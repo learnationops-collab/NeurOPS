@@ -1,31 +1,32 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { 
-    Users, Layers, Activity, ClipboardList, BarChart3,
-    Search, Check, X, Link2, Copy, ChevronRight, Loader2, RefreshCw,
-    Instagram, ExternalLink, Tag, CalendarDays, MessageSquare, ChevronDown
-} from 'lucide-react';
+import { Loader2, Check, Users, X } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import SetterCualificacionModal from '../../components/modals/SetterCualificacionModal';
+import SetterHeader from './components/SetterHeader';
+import SetterCualificacionFilters from './components/SetterCualificacionFilters';
+import UnattributedAgendasSection from './components/UnattributedAgendasSection';
+import SetterBulkActionBar from './components/SetterBulkActionBar';
+import SetterLeadRow from './components/SetterLeadRow';
 
 const SetterWorkflowPage = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     
+    // Paso activo: 'cualificacion' | 'agendas'
     const activeStep = searchParams.get('step') || 'cualificacion';
 
-    // Leads y carga
+    // Estado principal
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [submittingBulk, setSubmittingBulk] = useState(false);
     
-    // Selección masiva y filtros locales
+    // Selección masiva y búsqueda local
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [availableKeywords, setAvailableKeywords] = useState([]);
@@ -33,15 +34,30 @@ const SetterWorkflowPage = () => {
     // Lead seleccionado para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
 
-    // Filtros de fecha y descalificados para paso cualificacion
+    // Filtros de fecha y descalificados para cualificacion
     const [dateRange, setDateRange] = useState('today');
     const localToday = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
-    const [customDate, setCustomDate] = useState(localToday);    const [showDisqualified, setShowDisqualified] = useState(false);
+    const [customDate, setCustomDate] = useState(localToday);
+    const [showDisqualified, setShowDisqualified] = useState(false);
     const [stats, setStats] = useState({ qualified_today: 0, unassigned_today: 0, no_response_today: 0 });
     const [showCalendar, setShowCalendar] = useState(false);
     const [cualificacionTab, setCualificacionTab] = useState('pendientes'); // 'pendientes' | 'procesados'
 
-    // Cargar leads de la cola activa
+    // Agendas desatribuidas (Fuente Elias)
+    const [unattributedAgendas, setUnattributedAgendas] = useState([]);
+    const [loadingUnattributed, setLoadingUnattributed] = useState(false);
+    const [selectedAdsMap, setSelectedAdsMap] = useState({});
+    const [agendaIgMap, setAgendaIgMap] = useState({});
+    const [assigningId, setAssigningId] = useState(null);
+
+    // Cambiar de pestaña
+    const handleStepChange = (newStep) => {
+        setSearchParams({ step: newStep });
+        setSelectedLead(null);
+        setSelectedIds(new Set());
+    };
+
+    // Cargar leads / agendas de la cola activa
     const fetchLeads = async () => {
         setLoading(true);
         try {
@@ -90,13 +106,6 @@ const SetterWorkflowPage = () => {
             setAvailableKeywords([]);
         }
     };
-
-    // Agendas desatribuidas (Fuente Elias)
-    const [unattributedAgendas, setUnattributedAgendas] = useState([]);
-    const [loadingUnattributed, setLoadingUnattributed] = useState(false);
-    const [selectedAdsMap, setSelectedAdsMap] = useState({});
-    const [agendaIgMap, setAgendaIgMap] = useState({});
-    const [assigningId, setAssigningId] = useState(null);
 
     const fetchUnattributedAgendas = async () => {
         setLoadingUnattributed(true);
@@ -172,7 +181,7 @@ const SetterWorkflowPage = () => {
         );
     }, [leads, searchQuery]);
 
-    // Dividir listas de cualificación: Por Procesar (solo cualificados por confirmar) vs Procesados (confirmados)
+    // Subdividir leads de cualificación
     const { leadsPorProcesar, leadsProcesados } = useMemo(() => {
         if (!Array.isArray(filteredLeads)) return { leadsPorProcesar: [], leadsProcesados: [] };
         if (activeStep !== 'cualificacion') return { leadsPorProcesar: filteredLeads, leadsProcesados: [] };
@@ -181,11 +190,9 @@ const SetterWorkflowPage = () => {
         filteredLeads.forEach(l => {
             if (!l) return;
             const resVal = String(l.result || '').toLowerCase();
-            // Solo los confirmados cualificados van a Procesados
             if (l.processed || resVal === 'yes_confirmed' || resVal === 'confirmed') {
                 proc.push(l);
             } else if (resVal === 'yes' || resVal === 'true' || resVal === 'cualificado') {
-                // Solo los cualificados pendientes por confirmar van a Por Procesar
                 porProc.push(l);
             }
         });
@@ -200,7 +207,7 @@ const SetterWorkflowPage = () => {
         setLeads(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
-    // Procesar acción individual (de un solo clic)
+    // Procesar acción individual (Cualificar / Descualificar)
     const handleQuickAction = async (leadId, nextResult, e) => {
         if (e) e.stopPropagation();
         setProcessingId(leadId);
@@ -232,22 +239,6 @@ const SetterWorkflowPage = () => {
             toast.error("Error al actualizar estado del lead");
         } finally {
             setProcessingId(null);
-        }
-    };
-
-    // Actualizar anuncio de forma individual
-    const handleUpdateKeyword = async (leadId, newKeyword, e) => {
-        if (e) e.stopPropagation();
-        try {
-            await api.post(`/setter/deck/${leadId}`, { keyword: newKeyword });
-            toast.success("Anuncio asignado");
-            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, keyword: newKeyword } : l));
-            if (selectedLead?.id === leadId) {
-                setSelectedLead(prev => ({ ...prev, keyword: newKeyword }));
-            }
-        } catch (err) {
-            console.error("Error al actualizar anuncio:", err);
-            toast.error("Error al actualizar el anuncio");
         }
     };
 
@@ -283,34 +274,14 @@ const SetterWorkflowPage = () => {
         }
     };
 
-    // Copiar enlace de booking y marcar como enviado
-    const handleCopyLink = (lead, e) => {
-        if (e) e.stopPropagation();
-        // Generar enlace o buscar el slug asignado
-        const base = window.location.origin;
-        const slug = lead.keyword || 'lead';
-        const link = `${base}/book/${slug}`;
-        
-        navigator.clipboard.writeText(link).then(() => {
-            toast.success("Enlace de booking copiado al portapapeles");
-        }).catch(() => {
-            toast.error("No se pudo copiar el enlace de forma automática");
-        });
-    };
-
     const handleSaveAndNext = (currentLeadId) => {
-        // Buscar el índice del lead actual en la lista filtrada
         const currentIndex = filteredLeads.findIndex(l => l.id === currentLeadId);
-        
-        // Recargar los leads de fondo
         fetchLeads();
         fetchCualificacionStats();
 
         if (currentIndex !== -1 && currentIndex < filteredLeads.length - 1) {
-            // Seleccionar el siguiente lead disponible
             handleSelectLead(filteredLeads[currentIndex + 1]);
         } else if (filteredLeads.length > 1) {
-            // Si era el último pero quedan otros leads en la lista, seleccionar el primero disponible
             const remainingLeads = filteredLeads.filter(l => l.id !== currentLeadId);
             if (remainingLeads.length > 0) {
                 handleSelectLead(remainingLeads[0]);
@@ -318,12 +289,10 @@ const SetterWorkflowPage = () => {
                 setSelectedLead(null);
             }
         } else {
-            // Si no quedan leads, cerrar el modal
             setSelectedLead(null);
         }
     };
 
-    // Selección de elementos
     const toggleSelect = (id, e) => {
         if (e) e.stopPropagation();
         setSelectedIds(prev => {
@@ -341,499 +310,69 @@ const SetterWorkflowPage = () => {
             setSelectedIds(new Set(filteredLeads.map(l => l.id)));
         }
     };
-    const renderLeadRow = (l) => {
-        const isSelected = selectedIds.has(l.id);
-        const isViewed = selectedLead?.id === l.id;
-        
-        // Notificación de comentarios sin leer
-        const unreadKey = `read_comments_${l.client_id}`;
-        const readCount = parseInt(localStorage.getItem(unreadKey) || '0');
-        const hasUnread = l.unread_comment || (l.client_id && l.comments_count > readCount);
-
-        return (
-            <motion.div
-                key={l.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                onClick={() => handleSelectLead(l)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden group ${
-                    isViewed 
-                        ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
-                        : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                }`}
-            >
-                {/* Contenido principal (Avatar y texto) */}
-                <div className="flex items-center gap-4 min-w-0 flex-1 w-full">
-                    <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => toggleSelect(l.id, e)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                    />
-                    
-                    {/* Avatar de Canal */}
-                    {activeStep === 'cualificacion' && (
-                        <div className="w-12 h-12 bg-gradient-to-tr from-amber-500 via-rose-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0 relative">
-                            <Instagram size={24} className="text-white" />
-                            {hasUnread && (
-                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-600 rounded-full border-2 border-slate-950 flex items-center justify-center animate-bounce" title="Nuevas notas">
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-center">
-                        {/* Nombre e IG */}
-                        <div className="space-y-1">
-                             <div className="flex items-center gap-2 flex-wrap">
-                                 <h4 className="text-sm font-black text-white leading-tight truncate font-bold flex items-center gap-2">
-                                     {l.lead_name || 'Sin Nombre'}
-                                     {hasUnread && (
-                                         <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md animate-pulse">
-                                             Mensaje nuevo
-                                         </span>
-                                     )}
-                                 </h4>
-                                 {(() => {
-                                     const status = l.result;
-                                     if (status === 'yes' || status === 'true') {
-                                         return (
-                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
-                                                 Cualificado
-                                             </span>
-                                         );
-                                     }
-                                     if (status === 'no' || status === 'false') {
-                                         return (
-                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full shrink-0">
-                                                 Descualificado
-                                             </span>
-                                         );
-                                     }
-                                     return (
-                                         <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full shrink-0">
-                                             Pendiente
-                                         </span>
-                                     );
-                                 })()}
-                             </div>
-                            {activeStep === 'cualificacion' ? (
-                                l.instagram ? (
-                                    <a
-                                        href={l.ig_chat_link || `https://instagram.com/${l.instagram.replace('@', '')}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline cursor-pointer w-max"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <Instagram size={10} className="shrink-0" />
-                                        @{l.instagram.replace('@', '')}
-                                    </a>
-                                ) : (
-                                    <span className="text-[10px] text-slate-500 font-bold">Sin Instagram</span>
-                                )
-                            ) : (
-                                <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                                    <span>{l.origin || 'Web'}</span>
-                                    <span>•</span>
-                                    <span>ManyChat / Instagram</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Anuncio */}
-                        <div className="space-y-1">
-                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Anuncio</div>
-                            <div className="text-xs font-black text-violet-400 truncate max-w-[200px]" title={l.ad_name}>
-                                {l.ad_name || 'Desatribuido'}
-                            </div>
-                        </div>
-
-                        {/* Tiempo transcurrido */}
-                        {activeStep === 'cualificacion' && (
-                            <div className="space-y-1 md:text-right">
-                                <div className="text-xs font-black text-white">
-                                    {l.start_time ? (() => {
-                                        const date = new Date(l.start_time);
-                                        const now = new Date();
-                                        const diffMs = now - date;
-                                        const diffMins = Math.floor(diffMs / 60000);
-                                        const diffHours = Math.floor(diffMins / 60);
-                                        const diffDays = Math.floor(diffHours / 24);
-                                        if (diffMins < 1) return 'Hace instantes';
-                                        if (diffMins < 60) return `Hace ${diffMins} min`;
-                                        if (diffHours < 24) return `Hace ${diffHours} h`;
-                                        return `Hace ${diffDays} días`;
-                                    })() : 'N/A'}
-                                </div>
-                                {l.start_time && (
-                                    <div className="text-[9px] text-slate-500 font-mono">
-                                        {new Date(l.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(l.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Acciones directas a la derecha de la tarjeta */}
-                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
-                    {/* Paso 2: Cualificar / Descualificar */}
-                    {activeStep === 'cualificacion' && (
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <button
-                                 onClick={(e) => handleQuickAction(l.id, 'Cualificado', e)}
-                                 disabled={processingId === l.id}
-                                 className="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-emerald-600/15 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 md:flex-initial"
-                                 title="Confirmar cualificado"
-                             >
-                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                                 Confirmar cualificado
-                             </button>
-                             <button
-                                 onClick={(e) => handleQuickAction(l.id, 'Descualificado', e)}
-                                 disabled={processingId === l.id}
-                                 className="h-9 w-9 bg-slate-900 border border-slate-800 hover:bg-rose-550/10 hover:border-rose-500/20 text-slate-400 hover:text-rose-500 font-black rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-                                 title="Descualificar"
-                             >
-                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                             </button>
-                         </div>
-                     )}
-
-                     <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors hidden md:block" />
-                 </div>
-            </motion.div>
-        );
-    };
 
     return (
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
-            {/* Header del Espacio de Trabajo */}
-            <div className="px-6 pt-6 pb-4 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-white italic uppercase tracking-tight flex items-center gap-2">
-                            Setter Workspace
-                        </h1>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            Flujo de Trabajo Operativo en Pasos
-                        </p>
-                    </div>
+            {/* Header del Espacio de Trabajo con Pestañas (Leads cualificados / Agendas) */}
+            <SetterHeader
+                activeStep={activeStep}
+                onStepChange={handleStepChange}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+            />
 
-                    {/* Buscador */}
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                        <input
-                            type="text"
-                            placeholder="Buscar lead por nombre o IG..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800/80 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all font-bold"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Barra de Pasos Superior (Wizard) */}
-
-
-            {/* Área de Trabajo Principal (Grid 2 Columnas) */}
+            {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Columna Izquierda: Cola de Leads y Herramientas (ancho completo en cualificacion) */}
+                {/* Columna Izquierda: Lista de Leads / Agendas */}
                 <div className={`${activeStep === 'cualificacion' ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
                     
-                    {/* Barra de Acciones Masivas */}
-                    {selectedIds.size > 0 && (
-                        <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 px-3 py-1.5 rounded-xl border border-violet-500/20">
-                                    {selectedIds.size} Leads Marcados
-                                </span>
-                                <button 
-                                    onClick={() => setSelectedIds(new Set())}
-                                    className="text-[9px] font-black uppercase text-slate-500 hover:text-white underline cursor-pointer"
-                                >
-                                    Limpiar
-                                </button>
-                            </div>
+                    {/* Acciones Masivas */}
+                    <SetterBulkActionBar
+                        selectedIds={selectedIds}
+                        onClearSelection={() => setSelectedIds(new Set())}
+                        activeStep={activeStep}
+                        submittingBulk={submittingBulk}
+                        onBulkUpdate={handleBulkUpdate}
+                        availableKeywords={availableKeywords}
+                    />
 
-                            <div className="flex items-center gap-2.5 flex-wrap md:flex-nowrap">
-                                {/* Acciones en Lote según el paso */}
-                                {activeStep === 'cualificacion' && (
-                                    <>
-                                        <button
-                                            onClick={() => handleBulkUpdate('Cualificado')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-600/20"
-                                        >
-                                            ✓ Cualificar
-                                        </button>
-                                        <button
-                                            onClick={() => handleBulkUpdate('Descualificado')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-rose-650 hover:bg-rose-550 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-600/20"
-                                        >
-                                            ✕ Descualificar
-                                        </button>
-                                    </>
-                                )}
-
-                                {/* Selector de anuncio en lote */}
-                                {availableKeywords.length > 0 && (
-                                    <select
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                handleBulkUpdate(null, e.target.value);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                        disabled={submittingBulk}
-                                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-violet-500/50 cursor-pointer"
-                                    >
-                                        <option value="">Asociar Anuncio...</option>
-                                        {availableKeywords.map(k => (
-                                            <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
-                        </div>
+                    {/* Filtros para Cualificación */}
+                    {activeStep === 'cualificacion' && (
+                        <SetterCualificacionFilters
+                            dateRange={dateRange}
+                            setDateRange={setDateRange}
+                            customDate={customDate}
+                            setCustomDate={setCustomDate}
+                            showCalendar={showCalendar}
+                            setShowCalendar={setShowCalendar}
+                            stats={stats}
+                            showDisqualified={showDisqualified}
+                            setShowDisqualified={setShowDisqualified}
+                        />
                     )}
 
-                    {/* Filtros e Indicadores Superiores (para cualificación) */}
+                    {/* Sección Agendas Desatribuidas (Fuente Elias) */}
                     {activeStep === 'cualificacion' && (
-                        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 flex flex-wrap items-center justify-between gap-4">
-                            {/* Selector de fecha */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowCalendar(!showCalendar)}
-                                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 hover:text-white transition-all flex items-center gap-2 cursor-pointer"
-                                >
-                                    <CalendarDays size={14} className="text-violet-400" />
-                                    <span>
-                                        {dateRange === 'today' && 'Hoy'}
-                                        {dateRange === 'yesterday' && 'Ayer'}
-                                        {dateRange === 'week' && 'Esta semana'}
-                                        {dateRange === 'month' && 'Este mes'}
-                                        {dateRange === 'custom' && `Personalizado: ${customDate}`}
-                                    </span>
-                                    <ChevronDown size={14} className="text-slate-500" />
-                                </button>
-                                
-                                {showCalendar && (
-                                    <div className="absolute top-12 left-0 bg-slate-950 border border-slate-850 p-3 rounded-2xl shadow-xl z-50 space-y-2 min-w-[200px] animate-in fade-in slide-in-from-top-1 duration-150">
-                                        {[
-                                            { value: 'today', label: 'Hoy' },
-                                            { value: 'yesterday', label: 'Ayer' },
-                                            { value: 'week', label: 'Esta semana' },
-                                            { value: 'month', label: 'Este mes' }
-                                        ].map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => {
-                                                    setDateRange(opt.value);
-                                                    setShowCalendar(false);
-                                                }}
-                                                className={`w-full text-left px-3.5 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-between ${
-                                                    dateRange === opt.value 
-                                                        ? 'bg-violet-650/20 text-violet-400' 
-                                                        : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                                {dateRange === opt.value && <Check size={12} />}
-                                            </button>
-                                        ))}
-                                        
-                                        <div className="border-t border-slate-900 my-1 pt-2">
-                                            <button
-                                                onClick={() => {
-                                                    setDateRange('custom');
-                                                    setShowCalendar(false);
-                                                }}
-                                                className={`w-full text-left px-3.5 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-between ${
-                                                    dateRange === 'custom' 
-                                                        ? 'bg-violet-650/20 text-violet-400' 
-                                                        : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-                                                }`}
-                                            >
-                                                <span>Personalizado</span>
-                                                <CalendarDays size={12} />
-                                            </button>
-                                            
-                                            {dateRange === 'custom' && (
-                                                <input
-                                                    type="date"
-                                                    value={customDate}
-                                                    onChange={(e) => {
-                                                        setCustomDate(e.target.value);
-                                                    }}
-                                                    className="w-full mt-1.5 bg-slate-900 border border-slate-800 text-xs font-bold rounded-xl p-2 text-slate-200 outline-none focus:border-violet-500/50"
-                                                />
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Estadísticas */}
-                            <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
-                                <div className="flex items-center gap-2 bg-violet-500/5 border border-violet-500/10 px-3 py-1.5 rounded-2xl">
-                                    <Users size={14} className="text-violet-400" />
-                                    <span className="text-xs font-black text-white">{stats.qualified_today}</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cualificados hoy</span>
-                                </div>
-                                <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
-                                    <Users size={14} className="text-slate-500" />
-                                    <span className="text-xs font-black text-white">{stats.unassigned_today}</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin asignación</span>
-                                </div>
-                                <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
-                                    <MessageSquare size={14} className="text-slate-500" />
-                                    <span className="text-xs font-black text-white">{stats.no_response_today}</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin responder</span>
-                                </div>
-                            </div>
-
-                            {/* Botón Ver Descalificados */}
-                            <button
-                                onClick={() => setShowDisqualified(!showDisqualified)}
-                                className={`px-4 py-2 bg-slate-950 border border-slate-850 hover:border-slate-750 transition-all rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer ${
-                                    showDisqualified ? 'text-rose-400 bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20' : 'text-slate-400'
-                                }`}
-                            >
-                                <X size={12} />
-                                {showDisqualified ? 'Ocultar descalificados' : 'Ver descalificados'}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Sección Especial: Agendas Desatribuidas (Fuente Elias) */}
-                    {activeStep === 'cualificacion' && (
-                        <div className="bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-amber-500/5 border border-amber-500/20 rounded-[2rem] p-6 space-y-4 shadow-xl">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-amber-500/15 pb-4">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
-                                            <Link2 size={16} />
-                                        </span>
-                                        <h3 className="text-sm font-black text-white italic tracking-wider uppercase">
-                                            Agendas Desatribuidas (Fuente Elias)
-                                        </h3>
-                                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                            {unattributedAgendas.length} pendientes
-                                        </span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
-                                        Agendas de la fuente Elias que no tienen anuncio asociado. Asigna el anuncio correspondiente para completar la atribución.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={fetchUnattributedAgendas}
-                                    disabled={loadingUnattributed}
-                                    className="p-2.5 bg-slate-950 border border-amber-500/20 hover:border-amber-500/40 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0 self-start md:self-auto"
-                                    title="Actualizar agendas desatribuidas"
-                                >
-                                    <RefreshCw size={14} className={loadingUnattributed ? 'animate-spin text-amber-400' : ''} />
-                                </button>
-                            </div>
-
-                            {loadingUnattributed ? (
-                                <div className="flex items-center justify-center py-6 text-slate-500 gap-2">
-                                    <Loader2 size={18} className="animate-spin text-amber-400" />
-                                    <span className="text-xs font-bold uppercase">Cargando agendas desatribuidas...</span>
-                                </div>
-                            ) : unattributedAgendas.length === 0 ? (
-                                <div className="text-center py-4 text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
-                                    <Check size={16} />
-                                    <span>No hay agendas de Elias pendientes de atribución. ¡Todas cuentan con anuncio asociado!</span>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-                                    {unattributedAgendas.map(agenda => (
-                                        <div 
-                                            key={agenda.id}
-                                            className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-amber-500/30 transition-all"
-                                        >
-                                            <div className="space-y-1 min-w-0 flex-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-black text-xs text-white uppercase">{agenda.cliente}</span>
-                                                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                                                        Fuente: {agenda.setter}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold flex-wrap">
-                                                    <span>IG: <strong className="text-slate-200">{agenda.instagram}</strong></span>
-                                                    <span>WA: <strong className="text-slate-200">{agenda.whatsapp}</strong></span>
-                                                    {agenda.fecha_meet && agenda.fecha_meet !== 'N/A' && (
-                                                        <span>Cita: <strong className="text-indigo-400">{agenda.fecha_meet}</strong></span>
-                                                    )}
-                                                    <span>Closer: <strong className="text-slate-300">{agenda.closer}</strong></span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
-                                                {/* Input editable de Instagram del Lead */}
-                                                <div className="relative w-full sm:w-44">
-                                                    <Instagram size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/80" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="@instagram_lead"
-                                                        value={agendaIgMap[agenda.id] ?? (agenda.instagram !== 'N/A' ? agenda.instagram : '')}
-                                                        onChange={(e) => setAgendaIgMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
-                                                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50"
-                                                        title="Escribe o verifica el Instagram del Lead para vincular con ManyChat"
-                                                    />
-                                                </div>
-
-                                                {/* Selector de anuncio (Meta Ad) */}
-                                                <select
-                                                    value={selectedAdsMap[agenda.id] || ''}
-                                                    onChange={(e) => setSelectedAdsMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
-                                                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50 w-full sm:w-56 cursor-pointer"
-                                                >
-                                                    <option value="">Seleccionar anuncio (Meta Ad)...</option>
-                                                    {availableKeywords.map(ad => (
-                                                        <option key={ad.id} value={ad.id}>
-                                                            {ad.name} ({ad.slug})
-                                                        </option>
-                                                    ))}
-                                                </select>
-
-                                                {/* Botón Asignar Anuncio */}
-                                                <button
-                                                    onClick={() => handleAssignAdToAgenda(agenda)}
-                                                    disabled={assigningId === agenda.id || !selectedAdsMap[agenda.id]}
-                                                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer w-full sm:w-auto"
-                                                >
-                                                    {assigningId === agenda.id ? (
-                                                        <Loader2 size={14} className="animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <Check size={14} />
-                                                            Asignar Anuncio
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <UnattributedAgendasSection
+                            unattributedAgendas={unattributedAgendas}
+                            loadingUnattributed={loadingUnattributed}
+                            fetchUnattributedAgendas={fetchUnattributedAgendas}
+                            agendaIgMap={agendaIgMap}
+                            setAgendaIgMap={setAgendaIgMap}
+                            selectedAdsMap={selectedAdsMap}
+                            setSelectedAdsMap={setSelectedAdsMap}
+                            availableKeywords={availableKeywords}
+                            handleAssignAdToAgenda={handleAssignAdToAgenda}
+                            assigningId={assigningId}
+                        />
                     )}
 
                     {/* Contenedor de la Lista */}
                     <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
                         
-                        {/* Selector de Pestañas para Paso de Cualificación */}
+                        {/* Selector de Sub-Pestañas para Paso de Cualificación */}
                         {activeStep === 'cualificacion' ? (
                             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-900 pb-4">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -894,7 +433,7 @@ const SetterWorkflowPage = () => {
                                     </span>
                                 </div>
                                 <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                    {filteredLeads.length} Leads
+                                    {filteredLeads.length} Agendas
                                 </span>
                             </div>
                         )}
@@ -902,7 +441,7 @@ const SetterWorkflowPage = () => {
                         {loading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-3">
                                 <Loader2 className="animate-spin text-violet-500" size={32} />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando leads de la cola...</span>
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando cola de trabajo...</span>
                             </div>
                         ) : (
                             <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
@@ -928,7 +467,19 @@ const SetterWorkflowPage = () => {
                                             </div>
                                         ) : (
                                             <AnimatePresence initial={false}>
-                                                {leadsPorProcesar.map((l) => renderLeadRow(l))}
+                                                {leadsPorProcesar.map((l) => (
+                                                    <SetterLeadRow
+                                                        key={l.id}
+                                                        lead={l}
+                                                        activeStep={activeStep}
+                                                        isSelected={selectedIds.has(l.id)}
+                                                        isViewed={selectedLead?.id === l.id}
+                                                        processingId={processingId}
+                                                        onSelectLead={handleSelectLead}
+                                                        onToggleSelect={toggleSelect}
+                                                        onQuickAction={handleQuickAction}
+                                                    />
+                                                ))}
                                             </AnimatePresence>
                                         )
                                     ) : (
@@ -938,17 +489,41 @@ const SetterWorkflowPage = () => {
                                             </div>
                                         ) : (
                                             <AnimatePresence initial={false}>
-                                                {leadsProcesados.map((l) => renderLeadRow(l))}
+                                                {leadsProcesados.map((l) => (
+                                                    <SetterLeadRow
+                                                        key={l.id}
+                                                        lead={l}
+                                                        activeStep={activeStep}
+                                                        isSelected={selectedIds.has(l.id)}
+                                                        isViewed={selectedLead?.id === l.id}
+                                                        processingId={processingId}
+                                                        onSelectLead={handleSelectLead}
+                                                        onToggleSelect={toggleSelect}
+                                                        onQuickAction={handleQuickAction}
+                                                    />
+                                                ))}
                                             </AnimatePresence>
                                         )
                                     )
                                 ) : filteredLeads.length === 0 ? (
                                     <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                        👏 ¡No tienes leads pendientes en este paso!
+                                        👏 ¡No tienes agendas en este paso!
                                     </div>
                                 ) : (
                                     <AnimatePresence initial={false}>
-                                        {filteredLeads.map((l) => renderLeadRow(l))}
+                                        {filteredLeads.map((l) => (
+                                            <SetterLeadRow
+                                                key={l.id}
+                                                lead={l}
+                                                activeStep={activeStep}
+                                                isSelected={selectedIds.has(l.id)}
+                                                isViewed={selectedLead?.id === l.id}
+                                                processingId={processingId}
+                                                onSelectLead={handleSelectLead}
+                                                onToggleSelect={toggleSelect}
+                                                onQuickAction={handleQuickAction}
+                                            />
+                                        ))}
                                     </AnimatePresence>
                                 )}
                             </div>
@@ -956,18 +531,18 @@ const SetterWorkflowPage = () => {
                     </div>
                 </div>
 
-                {/* Columna Derecha: Visor de Calificación y Perfil Detallado (cols 5) - Oculto en cualificacion */}
+                {/* Columna Derecha: Visor de Calificación y Perfil Detallado (Oculto en cualificacion) */}
                 {activeStep !== 'cualificacion' && (
                     <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
                         {selectedLead ? (
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center pb-2 border-b border-slate-900">
                                     <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest">
-                                        Perfil & Calificación
+                                        Perfil & Agenda
                                     </h3>
                                     <button
                                         onClick={() => setSelectedLead(null)}
-                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors cursor-pointer"
                                     >
                                         <X size={14} />
                                     </button>
@@ -992,10 +567,10 @@ const SetterWorkflowPage = () => {
                                     <Users size={28} />
                                 </div>
                                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                                    Ficha de Calificación
+                                    Ficha del Prospecto
                                 </h3>
                                 <p className="text-[10px] text-slate-650 font-bold uppercase tracking-wider mt-1 max-w-xs">
-                                    Selecciona un lead de la lista izquierda para editar sus dolores, objeciones y ver las respuestas del formulario.
+                                    Selecciona una agenda de la lista para ver su perfil, respuestas y notas de comunicación.
                                 </p>
                             </div>
                         )}
