@@ -702,6 +702,9 @@
       - Se agregaron tarjetas de talleres con desglose financiero detallado y selector de vistas (Tarjetas vs Tabla comparativa ejecutiva).
       - Se perfeccionó el visor gráfico de embudo de conversión (Funnel) mostrando retención paso a paso y resincronización directa en tiempo real con la base de datos de NeurOPS.
       - Se integró el modal en 3 pasos (Tráfico, Asistencia/Retención y Validación NeurOPS) para la creación y edición de talleres con cálculo de ratios en vivo.
+    - **API Backend ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
+      - Se optimizó la función `prefill_workshop_metrics` para ignorar identificadores genéricos de Instagram y Mail (`'no tengo'`, `'n/a'`, `'ninguno'`) evitando atribuciones erróneas a ventas anónimas.
+      - Se añadió restricción temporal a las ventas consultadas, requiriendo que la fecha de compra sea igual o posterior al evento del taller para no atribuir ventas históricas de meses anteriores.
 
 
 
