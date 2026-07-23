@@ -715,4 +715,6 @@
       - Se agregó el botón directo `Perfil IG` (y fallback `Buscar IG`) y enlace dinámico de Instagram en cada tarjeta de **Agendas Desatribuidas**, permitiendo al setter ingresar al perfil del prospecto directamente desde la sección de agendas sin atribuir.
       - Se solucionó un bug crítico en la pestaña de agendas al cambiar el rango de fechas, causante de una pantalla vacía (cuelgue de React) debido a valores `null` en el campo `instagram` de las agendas desatribuidas. Se implementaron salvaguardas robustas con fallbacks seguros (`agenda.instagram || ''`) para evitar llamadas a métodos sobre valores nulos.
       - Se corrigió la función `fetchLeads` para enviar correctamente los parámetros de fecha (`date_range` y `date`) al backend cuando `activeStep === 'agendas'`.
+      - Se solucionó un error de referencia (`ReferenceError: ExternalLink is not defined`) en `UnattributedAgendasSection.jsx` al importar el componente `ExternalLink` que faltaba desde `lucide-react`. Esto resuelve por completo el cuelgue al cambiar filtros y renderizar agendas desatribuidas.
+
 
