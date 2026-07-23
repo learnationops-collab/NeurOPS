@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link2, RefreshCw, Loader2, Check, Instagram } from 'lucide-react';
+import { Link2, RefreshCw, Loader2, Check, Instagram, ExternalLink } from 'lucide-react';
 
 const UnattributedAgendasSection = ({
     unattributedAgendas,
