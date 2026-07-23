@@ -693,6 +693,10 @@ def get_setter_deck():
         except ValueError:
             pass
     
+    unread_client_ids = set()
+    if current_user and current_user.is_authenticated:
+        unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
     # Filtrar según el paso del flujo de trabajo
     if step == 'cualificacion':
         show_disqualified = request.args.get('show_disqualified') == 'true'
@@ -729,7 +733,7 @@ def get_setter_deck():
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
         
-        unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
         
         present_igs = set()
         for la in lead_answers:
