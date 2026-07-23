@@ -21,12 +21,39 @@ const SetterLeadRow = ({
     const readCount = parseInt(localStorage.getItem(unreadKey) || '0');
     const hasUnread = lead.unread_comment || (lead.client_id && lead.comments_count > readCount);
 
-    // Formatear enlace directo a perfil de Instagram
-    const rawIg = lead.instagram || '';
-    const igClean = rawIg.replace('@', '').trim();
-    const igUrl = lead.ig_chat_link && lead.ig_chat_link.startsWith('http')
-        ? lead.ig_chat_link
-        : (igClean ? `https://instagram.com/${igClean}` : null);
+    // Resolver información de Instagram de forma inteligente
+    const getIgInfo = () => {
+        let raw = (lead.instagram || '').trim().replace('@', '');
+        let chat = (lead.ig_chat_link || '').trim();
+
+        if (!raw && chat) {
+            if (chat.includes('instagram.com/')) {
+                const parts = chat.split('instagram.com/')[1]?.split('/')[0]?.split('?')[0];
+                if (parts && parts !== 'direct') {
+                    raw = parts.replace('@', '');
+                }
+            } else if (chat.startsWith('@')) {
+                raw = chat.replace('@', '');
+            }
+        }
+
+        if (chat && chat.startsWith('http')) {
+            return { handle: raw ? `@${raw}` : 'Perfil IG', url: chat, isDirect: true };
+        }
+
+        if (raw) {
+            return { handle: `@${raw}`, url: `https://instagram.com/${raw}`, isDirect: true };
+        }
+
+        if (lead.lead_name && lead.lead_name !== 'Sin Nombre' && lead.lead_name !== 'Sin Cliente') {
+            const queryName = encodeURIComponent(lead.lead_name.trim());
+            return { handle: lead.lead_name, url: `https://www.instagram.com/explore/search/keyword/?q=${queryName}`, isSearch: true };
+        }
+
+        return { handle: '', url: null, isDirect: false };
+    };
+
+    const igInfo = getIgInfo();
 
     return (
         <motion.div
@@ -116,17 +143,17 @@ const SetterLeadRow = ({
                         </div>
 
                         {/* Enlace directo a perfil de IG */}
-                        {igUrl ? (
+                        {igInfo.url ? (
                             <a
-                                href={igUrl}
+                                href={igInfo.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline cursor-pointer w-max"
                                 onClick={(e) => e.stopPropagation()}
-                                title="Abrir perfil de Instagram directamente"
+                                title={igInfo.isSearch ? "Buscar prospecto en Instagram" : "Abrir perfil de Instagram directamente"}
                             >
                                 <Instagram size={11} className="shrink-0 text-violet-400" />
-                                <span>@{igClean}</span>
+                                <span>{igInfo.handle}</span>
                                 <ExternalLink size={10} className="shrink-0 opacity-70" />
                             </a>
                         ) : (
@@ -192,17 +219,21 @@ const SetterLeadRow = ({
                 {/* Paso Agendas: Botón directo para ingresar a Instagram */}
                 {activeStep === 'agendas' && (
                     <div className="flex items-center gap-2 w-full md:w-auto">
-                        {igUrl ? (
+                        {igInfo.url ? (
                             <a
-                                href={igUrl}
+                                href={igInfo.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="h-9 px-3.5 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-purple-600/20 flex items-center justify-center gap-1.5 cursor-pointer flex-1 md:flex-initial"
-                                title="Entrar directamente al perfil de Instagram"
+                                className={`h-9 px-3.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer flex-1 md:flex-initial ${
+                                    igInfo.isSearch 
+                                        ? 'bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-purple-400' 
+                                        : 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 shadow-purple-600/20'
+                                }`}
+                                title={igInfo.isSearch ? "Buscar prospecto en Instagram" : "Entrar directamente al perfil de Instagram"}
                             >
                                 <Instagram size={13} />
-                                <span>Perfil IG</span>
+                                <span>{igInfo.isSearch ? 'Buscar IG' : 'Perfil IG'}</span>
                                 <ExternalLink size={11} />
                             </a>
                         ) : (

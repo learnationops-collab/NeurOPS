@@ -10,7 +10,8 @@ const SetterCualificacionFilters = ({
     setShowCalendar,
     stats,
     showDisqualified,
-    setShowDisqualified
+    setShowDisqualified,
+    activeStep = 'cualificacion'
 }) => {
     return (
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 flex flex-wrap items-center justify-between gap-4">
@@ -85,35 +86,39 @@ const SetterCualificacionFilters = ({
                 )}
             </div>
 
-            {/* Estadísticas de cualificación */}
-            <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
-                <div className="flex items-center gap-2 bg-violet-500/5 border border-violet-500/10 px-3 py-1.5 rounded-2xl">
-                    <Users size={14} className="text-violet-400" />
-                    <span className="text-xs font-black text-white">{stats.qualified_today}</span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cualificados hoy</span>
+            {/* Estadísticas de cualificación (Solo en paso cualificación) */}
+            {activeStep === 'cualificacion' && stats && (
+                <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
+                    <div className="flex items-center gap-2 bg-violet-500/5 border border-violet-500/10 px-3 py-1.5 rounded-2xl">
+                        <Users size={14} className="text-violet-400" />
+                        <span className="text-xs font-black text-white">{stats.qualified_today}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cualificados hoy</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
+                        <Users size={14} className="text-slate-500" />
+                        <span className="text-xs font-black text-white">{stats.unassigned_today}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin asignación</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
+                        <MessageSquare size={14} className="text-slate-500" />
+                        <span className="text-xs font-black text-white">{stats.no_response_today}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin responder</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
-                    <Users size={14} className="text-slate-500" />
-                    <span className="text-xs font-black text-white">{stats.unassigned_today}</span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin asignación</span>
-                </div>
-                <div className="flex items-center gap-2 bg-slate-950 border border-slate-900 px-3 py-1.5 rounded-2xl">
-                    <MessageSquare size={14} className="text-slate-500" />
-                    <span className="text-xs font-black text-white">{stats.no_response_today}</span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sin responder</span>
-                </div>
-            </div>
+            )}
 
-            {/* Botón Ver / Ocultar Descalificados */}
-            <button
-                onClick={() => setShowDisqualified(!showDisqualified)}
-                className={`px-4 py-2 bg-slate-950 border border-slate-850 hover:border-slate-750 transition-all rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer ${
-                    showDisqualified ? 'text-rose-400 bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20' : 'text-slate-400'
-                }`}
-            >
-                <X size={12} />
-                {showDisqualified ? 'Ocultar descalificados' : 'Ver descalificados'}
-            </button>
+            {/* Botón Ver / Ocultar Descalificados (Solo en cualificación) */}
+            {activeStep === 'cualificacion' && (
+                <button
+                    onClick={() => setShowDisqualified(!showDisqualified)}
+                    className={`px-4 py-2 bg-slate-950 border border-slate-850 hover:border-slate-750 transition-all rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer ${
+                        showDisqualified ? 'text-rose-400 bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20' : 'text-slate-400'
+                    }`}
+                >
+                    <X size={12} />
+                    {showDisqualified ? 'Ocultar descalificados' : 'Ver descalificados'}
+                </button>
+            )}
         </div>
     );
 };

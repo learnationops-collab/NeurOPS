@@ -338,34 +338,35 @@ const SetterWorkflowPage = () => {
                         availableKeywords={availableKeywords}
                     />
 
-                    {/* Filtros para Cualificación */}
-                    {activeStep === 'cualificacion' && (
-                        <SetterCualificacionFilters
-                            dateRange={dateRange}
-                            setDateRange={setDateRange}
-                            customDate={customDate}
-                            setCustomDate={setCustomDate}
-                            showCalendar={showCalendar}
-                            setShowCalendar={setShowCalendar}
-                            stats={stats}
-                            showDisqualified={showDisqualified}
-                            setShowDisqualified={setShowDisqualified}
+                    {/* Filtros de Fecha y Estadísticas */}
+                    <SetterCualificacionFilters
+                        dateRange={dateRange}
+                        setDateRange={setDateRange}
+                        customDate={customDate}
+                        setCustomDate={setCustomDate}
+                        showCalendar={showCalendar}
+                        setShowCalendar={setShowCalendar}
+                        stats={stats}
+                        showDisqualified={showDisqualified}
+                        setShowDisqualified={setShowDisqualified}
+                        activeStep={activeStep}
+                    />
+
+                    {/* Sección Agendas Desatribuidas (Exclusiva de la pestaña Agendas) */}
+                    {activeStep === 'agendas' && (
+                        <UnattributedAgendasSection
+                            unattributedAgendas={unattributedAgendas}
+                            loadingUnattributed={loadingUnattributed}
+                            fetchUnattributedAgendas={fetchUnattributedAgendas}
+                            agendaIgMap={agendaIgMap}
+                            setAgendaIgMap={setAgendaIgMap}
+                            selectedAdsMap={selectedAdsMap}
+                            setSelectedAdsMap={setSelectedAdsMap}
+                            availableKeywords={availableKeywords}
+                            handleAssignAdToAgenda={handleAssignAdToAgenda}
+                            assigningId={assigningId}
                         />
                     )}
-
-                    {/* Sección Agendas Desatribuidas */}
-                    <UnattributedAgendasSection
-                        unattributedAgendas={unattributedAgendas}
-                        loadingUnattributed={loadingUnattributed}
-                        fetchUnattributedAgendas={fetchUnattributedAgendas}
-                        agendaIgMap={agendaIgMap}
-                        setAgendaIgMap={setAgendaIgMap}
-                        selectedAdsMap={selectedAdsMap}
-                        setSelectedAdsMap={setSelectedAdsMap}
-                        availableKeywords={availableKeywords}
-                        handleAssignAdToAgenda={handleAssignAdToAgenda}
-                        assigningId={assigningId}
-                    />
 
                     {/* Contenedor de la Lista / Agendas Atribuidas */}
                     <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
