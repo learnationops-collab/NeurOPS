@@ -322,11 +322,11 @@ const SetterWorkflowPage = () => {
                 setSearchQuery={setSearchQuery}
             />
 
-            {/* Área de Trabajo Principal */}
+            {/* Área de Trabajo Principal (Ancho completo) */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Columna Izquierda: Lista de Leads / Agendas */}
-                <div className={`${activeStep === 'cualificacion' ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
+                {/* Lista de Leads / Agendas (Ancho completo 12 columnas) */}
+                <div className="lg:col-span-12 space-y-4">
                     
                     {/* Acciones Masivas */}
                     <SetterBulkActionBar
@@ -529,53 +529,6 @@ const SetterWorkflowPage = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Columna Derecha: Visor de Calificación y Perfil Detallado (Oculto en cualificacion) */}
-                {activeStep !== 'cualificacion' && (
-                    <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
-                        {selectedLead ? (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center pb-2 border-b border-slate-900">
-                                    <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest">
-                                        Perfil & Agenda
-                                    </h3>
-                                    <button
-                                        onClick={() => setSelectedLead(null)}
-                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors cursor-pointer"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                
-                                <LeadRoadmapDetail 
-                                    instagram={selectedLead.instagram}
-                                    email={selectedLead.email}
-                                    phone={selectedLead.phone}
-                                    availableKeywords={availableKeywords}
-                                    userRole={user?.role}
-                                    appointmentId={selectedLead.id}
-                                    compact={true}
-                                    onUpdate={() => {
-                                        fetchLeads();
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                                <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
-                                    <Users size={28} />
-                                </div>
-                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                                    Ficha del Prospecto
-                                </h3>
-                                <p className="text-[10px] text-slate-650 font-bold uppercase tracking-wider mt-1 max-w-xs">
-                                    Selecciona una agenda de la lista para ver su perfil, respuestas y notas de comunicación.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
             </div>
 
             {/* Modal de Detalle de Lead (para cualificación) */}
