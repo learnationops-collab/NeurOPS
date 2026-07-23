@@ -706,6 +706,201 @@
     - **API Backend ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se importaron `CommentNotification` y `Comment` al inicio de `get_setter_deck()` solucionando la excepción HTTP 500 (`NameError`) al consultar el endpoint en la pestaña de agendas.
       - Se enriqueció la serialización de agendas para el mazo con campos de cliente, conteo de comentarios y notificaciones sin leer.
+- **6 de Julio de 2026**:
+  - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:
+    - **Modelo de Base de Datos ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY])**:
+      - Se agregaron las columnas `closer_result` e `is_rescheduled` a la tabla `appointments` para almacenar el resultado del closer de forma independiente y saber si la cita proviene de una reagenda.
+    - **Servicio y Sincronización del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY], [booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY], [financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
+      - Se reestructuró `process_agenda` para procesar la cita según el rol del usuario (`role`).
+      - Si es `closer`: actualiza `closer_result` y soporta lógica y validaciones de notas para `Show up`, `No Show`, `Cancelado`, `Reagendado` y `2da call`.
+      - Si es `setter`: actualiza `result` y soporta lógica y notas para `Reagendado` y `Cancelado`.
+      - Para ambos roles, las reagendas, cancelaciones y segundas llamadas crean notas automáticas en el Lead Roadmap mediante la inserción de registros en `ClientComment`, registrando el nombre del usuario (`user.username`) que realizó la acción de forma nominativa en lugar del rol genérico, formateando la fecha de reprogramación al formato estándar `DD/MM/AAAA HH:MM`.
+      - Se añadió el parámetro opcional `is_admin` para omitir validaciones de propiedad si el usuario tiene rol de administrador.
+      - Se implementó `sync_appointment_to_financial_agenda` en `BookingService` y se invocó al finalizar `process_agenda` para propagar en tiempo real los cambios de estado físicos hacia la tabla de agendas financieras (`FinancialAgenda`).
+      - Se modificó `to_dict` en el modelo `FinancialAgenda` para separar el estado del call confirmer (`estado`) del estado dinámico del closer (`closer_result`), de modo que ambos campos se envíen de forma independiente en la API.
+    - **APIs del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se adaptó la serialización de citas en `_format_appointment_for_deck`, `get_dashboard` y `get_appointment` en `closer.py` para devolver `closer_result` e `is_rescheduled`.
+      - Se modificó la serialización en `get_setter_agendas` en `setter.py` para incluir también dichos campos.
+      - Se actualizaron los endpoints `/appointments/<id>/process`, `/deck/<id>` y `/deck/bulk-update` para enviar el rol y bypass de admin al servicio de forma consistente.
+      - Se modificó el filtro por defecto en la cola del deck (`get_closer_deck`) para que el closer visualice las citas basadas en `closer_result` (su propio estado) y no en `result` (el del confirmer).
+      - Se corrigieron los filtros en `get_setter_agendas` para considerar como citas "Pendientes" aquellas con estados no definitivos (`'Contactado'`, `'Sin respuesta'`, o `'Pendiente'`), evitando que desaparecieran al actualizarse.
+      - Se mapeó el estado de asistencia `'Asistió'` enviado desde la ficha a `'Show up'` en el backend (`process_closer_card`) para garantizar consistencia en la persistencia del estado en la base de datos.
+      - Se adaptó el endpoint `PUT /public/financial-agendas/<id>` para recibir y actualizar el estado de closing (`closer_result`) directamente en la cita asociada en la base de datos, delegando en `CloserService.process_agenda` en caso de cancelaciones, reagendas y segundas llamadas para registrar la razón con el usuario autenticado e interactuar con Google Calendar.
+    - **Modales y Tablas del Frontend ([AgendaManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/AgendaManagerModal.jsx) [MODIFY], [FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se implementó el soporte del prop `mode` ('closer' | 'setter') para alternar dinámicamente las opciones y la lógica de validación de los estados según el rol del usuario.
+      - Se añadió la inicialización correcta de estados y campos de reprogramación/notas al abrir el modal.
+      - Se agregó visualmente un campo textarea para ingresar la razón obligatoria del cambio si el estado es Reagendado, Cancelado o 2da call.
+      - Se modificó `FinancialAgendasPage.jsx` para importar `useAuth` y renderizar el selector de estado en caliente según el rol. Si el usuario logueado es Call Confirmer (triage/setter), la tabla muestra y edita el estado de confirmación (`estado` original de la agenda, con sus respectivas opciones). Si es admin o closer, muestra y edita el estado de closing (`closer_result`, con las opciones del closer).
+      - Se implementó un modal interactivo en `FinancialAgendasPage.jsx` (`statusActionModal`) que intercepta el selector cuando se selecciona un estado especial (`Cancelada` o `Reagendada` para call confirmer; y `Cancelada`, `Reagendada` o `2TH Call` para closer) solicitando obligatoriamente la razón (y opcionalmente la fecha/hora en caso de reprogramaciones) y enviándolas al backend. Se estilizó el campo selector de fecha/hora para resaltar visualmente mediante bordes temáticos destacados, animaciones y un icono flotante de calendario.
+    - **Mazo, Workflow y Dashboard del Closer ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY], [CloserDeckPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserDeckPage.jsx) [MODIFY])**:
+      - Se adaptó la renderización para mostrar el estado del closer (`closer_result`), la etiqueta del call confirmer (`result`) y si la cita es una reagenda (`is_rescheduled`).
+      - Se implementó la visualización de estas mismas insignias y la etiqueta del confirmer en el widget "Agendas hoy" del Dashboard del Closer.
+      - Se modificó `CloserDeckPage.jsx` para inicializar el formulario de seguimiento a partir del estado de la cita del closer (`closer_result` mapeando `"Show up"` a `"Asistió"`) y no a partir del confirmer (`result`).
+      - Se añadió visualmente la etiqueta del call confirmer (`Confirmer: result`) en la cabecera de la ficha del mazo.
+      - Se implementó la captura de razones mediante `window.prompt` en las acciones rápidas de cancelación y en el panel de reprogramación inline (reagendar y segunda llamada) para enviarlas al backend y guardarlas en el Lead Roadmap.
+    - **Dashboard e Integración ([SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [SetterAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/agendas/SetterAgendasPage.jsx) [MODIFY])**:
+      - Se pasó el prop `mode` correspondiente a las instancias del modal `AgendaManagerModal`.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `2aaaf324fb99_add_closer_result_and_is_rescheduled_to_.py` en la base de datos local SQLite.
+
+- **3 de Julio de 2026**:
+  - **Alineación de Tasas de Setting y Embudo a 7 Etapas**:
+    - **Frontend React ([PublicSetterStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterStatsPage.jsx) [MODIFY])**:
+      - Se reestructuró la Matriz de Pérdida de Pasos del embudo de setting para separar los prospectos ingresados a la etapa de cualificación (**2. Cualificación**, valor `funnel_qualification`) de los leads que la superaron con éxito (**3. Cualificados**, valor `leads`).
+      - Se renumeraron y desplazaron los pasos restantes de forma lógica a un total de 7 etapas.
+      - Se adaptó el objeto `calculations` y se actualizó la explicación en los tooltips paso a paso.
+      - Se modificó la descripción del tooltip en la tarjeta KPI de Eficacia a Cita para indicar la fórmula correcta `(Agendas / Cualificación) * 100`, unificando criterios y solucionando la discordancia con el reporte individual diario.
+    - **API del Backend ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/setter.py) [MODIFY])**:
+      - Se modificó `_prepare_setter_report_data` para calcular `qual` (usado para tasas y KPIs del reporte individual diario) en base a `inbox_leads` (leads cualificados reales: `funnel_qualification - not_lead`) en lugar de `funnel_qualification`.
+      - Esto alinea la **Tasa de Cualificación** (tarjeta 3) para calcularse como `leads / entrantes` (37% en lugar del 75%) y la **Conversión por Cualificado** (tarjeta 4) sobre leads reales, unificando criterios con el dashboard.
+      - Se actualizaron las medias de 7 y 10 días, y las comparaciones de periodos anteriores.
+    - **Plantilla del Reporte ([setter_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/setter_report.html) [MODIFY])**:
+      - Se removió por completo la grilla redundante de tasas inferiores `funnel-rates-grid` para simplificar la UI.
+      - Se integraron y fusionaron las comparativas y tendencias de 7 días (`funnel_comparisons`) directamente en cada una de las respectivas cajas del embudo visual horizontal.
+      - Se incrementó la altura mínima de las tarjetas del embudo visual a `155px` en el CSS para acomodar la información de tendencias sin desbordes.
+  - **Módulo de Clientes Nuevos y Seguimiento de Pagos (Follow Up)**:
+    - **Modelo de Base de Datos ([client.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
+      - Se añadió la columna `follow_up_status` para registrar y persistir el estado del cliente en el proceso de venta.
+    - **API del Backend ([new_clients.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/new_clients.py) [NEW], [__init__.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/__init__.py) [MODIFY])**:
+      - Se implementó el endpoint `GET /public/new-clients` para la consolidación histórica y por periodos de clientes a través del algoritmo de Union-Find sobre el registro de ventas.
+      - Se implementó el endpoint `POST /public/clients/follow-up` para insertar o actualizar el estado de follow up de forma atómica.
+    - **Frontend React ([NewClientsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/NewClientsTab.jsx) [MODIFY], [PublicCloserStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserStatsPage.jsx) [MODIFY])**:
+      - Se creó e integró el componente `NewClientsTab` que expone la tabla interactiva de clientes consolidados con desglose de tipos de pagos, deuda, buscador, exportación a CSV y filtros específicos.
+      - Se añadieron botones de selección de periodo rápido ("Mes pasado", "Este mes", "Hoy") con persistencia reactiva.
+      - Se integró un selector dropdown reactivo en cada fila para cambiar el estado del follow up y sincronizarlo al backend.
+      - Se agregó la nueva pestaña "Clientes Nuevos" en el dashboard de closing.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `a4c31a66f9b4_add_follow_up_status_to_client.py` en la base de datos local SQLite.
+
+- **2 de Julio de 2026**:
+  - **Reestructuración de Seguimientos y Referidos en el Reporte de Closers**:
+    - **Modelo de Base de Datos ([closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY])**:
+      - Se agregaron los campos `follow_ups_cold_scheduled`, `follow_ups_hot_scheduled`, `referrals_sourced`, `referrals_contacted` y `referrals_scheduled` a la tabla `closer_daily_reports` para registrar agendas concretadas de seguimientos SRD y métricas de referidos.
+    - **API del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
+      - Se actualizaron los endpoints `POST /public/closer-report`, `PUT /public/closer-reports/<id>` y `GET /public/closer-reports` para persistir, actualizar y serializar las nuevas métricas.
+      - Se modificó la función `_prepare_report_data` para pasar los nuevos campos estructurados al reporte de Discord.
+    - **Servicio del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se incluyeron los nuevos campos en la sumatoria/promedio de estadísticas agregadas en `get_comprehensive_stats`.
+    - **Plantilla de Discord ([closer_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/closer_report.html) [MODIFY])**:
+      - Se renombraron las secciones a "SRD Hot" y "SRD Cold".
+      - Se incorporó la métrica de "Agendados" en el reporte diario visual.
+      - Se agregó la nueva tarjeta de "Referidos" con Conseguidos, Contactados y Agendas.
+    - **Frontend React ([PublicCloserReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserReportPage.jsx) [MODIFY], [CloserReportsTable.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserReportsTable.jsx) [MODIFY], [CloserPerformanceTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserPerformanceTab.jsx) [MODIFY])**:
+      - Se incorporaron inputs para registrar agendas en SRD Hot, SRD Cold y un nuevo bloque dedicado para ingresar Referidos en el formulario.
+      - Se agregaron las columnas y mapeos correspondientes a la tabla general de reportes.
+      - Se adaptó el dashboard de rendimiento para mostrar las nuevas agendas de SRD y consolidar la tarjeta de Referidos en una grilla de tres columnas.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `7648b2670011_add_srd_hot_cold_scheduled_and_referrals_metrics.py` en la base de datos SQLite.
+
+- **1 de Julio de 2026**:
+  - **Eliminación Integral de la Funcionalidad de Notificaciones y Bandeja de Leads**:
+    - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
+      - Se removieron por completo todos los endpoints de notificaciones de administración, closer, setter y triage del sistema Flask.
+    - **Interfaz Frontend ([MainLayout.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/MainLayout.jsx) [MODIFY], [Dock.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/Dock.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY], [SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [LeadsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/leads/LeadsPage.jsx) [MODIFY])**:
+      - Se eliminaron el Drawer Lateral, la consulta periódica en segundo plano (polling) de notificaciones y la lógica asociada en `MainLayout.jsx`.
+      - Se quitó el botón/campana e insignia de notificaciones del Dock inferior en `Dock.jsx`.
+      - Se eliminaron los widgets de `NotificationWidget` y el fetching en los dashboards de Closers y Setters, optimizando sus grillas para una visualización limpia.
+      - Se quitó la pestaña y tarjetas correspondientes a "Avisos" (notificaciones) en la vista de base de datos de Leads del closer.
+  - **Eliminación de Notificaciones de Administración**:
+    - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY])**:
+      - Se removieron los endpoints de administración `/admin/notifications`, `/admin/notifications/<id>/read` y `/admin/notifications/read-all`.
+    - **Interfaz Frontend ([AdminDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/dashboard/AdminDashboard.jsx) [MODIFY], [MainLayout.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/MainLayout.jsx) [MODIFY])**:
+      - Se eliminaron el estado `notifications`, las funciones de obtención (`fetchNotifications`) y marcado (`handleMarkAsRead`), y el import/renderizado del widget de notificaciones (`NotificationWidget`) en `AdminDashboard.jsx`.
+      - Se removió al rol `'admin'` del polling y el drawer de notificaciones globales en `MainLayout.jsx` para desactivar por completo las consultas recurrentes a `/admin/notifications`.
+      - Se adaptó la grilla del dashboard para que el panel de atajos de teclado ocupe todo el ancho de forma limpia y equilibrada.
+  - **Exportación de Ventas en Formato CSV en el Registro de Ventas**:
+    - **Interfaz Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se implementó la función `handleExportPotentialClientsCSV` y se agregó el botón "Exportar Clientes Potenciales" para descargar los leads agendados que no tienen ninguna venta registrada (`sales_count === 0`).
+      - El reporte incluye las columnas: Fecha de cita, Nombre del lead, Telefono, Email e Instagram.
+  - **Exportación de "Clientes Nuevos" en Formato CSV**:
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se implementó la función `handleExportNewClientsCSV` que descarga el listado consolidado de Clientes Nuevos en formato CSV.
+      - Se utiliza el algoritmo de Union-Find en el cliente para agrupar ventas e identificar a aquellos clientes cuyo primer pago califique como ingreso (Seña, Completo o Parcial).
+      - Muestra el detalle financiero consolidado basado en montos brutos (Seña, Completo, Parcial, Cuotas, Renovaciones, Upsells, Total pagado, Total a pagar y Deuda).
+      - Se agregó el botón de acción "Exportar Clientes Nuevos" estilizado en color teal en el panel de herramientas superior.
+  - **Corrección en Modificación de Fuente (Setter)**:
+    - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se corrigió el bug por el cual las actualizaciones individuales o masivas de la fuente (setter) se revertían al recargar.
+      - En lugar de buscar la agenda más reciente por Instagram (lo cual fallaba por arrobas inconsistentes, agendas sin Instagram o atribución por correo), se integró `AttributionService.get_sales_attribution` para identificar con exactitud la agenda atribuida a la venta en caliente y actualizar su nombre.
+  - **Modificación Masiva de Ventas**:
+    - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se implementó el endpoint `POST /public/financial-sales/bulk-update` para actualizar múltiples ventas en lote. Soporta cambios en programa, tipo de pago simple, método de pago, estado, closer y setter, propagando las modificaciones a Google Sheets en tiempo real y persistiendo los cambios en la base de datos local de forma atómica.
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se implementó la selección masiva de filas en la tabla mediante checkboxes (cabecera y cuerpo).
+      - Se agregó la barra flotante de acciones masivas visible al seleccionar al menos una venta.
+      - Se integró el modal `BulkEditModal` que permite seleccionar qué campo modificar y su nuevo valor (con opciones predeterminadas e inputs personalizados).
+      - Se implementó la función `handleBulkUpdate` que realiza la llamada al endpoint de backend y refresca la tabla al finalizar.
+  - **Exportación de Pagos en Formato CSV en el Registro de Ventas**:
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se redefinió la función [handleExportCSV](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) para agrupar los pagos por cliente utilizando el algoritmo Union-Find (en base a Instagram y correo electrónico).
+      - Muestra el consolidado de pagos brutos por cliente en el periodo actual, manteniendo las mismas columnas financieras que el reporte de Clientes Nuevos (Seña, Completo, Parcial, Cuotas, Renovaciones, Upsells, Programa final, Total pagado, Total a pagar y Deuda), pero incluyendo a todos los clientes que pagaron, sin filtros restrictivos de ingreso.
+      - Se mantiene el botón de acción "Exportar CSV" en el panel de herramientas superior.
+
+- **20 de Julio de 2026**:
+  - **Rediseño y Modulación del Espacio de Trabajo de Confirmadores (Triaje - `/triage/deck?step=confirmar`)**:
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [NEW], [TriageLeadCard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageLeadCard.jsx) [NEW], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [NEW], [TriageDetailModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageDetailModal.jsx) [NEW])**:
+      - Se rediseñó por completo el espacio de confirmación inspirándose en el panel de referencia.
+      - Se incorporó la navegación por pestañas de nivel superior ("Pendientes" vs "Completadas").
+      - Se crearon 4 tarjetas KPI dinámicas ("Citas por confirmar", "Mensajes por contestar", "Seguimientos por hacer", "Reagendar / Actualizar") con filtrado interactivo.
+      - Se estructuraron los subgrupos visuales de tareas pendientes con insignias de hora, tags de taller/programa, códigos de fuente, setter asignado, tiempo límite de atención y botones de acción rápida directos (`Confirmar`, `Responder`, `Hacer seguimiento`).
+      - Se implementó el panel lateral derecho con gráfico de tipo Donut SVG para el resumen de pendientes y la botonera de acciones rápidas masivas.
+      - Se moduló el código en componentes atómicos respetando el límite estricto de 500 líneas por archivo.
+  - **Corrección del Error HTTP 500 e Integración de Chat y Encuestas en Lead Roadmap**:
+    - **API Backend ([lead_roadmap.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/lead_roadmap.py) [MODIFY])**:
+      - Se solucionó el bug HTTP 500 en `GET /api/public/lead-roadmap` causado por la consulta del atributo inexistente `keyword` sobre objetos `FinancialAgenda`. Se utilizó acceso seguro `getattr`.
+      - Se implementó un bloque de manejo de errores `try-except` robusto para evitar caídas de servidor y garantizar respuestas JSON estructuradas ante cualquier excepción inesperada.
+      - Se expuso la lista de respuestas de encuestas (`survey_answers`) en la respuesta JSON del roadmap.
+    - **Interfaz Frontend ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY], [LeadRoadmapHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapHeader.jsx) [NEW], [LeadRoadmapFunnel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFunnel.jsx) [NEW], [LeadRoadmapFormInfo.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFormInfo.jsx) [NEW])**:
+      - Se removió por completo el bloque y pestaña de "Calificación en Caliente" (dolores, objeciones y observaciones manuales).
+      - Se posicionó el Chat de Comunicación en vivo (`CommentsSection`) como panel principal al lado de las Respuestas del Formulario / Encuesta.
+      - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
+  - **Mejora del Sistema de Seguimientos y Simplificación en Espacio de Confirmación (Triaje - `/triage/deck?step=confirmar`)**:
+    - **Modelos y API Backend ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se agregaron las columnas `fecha_seguimiento` y `seguimiento_realizado` al modelo `FinancialAgenda` y su serialización en `to_dict()`.
+      - Se creó y ejecutó la migración correspondiente con Alembic (`686f8945d822_add_follow_up_fields_to_financial_agenda.py`).
+      - Se unificó la ruta `GET /api/closer/leads/<id>/comments` para consultar e incluir tanto los comentarios recientes (`ClientComment`), los comentarios genéricos (`Comment`), como las observaciones, dolores y objeciones históricas registradas previamente en la ficha del lead (`Client`), usando `getattr` y un formateador seguro de fechas (`_format_date`) para prevenir excepciones HTTP 500.
+
+      - Se habilitó la actualización de ambos campos en la ruta `PUT /public/financial-agendas/<agenda_id>`.
+      - Se corrigió la consulta en `GET /public/financial-agendas` para incluir en los resultados del rango de fechas tanto la fecha de la cita (`date`) como la fecha de seguimiento programada (`fecha_seguimiento`), importando adecuadamente `and_` de `sqlalchemy` para evitar excepciones de servidor (`NameError`).
+
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageDetailModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageDetailModal.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
+      - Se removió por completo el textarea de "Observación / Nota interna de Triaje" en `TriageDetailModal.jsx` para concentrar toda la comunicación y toma de notas exclusivamente en el Chat de Comunicación (`CommentsSection`).
+      - Se estableció un criterio estricto para la sección **SEGUIMIENTOS POR HACER**: sólo se muestran agendas que poseen una `fecha_seguimiento` explícitamente configurada que coincida con el día seleccionado y cuyo `seguimiento_realizado` sea falso.
+      - Al hacer clic en `Marcar Realizado`, el sistema marca el seguimiento actual como completado e inmediatamente despliega el modal `TriageFollowUpModal` consultando al Call Confirmer si desea agendar un **próximo seguimiento futuro** para el mismo prospecto.
+      - Se elevó la capa visual (`z-index`) de `TriageFollowUpModal` a `z-[200]` para garantizar que se superponga por encima de la Ficha Detallada del Lead (`TriageDetailModal` a `z-[100]`).
+      - Se eliminó por completo la sección y tarjeta KPI de "Mensajes por contestar", dejando únicamente las 3 categorías activas: "Citas por confirmar", "Seguimientos por hacer" y "Reagendar / Actualizar".
+
+    - **Funcionalidad "Día No Laborable" en Reportes Diarios ([report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/report.py) [MODIFY], [closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY], [triage_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/triage_report.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY], [triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py) [MODIFY])**:
+      - Se añadió el campo `is_non_working_day` a los modelos de base de datos `SetterDailyStats`, `CloserDailyReport`, `TriageDailyReport` y `TriageTrackerReport`.
+      - Se ejecutó la migración de Alembic `c9ec326adaa9_add_is_non_working_day_to_report_models.py`.
+      - Se actualizaron los endpoints de reporte diario de Setting (`POST /api/setter/daily-report`), Closing (`POST /api/closer/daily-report` y `POST /api/public/closer/report`) y Call Confirmer (`POST /api/public/triage-report`) para recibir y guardar la marca de día no laborable.
+      - Se agregó el botón **"Día no laborable"** a la interfaz de reporte diario para Setting (`SetterReportModal.jsx` y `SetterDashboard.jsx`), Call Confirmer (`PublicTriageReportPage.jsx`) y Closing (`CloserDashboard.jsx` y `PublicCloserReportPage.jsx` en `/closer/report`), permitiendo guardar el reporte completado sin retrasos al presionar este botón.
+
+    - **Sistema de Seguimientos y Seguimiento de Cobro en Mazo de Closers ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY], [closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se agregaron los campos `fecha_seguimiento` y `seguimiento_realizado` al modelo `Appointment` en `app/models/booking.py`.
+      - Se ejecutó la migración oficial de Alembic `fbec71fd9b9f_add_follow_up_fields_to_appointment.py`.
+      - Se adaptaron los endpoints `GET /api/closer/deck` y `POST /api/closer/deck/<id>` para serializar, filtrar y guardar fechas de seguimiento.
+      - Se integró la navegación de 3 categorías en el mazo de Closer (`/closer/deck?step=agendas`): **Citas del Día**, **Seguimientos por Hacer** y **Reagendar / Actualizar**.
+      - Se conectó el modal interactivo de seguimiento (`TriageFollowUpModal`) para solicitar una `fecha_seguimiento` al actualizar cualquier estado de la cita (No Show, Cancelado, Reagendado) o al declarar una venta (**Seguimiento de Cobro**).
+      - En la vista **Seguimientos por Hacer**, se agregaron los badges de fecha de seguimiento y el botón **"✓ Marcar Realizado"**, el cual actualiza el estado y consulta al closer si desea agendar un próximo seguimiento futuro.
+      - Se añadió el botón **"🚫 Lead Perdido / Descartado"** en `TriageFollowUpModal` y el manejo en `CloserService.process_agenda` para marcar prospectos que no cerraron como `Lead Perdido`, permitiendo archivarlos limpiamente para ser utilizados en futuras campañas de recuperación de leads.
+      - Se agregó la columna `fecha_seguimiento_cobro` al modelo `Appointment` (migración Alembic `027b9cb4171d_add_fecha_seguimiento_cobro_to_appointment.py`) para permitir configurar independientemente un **Seguimiento de Cobro** (cuotas/segundo pago) y un **Seguimiento Normal / Onboarding** al declarar una venta.
+      - Si la llamada asistió pero NO hubo venta, el sistema despliega el modal para programar un **Seguimiento de Cierre de Venta** o descartar como Lead Perdido.
+      - Se reemplazaron todos los `window.prompt` y `window.confirm` por un modal nativo en React (`ReasonModal`), capturando el motivo de cancelación, reagendamiento o calificación de No Lead con una interfaz uniforme y sin alertas emergentes del navegador.
+      - Se agregó un selector de **Fecha del Próximo Cobro** (`fecha_cobro`) en el **Paso 2** del formulario de declaración de venta. Al guardar, dicha fecha se auto-persiste como `fecha_seguimiento_cobro` en la cita de la base de datos, y luego el sistema muestra el `TriageFollowUpModal` en modo `isSaleFollowUp: true` para que el closer pueda ajustar o complementar las fechas de seguimiento (cobro y onboarding) antes de cerrar el flujo.
+
+- **22 de Julio de 2026**:
+  - **Rediseño y Modulación de la Vista Ejecutiva de Workshops para CEO (`/admin/ventas?tab=workshop`)**:
+    - **Interfaz Frontend ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY], [WorkshopKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopKpiCards.jsx) [NEW], [WorkshopCardsView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopCardsView.jsx) [NEW], [WorkshopTableView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopTableView.jsx) [NEW], [WorkshopFunnelView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopFunnelView.jsx) [NEW], [WorkshopFormModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopFormModal.jsx) [NEW])**:
+      - Se refactorizó la vista de workshops de un monolito de 1,116 líneas dividiéndolo en 5 componentes atómicos para cumplir estrictamente con el límite de 500 líneas por archivo.
+      - Se implementó un panel ejecutivo de KPIs para CEO que incluye: Inversión Ads, Cash Collected, Beneficio Neto (Profit), Margen de Ganancia %, ROAS Global con insignia de estado de salud (Sobresaliente, Saludable, En Riesgo), CPL (Costo por Lead), CPA (Costo por Agenda) y CAC (Costo de Adquisición de Cliente).
+      - Se agregaron tarjetas de talleres con desglose financiero detallado y selector de vistas (Tarjetas vs Tabla comparativa ejecutiva).
+      - Se perfeccionó el visor gráfico de embudo de conversión (Funnel) mostrando retención paso a paso y resincronización directa en tiempo real con la base de datos de NeurOPS.
+      - Se integró el modal en 3 pasos (Tráfico, Asistencia/Retención y Validación NeurOPS) para la creación y edición de talleres con cálculo de ratios en vivo.
+  - **Rediseño del Espacio de Trabajo de Setter con Pestañas y Navegación Directa a Instagram (`/setter/deck?step=cualificacion`)**:
+    - **API Backend ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se importaron `CommentNotification` y `Comment` al inicio de `get_setter_deck()` solucionando la excepción HTTP 500 (`NameError`) al consultar el endpoint en la pestaña de agendas.
+      - Se enriqueció la serialización de agendas para el mazo con campos de cliente, conteo de comentarios y notificaciones sin leer.
     - **Interfaz Frontend y Modulación ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY], [SetterHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterHeader.jsx) [NEW], [SetterLeadRow.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterLeadRow.jsx) [NEW], [SetterCualificacionFilters.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterCualificacionFilters.jsx) [NEW], [UnattributedAgendasSection.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/UnattributedAgendasSection.jsx) [MODIFY], [SetterBulkActionBar.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterBulkActionBar.jsx) [NEW])**:
       - Se refactorizó la vista principal del mazo de setters dividiéndola en 5 submódulos atómicos para cumplir con el estándar de máximo 500 líneas por archivo.
       - Se implementó la barra superior de pestañas dividiendo la navegación operativa en: **Leads cualificados** (`step=cualificacion`) y **Agendas** (`step=agendas`), imitando la estructura por pestañas del mazo de closers.
@@ -717,4 +912,4 @@
       - Se corrigió la función `fetchLeads` para enviar correctamente los parámetros de fecha (`date_range` y `date`) al backend cuando `activeStep === 'agendas'`.
       - Se solucionó un error de referencia (`ReferenceError: ExternalLink is not defined`) en `UnattributedAgendasSection.jsx` al importar el componente `ExternalLink` que faltaba desde `lucide-react`. Esto resuelve por completo el cuelgue al cambiar filtros y renderizar agendas desatribuidas.
       - Se removió el filtro de `setter_processed == False` y la limitación de estados de `result` en la pestaña de **Agendas** del backend (`setter.py`), para mostrar todas las citas del setter asignado en el periodo (incluidas las confirmadas o procesadas), igual al funcionamiento del mazo de closers.
-
+      - Se corrigió un error de atributos (`AttributeError: type object 'ManychatLead' has no attribute 'email'`) que causaba un HTTP 500 en producción. Se reestructuró la búsqueda de respaldo de Instagram para buscar por nombre en `ManychatLead` y por correo en la tabla `Lead` (que sí contiene las columnas `email` e `instagram_username`), previniendo caídas en Railway.
