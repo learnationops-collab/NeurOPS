@@ -933,6 +933,8 @@ def get_setter_deck():
                 if l_obj and l_obj.instagram_username:
                     client_ig = l_obj.instagram_username
 
+        ad_obj = Ad.query.filter_by(keyword=a.keyword).first() if a.keyword else None
+
         res_list.append({
             "id": a.id,
             "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
@@ -945,7 +947,7 @@ def get_setter_deck():
             "result": a.result or "Agendado",
             "ig_chat_link": a.ig_chat_link or "",
             "keyword": a.keyword or "",
-            "ad_name": a.keyword or "Agenda Directa",
+            "ad_name": ad_obj.name if ad_obj else (a.keyword or "Desatribuido"),
             "setter_notes": a.setter_notes or "",
             "client_id": a.client_id,
             "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
