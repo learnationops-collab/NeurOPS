@@ -711,5 +711,5 @@
       - Se implementó la barra superior de pestañas dividiendo la navegación operativa en: **Leads cualificados** (`step=cualificacion`) y **Agendas** (`step=agendas`), imitando la estructura por pestañas del mazo de closers.
       - Se removió la sección de **Agendas Desatribuidas** de la pestaña de **Leads Cualificados**, trasladándola exclusivamente a la pestaña de **Agendas** en la parte superior.
       - Se integró el selector de fechas (Hoy por defecto, Ayer, Esta Semana, Este Mes y Personalizado) en la pestaña de **Agendas** para filtrar simultáneamente agendas atribuidas y desatribuidas por el rango de fechas seleccionado.
-      - Se implementó la resolución inteligente de enlaces de Instagram (`getIgInfo`) que extrae handles de `ig_chat_link` y `ManychatLead`, permitiendo abrir el perfil o buscar al cliente directamente en Instagram en el 100% de las tarjetas de agenda.
+      - Se eliminó el panel lateral derecho de "Ficha del Prospecto" para otorgarle ancho completo (12 columnas) a la vista de agendas, maximizando el espacio horizontal para la visualización de datos de prospectos y botones de navegación rápida.
 
