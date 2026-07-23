@@ -712,4 +712,5 @@
       - Se removió la sección de **Agendas Desatribuidas** de la pestaña de **Leads Cualificados**, trasladándola exclusivamente a la pestaña de **Agendas** en la parte superior.
       - Se integró el selector de fechas (Hoy por defecto, Ayer, Esta Semana, Este Mes y Personalizado) en la pestaña de **Agendas** para filtrar simultáneamente agendas atribuidas y desatribuidas por el rango de fechas seleccionado.
       - Se eliminó el panel lateral derecho de "Ficha del Prospecto" para otorgarle ancho completo (12 columnas) a la vista de agendas, maximizando el espacio horizontal para la visualización de datos de prospectos y botones de navegación rápida.
+      - Se agregó el botón directo `Perfil IG` (y fallback `Buscar IG`) y enlace dinámico de Instagram en cada tarjeta de **Agendas Desatribuidas**, permitiendo al setter ingresar al perfil del prospecto directamente desde la sección de agendas sin atribuir.
 
