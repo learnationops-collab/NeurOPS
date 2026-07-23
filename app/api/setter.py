@@ -933,7 +933,34 @@ def get_setter_deck():
                 if l_obj and l_obj.instagram_username:
                     client_ig = l_obj.instagram_username
 
-        ad_obj = Ad.query.filter_by(keyword=a.keyword).first() if a.keyword else None
+        ad_obj = None
+        if a.keyword:
+            ad_obj = Ad.query.filter_by(keyword=a.keyword).first()
+
+        if not ad_obj and client_ig:
+            ig_clean_normal = client_ig.strip().lstrip('@').lower()
+            m_lead = ManychatLead.query.filter(
+                func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_clean_normal
+            ).first()
+            if m_lead:
+                la = LeadAnswer.query.filter(
+                    LeadAnswer.lead_id == m_lead.id,
+                    LeadAnswer.ad_id != None
+                ).order_by(LeadAnswer.created_at.desc()).first()
+                if la:
+                    ad_obj = Ad.query.get(la.ad_id)
+
+        if not ad_obj and a.client and a.client.full_name:
+            m_lead = ManychatLead.query.filter(
+                func.lower(ManychatLead.name) == a.client.full_name.strip().lower()
+            ).first()
+            if m_lead:
+                la = LeadAnswer.query.filter(
+                    LeadAnswer.lead_id == m_lead.id,
+                    LeadAnswer.ad_id != None
+                ).order_by(LeadAnswer.created_at.desc()).first()
+                if la:
+                    ad_obj = Ad.query.get(la.ad_id)
 
         res_list.append({
             "id": a.id,
