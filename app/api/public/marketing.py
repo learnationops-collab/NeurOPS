@@ -1007,6 +1007,23 @@ def force_manual_attribution_agenda():
         )
         db.session.add(answer)
     
+    # Sincronizar hacia NeurOPS Client y Appointment para asociar el lead a su agenda
+    from app.models import Client, Appointment
+    client_match = Client.query.filter(
+        db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_normalizado
+    ).first()
+    
+    if not client_match and agenda.lead:
+        client_match = Client.query.filter(
+            db.func.lower(Client.full_name) == agenda.lead.strip().lower()
+        ).first()
+        
+    if client_match:
+        client_match.instagram = f"@{ig_normalizado}"
+        appt_match = Appointment.query.filter_by(client_id=client_match.id).order_by(Appointment.start_time.desc()).first()
+        if appt_match:
+            appt_match.keyword = ad_exists.keyword
+
     try:
         db.session.commit()
         
