@@ -106,35 +106,7 @@ const UnattributedAgendasSection = ({
                                     />
                                 </div>
 
-                                {/* Botón Abrir Instagram del Lead */}
-                                {(() => {
-                                    const rawIgVal = agendaIgMap[agenda.id] ?? agenda.instagram ?? '';
-                                    const igVal = (rawIgVal && rawIgVal !== 'N/A' ? String(rawIgVal) : '').trim().replace('@', '');
-                                    const hasIg = Boolean(igVal && igVal !== 'N/A');
-                                    const targetUrl = hasIg
-                                        ? `https://instagram.com/${igVal}`
-                                        : (agenda.cliente && agenda.cliente !== 'N/A' ? `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(agenda.cliente.trim())}` : null);
 
-                                    if (!targetUrl) return null;
-
-                                    return (
-                                        <a
-                                            href={targetUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`h-9 px-3.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer shrink-0 w-full sm:w-auto ${
-                                                hasIg 
-                                                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-455/90 shadow-purple-600/20' 
-                                                    : 'bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-purple-400'
-                                            }`}
-                                            title={hasIg ? `Abrir perfil de @${igVal}` : `Buscar ${agenda.cliente || ''} en Instagram`}
-                                        >
-                                            <Instagram size={13} />
-                                            <span>{hasIg ? 'Perfil IG' : 'Buscar IG'}</span>
-                                            <ExternalLink size={11} />
-                                        </a>
-                                    );
-                                })()}
 
                                 {/* Selector de anuncio (Meta Ad) */}
                                 <select

@@ -216,43 +216,19 @@ const SetterLeadRow = ({
                     </div>
                 )}
 
-                {/* Paso Agendas: Botón directo para ingresar a Instagram */}
-                {activeStep === 'agendas' && (
+                {/* Paso Agendas: Solo botón de WhatsApp directo si tiene teléfono */}
+                {activeStep === 'agendas' && lead.phone && (
                     <div className="flex items-center gap-2 w-full md:w-auto">
-                        {igInfo.url ? (
-                            <a
-                                href={igInfo.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className={`h-9 px-3.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer flex-1 md:flex-initial ${
-                                    igInfo.isSearch 
-                                        ? 'bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-purple-400' 
-                                        : 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 shadow-purple-600/20'
-                                }`}
-                                title={igInfo.isSearch ? "Buscar prospecto en Instagram" : "Entrar directamente al perfil de Instagram"}
-                            >
-                                <Instagram size={13} />
-                                <span>{igInfo.isSearch ? 'Buscar IG' : 'Perfil IG'}</span>
-                                <ExternalLink size={11} />
-                            </a>
-                        ) : (
-                            <span className="text-[10px] text-slate-500 font-bold italic px-3 py-2 bg-slate-900 rounded-xl border border-slate-800">
-                                Sin IG
-                            </span>
-                        )}
-                        {lead.phone && (
-                            <a
-                                href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-9 w-9 bg-emerald-600/10 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-xl transition-all flex items-center justify-center cursor-pointer"
-                                title="Abrir WhatsApp"
-                            >
-                                <Phone size={13} />
-                            </a>
-                        )}
+                        <a
+                            href={`https://wa.me/${String(lead.phone || '').replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-9 w-9 bg-emerald-600/10 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-xl transition-all flex items-center justify-center cursor-pointer"
+                            title="Abrir WhatsApp"
+                        >
+                            <Phone size={13} />
+                        </a>
                     </div>
                 )}
 
