@@ -885,10 +885,8 @@ def get_setter_deck():
             or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
         )
     elif step == 'agendas':
-        query = Appointment.query.filter(
-            or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
-            Appointment.setter_processed == False
-        )
+        # Para agendas, mostrar todas las citas del setter en el periodo seleccionado (incluso procesadas o confirmadas)
+        query = Appointment.query
     else:
         query = Appointment.query.filter(
             or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
