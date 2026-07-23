@@ -657,59 +657,46 @@ def get_available_links():
 
 
 
-
-
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    from app.models import Appointment, CommentNotification, Comment
+    from app.models import Appointment, CommentNotification, Comment, ManychatLead, LeadAnswer, Ad, Event, Client
     from datetime import date, timedelta, datetime
+    from sqlalchemy import or_, func
     
-    date_range = request.args.get('date_range', 'all')
+    date_range = request.args.get('date_range', 'today' if request.args.get('step') == 'agendas' else 'all')
+    target_date_str = request.args.get('date')
     step = request.args.get('step')
-    start_date = None
     today = date.today()
+
+    start_dt = None
+    end_dt = None
+
     if date_range == 'today':
-        start_date = datetime.combine(today, datetime.min.time())
+        start_dt = datetime.combine(today, datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    elif date_range == 'yesterday':
+        yesterday = today - timedelta(days=1)
+        start_dt = datetime.combine(yesterday, datetime.min.time())
+        end_dt = datetime.combine(yesterday, datetime.max.time())
     elif date_range == 'week':
-        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
     elif date_range == 'month':
-        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
-    from sqlalchemy import or_
+        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    elif date_range == 'custom' and target_date_str:
+        try:
+            t_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            start_dt = datetime.combine(t_date, datetime.min.time())
+            end_dt = datetime.combine(t_date, datetime.max.time())
+        except ValueError:
+            pass
     
     # Filtrar según el paso del flujo de trabajo
     if step == 'cualificacion':
-        from app.models import LeadAnswer, ManychatLead, Ad, Event, Client, Appointment, Comment
-        from sqlalchemy import func
-        
         show_disqualified = request.args.get('show_disqualified') == 'true'
-        target_date_str = request.args.get('date')
         
-        start_dt = None
-        end_dt = None
-        
-        if date_range == 'today':
-            start_dt = datetime.combine(today, datetime.min.time())
-            end_dt = datetime.combine(today, datetime.max.time())
-        elif date_range == 'yesterday':
-            yesterday = today - timedelta(days=1)
-            start_dt = datetime.combine(yesterday, datetime.min.time())
-            end_dt = datetime.combine(yesterday, datetime.max.time())
-        elif date_range == 'week':
-            start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
-            end_dt = datetime.combine(today, datetime.max.time())
-        elif date_range == 'month':
-            start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
-            end_dt = datetime.combine(today, datetime.max.time())
-        elif date_range == 'custom' and target_date_str:
-            try:
-                target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-                start_dt = datetime.combine(target_date, datetime.min.time())
-                end_dt = datetime.combine(target_date, datetime.max.time())
-            except ValueError:
-                pass
-                
-        from sqlalchemy import or_
         query = LeadAnswer.query
         
         if not show_disqualified:
@@ -742,10 +729,8 @@ def get_setter_deck():
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
         
-        # No local import needed as they are imported globally
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
         
-        # Inyectar leads con comentarios sin leer que no estan en la consulta normal
         present_igs = set()
         for la in lead_answers:
             if la.lead and la.lead.ig:
@@ -896,7 +881,6 @@ def get_setter_deck():
 
     # Filtrar según el paso del flujo de trabajo (citas)
     if step == 'entrantes':
-        # Leads entrantes sin contactar (result es vacío, nulo o Pendiente)
         query = Appointment.query.filter(
             or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
         )
@@ -906,40 +890,65 @@ def get_setter_deck():
             Appointment.setter_processed == False
         )
     else:
-        # Consulta por defecto para mantener compatibilidad
         query = Appointment.query.filter(
             or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
             Appointment.setter_processed == False
         )
     
-    if start_date:
-        query = query.filter(Appointment.start_time >= start_date)
+    if start_dt and end_dt:
+        query = query.filter(
+            or_(
+                Appointment.start_time.between(start_dt, end_dt),
+                Appointment.created_at.between(start_dt, end_dt)
+            )
+        )
         
     if current_user.role != 'admin':
         query = query.filter_by(setter_id=current_user.id)
         
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+    res_list = []
+    for a in appointments:
+        client_ig = a.client.instagram if (a.client and a.client.instagram) else ""
+        if not client_ig and a.ig_chat_link:
+            clean_chat = a.ig_chat_link.strip()
+            if "instagram.com/" in clean_chat:
+                parts = clean_chat.split("instagram.com/")[1].split("/")[0].split("?")[0]
+                if parts and parts != "direct":
+                    client_ig = parts
+            elif clean_chat.startswith("@"):
+                client_ig = clean_chat
 
-    return jsonify([{
-        "id": a.id,
-        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
-        "email": a.client.email if a.client else "",
-        "phone": a.client.phone if a.client else "",
-        "instagram": a.client.instagram if a.client else "",
-        "start_time": a.start_time.isoformat() if a.start_time else None,
-        "created_at": a.created_at.isoformat() if a.created_at else None,
-        "origin": a.origin or "Agendamiento",
-        "result": a.result or "Agendado",
-        "ig_chat_link": a.ig_chat_link or "",
-        "keyword": a.keyword or "",
-        "ad_name": a.keyword or "Agenda Directa",
-        "setter_notes": a.setter_notes or "",
-        "client_id": a.client_id,
-        "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
-        "unread_comment": a.client_id in unread_client_ids if (a.client_id and unread_client_ids) else False
-    } for a in appointments]), 200
+        if not client_ig and a.client:
+            m_lead = None
+            if a.client.email:
+                m_lead = ManychatLead.query.filter(func.lower(ManychatLead.email) == a.client.email.lower().strip()).first()
+            if not m_lead and a.client.phone:
+                m_lead = ManychatLead.query.filter_by(phone=a.client.phone).first()
+            if m_lead and m_lead.ig:
+                client_ig = m_lead.ig
+
+        res_list.append({
+            "id": a.id,
+            "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
+            "email": a.client.email if a.client else "",
+            "phone": a.client.phone if a.client else "",
+            "instagram": client_ig,
+            "start_time": a.start_time.isoformat() if a.start_time else None,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "origin": a.origin or "Agendamiento",
+            "result": a.result or "Agendado",
+            "ig_chat_link": a.ig_chat_link or "",
+            "keyword": a.keyword or "",
+            "ad_name": a.keyword or "Agenda Directa",
+            "setter_notes": a.setter_notes or "",
+            "client_id": a.client_id,
+            "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
+            "unread_comment": a.client_id in unread_client_ids if (a.client_id and unread_client_ids) else False
+        })
+
+    return jsonify(res_list), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
