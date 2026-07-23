@@ -62,11 +62,12 @@ const SetterWorkflowPage = () => {
         setLoading(true);
         try {
             let url = `/setter/deck?step=${activeStep}`;
+            url += `&date_range=${dateRange}`;
             if (activeStep === 'cualificacion') {
-                url += `&date_range=${dateRange}&show_disqualified=${showDisqualified}`;
-                if (dateRange === 'custom' && customDate) {
-                    url += `&date=${customDate}`;
-                }
+                url += `&show_disqualified=${showDisqualified}`;
+            }
+            if (dateRange === 'custom' && customDate) {
+                url += `&date=${customDate}`;
             }
             const res = await api.get(url);
             const data = Array.isArray(res.data) ? res.data : [];

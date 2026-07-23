@@ -71,13 +71,13 @@ const UnattributedAgendasSection = ({
                                         IG: {' '}
                                         {agenda.instagram && agenda.instagram !== 'N/A' ? (
                                             <a 
-                                                href={`https://instagram.com/${agenda.instagram.replace('@', '')}`}
+                                                href={`https://instagram.com/ ${(agenda.instagram || '').replace('@', '').trim()}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-amber-400 hover:text-amber-300 hover:underline font-bold inline-flex items-center gap-1"
                                                 title="Abrir perfil de Instagram"
                                             >
-                                                @{agenda.instagram.replace('@', '')}
+                                                @{(agenda.instagram || '').replace('@', '').trim()}
                                                 <ExternalLink size={9} />
                                             </a>
                                         ) : (
@@ -99,7 +99,7 @@ const UnattributedAgendasSection = ({
                                     <input
                                         type="text"
                                         placeholder="@instagram_lead"
-                                        value={agendaIgMap[agenda.id] ?? (agenda.instagram !== 'N/A' ? agenda.instagram : '')}
+                                        value={agendaIgMap[agenda.id] ?? (agenda.instagram && agenda.instagram !== 'N/A' ? agenda.instagram : '')}
                                         onChange={(e) => setAgendaIgMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
                                         className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50"
                                         title="Escribe o verifica el Instagram del Lead para vincular con ManyChat"
@@ -108,7 +108,8 @@ const UnattributedAgendasSection = ({
 
                                 {/* Botón Abrir Instagram del Lead */}
                                 {(() => {
-                                    const igVal = (agendaIgMap[agenda.id] ?? (agenda.instagram !== 'N/A' ? agenda.instagram : '')).trim().replace('@', '');
+                                    const rawIgVal = agendaIgMap[agenda.id] ?? agenda.instagram ?? '';
+                                    const igVal = (rawIgVal && rawIgVal !== 'N/A' ? String(rawIgVal) : '').trim().replace('@', '');
                                     const hasIg = Boolean(igVal && igVal !== 'N/A');
                                     const targetUrl = hasIg
                                         ? `https://instagram.com/${igVal}`
@@ -123,10 +124,10 @@ const UnattributedAgendasSection = ({
                                             rel="noopener noreferrer"
                                             className={`h-9 px-3.5 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer shrink-0 w-full sm:w-auto ${
                                                 hasIg 
-                                                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-400 shadow-purple-600/20' 
+                                                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 hover:from-purple-500 hover:to-rose-455/90 shadow-purple-600/20' 
                                                     : 'bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-purple-400'
                                             }`}
-                                            title={hasIg ? `Abrir perfil de @${igVal}` : `Buscar ${agenda.cliente} en Instagram`}
+                                            title={hasIg ? `Abrir perfil de @${igVal}` : `Buscar ${agenda.cliente || ''} en Instagram`}
                                         >
                                             <Instagram size={13} />
                                             <span>{hasIg ? 'Perfil IG' : 'Buscar IG'}</span>
