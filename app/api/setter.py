@@ -919,13 +919,15 @@ def get_setter_deck():
                 client_ig = clean_chat
 
         if not client_ig and a.client:
-            m_lead = None
-            if a.client.email:
-                m_lead = ManychatLead.query.filter(func.lower(ManychatLead.email) == a.client.email.lower().strip()).first()
-            if not m_lead and a.client.phone:
-                m_lead = ManychatLead.query.filter_by(phone=a.client.phone).first()
-            if m_lead and m_lead.ig:
-                client_ig = m_lead.ig
+            if a.client.full_name:
+                m_lead = ManychatLead.query.filter(func.lower(ManychatLead.name) == a.client.full_name.lower().strip()).first()
+                if m_lead and m_lead.ig:
+                    client_ig = m_lead.ig
+            if not client_ig and a.client.email:
+                from app.models import Lead
+                l_obj = Lead.query.filter(func.lower(Lead.email) == a.client.email.lower().strip()).first()
+                if l_obj and l_obj.instagram_username:
+                    client_ig = l_obj.instagram_username
 
         res_list.append({
             "id": a.id,
