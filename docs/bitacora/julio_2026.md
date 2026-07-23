@@ -713,4 +713,6 @@
       - Se integró el selector de fechas (Hoy por defecto, Ayer, Esta Semana, Este Mes y Personalizado) en la pestaña de **Agendas** para filtrar simultáneamente agendas atribuidas y desatribuidas por el rango de fechas seleccionado.
       - Se eliminó el panel lateral derecho de "Ficha del Prospecto" para otorgarle ancho completo (12 columnas) a la vista de agendas, maximizando el espacio horizontal para la visualización de datos de prospectos y botones de navegación rápida.
       - Se agregó el botón directo `Perfil IG` (y fallback `Buscar IG`) y enlace dinámico de Instagram en cada tarjeta de **Agendas Desatribuidas**, permitiendo al setter ingresar al perfil del prospecto directamente desde la sección de agendas sin atribuir.
+      - Se solucionó un bug crítico en la pestaña de agendas al cambiar el rango de fechas, causante de una pantalla vacía (cuelgue de React) debido a valores `null` en el campo `instagram` de las agendas desatribuidas. Se implementaron salvaguardas robustas con fallbacks seguros (`agenda.instagram || ''`) para evitar llamadas a métodos sobre valores nulos.
+      - Se corrigió la función `fetchLeads` para enviar correctamente los parámetros de fecha (`date_range` y `date`) al backend cuando `activeStep === 'agendas'`.
 
