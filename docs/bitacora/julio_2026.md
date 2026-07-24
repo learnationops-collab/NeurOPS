@@ -926,3 +926,8 @@
   - **Corrección de Error de Atributo en Sincronización de Google Calendar**:
     - **Servicio de Google Calendar ([google_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/google_service.py) [MODIFY])**:
       - Se corrigió el error `AttributeError` al usar `appointment.appointment_type` (inexistente en el modelo `Appointment`), reemplazándolo por un acceso seguro `getattr(appointment, 'appointment_type', getattr(appointment, 'origin', 'Primera agenda'))` que actúa como fallback.
+  - **Corrección de Bugs y Consistencia en la Sección de Comentarios**:
+    - **Backend API Closer ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se añadió `db.session.flush()` en `add_lead_comment` después de añadir el objeto `ClientComment` a la sesión de la base de datos, asegurando que `comment.id` se autogenere y no se registre como `None` en la tabla intermedia de `CommentNotification`.
+    - **Componentes Frontend ([CommentsSection.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/CommentsSection.jsx) [MODIFY])**:
+      - Se eliminaron las barras diagonales al final (trailing slashes) redundantes de las URL en las peticiones HTTP GET de comentarios, alineándolas con las del backend y previniendo redirecciones de proxy (301/308) en producción que causan desajustes.
