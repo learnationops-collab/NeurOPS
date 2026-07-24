@@ -121,7 +121,7 @@ class GoogleService:
         event = {
           'summary': f'{client_name} y {closer_name}',
           'location': 'Google Meet / Zoom',
-          'description': f'Tipo: {appointment.appointment_type}',
+          'description': f"Tipo: {getattr(appointment, 'appointment_type', getattr(appointment, 'origin', 'Primera agenda'))}",
           'start': {
             'dateTime': start_time_iso,
             # 'timeZone': 'UTC',
