@@ -9,19 +9,25 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
     const [submitting, setSubmitting] = useState(false);
     const [operationalUsers, setOperationalUsers] = useState([]);
     const [selectedUserIds, setSelectedUserIds] = useState([]);
+    const [pollingEnabled, setPollingEnabled] = useState(true);
 
     useEffect(() => {
         if (clientId || (type && associatedId)) {
             fetchComments();
             
-            // Polling silencioso cada 10 segundos para actualizar en tiempo real
-            const interval = setInterval(() => {
-                fetchCommentsSilent();
-            }, 10000);
+            let interval;
+            if (pollingEnabled) {
+                // Polling silencioso cada 10 segundos para actualizar en tiempo real
+                interval = setInterval(() => {
+                    fetchCommentsSilent();
+                }, 10000);
+            }
             
-            return () => clearInterval(interval);
+            return () => {
+                if (interval) clearInterval(interval);
+            };
         }
-    }, [clientId, type, associatedId]);
+    }, [clientId, type, associatedId, pollingEnabled]);
 
     useEffect(() => {
         fetchOperationalUsers();
@@ -35,6 +41,9 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
             }
         } catch (err) {
             console.error("Error fetching operational users", err);
+            if (err.response?.status === 401) {
+                setPollingEnabled(false);
+            }
         }
     };
 
@@ -54,6 +63,9 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
             }
         } catch (err) {
             console.error("Error silently fetching comments", err);
+            if (err.response?.status === 401) {
+                setPollingEnabled(false);
+            }
         }
     };
 
@@ -78,6 +90,9 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
         } catch (err) {
             console.error("Error fetching comments", err);
             setComments([]);
+            if (err.response?.status === 401) {
+                setPollingEnabled(false);
+            }
         } finally {
             setLoading(false);
         }
