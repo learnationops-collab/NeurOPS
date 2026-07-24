@@ -931,3 +931,5 @@
       - Se añadió `db.session.flush()` en `add_lead_comment` después de añadir el objeto `ClientComment` a la sesión de la base de datos, asegurando que `comment.id` se autogenere y no se registre como `None` en la tabla intermedia de `CommentNotification`.
     - **Componentes Frontend ([CommentsSection.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/CommentsSection.jsx) [MODIFY])**:
       - Se eliminaron las barras diagonales al final (trailing slashes) redundantes de las URL en las peticiones HTTP GET de comentarios, alineándolas con las del backend y previniendo redirecciones de proxy (301/308) en producción que causan desajustes.
+      - Se implementó un detector de estado de autenticación en el polling: si cualquiera de las consultas de comentarios devuelve un código de error `401 Unauthorized` (sesión expirada), el frontend desactiva automáticamente el polling de forma permanente hasta la recarga de la página, impidiendo ciclos de peticiones infinitos e inútiles hacia el servidor.
+
