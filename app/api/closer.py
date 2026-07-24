@@ -921,6 +921,7 @@ def add_lead_comment(id):
     
     comment = ClientComment(client_id=id, author_id=current_user.id, text=text)
     db.session.add(comment)
+    db.session.flush()
     
     # Procesar destinatarios
     target_user_ids = data.get('target_user_ids', [])
