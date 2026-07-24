@@ -811,7 +811,7 @@ class CloserService:
             else:
                 appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
 
-        print(f"[DEBUG] Processing Agenda {appt_id}, Role: {role}, Status: {new_status}")
+        # print(f"[DEBUG] Processing Agenda {appt_id}, Role: {role}, Status: {new_status}")
 
         if role == 'closer':
             # Manejo del estado del Closer (closer_result)
