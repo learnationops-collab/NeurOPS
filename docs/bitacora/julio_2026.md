@@ -951,3 +951,14 @@
       - Se implementó una salvaguarda de no degradación: si un registro ya cuenta con resolución por parte del Closer (`closer_processed` en verdadero o `closer_result` asignado), la sincronización desde webhooks e importadores ignorará estados "primitivos" anteriores de confirmación (como `'Pendiente'`, `'Agendado'`), impidiendo que las citas ya atendidas vuelvan a figurar como pendientes en la cola de trabajo del Closer.
     - **APIs de Decks de Setter y Closer ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py), [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se añadieron llamadas a `BookingService.sync_appointment_to_financial_agenda` en los endpoints de precalificación (`process_setter_card`, `bulk_update_setter_cards`) y de atención de closers (`process_closer_card`), garantizando que cualquier cambio de estado realizado desde el espacio de trabajo se guarde inmediatamente tanto en la cita (`Appointment`) como en su correspondiente agenda financiera (`FinancialAgenda`), eliminando retrasos y desajustes.
+
+- **24 de Julio de 2026**:
+  - **Páginas Públicas de Privacidad y Términos de Servicio**:
+    - **Página de Política de Privacidad ([PrivacyPolicyPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PrivacyPolicyPage.jsx) [NEW])**:
+      - Se diseñó y creó la interfaz de Política de Privacidad adaptada al sistema de diseño y temas de NeurOPS/Learnation. El contenido en español cubre el responsable del tratamiento, datos recopilados, finalidad (agendamientos, WhatsApp API, Calendly), proveedores terceros, derechos ARCO y seguridad mediante HTTPS.
+    - **Página de Términos de Servicio ([TermsOfServicePage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/TermsOfServicePage.jsx) [NEW])**:
+      - Se diseñó y creó la vista de Términos de Servicio detallando las condiciones de aceptación de términos, descripción de los servicios ofrecidos, uso aceptable de la plataforma, cláusulas de propiedad intelectual, limitaciones de responsabilidad y canales oficiales de soporte.
+    - **Registro de Rutas Públicas ([App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
+      - Se importaron y registraron las rutas públicas independientes `/politica-de-privacidad` y `/terminos-de-servicio` (junto con sus alias en inglés `/privacy-policy` y `/terms-of-service`), excluyéndolas de los middlewares de autenticación (`ProtectedRoute`).
+    - **Validación de Enrutamiento (Flask Catch-All)**:
+      - Se comprobó que el ruteo catch-all del backend Flask (`app/__init__.py`) sirve correctamente el archivo index.html para que el enrutado dinámico en estas rutas públicas funcione sin arrojar 404 al acceder de forma directa en el navegador.
