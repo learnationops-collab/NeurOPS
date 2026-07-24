@@ -917,6 +917,12 @@
       - Se corrigió la serialización del nombre del anuncio (`ad_name`) en las agendas. En lugar de retornar el valor hardcodeado `"Agenda Directa"` por defecto ante la ausencia de un ad directo, ahora se consulta dinámicamente la tabla `Ad` usando el `keyword` de la cita para obtener y mostrar su nombre real configurado en la sección de marketing (`/admin/marketing`), cayendo en el keyword original o `"Desatribuido"` si no existiera concordancia.
       - Se implementó la sincronización en la vinculación manual de anuncios (`force_manual_attribution_agenda` en `marketing.py` [MODIFY]): cuando un setter asocia manualmente un anuncio a una agenda desatribuida ingresando el Instagram, el backend ahora busca al correspondiente `Client` en NeurOPS (por Instagram o por nombre de lead) y actualiza tanto su nombre de usuario en `Client.instagram` como la palabra clave `keyword` en su cita más reciente en `Appointment`. Esto asocia correctamente al lead y mueve la agenda a la sección de **Agendas Atribuidas** de forma consistente en todo el sistema.
       - Se perfeccionó la resolución del nombre del anuncio (`ad_name`) para las agendas en el backend (`setter.py` [MODIFY]). Si una cita no posee un `keyword` directo que concuerde con la tabla `Ad`, el sistema realiza ahora una búsqueda en cascada (fallback) localizando la cuenta de `ManychatLead` del prospecto por Instagram o por nombre completo de cliente, y extrayendo la interacción más reciente en `LeadAnswer` que contenga un anuncio (`ad_id`). Esto asegura que el anuncio configurado se resuelva dinámicamente y se muestre en lugar de "Desatribuido" cuando existe correspondencia en ManyChat.
- 
- 
- 
+- **23 de Julio de 2026**:
+  - **Limpieza de Logs de Depuración en el Servidor (Railway)**:
+    - **Servicio de Closers ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se comentó el log `[DEBUG] Processing Agenda...` en el procesamiento de agendas para evitar saturar la consola del servidor en producción.
+    - **Modelo de Usuario ([user.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/user.py) [MODIFY])**:
+      - Se comentó el print `DEBUG AUTH: Token verification failed: Signature has expired` en la verificación del token de autenticación JWT.
+  - **Corrección de Error de Atributo en Sincronización de Google Calendar**:
+    - **Servicio de Google Calendar ([google_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/google_service.py) [MODIFY])**:
+      - Se corrigió el error `AttributeError` al usar `appointment.appointment_type` (inexistente en el modelo `Appointment`), reemplazándolo por un acceso seguro `getattr(appointment, 'appointment_type', getattr(appointment, 'origin', 'Primera agenda'))` que actúa como fallback.
