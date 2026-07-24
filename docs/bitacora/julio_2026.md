@@ -1,5 +1,18 @@
 # Bitácora - Julio 2026
 
+- **24 de Julio de 2026**:
+  - **Filtro de Elementos Pausados en Gestión de Anuncios y Refactorización**:
+    - **Frontend React ([AdsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/AdsTab.jsx) [NEW])**:
+      - Se implementó el componente `AdsTab` independiente que contiene la visualización de la estructura de anuncios (Campañas > Conjuntos > Anuncios).
+      - Se implementó un estado local `showPaused` para ocultar por defecto campañas, conjuntos de anuncios y anuncios que estén en estado "Pausado" (`status === 'paused'`).
+      - Se calculó de manera eficiente el conteo total de elementos pausados ocultos (`pausedCount`) a través de un hook `useMemo`.
+      - Se añadió un botón premium interactivo en la cabecera (con iconos `Eye` y `EyeOff` de `lucide-react`) para alternar la visibilidad de los elementos pausados reactivamente.
+    - **Frontend React ([PeriodSpendTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PeriodSpendTab.jsx) [NEW])**:
+      - Se extrajo el componente `PeriodSpendTab` que maneja el registro e historial de inversión diaria por período a su propio archivo independiente para optimizar la modularidad y reducir el tamaño del archivo padre.
+    - **Frontend React ([AdManagementPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/AdManagementPage.jsx) [MODIFY])**:
+      - Se refactorizó la vista principal de gestión de anuncios para importar los componentes `AdsTab` y `PeriodSpendTab` desde archivos separados.
+      - Se redujo el tamaño del archivo principal a menos de 100 líneas, mejorando la legibilidad, mantenimiento y eficiencia en el uso de tokens.
+
 - **21 de Julio de 2026**:
   - **Deduplicación Estricta por Instagram Único y Conteo por Prospectos Únicos en Cualificación y Anuncios**:
     - **Backend Setter API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
