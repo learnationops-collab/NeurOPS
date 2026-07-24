@@ -42,9 +42,9 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
         try {
             let res;
             if (clientId) {
-                res = await api.get(`/closer/leads/${clientId}/comments/`, { skipAuthError: true });
+                res = await api.get(`/closer/leads/${clientId}/comments`, { skipAuthError: true });
             } else {
-                res = await api.get('/comments/', {
+                res = await api.get('/comments', {
                     params: { type, associated_id: associatedId },
                     skipAuthError: true
                 });
@@ -62,9 +62,9 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
         try {
             let res;
             if (clientId) {
-                res = await api.get(`/closer/leads/${clientId}/comments/`, { skipAuthError: true });
+                res = await api.get(`/closer/leads/${clientId}/comments`, { skipAuthError: true });
             } else {
-                res = await api.get('/comments/', {
+                res = await api.get('/comments', {
                     params: { type, associated_id: associatedId },
                     skipAuthError: true
                 });
