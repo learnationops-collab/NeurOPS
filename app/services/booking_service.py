@@ -517,21 +517,21 @@ class BookingService:
         closer_result = existing_closer_result
         
         # Si es un estado del Call Confirmer (antes de la llamada)
-        if estado_clean in ('pendiente', '', 'agendado', 'confirmado', 'sin respuesta', 'contactado', 'cancelada', 'reagendada'):
+        if estado_clean in ('pendiente', '', 'agendado', 'agendada', 'confirmado', 'confirmada', 'sin respuesta', 'contactado', 'contactada', 'cancelado', 'cancelada', 'reagendado', 'reagendada'):
             if estado_clean in ('pendiente', ''):
                 result = 'Pendiente'
-            elif estado_clean == 'agendado':
+            elif estado_clean in ('agendado', 'agendada'):
                 result = 'Agendado'
-            elif estado_clean == 'confirmado':
+            elif estado_clean in ('confirmado', 'confirmada'):
                 result = 'Confirmado'
             elif estado_clean == 'sin respuesta':
                 result = 'Sin respuesta'
-            elif estado_clean == 'contactado':
+            elif estado_clean in ('contactado', 'contactada'):
                 result = 'Contactado'
-            elif estado_clean == 'cancelada':
-                result = 'Cancelada'
-            elif estado_clean == 'reagendada':
-                result = 'Reagendada'
+            elif estado_clean in ('cancelado', 'cancelada'):
+                result = 'Cancelado'
+            elif estado_clean in ('reagendado', 'reagendada'):
+                result = 'Reagendado'
         
         # Si es un estado del Closer (después de la llamada)
         elif estado_clean in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call'):
@@ -549,13 +549,23 @@ class BookingService:
             if not result:
                 result = 'Confirmado'
 
-        # Determinar si está procesado por el Closer
-        if estado_clean in ('show up', 'no show', 'cancelada', 'reagendada', 'cerrada', 'cerrado', '2th call', '2da call'):
+        # Determinar si está procesado por el Closer o Setter
+        is_already_closer_processed = appt.closer_processed if appt else False
+        is_closer_state = estado_clean in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call')
+        
+        if is_already_closer_processed and not is_closer_state:
+            # Si ya fue procesado por el closer y el webhook no envía un estado de closer,
+            # mantenemos el estado de closer procesado para no degradarla a pendiente.
             closer_processed = True
+            closer_result = existing_closer_result
             setter_processed = True
         else:
-            closer_processed = False
-            setter_processed = False
+            if estado_clean in ('show up', 'no show', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'cerrada', 'cerrado', '2th call', '2da call'):
+                closer_processed = True
+                setter_processed = True
+            else:
+                closer_processed = False
+                setter_processed = False
             
         if not appt:
             appt = Appointment(
