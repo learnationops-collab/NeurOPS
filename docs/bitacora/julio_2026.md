@@ -956,8 +956,10 @@
   - **Páginas Públicas de Privacidad y Términos de Servicio**:
     - **Página de Política de Privacidad ([PrivacyPolicyPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PrivacyPolicyPage.jsx) [NEW])**:
       - Se diseñó y creó la interfaz de Política de Privacidad adaptada al sistema de diseño y temas de NeurOPS/Learnation. El contenido en español cubre el responsable del tratamiento, datos recopilados, finalidad (agendamientos, WhatsApp API, Calendly), proveedores terceros, derechos ARCO y seguridad mediante HTTPS.
+      - Se implementó un hook `useEffect` en el componente para forzar dinámicamente el modo oscuro (`.dark`, `.theme-custom`, `data-theme-style="glass"`) al cargarse la página, restaurando el tema original del usuario (sea claro u oscuro) al salir de la ruta.
     - **Página de Términos de Servicio ([TermsOfServicePage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/TermsOfServicePage.jsx) [NEW])**:
       - Se diseñó y creó la vista de Términos de Servicio detallando las condiciones de aceptación de términos, descripción de los servicios ofrecidos, uso aceptable de la plataforma, cláusulas de propiedad intelectual, limitaciones de responsabilidad y canales oficiales de soporte.
+      - Se integró la lógica de forzado de modo oscuro por `useEffect` para garantizar una consistencia estética oscura e independiente de las preferencias del panel de control de administración.
     - **Registro de Rutas Públicas ([App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
       - Se importaron y registraron las rutas públicas independientes `/politica-de-privacidad` y `/terminos-de-servicio` (junto con sus alias en inglés `/privacy-policy` y `/terms-of-service`), excluyéndolas de los middlewares de autenticación (`ProtectedRoute`).
     - **Validación de Enrutamiento (Flask Catch-All)**:
