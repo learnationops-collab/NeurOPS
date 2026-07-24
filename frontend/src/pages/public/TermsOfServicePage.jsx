@@ -1,8 +1,29 @@
+import { useEffect } from 'react';
 import { FileText, ShieldCheck, ArrowLeft, Mail, ExternalLink, ShieldAlert, Award, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const TermsOfServicePage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const previousClasses = Array.from(root.classList);
+    const previousThemeStyle = root.getAttribute('data-theme-style');
+
+    root.classList.add('dark', 'theme-custom');
+    root.classList.remove('theme-elegant', 'theme-clean');
+    root.setAttribute('data-theme-style', 'glass');
+
+    return () => {
+      root.className = '';
+      previousClasses.forEach(cls => root.classList.add(cls));
+      if (previousThemeStyle) {
+        root.setAttribute('data-theme-style', previousThemeStyle);
+      } else {
+        root.removeAttribute('data-theme-style');
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen w-full bg-main flex flex-col items-center justify-start py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
