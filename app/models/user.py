@@ -67,7 +67,7 @@ class User(UserMixin, db.Model):
             )
             return data['id']
         except Exception as e:
-            print(f"DEBUG AUTH: Token verification failed: {e}")
+            # print(f"DEBUG AUTH: Token verification failed: {e}")
             return None
 
     # Relationships are now defined in Appointment model for better singular access
