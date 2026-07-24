@@ -44,6 +44,8 @@ import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
+import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
@@ -97,6 +99,10 @@ function App() {
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />
+            <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
+            <Route path="/terms-of-service" element={<TermsOfServicePage />} />
 
             {/* Protected Admin Routes: Hubs */}
             <Route
