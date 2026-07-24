@@ -1447,6 +1447,12 @@ def process_closer_card(appt_id):
         description += f" Notas: \"{data['closer_notes']}\""
     BookingService.log_lead_event(appt.id, current_user.id, 'closer_notes', description)
     
+    # Sincronizar de vuelta a FinancialAgenda
+    try:
+        BookingService.sync_appointment_to_financial_agenda(appt)
+    except Exception as sync_err:
+        pass
+        
     try:
         db.session.commit()
         return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200

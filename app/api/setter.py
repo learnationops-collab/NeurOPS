@@ -1014,6 +1014,12 @@ def process_setter_card(appt_id):
     description = f"Setter {current_user.username} precalificó la carta. Notas: \"{data.get('setter_notes', '')}\""
     BookingService.log_lead_event(appt.id, current_user.id, 'setter_notes', description)
     
+    # Sincronizar de vuelta a FinancialAgenda
+    try:
+        BookingService.sync_appointment_to_financial_agenda(appt)
+    except Exception as sync_err:
+        pass
+        
     try:
         db.session.commit()
         return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200
@@ -1045,6 +1051,11 @@ def bulk_update_setter_cards():
             appt.result = result
             description = f"Setter {current_user.username} actualizó estado masivamente a: {result}"
             BookingService.log_lead_event(appt.id, current_user.id, 'status_change', description)
+            # Sincronizar de vuelta a FinancialAgenda
+            try:
+                BookingService.sync_appointment_to_financial_agenda(appt)
+            except Exception as sync_err:
+                pass
             
         if keyword:
             appt.keyword = keyword
