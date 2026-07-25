@@ -964,3 +964,16 @@
       - Se importaron y registraron las rutas públicas independientes `/politica-de-privacidad` y `/terminos-de-servicio` (junto con sus alias en inglés `/privacy-policy` y `/terms-of-service`), excluyéndolas de los middlewares de autenticación (`ProtectedRoute`).
     - **Validación de Enrutamiento (Flask Catch-All)**:
       - Se comprobó que el ruteo catch-all del backend Flask (`app/__init__.py`) sirve correctamente el archivo index.html para que el enrutado dinámico en estas rutas públicas funcione sin arrojar 404 al acceder de forma directa en el navegador.
+
+- **25 de Julio de 2026**:
+  - **Corrección de Error HTTP 400 y Consistencia Bidireccional de Estados de Agendas**:
+    - **Servicios de Backend ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY], [closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - En `BookingService.sync_financial_agenda_to_appointment`, se expandió el listado de estados reconocidos del closer (`is_closer_state`) para incluir `'lead perdido'`, `'perdido'`, `'no lead'`, `'cancelado'`, `'cancelada'`, `'reagendado'`, `'reagendada'`, `'show_up'`, `'no_show'`, evitando que las citas procesadas se degraden erróneamente a `'Pendiente'`.
+      - En `BookingService.sync_appointment_to_financial_agenda`, se amplió la búsqueda de agendas existentes a un rango de `+/- 36 horas` con fallback por cliente para asegurar la actualización o creación automática en la tabla `FinancialAgenda`.
+      - En `CloserService.process_agenda`, se flexibilizó la validación de permisos para permitir la atención de citas por roles operativos autorizados (`closer`, `setter`, `call_confirmer`, `triage`, `financial`) y asignación automática si no contaban con `closer_id`, resolviendo el error HTTP 400.
+      - Se agregó soporte explícito para el estado `'No Lead'` marcando la cita como procesada (`closer_processed = True`) y registrando la nota en el Roadmap.
+    - **API del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [closer.py (public)](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
+      - Se actualizaron las verificaciones de roles en el endpoint `POST /api/closer/appointments/<id>/process`.
+      - Se actualizaron los conteos automáticos de `prefill_closer_report` para incluir los estados `'No Lead'` y `'Lead Perdido'` en las métricas de llamadas atendidas del reporte diario de closers.
+    - **Interfaz Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se aseguró la inclusión del campo `role: 'closer'` en las llamadas al calificar un prospecto como `No Lead`.

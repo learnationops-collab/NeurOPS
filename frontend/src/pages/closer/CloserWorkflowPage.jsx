@@ -215,7 +215,7 @@ const CloserWorkflowPage = () => {
         } else if (actionType === 'no_lead') {
             setProcessingId(apptId);
             try {
-                await api.post(`/closer/appointments/${apptId}/process`, { status: 'No Lead', note: note });
+                await api.post(`/closer/appointments/${apptId}/process`, { status: 'No Lead', role: 'closer', note: note });
                 toast.success("Prospecto marcado como No Lead");
                 if (selectedLead?.id === apptId) setSelectedLead(null);
                 fetchAgendas();
