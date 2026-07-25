@@ -495,6 +495,76 @@ const PublicFinancialSalesPage = () => {
         }
     };
 
+    const handleExportPaymentsOnlyCSV = async () => {
+        setExporting(true);
+        const toastId = toast.loading('Generando CSV de pagos...');
+        try {
+            const res = await api.get('/public/financial-sales', {
+                params: {
+                    search: searchTerm,
+                    start_date: startDate,
+                    end_date: endDate,
+                    programa: programa,
+                    tipo_pago_simple: tipoPagoSimple,
+                    metodo_pago: metodoPago,
+                    closer: closer,
+                    source: source,
+                    sin_atribucion: sinAtribucion
+                }
+            });
+            
+            const allSales = res.data || [];
+            if (allSales.length === 0) {
+                toast.error('No hay pagos registrados en este periodo para exportar', { id: toastId });
+                return;
+            }
+
+            const escapeCSVValue = (val) => {
+                if (val === null || val === undefined) return '';
+                let valStr = String(val).replace(/"/g, '""');
+                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
+                    return `"${valStr}"`;
+                }
+                return valStr;
+            };
+
+            const headers = ['Fecha', 'cliente', 'email', 'monto bruto', 'metodo de pago', 'tipo de pago'];
+
+            const rows = allSales.map(s => {
+                const dateVal = s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '');
+                return [
+                    dateVal,
+                    s.nombre_cliente || '',
+                    s.mail_cliente || '',
+                    s.monto_bruto !== undefined ? s.monto_bruto : (s.monto || 0),
+                    s.metodo_pago || '',
+                    s.tipo_pago_simple || ''
+                ];
+            });
+
+            const csvContent = [
+                headers.map(escapeCSVValue).join(','),
+                ...rows.map(row => row.map(escapeCSVValue).join(','))
+            ].join('\n');
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `pagos_${startDate}_al_${endDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('Pagos exportados con éxito', { id: toastId });
+
+        } catch (error) {
+            toast.error('Error al exportar pagos a CSV', { id: toastId });
+            console.error(error);
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const handleExportNewClientsCSV = async () => {
         setExporting(true);
         const toastId = toast.loading('Generando reporte de clientes nuevos...');
@@ -1020,6 +1090,15 @@ const PublicFinancialSalesPage = () => {
                     >
                         <Download className="w-4 h-4" />
                         <span>{exporting ? 'Exportando...' : 'Exportar CSV'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleExportPaymentsOnlyCSV}
+                        disabled={exporting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/20"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>{exporting ? 'Exportando...' : 'Exportar pagos'}</span>
                     </button>
 
                     <button
