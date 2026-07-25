@@ -747,7 +747,7 @@ def get_slots():
 @bp.route('/appointments/<int:id>/process', methods=['POST'])
 @login_required
 def process_agenda(id):
-    if current_user.role not in ['closer', 'admin', 'setter']:
+    if current_user.role not in ['closer', 'admin', 'setter', 'call_confirmer', 'triage', 'financial']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     if 'role' not in data:

@@ -732,7 +732,7 @@ def prefill_closer_report():
         res = (appt.closer_result or appt.result or '').strip().lower()
         if is_first:
             first_call_scheduled += 1
-            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up'):
+            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up', 'lead perdido', 'perdido', 'no lead'):
                 first_call_attended += 1
             elif res in ('no show', 'no_show'):
                 first_call_no_show += 1
@@ -743,7 +743,7 @@ def prefill_closer_report():
                 first_call_canceled += 1
         else:
             second_call_scheduled += 1
-            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up'):
+            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up', 'lead perdido', 'perdido', 'no lead'):
                 second_call_attended += 1
             elif res in ('no show', 'no_show'):
                 second_call_no_show += 1

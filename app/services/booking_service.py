@@ -534,15 +534,19 @@ class BookingService:
                 result = 'Reagendado'
         
         # Si es un estado del Closer (después de la llamada)
-        elif estado_clean in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call'):
-            if estado_clean == 'no show':
+        elif estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'venta', 'cerrado/pif', 'cerrado/split'):
+            if estado_clean in ('no show', 'no_show'):
                 closer_result = 'No Show'
-            elif estado_clean == 'show up':
+            elif estado_clean in ('show up', 'show_up'):
                 closer_result = 'Show up'
-            elif estado_clean in ('cerrada', 'cerrado'):
+            elif estado_clean in ('cerrada', 'cerrado', 'venta', 'cerrado/pif', 'cerrado/split'):
                 closer_result = 'Cerrada'
             elif estado_clean in ('2th call', '2da call'):
                 closer_result = '2da call'
+            elif estado_clean in ('lead perdido', 'perdido'):
+                closer_result = 'Lead Perdido'
+            elif estado_clean == 'no lead':
+                closer_result = 'No Lead'
             
             # Si se procesa con un estado de Closer pero el result del confirmer estaba vacío,
             # lo dejamos como Confirmado por defecto.
@@ -551,7 +555,7 @@ class BookingService:
 
         # Determinar si está procesado por el Closer o Setter
         is_already_closer_processed = appt.closer_processed if appt else False
-        is_closer_state = estado_clean in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call')
+        is_closer_state = estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'venta', 'cerrado/pif', 'cerrado/split')
         
         if is_already_closer_processed and not is_closer_state:
             # Si ya fue procesado por el closer y el webhook no envía un estado de closer,
@@ -560,7 +564,7 @@ class BookingService:
             closer_result = existing_closer_result
             setter_processed = True
         else:
-            if estado_clean in ('show up', 'no show', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'cerrada', 'cerrado', '2th call', '2da call'):
+            if is_closer_state:
                 closer_processed = True
                 setter_processed = True
             else:
@@ -609,9 +613,9 @@ class BookingService:
             return None
             
         client = appt.client
-        # Buscar agenda financiera existente (rango de +/- 12 horas para tolerar desfases UTC/local)
-        start_search = appt.start_time - timedelta(hours=12)
-        end_search = appt.start_time + timedelta(hours=12)
+        # Buscar agenda financiera existente (rango de +/- 36 horas para tolerar desfases UTC/local)
+        start_search = appt.start_time - timedelta(hours=36)
+        end_search = appt.start_time + timedelta(hours=36)
         
         # Buscar agenda financiera existente (normalizando email e instagram para evitar problemas de matching exacto)
         from sqlalchemy import func
@@ -632,6 +636,9 @@ class BookingService:
                 FinancialAgenda.date <= end_search
             ).first()
             
+            if not agenda:
+                agenda = FinancialAgenda.query.filter(or_(*filters)).order_by(FinancialAgenda.date.desc()).first()
+            
         # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
         mapped_state = 'Pendiente'
         if appt.closer_result and appt.closer_result != 'Pendiente':
@@ -651,6 +658,10 @@ class BookingService:
             mapped_state = 'Reagendada'
         elif mapped_state_lower in ('2th call', '2da call'):
             mapped_state = '2TH Call'
+        elif mapped_state_lower in ('lead perdido', 'perdido'):
+            mapped_state = 'Lead Perdido'
+        elif mapped_state_lower == 'no lead':
+            mapped_state = 'No Lead'
                 
         # Buscar nombres de closer y setter
         closer_name = 'Sin asignar'

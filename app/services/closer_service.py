@@ -776,13 +776,17 @@ class CloserService:
             user_display = user.username
         
         appt = Appointment.query.get_or_404(appt_id)
-        if not is_admin and appt.closer_id != closer_id and appt.setter_id != closer_id:
-            raise Exception("No tienes permiso sobre esta agenda")
+        if not is_admin:
+            if appt.closer_id is None and user and user.role == 'closer':
+                appt.closer_id = closer_id
+            elif user and user.role not in ['closer', 'admin', 'setter', 'call_confirmer', 'triage']:
+                if appt.closer_id != closer_id and appt.setter_id != closer_id:
+                    raise Exception("No tienes permiso sobre esta agenda")
             
         new_status = data.get('status')
         reschedule_date = data.get('reschedule_date') # ISO string
         last_stage = data.get('last_stage')
-        role = data.get('role') # 'closer' o 'setter' / 'call_confirmer'
+        role = data.get('role', 'closer') # 'closer' por defecto si no viene
         note = data.get('note') # Razón guardada en Lead Roadmap
 
         formatted_reschedule = reschedule_date
@@ -811,9 +815,7 @@ class CloserService:
             else:
                 appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
 
-        # print(f"[DEBUG] Processing Agenda {appt_id}, Role: {role}, Status: {new_status}")
-
-        if role == 'closer':
+        if role == 'closer' or not role:
             # Manejo del estado del Closer (closer_result)
             if new_status:
                 appt.closer_result = new_status
@@ -824,16 +826,24 @@ class CloserService:
                 appt.closer_processed = True
 
             elif new_status == 'No Show':
+                appt.closer_result = 'No Show'
                 appt.closer_processed = True
 
             elif new_status in ['Lead Perdido', 'Perdido']:
                 appt.closer_result = 'Lead Perdido'
                 appt.closer_processed = True
                 appt.seguimiento_realizado = True
-                if note:
-                    if closer_id:
-                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como Lead Perdido por {user_display}: {note}")
-                        db.session.add(comment)
+                if note and closer_id:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como Lead Perdido por {user_display}: {note}")
+                    db.session.add(comment)
+
+            elif new_status == 'No Lead':
+                appt.closer_result = 'No Lead'
+                appt.closer_processed = True
+                appt.seguimiento_realizado = True
+                if note and closer_id:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como No Lead por {user_display}: {note}")
+                    db.session.add(comment)
 
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
