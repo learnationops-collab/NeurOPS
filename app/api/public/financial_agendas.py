@@ -1028,3 +1028,67 @@ def get_unread_no_agenda_triage():
             })
             
     return jsonify(results), 200
+
+@bp.route('/public/financial-agendas/potential-leads', methods=['GET'])
+@login_required
+def get_potential_leads():
+    # Retorna los ultimos N leads potenciales sin ventas cerradas
+    limit = request.args.get('limit', default=1000, type=int)
+    try:
+        from app.models import FinancialSale, FinancialAgenda
+        
+        # Obtener datos de ventas para filtrar compradores
+        sales = FinancialSale.query.all()
+        sold_emails = {s.mail_cliente.strip().lower() for s in sales if s.mail_cliente}
+        sold_instagrams = {s.instagram.strip().replace('@', '').lower() for s in sales if s.instagram}
+        
+        agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
+        
+        potential_leads = []
+        seen_emails = set()
+        seen_instagrams = set()
+        seen_phones = set()
+        
+        for a in agendas:
+            if len(potential_leads) >= limit:
+                break
+                
+            mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+            ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
+            phone_clean = a.whatsapp.strip() if a.whatsapp else None
+            
+            # Ignorar compradores
+            if mail_clean and mail_clean in sold_emails:
+                continue
+            if ig_clean and ig_clean in sold_instagrams:
+                continue
+                
+            # Evitar duplicados (agenda mas reciente primero)
+            if mail_clean and mail_clean in seen_emails:
+                continue
+            if ig_clean and ig_clean in seen_instagrams:
+                continue
+            if phone_clean and phone_clean in seen_phones:
+                continue
+                
+            if mail_clean:
+                seen_emails.add(mail_clean)
+            if ig_clean:
+                seen_instagrams.add(ig_clean)
+            if phone_clean:
+                seen_phones.add(phone_clean)
+                
+            potential_leads.append({
+                "date": a.date.isoformat() if a.date else (a.fecha_meet or ""),
+                "lead": a.lead or a.nombre or "Sin Nombre",
+                "whatsapp": a.whatsapp or "",
+                "mail": a.mail or "",
+                "instagram": a.instagram or ""
+            })
+            
+        return jsonify(potential_leads), 200
+    except Exception as e:
+        import logging
+        logging.error(f"Error al obtener clientes potenciales: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
+
