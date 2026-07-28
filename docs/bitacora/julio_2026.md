@@ -977,3 +977,12 @@
       - Se actualizaron los conteos automáticos de `prefill_closer_report` para incluir los estados `'No Lead'` y `'Lead Perdido'` en las métricas de llamadas atendidas del reporte diario de closers.
     - **Interfaz Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se aseguró la inclusión del campo `role: 'closer'` en las llamadas al calificar un prospecto como `No Lead`.
+
+- **28 de Julio de 2026**:
+  - **Mejora en Exportación de Clientes Potenciales (Recuperación de Leads)**:
+    - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se implementó un nuevo endpoint seguro `GET /public/financial-agendas/potential-leads` con soporte para límite de registros (`limit`).
+      - El endpoint calcula de manera eficiente todos los leads agendados sin ventas (comparando con `FinancialSale`), asegurando que no haya duplicados (filtrado por email, instagram y teléfono).
+    - **Frontend React ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se integró un modal interactivo (`showExportModal`) que permite seleccionar el límite de leads potenciales a exportar (por defecto 1000).
+      - Se vinculó el botón original de exportación a este modal y se modificó la llamada de descarga CSV para comunicarse con el nuevo endpoint optimizado.
