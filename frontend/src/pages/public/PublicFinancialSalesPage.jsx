@@ -65,6 +65,9 @@ const PublicFinancialSalesPage = () => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [showPaymentExportModal, setShowPaymentExportModal] = useState(false);
+    const [paymentExportTypes, setPaymentExportTypes] = useState([]);
+    const [paymentExportGroupByLead, setPaymentExportGroupByLead] = useState(false);
     const [selectedSaleIds, setSelectedSaleIds] = useState([]);
     const [showBulkEditModal, setShowBulkEditModal] = useState(false);
     const [bulkEditField, setBulkEditField] = useState('');
@@ -495,7 +498,8 @@ const PublicFinancialSalesPage = () => {
         }
     };
 
-    const handleExportPaymentsOnlyCSV = async () => {
+    const handleExportPaymentsOnlyCSV = async ({ selectedTypes, groupByLead }) => {
+        setShowPaymentExportModal(false);
         setExporting(true);
         const toastId = toast.loading('Generando CSV de pagos...');
         try {
@@ -513,10 +517,22 @@ const PublicFinancialSalesPage = () => {
                 }
             });
             
-            const allSales = res.data || [];
+            let allSales = res.data || [];
             if (allSales.length === 0) {
                 toast.error('No hay pagos registrados en este periodo para exportar', { id: toastId });
                 return;
+            }
+
+            // Filtrar por tipos de pago seleccionados
+            if (selectedTypes && selectedTypes.length > 0) {
+                allSales = allSales.filter(s => {
+                    const tp = (s.tipo_pago_simple || '').toLowerCase().trim();
+                    return selectedTypes.some(t => t.toLowerCase() === tp);
+                });
+                if (allSales.length === 0) {
+                    toast.error('No hay pagos del tipo seleccionado en este periodo', { id: toastId });
+                    return;
+                }
             }
 
             const escapeCSVValue = (val) => {
@@ -528,19 +544,60 @@ const PublicFinancialSalesPage = () => {
                 return valStr;
             };
 
-            const headers = ['Fecha', 'cliente', 'email', 'monto bruto', 'metodo de pago', 'tipo de pago'];
+            const normalizeKey = (s) => {
+                const ig = s.instagram ? s.instagram.trim().replace(/^@/, '').toLowerCase() : null;
+                const email = s.mail_cliente ? s.mail_cliente.trim().toLowerCase() : null;
+                return ig || email || `solo_${s.id}`;
+            };
 
-            const rows = allSales.map(s => {
-                const dateVal = s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '');
-                return [
-                    dateVal,
-                    s.nombre_cliente || '',
-                    s.mail_cliente || '',
-                    s.monto_bruto !== undefined ? s.monto_bruto : (s.monto || 0),
-                    s.metodo_pago || '',
-                    s.tipo_pago_simple || ''
-                ];
-            });
+            let rows = [];
+            let headers = [];
+
+            if (groupByLead) {
+                // Agrupar pagos por lead (mismo Instagram o email)
+                const leadsMap = {};
+                allSales.forEach(s => {
+                    const key = normalizeKey(s);
+                    if (!leadsMap[key]) leadsMap[key] = [];
+                    leadsMap[key].push(s);
+                });
+
+                headers = ['Lead', 'Email', 'Teléfono', 'Instagram', 'Tipos de pago', 'Métodos de pago', 'Total bruto', 'Cantidad de pagos'];
+
+                Object.values(leadsMap).forEach(group => {
+                    const sorted = group.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
+                    const ref = sorted[sorted.length - 1];
+                    const totalBruto = group.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
+                    const tipos = [...new Set(group.map(s => s.tipo_pago_simple || '').filter(Boolean))].join(' | ');
+                    const metodos = [...new Set(group.map(s => s.metodo_pago || '').filter(Boolean))].join(' | ');
+                    rows.push([
+                        ref.nombre_cliente || '',
+                        ref.mail_cliente || '',
+                        ref.telefono || '',
+                        ref.instagram || '',
+                        tipos,
+                        metodos,
+                        Math.round(totalBruto * 100) / 100,
+                        group.length
+                    ]);
+                });
+            } else {
+                // Un registro por pago
+                headers = ['Fecha', 'Cliente', 'Email', 'Teléfono', 'Instagram', 'Monto bruto', 'Método de pago', 'Tipo de pago'];
+                rows = allSales.map(s => {
+                    const dateVal = s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '');
+                    return [
+                        dateVal,
+                        s.nombre_cliente || '',
+                        s.mail_cliente || '',
+                        s.telefono || '',
+                        s.instagram || '',
+                        s.monto_bruto !== undefined ? s.monto_bruto : (s.monto || 0),
+                        s.metodo_pago || '',
+                        s.tipo_pago_simple || ''
+                    ];
+                });
+            }
 
             const csvContent = [
                 headers.map(escapeCSVValue).join(','),
@@ -1093,7 +1150,15 @@ const PublicFinancialSalesPage = () => {
                     </button>
 
                     <button
-                        onClick={handleExportPaymentsOnlyCSV}
+                        onClick={() => {
+                            // Precargar los tipos disponibles del periodo actual
+                            const tiposDisponibles = uniquePaymentTypes.length > 0
+                                ? uniquePaymentTypes
+                                : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'];
+                            setPaymentExportTypes(tiposDisponibles);
+                            setPaymentExportGroupByLead(false);
+                            setShowPaymentExportModal(true);
+                        }}
                         disabled={exporting}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/20"
                     >
@@ -2828,6 +2893,139 @@ const PublicFinancialSalesPage = () => {
                                 className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 disabled:bg-indigo-800 disabled:opacity-50"
                             >
                                 {bulkUpdating ? 'Actualizando...' : 'Aplicar Cambios'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Configuración de exportación de pagos */}
+            {showPaymentExportModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-base font-black text-white tracking-wide">Exportar Pagos</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">Configura qué incluir en el CSV</p>
+                            </div>
+                            <button
+                                onClick={() => setShowPaymentExportModal(false)}
+                                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-all"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Tipos de pago */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tipos de pago a incluir</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPaymentExportTypes(uniquePaymentTypes.length > 0 ? uniquePaymentTypes : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'])}
+                                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
+                                    >
+                                        Todos
+                                    </button>
+                                    <span className="text-slate-600">·</span>
+                                    <button
+                                        onClick={() => setPaymentExportTypes([])}
+                                        className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
+                                    >
+                                        Ninguno
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {(uniquePaymentTypes.length > 0
+                                    ? uniquePaymentTypes
+                                    : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell']
+                                ).map(tipo => {
+                                    const isSelected = paymentExportTypes.some(t => t.toLowerCase() === tipo.toLowerCase());
+                                    return (
+                                        <button
+                                            key={tipo}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setPaymentExportTypes(prev => prev.filter(t => t.toLowerCase() !== tipo.toLowerCase()));
+                                                } else {
+                                                    setPaymentExportTypes(prev => [...prev, tipo]);
+                                                }
+                                            }}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                                                isSelected
+                                                    ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                                                    : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                            }`}
+                                        >
+                                            <span className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-600'}`}>
+                                                {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                            </span>
+                                            {tipo}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {paymentExportTypes.length === 0 && (
+                                <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                    Sin selección = se exportan todos los tipos
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Agrupar por Lead */}
+                        <div className="border-t border-slate-800 pt-4">
+                            <button
+                                onClick={() => setPaymentExportGroupByLead(v => !v)}
+                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
+                                    paymentExportGroupByLead
+                                        ? 'bg-violet-600/20 border-violet-500/50'
+                                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                                }`}
+                            >
+                                <div className="text-left">
+                                    <p className={`text-sm font-bold ${paymentExportGroupByLead ? 'text-violet-300' : 'text-slate-300'}`}>
+                                        Agrupar por Lead
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {paymentExportGroupByLead
+                                            ? 'Una fila por lead con total y tipos combinados'
+                                            : 'Una fila por pago (vista detallada)'}
+                                    </p>
+                                </div>
+                                <div className={`w-10 h-5.5 rounded-full flex items-center transition-all px-0.5 ${paymentExportGroupByLead ? 'bg-violet-600' : 'bg-slate-700'}`}>
+                                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${paymentExportGroupByLead ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Columnas del CSV (informativo) */}
+                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Columnas del CSV</p>
+                            {paymentExportGroupByLead ? (
+                                <p className="text-xs text-slate-400">Lead · Email · Teléfono · Instagram · Tipos de pago · Métodos de pago · Total bruto · Cantidad de pagos</p>
+                            ) : (
+                                <p className="text-xs text-slate-400">Fecha · Cliente · Email · <span className="text-green-400 font-semibold">Teléfono</span> · Instagram · Monto bruto · Método de pago · Tipo de pago</p>
+                            )}
+                        </div>
+
+                        {/* Botones */}
+                        <div className="flex gap-3 pt-1">
+                            <button
+                                onClick={() => setShowPaymentExportModal(false)}
+                                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleExportPaymentsOnlyCSV({
+                                    selectedTypes: paymentExportTypes,
+                                    groupByLead: paymentExportGroupByLead
+                                })}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20"
+                            >
+                                <Download size={15} />
+                                Exportar CSV
                             </button>
                         </div>
                     </div>
