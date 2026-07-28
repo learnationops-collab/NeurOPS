@@ -517,13 +517,37 @@ const PublicFinancialSalesPage = () => {
                 }
             });
             
-            let allSales = res.data || [];
-            if (allSales.length === 0) {
+            const rawSales = res.data || [];
+            if (rawSales.length === 0) {
                 toast.error('No hay pagos registrados en este periodo para exportar', { id: toastId });
                 return;
             }
 
-            // Filtrar por tipos de pago seleccionados
+            const normalizeKey = (s) => {
+                const ig = s.instagram ? s.instagram.trim().replace(/^@/, '').toLowerCase() : null;
+                const email = s.mail_cliente ? s.mail_cliente.trim().toLowerCase() : null;
+                return ig || email || `solo_${s.id}`;
+            };
+
+            // Calcular la fecha de ingreso (primer pago) del lead en base a todos los registros devueltos
+            const entryDatesMap = {};
+            const leadsTemp = {};
+            rawSales.forEach(s => {
+                const key = normalizeKey(s);
+                if (!leadsTemp[key]) leadsTemp[key] = [];
+                leadsTemp[key].push(s);
+            });
+
+            Object.keys(leadsTemp).forEach(key => {
+                const group = leadsTemp[key];
+                const sorted = group.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
+                const first = sorted[0];
+                const entryDate = first.date ? first.date.split('T')[0] : (first.created_at ? first.created_at.split('T')[0] : '');
+                entryDatesMap[key] = entryDate;
+            });
+
+            // Ahora aplicamos el filtro de tipo de pago
+            let allSales = [...rawSales];
             if (selectedTypes && selectedTypes.length > 0) {
                 allSales = allSales.filter(s => {
                     const tp = (s.tipo_pago_simple || '').toLowerCase().trim();
@@ -544,12 +568,6 @@ const PublicFinancialSalesPage = () => {
                 return valStr;
             };
 
-            const normalizeKey = (s) => {
-                const ig = s.instagram ? s.instagram.trim().replace(/^@/, '').toLowerCase() : null;
-                const email = s.mail_cliente ? s.mail_cliente.trim().toLowerCase() : null;
-                return ig || email || `solo_${s.id}`;
-            };
-
             let rows = [];
             let headers = [];
 
@@ -562,15 +580,18 @@ const PublicFinancialSalesPage = () => {
                     leadsMap[key].push(s);
                 });
 
-                headers = ['Lead', 'Email', 'Teléfono', 'Instagram', 'Tipos de pago', 'Métodos de pago', 'Total bruto', 'Cantidad de pagos'];
+                headers = ['Fecha de ingreso', 'Lead', 'Email', 'Teléfono', 'Instagram', 'Tipos de pago', 'Métodos de pago', 'Total bruto', 'Cantidad de pagos'];
 
                 Object.values(leadsMap).forEach(group => {
                     const sorted = group.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
                     const ref = sorted[sorted.length - 1];
+                    const key = normalizeKey(ref);
+                    const entryDate = entryDatesMap[key] || '';
                     const totalBruto = group.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
                     const tipos = [...new Set(group.map(s => s.tipo_pago_simple || '').filter(Boolean))].join(' | ');
                     const metodos = [...new Set(group.map(s => s.metodo_pago || '').filter(Boolean))].join(' | ');
                     rows.push([
+                        entryDate,
                         ref.nombre_cliente || '',
                         ref.mail_cliente || '',
                         ref.telefono || '',
@@ -583,11 +604,14 @@ const PublicFinancialSalesPage = () => {
                 });
             } else {
                 // Un registro por pago
-                headers = ['Fecha', 'Cliente', 'Email', 'Teléfono', 'Instagram', 'Monto bruto', 'Método de pago', 'Tipo de pago'];
+                headers = ['Fecha de pago', 'Fecha de ingreso', 'Cliente', 'Email', 'Teléfono', 'Instagram', 'Monto bruto', 'Método de pago', 'Tipo de pago'];
                 rows = allSales.map(s => {
+                    const key = normalizeKey(s);
+                    const entryDate = entryDatesMap[key] || '';
                     const dateVal = s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '');
                     return [
                         dateVal,
+                        entryDate,
                         s.nombre_cliente || '',
                         s.mail_cliente || '',
                         s.telefono || '',
@@ -3003,9 +3027,9 @@ const PublicFinancialSalesPage = () => {
                         <div className="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 space-y-1">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Columnas del CSV</p>
                             {paymentExportGroupByLead ? (
-                                <p className="text-xs text-slate-400">Lead · Email · Teléfono · Instagram · Tipos de pago · Métodos de pago · Total bruto · Cantidad de pagos</p>
+                                <p className="text-xs text-slate-400">Fecha de ingreso · Lead · Email · Teléfono · Instagram · Tipos de pago · Métodos de pago · Total bruto · Cantidad de pagos</p>
                             ) : (
-                                <p className="text-xs text-slate-400">Fecha · Cliente · Email · <span className="text-green-400 font-semibold">Teléfono</span> · Instagram · Monto bruto · Método de pago · Tipo de pago</p>
+                                <p className="text-xs text-slate-400">Fecha de pago · Fecha de ingreso · Cliente · Email · Teléfono · Instagram · Monto bruto · Método de pago · Tipo de pago</p>
                             )}
                         </div>
 
