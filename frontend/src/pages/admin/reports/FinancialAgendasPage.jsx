@@ -350,6 +350,10 @@ const FinancialAgendasPage = () => {
         created_at: ''
     });
 
+    // Estados para exportación de clientes potenciales
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportLimit, setExportLimit] = useState(1000);
+
     const handleStatusActionSubmit = async (e) => {
         if (e) e.preventDefault();
         const { agenda, nuevoEstado, isConfirmer, requiresDate, razon, fechaHora } = statusActionModal;
@@ -402,24 +406,16 @@ const FinancialAgendasPage = () => {
     const handleExportPotentialClientsCSV = async () => {
         setExporting(true);
         try {
-            const response = await api.get('/public/financial-agendas', {
+            const response = await api.get('/public/financial-agendas/potential-leads', {
                 params: {
-                    search: searchTerm,
-                    start_date: startDate,
-                    end_date: endDate,
-                    date_filter_by: dateFilterBy,
-                    estado: estado,
-                    closer: closer,
-                    fuente: fuente,
-                    encargado_triage: encargadoTriage
+                    limit: exportLimit
                 }
             });
 
-            const allAgendas = response.data || [];
-            const potentials = allAgendas.filter(a => (a.sales_count || 0) === 0);
+            const potentials = response.data || [];
             
             if (potentials.length === 0) {
-                alert("No se encontraron clientes potenciales (leads agendados sin ventas registradas) en este periodo.");
+                alert("No se encontraron clientes potenciales (leads agendados sin ventas registradas).");
                 return;
             }
 
@@ -450,10 +446,11 @@ const FinancialAgendasPage = () => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `clientes_potenciales_${startDate}_al_${endDate}.csv`);
+            link.setAttribute('download', `clientes_potenciales_recuperacion_ultimos_${exportLimit}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setShowExportModal(false);
         } catch (err) {
             console.error("Error al exportar clientes potenciales:", err);
             alert("Error al exportar clientes potenciales a CSV");
@@ -995,7 +992,7 @@ const FinancialAgendasPage = () => {
                     </h3>
                     
                     <button
-                        onClick={handleExportPotentialClientsCSV}
+                        onClick={() => setShowExportModal(true)}
                         disabled={exporting}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-teal-500/20"
                     >
@@ -1428,6 +1425,70 @@ const FinancialAgendasPage = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Configuración de Exportación de Leads Potenciales */}
+            {showExportModal && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-md w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                        {/* Cabecera Fija */}
+                        <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
+                            <h3 className="text-lg font-black text-white italic uppercase flex items-center gap-2">
+                                <Download className="text-teal-500 w-5 h-5" />
+                                Exportar Clientes Potenciales
+                            </h3>
+                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                                Leads sin ventas registradas
+                            </p>
+                        </div>
+                        
+                        <div className="p-5 md:p-6 space-y-4 text-left">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    Cantidad de Leads a Exportar (últimos agendados)
+                                </label>
+                                <input 
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold"
+                                    value={exportLimit}
+                                    onChange={e => setExportLimit(parseInt(e.target.value) || '')}
+                                    required
+                                />
+                                <p className="text-[10px] text-slate-500">
+                                    Se ordenarán las agendas de forma descendente y se exportarán los leads únicos que no tengan ventas asociadas.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {/* Footer Fijo */}
+                        <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex gap-3">
+                            <button 
+                                type="button"
+                                onClick={() => setShowExportModal(false)}
+                                className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleExportPotentialClientsCSV}
+                                disabled={exporting || !exportLimit}
+                                className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 text-xs font-black uppercase tracking-widest text-white rounded-xl disabled:bg-teal-800 disabled:opacity-50 transition-colors shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2"
+                            >
+                                {exporting ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Exportando...
+                                    </>
+                                ) : (
+                                    'Exportar CSV'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
