@@ -1,5 +1,21 @@
 # Bitácora - Julio 2026
 
+- **28 de Julio de 2026**:
+  - **Mejora en Exportación de Clientes Potenciales (Recuperación de Leads)**:
+    - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se implementó un nuevo endpoint seguro `GET /public/financial-agendas/potential-leads` con soporte para límite de registros (`limit`).
+      - El endpoint calcula de manera eficiente todos los leads agendados sin ventas (comparando con `FinancialSale`), asegurando que no haya duplicados (filtrado por email, instagram y teléfono).
+    - **Frontend React ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se integró un modal interactivo (`showExportModal`) que permite seleccionar el límite de leads potenciales a exportar (por defecto 1000).
+      - Se vinculó el botón original de exportación a este modal y se modificó la llamada de descarga CSV para comunicarse con el nuevo endpoint optimizado.
+  - **Mejora en Exportación de Registro de Pagos (`/admin/ventas`)**:
+    - **Frontend React ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - El botón "Exportar pagos" ahora abre un modal de configuración previo a la descarga en lugar de ejecutarse directamente.
+      - Se implementó un panel de selección de **tipos de pago** con checkboxes interactivos (Completo, Seña, Cuota, Parcial, Renovación, Upsell), mostrando los tipos reales del período activo. Si no se selecciona ninguno, se exportan todos.
+      - Se agregó una opción de **agrupar por Lead** (toggle): al activarlo, el CSV consolida todos los pagos del mismo lead (por Instagram o email) en una sola fila con el total bruto, tipos y métodos combinados.
+      - Se incluyó la columna **Teléfono** en ambos modos de exportación (por pago individual y por lead agrupado).
+      - El modal muestra una previsualización informativa de las columnas del CSV resultante antes de confirmar la exportación.
+
 - **24 de Julio de 2026**:
   - **Filtro de Elementos Pausados en Gestión de Anuncios y Refactorización**:
     - **Frontend React ([AdsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/AdsTab.jsx) [NEW])**:
