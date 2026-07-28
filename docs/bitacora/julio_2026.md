@@ -14,6 +14,7 @@
       - Se implementó un panel de selección de **tipos de pago** con checkboxes interactivos (Completo, Seña, Cuota, Parcial, Renovación, Upsell), mostrando los tipos reales del período activo. Si no se selecciona ninguno, se exportan todos.
       - Se agregó una opción de **agrupar por Lead** (toggle): al activarlo, el CSV consolida todos los pagos del mismo lead (por Instagram o email) en una sola fila con el total bruto, tipos y métodos combinados.
       - Se incluyó la columna **Teléfono** en ambos modos de exportación (por pago individual y por lead agrupado).
+      - Se agregó la columna **Fecha de ingreso** a ambos modos (determinando el ingreso en base al primer pago registrado del lead en la data actual).
       - El modal muestra una previsualización informativa de las columnas del CSV resultante antes de confirmar la exportación.
 
 - **24 de Julio de 2026**:
