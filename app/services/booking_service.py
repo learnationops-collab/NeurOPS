@@ -382,6 +382,20 @@ class BookingService:
             return None
 
     @staticmethod
+    def normalize_closer_name(name_str):
+        """Normaliza cualquier alias de closer al nombre de usuario canónico (User.username)."""
+        if not name_str:
+            return "Sin asignar"
+        name_clean = str(name_str).strip()
+        if name_clean.lower() in ('n/a', 'none', 'undefined', 'sin asignar', 'sin_asignar', 'equipo', ''):
+            return "Sin asignar"
+            
+        user = BookingService.resolve_user_by_name(name_clean, default_role='closer')
+        if user and user.username:
+            return user.username
+        return name_clean
+
+    @staticmethod
     def resolve_user_by_name(name_str, default_role=None):
         """Resuelve un usuario por nombre/username de forma flexible."""
         if not name_str:

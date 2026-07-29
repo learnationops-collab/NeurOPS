@@ -106,11 +106,15 @@ def receive_financial_agendas():
                 encargado_triage_val = str(val).strip()
                 break
 
+        from app.services.booking_service import BookingService
+        raw_closer = item.get('closer') or item.get('vendedor')
+
         if existing:
             # Actualizar datos de agenda existente
             existing.nombre = str(setter).strip()
             existing.lead = str(lead_val).strip()
-            existing.closer = item.get('closer') or item.get('vendedor') or existing.closer
+            if raw_closer:
+                existing.closer = BookingService.normalize_closer_name(raw_closer)
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
             existing.registro = registro_val
@@ -123,7 +127,7 @@ def receive_financial_agendas():
             agenda = FinancialAgenda(
                 nombre=str(setter).strip(),
                 lead=str(lead_val).strip(),
-                closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
+                closer=BookingService.normalize_closer_name(raw_closer or 'Sin asignar'),
                 fecha_meet=dt_str or str(agenda_date),
                 date=agenda_date,
                 registro=registro_val,
@@ -563,7 +567,8 @@ def update_financial_agenda(agenda_id):
         if 'lead' in data:
             agenda.lead = data['lead']
         if 'closer' in data:
-            agenda.closer = data['closer']
+            from app.services.booking_service import BookingService
+            agenda.closer = BookingService.normalize_closer_name(data['closer'])
         if 'fecha_meet' in data:
             agenda.fecha_meet = data['fecha_meet']
         if 'instagram' in data:
