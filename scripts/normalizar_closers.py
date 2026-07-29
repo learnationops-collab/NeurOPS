@@ -75,25 +75,41 @@ def normalizar_closers():
         agenda_updates = 0
 
         # Mapeo directo de patrones de texto en agenda -> nombre canónico
-        canonical_mappings = []
         if jean_carlo:
-            for a_name in alias_map[jean_carlo.id]:
-                canonical_mappings.append((a_name, jean_carlo.username))
-        if sebastian:
-            for a_name in alias_map[sebastian.id]:
-                canonical_mappings.append((a_name, sebastian.username))
-        if marlon_closer:
-            for a_name in alias_map[marlon_closer.id]:
-                canonical_mappings.append((a_name, marlon_closer.username))
+            aliases_lc = [a.strip().lower() for a in alias_map[jean_carlo.id]]
+            updated = FinancialAgenda.query.filter(
+                func.lower(FinancialAgenda.closer).in_(aliases_lc)
+            ).filter(
+                FinancialAgenda.closer != jean_carlo.username
+            ).update(
+                {FinancialAgenda.closer: jean_carlo.username},
+                synchronize_session=False
+            )
+            agenda_updates += updated
 
-        for target_alias, canonical_username in canonical_mappings:
-            agendas = FinancialAgenda.query.filter(
-                func.lower(FinancialAgenda.closer) == target_alias.strip().lower()
-            ).all()
-            for agenda in agendas:
-                if agenda.closer != canonical_username:
-                    agenda.closer = canonical_username
-                    agenda_updates += 1
+        if sebastian:
+            aliases_lc = [a.strip().lower() for a in alias_map[sebastian.id]]
+            updated = FinancialAgenda.query.filter(
+                func.lower(FinancialAgenda.closer).in_(aliases_lc)
+            ).filter(
+                FinancialAgenda.closer != sebastian.username
+            ).update(
+                {FinancialAgenda.closer: sebastian.username},
+                synchronize_session=False
+            )
+            agenda_updates += updated
+
+        if marlon_closer:
+            aliases_lc = [a.strip().lower() for a in alias_map[marlon_closer.id]]
+            updated = FinancialAgenda.query.filter(
+                func.lower(FinancialAgenda.closer).in_(aliases_lc)
+            ).filter(
+                FinancialAgenda.closer != marlon_closer.username
+            ).update(
+                {FinancialAgenda.closer: marlon_closer.username},
+                synchronize_session=False
+            )
+            agenda_updates += updated
 
         db.session.commit()
         print(f"Agendas financieras actualizadas a nombre canónico: {agenda_updates} registros procesados.")
