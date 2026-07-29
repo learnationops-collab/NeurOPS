@@ -1010,10 +1010,10 @@
       - Se creó el método estático `BookingService.normalize_closer_name(name_str)` para resolver y convertir cualquier alias o variación de texto de closers a su nombre de usuario canónico oficial (`User.username`).
     - **API de Agendas Financieras ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
       - Se integró `BookingService.normalize_closer_name` en la recepción de agendamientos vía Webhook (`receive_financial_agendas`) y en la edición manual (`update_financial_agenda`), garantizando que nuevos agendamientos se guarden con nombres estandarizados.
-    - **Script de Migración de Closers ([normalizar_closers.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/normalizar_closers.py) [NEW])**:
-      - Se diseñó y ejecutó un script de normalización que registró 15 alias en la tabla `CloserAlias` para los usuarios `Jean Carlo` (ID 4), `Sebastian` (ID 1125) y `Marlon Closer` (ID 1126).
-      - Se actualizaron 2,457 registros históricos en `FinancialAgenda`, consolidando variantes como `Jean Carlo Pérez` -> `Jean Carlo`, `Sebastian Hernández` -> `Sebastian`, y `Marlon García`/`Marol Garcia` -> `Marlon Closer`.
-      - Se reasignaron 1,626 citas y 200 inscripciones del usuario legacy a `Marlon Closer` (`id=1126`).
+    - **Script de Migración de Closers ([normalizar_closers.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/normalizar_closers.py) [NEW/MODIFY])**:
+      - Se diseñó un script de normalización que registra alias en la tabla `CloserAlias` para los usuarios `Jean Carlo` (ID 4), `Sebastian` (ID 1125) y `Marlon Closer` (ID 1126).
+      - **Optimización de Rendimiento**: Se rediseñó el script para utilizar actualizaciones en lote (bulk updates con `update()`) en lugar de actualizaciones fila por fila en memoria. Esto redujo el tiempo de procesamiento en producción de minutos a escasos segundos al minimizar el tráfico de red con Railway.
+      - **Ejecución en Producción**: Se ejecutó exitosamente el script contra la base de datos de producción (PostgreSQL en Railway), unificando 2,457 registros históricos en `FinancialAgenda` y consolidando 1,626 citas e inscripciones del usuario legacy a `Marlon Closer` (ID 1126).
     - **Sincronización de Base de Datos ([actualizar_db.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/actualizar_db.py) [MODIFY])**:
       - Se integró la llamada automática a `normalizar_closers()` al finalizar la sincronización desde producción.
 
