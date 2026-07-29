@@ -409,49 +409,61 @@ def get_financial_sales():
     metodo_pago = request.args.get('metodo_pago', default='', type=str).strip()
     sin_atribucion = request.args.get('sin_atribucion', default='false', type=str).lower() == 'true'
     
+    ids_str = request.args.get('ids', default='', type=str).strip()
+    
     # Nuevos parámetros de consulta
     closer_filter = request.args.get('closer', default='', type=str).strip()
     source_filter = request.args.get('source', default='', type=str).strip()
     
     query = FinancialSale.query
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(or_(
-            FinancialSale.nombre_cliente.ilike(search_pattern),
-            FinancialSale.instagram.ilike(search_pattern),
-            FinancialSale.email_vendedor.ilike(search_pattern),
-            FinancialSale.setter.ilike(search_pattern)
-        ))
-        
-    if start_date_str:
+    if ids_str:
+        # Filtro por IDs seleccionados
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            query = query.filter(FinancialSale.date >= start_date)
+            ids = [int(x) for x in ids_str.split(',') if x.strip()]
+            if ids:
+                query = query.filter(FinancialSale.id.in_(ids))
         except ValueError:
             pass
+    else:
+        # Filtros normales
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(or_(
+                FinancialSale.nombre_cliente.ilike(search_pattern),
+                FinancialSale.instagram.ilike(search_pattern),
+                FinancialSale.email_vendedor.ilike(search_pattern),
+                FinancialSale.setter.ilike(search_pattern)
+            ))
             
-    if end_date_str:
-        try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            query = query.filter(FinancialSale.date <= end_date)
-        except ValueError:
-            pass
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                query = query.filter(FinancialSale.date >= start_date)
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+                end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+                query = query.filter(FinancialSale.date <= end_date)
+            except ValueError:
+                pass
 
-    if programa:
-        query = query.filter(or_(
-            FinancialSale.tipo_pago.like(f"{programa} - %"),
-            FinancialSale.tipo_pago == programa
-        ))
-        
-    if tipo_pago_simple:
-        query = query.filter(or_(
-            FinancialSale.tipo_pago.like(f"% - {tipo_pago_simple}"),
-            FinancialSale.tipo_pago == tipo_pago_simple
-        ))
-        
-    if metodo_pago:
-        query = query.filter(FinancialSale.metodo_pago == metodo_pago)
+        if programa:
+            query = query.filter(or_(
+                FinancialSale.tipo_pago.like(f"{programa} - %"),
+                FinancialSale.tipo_pago == programa
+            ))
+            
+        if tipo_pago_simple:
+            query = query.filter(or_(
+                FinancialSale.tipo_pago.like(f"% - {tipo_pago_simple}"),
+                FinancialSale.tipo_pago == tipo_pago_simple
+            ))
+            
+        if metodo_pago:
+            query = query.filter(FinancialSale.metodo_pago == metodo_pago)
             
     query = query.order_by(FinancialSale.date.desc())
     subquery_sales = query.all()
@@ -524,7 +536,7 @@ def get_financial_sales():
             all_payment_methods_set.add(s.metodo_pago)
 
         # Aplicar el filtro de closer in-memory
-        if closer_filter:
+        if not ids_str and closer_filter:
             if closer_filter.lower() == 'sin closer':
                 if final_closer != 'Sin Closer':
                     continue
@@ -533,7 +545,7 @@ def get_financial_sales():
                     continue
 
         # Aplicar el filtro de fuente (setter) in-memory
-        if source_filter:
+        if not ids_str and source_filter:
             if source_filter.lower() == 'sin setter':
                 if final_setter != 'Sin Setter':
                     continue

@@ -69,6 +69,7 @@ const PublicFinancialSalesPage = () => {
     const [paymentExportTypes, setPaymentExportTypes] = useState([]);
     const [paymentExportGroupByLead, setPaymentExportGroupByLead] = useState(false);
     const [selectedSaleIds, setSelectedSaleIds] = useState([]);
+    const [exportingSelectedOnly, setExportingSelectedOnly] = useState(false);
     const [showBulkEditModal, setShowBulkEditModal] = useState(false);
     const [bulkEditField, setBulkEditField] = useState('');
     const [bulkEditValue, setBulkEditValue] = useState('');
@@ -501,10 +502,11 @@ const PublicFinancialSalesPage = () => {
     const handleExportPaymentsOnlyCSV = async ({ selectedTypes, groupByLead }) => {
         setShowPaymentExportModal(false);
         setExporting(true);
-        const toastId = toast.loading('Generando CSV de pagos...');
+        const toastId = toast.loading(exportingSelectedOnly ? 'Generando CSV de pagos seleccionados...' : 'Generando CSV de pagos...');
         try {
-            const res = await api.get('/public/financial-sales', {
-                params: {
+            const params = exportingSelectedOnly
+                ? { ids: selectedSaleIds.join(',') }
+                : {
                     search: searchTerm,
                     start_date: startDate,
                     end_date: endDate,
@@ -514,12 +516,13 @@ const PublicFinancialSalesPage = () => {
                     closer: closer,
                     source: source,
                     sin_atribucion: sinAtribucion
-                }
-            });
+                };
+
+            const res = await api.get('/public/financial-sales', { params });
             
             const rawSales = res.data || [];
             if (rawSales.length === 0) {
-                toast.error('No hay pagos registrados en este periodo para exportar', { id: toastId });
+                toast.error(exportingSelectedOnly ? 'No hay pagos seleccionados para exportar' : 'No hay pagos registrados en este periodo para exportar', { id: toastId });
                 return;
             }
 
@@ -632,11 +635,14 @@ const PublicFinancialSalesPage = () => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `pagos_${startDate}_al_${endDate}.csv`);
+            const fileName = exportingSelectedOnly
+                ? `pagos_seleccionados_${new Date().toISOString().split('T')[0]}.csv`
+                : `pagos_${startDate}_al_${endDate}.csv`;
+            link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success('Pagos exportados con éxito', { id: toastId });
+            toast.success(exportingSelectedOnly ? 'Pagos seleccionados exportados con éxito' : 'Pagos exportados con éxito', { id: toastId });
 
         } catch (error) {
             toast.error('Error al exportar pagos a CSV', { id: toastId });
@@ -1181,6 +1187,7 @@ const PublicFinancialSalesPage = () => {
                                 : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'];
                             setPaymentExportTypes(tiposDisponibles);
                             setPaymentExportGroupByLead(false);
+                            setExportingSelectedOnly(false);
                             setShowPaymentExportModal(true);
                         }}
                         disabled={exporting}
@@ -1833,6 +1840,22 @@ const PublicFinancialSalesPage = () => {
                                     >
                                         <Edit2 size={12} />
                                         Modificación Masiva
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const tiposDisponibles = uniquePaymentTypes.length > 0
+                                                ? uniquePaymentTypes
+                                                : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'];
+                                            setPaymentExportTypes(tiposDisponibles);
+                                            setPaymentExportGroupByLead(false);
+                                            setExportingSelectedOnly(true);
+                                            setShowPaymentExportModal(true);
+                                        }}
+                                        disabled={exporting}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-850 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-blue-500/10"
+                                    >
+                                        <Download size={12} />
+                                        {exporting ? 'Exportando...' : 'Exportar Seleccionados'}
                                     </button>
                                     <button
                                         onClick={() => setSelectedSaleIds([])}

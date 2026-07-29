@@ -1,5 +1,15 @@
 # Bitácora - Julio 2026
 
+- **29 de Julio de 2026**:
+  - **Exportación de Pagos de Leads Seleccionados**:
+    - **Backend API ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se agregó soporte para el parámetro opcional `ids` en el endpoint `GET /public/financial-sales`.
+      - Si se pasa el parámetro `ids`, el backend filtra directamente los registros correspondientes y omite los filtros normales y de filtros in-memory (`closer` y `source`).
+    - **Frontend React ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se implementó el estado local `exportingSelectedOnly` para diferenciar la exportación del período completo de la exportación de registros seleccionados.
+      - Se agregó un botón interactivo "Exportar Seleccionados" al panel de acciones masivas, visible únicamente cuando hay pagos seleccionados.
+      - Se modificó `handleExportPaymentsOnlyCSV` para que envíe los IDs seleccionados al backend en el parámetro `ids` al exportar los seleccionados y guarde el CSV con un nombre de archivo personalizado (`pagos_seleccionados_[fecha].csv`).
+
 - **28 de Julio de 2026**:
   - **Mejora en Exportación de Clientes Potenciales (Recuperación de Leads)**:
     - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
