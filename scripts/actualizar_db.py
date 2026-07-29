@@ -139,6 +139,14 @@ def actualizar():
             print(f"Error al sincronizar event_closers: {e}")
 
         prod_session.close()
+        
+        # 3. Normalización post-sincronización de closers y alias
+        try:
+            from scripts.normalizar_closers import normalizar_closers
+            normalizar_closers()
+        except Exception as norm_err:
+            print(f"Error al ejecutar normalización de closers: {norm_err}")
+
         print("--- Proceso finalizado con éxito ---")
 
 if __name__ == "__main__":
