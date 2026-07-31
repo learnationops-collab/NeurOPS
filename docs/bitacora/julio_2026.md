@@ -1,6 +1,13 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Alineación Visual e Integración Completa del Closer Workspace v6 (Prototipo `closer-workspace-v6.html`)**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se integró el **Hero Section v6** en la cabecera del workspace con saludo personalizado al closer, mensaje motivacional, barra de progreso de resolución de agendas del día y 4 tarjetas de estadísticas (`sbox-v6`) para Confirmaciones, Llamadas Reportadas, Seguimientos y Racha sin fallar.
+      - Se implementó el **Dock Flotante v6** (`dock-v6`) fijo en la parte inferior que permite alternar dinámicamente entre la vista de **📥 Bandeja** (`inbox`) y el **📊 Reporte del Día** (`report`).
+      - Se integró el módulo del **Reporte del Día (`v-report`)** completo dentro de `/closer/deck`, incluyendo el bloque de estado de la bandeja (`gate-v6`), el embudo de **Referidos del Día** (pasos 0 a 5 con cálculo de conversión automática), la sección de **Reflexión Diaria** (Victorias del día y A mejorar mañana) y la simulación/envío del reporte al sistema (`reportSent`).
+    - **Estilos CSS ([index.css](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/index.css) [MODIFY])**:
+      - Se agregaron las clases y variables CSS del diseño v6 para Hero (`.hero-v6`, `.hcard-v6`, `.prog-v6`, `.pbarw-v6`, `.pmeta-v6`), Stat Boxes (`.stats-v6`, `.sbox-v6`), Dock flotante inferior (`.dock-v6`, `.dk-v6`) y Filas operativas (`.row-v6`, `.time-v6`, `.rmain-v6`, `.chips-v6`, `.chip-v6`).
   - **Ficha de Lead y Modales de Reporte/Cambio de Estado v6 (Árbol de Decisiones Interactivo)**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se rediseñó por completo el modal detallado del lead (`selectedLead`) en una estructura premium de dos columnas.
