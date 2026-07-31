@@ -1,6 +1,12 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Sincronización y Actualización de Base de Datos Local**:
+    - **Base de Datos ([actualizar_db.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/actualizar_db.py) [EXECUTE])**:
+      - Se ejecutó exitosamente el script de sincronización de la base de datos local SQLite (`instance/local.db`) desde el servidor de producción PostgreSQL.
+      - Se limpiaron y restablecieron las tablas relacionales y de asociación evitando violaciones de claves foráneas y restricciones UNIQUE.
+      - Se copiaron 11,427 registros de `manychat_leads`, 4,485 `clients`, 3,700 `financial_agendas`, 3,177 `appointments`, 828 `financial_sales`, 5,455 `lead_answers`, 473 `payments` y demás entidades operativas.
+      - Se ejecutó el pipeline automático de normalización de closers y alias sin errores.
   - **Modal del Lead Dinámico Overlay y Modales Secundarios v7 (Prototipo `closer-workspace-v7.html`)**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se hizo que la vista del tablero principal (Kanban de confirmaciones y listas operativas) tome el 100% de ancho (`lg:col-span-12`), eliminando la vista dividida lateral estática.
