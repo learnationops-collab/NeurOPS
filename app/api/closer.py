@@ -1334,8 +1334,39 @@ def get_closer_deck():
     
     selected_date_str = request.args.get('selected_date') or today.isoformat()
 
-    if step == 'agendas':
-        # Citas del día seleccionado (o hoy) en UTC naive para consistencia con sheets y estadísticas
+    if step == 'confirmations':
+        # Pipeline de confirmación: citas no procesadas por el closer desde hoy en adelante
+        from datetime import time
+        try:
+            today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            today_local = date.today()
+        start_utc = datetime.combine(today_local, time.min)
+        query = Appointment.query.filter(
+            Appointment.start_time >= start_utc,
+            Appointment.closer_processed == False,
+            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        )
+    elif step == 'calls':
+        # Llamadas confirmadas de la fecha seleccionada
+        from datetime import time
+        try:
+            today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            today_local = date.today()
+            
+        start_utc = datetime.combine(today_local, time.min)
+        end_utc = datetime.combine(today_local, time.max)
+        
+        query = Appointment.query.filter(
+            Appointment.start_time >= start_utc,
+            Appointment.start_time <= end_utc,
+            Appointment.result == 'Confirmado',
+            Appointment.closer_processed == False,
+            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        )
+    elif step == 'agendas':
+        # Mantener compatibilidad con agendas anteriores
         from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
@@ -1426,6 +1457,9 @@ def process_closer_card(appt_id):
             res_val = 'Show up'
         appt.closer_result = res_val
         
+    if 'confirm_status' in data:
+        appt.result = data['confirm_status']
+        
     if 'with_decision_maker' in data:
         if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
             appt.with_decision_maker = None
@@ -1439,7 +1473,11 @@ def process_closer_card(appt_id):
     if 'seguimiento_realizado' in data:
         appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
 
-    appt.closer_processed = True
+    # Si es una actualización de confirmación rápida, no marcamos la cita como procesada
+    if 'confirm_status' in data and len(data) == 1:
+        pass
+    else:
+        appt.closer_processed = True
     
     from app.services.booking_service import BookingService
     description = f"Closer {current_user.username} completó seguimiento. Estado: {data.get('result', 'Pendiente')}."
