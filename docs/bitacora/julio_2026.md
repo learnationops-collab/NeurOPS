@@ -1047,4 +1047,5 @@
       - Se creó el componente local `MultiSelectFilter` provisto de panel flotante, control de click outside reactivo mediante hooks, checkboxes para multiselección e indicadores numéricos de elementos activos en el botón trigger.
       - Se reemplazaron los cinco dropdowns `<select>` antiguos correspondientes a Programa, Tipo de Pago, Método de Pago, Closer y Fuente (Setter) por instancias del nuevo componente interactivo `MultiSelectFilter`.
       - Se garantizó la propagación automática de los filtros multiselección hacia la llamada de la API de exportación de Clientes Nuevos.
+      - **Corrección de Diseño y Maquetación**: Se solucionó el error de alineación de iconos agregando la clase `relative` al botón del desplegable, y se previno el recorte visual de los menús absolutos cambiando la propiedad `overflow-hidden` a `overflow-visible` en la tarjeta contenedora de filtros.
 
