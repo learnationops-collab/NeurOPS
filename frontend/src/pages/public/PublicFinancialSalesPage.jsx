@@ -1331,7 +1331,7 @@ const PublicFinancialSalesPage = () => {
             </div>
 
             {/* Panel de Filtros Reorganizado */}
-            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-visible">
+            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-visible z-30">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div className="flex items-center gap-2 text-violet-405">
                         <Filter size={16} className="text-violet-400" />
