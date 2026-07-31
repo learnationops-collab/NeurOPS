@@ -1,5 +1,17 @@
 # Bitácora - Julio 2026
 
+- **31 de Julio de 2026**:
+  - **Unificación de Triaje y Cierre (Closer Confirms v6)**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se eliminó el flujo clásico de Triage para closers y se rediseñó el workspace completo con la estética premium "v6" basada en `closer-workspace-v6.html`.
+      - Se implementaron 3 pestañas principales de navegación operativa: **Confirmaciones** (Kanban de agendas por confirmar, confirmadas y no asistirá/llamar), **Llamadas del Día** (Lista clásica de agendas del día para cierre), y **Seguimientos** (Lista clásica de agendas de seguimiento o recontacto).
+      - Se integró un **Buscador en la Barra Superior** (`search-v6`) con resultados en tiempo real y buscador extendido para abrir fichas operativas interactivas de cualquier lead.
+      - Se implementó un **Kanban de Confirmaciones** (`kb-v6`) dinámico de 3 columnas para que el closer realice las confirmaciones de forma directa y fluida.
+      - Se eliminó el selector duplicado de fecha del Closer para unificar los datos en la agenda de hoy.
+      - Se adaptó la carga de datos (`fetchAgendas`) para consultar todos los leads del día y popular coherentemente el Kanban de confirmaciones y las listas operativas.
+      - Se ajustaron las acciones de cambio de estado en el modal detallado para actualizar los pipelines de confirmación directamente (`result`) y los estados de venta (`closer_result`).
+      - Se corrigieron todos los errores de anidación de etiquetas JSX y llaves, logrando una compilación de producción exitosa.
+
 - **29 de Julio de 2026**:
   - **Exportación de Pagos de Leads Seleccionados**:
     - **Backend API ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:

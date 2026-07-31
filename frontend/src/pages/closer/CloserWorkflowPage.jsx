@@ -19,7 +19,7 @@ const CloserWorkflowPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     
-    const activeStep = searchParams.get('step') || 'agendas';
+    const activeStep = searchParams.get('step') || 'confirmations';
 
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
@@ -28,6 +28,15 @@ const CloserWorkflowPage = () => {
     const [processingId, setProcessingId] = useState(null);
     const [submittingBulk, setSubmittingBulk] = useState(false);
     
+    // Contadores de pestañas (v6)
+    const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
+
+    // Búsqueda global (v6)
+    const [searchScope, setSearchScope] = useState('all');
+    const [searchResults, setSearchResults] = useState([]);
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const [searching, setSearching] = useState(false);
+
     // Modal de Seguimiento tras cambio de estado / venta
     const [followUpModal, setFollowUpModal] = useState({
         show: false,
@@ -104,6 +113,112 @@ const CloserWorkflowPage = () => {
         }
     }, [user]);
 
+    // Búsqueda global con debounce
+    useEffect(() => {
+        if (searchQuery.trim().length < 2) {
+            setSearchResults([]);
+            setShowSearchResults(false);
+            return;
+        }
+
+        const delayDebounceFn = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const res = await api.get(`/closer/leads/search?q=${encodeURIComponent(searchQuery)}`);
+                let data = res.data || [];
+                
+                // Filtrar según el ámbito (searchScope)
+                if (searchScope !== 'all') {
+                    data = data.filter(l => {
+                        const appt = l.appointment;
+                        const result = appt ? appt.result || "" : "";
+                        const closerResult = appt ? appt.closer_result || "" : "";
+                        
+                        let fase = 'confirm'; // Por defecto
+                        if (appt) {
+                            const resClean = result.toLowerCase();
+                            const closerResClean = closerResult.toLowerCase();
+                            
+                            if (closerResClean === 'show up' || closerResClean === 'cerrada' || closerResClean === 'cerrado') {
+                                fase = 'done';
+                            } else if (appt.fecha_seguimiento || closerResClean === 'no show' || closerResClean === 'cancelado' || closerResClean === 'reagendado') {
+                                fase = 'seg';
+                            } else if (resClean === 'confirmado') {
+                                fase = 'call';
+                            } else {
+                                fase = 'confirm';
+                            }
+                        }
+                        return fase === searchScope;
+                    });
+                }
+                setSearchResults(data);
+                setShowSearchResults(true);
+            } catch (err) {
+                console.error("Error al buscar leads:", err);
+            } finally {
+                setSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery, searchScope]);
+
+    // Cerrar buscador global al hacer clic fuera
+    useEffect(() => {
+        const handleOutsideClick = (e) => {
+            if (!e.target.closest('.search-v6')) {
+                setShowSearchResults(false);
+            }
+        };
+        document.addEventListener('click', handleOutsideClick);
+        return () => document.removeEventListener('click', handleOutsideClick);
+    }, []);
+
+    // Seleccionar lead desde resultados de búsqueda global
+    const handleSelectSearchResult = async (lead) => {
+        setShowSearchResults(false);
+        setSearchQuery('');
+        
+        if (lead.appointment && lead.appointment.id) {
+            // Si tiene cita en la base de datos local, la cargamos completa
+            setLoading(true);
+            try {
+                const res = await api.get(`/closer/deck/card/${lead.appointment.id}`);
+                if (res.data) {
+                    setSelectedLead(res.data);
+                }
+            } catch (err) {
+                console.error("Error al cargar card de cita:", err);
+                toast.error("Error al cargar la ficha de la cita");
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            // Cita simulada o datos de lead básicos
+            setSelectedLead({
+                id: lead.id ? -lead.id : -Math.floor(Math.random() * 100000), // id negativo para sintéticos
+                lead_name: lead.username || "Sin Nombre",
+                email: lead.email || "",
+                phone: lead.phone || "",
+                instagram: lead.instagram || "",
+                origin: lead.appointment?.setter_name ? "Setter" : "Desconocido",
+                setter_name: lead.appointment?.setter_name || "Sin Asignar",
+                closer_result: "Pendiente"
+            });
+        }
+    };
+
+    // Obtener contadores de las pestañas
+    const fetchCounts = async () => {
+        try {
+            const countsRes = await api.get(`/closer/deck/counts?selected_date=${selectedDate}`);
+            setCounts(countsRes.data || { confirmations: 0, calls: 0, seguimientos: 0 });
+        } catch (err) {
+            console.error("Error al obtener conteos de deck:", err);
+        }
+    };
+
     // Cargar agendas del día del closer
     const fetchAgendas = async () => {
         setLoading(true);
@@ -126,6 +241,9 @@ const CloserWorkflowPage = () => {
             if (selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
                 setSelectedLead(null);
             }
+
+            // Actualizar contadores
+            await fetchCounts();
         } catch (err) {
             console.error("Error al cargar agendas:", err);
             toast.error("Error al cargar las agendas");
@@ -269,6 +387,127 @@ const CloserWorkflowPage = () => {
             (a.email && a.email.toLowerCase().includes(query))
         );
     }, [agendas, searchQuery]);
+
+    // Pipeline Kanban agrupado para confirmaciones (v6)
+    const confirmationsPipeline = useMemo(() => {
+        const list = filteredAgendas || [];
+        const porConfirmar = [];
+        const conversando = [];
+        const confirmado = [];
+
+        list.forEach(a => {
+            const result = a.result ? a.result.toLowerCase() : "";
+            if (result === 'confirmado') {
+                confirmado.push(a);
+            } else if (result === 'conversando' || result === 'contactado') {
+                conversando.push(a);
+            } else {
+                porConfirmar.push(a);
+            }
+        });
+
+        return { porConfirmar, conversando, confirmado };
+    }, [filteredAgendas]);
+
+    // Actualización rápida del estado de confirmación desde el Kanban (v6)
+    const handleQuickConfirmStatus = async (apptId, status, e) => {
+        if (e) e.stopPropagation();
+        setProcessingId(apptId);
+        try {
+            await api.post(`/closer/deck/${apptId}`, { confirm_status: status });
+            toast.success(`Confirmación actualizada a: ${status}`);
+            
+            // Actualizar localmente en memoria para respuesta visual inmediata
+            setAgendas(prev => prev.map(a => a.id === apptId ? { ...a, result: status } : a));
+            
+            // Consultar contadores actualizados
+            fetchCounts();
+        } catch (err) {
+            console.error("Error al actualizar estado de confirmación:", err);
+            toast.error("Error al actualizar la confirmación");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // Renderizar una tarjeta individual del Kanban de confirmación (v6)
+    const renderKanbanCard = (a, phase) => {
+        const isViewed = selectedLead?.id === a.id;
+        
+        // Formatear fecha y hora legible
+        const apptDate = a.start_time ? a.start_time.split('T')[0] : '';
+        const apptTime = a.start_time ? a.start_time.split('T')[1]?.substring(0, 5) : '';
+        
+        // Calcular etiqueta "Hoy", "Mañana", etc.
+        let dateLabel = apptDate;
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (apptDate === todayStr) {
+            dateLabel = 'Hoy';
+        } else {
+            try {
+                const parts = apptDate.split('-');
+                if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`;
+            } catch (e) {}
+        }
+        
+        return (
+            <div 
+                key={a.id} 
+                className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
+                onClick={() => handleSelectLead(a)}
+            >
+                <div className="when-v6 soon-v6">
+                    <span className="wd-v6"></span>
+                    {dateLabel} · {apptTime}
+                </div>
+                <b>{a.lead_name || 'Sin Nombre'}</b>
+                <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
+                
+                <div className="flex gap-1.5 flex-wrap mt-2">
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        {a.origin || 'Meta Ads'}
+                    </span>
+                    {a.examen && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                            {a.examen}
+                        </span>
+                    )}
+                </div>
+                
+                {a.setter_notes && (
+                    <div className="nt-v6 text-[10px] text-slate-350">
+                        {a.setter_notes}
+                    </div>
+                )}
+                
+                {phase === 'por_confirmar' && (
+                    <button 
+                        className="kadv-v6" 
+                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Conversando', e)}
+                        disabled={processingId === a.id}
+                    >
+                        {processingId === a.id ? '...' : 'Registrar contacto'}
+                    </button>
+                )}
+                {phase === 'conversando' && (
+                    <button 
+                        className="kadv-v6" 
+                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Confirmado', e)}
+                        disabled={processingId === a.id}
+                    >
+                        {processingId === a.id ? '...' : 'Confirmar asistencia'}
+                    </button>
+                )}
+                {phase === 'confirmado' && (
+                    <div className="flex gap-1 mt-2.5">
+                        <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
+                            ✓ Listo · espera su fecha
+                        </span>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Procesar acción rápida (Asistió, No Show, Canceló)
     const handleQuickAction = async (leadId, nextStatus, e) => {
@@ -576,323 +815,457 @@ const CloserWorkflowPage = () => {
     return (
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
-            {/* Header del Espacio de Trabajo */}
-            <div className="px-6 pt-6 pb-4 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 space-y-4">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-white italic uppercase tracking-tight flex items-center gap-2">
-                            Closer Workspace
-                        </h1>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            Flujo de Trabajo Operativo • {activeStep === 'seguimientos' ? '2. Seguimientos por Hacer' : activeStep === 'reagendar' ? '3. Reagendar / Actualizar' : '1. Citas del Día'}
-                        </p>
+            {/* Header del Espacio de Trabajo Premium v6 */}
+            <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+                <div className="topin">
+                    <div className="brand-v6">
+                        <div className="logo-v6">L</div>
+                        <div>
+                            <h1>Closer Workspace</h1>
+                            <small>Learnation</small>
+                        </div>
                     </div>
-
-                    {/* Selector de Pestaña de Categoría */}
-                    <div className="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800/80">
-                        <button
-                            onClick={() => setSearchParams({ step: 'agendas', selected_date: selectedDate })}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                                activeStep === 'agendas'
-                                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                            }`}
-                        >
-                            <Calendar size={12} />
-                            <span>Citas del Día</span>
-                        </button>
-                        <button
-                            onClick={() => setSearchParams({ step: 'seguimientos', selected_date: selectedDate })}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                                activeStep === 'seguimientos'
-                                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/25'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                            }`}
-                        >
-                            <Clock size={12} />
-                            <span>Seguimientos por Hacer</span>
-                        </button>
-                        <button
-                            onClick={() => setSearchParams({ step: 'reagendar', selected_date: selectedDate })}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                                activeStep === 'reagendar'
-                                    ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/25'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                            }`}
-                        >
-                            <RefreshCw size={12} />
-                            <span>Reagendar / Actualizar</span>
-                        </button>
-                    </div>
-
-                    {/* Controles de Búsqueda y Filtro de Fecha */}
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        {(activeStep === 'agendas' || activeStep === 'seguimientos') && (
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="bg-slate-900 border border-slate-800/80 rounded-xl px-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer font-bold"
-                                />
-                            </div>
-                        )}
-                        <div className="relative w-full md:w-64">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                            <input
-                                type="text"
-                                placeholder="Buscar lead por nombre o IG..."
+                    
+                    <div className="search-v6">
+                        <div className="sinner-v6">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                            <input 
+                                id="q" 
+                                placeholder="Buscar lead por nombre, @IG o examen…" 
+                                autoComplete="off"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-800/80 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all font-bold"
+                                onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
                             />
+                            <select 
+                                id="qscope"
+                                value={searchScope}
+                                onChange={(e) => setSearchScope(e.target.value)}
+                            >
+                                <option value="all">Todo</option>
+                                <option value="confirm">Confirmaciones</option>
+                                <option value="call">Llamadas</option>
+                                <option value="seg">Seguimientos</option>
+                                <option value="done">Resueltos</option>
+                            </select>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Área de Trabajo Principal */}
-            <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                
-                {/* Columna Izquierda: Cola de Citas del Día (ancho completo en agendas) */}
-                <div className={`${activeStep === 'agendas' ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
-                    
-                    {/* Sección Especial: Mensajes de Leads sin Agenda */}
-                    {activeStep === 'agendas' && unreadNoAgenda.length > 0 && (
-                        <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
-                            <h2 className="text-sm font-black text-rose-450 uppercase tracking-widest pl-1 flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                                Mensajes pendientes de Leads sin Agenda ({unreadNoAgenda.length})
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {unreadNoAgenda.map((a) => {
-                                    const isViewed = selectedLead?.id === a.id;
-                                    
-                                    return (
-                                        <motion.div
-                                            key={a.id}
-                                            layout
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            onClick={() => handleSelectLead(a)}
-                                            className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                isViewed 
-                                                    ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
-                                                    : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                    <div className="min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
-                                                                Mensaje nuevo
-                                                            </span>
-                                                            <h4 className="text-sm font-black text-white leading-tight truncate">
-                                                                {a.lead_name || 'Sin Nombre'}
-                                                            </h4>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5 text-[10px] text-slate-500">
-                                                            {a.instagram && <span>@{a.instagram.replace('@', '')}</span>}
-                                                            {a.email && <span>• {a.email}</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Barra de Acciones Masivas */}
-                    {selectedIds.size > 0 && (
-                        <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 px-3 py-1.5 rounded-xl border border-violet-500/20">
-                                    {selectedIds.size} Agendas Marcadas
-                                </span>
-                                <button 
-                                    onClick={() => setSelectedIds(new Set())}
-                                    className="text-[9px] font-black uppercase text-slate-500 hover:text-white underline cursor-pointer"
-                                >
-                                    Limpiar
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => handleBulkUpdate('Completada')}
-                                    disabled={submittingBulk}
-                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-650/20"
-                                >
-                                    ✓ Asistió
-                                </button>
-                                <button
-                                    onClick={() => handleBulkUpdate('No Show')}
-                                    disabled={submittingBulk}
-                                    className="px-4 py-2 bg-rose-650 hover:bg-rose-555 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-650/20"
-                                >
-                                    ✕ No Show
-                                </button>
-                                <button
-                                    onClick={() => handleBulkUpdate('Cancelada')}
-                                    disabled={submittingBulk}
-                                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-650/20"
-                                >
-                                    ✕ Canceló
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Contenedor de la Lista */}
-                    <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
-                        
-                        <div className="flex justify-between items-center border-b border-slate-900 pb-4">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={filteredAgendas.length > 0 && selectedIds.size === filteredAgendas.length}
-                                    onChange={toggleSelectAll}
-                                    className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
-                                />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Seleccionar Todos
-                                </span>
-                            </div>
-                            <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                {filteredAgendas.length} Confirmadas Hoy
-                            </span>
-                        </div>
-
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                <Loader2 className="animate-spin text-violet-500" size={32} />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando agendas...</span>
-                            </div>
-                        ) : filteredAgendas.length === 0 ? (
-                            <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                👏 No tienes agendas programadas para el día de hoy.
-                            </div>
-                        ) : (
-                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                <AnimatePresence initial={false}>
-                                    {filteredAgendas.map((a) => {
-                                        const isSelected = selectedIds.has(a.id);
-                                        const isViewed = selectedLead?.id === a.id;
-                                        const isRescheduling = rescheduleData.apptId === a.id;
+                        {showSearchResults && (
+                            <div id="qres" className="sresults-v6">
+                                {searching ? (
+                                    <div className="p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                                        <Loader2 className="animate-spin text-pink-500" size={14} />
+                                        <span>Buscando...</span>
+                                    </div>
+                                ) : searchResults.length > 0 ? (
+                                    searchResults.map((l) => {
+                                        const appt = l.appointment;
+                                        const result = appt ? appt.result || "" : "";
+                                        const closerResult = appt ? appt.closer_result || "" : "";
+                                        
+                                        let label = 'Confirmación';
+                                        let colorClass = 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+                                        
+                                        if (appt) {
+                                            const resClean = result.toLowerCase();
+                                            const closerResClean = closerResult.toLowerCase();
+                                            
+                                            if (closerResClean === 'show up' || closerResClean === 'cerrada' || closerResClean === 'cerrado') {
+                                                label = 'Resuelto';
+                                                colorClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                                            } else if (appt.fecha_seguimiento || closerResClean === 'no show' || closerResClean === 'cancelado' || closerResClean === 'reagendado') {
+                                                label = 'Seguimiento';
+                                                colorClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                                            } else if (resClean === 'confirmado') {
+                                                label = 'Llamada';
+                                                colorClass = 'bg-pink-500/10 text-pink-400 border border-pink-500/20';
+                                            }
+                                        }
                                         
                                         return (
-                                            <motion.div
-                                                key={a.id}
-                                                layout
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                onClick={() => handleSelectLead(a)}
-                                                className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                    isViewed 
-                                                        ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
-                                                        : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                                }`}
+                                            <div 
+                                                key={l.id || Math.random()} 
+                                                className="sres-v6" 
+                                                onClick={() => handleSelectSearchResult(l)}
                                             >
-                                                <div className="flex items-center justify-between gap-4">
-                                                    {/* Checkbox y Nombre */}
-                                                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            onChange={(e) => toggleSelect(a.id, e)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                        />
-                                                        
-                                                        <div className="min-w-0 space-y-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                                                    <Clock size={10} />
-                                                                    {formatTimeOnly(a.start_time)}
-                                                                </span>
-                                                                <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
-                                                                    {a.lead_name || 'Sin Nombre'}
-                                                                    {a.unread_comment && (
-                                                                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md animate-pulse">
-                                                                            Mensaje nuevo
-                                                                        </span>
-                                                                    )}
-                                                                </h4>
-                                                            </div>
-                                                            
-                                                            <div className="flex items-center gap-2 flex-wrap mt-1">
-                                                                <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
-                                                                    {a.origin || 'Sheets'}
-                                                                </span>
-                                                                <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
-                                                                    Confirmer: {a.result || 'Pendiente'}
-                                                                </span>
-                                                                {a.fecha_seguimiento && (
-                                                                    <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                                        <Calendar size={10} />
-                                                                        Seguimiento: {a.fecha_seguimiento}
-                                                                    </span>
-                                                                )}
-                                                                {a.is_rescheduled && (
-                                                                    <span className="text-[8px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-md">
-                                                                        Reagenda
-                                                                    </span>
-                                                                )}
-                                                                {a.instagram && (
-                                                                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
-                                                                        @{a.instagram}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Estado actual e indicador */}
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
-                                                            <button
-                                                                onClick={(e) => handleMarkFollowUpDone(a, e)}
-                                                                disabled={processingId === a.id}
-                                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                                                            >
-                                                                {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                                Marcar Realizado
-                                                            </button>
-                                                        )}
-                                                        <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
-                                                            a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
-                                                            a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                                            a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
-                                                            a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
-                                                            a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
-                                                            'bg-slate-500/10 text-slate-450 border border-slate-500/20'
-                                                        }`}>
-                                                            {a.closer_result || 'Pendiente'}
-                                                        </span>
-                                                        <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
+                                                <div className="flex-1 min-w-0">
+                                                    <b>{l.username || 'Sin Nombre'}</b>
+                                                    <div className="text-xs text-slate-400 truncate">
+                                                        {l.instagram ? `@${l.instagram.replace('@', '')}` : 'Sin Instagram'} • {l.phone || 'Sin Teléfono'} • {appt?.examen || 'Sin Examen'}
                                                     </div>
                                                 </div>
-                                            </motion.div>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
+                                                    {label}
+                                                </span>
+                                            </div>
                                         );
-                                    })}
-                                </AnimatePresence>
+                                    })
+                                ) : (
+                                    <div className="p-4 text-center text-xs text-slate-400">
+                                        Sin resultados.
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
+                    
+                    <div className="who-v6">
+                        <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
+                        <div className="av-v6">
+                            {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* Área de Trabajo Principal */}
+            <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
+                
+                {/* Selector de Pestañas v6 */}
+                <div className="tabs-v6">
+                    <button 
+                        className={`tab-v6 ${activeStep === 'confirmations' ? 'on' : ''}`}
+                        data-b="true"
+                        onClick={() => setSearchParams({ step: 'confirmations', selected_date: selectedDate })}
+                    >
+                        ① Confirmaciones 
+                        <span className={`n-v6 ml-1.5 ${counts.confirmations > 0 ? 'bg-rose-500 text-white font-bold' : ''}`}>
+                            {counts.confirmations}
+                        </span>
+                    </button>
+                    <button 
+                        className={`tab-v6 ${activeStep === 'calls' ? 'on' : ''}`}
+                        onClick={() => setSearchParams({ step: 'calls', selected_date: selectedDate })}
+                    >
+                        ② Llamadas 
+                        <span className={`n-v6 ml-1.5 ${counts.calls > 0 ? 'bg-amber-500 text-white font-bold' : ''}`}>
+                            {counts.calls}
+                        </span>
+                    </button>
+                    <button 
+                        className={`tab-v6 ${activeStep === 'seguimientos' ? 'on' : ''}`}
+                        onClick={() => setSearchParams({ step: 'seguimientos', selected_date: selectedDate })}
+                    >
+                        ③ Seguimientos 
+                        <span className="n-v6 ml-1.5">{counts.seguimientos}</span>
+                    </button>
+                    <div className="flex-1"></div>
+                    
+                    {/* Filtro de fecha para llamadas y seguimientos */}
+                    {(activeStep === 'calls' || activeStep === 'seguimientos') && (
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-1.5 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer w-auto mr-3 text-center"
+                        />
+                    )}
+                    <button 
+                        className="tab-v6" 
+                        onClick={() => navigate('/closer/sales/new')}
+                        style={{ color: '#FFB3DE' }}
+                    >
+                        ＋ Nueva agenda
+                    </button>
                 </div>
 
-                {/* Columna Derecha: Visor Detallado - Oculto en agendas */}
-                {activeStep !== 'agendas' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Columna Izquierda */}
+                <div className={`${!selectedLead ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
+                    
+                    {activeStep === 'confirmations' ? (
+                        /* Renderizado del Kanban de Confirmaciones */
+                        loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                <Loader2 className="animate-spin text-pink-500" size={32} />
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando confirmaciones...</span>
+                            </div>
+                        ) : filteredAgendas.length === 0 ? (
+                            <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
+                                👏 No hay citas pendientes de confirmación.
+                            </div>
+                        ) : (
+                            <div className="kb-v6">
+                                {/* Columna Por confirmar */}
+                                <div className="kcol-v6 k1-v6">
+                                    <div className="kch-v6">
+                                        <span className="dt-v6"></span>
+                                        <b>Por confirmar</b>
+                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length}</span>
+                                    </div>
+                                    <div className="kbody-v6">
+                                        {confirmationsPipeline.porConfirmar.length > 0 ? (
+                                            confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))
+                                        ) : (
+                                            <div className="kempty-v6 done-v6">✓ Ninguno sin tocar</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Columna Conversando */}
+                                <div className="kcol-v6 k2-v6">
+                                    <div className="kch-v6">
+                                        <span className="dt-v6"></span>
+                                        <b>Conversando</b>
+                                        <span className="n-v6">{confirmationsPipeline.conversando.length}</span>
+                                    </div>
+                                    <div className="kbody-v6">
+                                        {confirmationsPipeline.conversando.length > 0 ? (
+                                            confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))
+                                        ) : (
+                                            <div className="kempty-v6">Sin leads conversando.</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Columna Confirmado */}
+                                <div className="kcol-v6 k3-v6">
+                                    <div className="kch-v6">
+                                        <span className="dt-v6"></span>
+                                        <b>Confirmado</b>
+                                        <span className="n-v6">{confirmationsPipeline.confirmado.length}</span>
+                                    </div>
+                                    <div className="kbody-v6">
+                                        {confirmationsPipeline.confirmado.length > 0 ? (
+                                            confirmationsPipeline.confirmado.map(a => renderKanbanCard(a, 'confirmado'))
+                                        ) : (
+                                            <div className="kempty-v6">Sin leads confirmados.</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    ) : (
+                        /* Renderizado clásico de Lista para Llamadas y Seguimientos */
+                        <>
+                            {/* Sección Especial: Mensajes de Leads sin Agenda */}
+                            {unreadNoAgenda.length > 0 && (
+                                <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
+                                    <h2 className="text-sm font-black text-rose-450 uppercase tracking-widest pl-1 flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                        Mensajes pendientes de Leads sin Agenda ({unreadNoAgenda.length})
+                                    </h2>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {unreadNoAgenda.map((a) => {
+                                            const isViewed = selectedLead?.id === a.id;
+                                            
+                                            return (
+                                                <motion.div
+                                                    key={a.id}
+                                                    layout
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    onClick={() => handleSelectLead(a)}
+                                                    className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
+                                                        isViewed 
+                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                                                            : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                                            <div className="min-w-0 space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
+                                                                        Mensaje nuevo
+                                                                    </span>
+                                                                    <h4 className="text-sm font-black text-white leading-tight truncate">
+                                                                        {a.lead_name || 'Sin Nombre'}
+                                                                    </h4>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5 text-[10px] text-slate-500">
+                                                                    {a.instagram && <span>@{a.instagram.replace('@', '')}</span>}
+                                                                    {a.email && <span>• {a.email}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Barra de Acciones Masivas */}
+                            {selectedIds.size > 0 && (
+                                <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-left animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 px-3 py-1.5 rounded-xl border border-violet-500/20">
+                                            {selectedIds.size} Agendas Marcadas
+                                        </span>
+                                        <button 
+                                            onClick={() => setSelectedIds(new Set())}
+                                            className="text-[9px] font-black uppercase text-slate-500 hover:text-white underline cursor-pointer"
+                                        >
+                                            Limpiar
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleBulkUpdate('Completada')}
+                                            disabled={submittingBulk}
+                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-650/20"
+                                        >
+                                            ✓ Asistió
+                                        </button>
+                                        <button
+                                            onClick={() => handleBulkUpdate('No Show')}
+                                            disabled={submittingBulk}
+                                            className="px-4 py-2 bg-rose-650 hover:bg-rose-555 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-650/20"
+                                        >
+                                            ✕ No Show
+                                        </button>
+                                        <button
+                                            onClick={() => handleBulkUpdate('Cancelada')}
+                                            disabled={submittingBulk}
+                                            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-650/20"
+                                        >
+                                            ✕ Canceló
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Contenedor de la Lista */}
+                            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
+                                <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={filteredAgendas.length > 0 && selectedIds.size === filteredAgendas.length}
+                                            onChange={toggleSelectAll}
+                                            className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
+                                        />
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Seleccionar Todos
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
+                                        {filteredAgendas.length} Citas en Lista
+                                    </span>
+                                </div>
+
+                                {loading ? (
+                                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                        <Loader2 className="animate-spin text-violet-500" size={32} />
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando agendas...</span>
+                                    </div>
+                                ) : filteredAgendas.length === 0 ? (
+                                    <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
+                                        👏 No tienes agendas programadas.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+                                        <AnimatePresence initial={false}>
+                                            {filteredAgendas.map((a) => {
+                                                const isSelected = selectedIds.has(a.id);
+                                                const isViewed = selectedLead?.id === a.id;
+                                                
+                                                return (
+                                                    <motion.div
+                                                        key={a.id}
+                                                        layout
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        onClick={() => handleSelectLead(a)}
+                                                        className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
+                                                            isViewed 
+                                                                ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                                                                : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-4">
+                                                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => toggleSelect(a.id, e)}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
+                                                                />
+                                                                
+                                                                <div className="min-w-0 space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                                                            <Clock size={10} />
+                                                                            {formatTimeOnly(a.start_time)}
+                                                                        </span>
+                                                                        <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
+                                                                            {a.lead_name || 'Sin Nombre'}
+                                                                            {a.unread_comment && (
+                                                                                <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
+                                                                                    Mensaje nuevo
+                                                                                </span>
+                                                                            )}
+                                                                        </h4>
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                                                                        <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
+                                                                            {a.origin || 'Sheets'}
+                                                                        </span>
+                                                                        <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
+                                                                            Confirmer: {a.result || 'Pendiente'}
+                                                                        </span>
+                                                                        {a.fecha_seguimiento && (
+                                                                            <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                                                <Calendar size={10} />
+                                                                                Seguimiento: {a.fecha_seguimiento}
+                                                                            </span>
+                                                                        )}
+                                                                        {a.instagram && (
+                                                                            <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
+                                                                                @{a.instagram}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3 shrink-0">
+                                                                {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
+                                                                    <button
+                                                                        onClick={(e) => handleMarkFollowUpDone(a, e)}
+                                                                        disabled={processingId === a.id}
+                                                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
+                                                                    >
+                                                                        {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                                        Marcar Realizado
+                                                                    </button>
+                                                                )}
+                                                                <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
+                                                                    a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
+                                                                    a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
+                                                                    a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
+                                                                    a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
+                                                                    a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
+                                                                    'bg-slate-500/10 text-slate-450 border border-slate-500/20'
+                                                                }`}>
+                                                                    {a.closer_result || 'Pendiente'}
+                                                                </span>
+                                                                <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Columna Derecha: Visor Detallado */}
+                {selectedLead && (
                     <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
-                        {selectedLead ? (
-                            <div className="space-y-4">
+                        <div className="space-y-4">
                                 <div className="flex justify-between items-center pb-2 border-b border-slate-900">
                                     <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
                                         <AlertCircle size={13} />
@@ -918,28 +1291,13 @@ const CloserWorkflowPage = () => {
                                         fetchAgendas();
                                     }}
                                 />
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                                <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
-                                    <Users size={28} />
-                                </div>
-                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                                    Perfil del Prospecto
-                                </h3>
-                                <p className="text-[10px] text-slate-655 font-bold uppercase tracking-wider mt-1.5 max-w-xs leading-relaxed">
-                                    Selecciona una cita de la agenda de hoy para calificar objeciones, guardar notas e investigar respuestas del prospecto.
-                                </p>
-                            </div>
-                        )}
+                        </div>
                     </div>
                 )}
 
-            </div>
-
             {/* Modal de Detalle de Agenda Custom (para agendas del Closer) */}
             <AnimatePresence>
-                {activeStep === 'agendas' && selectedLead && (
+                {(activeStep === 'confirmations' || activeStep === 'calls') && selectedLead && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -1158,6 +1516,8 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
             </AnimatePresence>
+        </div> {/* Cierre de la grilla grid-cols-12 */}
+        </div> {/* Cierre del área de trabajo principal flex flex-col */}
 
             {/* Modal de decisión: Con / Sin Decisor */}
             <AnimatePresence>
