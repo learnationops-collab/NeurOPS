@@ -97,6 +97,95 @@ const GROUPED_COLUMNS = [
     { id: 'programas', label: 'Programas', getValue: (group) => [...new Set(group.map(s => s.programa || '').filter(Boolean))].join(' | ') }
 ];
 
+const MultiSelectFilter = ({ label, options, selectedValues, onChange, icon: Icon, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedList = selectedValues ? selectedValues.split(',').filter(Boolean) : [];
+
+    const handleToggle = (val) => {
+        let newList;
+        if (selectedList.includes(val)) {
+            newList = selectedList.filter(v => v !== val);
+        } else {
+            newList = [...selectedList, val];
+        }
+        onChange(newList.join(','));
+    };
+
+    const handleSelectAll = () => {
+        onChange('');
+    };
+
+    return (
+        <div ref={containerRef} className="relative flex flex-col gap-1 w-full">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">{label}</span>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-3 py-2 text-left transition-all focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 shrink-0"
+            >
+                {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />}
+                <span className="truncate pr-2">
+                    {selectedList.length === 0 
+                        ? placeholder 
+                        : `${placeholder} (${selectedList.length})`}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-slate-550 transition-transform ${isOpen ? 'rotate-180' : ''} shrink-0`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 z-[100] mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2.5 backdrop-blur-md space-y-1.5">
+                    <div className="flex items-center justify-between px-1 pb-1.5 border-b border-slate-850">
+                        <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider">Opciones</span>
+                        {selectedList.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleSelectAll}
+                                className="text-[9px] text-rose-450 hover:text-rose-400 font-bold uppercase tracking-wider transition-colors"
+                            >
+                                Limpiar
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                        {options.map((option) => {
+                            const isSelected = selectedList.includes(option);
+                            return (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    onClick={() => handleToggle(option)}
+                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-all ${
+                                        isSelected 
+                                            ? 'bg-violet-650/20 text-violet-300' 
+                                            : 'text-slate-450 hover:bg-slate-850/50 hover:text-slate-200'
+                                    }`}
+                                >
+                                    <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-violet-500 border-violet-500' : 'border-slate-650'}`}>
+                                        {isSelected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                    </span>
+                                    <span className="truncate">{option}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PublicFinancialSalesPage = () => {
     const navigate = useNavigate();
     const [sales, setSales] = useState([]);
@@ -1344,118 +1433,54 @@ const PublicFinancialSalesPage = () => {
                 {/* Fila Secundaria: Selectores de Filtro Avanzado Iconográficos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {/* Programa */}
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</span>
-                        <div className="relative">
-                            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-                            <select
-                                value={programa}
-                                onChange={(e) => setPrograma(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
-                            >
-                                <option value="">Todos los Programas</option>
-                                {uniquePrograms
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map((p) => (
-                                        <option key={p} value={p}>{p}</option>
-                                    ))
-                                }
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
-                        </div>
-                    </div>
+                    <MultiSelectFilter
+                        label="Programa"
+                        options={uniquePrograms.sort((a, b) => a.localeCompare(b))}
+                        selectedValues={programa}
+                        onChange={setPrograma}
+                        icon={BookOpen}
+                        placeholder="Todos los Programas"
+                    />
 
                     {/* Tipo de Pago */}
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Tipo de Pago</span>
-                        <div className="relative">
-                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-                            <select
-                                value={tipoPagoSimple}
-                                onChange={(e) => setTipoPagoSimple(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
-                            >
-                                <option value="">Todos los Pagos</option>
-                                {uniquePaymentTypes
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map((type) => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))
-                                }
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
-                        </div>
-                    </div>
+                    <MultiSelectFilter
+                        label="Tipo de Pago"
+                        options={uniquePaymentTypes.sort((a, b) => a.localeCompare(b))}
+                        selectedValues={tipoPagoSimple}
+                        onChange={setTipoPagoSimple}
+                        icon={CreditCard}
+                        placeholder="Todos los Pagos"
+                    />
 
                     {/* Método de Pago */}
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Método</span>
-                        <div className="relative">
-                            <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-                            <select
-                                value={metodoPago}
-                                onChange={(e) => setMetodoPago(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
-                            >
-                                <option value="">Todos los Métodos</option>
-                                {uniquePaymentMethods
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map((method) => (
-                                        <option key={method} value={method}>{method}</option>
-                                    ))
-                                }
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
-                        </div>
-                    </div>
+                    <MultiSelectFilter
+                        label="Método"
+                        options={uniquePaymentMethods.sort((a, b) => a.localeCompare(b))}
+                        selectedValues={metodoPago}
+                        onChange={setMetodoPago}
+                        icon={Wallet}
+                        placeholder="Todos los Métodos"
+                    />
 
                     {/* Closer */}
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Closer</span>
-                        <div className="relative">
-                            <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
-                            <select
-                                value={closer}
-                                onChange={(e) => setCloser(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
-                            >
-                                <option value="">Todos los Closers</option>
-                                <option value="Sin Closer">Sin Closer</option>
-                                {uniqueClosers
-                                    .filter(c => c !== "Sin Closer")
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map((c) => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))
-                                }
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
-                        </div>
-                    </div>
+                    <MultiSelectFilter
+                        label="Closer"
+                        options={['Sin Closer', ...uniqueClosers.filter(c => c !== "Sin Closer").sort((a, b) => a.localeCompare(b))]}
+                        selectedValues={closer}
+                        onChange={setCloser}
+                        icon={UserCheck}
+                        placeholder="Todos los Closers"
+                    />
 
                     {/* Fuente (Setter) */}
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Fuente (Setter)</span>
-                        <div className="relative">
-                            <Compass className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
-                            <select
-                                value={source}
-                                onChange={(e) => setSource(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
-                            >
-                                <option value="">Todas las Fuentes</option>
-                                <option value="Sin Setter">Sin Setter</option>
-                                {uniqueSetters
-                                    .filter(s => s !== "Sin Setter")
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map((s) => (
-                                        <option key={s} value={s}>{s}</option>
-                                    ))
-                                }
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
-                        </div>
-                    </div>
+                    <MultiSelectFilter
+                        label="Fuente (Setter)"
+                        options={['Sin Setter', ...uniqueSetters.filter(s => s !== "Sin Setter").sort((a, b) => a.localeCompare(b))]}
+                        selectedValues={source}
+                        onChange={setSource}
+                        icon={Compass}
+                        placeholder="Todas las Fuentes"
+                    />
                 </div>
 
                 {/* Pills/Badges de Filtros Activos */}
