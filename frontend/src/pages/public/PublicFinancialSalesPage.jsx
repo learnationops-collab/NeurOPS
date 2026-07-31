@@ -133,7 +133,7 @@ const MultiSelectFilter = ({ label, options, selectedValues, onChange, icon: Ico
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-3 py-2 text-left transition-all focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 shrink-0"
+                className="relative w-full flex items-center justify-between bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-3 py-2 text-left transition-all focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 shrink-0"
             >
                 {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />}
                 <span className="truncate pr-2">
@@ -1331,7 +1331,7 @@ const PublicFinancialSalesPage = () => {
             </div>
 
             {/* Panel de Filtros Reorganizado */}
-            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-hidden">
+            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-visible">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div className="flex items-center gap-2 text-violet-405">
                         <Filter size={16} className="text-violet-400" />
