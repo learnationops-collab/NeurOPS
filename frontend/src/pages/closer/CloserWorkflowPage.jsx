@@ -497,10 +497,43 @@ const CloserWorkflowPage = () => {
         }
     };
 
-    const handleSelectLead = (lead) => {
+    const handleSelectLead = async (lead) => {
+        if (!lead) return;
+
+        // 1. Establecer selección inicial de forma síncrona
         setSelectedLead(lead);
+        setModalTab('act');
+        setDecisionPath([]);
+        setReasonInput('');
+        setSessionForm({
+            confirm_status: lead.result || lead.closer_result || 'por_confirmar',
+            notes: lead.closer_notes || lead.notes || '',
+            result: lead.closer_result || lead.result || 'Pendiente'
+        });
+
+        // 2. Determinar paso inicial del árbol por contexto
+        if (activeStep === 'confirmations' || lead.fase === 'confirm') {
+            setModalStep('confirm');
+        } else if (activeStep === 'seguimientos' || lead.fase === 'seg') {
+            setModalStep(lead.tipo === 'cerrada' ? 'segventa' : 'seg');
+        } else {
+            setModalStep('root');
+        }
+
         setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
         setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
+
+        // 3. Enriquecer datos completos si la cita tiene ID real de BD
+        if (lead.id && lead.id > 0) {
+            try {
+                const res = await api.get(`/closer/deck/card/${lead.id}`, { skipAuthError: true });
+                if (res.data) {
+                    setSelectedLead(prev => ({ ...prev, ...res.data }));
+                }
+            } catch (err) {
+                console.warn("No se pudieron cargar detalles completos del lead:", err);
+            }
+        }
     };
 
     // Filtrar localmente por búsqueda
@@ -1052,7 +1085,7 @@ const CloserWorkflowPage = () => {
 
     const getCalificacionColor = (text) => {
         if (!text) return 'info';
-        const str = text.toLowerCase();
+        const str = String(text).toLowerCase();
         if (/no te podemos ayudar|desempleado|primero/.test(str)) return 'bad';
         if (/dispuesto|comprometo|no, no necesito|más de/.test(str)) return 'good';
         if (/pareja|lo hablo/.test(str)) return 'warn';
@@ -2742,7 +2775,7 @@ const CloserWorkflowPage = () => {
 
                                 {/* Columna Derecha: Chat / Comentarios */}
                                 <div className="lg:col-span-5 h-[65vh]">
-                                    <CommentsSection clientId={selectedLead.client_id} />
+                                    <CommentsSection clientId={selectedLead.client_id || (selectedLead.id > 0 ? selectedLead.id : null)} />
                                 </div>
                             </div>
                         </motion.div>
