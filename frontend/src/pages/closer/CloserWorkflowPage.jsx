@@ -68,8 +68,30 @@ const CloserWorkflowPage = () => {
         return localDate.toISOString().split('T')[0];
     });
     
-    // Cita seleccionada para el visor de la derecha
+    // Cita seleccionada para el visor de la derecha (modal overlay v7)
     const [selectedLead, setSelectedLead] = useState(null);
+
+    // Modales secundarios v7: Nueva Agenda y Referido Manual
+    const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
+    const [newAgendaForm, setNewAgendaForm] = useState({
+        lead_name: '',
+        instagram: '',
+        date: new Date().toISOString().split('T')[0],
+        time: '18:00',
+        origin: 'Setter',
+        examen: ''
+    });
+
+    const [manualRefModalOpen, setManualRefModalOpen] = useState(false);
+    const [manualRefForm, setManualRefForm] = useState({
+        from_lead_id: null,
+        from_lead_name: '',
+        lead_name: '',
+        contact: '',
+        notes: ''
+    });
+    const [refSearchQuery, setRefSearchQuery] = useState('');
+    const [refSearchResults, setRefSearchResults] = useState([]);
 
     // Modal de motivo/razón de cambio (Reemplazo de window.prompt)
     const [reasonModal, setReasonModal] = useState({
@@ -217,6 +239,99 @@ const CloserWorkflowPage = () => {
                 setter_name: lead.appointment?.setter_name || "Sin Asignar",
                 closer_result: "Pendiente"
             });
+        }
+    };
+
+    // Crear Nueva Agenda (Modal v7)
+    const handleCreateAgenda = async () => {
+        if (!newAgendaForm.lead_name.trim()) {
+            toast.error("El nombre del prospecto es obligatorio");
+            return;
+        }
+        if (!newAgendaForm.date || !newAgendaForm.time) {
+            toast.error("La fecha y hora son obligatorias");
+            return;
+        }
+        setProcessingId('new_agenda');
+        try {
+            const payload = {
+                lead_name: newAgendaForm.lead_name,
+                instagram: newAgendaForm.instagram ? newAgendaForm.instagram.replace('@', '').trim() : '',
+                start_time: `${newAgendaForm.date}T${newAgendaForm.time}:00`,
+                origin: newAgendaForm.origin,
+                examen: newAgendaForm.examen
+            };
+            await api.post('/closer/deck/new', payload);
+            toast.success("Agenda creada correctamente");
+            setNewAgendaModalOpen(false);
+            setNewAgendaForm({
+                lead_name: '',
+                instagram: '',
+                date: new Date().toISOString().split('T')[0],
+                time: '18:00',
+                origin: 'Setter',
+                examen: ''
+            });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al crear agenda:", err);
+            toast.error("Error al crear la agenda");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // Guardar Referido Manual (Modal v7)
+    const handleSaveManualRef = async () => {
+        if (!manualRefForm.from_lead_id) {
+            toast.error("Selecciona el lead origen del referido");
+            return;
+        }
+        if (!manualRefForm.lead_name.trim()) {
+            toast.error("El nombre del referido es obligatorio");
+            return;
+        }
+        setProcessingId('manual_ref');
+        try {
+            const payload = {
+                from_lead_id: manualRefForm.from_lead_id,
+                lead_name: manualRefForm.lead_name,
+                contact: manualRefForm.contact,
+                notes: manualRefForm.notes
+            };
+            await api.post('/closer/deck/referrals/manual', payload);
+            toast.success("Referido guardado correctamente");
+            setManualRefModalOpen(false);
+            setManualRefForm({
+                from_lead_id: null,
+                from_lead_name: '',
+                lead_name: '',
+                contact: '',
+                notes: ''
+            });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al guardar referido manual:", err);
+            toast.error("Error al registrar referido");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // Eliminar Lead (Modal v7)
+    const handleDeleteLead = async (leadId, leadName) => {
+        if (!window.confirm(`¿Eliminar definitivamente a ${leadName || 'este prospecto'}?`)) return;
+        setProcessingId(leadId);
+        try {
+            await api.delete(`/closer/deck/${leadId}`);
+            toast.success("Prospecto eliminado correctamente");
+            if (selectedLead?.id === leadId) setSelectedLead(null);
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al eliminar lead:", err);
+            toast.error("Error al eliminar el prospecto");
+        } finally {
+            setProcessingId(null);
         }
     };
 
@@ -1996,7 +2111,14 @@ const CloserWorkflowPage = () => {
                     )}
                     <button 
                         className="tab-v6" 
-                        onClick={() => navigate('/closer/sales/new')}
+                        onClick={() => setManualRefModalOpen(true)}
+                        style={{ color: '#60A5FA' }}
+                    >
+                        🎁 Referido manual
+                    </button>
+                    <button 
+                        className="tab-v6" 
+                        onClick={() => setNewAgendaModalOpen(true)}
                         style={{ color: '#FFB3DE' }}
                     >
                         ＋ Nueva agenda
@@ -2005,8 +2127,8 @@ const CloserWorkflowPage = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Columna Izquierda */}
-                <div className={`${!selectedLead ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
+                {/* Columna Única de Ancho Completo v7 */}
+                <div className="lg:col-span-12 space-y-4">
                     
                     {activeStep === 'confirmations' ? (
                         /* Renderizado del Kanban de Confirmaciones */
@@ -2296,39 +2418,6 @@ const CloserWorkflowPage = () => {
                         </>
                     )}
                 </div>
-
-                {/* Columna Derecha: Visor Detallado */}
-                {selectedLead && (
-                    <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
-                        <div className="space-y-4">
-                                <div className="flex justify-between items-center pb-2 border-b border-slate-900">
-                                    <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
-                                        <AlertCircle size={13} />
-                                        Ficha de Seguimiento
-                                    </h3>
-                                    <button
-                                        onClick={() => setSelectedLead(null)}
-                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                
-                                <LeadRoadmapDetail 
-                                    instagram={selectedLead.instagram}
-                                    email={selectedLead.email}
-                                    phone={selectedLead.phone}
-                                    availableKeywords={[]}
-                                    userRole={user?.role}
-                                    appointmentId={selectedLead.id}
-                                    compact={true}
-                                    onUpdate={() => {
-                                        fetchAgendas();
-                                    }}
-                                />
-                        </div>
-                    </div>
-                )}
                 </div>
                 </div>
                 ) : (
@@ -2476,26 +2565,32 @@ const CloserWorkflowPage = () => {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="w-full max-w-6xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden text-left relative flex flex-col max-h-[90vh] text-slate-100 animate-in zoom-in-95 duration-250"
                         >
-                            {/* Cabecera */}
+                            {/* Cabecera v7 */}
                             <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                                 <div className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase text-violet-400 tracking-widest">
-                                        Ficha Operativa de Cierre
-                                    </span>
-                                    <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-2">
-                                        <AlertCircle size={20} className="text-violet-400" />
-                                        {selectedLead.lead_name || 'Sin Nombre'}
+                                    <h3 className="text-2xl font-black text-white tracking-tight">
+                                        {(selectedLead.lead_name || 'Sin Nombre').toUpperCase()}
                                     </h3>
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                        {activeStep === 'confirmations' ? 'Proceso de confirmación' : activeStep === 'calls' ? 'Reporte de llamada' : 'Seguimiento'} • ID Cita: #{selectedLead.id}
+                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                        {activeStep === 'confirmations' ? 'Proceso de confirmación' : activeStep === 'calls' ? 'Reporte de llamada' : 'Seguimiento'}
+                                        {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => setSelectedLead(null)}
-                                    className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none bg-transparent"
-                                >
-                                    <X size={20} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
+                                        title="Eliminar lead"
+                                        className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30"
+                                    >
+                                        <X size={18} className="rotate-45" />
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedLead(null)}
+                                        className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none bg-transparent"
+                                    >
+                                        <X size={22} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Selector de Pestañas del Modal */}
@@ -2619,6 +2714,19 @@ const CloserWorkflowPage = () => {
                                                     placeholder="Escribe una nota interna para ti o para el equipo..."
                                                     className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
                                                 />
+                                                <div className="flex flex-wrap gap-2 items-center pt-1">
+                                                    <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
+                                                    {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
+                                                        <button
+                                                            key={m}
+                                                            type="button"
+                                                            onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
+                                                            className="text-[10px] font-bold text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                                        >
+                                                            {m}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                                 <button
                                                     onClick={addLeadNote}
                                                     disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
@@ -3224,6 +3332,237 @@ const CloserWorkflowPage = () => {
                 isSaleFollowUp={followUpModal.isSaleFollowUp}
                 loading={savingFollowUp}
             />
+
+            {/* Modal Nueva Agenda v7 (ovNew) */}
+            <AnimatePresence>
+                {newAgendaModalOpen && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 max-w-lg w-full shadow-2xl space-y-5 relative text-slate-100"
+                        >
+                            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-black text-white italic">Nueva agenda</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Referidos · leads propios</p>
+                                </div>
+                                <button onClick={() => setNewAgendaModalOpen(false)} className="text-slate-500 hover:text-white p-1">
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Nombre <span className="text-pink-500">*</span></label>
+                                        <input
+                                            value={newAgendaForm.lead_name}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, lead_name: e.target.value }))}
+                                            placeholder="Carla Mendoza"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Instagram <span className="text-pink-500">*</span></label>
+                                        <input
+                                            value={newAgendaForm.instagram}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, instagram: e.target.value }))}
+                                            placeholder="@usuario"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Fecha <span className="text-pink-500">*</span></label>
+                                        <input
+                                            type="date"
+                                            value={newAgendaForm.date}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, date: e.target.value }))}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Hora <span className="text-pink-500">*</span></label>
+                                        <input
+                                            type="time"
+                                            value={newAgendaForm.time}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, time: e.target.value }))}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Fuente <span className="text-pink-500">*</span></label>
+                                        <select
+                                            value={newAgendaForm.origin}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, origin: e.target.value }))}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-white"
+                                        >
+                                            <option value="Setter">Setter</option>
+                                            <option value="Workshop">Workshop</option>
+                                            <option value="VSL">VSL</option>
+                                            <option value="Referido">Referido</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Examen objetivo</label>
+                                    <input
+                                        value={newAgendaForm.examen}
+                                        onChange={(e) => setNewAgendaForm(prev => ({ ...prev, examen: e.target.value }))}
+                                        placeholder="ENARM / STEP 1 / MIR…"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setNewAgendaModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold uppercase">
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleCreateAgenda}
+                                    disabled={processingId === 'new_agenda'}
+                                    className="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                                >
+                                    {processingId === 'new_agenda' ? 'Creando...' : 'Crear y mandar a confirmar'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal Referido Manual v7 (ovRef) */}
+            <AnimatePresence>
+                {manualRefModalOpen && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 max-w-lg w-full shadow-2xl space-y-5 relative text-slate-100"
+                        >
+                            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-black text-white italic">🎁 Agregar referido</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sin lead de origen no hay trazabilidad</p>
+                                </div>
+                                <button onClick={() => setManualRefModalOpen(false)} className="text-slate-500 hover:text-white p-1">
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl text-[10px] text-slate-400 font-bold uppercase leading-relaxed">
+                                Todo referido tiene que colgar de alguien. Así sabés qué perfil de cliente refiere y cuánto vale cada referido en ventas.
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">¿Quién te lo pasó? <span className="text-pink-500">*</span></label>
+                                    {manualRefForm.from_lead_name ? (
+                                        <div className="flex justify-between items-center p-3 bg-violet-500/10 border border-violet-500/30 rounded-xl">
+                                            <span className="text-xs font-bold text-violet-300">Colgado de: {manualRefForm.from_lead_name}</span>
+                                            <button onClick={() => setManualRefForm(prev => ({ ...prev, from_lead_id: null, from_lead_name: '' }))} className="text-[10px] text-pink-400 font-bold underline">Cambiar</button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <input
+                                                value={refSearchQuery}
+                                                onChange={async (e) => {
+                                                    const q = e.target.value;
+                                                    setRefSearchQuery(q);
+                                                    if (q.trim().length >= 2) {
+                                                        try {
+                                                            const res = await api.get(`/closer/leads/search?q=${encodeURIComponent(q)}`);
+                                                            setRefSearchResults(res.data || []);
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                        }
+                                                    } else {
+                                                        setRefSearchResults([]);
+                                                    }
+                                                }}
+                                                placeholder="Buscá el lead que te dio el referido…"
+                                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                            />
+                                            {refSearchResults.length > 0 && (
+                                                <div className="max-h-40 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl divide-y divide-slate-850">
+                                                    {refSearchResults.map(l => (
+                                                        <div
+                                                            key={l.id}
+                                                            onClick={() => {
+                                                                setManualRefForm(prev => ({ ...prev, from_lead_id: l.appointment?.id || l.id, from_lead_name: l.username || l.lead_name }));
+                                                                setRefSearchResults([]);
+                                                                setRefSearchQuery('');
+                                                            }}
+                                                            className="p-2.5 hover:bg-violet-500/10 cursor-pointer text-xs font-bold text-slate-200 flex justify-between"
+                                                        >
+                                                            <span>{l.username || l.lead_name}</span>
+                                                            <span className="text-[10px] text-slate-500">{l.instagram ? `@${l.instagram}` : ''}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Nombre del referido <span className="text-pink-500">*</span></label>
+                                        <input
+                                            value={manualRefForm.lead_name}
+                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, lead_name: e.target.value }))}
+                                            placeholder="Ej: Carla Mendoza"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Instagram o teléfono</label>
+                                        <input
+                                            value={manualRefForm.contact}
+                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, contact: e.target.value }))}
+                                            placeholder="@usuario o +52 ..."
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Contexto</label>
+                                    <textarea
+                                        rows={2}
+                                        value={manualRefForm.notes}
+                                        onChange={(e) => setManualRefForm(prev => ({ ...prev, notes: e.target.value }))}
+                                        placeholder="Es su compañera de guardia, también rinde ENARM en marzo."
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white custom-scrollbar"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setManualRefModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold uppercase">
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveManualRef}
+                                    disabled={!manualRefForm.from_lead_id || !manualRefForm.lead_name.trim() || processingId === 'manual_ref'}
+                                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                                >
+                                    {processingId === 'manual_ref' ? 'Guardando...' : 'Crear referido'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* DOCK FLOTANTE v6 */}
             <div className={`dock-v6 ${reportSent ? 'done-v6' : ''}`}>
