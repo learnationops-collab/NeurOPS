@@ -451,19 +451,27 @@ def get_financial_sales():
                 pass
 
         if programa:
-            query = query.filter(or_(
-                FinancialSale.tipo_pago.like(f"{programa} - %"),
-                FinancialSale.tipo_pago == programa
-            ))
+            programas = [p.strip() for p in programa.split(',') if p.strip()]
+            if programas:
+                filters_or = []
+                for p in programas:
+                    filters_or.append(FinancialSale.tipo_pago.like(f"{p} - %"))
+                    filters_or.append(FinancialSale.tipo_pago == p)
+                query = query.filter(or_(*filters_or))
             
         if tipo_pago_simple:
-            query = query.filter(or_(
-                FinancialSale.tipo_pago.like(f"% - {tipo_pago_simple}"),
-                FinancialSale.tipo_pago == tipo_pago_simple
-            ))
+            tipos = [t.strip() for t in tipo_pago_simple.split(',') if t.strip()]
+            if tipos:
+                filters_or = []
+                for t in tipos:
+                    filters_or.append(FinancialSale.tipo_pago.like(f"% - {t}"))
+                    filters_or.append(FinancialSale.tipo_pago == t)
+                query = query.filter(or_(*filters_or))
             
         if metodo_pago:
-            query = query.filter(FinancialSale.metodo_pago == metodo_pago)
+            metodos = [m.strip() for m in metodo_pago.split(',') if m.strip()]
+            if metodos:
+                query = query.filter(FinancialSale.metodo_pago.in_(metodos))
             
     query = query.order_by(FinancialSale.date.desc())
     subquery_sales = query.all()
@@ -537,20 +545,28 @@ def get_financial_sales():
 
         # Aplicar el filtro de closer in-memory
         if not ids_str and closer_filter:
-            if closer_filter.lower() == 'sin closer':
-                if final_closer != 'Sin Closer':
-                    continue
-            else:
-                if final_closer.lower() != closer_filter.lower():
+            closers = [c.strip().lower() for c in closer_filter.split(',') if c.strip()]
+            if closers:
+                matches = False
+                for c in closers:
+                    if c == 'sin closer' and final_closer == 'Sin Closer':
+                        matches = True
+                    elif final_closer.lower() == c:
+                        matches = True
+                if not matches:
                     continue
 
         # Aplicar el filtro de fuente (setter) in-memory
         if not ids_str and source_filter:
-            if source_filter.lower() == 'sin setter':
-                if final_setter != 'Sin Setter':
-                    continue
-            else:
-                if final_setter.lower() != source_filter.lower():
+            sources = [sf.strip().lower() for sf in source_filter.split(',') if sf.strip()]
+            if sources:
+                matches = False
+                for sf in sources:
+                    if sf == 'sin setter' and final_setter == 'Sin Setter':
+                        matches = True
+                    elif final_setter.lower() == sf:
+                        matches = True
+                if not matches:
                     continue
                     
         # Una venta está completada si no tiene estado o su estado es "Completada" o "Confirmada"
