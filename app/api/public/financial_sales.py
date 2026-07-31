@@ -450,29 +450,7 @@ def get_financial_sales():
             except ValueError:
                 pass
 
-        if programa:
-            programas = [p.strip() for p in programa.split(',') if p.strip()]
-            if programas:
-                filters_or = []
-                for p in programas:
-                    filters_or.append(FinancialSale.tipo_pago.like(f"{p} - %"))
-                    filters_or.append(FinancialSale.tipo_pago == p)
-                query = query.filter(or_(*filters_or))
-            
-        if tipo_pago_simple:
-            tipos = [t.strip() for t in tipo_pago_simple.split(',') if t.strip()]
-            if tipos:
-                filters_or = []
-                for t in tipos:
-                    filters_or.append(FinancialSale.tipo_pago.like(f"% - {t}"))
-                    filters_or.append(FinancialSale.tipo_pago == t)
-                query = query.filter(or_(*filters_or))
-            
-        if metodo_pago:
-            metodos = [m.strip() for m in metodo_pago.split(',') if m.strip()]
-            if metodos:
-                query = query.filter(FinancialSale.metodo_pago.in_(metodos))
-            
+
     query = query.order_by(FinancialSale.date.desc())
     subquery_sales = query.all()
     
@@ -542,6 +520,39 @@ def get_financial_sales():
             all_payment_types_set.add(simple_tp)
         if s.metodo_pago:
             all_payment_methods_set.add(s.metodo_pago)
+
+        # Aplicar el filtro de programa in-memory
+        if not ids_str and programa:
+            programas = [p.strip().lower() for p in programa.split(',') if p.strip()]
+            if programas:
+                matches = False
+                for p in programas:
+                    if prog and prog.lower() == p:
+                        matches = True
+                if not matches:
+                    continue
+
+        # Aplicar el filtro de tipo_pago_simple in-memory
+        if not ids_str and tipo_pago_simple:
+            tipos = [t.strip().lower() for t in tipo_pago_simple.split(',') if t.strip()]
+            if tipos:
+                matches = False
+                for t in tipos:
+                    if simple_tp and simple_tp.lower() == t:
+                        matches = True
+                if not matches:
+                    continue
+
+        # Aplicar el filtro de metodo_pago in-memory
+        if not ids_str and metodo_pago:
+            metodos = [m.strip().lower() for m in metodo_pago.split(',') if m.strip()]
+            if metodos:
+                matches = False
+                for m in metodos:
+                    if s.metodo_pago and s.metodo_pago.lower() == m:
+                        matches = True
+                if not matches:
+                    continue
 
         # Aplicar el filtro de closer in-memory
         if not ids_str and closer_filter:
