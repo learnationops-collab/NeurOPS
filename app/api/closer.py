@@ -130,9 +130,12 @@ def search_closer_leads():
             if appt.setter:
                 setter_name = appt.setter.username or appt.setter.name or ""
             appt_data = {
+                "id": appt.id,
                 "start_time": appt.start_time.isoformat(),
                 "setter_name": setter_name,
-                "examen": appt.examen or ""
+                "examen": appt.examen or "",
+                "result": appt.result or "",
+                "closer_result": appt.closer_result or ""
             }
         else:
             # Buscar en agendas de Google Sheets (FinancialAgenda) por instagram o email
