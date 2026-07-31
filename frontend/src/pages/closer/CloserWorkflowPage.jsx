@@ -71,6 +71,12 @@ const CloserWorkflowPage = () => {
     // Cita seleccionada para el visor de la derecha (modal overlay v7)
     const [selectedLead, setSelectedLead] = useState(null);
 
+    // Estado del árbol de decisiones del modal de lead v7 (pestaña, paso actual, camino recorrido y formulario de sesión)
+    const [modalTab, setModalTab] = useState('act');
+    const [modalStep, setModalStep] = useState('root');
+    const [decisionPath, setDecisionPath] = useState([]);
+    const [sessionForm, setSessionForm] = useState({});
+
     // Modales secundarios v7: Nueva Agenda y Referido Manual
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
     const [newAgendaForm, setNewAgendaForm] = useState({

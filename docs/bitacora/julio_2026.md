@@ -35,6 +35,10 @@
       - Se adaptó la carga de datos (`fetchAgendas`) para consultar todos los leads del día y popular coherentemente el Kanban de confirmaciones y las listas operativas.
       - Se ajustaron las acciones de cambio de estado en el modal detallado para actualizar los pipelines de confirmación directamente (`result`) y los estados de venta (`closer_result`).
       - Se corrigieron todos los errores de anidación de etiquetas JSX y llaves, logrando una compilación de producción exitosa.
+  - **Bugfix Crítico: Modal del Lead (`ovLead`) no se renderizaba tras el rediseño v7**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - **Diagnóstico**: Al hacer clic en cualquier registro de lead, solo se veía el fondo de la página en lugar del modal desplegable. La causa fue un `ReferenceError` en tiempo de render: la pestaña del modal (`modalTab`), el paso del árbol de decisiones (`modalStep`), el camino recorrido (`decisionPath`) y el formulario de sesión (`sessionForm`) se usaban extensivamente en `renderActionStepContent` y en el JSX del modal `ovLead`, pero sus hooks `useState` nunca habían sido declarados durante la migración a v7. Esto tumbaba el árbol de React completo al abrir cualquier lead.
+      - **Corrección**: Se agregaron las declaraciones faltantes `const [modalTab, setModalTab] = useState('act')`, `const [modalStep, setModalStep] = useState('root')`, `const [decisionPath, setDecisionPath] = useState([])` y `const [sessionForm, setSessionForm] = useState({})` junto al resto del estado del modal overlay v7, restaurando la apertura correcta de la ficha del lead con su árbol interactivo, pestañas y formulario.
 
 - **29 de Julio de 2026**:
   - **Exportación de Pagos de Leads Seleccionados**:
