@@ -83,7 +83,7 @@ const MainLayout = ({ children }) => {
 
     return (
         <div
-            className="flex h-screen bg-main text-base overflow-visible w-full relative transition-all duration-1000"
+            className="flex h-screen bg-main text-base overflow-hidden w-full relative transition-all duration-1000"
             style={bgImage ? {
                 backgroundImage: `url(${bgImage})`,
                 backgroundSize: 'cover',
@@ -95,7 +95,7 @@ const MainLayout = ({ children }) => {
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-0" />
             )}
 
-            <div className="relative z-10 flex w-full h-full overflow-visible">
+            <div className="relative z-10 flex w-full h-full overflow-hidden">
                 <HotkeysManager
                     controlFocus={controlFocus}
                     onToggleWidgets={() => setIsPillOpen(prev => !prev)}
@@ -116,7 +116,7 @@ const MainLayout = ({ children }) => {
 
                 <OnboardingTour />
 
-                <main className="flex-1 flex flex-col min-w-0 overflow-visible relative">
+                <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
                     <div id="app-main-scroll" className="flex-1 overflow-y-auto scroll-smooth pb-32">
                         <div className="min-h-full">
                             {children}
