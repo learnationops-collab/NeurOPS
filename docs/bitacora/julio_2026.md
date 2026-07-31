@@ -1040,9 +1040,8 @@
   - **Filtros con Selección Múltiple en el Registro de Ventas**:
     - **API del Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
       - Se actualizaron los filtros de consulta en `GET /public/financial-sales` para admitir múltiples valores separados por comas.
-      - Se implementó la resolución y generación de consultas `or_` dinámicas en base de datos para los campos `programa` y `tipo_pago_simple`.
-      - Se adaptó el filtro de `metodo_pago` mediante el operador `in_` sobre la lista de valores provista.
-      - Se reestructuraron las validaciones in-memory de los filtros de `closer` y `source` (setter) para segmentar el string de búsqueda y contrastarlo contra las asignaciones finales correspondientes.
+      - Se removieron los filtros SQL específicos (`programa`, `tipo_pago_simple`, `metodo_pago`) de la consulta de base de datos base, permitiendo que la lista de opciones únicas globales de los filtros se calcule siempre de manera completa sobre todas las ventas del rango de fechas.
+      - Se implementó la resolución y el filtrado in-memory secuencial para `programa`, `tipo_pago_simple`, `metodo_pago`, `closer` y `source` (setter) dentro del bucle de serialización de ventas, resolviendo el problema de la desaparición de opciones del dropdown al seleccionar algún filtro.
     - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
       - Se creó el componente local `MultiSelectFilter` provisto de panel flotante, control de click outside reactivo mediante hooks, checkboxes para multiselección e indicadores numéricos de elementos activos en el botón trigger.
       - Se reemplazaron los cinco dropdowns `<select>` antiguos correspondientes a Programa, Tipo de Pago, Método de Pago, Closer y Fuente (Setter) por instancias del nuevo componente interactivo `MultiSelectFilter`.
