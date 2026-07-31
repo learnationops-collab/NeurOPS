@@ -1424,6 +1424,60 @@ def get_closer_deck():
     return jsonify(formatted_appointments), 200
 
 
+@bp.route('/deck/counts', methods=['GET'])
+@login_required
+def get_closer_deck_counts():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    selected_date_str = request.args.get('selected_date')
+    today = date.today()
+    if not selected_date_str:
+        selected_date_str = today.isoformat()
+        
+    from datetime import time
+    try:
+        today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        today_local = date.today()
+        
+    start_utc = datetime.combine(today_local, time.min)
+    end_utc = datetime.combine(today_local, time.max)
+    
+    query_confirmations = Appointment.query.filter(
+        Appointment.start_time >= start_utc,
+        Appointment.closer_processed == False,
+        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+    )
+    
+    query_calls = Appointment.query.filter(
+        Appointment.start_time >= start_utc,
+        Appointment.start_time <= end_utc,
+        Appointment.result == 'Confirmado',
+        Appointment.closer_processed == False,
+        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+    )
+    
+    query_seg = Appointment.query.filter(
+        or_(
+            Appointment.fecha_seguimiento.like(f"{selected_date_str}%"),
+            Appointment.fecha_seguimiento_cobro.like(f"{selected_date_str}%")
+        ),
+        or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado == None)
+    )
+    
+    if current_user.role != 'admin':
+        query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
+        query_calls = query_calls.filter_by(closer_id=current_user.id)
+        query_seg = query_seg.filter_by(closer_id=current_user.id)
+        
+    return jsonify({
+        "confirmations": query_confirmations.count(),
+        "calls": query_calls.count(),
+        "seguimientos": query_seg.count()
+    }), 200
+
+
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
 @login_required
 def process_closer_card(appt_id):
