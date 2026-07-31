@@ -1,6 +1,14 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Modal del Lead Dinámico Overlay y Modales Secundarios v7 (Prototipo `closer-workspace-v7.html`)**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se hizo que la vista del tablero principal (Kanban de confirmaciones y listas operativas) tome el 100% de ancho (`lg:col-span-12`), eliminando la vista dividida lateral estática.
+      - Al hacer clic sobre cualquier lead, se abre de forma fluida el **Modal Desplegable Overlay del Lead v7** (`AnimatePresence` `selectedLead`).
+      - Se implementó la cabecera dinámica v7 con nombre del prospecto en mayúsculas, indicador de etapa/fecha, botón de eliminación rápida (`handleDeleteLead`) con diálogo de confirmación y botón de cierre.
+      - Se agregaron las pestañas **⚡ Acción**, **📋 Formulario** y **💬 Setter** con contador de notas, menciones rápidas (`@Elías`, `@Jean Carlo`, `@Sebastián`, `@Dani`) y guardado automático.
+      - Se integró el modal overlay de **Nueva Agenda v7** (`ovNew`) para registrar agendas de referidos y leads propios directamente desde el workspace.
+      - Se integró el modal overlay de **Agregar Referido Manual v7** (`ovRef`) con buscador en tiempo real del lead origen para vincular referidos con trazabilidad.
   - **Alineación Visual e Integración Completa del Closer Workspace v6 (Prototipo `closer-workspace-v6.html`)**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se integró el **Hero Section v6** en la cabecera del workspace con saludo personalizado al closer, mensaje motivacional, barra de progreso de resolución de agendas del día y 4 tarjetas de estadísticas (`sbox-v6`) para Confirmaciones, Llamadas Reportadas, Seguimientos y Racha sin fallar.
