@@ -56,6 +56,47 @@ const getCloserColors = (name) => {
     return { gradient: 'from-slate-500 to-slate-600', dot: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10' };
 };
 
+const normalizeKeyGlobal = (s) => {
+    const ig = s.instagram ? s.instagram.trim().replace(/^@/, '').toLowerCase() : null;
+    const email = s.mail_cliente ? s.mail_cliente.trim().toLowerCase() : null;
+    return ig || email || `solo_${s.id}`;
+};
+
+const INDIVIDUAL_COLUMNS = [
+    { id: 'dateVal', label: 'Fecha de pago', getValue: (s) => s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '') },
+    { id: 'entryDate', label: 'Fecha de ingreso', getValue: (s, entryDatesMap) => entryDatesMap[normalizeKeyGlobal(s)] || '' },
+    { id: 'nombre_cliente', label: 'Cliente', getValue: (s) => s.nombre_cliente || '' },
+    { id: 'mail_cliente', label: 'Email', getValue: (s) => s.mail_cliente || '' },
+    { id: 'telefono', label: 'Teléfono', getValue: (s) => s.telefono || '' },
+    { id: 'instagram', label: 'Instagram', getValue: (s) => s.instagram || '' },
+    { id: 'monto_bruto', label: 'Monto bruto', getValue: (s) => s.monto_bruto !== undefined ? s.monto_bruto : (s.monto || 0) },
+    { id: 'monto', label: 'Monto neto (ajustado)', getValue: (s) => s.monto || 0 },
+    { id: 'metodo_pago', label: 'Método de pago', getValue: (s) => s.metodo_pago || '' },
+    { id: 'tipo_pago_simple', label: 'Tipo de pago', getValue: (s) => s.tipo_pago_simple || '' },
+    { id: 'programa', label: 'Programa', getValue: (s) => s.programa || '' },
+    { id: 'closer_name', label: 'Closer', getValue: (s) => s.closer_name || '' },
+    { id: 'setter', label: 'Setter', getValue: (s) => s.setter || '' },
+    { id: 'estado', label: 'Estado', getValue: (s) => s.estado || '' },
+    { id: 'segundo_pago', label: 'Segundo pago', getValue: (s) => s.segundo_pago || '' },
+    { id: 'examen', label: 'Examen', getValue: (s) => s.examen || '' }
+];
+
+const GROUPED_COLUMNS = [
+    { id: 'entryDate', label: 'Fecha de ingreso', getValue: (group, ref, entryDatesMap) => entryDatesMap[normalizeKeyGlobal(ref)] || '' },
+    { id: 'lead', label: 'Lead', getValue: (group, ref) => ref.nombre_cliente || '' },
+    { id: 'email', label: 'Email', getValue: (group, ref) => ref.mail_cliente || '' },
+    { id: 'telefono', label: 'Teléfono', getValue: (group, ref) => ref.telefono || '' },
+    { id: 'instagram', label: 'Instagram', getValue: (group, ref) => ref.instagram || '' },
+    { id: 'tipos', label: 'Tipos de pago', getValue: (group) => [...new Set(group.map(s => s.tipo_pago_simple || '').filter(Boolean))].join(' | ') },
+    { id: 'metodos', label: 'Métodos de pago', getValue: (group) => [...new Set(group.map(s => s.metodo_pago || '').filter(Boolean))].join(' | ') },
+    { id: 'totalBruto', label: 'Total bruto', getValue: (group) => Math.round(group.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0) * 100) / 100 },
+    { id: 'totalNeto', label: 'Total neto (ajustado)', getValue: (group) => Math.round(group.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0) * 100) / 100 },
+    { id: 'cantidadPagos', label: 'Cantidad de pagos', getValue: (group) => group.length },
+    { id: 'closer', label: 'Closer', getValue: (group) => [...new Set(group.map(s => s.closer_name || '').filter(Boolean))].join(' | ') },
+    { id: 'setter', label: 'Setter', getValue: (group) => [...new Set(group.map(s => s.setter || '').filter(Boolean))].join(' | ') },
+    { id: 'programas', label: 'Programas', getValue: (group) => [...new Set(group.map(s => s.programa || '').filter(Boolean))].join(' | ') }
+];
+
 const PublicFinancialSalesPage = () => {
     const navigate = useNavigate();
     const [sales, setSales] = useState([]);
@@ -70,6 +111,8 @@ const PublicFinancialSalesPage = () => {
     const [paymentExportGroupByLead, setPaymentExportGroupByLead] = useState(false);
     const [selectedSaleIds, setSelectedSaleIds] = useState([]);
     const [exportingSelectedOnly, setExportingSelectedOnly] = useState(false);
+    const [selectedIndividualCols, setSelectedIndividualCols] = useState(INDIVIDUAL_COLUMNS.map(c => c.id));
+    const [selectedGroupedCols, setSelectedGroupedCols] = useState(GROUPED_COLUMNS.map(c => c.id));
     const [showBulkEditModal, setShowBulkEditModal] = useState(false);
     const [bulkEditField, setBulkEditField] = useState('');
     const [bulkEditValue, setBulkEditValue] = useState('');
@@ -574,6 +617,18 @@ const PublicFinancialSalesPage = () => {
             let rows = [];
             let headers = [];
 
+            const activeCols = groupByLead
+                ? GROUPED_COLUMNS.filter(c => selectedGroupedCols.includes(c.id))
+                : INDIVIDUAL_COLUMNS.filter(c => selectedIndividualCols.includes(c.id));
+
+            if (activeCols.length === 0) {
+                toast.error('Debes seleccionar al menos una columna para exportar', { id: toastId });
+                setExporting(false);
+                return;
+            }
+
+            headers = activeCols.map(c => c.label);
+
             if (groupByLead) {
                 // Agrupar pagos por lead (mismo Instagram o email)
                 const leadsMap = {};
@@ -583,46 +638,16 @@ const PublicFinancialSalesPage = () => {
                     leadsMap[key].push(s);
                 });
 
-                headers = ['Fecha de ingreso', 'Lead', 'Email', 'Teléfono', 'Instagram', 'Tipos de pago', 'Métodos de pago', 'Total bruto', 'Cantidad de pagos'];
-
                 Object.values(leadsMap).forEach(group => {
                     const sorted = group.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
                     const ref = sorted[sorted.length - 1];
-                    const key = normalizeKey(ref);
-                    const entryDate = entryDatesMap[key] || '';
-                    const totalBruto = group.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
-                    const tipos = [...new Set(group.map(s => s.tipo_pago_simple || '').filter(Boolean))].join(' | ');
-                    const metodos = [...new Set(group.map(s => s.metodo_pago || '').filter(Boolean))].join(' | ');
-                    rows.push([
-                        entryDate,
-                        ref.nombre_cliente || '',
-                        ref.mail_cliente || '',
-                        ref.telefono || '',
-                        ref.instagram || '',
-                        tipos,
-                        metodos,
-                        Math.round(totalBruto * 100) / 100,
-                        group.length
-                    ]);
+                    const rowData = activeCols.map(col => col.getValue(group, ref, entryDatesMap));
+                    rows.push(rowData);
                 });
             } else {
                 // Un registro por pago
-                headers = ['Fecha de pago', 'Fecha de ingreso', 'Cliente', 'Email', 'Teléfono', 'Instagram', 'Monto bruto', 'Método de pago', 'Tipo de pago'];
                 rows = allSales.map(s => {
-                    const key = normalizeKey(s);
-                    const entryDate = entryDatesMap[key] || '';
-                    const dateVal = s.date ? s.date.split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : '');
-                    return [
-                        dateVal,
-                        entryDate,
-                        s.nombre_cliente || '',
-                        s.mail_cliente || '',
-                        s.telefono || '',
-                        s.instagram || '',
-                        s.monto_bruto !== undefined ? s.monto_bruto : (s.monto || 0),
-                        s.metodo_pago || '',
-                        s.tipo_pago_simple || ''
-                    ];
+                    return activeCols.map(col => col.getValue(s, entryDatesMap));
                 });
             }
 
@@ -3046,13 +3071,75 @@ const PublicFinancialSalesPage = () => {
                             </button>
                         </div>
 
-                        {/* Columnas del CSV (informativo) */}
-                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 space-y-1">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Columnas del CSV</p>
-                            {paymentExportGroupByLead ? (
-                                <p className="text-xs text-slate-400">Fecha de ingreso · Lead · Email · Teléfono · Instagram · Tipos de pago · Métodos de pago · Total bruto · Cantidad de pagos</p>
-                            ) : (
-                                <p className="text-xs text-slate-400">Fecha de pago · Fecha de ingreso · Cliente · Email · Teléfono · Instagram · Monto bruto · Método de pago · Tipo de pago</p>
+                        {/* Columnas a Exportar */}
+                        <div className="space-y-2 border-t border-slate-800 pt-4">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Columnas a exportar</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            if (paymentExportGroupByLead) {
+                                                setSelectedGroupedCols(GROUPED_COLUMNS.map(c => c.id));
+                                            } else {
+                                                setSelectedIndividualCols(INDIVIDUAL_COLUMNS.map(c => c.id));
+                                            }
+                                        }}
+                                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
+                                    >
+                                        Todas
+                                    </button>
+                                    <span className="text-slate-600">·</span>
+                                    <button
+                                        onClick={() => {
+                                            if (paymentExportGroupByLead) {
+                                                setSelectedGroupedCols([]);
+                                            } else {
+                                                setSelectedIndividualCols([]);
+                                            }
+                                        }}
+                                        className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
+                                    >
+                                        Ninguna
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                                {(paymentExportGroupByLead ? GROUPED_COLUMNS : INDIVIDUAL_COLUMNS).map(col => {
+                                    const isSelected = paymentExportGroupByLead
+                                        ? selectedGroupedCols.includes(col.id)
+                                        : selectedIndividualCols.includes(col.id);
+                                    return (
+                                        <button
+                                            key={col.id}
+                                            onClick={() => {
+                                                if (paymentExportGroupByLead) {
+                                                    setSelectedGroupedCols(prev =>
+                                                        isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
+                                                    );
+                                                } else {
+                                                    setSelectedIndividualCols(prev =>
+                                                        isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
+                                                    );
+                                                }
+                                            }}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                                                isSelected
+                                                    ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
+                                                    : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                            }`}
+                                        >
+                                            <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
+                                                {isSelected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                            </span>
+                                            <span className="truncate">{col.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {((paymentExportGroupByLead ? selectedGroupedCols : selectedIndividualCols).length === 0) && (
+                                <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                    Debes seleccionar al menos una columna para exportar.
+                                </p>
                             )}
                         </div>
 
