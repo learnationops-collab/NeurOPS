@@ -2588,59 +2588,53 @@ const CloserWorkflowPage = () => {
                 </div>
                 )}
 
-            {/* Modal de Detalle de Agenda Custom (para agendas del Closer) */}
+            {/* Modal de Detalle de Lead v7 (ovLead) */}
             <AnimatePresence>
                 {selectedLead && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="ov on" id="ovLead">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-6xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden text-left relative flex flex-col max-h-[90vh] text-slate-100 animate-in zoom-in-95 duration-250"
+                            initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 18, scale: 0.97 }}
+                            transition={{ duration: 0.2 }}
+                            className="md"
                         >
-                            {/* Cabecera v7 */}
-                            <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                                <div className="space-y-1">
-                                    <h3 className="text-2xl font-black text-white tracking-tight">
-                                        {(selectedLead.lead_name || 'Sin Nombre').toUpperCase()}
-                                    </h3>
-                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                            {/* Cabecera mdh v7 */}
+                            <div className="mdh">
+                                <div style={{ flex: 1 }}>
+                                    <h3>{(selectedLead.lead_name || 'Sin Nombre').toUpperCase()}</h3>
+                                    <p>
                                         {activeStep === 'confirmations' ? 'Proceso de confirmación' : activeStep === 'calls' ? 'Reporte de llamada' : 'Seguimiento'}
                                         {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
-                                        title="Eliminar lead"
-                                        className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30"
-                                    >
-                                        <X size={18} className="rotate-45" />
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedLead(null)}
-                                        className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none bg-transparent"
-                                    >
-                                        <X size={22} />
-                                    </button>
-                                </div>
+                                <button
+                                    className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30 mr-2"
+                                    title="Eliminar lead"
+                                    onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
+                                >
+                                    <X size={16} className="rotate-45" />
+                                </button>
+                                <button className="x" onClick={() => setSelectedLead(null)}>
+                                    ×
+                                </button>
                             </div>
 
-                            {/* Selector de Pestañas del Modal */}
-                            <div className="ltabs mt-4">
-                                <button 
+                            {/* Pestañas ltabs v7 */}
+                            <div className="ltabs">
+                                <button
                                     className={`ltab ${modalTab === 'act' ? 'on' : ''}`}
                                     onClick={() => setModalTab('act')}
                                 >
                                     ⚡ Acción
                                 </button>
-                                <button 
+                                <button
                                     className={`ltab ${modalTab === 'form' ? 'on' : ''}`}
                                     onClick={() => setModalTab('form')}
                                 >
                                     📋 Formulario
                                 </button>
-                                <button 
+                                <button
                                     className={`ltab ${modalTab === 'set' ? 'on' : ''}`}
                                     onClick={() => setModalTab('set')}
                                 >
@@ -2648,135 +2642,140 @@ const CloserWorkflowPage = () => {
                                 </button>
                             </div>
 
-                            {/* Grid principal */}
-                            <div className="flex-1 overflow-y-auto custom-scrollbar mt-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pr-2">
-                                
-                                {/* Columna Izquierda: Ficha Operativa Interactiva */}
-                                <div className="lg:col-span-7 space-y-6">
-                                    
-                                    {/* Info Card Fijo en Cabecera de Izquierda */}
-                                    <div className="idcard bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex flex-wrap gap-4 text-xs">
-                                        <div className="idc"><span>◎ Instagram</span><b>@{selectedLead.instagram ? selectedLead.instagram.replace('@', '') : 'no_ig'}</b></div>
-                                        <div className="idc"><span>⤴ Fuente</span><b>{selectedLead.origin || 'Sheets'}</b></div>
-                                        <div className="idc"><span>◈ Examen</span><b>{selectedLead.examen || 'MIR / ENARM'}</b></div>
-                                        <div className="idc hl"><span>● Estado</span><b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b></div>
+                            {/* Cuerpo mdb v7 */}
+                            <div className="mdb">
+                                {/* Ficha idcard v7 */}
+                                <div className="idcard">
+                                    <div className="idc">
+                                        <span>◎ Instagram</span>
+                                        <b>@{String(selectedLead.instagram || 'no_ig').replace('@', '')}</b>
                                     </div>
+                                    <div className="idc">
+                                        <span>⤴ Fuente</span>
+                                        <b>{selectedLead.origin || 'Sheets'}</b>
+                                    </div>
+                                    <div className="idc">
+                                        <span>◈ Examen</span>
+                                        <b>{selectedLead.examen || 'MIR / ENARM'}</b>
+                                    </div>
+                                    <div className="idc hl">
+                                        <span>● Estado</span>
+                                        <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
+                                    </div>
+                                </div>
 
-                                    {/* Contenedor de la pestaña Acción */}
-                                    {modalTab === 'act' && (
-                                        <div className="space-y-4">
-                                            {/* Línea de tiempo / trail de decisiones */}
-                                            <div className="trail flex flex-wrap gap-1.5 items-center pb-2 border-b border-slate-850/50">
-                                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-wider">Camino:</span>
-                                                {decisionPath.length === 0 ? (
-                                                    <span className="text-[10px] text-slate-655 font-bold uppercase tracking-wider">Raíz</span>
-                                                ) : (
-                                                    decisionPath.map((crumb, idx) => (
-                                                        <span key={idx} className="text-[10px] font-black uppercase text-violet-405 bg-violet-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                                            {crumb}
-                                                            {idx < decisionPath.length - 1 && <span className="text-slate-600 ml-1">›</span>}
-                                                        </span>
-                                                    ))
-                                                )}
-                                            </div>
-
-                                            {/* Árbol de decisiones dinámico por modalStep */}
+                                {/* Contenido por pestaña */}
+                                {modalTab === 'act' && (
+                                    <div id="paneAct">
+                                        <div className="trail">
+                                            <span style={{ fontSize: '9.5px', fontWeight: 800, textTransform: 'uppercase', color: '#8C99E0' }}>Camino:</span>
+                                            {decisionPath.length === 0 ? (
+                                                <span className="crumb" style={{ background: 'rgba(255,255,255,.06)', color: '#D1D8FF', borderColor: 'rgba(255,255,255,.12)' }}>
+                                                    Raíz
+                                                </span>
+                                            ) : (
+                                                decisionPath.map((crumb, idx) => (
+                                                    <span key={idx} className="crumb">
+                                                        {crumb}
+                                                    </span>
+                                                ))
+                                            )}
+                                        </div>
+                                        <div id="ldBody">
                                             {renderActionStepContent()}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
-                                    {/* Contenedor de la pestaña Formulario */}
-                                    {modalTab === 'form' && (
-                                        <div className="space-y-4">
-                                            <div className="fsec space-y-3">
-                                                <div className="fh flex items-center justify-between pb-2 border-b border-slate-800">
-                                                    <b className="text-xs font-black uppercase tracking-widest text-slate-400">Calificación externa</b>
-                                                    <span className="tagx px-2 py-0.5 rounded text-[9px] font-black bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">n8n</span>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
-                                                    {renderFormQuestion("Fuente del Lead", selectedLead.origin || 'Meta Ads')}
-                                                    {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
-                                                </div>
+                                {modalTab === 'form' && (
+                                    <div id="paneForm">
+                                        <div className="fsec">
+                                            <div className="fh">
+                                                <b>Calificación externa</b>
+                                                <span className="tagx" style={{ background: 'rgba(99,102,241,.2)', color: '#A5B4FC' }}>n8n</span>
+                                                <hr />
                                             </div>
-
-                                            <div className="fsec mt-6 space-y-3">
-                                                <div className="fh flex items-center justify-between pb-2 border-b border-slate-800">
-                                                    <b className="text-xs font-black uppercase tracking-widest text-slate-400">Encuesta de cita</b>
-                                                    <span className="tagx px-2 py-0.5 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">✓ completada</span>
-                                                </div>
-                                                <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar pr-2">
-                                                    {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 ? (
-                                                        selectedLead.survey_answers.map((ans, idx) => (
-                                                            renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer))
-                                                        ))
-                                                    ) : (
-                                                        <div className="text-slate-500 text-xs italic font-bold">No hay respuestas a la encuesta.</div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
+                                            {renderFormQuestion("Fuente del Lead", selectedLead.origin || 'Meta Ads')}
+                                            {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
                                         </div>
-                                    )}
 
-                                    {/* Contenedor de la pestaña Setter */}
-                                    {modalTab === 'set' && (
-                                        <div className="space-y-4">
-                                            <div className="note p-3 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-slate-400 font-bold uppercase leading-relaxed">
-                                                Contexto de quien lo agendó y notas de cualificación.
+                                        <div className="fsec" style={{ marginTop: '20px' }}>
+                                            <div className="fh">
+                                                <b>Encuesta de cita</b>
+                                                <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>✓ completada</span>
+                                                <hr />
                                             </div>
-                                            {selectedLead.setter_notes ? (
-                                                <div className="snote p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-1">
-                                                    <div className="sh flex justify-between text-[10px] text-slate-500 font-bold uppercase">
-                                                        <span>{selectedLead.setter_name || 'Setter'}</span>
-                                                        <span>Nota Setter</span>
-                                                    </div>
-                                                    <p className="text-xs text-slate-200 font-medium leading-relaxed italic">
-                                                        "{selectedLead.setter_notes}"
-                                                    </p>
-                                                </div>
+                                            {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 ? (
+                                                selectedLead.survey_answers.map((ans, idx) => (
+                                                    renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer))
+                                                ))
                                             ) : (
-                                                <div className="text-slate-500 text-xs italic font-bold">Nadie dejó notas del setter todavía.</div>
-                                            )}
-
-                                            <div className="pt-4 border-t border-slate-800 space-y-3">
-                                                <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
-                                                <textarea
-                                                    rows={3}
-                                                    value={reasonInput}
-                                                    onChange={(e) => setReasonInput(e.target.value)}
-                                                    placeholder="Escribe una nota interna para ti o para el equipo..."
-                                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
-                                                />
-                                                <div className="flex flex-wrap gap-2 items-center pt-1">
-                                                    <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
-                                                    {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
-                                                        <button
-                                                            key={m}
-                                                            type="button"
-                                                            onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
-                                                            className="text-[10px] font-bold text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-                                                        >
-                                                            {m}
-                                                        </button>
-                                                    ))}
+                                                <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
+                                                    No hay respuestas a la encuesta registradas.
                                                 </div>
-                                                <button
-                                                    onClick={addLeadNote}
-                                                    disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
-                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                                                >
-                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
-                                                </button>
-                                            </div>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
-                                </div>
+                                {modalTab === 'set' && (
+                                    <div id="paneSet" className="space-y-4">
+                                        <div className="note">
+                                            Contexto de quien lo agendó y notas de cualificación.
+                                        </div>
+                                        {selectedLead.setter_notes ? (
+                                            <div className="snote">
+                                                <div className="sh">
+                                                    <div className="sav">{(selectedLead.setter_name || 'S').charAt(0).toUpperCase()}</div>
+                                                    <div className="sn">{selectedLead.setter_name || 'Setter'}</div>
+                                                    <div className="sd">Nota Setter</div>
+                                                </div>
+                                                <p>"{selectedLead.setter_notes}"</p>
+                                            </div>
+                                        ) : (
+                                            <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
+                                                No hay notas previas del setter.
+                                            </div>
+                                        )}
 
-                                {/* Columna Derecha: Chat / Comentarios */}
-                                <div className="lg:col-span-5 h-[65vh]">
-                                    <CommentsSection clientId={selectedLead.client_id || (selectedLead.id > 0 ? selectedLead.id : null)} />
-                                </div>
+                                        <div className="pt-4 border-t border-slate-800 space-y-3">
+                                            <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
+                                            <textarea
+                                                rows={3}
+                                                value={reasonInput}
+                                                onChange={(e) => setReasonInput(e.target.value)}
+                                                placeholder="Escribe una nota interna para ti o para el equipo..."
+                                                className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                                            />
+                                            <div className="flex flex-wrap gap-2 items-center pt-1">
+                                                <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
+                                                {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
+                                                    <button
+                                                        key={m}
+                                                        type="button"
+                                                        onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
+                                                        className="chipbtn"
+                                                    >
+                                                        {m}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <button
+                                                onClick={addLeadNote}
+                                                disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
+                                                className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                            >
+                                                {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
+                                            </button>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-800 space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400">Comentarios e Hilo</label>
+                                            <CommentsSection clientId={selectedLead.client_id || (selectedLead.id > 0 ? selectedLead.id : null)} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>
