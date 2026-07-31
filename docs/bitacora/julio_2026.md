@@ -1035,3 +1035,16 @@
       - Se añadieron los estados reactivos `selectedIndividualCols` y `selectedGroupedCols` para persistir la selección del usuario.
       - Se rediseñó el modal de exportación sustituyendo el texto informativo por una grilla interactiva de checkboxes con botones rápidos de selección ("Todas" y "Ninguna") y scroll vertical incorporado.
       - Se actualizó la función `handleExportPaymentsOnlyCSV` para estructurar y exportar únicamente los encabezados y campos seleccionados activamente por el usuario.
+
+- **31 de Julio de 2026**:
+  - **Filtros con Selección Múltiple en el Registro de Ventas**:
+    - **API del Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se actualizaron los filtros de consulta en `GET /public/financial-sales` para admitir múltiples valores separados por comas.
+      - Se implementó la resolución y generación de consultas `or_` dinámicas en base de datos para los campos `programa` y `tipo_pago_simple`.
+      - Se adaptó el filtro de `metodo_pago` mediante el operador `in_` sobre la lista de valores provista.
+      - Se reestructuraron las validaciones in-memory de los filtros de `closer` y `source` (setter) para segmentar el string de búsqueda y contrastarlo contra las asignaciones finales correspondientes.
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se creó el componente local `MultiSelectFilter` provisto de panel flotante, control de click outside reactivo mediante hooks, checkboxes para multiselección e indicadores numéricos de elementos activos en el botón trigger.
+      - Se reemplazaron los cinco dropdowns `<select>` antiguos correspondientes a Programa, Tipo de Pago, Método de Pago, Closer y Fuente (Setter) por instancias del nuevo componente interactivo `MultiSelectFilter`.
+      - Se garantizó la propagación automática de los filtros multiselección hacia la llamada de la API de exportación de Clientes Nuevos.
+
