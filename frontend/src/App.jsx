@@ -262,9 +262,7 @@ function App() {
               path="/closer/deck"
               element={
                 <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserWorkflowPage />
-                  </MainLayout>
+                  <CloserWorkflowPage />
                 </ProtectedRoute>
               }
             />
