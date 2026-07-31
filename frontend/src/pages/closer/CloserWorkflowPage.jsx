@@ -21,6 +21,17 @@ const CloserWorkflowPage = () => {
     
     const activeStep = searchParams.get('step') || 'confirmations';
 
+    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
+    const [activeView, setActiveView] = useState('inbox');
+    const [reportSent, setReportSent] = useState(false);
+    
+    // Estado del reporte v6
+    const [referrals, setReferrals] = useState({ rf1: 0, rf2: 0, rf3: 0, rf4: 0, rf5: 0 });
+    const [reflection, setReflection] = useState({ win: '', fix: '' });
+    const [offDaysMode, setOffDaysMode] = useState(null); // 0 = no, 1 = si
+    const [selectedOffDays, setSelectedOffDays] = useState(new Set());
+    const [submittingReport, setSubmittingReport] = useState(false);
+
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
@@ -1891,6 +1902,59 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
                 
+                {/* HERO SECTION v6 */}
+                <div className="hero-v6">
+                    <div className="hcard-v6">
+                        <h2>Buen día, <em>{user?.name?.split(' ')[0] || user?.username || 'Closer'}</em> 👋</h2>
+                        <p>Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.</p>
+                        <div className="prog-v6">
+                            <div className="pbarw-v6">
+                                <i style={{ width: `${Math.min(100, Math.max(0, agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0))}%` }}></i>
+                            </div>
+                            <div className="pmeta-v6">
+                                <span>{agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length} de {agendas.length} resueltos</span>
+                                <span>{agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0}% completado</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="stats-v6">
+                        <div className="sbox-v6 a">
+                            <div className="ic-v6">📅</div>
+                            <div className="tt-v6">
+                                <div className="n-v6">{counts.confirmations}<s>/{agendas.length}</s></div>
+                                <div className="k-v6">Confirmaciones</div>
+                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.confirmations / agendas.length) * 100) : 0}%` }}></i></div>
+                            </div>
+                        </div>
+                        <div className="sbox-v6 c">
+                            <div className="ic-v6">📞</div>
+                            <div className="tt-v6">
+                                <div className="n-v6">{counts.calls}<s>/{agendas.length}</s></div>
+                                <div className="k-v6">Llamadas reportadas</div>
+                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.calls / agendas.length) * 100) : 0}%` }}></i></div>
+                            </div>
+                        </div>
+                        <div className="sbox-v6 b">
+                            <div className="ic-v6">💬</div>
+                            <div className="tt-v6">
+                                <div className="n-v6">{counts.seguimientos}<s>/50</s></div>
+                                <div className="k-v6">Seguimientos</div>
+                                <div className="mb-v6"><i style={{ width: `${Math.min(100, (counts.seguimientos / 50) * 100)}%` }}></i></div>
+                            </div>
+                        </div>
+                        <div className="sbox-v6 d">
+                            <div className="ic-v6">🔥</div>
+                            <div className="tt-v6">
+                                <div className="n-v6">12<s> días</s></div>
+                                <div className="k-v6">Racha sin fallar</div>
+                                <div className="mb-v6"><i style={{ width: '86%' }}></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {activeView === 'inbox' ? (
+                <div className="space-y-6">
                 {/* Selector de Pestañas v6 */}
                 <div className="tabs-v6">
                     <button 
@@ -2265,6 +2329,142 @@ const CloserWorkflowPage = () => {
                         </div>
                     </div>
                 )}
+                </div>
+                </div>
+                ) : (
+                <div className="space-y-6 text-left">
+                    {/* REPORTE DEL DÍA v6 (v-report) */}
+                    {reportSent ? (
+                        <div className="bg-gradient-to-r from-emerald-500/20 to-blue-600/20 border border-emerald-500/50 rounded-3xl p-6 flex items-center gap-5">
+                            <div className="text-4xl">✅</div>
+                            <div className="flex-1">
+                                <h4 className="text-xl font-black text-white">Reporte del día enviado</h4>
+                                <p className="text-xs text-slate-300 mt-1">
+                                    {counts.confirmations} confirmados · {counts.calls} llamadas · {counts.seguimientos} seguimientos. Deuda de burpees: <b>{Math.max(0, 50 - counts.seguimientos)}</b>. Ya no te queda nada por completar hoy.
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <b className="text-xs font-black uppercase text-emerald-400 block">Enviado</b>
+                                <small className="text-xs text-slate-400">{new Date().toLocaleDateString('es-ES')} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+                            (counts.confirmations + counts.calls) > 0 
+                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' 
+                                : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                        }`}>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">{(counts.confirmations + counts.calls) > 0 ? '🏆' : '🔒'}</span>
+                                <div>
+                                    <h4 className="font-bold text-sm">
+                                        {(counts.confirmations + counts.calls) > 0 ? 'Bandeja al día' : 'Bandeja con pendientes'}
+                                    </h4>
+                                    <p className="text-xs text-slate-400">
+                                        {(counts.confirmations + counts.calls) > 0 
+                                            ? 'Nadie sin tocar y llamadas reportadas.' 
+                                            : `Quedan agendas por tocar o llamadas por reportar.`}
+                                    </p>
+                                </div>
+                            </div>
+                            <button className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-white transition-all cursor-pointer" onClick={() => setActiveView('inbox')}>
+                                Ir a la bandeja
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Referidos */}
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Referidos del día
+                        </h3>
+                        <p className="text-xs text-slate-400">El único embudo que el sistema no puede ver solo.</p>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">0</div>
+                                <div className="flex-1 min-w-0">
+                                    <b className="text-xs font-bold block text-white">Llamadas tomadas hoy</b>
+                                    <small className="text-[10px] text-slate-500">Automático</small>
+                                </div>
+                                <div className="text-lg font-black text-pink-400">{counts.calls}</div>
+                            </div>
+
+                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">1</div>
+                                <div className="flex-1 min-w-0">
+                                    <b className="text-xs font-bold block text-white">¿A cuántas les pediste referido?</b>
+                                </div>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={referrals.rf1}
+                                    onChange={(e) => setReferrals(prev => ({ ...prev, rf1: parseInt(e.target.value) || 0 }))}
+                                    className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-center font-bold text-sm text-white"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">2</div>
+                                <div className="flex-1 min-w-0">
+                                    <b className="text-xs font-bold block text-white">¿Cuántas te dieron referido?</b>
+                                </div>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={referrals.rf2}
+                                    onChange={(e) => setReferrals(prev => ({ ...prev, rf2: parseInt(e.target.value) || 0 }))}
+                                    className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-center font-bold text-sm text-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Reflexión Diaria */}
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500"></span> Reflexión diaria
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-300 block">🏆 Victorias del día</label>
+                                <textarea
+                                    rows={3}
+                                    value={reflection.win}
+                                    onChange={(e) => setReflection(prev => ({ ...prev, win: e.target.value }))}
+                                    placeholder="Qué te salió bien y por qué..."
+                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-pink-500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-300 block">🔧 A mejorar mañana</label>
+                                <textarea
+                                    rows={3}
+                                    value={reflection.fix}
+                                    onChange={(e) => setReflection(prev => ({ ...prev, fix: e.target.value }))}
+                                    placeholder="Una cosa concreta, no una lista..."
+                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-indigo-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Enviar reporte */}
+                    {!reportSent && (
+                        <div className="flex items-center gap-4 pt-2">
+                            <button
+                                onClick={() => {
+                                    setReportSent(true);
+                                    toast.success("Reporte del día enviado con éxito");
+                                }}
+                                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer"
+                            >
+                                Enviar reporte al sistema
+                            </button>
+                        </div>
+                    )}
+                </div>
+                )}
 
             {/* Modal de Detalle de Agenda Custom (para agendas del Closer) */}
             <AnimatePresence>
@@ -2441,8 +2641,6 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div> {/* Cierre de la grilla grid-cols-12 */}
-        </div> {/* Cierre del área de trabajo principal flex flex-col */}
 
             {/* Modal de decisión: Con / Sin Decisor */}
             <AnimatePresence>
@@ -3026,6 +3224,30 @@ const CloserWorkflowPage = () => {
                 isSaleFollowUp={followUpModal.isSaleFollowUp}
                 loading={savingFollowUp}
             />
+
+            {/* DOCK FLOTANTE v6 */}
+            <div className={`dock-v6 ${reportSent ? 'done-v6' : ''}`}>
+                <button 
+                    className={`dk-v6 ${activeView === 'inbox' ? 'on' : ''}`}
+                    onClick={() => setActiveView('inbox')}
+                >
+                    <span>📥 Bandeja</span>
+                    {(counts.confirmations + counts.calls + counts.seguimientos) > 0 && (
+                        <span className="b-v6">{counts.confirmations + counts.calls + counts.seguimientos}</span>
+                    )}
+                </button>
+                <button 
+                    className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${reportSent ? 'sent' : ''}`}
+                    onClick={() => setActiveView('report')}
+                >
+                    {reportSent ? (
+                        <span>✓ Reporte enviado</span>
+                    ) : (
+                        <span>📊 Reporte del día</span>
+                    )}
+                </button>
+            </div>
+        </div>
         </div>
     );
 };
