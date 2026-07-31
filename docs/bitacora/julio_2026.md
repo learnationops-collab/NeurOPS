@@ -1,7 +1,15 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
-  - **Unificación de Triaje y Cierre (Closer Confirms v6)**:
+  - **Ficha de Lead y Modales de Reporte/Cambio de Estado v6 (Árbol de Decisiones Interactivo)**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se rediseñó por completo el modal detallado del lead (`selectedLead`) en una estructura premium de dos columnas.
+      - Columna izquierda: Se agregaron las pestañas **⚡ Acción** (árbol interactivo de toma de decisiones), **📋 Formulario** (respuestas de calificación y encuesta del prospecto coloreados por score) y **💬 Setter** (comentarios de cualificación y notas rápidas con guardado directo).
+      - Se implementó el árbol interactivo completo con estados locales (`modalStep`, `decisionPath`, `sessionForm`) para seguir el paso a paso del Closer: Confirmaciones (conversando, por confirmar, confirmado), Llamadas (Asistió con/sin decisor -> Presentó oferta -> Venta/No Cierre), Seguimientos (cadencia de 4 intentos automática) y Cobros (parciales/totales vinculados a Ventas DB).
+      - Se conectaron las acciones de guardado (`saveConfirmReport`, `saveLlamadaReport`, `saveSeguimientoReport`, `addLeadNote`) con la API del backend Flask (`POST /api/closer/deck/<id>`).
+    - **Estilos CSS ([index.css](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/index.css) [MODIFY])**:
+      - Se agregaron estilos CSS detallados y responsivos (`.ltabs`, `.ltab`, `.idcard`, `.idc`, `.trail`, `.opt`) para el modal interactivo, manteniendo la estética de vidrio y colores de la versión v6.
+  - **Unificación de Triaje y Cierre (Closer Confirms v6 - Fase 1)**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se eliminó el flujo clásico de Triage para closers y se rediseñó el workspace completo con la estética premium "v6" basada en `closer-workspace-v6.html`.
       - Se implementaron 3 pestañas principales de navegación operativa: **Confirmaciones** (Kanban de agendas por confirmar, confirmadas y no asistirá/llamar), **Llamadas del Día** (Lista clásica de agendas del día para cierre), y **Seguimientos** (Lista clásica de agendas de seguimiento o recontacto).

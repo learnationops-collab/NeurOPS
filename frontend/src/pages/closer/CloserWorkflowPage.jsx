@@ -812,6 +812,977 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    // Funciones operativas de la Ficha Interactiva v6
+    const addDecisionPath = (label, nextStep) => {
+        setDecisionPath(prev => [...prev, label]);
+        setModalStep(nextStep);
+    };
+
+    const saveConfirmReport = async () => {
+        if (!sessionForm.notes.trim()) {
+            toast.error("Por favor, ingresa una nota explicativa");
+            return;
+        }
+        setProcessingId(selectedLead.id);
+        try {
+            await api.post(`/closer/deck/${selectedLead.id}`, {
+                confirm_status: sessionForm.confirm_status || 'por_confirmar',
+                closer_notes: sessionForm.notes
+            });
+            toast.success("Confirmación registrada correctamente");
+            setSelectedLead(null);
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error en saveConfirmReport:", err);
+            toast.error("Error al guardar confirmación");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const saveLlamadaReport = async (finalResult, extraData = {}) => {
+        setProcessingId(selectedLead.id);
+        try {
+            const payload = {
+                result: finalResult,
+                closer_notes: sessionForm.notes,
+                ...extraData
+            };
+            await api.post(`/closer/deck/${selectedLead.id}`, payload);
+            toast.success("Reporte de llamada guardado con éxito");
+            setSelectedLead(null);
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error en saveLlamadaReport:", err);
+            toast.error("Error al reportar llamada");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const saveSeguimientoReport = async () => {
+        setProcessingId(selectedLead.id);
+        try {
+            if (sessionForm.result === 'agendo' && sessionForm.nueva_fecha_agenda) {
+                await api.patch(`/appointments/${selectedLead.id}`, {
+                    start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                });
+                await api.post(`/closer/deck/${selectedLead.id}`, {
+                    confirm_status: 'por_confirmar',
+                    result: 'Pendiente',
+                    closer_notes: sessionForm.notes
+                });
+                toast.success("Lead reagendado y enviado a confirmación");
+            } else {
+                const payload = {
+                    closer_notes: sessionForm.notes,
+                    seguimiento_realizado: true,
+                    fecha_seguimiento: sessionForm.fecha_seguimiento || null
+                };
+                await api.post(`/closer/deck/${selectedLead.id}`, payload);
+                toast.success("Seguimiento guardado correctamente");
+            }
+            setSelectedLead(null);
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error en saveSeguimientoReport:", err);
+            toast.error("Error al guardar el seguimiento");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const addLeadNote = async () => {
+        if (reasonInput.trim().length < 5) return;
+        setProcessingId(selectedLead.id);
+        try {
+            await api.post(`/closer/deck/comments/${selectedLead.id}`, {
+                text: reasonInput.trim()
+            });
+            toast.success("Nota añadida al hilo");
+            setReasonInput('');
+        } catch (err) {
+            console.error("Error en addLeadNote:", err);
+            toast.error("Error al registrar nota");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const renderFormQuestion = (q, a, c = 'info') => {
+        const borderCls = 
+            c === 'good' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' :
+            c === 'bad' ? 'border-rose-500/20 bg-rose-500/5 text-rose-400' :
+            c === 'warn' ? 'border-amber-500/20 bg-amber-500/5 text-amber-400' :
+            'border-slate-850 bg-slate-950/30 text-slate-300';
+
+        return (
+            <div className={`p-4 rounded-2xl border text-left flex flex-col gap-1 ${borderCls}`}>
+                <div className="text-[10px] text-slate-500 font-bold uppercase leading-none">{q}</div>
+                <div className="text-xs font-black leading-normal mt-1">{a || 'Sin respuesta'}</div>
+            </div>
+        );
+    };
+
+    const getCalificacionColor = (text) => {
+        if (!text) return 'info';
+        const str = text.toLowerCase();
+        if (/no te podemos ayudar|desempleado|primero/.test(str)) return 'bad';
+        if (/dispuesto|comprometo|no, no necesito|más de/.test(str)) return 'good';
+        if (/pareja|lo hablo/.test(str)) return 'warn';
+        return 'info';
+    };
+
+    const renderActionStepContent = () => {
+        const option = (fn, type, label, sub) => (
+            <button
+                onClick={fn}
+                className={`opt h-auto p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1 relative overflow-hidden group ${
+                    type === 'ok' ? 'bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-400' :
+                    type === 'no' ? 'bg-rose-500/5 border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/40 text-rose-450' :
+                    type === 'bad' ? 'bg-rose-600/10 border-rose-600/20 hover:bg-rose-600/15 hover:border-rose-600/45 text-rose-400' :
+                    type === 'pink' ? 'bg-pink-500/5 border-pink-500/20 hover:bg-pink-500/10 hover:border-pink-500/40 text-pink-400' :
+                    'bg-slate-900 border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-slate-350'
+                }`}
+            >
+                <span className="text-xs font-black uppercase tracking-wider leading-none">{label}</span>
+                {sub && <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight mt-0.5">{sub}</span>}
+            </button>
+        );
+
+        if (modalStep === 'confirm') {
+            const steps = [
+                { k: 'por_confirmar', label: 'Por confirmar', desc: 'Sin contacto' },
+                { k: 'conversando', label: 'Conversando', desc: 'Respondió' },
+                { k: 'confirmado', label: 'Confirmado', desc: 'Asiste seguro' }
+            ];
+            const currentIdx = steps.findIndex(x => x.k === selectedLead.result);
+
+            return (
+                <div className="space-y-6">
+                    {/* Pipeline visual */}
+                    <div className="flex items-center gap-3 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl overflow-x-auto justify-center font-bold">
+                        {steps.map((st, i) => (
+                            <React.Fragment key={st.k}>
+                                <div className={`text-center space-y-0.5 ${i <= currentIdx ? 'text-violet-400' : 'text-slate-500'}`}>
+                                    <div className="text-[10px] font-black uppercase tracking-widest">{st.label}</div>
+                                    <div className="text-[8px] font-bold uppercase tracking-wider text-slate-550">{st.desc}</div>
+                                </div>
+                                {i < 2 && <span className="text-slate-700 text-xs">›</span>}
+                            </React.Fragment>
+                        ))}
+                    </div>
+
+                    {sessionForm.confirm_status === 'Confirmado' || selectedLead.result === 'Confirmado' ? (
+                        <div className="space-y-4">
+                            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs text-emerald-450 font-bold uppercase tracking-wide text-center">
+                                ✓ Este lead ya asiste seguro a la llamada.
+                            </div>
+                            <div className="q space-y-3">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400">Otras acciones de confirmación</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Cambiar fecha')}
+                                    {option(() => {
+                                        setReasonInput('');
+                                        setReasonModal({
+                                            show: true,
+                                            title: "Descartar lead",
+                                            description: `¿Seguro que deseas descartar a ${selectedLead.lead_name}? Ingresa un motivo:`,
+                                            placeholder: "Motivo...",
+                                            confirmText: "Confirmar descarte",
+                                            requireText: true,
+                                            actionType: 'confirm_discard',
+                                            apptId: selectedLead.id
+                                        });
+                                    }, 'bad', 'Descartar lead', 'Lead frío o no responde')}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="q req space-y-2">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                                    <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">1</span>
+                                    ¿En qué va el proceso? (Requerido)
+                                </h4>
+                                <textarea
+                                    rows={3}
+                                    value={sessionForm.notes}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                                    placeholder="Le escribí por WhatsApp e Instagram. Me contestó que está de turno, le hablo por la tarde."
+                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                                />
+                            </div>
+
+                            <div className="q req space-y-2">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                                    <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">2</span>
+                                    ¿Ya hubo contacto con el prospecto?
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {selectedLead.result === 'por_confirmar' || !selectedLead.result ? (
+                                        <>
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'info', 'Sí, conversando', 'Respondió mensaje')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'por_confirmar' })), 'no', 'No responde aún', 'Registrar intento')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'Confirmado' })), 'ok', 'Sí, confirmó', 'Asiste seguro')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'no', 'Sigue conversando', 'Aún no confirma')}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
+                                <button
+                                    onClick={() => setModalStep('reagQ')}
+                                    className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
+                                >
+                                    Reagendar
+                                </button>
+                                <button
+                                    onClick={saveConfirmReport}
+                                    disabled={!sessionForm.notes.trim() || processingId === selectedLead.id}
+                                    className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                                >
+                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Reporte'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        if (modalStep === 'root') {
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">1</span>
+                        ¿Qué pasó con esta llamada de hoy?
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {option(() => addDecisionPath("Asistió", "decisor"), 'ok', 'Asistió', 'Se conectó a la llamada')}
+                        {option(() => addDecisionPath("No show", "noshow"), 'no', 'No show', 'No se presentó')}
+                        {option(() => addDecisionPath("Canceló", "cancel"), 'bad', 'Canceló', 'Avisó que no venía')}
+                        {option(() => addDecisionPath("Reagendó", "reagQ"), 'info', 'Reagendar', 'Pidió nueva fecha')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'decisor') {
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">2</span>
+                        ¿Estuvo presente el tomador de decisiones?
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, with_decision_maker: true }));
+                            addDecisionPath("Con decisor", "pres");
+                        }, 'ok', 'Sí, con decisor')}
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, with_decision_maker: false }));
+                            addDecisionPath("Sin decisor", "pres");
+                        }, 'no', 'No, sin decisor')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'pres') {
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">3</span>
+                        ¿Se hizo la presentación de la oferta?
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {option(() => addDecisionPath("Con presentation", "venta"), 'ok', 'Sí, se presentó')}
+                        {option(() => addDecisionPath("Sin presentación", "nopres"), 'no', 'No se presentó')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'venta') {
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">4</span>
+                        ¿Se cerró la venta?
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {option(() => {
+                            setSalePrompt({ apptId: selectedLead.id });
+                            setSaleForm({
+                                lead_id: selectedLead.id,
+                                email_vendedor: user?.email || '',
+                                nombre_cliente: selectedLead.lead_name || '',
+                                telefono: selectedLead.phone || '',
+                                mail_cliente: selectedLead.email || '',
+                                programa: 'RR',
+                                tipo_pago_simple: 'completo',
+                                monto: '',
+                                segundo_pago: '',
+                                fecha_cobro: '',
+                                metodo_pago: 'Stripe',
+                                examen_lead: selectedLead.examen || '',
+                                notes: '',
+                                estado: 'Completada',
+                                instagram: selectedLead.instagram || '',
+                                setter: selectedLead.setter_name || '',
+                                documento_identidad: '',
+                                enviar_mensaje: true,
+                                sold_in_call: true,
+                                date: new Date().toISOString().split('T')[0]
+                            });
+                            setSaleStep(1);
+                            setSaleModalOpen(true);
+                        }, 'ok', 'Sí, hubo venta', 'Registrar pago')}
+                        {option(() => addDecisionPath("Sin venta", "nocierre"), 'no', 'No hubo venta')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'nocierre') {
+            const sub = sessionForm.with_decision_maker ? 'Decisión pendiente · con decisor' : 'Sin decisor · oferta presentada';
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">5</span>
+                        Se presentó la oferta pero no se cerró. ¿Siguiente acción?
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, result: 'tomada', rmot: sub }));
+                            setModalStep('follow');
+                        }, 'ok', 'Programar seguimiento')}
+                        {option(() => {
+                            setReasonInput('');
+                            setReasonModal({
+                                show: true,
+                                title: "Calificar como Perdido",
+                                description: `¿Seguro que deseas calificar a ${selectedLead.lead_name} como perdido tras la presentación? Motivo:`,
+                                placeholder: "Objeción final o motivo de pérdida...",
+                                confirmText: "Confirmar Perdido",
+                                requireText: true,
+                                actionType: 'lost_after_pres',
+                                apptId: selectedLead.id
+                            });
+                        }, 'bad', 'Lead perdido / descartado', 'Descartar prospecto')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'nopres') {
+            return (
+                <div className="q space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">4</span>
+                        No se le presentó la oferta. ¿Siguiente paso?
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2.5">
+                        {option(() => setModalStep('second'), 'info', 'Agendar 2ª llamada', 'Enviar a confirmación')}
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, result: 'tomada', rmot: 'Falta agendar 2ª llamada' }));
+                            setModalStep('follow');
+                        }, 'ok', 'Seguimiento', 'Agendar más tarde')}
+                        {option(() => {
+                            setReasonInput('');
+                            setReasonModal({
+                                show: true,
+                                title: "Descartar sin presentación",
+                                description: `¿Seguro que deseas descartar a ${selectedLead.lead_name} sin haberle presentado oferta? Motivo:`,
+                                placeholder: "Escribe el motivo...",
+                                confirmText: "Descartar",
+                                requireText: true,
+                                actionType: 'lost_no_pres',
+                                apptId: selectedLead.id
+                            });
+                        }, 'bad', 'Descartar lead', 'No califica')}
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'second') {
+            return (
+                <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400">Agendar 2ª Llamada Operativa</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] text-slate-555 font-bold uppercase block">Nueva Fecha</label>
+                            <input 
+                                type="date"
+                                value={sessionForm.nueva_fecha_agenda}
+                                onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_fecha_agenda: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                            />
+                        </div>
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] text-slate-555 font-bold uppercase block">Nueva Hora</label>
+                            <input 
+                                type="time"
+                                value={sessionForm.nueva_hora_agenda}
+                                onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_hora_agenda: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[10px] text-slate-555 font-bold uppercase block">Qué falta cubrir / Notas</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Faltó el decisor / no dio tiempo al pitch..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                        <button onClick={() => setModalStep('nopres')} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-[10px] font-black uppercase transition-all">Volver</button>
+                        <button
+                            onClick={async () => {
+                                if (!sessionForm.nueva_fecha_agenda) {
+                                    toast.error("La fecha es obligatoria");
+                                    return;
+                                }
+                                setProcessingId(selectedLead.id);
+                                try {
+                                    await api.patch(`/appointments/${selectedLead.id}`, {
+                                        start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                                    });
+                                    await api.post(`/closer/deck/${selectedLead.id}`, {
+                                        confirm_status: 'por_confirmar',
+                                        result: 'Pendiente',
+                                        closer_notes: sessionForm.notes || 'Agendó 2ª llamada'
+                                    });
+                                    toast.success("2ª llamada agendada y enviada a confirmaciones");
+                                    setSelectedLead(null);
+                                    fetchAgendas();
+                                } catch (e) {
+                                    console.error(e);
+                                    toast.error("Error al agendar 2ª llamada");
+                                } finally {
+                                    setProcessingId(null);
+                                }
+                            }}
+                            disabled={processingId === selectedLead.id}
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                            Enviar a Confirmaciones
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'noshow') {
+            const motivos = ['No contestó el mensaje', 'Bloqueó / desapareció', 'Se arrepintió', 'Problema técnico / horario', 'Confundió la fecha', 'Otro motivo'];
+            return (
+                <div className="space-y-4">
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Por qué no se presentó?</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {motivos.map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => setSessionForm(prev => ({ ...prev, motivo: m }))}
+                                    className={`py-2 px-3 border rounded-xl text-left transition-all cursor-pointer font-bold text-[10px] uppercase ${
+                                        sessionForm.motivo === m
+                                            ? 'bg-rose-500/10 border-rose-500 text-rose-400'
+                                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Qué pasó exactamente</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Le escribí 3 veces, visto sin respuesta..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+                    <div className="q space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">Siguiente paso operativo</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            {option(() => {
+                                setSessionForm(prev => ({ ...prev, result: 'no_tomada', rmot: `No show: ${sessionForm.motivo || 'Sin especificar'}` }));
+                                setModalStep('follow');
+                            }, 'ok', 'Programar seguimiento', 'Continuar contacto')}
+                            {option(() => {
+                                setReasonInput('');
+                                setReasonModal({
+                                    show: true,
+                                    title: "Descartar por No Show",
+                                    description: `¿Seguro que deseas descartar a ${selectedLead.lead_name} por no show reiterado? Comentario:`,
+                                    placeholder: "Motivo del descarte...",
+                                    confirmText: "Confirmar Descarte",
+                                    requireText: true,
+                                    actionType: 'lost_no_show',
+                                    apptId: selectedLead.id
+                                });
+                            }, 'bad', 'Descartar lead', 'Dar por perdido')}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'cancel') {
+            const motivos = ['Sin tiempo / imprevisto', 'Ya no le interesa', 'Problema económico', 'No dio motivo'];
+            return (
+                <div className="space-y-4">
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">Motivo de la cancelación</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {motivos.map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => setSessionForm(prev => ({ ...prev, motivo: m }))}
+                                    className={`py-2 px-3 border rounded-xl text-left transition-all cursor-pointer font-bold text-[10px] uppercase ${
+                                        sessionForm.motivo === m
+                                            ? 'bg-rose-500/10 border-rose-500 text-rose-455'
+                                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Comentario del closer</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Detalle de lo que dijo..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+                    <div className="q space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">Siguiente paso operativo</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                            {option(() => setModalStep('reagQ'), 'info', 'Reagendar ahora', 'Cambiar cita')}
+                            {option(() => {
+                                setSessionForm(prev => ({ ...prev, result: 'no_tomada', rmot: `Cancelación: ${sessionForm.motivo || 'Sin especificar'}` }));
+                                setModalStep('follow');
+                            }, 'ok', 'Seguimiento', 'Programar contacto')}
+                            {option(() => {
+                                setReasonInput('');
+                                setReasonModal({
+                                    show: true,
+                                    title: "Calificar como No Lead",
+                                    description: `¿Seguro que deseas marcar a ${selectedLead.lead_name} como No Lead? Detalle:`,
+                                    placeholder: "Escribe por qué no es lead calificado...",
+                                    confirmText: "Confirmar No Lead",
+                                    requireText: true,
+                                    actionType: 'no_lead',
+                                    apptId: selectedLead.id
+                                });
+                            }, 'bad', 'Marcar No Lead', 'No califica')}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'reagQ') {
+            const motivos = ['Imprevisto del lead', 'Sin tiempo suficiente', 'Pidió otro horario', 'No dio motivo'];
+            return (
+                <div className="space-y-4">
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Por qué se reagenda?</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {motivos.map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => setSessionForm(prev => ({ ...prev, motivo: m }))}
+                                    className={`py-2 px-3 border rounded-xl text-left transition-all cursor-pointer font-bold text-[10px] uppercase ${
+                                        sessionForm.motivo === m
+                                            ? 'bg-violet-500/10 border-violet-500 text-violet-400'
+                                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="q space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Dejó una fecha nueva?</h4>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase mt-0.5">Si no dio fecha, no es reagenda: se programa un seguimiento.</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            {option(() => setModalStep('reagSi'), 'ok', 'Sí, dejó fecha', 'Vuelve a confirmaciones')}
+                            {option(() => {
+                                setSessionForm(prev => ({ ...prev, result: 'no_tomada', rmot: 'Reprogramó sin fecha' }));
+                                setModalStep('follow');
+                            }, 'no', 'No dejó fecha', 'Mandar a seguimiento')}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'reagSi') {
+            return (
+                <div className="space-y-4">
+                    <div className="p-3 bg-violet-650/10 border border-violet-500/20 rounded-2xl text-[10px] font-black uppercase tracking-wider text-violet-400">
+                        ▸ Al confirmar, el prospecto volverá a la columna «Por confirmar» del Kanban.
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Fecha <span className="rq text-pink-500">*</span></label>
+                            <input 
+                                type="date"
+                                value={sessionForm.nueva_fecha_agenda}
+                                onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_fecha_agenda: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                            />
+                        </div>
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Hora <span className="rq text-pink-500">*</span></label>
+                            <input 
+                                type="time"
+                                value={sessionForm.nueva_hora_agenda}
+                                onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_hora_agenda: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                        <button onClick={() => setModalStep('reagQ')} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-[10px] font-black uppercase transition-all">Volver</button>
+                        <button
+                            onClick={async () => {
+                                if (!sessionForm.nueva_fecha_agenda) {
+                                    toast.error("La fecha es obligatoria");
+                                    return;
+                                }
+                                setProcessingId(selectedLead.id);
+                                try {
+                                    await api.patch(`/appointments/${selectedLead.id}`, {
+                                        start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                                    });
+                                    await api.post(`/closer/deck/${selectedLead.id}`, {
+                                        confirm_status: 'por_confirmar',
+                                        result: 'Pendiente',
+                                        closer_notes: sessionForm.notes || `Reagendado por: ${sessionForm.motivo || 'Sin especificar'}`
+                                    });
+                                    toast.success("Cita reagendada con éxito");
+                                    setSelectedLead(null);
+                                    fetchAgendas();
+                                } catch (e) {
+                                    console.error(e);
+                                    toast.error("Error al reagendar");
+                                } finally {
+                                    setProcessingId(null);
+                                }
+                            }}
+                            disabled={processingId === selectedLead.id}
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                            Confirmar Reagenda
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'follow') {
+            const cadencias = [
+                { k: 'hoy', d: 0, label: 'Hoy', desc: new Date().toLocaleDateString() },
+                { k: 'mañana', d: 1, label: 'Mañana', desc: new Date(Date.now() + 86400000).toLocaleDateString() },
+                { k: 'sin_fecha', d: null, label: 'Sin fecha', desc: 'Va al pool' }
+            ];
+
+            return (
+                <div className="space-y-4 text-left">
+                    <div className="p-4 bg-slate-950/20 border border-slate-850 rounded-2xl flex justify-between gap-4 text-xs font-bold uppercase">
+                        <div><span className="text-slate-500 text-[9px] block">Tipo de seguimiento</span><b>{sessionForm.result === 'tomada' ? 'Operativo (Showup)' : 'Recuperación (No show/Canceló)'}</b></div>
+                        <div><span className="text-slate-500 text-[9px] block">Subestado</span><b>{sessionForm.rmot || 'Seguimiento programado'}</b></div>
+                        <div><span className="text-slate-500 text-[9px] block">Intentos</span><b>4 intentos · cadencia automática</b></div>
+                    </div>
+
+                    <div className="q space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Cuándo lo vas a seguir?</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                            {cadencias.map(cd => (
+                                <button
+                                    key={cd.k}
+                                    onClick={() => {
+                                        const dt = cd.d === null ? '' : new Date(Date.now() + cd.d * 86400000).toISOString().split('T')[0];
+                                        setSessionForm(prev => ({ ...prev, fecha_seguimiento: dt }));
+                                    }}
+                                    className={`py-2 px-3 border rounded-xl text-left transition-all cursor-pointer font-bold text-[10px] uppercase flex flex-col gap-0.5 ${
+                                        (cd.d === null && !sessionForm.fecha_seguimiento) || (cd.d !== null && sessionForm.fecha_seguimiento === new Date(Date.now() + cd.d * 86400000).toISOString().split('T')[0])
+                                            ? 'bg-violet-650/10 border-violet-500/50 text-violet-400'
+                                            : 'bg-slate-900 border-slate-800 text-slate-450 hover:border-slate-700'
+                                    }`}
+                                >
+                                    <span>{cd.label}</span>
+                                    <span className="text-[8px] text-slate-500 font-medium normal-case">{cd.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <input
+                            type="date"
+                            value={sessionForm.fecha_seguimiento}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, fecha_seguimiento: e.target.value }))}
+                            className="w-full max-w-[200px] mt-2 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Ángulo del seguimiento / Notas</label>
+                        <p className="text-[8px] text-slate-550 uppercase font-bold mt-0.5">Qué le vas a decir y por qué canal. Lo leerá el equipo si no estás.</p>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Quedó en hablarlo con su pareja. Regreso con el caso de Ana, mismo examen y misma objeción de precio..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                        <button onClick={() => setModalStep('root')} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-[10px] font-black uppercase transition-all">Volver</button>
+                        <button
+                            onClick={async () => {
+                                setProcessingId(selectedLead.id);
+                                try {
+                                    await api.post(`/closer/deck/${selectedLead.id}`, {
+                                        result: sessionForm.result === 'tomada' ? 'Show up' : 'No Show',
+                                        closer_notes: sessionForm.notes || 'Programó seguimiento',
+                                        fecha_seguimiento: sessionForm.fecha_seguimiento || null
+                                    });
+                                    toast.success("Seguimiento programado con éxito");
+                                    setSelectedLead(null);
+                                    fetchAgendas();
+                                } catch (e) {
+                                    console.error(e);
+                                    toast.error("Error al programar seguimiento");
+                                } finally {
+                                    setProcessingId(null);
+                                }
+                            }}
+                            disabled={processingId === selectedLead.id}
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                            Guardar Seguimiento
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'seg') {
+            const seq = selectedLead.seguimiento_intento || 1;
+            return (
+                <div className="space-y-4">
+                    <div className="p-3 bg-[#111219]/90 border border-slate-900 rounded-2xl text-xs font-bold text-slate-350 flex justify-between">
+                        <span><b>Seguimiento {seq} de 4</b></span>
+                        <span>Cadencia automática</span>
+                    </div>
+
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con este contacto?</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', 'Lo hice, no contestó')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Contestó', 'Estamos conversando')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'agendo' })), 'ok', 'Contestó y agendó', 'Vuelve al meet')}
+                            {option(() => {
+                                setSalePrompt({ apptId: selectedLead.id });
+                                setSaleForm({
+                                    lead_id: selectedLead.id,
+                                    email_vendedor: user?.email || '',
+                                    nombre_cliente: selectedLead.lead_name || '',
+                                    telefono: selectedLead.phone || '',
+                                    mail_cliente: selectedLead.email || '',
+                                    programa: 'RR',
+                                    tipo_pago_simple: 'completo',
+                                    monto: '',
+                                    segundo_pago: '',
+                                    fecha_cobro: '',
+                                    metodo_pago: 'Stripe',
+                                    examen_lead: selectedLead.examen || '',
+                                    notes: '',
+                                    estado: 'Completada',
+                                    instagram: selectedLead.instagram || '',
+                                    setter: selectedLead.setter_name || '',
+                                    documento_identidad: '',
+                                    enviar_mensaje: true,
+                                    sold_in_call: true,
+                                    date: new Date().toISOString().split('T')[0]
+                                });
+                                setSaleStep(1);
+                                setSaleModalOpen(true);
+                            }, 'ok', 'Cerró la venta', 'Registrar pago')}
+                        </div>
+                    </div>
+
+                    {sessionForm.result === 'agendo' && (
+                        <div className="grid grid-cols-2 gap-3 p-4 bg-slate-950/20 border border-slate-850 rounded-2xl">
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Fecha <span className="rq text-pink-500">*</span></label>
+                                <input 
+                                    type="date"
+                                    value={sessionForm.nueva_fecha_agenda}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_fecha_agenda: e.target.value }))}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                                />
+                            </div>
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Hora <span className="rq text-pink-500">*</span></label>
+                                <input 
+                                    type="time"
+                                    value={sessionForm.nueva_hora_agenda}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_hora_agenda: e.target.value }))}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Qué le dijiste y qué respondió (Requerido)</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Le mandé el caso de Ana, mismo examen y mismo miedo de no pasar. Vio el mensaje pero no contestó..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+
+                    {sessionForm.result && sessionForm.result !== 'agendo' && (
+                        <div className="q space-y-2">
+                            <h4 className="text-[10px] font-black uppercase text-slate-400">¿Y ahora qué hacemos?</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                {option(() => {
+                                    const delayDays = [0, 3, 7, 14][Math.min(3, seq)];
+                                    const nextDate = new Date(Date.now() + delayDays * 86400000).toISOString().split('T')[0];
+                                    setSessionForm(prev => ({ ...prev, fecha_seguimiento: nextDate, sig_action: 'next' }));
+                                }, 'ok', `Programar Seguimiento ${Math.min(4, seq + 1)}`, `Sugerido para +${[0, 3, 7, 14][Math.min(3, seq)]} días`)}
+                                {option(() => {
+                                    setReasonInput('');
+                                    setReasonModal({
+                                        show: true,
+                                        title: "Cerrar Seguimiento",
+                                        description: `¿Seguro que deseas dar por cerrado el seguimiento de ${selectedLead.lead_name}? Ingresa motivo:`,
+                                        placeholder: "No califica, compró en otro lado, pidió no ser contactado...",
+                                        confirmText: "Cerrar Seguimiento",
+                                        requireText: true,
+                                        actionType: 'close_follow_up',
+                                        apptId: selectedLead.id
+                                    });
+                                }, 'bad', 'Cerrar Seguimiento', 'Lead frío o agotado')}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                        <div />
+                        <button
+                            onClick={saveSeguimientoReport}
+                            disabled={!sessionForm.notes.trim() || !sessionForm.result || processingId === selectedLead.id}
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Completar Seguimiento'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (modalStep === 'segventa') {
+            return (
+                <div className="space-y-4">
+                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-emerald-450 text-center">
+                        ▸ Seguimiento de Cliente. Ya cerró la venta: el foco es cobrar la deuda.
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl text-xs font-bold text-slate-350">
+                        <div><span className="text-slate-500 text-[8px] block">Programa</span><b>{selectedLead.programa || 'Ace Learner (AL)'}</b></div>
+                        <div><span className="text-slate-500 text-[8px] block">Ya pagó</span><b className="text-emerald-400">$1,850 USD</b></div>
+                        <div><span className="text-slate-500 text-[8px] block">Debe</span><b className="text-rose-450">$0 USD</b></div>
+                        <div><span className="text-slate-550 text-[8px] block">Cliente desde</span><b>31/07/2026</b></div>
+                    </div>
+
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con el cobro?</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando')}
+                            {option(() => {
+                                setSalePrompt({ apptId: selectedLead.id });
+                                setSaleForm({
+                                    lead_id: selectedLead.id,
+                                    email_vendedor: user?.email || '',
+                                    nombre_cliente: selectedLead.lead_name || '',
+                                    telefono: selectedLead.phone || '',
+                                    mail_cliente: selectedLead.email || '',
+                                    programa: selectedLead.programa || 'RR',
+                                    tipo_pago_simple: 'parcial',
+                                    monto: '',
+                                    segundo_pago: '',
+                                    fecha_cobro: '',
+                                    metodo_pago: 'Stripe',
+                                    examen_lead: selectedLead.examen || '',
+                                    notes: '',
+                                    estado: 'Completada',
+                                    instagram: selectedLead.instagram || '',
+                                    setter: selectedLead.setter_name || '',
+                                    documento_identidad: '',
+                                    enviar_mensaje: true,
+                                    sold_in_call: false,
+                                    date: new Date().toISOString().split('T')[0]
+                                });
+                                setSaleStep(2);
+                                setSaleModalOpen(true);
+                            }, 'ok', 'Registrar Cobro')}
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Qué sucedió exactamente (Requerido)</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Le recordé la cuota de este mes. Dijo que cobra el viernes y transfiere a primera hora del lunes..."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                        <div />
+                        <button
+                            onClick={saveSeguimientoReport}
+                            disabled={!sessionForm.notes.trim() || !sessionForm.result || processingId === selectedLead.id}
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Completar Cobro'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
+    };
+
     return (
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
@@ -1297,7 +2268,7 @@ const CloserWorkflowPage = () => {
 
             {/* Modal de Detalle de Agenda Custom (para agendas del Closer) */}
             <AnimatePresence>
-                {(activeStep === 'confirmations' || activeStep === 'calls') && selectedLead && (
+                {selectedLead && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -1308,12 +2279,15 @@ const CloserWorkflowPage = () => {
                             {/* Cabecera */}
                             <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                                 <div className="space-y-1">
-                                    <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase text-violet-400 tracking-widest">
+                                        Ficha Operativa de Cierre
+                                    </span>
+                                    <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-2">
                                         <AlertCircle size={20} className="text-violet-400" />
                                         {selectedLead.lead_name || 'Sin Nombre'}
                                     </h3>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                        Ficha Operativa de Cierre • ID Cita: #{selectedLead.id}
+                                        {activeStep === 'confirmations' ? 'Proceso de confirmación' : activeStep === 'calls' ? 'Reporte de llamada' : 'Seguimiento'} • ID Cita: #{selectedLead.id}
                                     </p>
                                 </div>
                                 <button
@@ -1323,188 +2297,139 @@ const CloserWorkflowPage = () => {
                                     <X size={20} />
                                 </button>
                             </div>
-                            
+
+                            {/* Selector de Pestañas del Modal */}
+                            <div className="ltabs mt-4">
+                                <button 
+                                    className={`ltab ${modalTab === 'act' ? 'on' : ''}`}
+                                    onClick={() => setModalTab('act')}
+                                >
+                                    ⚡ Acción
+                                </button>
+                                <button 
+                                    className={`ltab ${modalTab === 'form' ? 'on' : ''}`}
+                                    onClick={() => setModalTab('form')}
+                                >
+                                    📋 Formulario
+                                </button>
+                                <button 
+                                    className={`ltab ${modalTab === 'set' ? 'on' : ''}`}
+                                    onClick={() => setModalTab('set')}
+                                >
+                                    💬 Setter <span className="b">{selectedLead.setter_notes ? 1 : 0}</span>
+                                </button>
+                            </div>
+
                             {/* Grid principal */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar mt-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pr-2">
-                                {/* Columna Izquierda: Info y Acciones */}
+                                
+                                {/* Columna Izquierda: Ficha Operativa Interactiva */}
                                 <div className="lg:col-span-7 space-y-6">
-                                    {/* Bloque 1: Info Principal del Lead */}
-                                    <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-4">
-                                        <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-wider border-b border-slate-900 pb-2">
-                                            Información del Prospecto
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Instagram</span>
-                                                {selectedLead.instagram ? (
-                                                    <a
-                                                        href={selectedLead.ig_chat_link || `https://instagram.com/${selectedLead.instagram.replace('@', '')}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-violet-400 hover:text-violet-300 font-black hover:underline inline-flex items-center gap-1.5"
-                                                    >
-                                                        <Instagram size={12} />
-                                                        @{selectedLead.instagram.replace('@', '')}
-                                                        <ExternalLink size={10} />
-                                                    </a>
+                                    
+                                    {/* Info Card Fijo en Cabecera de Izquierda */}
+                                    <div className="idcard bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex flex-wrap gap-4 text-xs">
+                                        <div className="idc"><span>◎ Instagram</span><b>@{selectedLead.instagram ? selectedLead.instagram.replace('@', '') : 'no_ig'}</b></div>
+                                        <div className="idc"><span>⤴ Fuente</span><b>{selectedLead.origin || 'Sheets'}</b></div>
+                                        <div className="idc"><span>◈ Examen</span><b>{selectedLead.examen || 'MIR / ENARM'}</b></div>
+                                        <div className="idc hl"><span>● Estado</span><b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b></div>
+                                    </div>
+
+                                    {/* Contenedor de la pestaña Acción */}
+                                    {modalTab === 'act' && (
+                                        <div className="space-y-4">
+                                            {/* Línea de tiempo / trail de decisiones */}
+                                            <div className="trail flex flex-wrap gap-1.5 items-center pb-2 border-b border-slate-850/50">
+                                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-wider">Camino:</span>
+                                                {decisionPath.length === 0 ? (
+                                                    <span className="text-[10px] text-slate-655 font-bold uppercase tracking-wider">Raíz</span>
                                                 ) : (
-                                                    <span className="text-slate-400 font-bold">No asignado</span>
-                                                )}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Fuente del Lead</span>
-                                                <span className="text-slate-200 font-bold">{selectedLead.origin || 'Meta Ads / ManyChat'}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Email</span>
-                                                <span className="text-slate-350 font-bold">{selectedLead.email || 'N/A'}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Teléfono</span>
-                                                <span className="text-slate-350 font-bold">{selectedLead.phone || 'N/A'}</span>
-                                            </div>
-                                            <div className="space-y-1 sm:col-span-2">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Setter Asignado</span>
-                                                <span className="text-slate-200 font-black">{selectedLead.setter_name || 'Sin Asignar'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Bloque 2: Notas del Setter */}
-                                    {selectedLead.setter_notes && (
-                                        <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-2">
-                                            <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-wider">
-                                                Notas de Cualificación (Setter)
-                                            </h4>
-                                            <p className="text-xs text-slate-300 italic leading-relaxed">
-                                                "{selectedLead.setter_notes}"
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Bloque 3: Respuestas del Formulario */}
-                                    {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 && (
-                                        <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-3">
-                                            <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-wider border-b border-slate-900 pb-2">
-                                                Respuestas de la Encuesta
-                                            </h4>
-                                            <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
-                                                {selectedLead.survey_answers.map((ans, index) => (
-                                                    <div key={index} className="space-y-0.5 border-l-2 border-emerald-500/20 pl-3">
-                                                        <p className="text-[9px] font-bold text-slate-500 leading-tight">{ans.question}</p>
-                                                        <p className="text-xs font-black text-slate-200">{ans.answer || 'Sin respuesta'}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Bloque 4: Modificar Estado (Acciones del Closer) */}
-                                    <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-4">
-                                        <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                                            <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
-                                                Modificar Estado del Lead
-                                            </h4>
-                                            <span className="text-[10px] font-black uppercase bg-violet-650/20 text-violet-400 border border-violet-500/25 px-2.5 py-0.5 rounded-lg">
-                                                Actual: {selectedLead.closer_result || 'Pendiente'}
-                                            </span>
-                                        </div>
-                                        {selectedLead.id < 0 ? (
-                                            <div className="py-6 px-6 bg-slate-950/40 rounded-2xl border border-slate-850/50 text-xs font-semibold text-slate-400 text-center italic">
-                                                Este lead no posee una cita agendada para hoy. Utiliza la sección de Notas & Comentarios a la derecha para comunicarte.
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {/* Botonera de acciones rápidas */}
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        onClick={(e) => { handleQuickAction(selectedLead.id, 'Completada', e); setSelectedLead(null); }}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        Asistió
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { handleQuickAction(selectedLead.id, 'No Show', e); setSelectedLead(null); }}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        No Show
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { handleQuickAction(selectedLead.id, 'Cancelada', e); setSelectedLead(null); }}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-amber-600/90 hover:bg-amber-505 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        Canceló
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reprogramada' })}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        Reagendar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Primera Agenda' })}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-blue-650/80 hover:bg-blue-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        2ª Llamada
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            if (e) e.stopPropagation();
-                                                            setReasonInput('');
-                                                            setReasonModal({
-                                                                show: true,
-                                                                title: "Calificar como No Lead",
-                                                                description: `¿Seguro que deseas calificar a ${selectedLead.lead_name || 'este prospecto'} como No Lead? Puedes ingresar un detalle opcional:`,
-                                                                placeholder: "Detalles opcionales...",
-                                                                confirmText: "Confirmar No Lead",
-                                                                requireText: false,
-                                                                actionType: 'no_lead',
-                                                                apptId: selectedLead.id
-                                                            });
-                                                        }}
-                                                        disabled={processingId === selectedLead.id}
-                                                        className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-slate-350 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-slate-750"
-                                                    >
-                                                        No Lead
-                                                    </button>
-                                                </div>
-
-                                                {/* Formulario de reprogramación inline si se activó */}
-                                                {rescheduleData.apptId === selectedLead.id && (
-                                                    <div className="pt-4 border-t border-slate-900 flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
-                                                        <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
-                                                            <CalendarDays size={14} className="text-violet-500" />
-                                                            {rescheduleData.status === 'Reprogramada' ? 'Nueva Fecha Reagenda:' : 'Nueva Fecha 2ª Llamada:'}
+                                                    decisionPath.map((crumb, idx) => (
+                                                        <span key={idx} className="text-[10px] font-black uppercase text-violet-405 bg-violet-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                                            {crumb}
+                                                            {idx < decisionPath.length - 1 && <span className="text-slate-600 ml-1">›</span>}
                                                         </span>
-                                                        <input 
-                                                            type="datetime-local" 
-                                                            value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
-                                                            onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
-                                                            className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
-                                                        />
-                                                        <button
-                                                            onClick={handleConfirmReschedule}
-                                                            disabled={processingId === selectedLead.id || !rescheduleData.date}
-                                                            className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
-                                                        >
-                                                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Confirmar Reprogramación'}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
-                                                            className="h-9 px-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
-                                                        >
-                                                            Cancelar
-                                                        </button>
-                                                    </div>
+                                                    ))
                                                 )}
-                                            </>
-                                        )}
-                                    </div>
+                                            </div>
+
+                                            {/* Árbol de decisiones dinámico por modalStep */}
+                                            {renderActionStepContent()}
+                                        </div>
+                                    )}
+
+                                    {/* Contenedor de la pestaña Formulario */}
+                                    {modalTab === 'form' && (
+                                        <div className="space-y-4">
+                                            <div className="fsec space-y-3">
+                                                <div className="fh flex items-center justify-between pb-2 border-b border-slate-800">
+                                                    <b className="text-xs font-black uppercase tracking-widest text-slate-400">Calificación externa</b>
+                                                    <span className="tagx px-2 py-0.5 rounded text-[9px] font-black bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">n8n</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
+                                                    {renderFormQuestion("Fuente del Lead", selectedLead.origin || 'Meta Ads')}
+                                                    {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
+                                                </div>
+                                            </div>
+
+                                            <div className="fsec mt-6 space-y-3">
+                                                <div className="fh flex items-center justify-between pb-2 border-b border-slate-800">
+                                                    <b className="text-xs font-black uppercase tracking-widest text-slate-400">Encuesta de cita</b>
+                                                    <span className="tagx px-2 py-0.5 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">✓ completada</span>
+                                                </div>
+                                                <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar pr-2">
+                                                    {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 ? (
+                                                        selectedLead.survey_answers.map((ans, idx) => (
+                                                            renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer))
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-slate-500 text-xs italic font-bold">No hay respuestas a la encuesta.</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Contenedor de la pestaña Setter */}
+                                    {modalTab === 'set' && (
+                                        <div className="space-y-4">
+                                            <div className="note p-3 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-slate-400 font-bold uppercase leading-relaxed">
+                                                Contexto de quien lo agendó y notas de cualificación.
+                                            </div>
+                                            {selectedLead.setter_notes ? (
+                                                <div className="snote p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-1">
+                                                    <div className="sh flex justify-between text-[10px] text-slate-500 font-bold uppercase">
+                                                        <span>{selectedLead.setter_name || 'Setter'}</span>
+                                                        <span>Nota Setter</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-200 font-medium leading-relaxed italic">
+                                                        "{selectedLead.setter_notes}"
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="text-slate-500 text-xs italic font-bold">Nadie dejó notas del setter todavía.</div>
+                                            )}
+
+                                            <div className="pt-4 border-t border-slate-800 space-y-3">
+                                                <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
+                                                <textarea
+                                                    rows={3}
+                                                    value={reasonInput}
+                                                    onChange={(e) => setReasonInput(e.target.value)}
+                                                    placeholder="Escribe una nota interna para ti o para el equipo..."
+                                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                                                />
+                                                <button
+                                                    onClick={addLeadNote}
+                                                    disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
+                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                                >
+                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
 
                                 {/* Columna Derecha: Chat / Comentarios */}

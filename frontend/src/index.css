@@ -890,6 +890,111 @@ header.top-v6 {
   font-weight: 700;
 }
 
+/* MODAL DETAILED v6 styles */
+.ltabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--v6-bd);
+  padding-bottom: 2px;
+}
+.ltab {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+  cursor: pointer;
+  position: relative;
+  transition: color .2s;
+}
+.ltab:hover {
+  color: #fff;
+}
+.ltab.on {
+  color: #fff;
+}
+.ltab.on::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--v6-pink);
+  box-shadow: 0 0 8px var(--v6-pink);
+}
+.ltab .b {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.1);
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.idcard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.idc {
+  flex: 1;
+  min-width: 110px;
+  background: rgba(255,255,255,.015);
+  border: 1px solid var(--v6-bd);
+  padding: 8px 12px;
+  border-radius: 12px;
+  text-align: left;
+}
+.idc span {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+  margin-bottom: 2px;
+}
+.idc b {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+}
+.idc.hl {
+  border-color: rgba(255,63,164,.25);
+  background: rgba(255,63,164,.02);
+}
+.idc.hl b {
+  color: var(--v6-pink);
+}
+
+.trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.opt {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all .2s;
+  background: rgba(255,255,255,.01);
+  border: 1px solid var(--v6-bd);
+}
+.opt:hover {
+  background: rgba(255,255,255,.03);
+  border-color: rgba(255,255,255,.2);
+}
+
 /* ===== Print Media Styles ===== */
 @media print {
     /* Ocultar elementos de navegación, menús y filtros */
