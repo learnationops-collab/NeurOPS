@@ -1,0 +1,269 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
+import api from '../../../services/api';
+
+const TIPOS = {
+    no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' },
+    tomada: { label: 'Llamadas tomadas', desc: 'Asistieron y quedó una decisión o una 2ª llamada', icon: '🎤', cls: 'amber' },
+    cerrada: { label: 'Llamadas cerradas', desc: 'Clientes: cobranza, renovación y upsell', icon: '💰', cls: 'emerald' }
+};
+
+const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
+
+const chipCls = {
+    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+};
+
+const SeguimientoRow = ({ item, tipo, onClick }) => (
+    <div
+        onClick={onClick}
+        className="p-4 rounded-2xl border border-slate-900/60 bg-black/20 hover:bg-slate-900/50 hover:border-slate-800 transition-all cursor-pointer flex items-center justify-between gap-4"
+    >
+        <div className="min-w-0 flex-1">
+            <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
+                    {item.seguimiento_sub || 'Sin subestado'}
+                </span>
+                {item.origin && <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">{item.origin}</span>}
+                {item.days_since_call !== null && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        Call hace {item.days_since_call}d
+                    </span>
+                )}
+                {tipo === 'cerrada' && item.programa_nombre && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        {item.programa_nombre}
+                    </span>
+                )}
+                {tipo === 'cerrada' && typeof item.deuda === 'number' && (
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                        {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
+                    </span>
+                )}
+            </div>
+        </div>
+        <div className="shrink-0 text-right">
+            {item.fecha_seguimiento ? (
+                <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">Seguimiento {item.seguimiento_intento} de 4</span>
+            ) : (
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Asignar fecha</span>
+            )}
+        </div>
+    </div>
+);
+
+const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
+    const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
+    const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
+    const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
+    const [loading, setLoading] = useState(true);
+    const [openPool, setOpenPool] = useState(null);
+    const [poolItems, setPoolItems] = useState([]);
+    const [poolLoading, setPoolLoading] = useState(false);
+    const [poolFilters, setPoolFilters] = useState({ sub: '', days_since: '', programa: '', deuda: '' });
+
+    const fetchMain = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [todayRes, countsRes, goalRes] = await Promise.all([
+                api.get(`/closer/followups/today?selected_date=${selectedDate}`),
+                api.get('/closer/followups/pool-counts'),
+                api.get(`/closer/followups/goal?selected_date=${selectedDate}`)
+            ]);
+            setGrouped(todayRes.data.grouped);
+            setPoolCounts(countsRes.data);
+            setGoal(goalRes.data);
+        } catch (err) {
+            console.error('Error cargando seguimientos', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedDate]);
+
+    useEffect(() => { fetchMain(); }, [fetchMain]);
+
+    const fetchPool = useCallback(async () => {
+        if (!openPool) return;
+        setPoolLoading(true);
+        try {
+            const params = new URLSearchParams({ tipo: openPool });
+            if (poolFilters.sub) params.set('sub', poolFilters.sub);
+            if (poolFilters.days_since) params.set('days_since', poolFilters.days_since);
+            if (openPool === 'cerrada' && poolFilters.programa) params.set('programa', poolFilters.programa);
+            if (openPool === 'cerrada' && poolFilters.deuda) params.set('deuda', poolFilters.deuda);
+            const res = await api.get(`/closer/followups/pool?${params.toString()}`);
+            setPoolItems(res.data.items);
+        } catch (err) {
+            console.error('Error cargando pool de seguimientos', err);
+        } finally {
+            setPoolLoading(false);
+        }
+    }, [openPool, poolFilters]);
+
+    useEffect(() => { fetchPool(); }, [fetchPool]);
+
+    const togglePool = (tipo) => {
+        setOpenPool(prev => (prev === tipo ? null : tipo));
+        setPoolFilters({ sub: '', days_since: '', programa: '', deuda: '' });
+    };
+
+    const openLead = (item, tipo) => {
+        onOpenLead({
+            id: item.id,
+            lead_name: item.lead_name,
+            instagram: item.instagram,
+            examen: item.examen,
+            origin: item.origin,
+            fase: 'seg',
+            tipo,
+            seguimiento_intento: item.seguimiento_intento,
+            closer_notes: item.closer_notes,
+            deuda: item.deuda,
+            programa_nombre: item.programa_nombre,
+            programa_code: item.programa_code
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <Loader2 className="animate-spin text-violet-500" size={32} />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando seguimientos...</span>
+            </div>
+        );
+    }
+
+    const totalHoy = grouped.no_tomada.length + grouped.tomada.length + grouped.cerrada.length;
+
+    return (
+        <div className="space-y-6">
+            {/* Meta diaria */}
+            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6">
+                <div className="text-4xl font-black text-white">{goal.hechos}<span className="text-lg text-slate-500">/{goal.meta}</span></div>
+                <div className="flex-1">
+                    <b className="text-sm font-black text-white block">Objetivo de seguimientos del día</b>
+                    <span className="text-xs text-slate-400">
+                        {goal.faltan > 0 ? `Te faltan ${goal.faltan} para la meta.` : 'Meta cumplida. 🏅'}
+                    </span>
+                    <div className="h-2 rounded-full bg-slate-900 border border-slate-850 overflow-hidden mt-2">
+                        <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-500 transition-all" style={{ width: `${goal.pct}%` }} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Asignados para hoy */}
+            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                    <div>
+                        <h3 className="text-sm font-black text-white">📅 Asignados para hoy</h3>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
+                    </div>
+                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
+                </div>
+                {totalHoy === 0 ? (
+                    <div className="text-center py-8 text-emerald-400 text-xs font-bold">✓ Todos los seguimientos de hoy están resueltos.</div>
+                ) : (
+                    Object.keys(TIPOS).map(tipo => grouped[tipo].length > 0 && (
+                        <div key={tipo} className="space-y-2">
+                            <div className="flex items-center gap-2 pt-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{TIPOS[tipo].icon} {TIPOS[tipo].label} · {grouped[tipo].length}</span>
+                                <span className="flex-1 h-px bg-slate-900" />
+                            </div>
+                            {grouped[tipo].map(item => (
+                                <SeguimientoRow key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
+                            ))}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Pool sin fecha */}
+            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                    <div>
+                        <h3 className="text-sm font-black text-white">📥 Pool sin fecha asignada</h3>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-0.5">Base para elegir a quién seguir</p>
+                    </div>
+                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
+                        {poolCounts.no_tomada + poolCounts.tomada + poolCounts.cerrada} disponibles
+                    </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {Object.keys(TIPOS).map(tipo => (
+                        <button
+                            key={tipo}
+                            onClick={() => togglePool(tipo)}
+                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                                openPool === tipo ? 'bg-violet-650/10 border-violet-500/50' : 'bg-slate-900/60 border-slate-850 hover:border-slate-700'
+                            }`}
+                        >
+                            <span className="text-xl">{TIPOS[tipo].icon}</span>
+                            <div className="flex-1 min-w-0">
+                                <b className="text-xs font-black text-white block truncate">{TIPOS[tipo].label}</b>
+                                <span className="text-[9px] text-slate-500 font-bold uppercase">{TIPOS[tipo].desc}</span>
+                            </div>
+                            <span className="text-sm font-black text-slate-300">{poolCounts[tipo]}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {openPool && (
+                    <div className="space-y-3 pt-2">
+                        <div className="flex flex-wrap gap-2">
+                            <select
+                                value={poolFilters.days_since}
+                                onChange={(e) => setPoolFilters(prev => ({ ...prev, days_since: e.target.value }))}
+                                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                            >
+                                <option value="">Fecha de la call: cualquiera</option>
+                                <option value="14">Últimos 14 días</option>
+                                <option value="30">Últimos 30 días</option>
+                                <option value="+30">Más de 30 días</option>
+                            </select>
+                            {openPool === 'cerrada' && (
+                                <>
+                                    <select
+                                        value={poolFilters.programa}
+                                        onChange={(e) => setPoolFilters(prev => ({ ...prev, programa: e.target.value }))}
+                                        className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                                    >
+                                        <option value="">Programa: todos</option>
+                                        <option value="AL">Ace Learners</option>
+                                        <option value="RR">Residency Roadmap</option>
+                                        <option value="SI">Specialist Initiative</option>
+                                    </select>
+                                    <select
+                                        value={poolFilters.deuda}
+                                        onChange={(e) => setPoolFilters(prev => ({ ...prev, deuda: e.target.value }))}
+                                        className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                                    >
+                                        <option value="">Deuda: cualquiera</option>
+                                        <option value="con">Con saldo pendiente</option>
+                                        <option value="sin">Al día</option>
+                                    </select>
+                                </>
+                            )}
+                        </div>
+
+                        {poolLoading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-violet-500" size={24} /></div>
+                        ) : poolItems.length === 0 ? (
+                            <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">Sin leads en esta categoría con estos filtros.</div>
+                        ) : (
+                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                                {poolItems.map(item => (
+                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default SeguimientosPane;

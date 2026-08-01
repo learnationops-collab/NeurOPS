@@ -15,6 +15,7 @@ import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
+import SeguimientosPane from './components/SeguimientosPane';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -425,11 +426,19 @@ const CloserWorkflowPage = () => {
             const payload = {};
             if (typeof followUpData === 'object' && followUpData !== null) {
                 if (followUpData.normal) payload.fecha_seguimiento = followUpData.normal;
-                if (followUpData.cobro) payload.fecha_seguimiento_cobro = followUpData.cobro;
+                if (followUpData.cobro) {
+                    payload.fecha_seguimiento_cobro = followUpData.cobro;
+                    if (!followUpData.normal) payload.fecha_seguimiento = followUpData.cobro;
+                }
                 payload.seguimiento_realizado = false;
             } else {
                 payload.fecha_seguimiento = followUpData;
                 payload.seguimiento_realizado = false;
+            }
+            if (followUpModal.tipo) {
+                payload.seguimiento_tipo = followUpModal.tipo;
+                payload.seguimiento_sub = followUpModal.newStatus || 'Seguimiento programado';
+                payload.seguimiento_intento = 1;
             }
 
             await api.post(`/closer/deck/${followUpModal.agendaId}`, payload);
@@ -987,6 +996,10 @@ const CloserWorkflowPage = () => {
                     try {
                         await api.post(`/closer/deck/${savedApptId}`, {
                             fecha_seguimiento_cobro: saleForm.fecha_cobro,
+                            fecha_seguimiento: saleForm.fecha_cobro,
+                            seguimiento_tipo: 'cerrada',
+                            seguimiento_sub: 'Seguimiento de cobro',
+                            seguimiento_intento: 1,
                             seguimiento_realizado: false
                         });
                     } catch (e) {
@@ -1005,7 +1018,8 @@ const CloserWorkflowPage = () => {
                         agendaId: savedApptId,
                         leadName: saleForm.nombre_cliente || 'Cliente',
                         newStatus: 'Seguimiento de Cobro',
-                        isSaleFollowUp: true
+                        isSaleFollowUp: true,
+                        tipo: 'cerrada'
                     });
                 }
             } else {
@@ -1129,6 +1143,18 @@ const CloserWorkflowPage = () => {
                     closer_notes: sessionForm.notes
                 });
                 toast.success("Lead reagendado y enviado a confirmación");
+            } else if (sessionForm.sig_action === 'next') {
+                // Continúa la cadencia: NO se marca como realizado (sigue vivo en el pool/asignados),
+                // se incrementa el intento y se guarda la nueva fecha ya calculada por la cadencia automática.
+                const nextIntento = Math.min(4, (selectedLead.seguimiento_intento || 1) + 1);
+                await api.post(`/closer/deck/${selectedLead.id}`, {
+                    closer_notes: sessionForm.notes,
+                    seguimiento_realizado: false,
+                    seguimiento_intento: nextIntento,
+                    seguimiento_tipo: selectedLead.seguimiento_tipo || (sessionForm.result === 'contesto' ? 'tomada' : 'no_tomada'),
+                    fecha_seguimiento: sessionForm.fecha_seguimiento || null
+                });
+                toast.success(`Seguimiento ${nextIntento} de 4 programado`);
             } else {
                 const payload = {
                     closer_notes: sessionForm.notes,
@@ -1846,7 +1872,11 @@ const CloserWorkflowPage = () => {
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
                                         result: sessionForm.result === 'tomada' ? 'Show up' : 'No Show',
                                         closer_notes: sessionForm.notes || 'Programó seguimiento',
-                                        fecha_seguimiento: sessionForm.fecha_seguimiento || null
+                                        fecha_seguimiento: sessionForm.fecha_seguimiento || null,
+                                        seguimiento_tipo: sessionForm.result === 'tomada' ? 'tomada' : 'no_tomada',
+                                        seguimiento_sub: sessionForm.rmot || 'Seguimiento programado',
+                                        seguimiento_intento: 1,
+                                        seguimiento_realizado: false
                                     });
                                     toast.success("Seguimiento programado con éxito");
                                     setSelectedLead(null);
@@ -1993,11 +2023,14 @@ const CloserWorkflowPage = () => {
                     <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-emerald-450 text-center">
                         ▸ Seguimiento de Cliente. Ya cerró la venta: el foco es cobrar la deuda.
                     </div>
-                    <div className="grid grid-cols-4 gap-2 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl text-xs font-bold text-slate-350">
-                        <div><span className="text-slate-500 text-[8px] block">Programa</span><b>{selectedLead.programa || 'Ace Learner (AL)'}</b></div>
-                        <div><span className="text-slate-500 text-[8px] block">Ya pagó</span><b className="text-emerald-400">$1,850 USD</b></div>
-                        <div><span className="text-slate-500 text-[8px] block">Debe</span><b className="text-rose-450">$0 USD</b></div>
-                        <div><span className="text-slate-550 text-[8px] block">Cliente desde</span><b>31/07/2026</b></div>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl text-xs font-bold text-slate-350">
+                        <div><span className="text-slate-500 text-[8px] block">Programa</span><b>{selectedLead.programa_nombre || 'Sin datos'}</b></div>
+                        <div>
+                            <span className="text-slate-500 text-[8px] block">Deuda pendiente</span>
+                            <b className={typeof selectedLead.deuda === 'number' && selectedLead.deuda > 0 ? 'text-rose-450' : 'text-emerald-400'}>
+                                {typeof selectedLead.deuda === 'number' ? `$${Math.round(selectedLead.deuda).toLocaleString('en-US')}` : 'Sin datos'}
+                            </b>
+                        </div>
                     </div>
 
                     <div className="q req space-y-2">
@@ -2013,7 +2046,7 @@ const CloserWorkflowPage = () => {
                                     nombre_cliente: selectedLead.lead_name || '',
                                     telefono: selectedLead.phone || '',
                                     mail_cliente: selectedLead.email || '',
-                                    programa: selectedLead.programa || 'RR',
+                                    programa: selectedLead.programa_code || 'RR',
                                     tipo_pago_simple: 'parcial',
                                     monto: '',
                                     segundo_pago: '',
@@ -2346,8 +2379,10 @@ const CloserWorkflowPage = () => {
                                 </div>
                             </div>
                         )
+                    ) : activeStep === 'seguimientos' ? (
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} />
                     ) : (
-                        /* Renderizado clásico de Lista para Llamadas y Seguimientos */
+                        /* Renderizado clásico de Lista para Llamadas */
                         <>
                             {/* Sección Especial: Mensajes de Leads sin Agenda */}
                             {unreadNoAgenda.length > 0 && (

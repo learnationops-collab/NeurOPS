@@ -1319,7 +1319,11 @@ def _format_appointment_for_deck(a):
         "closer_processed": a.closer_processed,
         "fecha_seguimiento": getattr(a, 'fecha_seguimiento', None),
         "fecha_seguimiento_cobro": getattr(a, 'fecha_seguimiento_cobro', None),
-        "seguimiento_realizado": bool(getattr(a, 'seguimiento_realizado', False)) if getattr(a, 'seguimiento_realizado', None) is not None else False
+        "seguimiento_realizado": bool(getattr(a, 'seguimiento_realizado', False)) if getattr(a, 'seguimiento_realizado', None) is not None else False,
+        "seguimiento_tipo": getattr(a, 'seguimiento_tipo', None),
+        "seguimiento_sub": getattr(a, 'seguimiento_sub', None),
+        "seguimiento_intento": getattr(a, 'seguimiento_intento', None) or 1,
+        "examen": a.examen or ""
     }
 
 @bp.route('/deck', methods=['GET'])
@@ -1533,6 +1537,12 @@ def process_closer_card(appt_id):
         appt.fecha_seguimiento_cobro = data['fecha_seguimiento_cobro']
     if 'seguimiento_realizado' in data:
         appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
+    if 'seguimiento_tipo' in data:
+        appt.seguimiento_tipo = data['seguimiento_tipo']
+    if 'seguimiento_sub' in data:
+        appt.seguimiento_sub = data['seguimiento_sub']
+    if 'seguimiento_intento' in data:
+        appt.seguimiento_intento = data['seguimiento_intento']
 
     # Si es una actualización de confirmación rápida (con o sin nota adjunta), no marcamos
     # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
