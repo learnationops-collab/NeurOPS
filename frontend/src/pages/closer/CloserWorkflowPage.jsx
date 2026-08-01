@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { 
@@ -14,10 +14,10 @@ import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
+import CloserDashboard from './dashboard/CloserDashboard';
 
 const CloserWorkflowPage = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showOperatorControls, setShowOperatorControls] = useState(false);
 
@@ -2480,7 +2480,7 @@ const CloserWorkflowPage = () => {
                 </div>
                 </div>
                 </div>
-                ) : (
+                ) : activeView === 'report' ? (
                 <div className="space-y-6 text-left">
                     {/* REPORTE DEL DÍA v6 (v-report) */}
                     {reportSent ? (
@@ -2613,6 +2613,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
                 </div>
+                ) : (
+                    <CloserDashboard embedded />
                 )}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
@@ -3645,8 +3647,8 @@ const CloserWorkflowPage = () => {
                     )}
                 </button>
                 <button
-                    className="dk-v6"
-                    onClick={() => navigate('/closer/dashboard')}
+                    className={`dk-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
+                    onClick={() => setActiveView('dashboard')}
                 >
                     <span>📈 Dashboard</span>
                 </button>

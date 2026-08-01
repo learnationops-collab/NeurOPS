@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
@@ -19,8 +18,7 @@ const SectionTitle = ({ children }) => (
     </h2>
 );
 
-const CloserDashboard = () => {
-    const navigate = useNavigate();
+const CloserDashboard = ({ embedded = false }) => {
     const { user } = useAuth();
 
     const [period, setPeriod] = useState('mes');
@@ -48,9 +46,11 @@ const CloserDashboard = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
+
     if (loading && !data) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className={`flex items-center justify-center ${minHeightClass}`}>
                 <Loader2 className="animate-spin text-primary" size={48} />
             </div>
         );
@@ -58,7 +58,7 @@ const CloserDashboard = () => {
 
     if (error || !data) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+            <div className={`flex flex-col items-center justify-center ${minHeightClass} gap-4`}>
                 <p className="text-muted">{error || 'Sin datos.'}</p>
                 <button onClick={fetchData} className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-black uppercase tracking-wider">Reintentar</button>
             </div>
@@ -70,22 +70,12 @@ const CloserDashboard = () => {
         : `· ${PERIOD_LABELS[period]} vs. ${COMPARE_LABELS[compare]}`;
 
     return (
-        <div className="min-h-screen bg-main p-6 md:p-10">
-            <div className="max-w-7xl mx-auto">
+        <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
+            <div className={embedded ? '' : 'max-w-7xl mx-auto'}>
                 <header className="flex flex-wrap justify-between items-center gap-4 border-b border-base pb-6 mb-2">
-                    <div className="flex items-center gap-4">
-                        {user?.role === 'closer' && (
-                            <button
-                                onClick={() => navigate('/closer/deck')}
-                                className="p-2.5 rounded-xl bg-surface border border-base text-muted hover:text-primary transition-all"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
-                        )}
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-base">Dashboard de Performance</h1>
-                            <p className="text-[10px] font-bold text-muted tracking-widest mt-1 uppercase">Learnation · Analítica de closers</p>
-                        </div>
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-base">Dashboard de Performance</h1>
+                        <p className="text-[10px] font-bold text-muted tracking-widest mt-1 uppercase">Learnation · Analítica de closers</p>
                     </div>
                     <PerformanceFilters
                         closers={data.closers}

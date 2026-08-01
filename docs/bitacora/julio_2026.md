@@ -1,6 +1,13 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Dashboard Embebido como Tercera Vista del Mazo del Closer (en vez de ruta separada)**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY])**:
+      - **Feedback del usuario**: navegar a `/closer/dashboard` (ruta separada envuelta en `MainLayout`) seguía mostrando el Dock genérico de 5 ítems de `MainLayout` (Agendas, Declarar Venta, Reporte Diario, Dashboard, Sin Anuncio) en vez de mantener únicamente las 3 pestañas propias del workspace v6 (Bandeja, Reporte del día, Dashboard).
+      - Se convirtió el botón "📈 Dashboard" del Dock Flotante v6 de una navegación de ruta (`navigate('/closer/dashboard')`) a un tercer valor del estado `activeView` (`'inbox' | 'report' | 'dashboard'`), renderizando `<CloserDashboard embedded />` inline dentro del mismo `CloserWorkflowPage.jsx` standalone.
+      - Se agregó el prop `embedded` a `CloserDashboard.jsx` para que, al usarse dentro del workspace, no duplique el fondo/padding de página completa (`min-h-screen p-6 md:p-10`) ni el botón de "volver" (que ya no aplica al no cambiar de ruta).
+      - La ruta `/closer/dashboard` (envuelta en `MainLayout`) se mantiene intacta para acceso directo por URL o desde el rol admin.
+      - Se eliminó el hook `useNavigate` de `CloserWorkflowPage.jsx` al quedar sin ningún uso restante tras este cambio.
   - **Simplificación de Analítica del Closer y Corrección del Atajo de Acceso Simulado ('W')**:
     - **Navegación del Mazo del Closer ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY], [App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
       - El ítem "4. Dashboard" del Dock del closer apuntaba a `/closer/stats` (`PublicCloserStatsPage.jsx`), una página con 6 pestañas que embebía directamente componentes administrativos completos (`Registro Ventas` → `PublicFinancialSalesPage`, `Registro Agendas` → `FinancialAgendasPage`, además de `Historial de Reportes`, `Clientes Nuevos`, `Rendimiento` y `Forms`). Se redirigió ese ítem del Dock a la nueva ruta `/closer/dashboard` (el dashboard de performance real integrado hoy), dejándola como la única vista analítica del closer.
