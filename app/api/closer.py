@@ -695,14 +695,19 @@ def create_appointment():
             client = BookingService.create_or_update_client(client_data)
             lead_id = client.id
             
-        start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
-        
-        # Enforce 4-day limit for non-admin users
-        if current_user.role != 'admin':
-            today = date.today()
-            max_date = today + timedelta(days=4)
-            if start_time.date() > max_date:
-                return jsonify({"error": "Solo puedes agendar para los próximos 4 días"}), 400
+        start_time = None
+        try:
+            start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
+        except Exception:
+            for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+                try:
+                    start_time = datetime.strptime(start_time_str.split('.')[0].replace('Z', ''), fmt)
+                    break
+                except Exception:
+                    pass
+
+        if not start_time:
+            return jsonify({"error": "Formato de fecha inválido (start_time)"}), 400
 
         # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', setter_id=None)
         setter_id = current_user.id if current_user.role in ['setter', 'closer'] else None
