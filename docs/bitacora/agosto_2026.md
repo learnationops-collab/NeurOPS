@@ -1,6 +1,11 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Bugfix: HTTP 400 por Restricción de 4 Días al Agendar Citas Futuras ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+    - **Reportado por el usuario**: error HTTP 400 en producción al intentar crear agendas a más de 4 días en el futuro.
+    - **Diagnóstico**: el endpoint `POST /api/closer/appointments` mantenía un límite preexistente que bloqueaba a usuarios no administradores si `start_time.date() > date.today() + 4 días`, lanzando `{"error": "Solo puedes agendar para los próximos 4 días"}` con código HTTP 400.
+    - **Corrección**: Se removió dicha restricción en la ruta de creación de citas del closer/setter para permitir agendar libremente en cualquier fecha futura, y se fortaleció el parsing de fechas ISO tolerando múltiples formatos y separadores de tiempo.
+    - **Verificado end-to-end**: prueba de agendamiento a 7 días en el futuro respondiendo HTTP 201 con ID de cita y evento de Google Calendar generados exitosamente.
   - **Bugfix: Endpoint Inexistente para Crear Referidos Manuales ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
     - **Reportado por el usuario**: imposibilidad de crear clientes referidos desde el modal de la UI del closer.
     - **Diagnóstico**: `CloserWorkflowPage.jsx` enviaba `POST /api/closer/deck/referrals/manual` al intentar crear un referido colgado de un prospecto existente, pero dicha ruta no existía en el backend Flask, resultando en error HTTP 404 / 405.
