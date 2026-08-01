@@ -289,13 +289,14 @@ const CloserWorkflowPage = () => {
         setProcessingId('new_agenda');
         try {
             const payload = {
-                lead_name: newAgendaForm.lead_name,
-                instagram: newAgendaForm.instagram ? newAgendaForm.instagram.replace('@', '').trim() : '',
                 start_time: `${newAgendaForm.date}T${newAgendaForm.time}:00`,
                 origin: newAgendaForm.origin,
-                examen: newAgendaForm.examen
+                client_data: {
+                    name: newAgendaForm.lead_name,
+                    instagram: newAgendaForm.instagram ? newAgendaForm.instagram.replace('@', '').trim() : ''
+                }
             };
-            await api.post('/closer/deck/new', payload);
+            await api.post('/closer/appointments', payload);
             toast.success("Agenda creada correctamente");
             setNewAgendaModalOpen(false);
             setNewAgendaForm({
@@ -1189,7 +1190,7 @@ const CloserWorkflowPage = () => {
     };
 
     const renderActionStepContent = () => {
-        const option = (fn, type, label, sub) => (
+        const option = (fn, type, label, sub, selected = false) => (
             <button
                 onClick={fn}
                 className={`opt h-auto p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1 relative overflow-hidden group ${
@@ -1198,8 +1199,9 @@ const CloserWorkflowPage = () => {
                     type === 'bad' ? 'bg-rose-600/10 border-rose-600/20 hover:bg-rose-600/15 hover:border-rose-600/45 text-rose-400' :
                     type === 'pink' ? 'bg-pink-500/5 border-pink-500/20 hover:bg-pink-500/10 hover:border-pink-500/40 text-pink-400' :
                     'bg-slate-900 border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-slate-350'
-                }`}
+                } ${selected ? 'ring-2 ring-violet-500 border-violet-500/60' : ''}`}
             >
+                {selected && <Check size={14} className="absolute top-3 right-3 text-violet-400" />}
                 <span className="text-xs font-black uppercase tracking-wider leading-none">{label}</span>
                 {sub && <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight mt-0.5">{sub}</span>}
             </button>
@@ -1281,13 +1283,13 @@ const CloserWorkflowPage = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     {currentKey === 'por_confirmar' ? (
                                         <>
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'info', 'Sí, conversando', 'Respondió mensaje')}
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'por_confirmar' })), 'no', 'No responde aún', 'Registrar intento')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'info', 'Sí, conversando', 'Respondió mensaje', sessionForm.confirm_status === 'conversando')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'por_confirmar' })), 'no', 'No responde aún', 'Registrar intento', sessionForm.confirm_status === 'por_confirmar')}
                                         </>
                                     ) : (
                                         <>
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'Confirmado' })), 'ok', 'Sí, confirmó', 'Asiste seguro')}
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'no', 'Sigue conversando', 'Aún no confirma')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'Confirmado' })), 'ok', 'Sí, confirmó', 'Asiste seguro', sessionForm.confirm_status === 'Confirmado')}
+                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'no', 'Sigue conversando', 'Aún no confirma', sessionForm.confirm_status === 'conversando')}
                                         </>
                                     )}
                                 </div>

@@ -711,7 +711,7 @@ def create_appointment():
             client_id=lead_id,
             closer_id=current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id), # Fallback mostly for admins/setters to pick closer
             start_time_utc=start_time,
-            origin='Manual Closer',
+            origin=data.get('origin') or 'Manual Closer',
             setter_id=setter_id
         )
         
@@ -1530,8 +1530,11 @@ def process_closer_card(appt_id):
     if 'seguimiento_realizado' in data:
         appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
 
-    # Si es una actualización de confirmación rápida, no marcamos la cita como procesada
-    if 'confirm_status' in data and len(data) == 1:
+    # Si es una actualización de confirmación rápida (con o sin nota adjunta), no marcamos
+    # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
+    # (Por confirmar / Conversando / Confirmado), no se resolvió ni salió del mazo.
+    confirm_only_keys = {'confirm_status', 'closer_notes'}
+    if 'confirm_status' in data and set(data.keys()).issubset(confirm_only_keys):
         pass
     else:
         appt.closer_processed = True
