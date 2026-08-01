@@ -1,6 +1,9 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Bugfix: Simulación de Sesión desde Gestión de Equipo Redirigía a Vistas Viejas ([TeamManagementPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/team/TeamManagementPage.jsx) [MODIFY])**:
+      - **Diagnóstico**: existe un segundo disparador de suplantación de sesión, independiente del panel "Acceso Simulado" (`OperatorControls.jsx`) del atajo 'W' ya corregido hoy: el botón de simular usuario en `/admin/team` (Gestión de Equipo) tiene su propia función `handleImpersonate` con una tabla de redirección desactualizada, que enviaba a un closer simulado a `/closer/report` (página standalone envuelta en `MainLayout`, con el Dock genérico de 5 ítems) en vez de a la Bandeja del workspace.
+      - **Corrección**: se alinearon las rutas de redirección de `TeamManagementPage.jsx` con las ya correctas de `OperatorControls.jsx` y `LoginPage.jsx`: closer → `/closer/deck?step=agendas`, setter → `/setter/deck?step=cualificacion`, triage → `/triage/deck?step=confirmar` (antes los tres apuntaban a sus páginas de "reporte" en vez de al deck de trabajo).
   - **Dashboard Embebido como Tercera Vista del Mazo del Closer (en vez de ruta separada)**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY])**:
       - **Feedback del usuario**: navegar a `/closer/dashboard` (ruta separada envuelta en `MainLayout`) seguía mostrando el Dock genérico de 5 ítems de `MainLayout` (Agendas, Declarar Venta, Reporte Diario, Dashboard, Sin Anuncio) en vez de mantener únicamente las 3 pestañas propias del workspace v6 (Bandeja, Reporte del día, Dashboard).

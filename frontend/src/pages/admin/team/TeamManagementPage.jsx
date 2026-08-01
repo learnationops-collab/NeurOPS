@@ -127,9 +127,9 @@ const TeamManagementPage = () => {
             let path = '/publico';
             if (impersonatedUser.role === 'admin') path = '/admin/ventas';
             else if (impersonatedUser.role === 'operator') path = '/ops/dashboard';
-            else if (impersonatedUser.role === 'setter') path = '/setter/report';
-            else if (impersonatedUser.role === 'triage') path = '/triage/report';
-            else if (impersonatedUser.role === 'closer') path = '/closer/report';
+            else if (impersonatedUser.role === 'setter') path = '/setter/deck?step=cualificacion';
+            else if (impersonatedUser.role === 'triage') path = '/triage/deck?step=confirmar';
+            else if (impersonatedUser.role === 'closer') path = '/closer/deck?step=agendas';
 
             window.location.href = path;
         } catch (err) {
