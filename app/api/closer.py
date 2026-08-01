@@ -1357,18 +1357,17 @@ def get_closer_deck():
             or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
         )
     elif step == 'calls':
-        # Llamadas confirmadas de la fecha seleccionada
+        # Llamadas confirmadas sin reportar, de la fecha seleccionada hacia atrás
+        # (incluye vencidas de días anteriores, igual que el prototipo v7: "de hoy hacia atrás")
         from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             today_local = date.today()
-            
-        start_utc = datetime.combine(today_local, time.min)
+
         end_utc = datetime.combine(today_local, time.max)
-        
+
         query = Appointment.query.filter(
-            Appointment.start_time >= start_utc,
             Appointment.start_time <= end_utc,
             Appointment.result == 'Confirmado',
             Appointment.closer_processed == False,
@@ -1457,7 +1456,6 @@ def get_closer_deck_counts():
     )
     
     query_calls = Appointment.query.filter(
-        Appointment.start_time >= start_utc,
         Appointment.start_time <= end_utc,
         Appointment.result == 'Confirmado',
         Appointment.closer_processed == False,
