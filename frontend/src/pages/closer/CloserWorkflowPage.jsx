@@ -71,6 +71,10 @@ const CloserWorkflowPage = () => {
     const [vaciamosPorConfirmar, setVaciamosPorConfirmar] = useState(false);
     const [celebration, setCelebration] = useState(null);
 
+    // Plan de cuotas del lead (seguimiento de cobro - cliente ya cerrado)
+    const [cuotasPlan, setCuotasPlan] = useState([]);
+    const [loadingCuotas, setLoadingCuotas] = useState(false);
+
     // Búsqueda global (v6)
     const [searchScope, setSearchScope] = useState('all');
     const [searchResults, setSearchResults] = useState([]);
@@ -160,6 +164,8 @@ const CloserWorkflowPage = () => {
         programa: 'RR',
         tipo_pago_simple: 'completo',
         monto: '',
+        precio_total: '',
+        num_cuotas: 3,
         segundo_pago: '',
         fecha_cobro: '',
         metodo_pago: 'Stripe',
@@ -417,6 +423,30 @@ const CloserWorkflowPage = () => {
     useEffect(() => {
         fetchAgendas();
     }, [activeStep, selectedDate]);
+
+    // Cargar el plan de cuotas real al abrir el seguimiento de cobro de un cliente ya cerrado
+    useEffect(() => {
+        if (modalStep !== 'segventa' || !selectedLead?.id || selectedLead.id <= 0) {
+            setCuotasPlan([]);
+            return;
+        }
+        setLoadingCuotas(true);
+        api.get(`/closer/installments/${selectedLead.id}`)
+            .then(res => setCuotasPlan(res.data.cuotas || []))
+            .catch(err => console.error('Error al cargar el plan de cuotas:', err))
+            .finally(() => setLoadingCuotas(false));
+    }, [modalStep, selectedLead?.id]);
+
+    const handleMarkCuotaPaid = async (cuotaId) => {
+        try {
+            await api.patch(`/closer/installments/cuota/${cuotaId}`, { estado: 'pagado' });
+            setCuotasPlan(prev => prev.map(c => c.id === cuotaId ? { ...c, estado: 'pagado' } : c));
+            toast.success('Cuota marcada como pagada');
+        } catch (err) {
+            console.error('Error al marcar la cuota como pagada:', err);
+            toast.error('Error al marcar la cuota como pagada');
+        }
+    };
 
     // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
     const handleConfirmFollowUp = async (followUpData) => {
@@ -1004,6 +1034,25 @@ const CloserWorkflowPage = () => {
                         });
                     } catch (e) {
                         console.error("Error al auto-guardar fecha_seguimiento_cobro:", e);
+                    }
+                }
+
+                // Si no fue pago completo, guardar el plan de cuotas configurado
+                if (savedApptId && saleForm.tipo_pago_simple !== 'completo' && saleForm.precio_total) {
+                    const total = parseFloat(saleForm.precio_total) || 0;
+                    const cobradoHoy = parseFloat(saleForm.monto) || 0;
+                    if (total > cobradoHoy) {
+                        try {
+                            await api.post('/closer/installments', {
+                                appointment_id: savedApptId,
+                                total,
+                                cobrado_hoy: cobradoHoy,
+                                num_cuotas: parseInt(saleForm.num_cuotas) || 1
+                            });
+                        } catch (e) {
+                            console.error("Error al guardar el plan de cuotas:", e);
+                            toast.error("La venta se guardó, pero hubo un error al guardar el plan de cuotas");
+                        }
                     }
                 }
 
@@ -2033,6 +2082,46 @@ const CloserWorkflowPage = () => {
                         </div>
                     </div>
 
+                    {loadingCuotas ? (
+                        <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-500" size={18} /></div>
+                    ) : cuotasPlan.length > 0 && (
+                        <div className="space-y-2">
+                            <h4 className="text-[10px] font-black uppercase text-slate-400">Plan de cuotas</h4>
+                            <div className="rounded-xl border border-slate-800 overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <tbody>
+                                        {cuotasPlan.map(c => (
+                                            <tr key={c.id} className="border-t border-slate-850 first:border-t-0">
+                                                <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
+                                                <td className="px-3 py-2 font-bold text-slate-300">${Math.round(c.monto).toLocaleString('en-US')}</td>
+                                                <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
+                                                <td className="px-3 py-2">
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                                        c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                        c.estado === 'vencido' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                    }`}>
+                                                        {c.estado}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                    {c.estado !== 'pagado' && (
+                                                        <button
+                                                            onClick={() => handleMarkCuotaPaid(c.id)}
+                                                            className="px-2 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                                                        >
+                                                            Marcar pagada
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="q req space-y-2">
                         <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con el cobro?</h4>
                         <div className="grid grid-cols-3 gap-2">
@@ -3049,7 +3138,7 @@ const CloserWorkflowPage = () => {
                         >
                             {/* Ambient Brillo */}
                             <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-indigo-500" />
+                                <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-violet-500" />
                             </div>
 
                             <div className="flex justify-between items-center pb-4 border-b border-slate-800 relative z-10">
@@ -3097,7 +3186,7 @@ const CloserWorkflowPage = () => {
                                                 saleStep > s.step 
                                                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
                                                     : saleStep === s.step
-                                                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/35'
+                                                    ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/35'
                                                     : 'bg-slate-800 border-slate-700 text-slate-500'
                                             }`}>
                                                 {saleStep > s.step ? <Check size={10} /> : s.step}
@@ -3135,7 +3224,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.nombre_cliente}
                                                         onChange={e => setSaleForm({ ...saleForm, nombre_cliente: e.target.value })}
                                                         placeholder="ej. Juan Pérez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3149,7 +3238,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.instagram}
                                                         onChange={e => setSaleForm({ ...saleForm, instagram: e.target.value })}
                                                         placeholder="ej. @juanperez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3163,7 +3252,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.mail_cliente}
                                                         onChange={e => setSaleForm({ ...saleForm, mail_cliente: e.target.value })}
                                                         placeholder="ej. juan@gmail.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3177,7 +3266,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.telefono}
                                                         onChange={e => setSaleForm({ ...saleForm, telefono: e.target.value })}
                                                         placeholder="ej. +34600000000"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -3190,7 +3279,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.documento_identidad}
                                                         onChange={e => setSaleForm({ ...saleForm, documento_identidad: e.target.value })}
                                                         placeholder="Ingresa la cédula o DNI"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -3203,7 +3292,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.email_vendedor}
                                                         onChange={e => setSaleForm({ ...saleForm, email_vendedor: e.target.value })}
                                                         placeholder="email@vendedor.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3225,7 +3314,7 @@ const CloserWorkflowPage = () => {
                                                 <select
                                                     value={saleForm.programa}
                                                     onChange={e => setSaleForm({ ...saleForm, programa: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
                                                     required
                                                 >
                                                     <option value="RR">Residency Roadmap (RR)</option>
@@ -3238,7 +3327,7 @@ const CloserWorkflowPage = () => {
                                                 <select
                                                     value={saleForm.tipo_pago_simple}
                                                     onChange={e => setSaleForm({ ...saleForm, tipo_pago_simple: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
                                                     required
                                                 >
                                                     <option value="completo">Completo (PIF)</option>
@@ -3249,8 +3338,27 @@ const CloserWorkflowPage = () => {
                                                     <option value="Upsell">Upsell</option>
                                                 </select>
                                             </div>
+                                            {saleForm.tipo_pago_simple !== 'completo' && (
+                                                <div className="space-y-1 text-left">
+                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Total (USD) *</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={saleForm.precio_total}
+                                                            onChange={e => setSaleForm({ ...saleForm, precio_total: e.target.value })}
+                                                            placeholder="0.00"
+                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto Cobrado (USD) *</label>
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                                                    {saleForm.tipo_pago_simple === 'completo' ? 'Monto Cobrado (USD) *' : 'Cobrado Hoy (USD) *'}
+                                                </label>
                                                 <div className="relative">
                                                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
                                                     <input
@@ -3259,7 +3367,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.monto}
                                                         onChange={e => setSaleForm({ ...saleForm, monto: e.target.value })}
                                                         placeholder="0.00"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3269,7 +3377,7 @@ const CloserWorkflowPage = () => {
                                                 <select
                                                     value={saleForm.metodo_pago}
                                                     onChange={e => setSaleForm({ ...saleForm, metodo_pago: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
                                                     required
                                                 >
                                                     <option value="Stripe">Stripe</option>
@@ -3299,10 +3407,77 @@ const CloserWorkflowPage = () => {
                                                     value={saleForm.segundo_pago || ''}
                                                     onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
                                                     placeholder="ej. Cobro de $500 (2do pago / saldo)"
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                 />
                                             </div>
                                         </div>
+
+                                        {saleForm.tipo_pago_simple === 'completo' ? (
+                                            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                                Pago único: se cobra todo hoy, no hay saldo ni cronograma de cuotas.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 pt-2 border-t border-slate-800">
+                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">Plan de Cuotas (Próximos Pagos)</h4>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1 text-left">
+                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Cuotas Restantes *</label>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            value={saleForm.num_cuotas}
+                                                            onChange={e => setSaleForm({ ...saleForm, num_cuotas: e.target.value })}
+                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1 text-left">
+                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo a Financiar</label>
+                                                        <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-violet-400">
+                                                            ${Math.max(0, (parseFloat(saleForm.precio_total) || 0) - (parseFloat(saleForm.monto) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {(() => {
+                                                    const total = parseFloat(saleForm.precio_total) || 0;
+                                                    const now = parseFloat(saleForm.monto) || 0;
+                                                    const n = Math.max(1, parseInt(saleForm.num_cuotas) || 1);
+                                                    const rest = Math.max(0, total - now);
+                                                    if (rest <= 0) return null;
+                                                    const each = Math.round((rest / n) * 100) / 100;
+                                                    const rows = Array.from({ length: n }, (_, i) => {
+                                                        const monto = i === n - 1 ? Math.round((rest - each * (n - 1)) * 100) / 100 : each;
+                                                        const d = new Date();
+                                                        d.setMonth(d.getMonth() + i + 1);
+                                                        return { n: i + 1, monto, fecha: d.toISOString().split('T')[0] };
+                                                    });
+                                                    return (
+                                                        <div className="rounded-xl border border-slate-800 overflow-hidden">
+                                                            <table className="w-full text-xs">
+                                                                <thead className="bg-slate-950/60">
+                                                                    <tr>
+                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
+                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
+                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
+                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {rows.map(r => (
+                                                                        <tr key={r.n} className="border-t border-slate-850">
+                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {r.n}</td>
+                                                                            <td className="px-3 py-2 font-bold text-slate-300">${r.monto.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                                            <td className="px-3 py-2 font-bold text-slate-300">{r.fecha}</td>
+                                                                            <td className="px-3 py-2"><span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Pendiente</span></td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    );
+                                                })()}
+                                                <p className="text-[9px] text-slate-550 font-medium">Se guarda automáticamente al declarar la venta. Las fechas y montos se pueden ajustar después.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -3322,7 +3497,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.examen_lead}
                                                         onChange={e => setSaleForm({ ...saleForm, examen_lead: e.target.value })}
                                                         placeholder="ej. USMLE Step 1"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -3334,7 +3509,7 @@ const CloserWorkflowPage = () => {
                                                         type="date"
                                                         value={saleForm.date}
                                                         onChange={e => setSaleForm({ ...saleForm, date: e.target.value })}
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
                                                         required
                                                     />
                                                 </div>
@@ -3344,7 +3519,7 @@ const CloserWorkflowPage = () => {
                                                 <select
                                                     value={saleForm.estado}
                                                     onChange={e => setSaleForm({ ...saleForm, estado: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
                                                     required
                                                 >
                                                     <option value="Completada">Completada</option>
@@ -3360,7 +3535,7 @@ const CloserWorkflowPage = () => {
                                                         value={saleForm.notas}
                                                         onChange={e => setSaleForm({ ...saleForm, notas: e.target.value })}
                                                         placeholder="Detalles sobre el cierre, objeciones vencidas, etc..."
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-white placeholder-slate-650 outline-none focus:border-indigo-500 transition-all min-h-[70px] resize-none"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-white placeholder-slate-650 outline-none focus:border-violet-500 transition-all min-h-[70px] resize-none"
                                                     />
                                                 </div>
                                             </div>
@@ -3417,7 +3592,7 @@ const CloserWorkflowPage = () => {
                                     <button
                                         type="button"
                                         onClick={handleNextStep}
-                                        className="h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                                        className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                                     >
                                         Siguiente
                                         <ArrowRight size={12} />

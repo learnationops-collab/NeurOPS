@@ -1,6 +1,19 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Restyling del Modal de Declarar Venta y Plan de Cuotas Real (Prototipo `closer-workspace-v7.html`)**:
+    - **Reportado por el usuario**: al probar el sistema de seguimientos, el modal de declarar venta seguía con el tema visual viejo (índigo/esmeralda) en vez del violeta/rosa del resto del workspace v6/v7, y faltaba la sección para configurar los próximos pagos (plan de cuotas) de una venta parcial.
+    - **Restyling ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**: se reemplazaron los acentos `indigo-*` por `violet-*` en todo el modal de declarar venta (líneas ~3042–3439), sin tocar el resto del archivo donde `indigo` se usa en otro flujo no reportado como problema.
+    - **Nuevo Modelo y Migración ([installment.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/installment.py) [NEW], migración `649861242f3c`)**:
+      - `InstallmentPlan`: cuotas individuales (número, monto, fecha de vencimiento, estado pagado/pendiente, fecha de pago) ligadas a la `Appointment` que originó la venta — no a `Enrollment` (sistema legado sin datos recientes) ni a `FinancialSale` (registro plano sin relación estructurada a un cronograma).
+    - **Nuevo Servicio y Endpoints ([installment_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/installment_service.py) [NEW], [closer_installments.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer_installments.py) [NEW])**:
+      - `POST /api/closer/installments`: genera el cronograma (saldo dividido en N cuotas mensuales, igual al `plan()`/`plan2()` del prototipo), reemplazando cualquier plan previo de la misma cita.
+      - `GET /api/closer/installments/<appointment_id>`: lista las cuotas de un lead, marcando dinámicamente como "vencido" cualquier pendiente cuya fecha ya pasó.
+      - `PATCH /api/closer/installments/cuota/<id>`: edita monto/fecha o marca una cuota como pagada.
+    - **Frontend ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Paso 2 del modal de venta: cuando el tipo de pago no es "Completo", se agregó el campo "Precio Total" (antes solo existía "Monto Cobrado", sin forma de saber el precio total del programa) y una sección "Plan de Cuotas" con cantidad de cuotas configurable y una tabla en vivo (monto/fecha/estado) calculada igual que el prototipo. Se guarda automáticamente al declarar la venta.
+      - En el seguimiento de cobro de un cliente ya cerrado (`segventa`), se agregó la tabla real de cuotas con botón "Marcar pagada" por fila, reemplazando la ausencia total de esta información.
+    - **Verificado end-to-end** contra datos reales: creación de un plan de 3 cuotas sobre saldo de $2000 (montos $666.67/$666.67/$666.66, fechas mensuales correctas), marcar una cuota como pagada, y relectura del plan reflejando el cambio.
   - **Frontend: Sistema de Categorización de Seguimientos (continuación) — Pestaña "③ Seguimientos" Reagrupada**:
     - **Nuevo Componente ([SeguimientosPane.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/components/SeguimientosPane.jsx) [NEW])**:
       - Reemplaza la lista genérica compartida con "Llamadas" cuando `activeStep==='seguimientos'`, replicando la estructura del prototipo v7: barra de meta diaria (seguimientos hechos vs. meta de 50), sección "Asignados para hoy" agrupada en las 3 categorías (📵 No tomada / 🎤 Tomada / 💰 Cerrada, cada una con sus leads y subestado), y sección "Pool sin fecha asignada" con 3 botones de categoría y un explorador con filtros reales (días desde la llamada; para "Cerrada" además programa y estado de deuda).

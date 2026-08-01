@@ -15,7 +15,8 @@ from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
 from .alert import AlertRule, Alert
- 
+from .installment import InstallmentPlan
+
 # Export all for easy access via from app.models import ...
 __all__ = [
     'User', 'GoogleCalendarToken', 'CloserAlias', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
@@ -29,6 +30,7 @@ __all__ = [
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction', 'WorkshopEvent',
-    'AlertRule', 'Alert'
+    'AlertRule', 'Alert',
+    'InstallmentPlan'
 ]
 

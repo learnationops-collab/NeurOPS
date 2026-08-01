@@ -77,6 +77,9 @@ def create_app(config_class=Config):
     from app.api.closer_followups import bp as closer_followups_api_bp
     app.register_blueprint(closer_followups_api_bp, url_prefix='/api/closer')
 
+    from app.api.closer_installments import bp as closer_installments_api_bp
+    app.register_blueprint(closer_installments_api_bp, url_prefix='/api/closer')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
