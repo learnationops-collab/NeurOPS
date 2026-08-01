@@ -16,6 +16,8 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 
+const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
+
 const CloserWorkflowPage = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +64,11 @@ const CloserWorkflowPage = () => {
     
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
+
+    // Celebraciones de hitos en el pipeline de confirmaciones (v7)
+    const [confirmadosHoy, setConfirmadosHoy] = useState(0);
+    const [vaciamosPorConfirmar, setVaciamosPorConfirmar] = useState(false);
+    const [celebration, setCelebration] = useState(null);
 
     // Búsqueda global (v6)
     const [searchScope, setSearchScope] = useState('all');
@@ -496,6 +503,19 @@ const CloserWorkflowPage = () => {
             } finally {
                 setProcessingId(null);
             }
+        } else if (actionType === 'confirm_discard') {
+            setProcessingId(apptId);
+            try {
+                await api.post(`/closer/appointments/${apptId}/process`, { status: 'No Lead', role: 'closer', note: note });
+                toast.success("Lead descartado del pipeline de confirmaciones");
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error(err);
+                toast.error("Error al descartar el lead");
+            } finally {
+                setProcessingId(null);
+            }
         }
     };
 
@@ -533,7 +553,7 @@ const CloserWorkflowPage = () => {
         setDecisionPath([]);
         setReasonInput('');
         setSessionForm({
-            confirm_status: lead.result || lead.closer_result || 'por_confirmar',
+            confirm_status: null,
             notes: lead.closer_notes || lead.notes || '',
             result: lead.closer_result || lead.result || 'Pendiente'
         });
@@ -1005,19 +1025,68 @@ const CloserWorkflowPage = () => {
     };
 
     const saveConfirmReport = async () => {
-        if (!sessionForm.notes.trim()) {
-            toast.error("Por favor, ingresa una nota explicativa");
+        if (sessionForm.notes.trim().length < 10) {
+            toast.error("Contá en qué va el proceso con al menos 10 caracteres");
             return;
         }
+        if (!sessionForm.confirm_status) {
+            toast.error("Elegí si ya hubo contacto o confirmó antes de guardar");
+            return;
+        }
+        const leadName = selectedLead.lead_name || 'El lead';
+        const newStatus = sessionForm.confirm_status;
+        const prevStatus = (selectedLead.result || '').toLowerCase();
+        const wasPorConfirmar = !['conversando', 'contactado', 'confirmado'].includes(prevStatus);
+        const pcRemaining = confirmationsPipeline.porConfirmar.filter(a => a.id !== selectedLead.id).length;
+        const cvRemaining = confirmationsPipeline.conversando.filter(a => a.id !== selectedLead.id).length;
+
         setProcessingId(selectedLead.id);
         try {
             await api.post(`/closer/deck/${selectedLead.id}`, {
-                confirm_status: sessionForm.confirm_status || 'por_confirmar',
+                confirm_status: newStatus,
                 closer_notes: sessionForm.notes
             });
-            toast.success("Confirmación registrada correctamente");
             setSelectedLead(null);
             fetchAgendas();
+
+            if (newStatus === 'Confirmado') {
+                const newConfirmadosHoy = confirmadosHoy + 1;
+                setConfirmadosHoy(newConfirmadosHoy);
+                if (pcRemaining === 0 && cvRemaining === 0) {
+                    setCelebration({
+                        emoji: '🏆',
+                        title: 'Pipeline blindado',
+                        body: `${newConfirmadosHoy} agenda${newConfirmadosHoy !== 1 ? 's' : ''} confirmada${newConfirmadosHoy !== 1 ? 's' : ''}. Ninguna se te va a caer por falta de recordatorio.`,
+                        next: 'Siguiente paso: reportá las llamadas que ya ocurrieron.',
+                        bar: null
+                    });
+                } else {
+                    setCelebration({
+                        emoji: '✅',
+                        title: `Tu ${ORDINALES[Math.min(9, newConfirmadosHoy - 1)]} confirmado del día`,
+                        body: `${leadName} asiste seguro. Una agenda confirmada muestra el doble que una sin confirmar.`,
+                        next: pcRemaining
+                            ? `Te quedan ${pcRemaining} por confirmar y ${cvRemaining} conversando.`
+                            : `No queda nadie sin tocar. Faltan ${cvRemaining} conversando.`,
+                        bar: { v: newConfirmadosHoy, t: newConfirmadosHoy + pcRemaining + cvRemaining, label: 'Confirmados del día' }
+                    });
+                }
+            } else if (newStatus === 'conversando' && wasPorConfirmar) {
+                if (pcRemaining === 0 && !vaciamosPorConfirmar) {
+                    setVaciamosPorConfirmar(true);
+                    setCelebration({
+                        emoji: '🎯',
+                        title: 'Ninguno quedó sin tocar',
+                        body: 'Todas tus agendas tienen contacto registrado. Eso es lo que desbloquea el reporte del día.',
+                        next: 'Los que están conversando no bloquean: no todos responden y eso no es tu culpa.',
+                        bar: null
+                    });
+                } else {
+                    toast.success(`${leadName} → Conversando 💬`);
+                }
+            } else {
+                toast.success("Nota guardada. Sigue en la misma etapa.");
+            }
         } catch (err) {
             console.error("Error en saveConfirmReport:", err);
             toast.error("Error al guardar confirmación");
@@ -1142,7 +1211,11 @@ const CloserWorkflowPage = () => {
                 { k: 'conversando', label: 'Conversando', desc: 'Respondió' },
                 { k: 'confirmado', label: 'Confirmado', desc: 'Asiste seguro' }
             ];
-            const currentIdx = steps.findIndex(x => x.k === selectedLead.result);
+            const normalizedResult = (selectedLead.result || '').toLowerCase();
+            const currentKey = normalizedResult === 'confirmado'
+                ? 'confirmado'
+                : (normalizedResult === 'conversando' || normalizedResult === 'contactado') ? 'conversando' : 'por_confirmar';
+            const currentIdx = steps.findIndex(x => x.k === currentKey);
 
             return (
                 <div className="space-y-6">
@@ -1159,7 +1232,7 @@ const CloserWorkflowPage = () => {
                         ))}
                     </div>
 
-                    {sessionForm.confirm_status === 'Confirmado' || selectedLead.result === 'Confirmado' ? (
+                    {sessionForm.confirm_status === 'Confirmado' || currentKey === 'confirmado' ? (
                         <div className="space-y-4">
                             <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs text-emerald-450 font-bold uppercase tracking-wide text-center">
                                 ✓ Este lead ya asiste seguro a la llamada.
@@ -1206,7 +1279,7 @@ const CloserWorkflowPage = () => {
                                     ¿Ya hubo contacto con el prospecto?
                                 </h4>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {selectedLead.result === 'por_confirmar' || !selectedLead.result ? (
+                                    {currentKey === 'por_confirmar' ? (
                                         <>
                                             {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'info', 'Sí, conversando', 'Respondió mensaje')}
                                             {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'por_confirmar' })), 'no', 'No responde aún', 'Registrar intento')}
@@ -1220,19 +1293,38 @@ const CloserWorkflowPage = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
-                                <button
-                                    onClick={() => setModalStep('reagQ')}
-                                    className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
-                                >
-                                    Reagendar
-                                </button>
+                            <div className="q space-y-3">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400">Otras acciones</h4>
+                                <div className={`grid ${currentKey === 'conversando' ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                                    {currentKey === 'conversando' && option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Pidió otra fecha')}
+                                    {option(() => {
+                                        setReasonInput('');
+                                        setReasonModal({
+                                            show: true,
+                                            title: "Descartar lead",
+                                            description: `¿Seguro que deseas descartar a ${selectedLead.lead_name}? Ingresa un motivo:`,
+                                            placeholder: "Motivo...",
+                                            confirmText: "Confirmar descarte",
+                                            requireText: true,
+                                            actionType: 'confirm_discard',
+                                            apptId: selectedLead.id
+                                        });
+                                    }, 'bad', 'Descartar lead', 'Exige motivo')}
+                                </div>
+                                {currentKey === 'por_confirmar' && (
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                        Reagendar aparece recién cuando el lead está conversando: si todavía no respondió, no hay nada que reagendar.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-800">
                                 <button
                                     onClick={saveConfirmReport}
-                                    disabled={!sessionForm.notes.trim() || processingId === selectedLead.id}
-                                    className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                                    disabled={sessionForm.notes.trim().length < 10 || !sessionForm.confirm_status || processingId === selectedLead.id}
+                                    className="w-full h-11 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center"
                                 >
-                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Reporte'}
+                                    {processingId === selectedLead.id ? <Loader2 size={14} className="animate-spin" /> : 'Guardar Reporte'}
                                 </button>
                             </div>
                         </div>
@@ -3658,6 +3750,52 @@ const CloserWorkflowPage = () => {
                 isOpen={showOperatorControls}
                 onClose={() => setShowOperatorControls(false)}
             />
+
+            {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
+            <AnimatePresence>
+                {celebration && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: 'spring', damping: 22, stiffness: 220 }}
+                            className="w-full max-w-md bg-gradient-to-br from-violet-950 via-slate-900 to-slate-950 border border-violet-500/40 rounded-[2rem] p-10 text-center shadow-2xl shadow-violet-900/40"
+                        >
+                            <span className="text-6xl leading-none block mb-3">{celebration.emoji}</span>
+                            <h3 className="text-2xl font-black text-white tracking-tight">{celebration.title}</h3>
+                            <p className="text-sm text-slate-300 mt-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: celebration.body }} />
+
+                            {celebration.bar && (
+                                <div className="mt-5">
+                                    <div className="h-2 rounded-full bg-black/40 border border-white/10 overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-500"
+                                            style={{ width: `${Math.min(100, (celebration.bar.v / celebration.bar.t) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-2">
+                                        {celebration.bar.label} · {celebration.bar.v} de {celebration.bar.t}
+                                    </p>
+                                </div>
+                            )}
+
+                            {celebration.next && (
+                                <div className="mt-5 text-[11px] font-black uppercase tracking-wider text-pink-300 bg-pink-500/10 border border-pink-500/30 rounded-xl px-4 py-3">
+                                    {celebration.next}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => setCelebration(null)}
+                                className="mt-6 w-full py-3.5 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl text-sm font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                Seguir
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
         </div>
     );
