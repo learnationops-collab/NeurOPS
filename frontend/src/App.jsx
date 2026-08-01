@@ -251,7 +251,7 @@ function App() {
             <Route
               path="/closer/stats"
               element={
-                <ProtectedRoute roles={['closer']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <PublicCloserStatsPage />
                   </MainLayout>
