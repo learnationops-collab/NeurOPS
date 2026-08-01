@@ -592,10 +592,12 @@ const CloserWorkflowPage = () => {
         setModalTab('act');
         setDecisionPath([]);
         setReasonInput('');
+        const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
         setSessionForm({
             confirm_status: null,
             notes: lead.closer_notes || lead.notes || '',
-            result: lead.closer_result || lead.result || 'Pendiente'
+            result: lead.closer_result || lead.result || 'Pendiente',
+            fecha_seguimiento: tomorrowStr
         });
 
         // 2. Determinar paso inicial del árbol por contexto
@@ -1921,7 +1923,7 @@ const CloserWorkflowPage = () => {
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
                                         result: sessionForm.result === 'tomada' ? 'Show up' : 'No Show',
                                         closer_notes: sessionForm.notes || 'Programó seguimiento',
-                                        fecha_seguimiento: sessionForm.fecha_seguimiento || null,
+                                        fecha_seguimiento: sessionForm.fecha_seguimiento || new Date(Date.now() + 86400000).toISOString().split('T')[0],
                                         seguimiento_tipo: sessionForm.result === 'tomada' ? 'tomada' : 'no_tomada',
                                         seguimiento_sub: sessionForm.rmot || 'Seguimiento programado',
                                         seguimiento_intento: 1,

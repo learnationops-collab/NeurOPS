@@ -1370,21 +1370,29 @@ def get_closer_deck():
             or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
         )
     elif step == 'calls':
-        # Llamadas confirmadas sin reportar, de la fecha seleccionada hacia atrás
-        # (incluye vencidas de días anteriores, igual que el prototipo v7: "de hoy hacia atrás")
+        # Llamadas confirmadas sin reportar (incluye 1ra y 2da call), de la fecha seleccionada hacia atrás
         from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             today_local = date.today()
 
-        end_utc = datetime.combine(today_local, time.max)
+        # Margen de 12h para zonas horarias (UTC-4/5/6) para incluir llamadas de la noche local
+        end_utc = datetime.combine(today_local, time.max) + timedelta(hours=12)
 
         query = Appointment.query.filter(
             Appointment.start_time <= end_utc,
-            Appointment.result == 'Confirmado',
+            or_(
+                Appointment.result.in_(['Confirmado', '2TH Call', '2da Call', '2da call', 'Segunda llamada', 'Segunda agenda']),
+                Appointment.closer_result == '2da call'
+            ),
             Appointment.closer_processed == False,
-            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+            or_(
+                Appointment.closer_result == 'Pendiente',
+                Appointment.closer_result == None,
+                Appointment.closer_result == '',
+                Appointment.closer_result == '2da call'
+            )
         )
     elif step == 'agendas':
         # Mantener compatibilidad con agendas anteriores
@@ -1460,7 +1468,7 @@ def get_closer_deck_counts():
         today_local = date.today()
         
     start_utc = datetime.combine(today_local, time.min)
-    end_utc = datetime.combine(today_local, time.max)
+    end_utc_calls = datetime.combine(today_local, time.max) + timedelta(hours=12)
     
     query_confirmations = Appointment.query.filter(
         Appointment.start_time >= start_utc,
@@ -1469,10 +1477,18 @@ def get_closer_deck_counts():
     )
     
     query_calls = Appointment.query.filter(
-        Appointment.start_time <= end_utc,
-        Appointment.result == 'Confirmado',
+        Appointment.start_time <= end_utc_calls,
+        or_(
+            Appointment.result.in_(['Confirmado', '2TH Call', '2da Call', '2da call', 'Segunda llamada', 'Segunda agenda']),
+            Appointment.closer_result == '2da call'
+        ),
         Appointment.closer_processed == False,
-        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        or_(
+            Appointment.closer_result == 'Pendiente',
+            Appointment.closer_result == None,
+            Appointment.closer_result == '',
+            Appointment.closer_result == '2da call'
+        )
     )
     
     query_seg = Appointment.query.filter(
