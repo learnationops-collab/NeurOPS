@@ -1,6 +1,17 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Bugfix: HTTP 400 al Crear Agenda para un Cliente/Lead Existente en la Base de Datos ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+    - **Reportado por el usuario**: error 400 al intentar crear una agenda (`POST /api/closer/appointments`) para un usuario que ya existe en la base de datos.
+    - **Diagnóstico**:
+      1. `BookingService.create_or_update_client` solo buscaba por coincidencia exacta de `email`. Si el cliente existía con variaciones de espacios/mayúsculas o sin email pero con el mismo Instagram/teléfono, no lo encontraba e intentaba insertar un registro duplicado, fallando la restricción `unique=True` de `Client.email` con error de base de datos.
+      2. Si el agendamiento fallaba o devolvía `None` por conflicto de horario, el endpoint en `closer.py` intentaba acceder a `appt.id`, lanzando `AttributeError` capturado como HTTP 400 genérico.
+      3. Si `lead_id` correspondía a la tabla `Lead` (ManyChat) en vez de `Client`, la resolución fallaba con `AttributeError`.
+    - **Corrección**:
+      - `BookingService.create_or_update_client` ahora normaliza los datos y ejecuta búsqueda inteligente cruzada por email (limpio, minúsculas), Instagram (normalizado sin `@`) y teléfono (últimos 8 dígitos), reutilizando el cliente existente sin duplicarlo.
+      - `BookingService.create_appointment` realiza fallback a la tabla `Lead` en caso de recibir un `lead_id` de ManyChat/Marketing.
+      - `app/api/closer.py` valida explícitamente `if not appt:` retornando un error HTTP 400 claro ("Ya existe una cita agendada en este horario para este closer...") y añade la sincronización automática con `FinancialAgenda`.
+    - **Verificado end-to-end**: ejecuciones de prueba con datos reales verificando la resolución de clientes existentes por Instagram (ej. cliente `ID=3329`) y correo normalizado, sin generar errores 400 ni duplicados en base de datos.
   - **Restyling del Modal de Declarar Venta y Plan de Cuotas Real (Prototipo `closer-workspace-v7.html`)**:
     - **Reportado por el usuario**: al probar el sistema de seguimientos, el modal de declarar venta seguía con el tema visual viejo (índigo/esmeralda) en vez del violeta/rosa del resto del workspace v6/v7, y faltaba la sección para configurar los próximos pagos (plan de cuotas) de una venta parcial.
     - **Restyling ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**: se reemplazaron los acentos `indigo-*` por `violet-*` en todo el modal de declarar venta (líneas ~3042–3439), sin tocar el resto del archivo donde `indigo` se usa en otro flujo no reportado como problema.
