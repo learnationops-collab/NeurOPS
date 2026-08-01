@@ -1603,6 +1603,36 @@ def process_closer_card(appt_id):
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
 
 
+@bp.route('/deck/<int:appt_id>', methods=['DELETE'])
+@login_required
+def delete_deck_appointment(appt_id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    appt = Appointment.query.get_or_404(appt_id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+
+    try:
+        # Liberar respuestas de encuesta asociadas (se conserva el historial del cliente,
+        # solo se desvincula de la cita que se está borrando; no tiene cascade de borrado).
+        SurveyAnswer.query.filter_by(appointment_id=appt.id).update({'appointment_id': None})
+
+        if appt.google_event_id:
+            try:
+                from app.services.google_service import GoogleService
+                GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+            except Exception as gcal_err:
+                print(f"[GCal Delete Error] {gcal_err}")
+
+        db.session.delete(appt)
+        db.session.commit()
+        return jsonify({"message": "Agenda eliminada correctamente"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
 @bp.route('/deck/referrals/manual', methods=['POST'])
 @login_required
 def create_manual_referral():
