@@ -82,30 +82,68 @@ class BookingService:
     def create_or_update_client(data, client_id=None):
         email = data.get('email')
         name = data.get('name')
+        phone = data.get('phone')
+        instagram = data.get('instagram')
+
+        email_clean = str(email).strip().lower() if email and '@' in str(email) else None
+        ig_clean = str(instagram).strip().replace('@', '').lower() if instagram and str(instagram).lower() not in ('n/a', 'none', '') else None
+        phone_clean = str(phone).strip() if phone and str(phone).lower() not in ('n/a', 'none', '') else None
         
         client = None
-        if client_id: client = Client.query.get(client_id)
-        if not client and email: client = Client.query.filter_by(email=email).first()
+        if client_id:
+            client = Client.query.get(client_id)
+        
+        # Búsqueda por email
+        if not client and email_clean:
+            client = Client.query.filter(db.func.lower(Client.email) == email_clean).first()
+            
+        # Búsqueda por instagram
+        if not client and ig_clean:
+            client = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
+
+        # Búsqueda por teléfono
+        if not client and phone_clean and len(phone_clean) >= 8:
+            client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
 
         if not client:
+            import uuid
             client = Client(
-                full_name=name,
-                email=email,
-                phone=data.get('phone'),
-                instagram=data.get('instagram')
+                full_name=name or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
+                email=email_clean or f"no-email-{uuid.uuid4().hex[:12]}@neurops.com",
+                phone=phone_clean,
+                instagram=ig_clean
             )
             db.session.add(client)
         else:
             if name: client.full_name = name
-            if 'phone' in data: client.phone = data['phone']
-            if 'instagram' in data: client.instagram = data['instagram']
+            if email_clean and (not client.email or 'no-email-' in client.email): client.email = email_clean
+            if phone_clean: client.phone = phone_clean
+            if ig_clean: client.instagram = ig_clean
         
         db.session.commit()
         return client
 
     @staticmethod
     def create_appointment(client_id, closer_id, start_time_utc, origin='direct', setter_id=None):
-        # Check for conflict on same time for same closer, ignoring cancelled/rescheduled ones
+        # Validar existencia de cliente
+        client = Client.query.get(client_id)
+        if not client:
+            from app.models import Lead
+            lead_obj = Lead.query.get(client_id)
+            if lead_obj:
+                client = BookingService.find_or_create_client(
+                    nombre=lead_obj.name,
+                    email=lead_obj.email,
+                    instagram=lead_obj.instagram_username,
+                    phone=None
+                )
+                client_id = client.id
+
+        if not client:
+            print(f"[BookingService Error] Cliente con ID {client_id} no encontrado.")
+            return None
+
+        # Verificar conflicto de horario para el mismo closer
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
         ).first()
@@ -114,86 +152,67 @@ class BookingService:
         appt = Appointment(
             closer_id=closer_id,
             setter_id=setter_id,
-            client_id=client_id,
+            client_id=client.id,
             start_time=start_time_utc,
             origin=origin,
             last_stage='Nueva'
         )
         db.session.add(appt)
         
-        # Crear notificación consolidada para el Closer y Admins
+        # Notificación para Closer y Admins
         try:
-            client = Client.query.get(client_id)
             client_name = client.full_name or client.email or "Cliente"
             
             noti = Notification(
                 subject="Nueva Agenda",
                 content=f"Nueva sesión con {client_name} para el {start_time_utc.strftime('%d/%m/%Y %H:%M')} UTC.",
                 target_users=["role:admin", int(closer_id)],
-                related_users=[int(closer_id), client_id],
+                related_users=[int(closer_id), client.id],
                 associated_id=appt.id,
                 associated_type='appointment'
             )
             db.session.add(noti)
             
-            # --- SYNC LEAD (Bridge to ManyChat/Marketing Leads) ---
+            # Sincronizar Lead
             try:
-                from app.models import Lead, PipelineStage, Pipeline
+                from app.models import Lead, PipelineStage
                 import uuid
                 
-                # 1. Search for existing Lead by email
                 lead = None
-                if client.email:
-                    lead = Lead.query.filter_by(email=client.email).first()
+                if client.email and 'no-email-' not in client.email:
+                    lead = Lead.query.filter(db.func.lower(Lead.email) == client.email.lower()).first()
+                if not lead and client.instagram:
+                    ig_clean = client.instagram.replace('@', '').strip().lower()
+                    lead = Lead.query.filter(db.func.lower(db.func.replace(Lead.instagram_username, '@', '')) == ig_clean).first()
                 
-                # 2. If not found, create new Lead
                 if not lead:
-                    # Find 'Nueva' stage or default
                     stage = PipelineStage.query.filter_by(name='Nueva').first()
-                    if not stage:
-                        # Fallback to first stage of first pipeline or just None (nullable=True?)
-                        # Lead.stage_id is nullable=True
-                        pass
-
-                    # Generate dummy ID if creating from Booking (not ManyChat)
                     dummy_mc_id = f"gen_{int(datetime.utcnow().timestamp())}_{str(uuid.uuid4())[:8]}"
                     
                     lead = Lead(
                         manychat_id=dummy_mc_id,
                         name=client.full_name or client.email or "Sin Nombre",
-                        email=client.email,
+                        email=client.email if client.email and 'no-email-' not in client.email else None,
                         instagram_username=client.instagram,
-                        # phone field does not exist in Lead model
                         stage_id=stage.id if stage else None,
                         ad_source=origin or 'Booking',
                         notes=f"Creado automáticamente desde Agenda ID {appt.id}"
                     )
                     db.session.add(lead)
-                    db.session.flush() # get ID
+                    db.session.flush()
                 
-                # 3. Update existing or new Lead
-                # Link appointment in notes (since no direct FK)
                 new_note = f"\n[Auto] Agenda creada: {start_time_utc.strftime('%Y-%m-%d %H:%M')} (ID: {appt.id})"
                 lead.notes = (lead.notes or "") + new_note
                 
-                # Optional: Force stage to 'Agendado' if it exists? 
-                # User said "se actualiza como lead". "Nueva" might be for new leads.
-                # If they booked, maybe stage should be "Agendada"?
-                # But Closer Kanban uses Appointments. Lead Pipeline (Marketing) might have 'Agendada'.
-                # Let's check PipelineStages for 'Agendada'.
                 agendada_stage = PipelineStage.query.filter(PipelineStage.name.ilike('%Agend%')).first()
                 if agendada_stage:
                     lead.stage_id = agendada_stage.id
                 
             except Exception as lead_err:
-                print(f"[BookingService] Error syncing Lead: {lead_err}")
-                # Don't fail the appointment creation
+                print(f"[BookingService] Error sincronizando Lead: {lead_err}")
             
-            # -------------------------------------------------------
-
         except Exception as e:
-            print(f"Error creating notification for appointment: {e}")
-            # No bloqueamos el agendamiento si falla la notificación
+            print(f"Error creando notificación de cita: {e}")
 
         db.session.commit()
         return appt

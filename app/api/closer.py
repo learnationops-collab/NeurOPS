@@ -715,23 +715,32 @@ def create_appointment():
             setter_id=setter_id
         )
         
-        if appt:
-            db.session.commit()
-            
-            # Check for webhook trigger
-            if data.get('trigger_webhook', False):
-                 BookingService.trigger_agenda_webhook(appt)
+        if not appt:
+            return jsonify({"error": "Ya existe una cita agendada en este horario para este closer o no se pudo crear la agenda"}), 400
 
-            # Sync with Google Calendar
-            try:
-                from app.services.google_service import GoogleService
-                evt_id = GoogleService.create_event(current_user.id, appt)
-                if evt_id: 
-                    appt.google_event_id = evt_id
-                    db.session.commit()
-            except Exception as e:
-                print(f"GCal Sync Error: {e}")
-            
+        db.session.commit()
+        
+        # Sincronizar con agenda financiera
+        try:
+            BookingService.sync_appointment_to_financial_agenda(appt)
+            db.session.commit()
+        except Exception as f_err:
+            print(f"[FinancialAgenda Sync Error] {f_err}")
+
+        # Webhook trigger
+        if data.get('trigger_webhook', False):
+             BookingService.trigger_agenda_webhook(appt)
+
+        # Sync con Google Calendar
+        try:
+            from app.services.google_service import GoogleService
+            evt_id = GoogleService.create_event(current_user.id, appt)
+            if evt_id: 
+                appt.google_event_id = evt_id
+                db.session.commit()
+        except Exception as e:
+            print(f"GCal Sync Error: {e}")
+        
         return jsonify({"message": "Agenda creada", "id": appt.id}), 201
     except Exception as e:
         db.session.rollback()
