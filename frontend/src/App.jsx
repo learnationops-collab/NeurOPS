@@ -77,7 +77,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/deck?step=cualificacion" />;
-    if (user.role === 'closer') return <Navigate to="/closer/deck?step=agendas" />;
+    if (user.role === 'closer') return <Navigate to="/closer/deck?step=confirmations" />;
     if (user.role === 'triage') return <Navigate to="/triage/deck?step=confirmar" />;
     return <Navigate to="/" />;
   }

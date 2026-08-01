@@ -28,7 +28,7 @@ const LoginPage = () => {
       } else if (user.role === 'triage') {
         navigate('/triage/deck?step=confirmar');
       } else if (user.role === 'closer') {
-        navigate('/closer/deck?step=agendas');
+        navigate('/closer/deck?step=confirmations');
       } else if (user.role === 'operator') {
         navigate('/ops/dashboard');
       } else {

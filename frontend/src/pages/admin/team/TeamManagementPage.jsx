@@ -129,7 +129,7 @@ const TeamManagementPage = () => {
             else if (impersonatedUser.role === 'operator') path = '/ops/dashboard';
             else if (impersonatedUser.role === 'setter') path = '/setter/deck?step=cualificacion';
             else if (impersonatedUser.role === 'triage') path = '/triage/deck?step=confirmar';
-            else if (impersonatedUser.role === 'closer') path = '/closer/deck?step=agendas';
+            else if (impersonatedUser.role === 'closer') path = '/closer/deck?step=confirmations';
 
             window.location.href = path;
         } catch (err) {

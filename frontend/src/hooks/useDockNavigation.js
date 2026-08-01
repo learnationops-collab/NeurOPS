@@ -44,7 +44,7 @@ const useDockNavigation = () => {
 
         if (isCloser) {
             return [
-                { id: 'step-1', icon: Layers, label: '1. Agendas del Día', path: '/closer/deck?step=agendas' },
+                { id: 'step-1', icon: Layers, label: '1. Agendas del Día', path: '/closer/deck?step=confirmations' },
                 { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/sales/new' },
                 { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/closer/report' },
                 { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/closer/dashboard' },
