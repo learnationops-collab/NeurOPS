@@ -8,10 +8,11 @@ class BookingService:
     def get_available_slots_utc(start_date, end_date, preferred_closer_id=None):
         from app.models import WeeklyAvailability
         
-        # Get all active appointments (not cancelled or rescheduled) in range to avoid double booking
+        # Get all active appointments (not cancelled/rescheduled, not already resolved by the closer) in range to avoid double booking
         appointments = Appointment.query.filter(
             Appointment.start_time >= datetime.combine(start_date, time.min),
             Appointment.start_time <= datetime.combine(end_date, time.max) + timedelta(days=1),
+            Appointment.closer_processed == False,
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
         ).all()
         
@@ -143,8 +144,10 @@ class BookingService:
             print(f"[BookingService Error] Cliente con ID {client_id} no encontrado.")
             return None
 
-        # Verificar conflicto de horario para el mismo closer
+        # Verificar conflicto de horario para el mismo closer (una cita ya resuelta por el closer,
+        # p.ej. Show up/No Show/No Lead/Lead Perdido, no debe seguir bloqueando ese horario)
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
+            Appointment.closer_processed == False,
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
         ).first()
         if conflict: return None
