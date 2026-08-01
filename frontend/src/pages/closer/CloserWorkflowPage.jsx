@@ -1234,7 +1234,7 @@ const CloserWorkflowPage = () => {
                         ))}
                     </div>
 
-                    {sessionForm.confirm_status === 'Confirmado' || currentKey === 'confirmado' ? (
+                    {currentKey === 'confirmado' ? (
                         <div className="space-y-4">
                             <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs text-emerald-450 font-bold uppercase tracking-wide text-center">
                                 ✓ Este lead ya asiste seguro a la llamada.

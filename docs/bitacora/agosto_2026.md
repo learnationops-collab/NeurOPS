@@ -1,6 +1,10 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Bugfix: Botón "Guardar Reporte" Desaparecía al Elegir "Sí, confirmó" en la Etapa "Conversando" ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+    - **Reportado por el usuario**: al pasar un lead a "Conversando" y luego intentar confirmar asistencia, no aparecía el botón para guardar y pasarlo a "Confirmado".
+    - **Diagnóstico**: la condición que decide qué vista del paso de confirmación mostrar (`sessionForm.confirm_status === 'Confirmado' || currentKey === 'confirmado' ? (...)`) mezclaba el estado **ya guardado** del lead (`currentKey`, derivado de `selectedLead.result`) con la **selección pendiente todavía sin guardar** en el formulario (`sessionForm.confirm_status`). Apenas el closer hacía clic en la opción "Sí, confirmó" (que solo actualiza el estado local del formulario), la vista saltaba inmediatamente a la pantalla de "lead ya confirmado" (con únicamente Reagendar/Descartar), que no incluye ni el textarea de nota ni el botón "Guardar Reporte" — antes de que el usuario llegara a guardar nada. Bug preexistente, no introducido en esta sesión, pero bloqueaba exactamente el flujo que se estaba probando.
+    - **Corrección**: la vista ahora depende únicamente del estado real y ya persistido del lead (`currentKey === 'confirmado'`). La opción elegida se sigue marcando visualmente como seleccionada (fix de ayer), pero el formulario con el botón "Guardar Reporte" permanece visible hasta que el closer efectivamente guarda.
   - **Sincronización de Base de Datos Local desde Producción**:
     - **Base de Datos ([actualizar_db.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/actualizar_db.py) [EXECUTE])**:
       - Se ejecutó el script de sincronización (solo lectura de producción → escritura local, no toca producción en ningún momento) para que el entorno local refleje el estado real de producción antes de seguir probando el mazo del closer.
