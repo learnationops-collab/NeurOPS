@@ -259,6 +259,16 @@ function App() {
               }
             />
             <Route
+              path="/closer/dashboard"
+              element={
+                <ProtectedRoute roles={['closer', 'admin']}>
+                  <MainLayout>
+                    <CloserDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/closer/deck"
               element={
                 <ProtectedRoute roles={['closer']}>

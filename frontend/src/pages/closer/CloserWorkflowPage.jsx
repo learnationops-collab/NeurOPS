@@ -3613,7 +3613,7 @@ const CloserWorkflowPage = () => {
                         <span className="b-v6">{counts.confirmations + counts.calls + counts.seguimientos}</span>
                     )}
                 </button>
-                <button 
+                <button
                     className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${reportSent ? 'sent' : ''}`}
                     onClick={() => setActiveView('report')}
                 >
@@ -3622,6 +3622,12 @@ const CloserWorkflowPage = () => {
                     ) : (
                         <span>📊 Reporte del día</span>
                     )}
+                </button>
+                <button
+                    className="dk-v6"
+                    onClick={() => navigate('/closer/dashboard')}
+                >
+                    <span>📈 Dashboard</span>
                 </button>
             </div>
         </div>
