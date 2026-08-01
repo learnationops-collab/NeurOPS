@@ -1238,11 +1238,17 @@ def _format_appointment_for_deck(a):
     from app.models.financial import FinancialAgenda
     from sqlalchemy import or_
     from datetime import timedelta
-    
+
+    # Etapas del pipeline propio de confirmaciones del Closer (ovLead / step('confirm')).
+    # Una vez que el Closer tomó acción sobre el lead acá, ese estado es autoritativo y
+    # no debe ser pisado por el estado (potencialmente desactualizado) de FinancialAgenda.
+    CLOSER_CONFIRM_STAGES = ('por_confirmar', 'conversando', 'confirmado')
+
+    a_result_lower = a.result.strip().lower() if a.result else ''
     confirmer_result = "Pendiente"
-    if a.result and a.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a'):
+    if a.result and a_result_lower not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a'):
         confirmer_result = a.result
-    if a.client and a.start_time:
+    if a.client and a.start_time and a_result_lower not in CLOSER_CONFIRM_STAGES:
         client = a.client
         start_search = a.start_time - timedelta(hours=12)
         end_search = a.start_time + timedelta(hours=12)
