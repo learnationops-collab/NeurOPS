@@ -13,13 +13,34 @@ import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
+import OperatorControls from '../../components/modals/OperatorControls';
 
 const CloserWorkflowPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    
+    const [showOperatorControls, setShowOperatorControls] = useState(false);
+
     const activeStep = searchParams.get('step') || 'confirmations';
+
+    // Atajo 'w' para Acceso Simulado (operador). CloserWorkflowPage corre fuera de
+    // MainLayout (para que los modales fixed funcionen standalone), por lo que no
+    // hereda el HotkeysManager global y necesita su propio listener.
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
+                e.target.isContentEditable
+            ) return;
+            if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault();
+                setShowOperatorControls(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
     const [activeView, setActiveView] = useState('inbox');
@@ -3630,6 +3651,11 @@ const CloserWorkflowPage = () => {
                     <span>📈 Dashboard</span>
                 </button>
             </div>
+
+            <OperatorControls
+                isOpen={showOperatorControls}
+                onClose={() => setShowOperatorControls(false)}
+            />
         </div>
         </div>
     );
