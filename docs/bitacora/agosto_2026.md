@@ -1,6 +1,16 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Bugfix: Endpoint Inexistente para Crear Referidos Manuales ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+    - **Reportado por el usuario**: imposibilidad de crear clientes referidos desde el modal de la UI del closer.
+    - **Diagnóstico**: `CloserWorkflowPage.jsx` enviaba `POST /api/closer/deck/referrals/manual` al intentar crear un referido colgado de un prospecto existente, pero dicha ruta no existía en el backend Flask, resultando en error HTTP 404 / 405.
+    - **Corrección**: Se creó el endpoint `@bp.route('/deck/referrals/manual', methods=['POST'])` en `app/api/closer.py` que:
+      1. Resuelve el cliente origen (`from_lead_id`).
+      2. Clasifica el contacto del referido (Instagram con `@` o número telefónico).
+      3. Busca o crea el cliente referido de forma limpia usando `find_or_create_client`.
+      4. Genera la nueva cita del referido asociada al closer con origen `Referido de <Cliente Origen>`.
+      5. Registra una nota trazable en la ficha del cliente que otorgó la referencia.
+    - **Verificado end-to-end**: prueba automatizada confirmando la creación limpia del referido, cita y notas con respuesta HTTP 201.
   - **Bugfix: Pestaña "Llamadas" Excluía Segundas Agendas/Llamadas y Fallback de Programación de Seguimiento ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
     - **Reportado por el usuario (Nota de voz)**:
       1. Al agendar una 2ª llamada para hoy y pasarla por el proceso de confirmación, la cita no aparecía en la pestaña "② Llamadas".
