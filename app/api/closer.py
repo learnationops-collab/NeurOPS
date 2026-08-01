@@ -1598,6 +1598,85 @@ def process_closer_card(appt_id):
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
 
 
+@bp.route('/deck/referrals/manual', methods=['POST'])
+@login_required
+def create_manual_referral():
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json() or {}
+    from_lead_id = data.get('from_lead_id')
+    lead_name = (data.get('lead_name') or '').strip()
+    contact = (data.get('contact') or '').strip()
+    notes = (data.get('notes') or '').strip()
+
+    if not from_lead_id:
+        return jsonify({"error": "Selecciona el lead origen del referido"}), 400
+    if not lead_name:
+        return jsonify({"error": "El nombre del referido es obligatorio"}), 400
+
+    try:
+        from app.services.booking_service import BookingService
+        from app.models import Client, Appointment, Comment, db
+
+        # Resolver lead / cliente origen
+        referrer_client = None
+        origin_appt = Appointment.query.get(from_lead_id)
+        if origin_appt and origin_appt.client:
+            referrer_client = origin_appt.client
+        else:
+            referrer_client = Client.query.get(from_lead_id)
+
+        referrer_name = referrer_client.full_name if referrer_client else f"Lead #{from_lead_id}"
+
+        # Clasificar contacto
+        instagram = None
+        phone = None
+        if contact:
+            if '@' in contact or not contact.replace('+', '').replace(' ', '').replace('-', '').isdigit():
+                instagram = contact.replace('@', '').strip()
+            else:
+                phone = contact
+
+        # Crear o buscar cliente referido
+        ref_client = BookingService.find_or_create_client(
+            nombre=lead_name,
+            email=None,
+            instagram=instagram,
+            phone=phone
+        )
+
+        # Crear cita para el referido
+        now = datetime.utcnow()
+        appt = Appointment(
+            closer_id=current_user.id if current_user.role == 'closer' else None,
+            client_id=ref_client.id,
+            start_time=now,
+            origin=f"Referido de {referrer_name}",
+            last_stage='Nueva',
+            closer_notes=f"Referido por {referrer_name}. Contacto: {contact or 'N/A'}. Notas: {notes}",
+            closer_processed=False
+        )
+        db.session.add(appt)
+
+        # Dejar comentario en el perfil del cliente origen
+        if referrer_client:
+            comment_text = f"💡 Referencia otorgada: creó un nuevo referido '{lead_name}' ({contact or 'Sin contacto'}). Contexto: {notes}"
+            comment = Comment(
+                text=comment_text,
+                comment_type='client',
+                associated_id=referrer_client.id,
+                author_id=current_user.id
+            )
+            db.session.add(comment)
+
+        db.session.commit()
+        return jsonify({"message": "Referido guardado correctamente", "id": appt.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
 @bp.route('/deck/bulk-update', methods=['POST'])
 @login_required
 def bulk_update_closer_cards():
