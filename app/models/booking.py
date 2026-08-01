@@ -31,6 +31,13 @@ class Appointment(db.Model):
     fecha_seguimiento_cobro = db.Column(db.String(255), nullable=True)
     seguimiento_realizado = db.Column(db.Boolean, default=False, server_default='0')
 
+    # Categorización del seguimiento (pipeline de recuperación v7): 'no_tomada' (no show/canceló/
+    # reprogramó sin fecha), 'tomada' (asistió pero quedó una decisión pendiente o falta 2da llamada),
+    # 'cerrada' (cliente ya pagó: seguimiento de cobranza/renovación/upsell).
+    seguimiento_tipo = db.Column(db.String(50), nullable=True)
+    seguimiento_sub = db.Column(db.String(255), nullable=True)
+    seguimiento_intento = db.Column(db.Integer, default=1, server_default='1')
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')
