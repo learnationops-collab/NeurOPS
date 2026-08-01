@@ -1029,7 +1029,7 @@ const CloserWorkflowPage = () => {
         setProcessingId(selectedLead.id);
         try {
             if (sessionForm.result === 'agendo' && sessionForm.nueva_fecha_agenda) {
-                await api.patch(`/appointments/${selectedLead.id}`, {
+                await api.patch(`/closer/appointments/${selectedLead.id}`, {
                     start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
                 });
                 await api.post(`/closer/deck/${selectedLead.id}`, {
@@ -1420,7 +1420,7 @@ const CloserWorkflowPage = () => {
                                 }
                                 setProcessingId(selectedLead.id);
                                 try {
-                                    await api.patch(`/appointments/${selectedLead.id}`, {
+                                    await api.patch(`/closer/appointments/${selectedLead.id}`, {
                                         start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
                                     });
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
@@ -1638,7 +1638,7 @@ const CloserWorkflowPage = () => {
                                 }
                                 setProcessingId(selectedLead.id);
                                 try {
-                                    await api.patch(`/appointments/${selectedLead.id}`, {
+                                    await api.patch(`/closer/appointments/${selectedLead.id}`, {
                                         start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
                                     });
                                     await api.post(`/closer/deck/${selectedLead.id}`, {

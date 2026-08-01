@@ -1,6 +1,12 @@
 # Bitácora - Julio 2026
 
 - **31 de Julio de 2026**:
+  - **Bugfix Urgente: HTTP 405 en `PATCH /api/appointments/<id>` al Reprogramar desde el Mazo del Closer**:
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - **Diagnóstico**: La ruta `PATCH /appointments/<id>` sólo existe registrada dentro del blueprint `closer_api` (`app/api/closer.py`), montado con `url_prefix='/api/closer'` en `app/__init__.py`. Tres llamadas de reprogramación/agendamiento de seguimiento (`saveSeguimientoReport` y sus dos variantes inline, ~líneas 1032, 1423 y 1641) usaban `api.patch(\`/appointments/${selectedLead.id}\`, ...)` sin el prefijo `/closer`, apuntando a `/api/appointments/<id>` (inexistente). Esa ruta caía en el catch-all `@app.route('/<path:path>')` del backend (que sirve el SPA y sólo acepta `GET`), devolviendo `405 Method Not Allowed` en lugar de `404`.
+      - **Corrección**: Se corrigieron las 3 llamadas a `api.patch(\`/closer/appointments/${selectedLead.id}\`, ...)`, alineándolas con el resto de las llamadas del mismo archivo y de `LeadsPage.jsx` / `AgendaManagerModal.jsx` / `SetterAgendasPage.jsx`, que ya usaban correctamente el prefijo `/closer`.
+      - Se auditó el resto del frontend (`grep -rn "api\.(get|post|patch|delete)(\`.*appointments"`) sin encontrar más llamadas afectadas por el mismo patrón.
+      - **Verificación**: Se levantó el backend (`env/Scripts/python.exe run.py`, puerto 5000) y se reprodujo el bug exacto contra la ruta antigua (`curl -X PATCH /api/appointments/1` → `405 Method Not Allowed`); contra la ruta corregida (`curl -X PATCH /api/closer/appointments/1` → `400 CSRF token is missing`, confirmando que la ruta y el método ahora sí resuelven correctamente). Se levantó también el frontend (`npm run dev`, puerto 5173) confirmando que compila y sirve sin errores. No se pudo completar una prueba manual end-to-end del flujo de reprogramación vía UI por falta de credenciales de prueba disponibles en el entorno.
   - **Sincronización y Actualización de Base de Datos Local**:
     - **Base de Datos ([actualizar_db.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/scripts/actualizar_db.py) [EXECUTE])**:
       - Se ejecutó exitosamente el script de sincronización de la base de datos local SQLite (`instance/local.db`) desde el servidor de producción PostgreSQL.
