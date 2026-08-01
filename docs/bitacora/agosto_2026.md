@@ -1,6 +1,17 @@
 # Bitácora - Agosto 2026
 
 - **1 de Agosto de 2026**:
+  - **Bugfix: Pestaña "Llamadas" Excluía Segundas Agendas/Llamadas y Fallback de Programación de Seguimiento ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+    - **Reportado por el usuario (Nota de voz)**:
+      1. Al agendar una 2ª llamada para hoy y pasarla por el proceso de confirmación, la cita no aparecía en la pestaña "② Llamadas".
+      2. Solicitar que siempre se pida / programe un seguimiento cada vez que sea posible para mantener activa la rotación de prospectos.
+    - **Diagnóstico**:
+      1. En `app/api/closer.py`, el filtro del endpoint `GET /api/closer/deck?step=calls` y `GET /api/closer/deck/counts` requería estrictamente `result == 'Confirmado'` y `closer_result` en `['Pendiente', None, '']`. Las segundas llamadas se crean con `result='2TH Call'` y `closer_result='2da call'`, lo que las descartaba de la pestaña "Llamadas" pese a estar confirmadas para hoy. Además, `end_utc` usaba la medianoche estricta UTC, excluyendo citas nocturnas locales (UTC-4/5/6).
+      2. En el frontend, al abrir o reportar la interacción con un lead, la fecha de seguimiento no venía pre-llenada por defecto, dejando la oportunidad de guardarlo sin fecha asignada (`null`).
+    - **Corrección**:
+      - `closer.py`: Se amplió el filtro de `step=calls` y `deck/counts` para incluir estados de 2ª llamada (`2TH Call`, `2da call`, `2da Call`, `Segunda llamada`) tanto en `result` como en `closer_result`. Se agregó un margen de +12h en `end_utc` para incluir correctamente las citas de la noche local.
+      - `CloserWorkflowPage.jsx`: Se pre-llena por defecto la fecha de seguimiento (`fecha_seguimiento`) para el día de mañana (`Date.now() + 86400000`) al inicializar cualquier reporte de lead y se garantiza su fallback automático al guardar, asegurando que todo prospecto procesado quede con un seguimiento futuro programado.
+    - **Verificado end-to-end**: consulta de backend confirmando la devolución correcta de llamadas y segundas agendas en `step=calls` y en el conteo de la pestaña.
   - **Bugfix: HTTP 400 al Crear Agenda para un Cliente/Lead Existente en la Base de Datos ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
     - **Reportado por el usuario**: error 400 al intentar crear una agenda (`POST /api/closer/appointments`) para un usuario que ya existe en la base de datos.
     - **Diagnóstico**:
