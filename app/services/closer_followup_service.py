@@ -15,6 +15,10 @@ TIPOS_SEGUIMIENTO = {
 
 PROGRAM_CODE_NAMES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
 
+# closer_result que implican "no_tomada" aunque el closer nunca haya programado explícitamente
+# un seguimiento (ej. reportó la llamada como No Show pero cerró el modal sin asignar fecha).
+DERIVABLE_NO_TOMADA = {'no show', 'cancelado', 'cancelada'}
+
 
 class CloserFollowUpService:
     @staticmethod
@@ -24,10 +28,45 @@ class CloserFollowUpService:
         return (base + timedelta(days=CADENCIA[idx])).isoformat()
 
     @staticmethod
+    def _client_has_sale(client):
+        """True si el cliente ya tiene una venta registrada en FinancialSale (mismo cruce
+        email/instagram que _client_program_code)."""
+        if not client:
+            return False
+        filters = []
+        if client.email:
+            filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
+        if client.instagram:
+            ig = client.instagram.strip().lstrip('@').lower()
+            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+        if not filters:
+            return False
+        return FinancialSale.query.filter(or_(*filters)).first() is not None
+
+    @staticmethod
+    def _effective_tipo(a):
+        """Categoría del seguimiento: la explícitamente etiquetada, o derivada del resultado
+        real de la llamada si el closer nunca llegó a programar un seguimiento para esta cita
+        (caso más común: cerró el reporte de "No Show" sin pasar por la pantalla de seguimiento).
+        'cerrada' NO se deriva acá: sigue atada exclusivamente al flujo de declarar venta con
+        cobro pendiente (fecha_seguimiento_cobro), no a "cualquier cliente que alguna vez compró"."""
+        if a.seguimiento_tipo:
+            return a.seguimiento_tipo
+        cr = (a.closer_result or '').strip().lower()
+        if cr in DERIVABLE_NO_TOMADA:
+            return 'no_tomada'
+        if cr == 'show up' and not CloserFollowUpService._client_has_sale(a.client):
+            return 'tomada'
+        return None
+
+    @staticmethod
     def _base_query(closer_id):
         q = Appointment.query.filter(
-            Appointment.seguimiento_tipo.isnot(None),
-            or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado.is_(None))
+            or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado.is_(None)),
+            or_(
+                Appointment.seguimiento_tipo.isnot(None),
+                func.lower(Appointment.closer_result).in_(DERIVABLE_NO_TOMADA | {'show up'})
+            )
         )
         if closer_id:
             q = q.filter(Appointment.closer_id == closer_id)
@@ -86,7 +125,7 @@ class CloserFollowUpService:
             'instagram': a.client.instagram if a.client else '',
             'origin': a.origin or '',
             'examen': a.examen or '',
-            'seguimiento_tipo': a.seguimiento_tipo,
+            'seguimiento_tipo': CloserFollowUpService._effective_tipo(a),
             'seguimiento_sub': a.seguimiento_sub or '',
             'seguimiento_intento': a.seguimiento_intento or 1,
             'fecha_seguimiento': a.fecha_seguimiento or None,
@@ -110,7 +149,7 @@ class CloserFollowUpService:
         items = q.order_by(Appointment.fecha_seguimiento.asc()).all()
         grouped = {'no_tomada': [], 'tomada': [], 'cerrada': []}
         for a in items:
-            key = a.seguimiento_tipo if a.seguimiento_tipo in grouped else 'no_tomada'
+            key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
             grouped[key].append(CloserFollowUpService._serialize(a, include_debt=(key == 'cerrada')))
         return grouped
 
@@ -119,12 +158,15 @@ class CloserFollowUpService:
         q = CloserFollowUpService._base_query(closer_id).filter(
             or_(Appointment.fecha_seguimiento == None, Appointment.fecha_seguimiento == '')
         )
-        if tipo:
-            q = q.filter(Appointment.seguimiento_tipo == tipo)
-        if sub:
-            q = q.filter(Appointment.seguimiento_sub == sub)
-
         items = q.order_by(Appointment.start_time.desc()).all()
+
+        # El tipo puede venir etiquetado en la cita o derivado de closer_result (ver _effective_tipo),
+        # así que el filtro se aplica en Python sobre el tipo efectivo, no en la query SQL.
+        if tipo:
+            items = [a for a in items if CloserFollowUpService._effective_tipo(a) == tipo]
+        if sub:
+            items = [a for a in items if (a.seguimiento_sub or '') == sub]
+
         include_debt = (tipo == 'cerrada')
         serialized = [CloserFollowUpService._serialize(a, include_debt=include_debt) for a in items]
 
@@ -163,8 +205,9 @@ class CloserFollowUpService:
         )
         counts = {'no_tomada': 0, 'tomada': 0, 'cerrada': 0}
         for a in q.all():
-            key = a.seguimiento_tipo if a.seguimiento_tipo in counts else 'no_tomada'
-            counts[key] += 1
+            key = CloserFollowUpService._effective_tipo(a)
+            if key in counts:
+                counts[key] += 1
         return counts
 
     @staticmethod
