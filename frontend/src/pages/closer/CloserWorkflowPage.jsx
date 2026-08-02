@@ -16,7 +16,7 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 import SeguimientosPane from './components/SeguimientosPane';
-import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime } from '../../utils/datetime';
+import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -96,11 +96,7 @@ const CloserWorkflowPage = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
-    const [selectedDate, setSelectedDate] = useState(() => {
-        const offset = new Date().getTimezoneOffset();
-        const localDate = new Date(new Date().getTime() - (offset * 60 * 1000));
-        return localDate.toISOString().split('T')[0];
-    });
+    const [selectedDate, setSelectedDate] = useState(localToday);
     
     // Cita seleccionada para el visor de la derecha (modal overlay v7)
     const [selectedLead, setSelectedLead] = useState(null);
@@ -116,7 +112,7 @@ const CloserWorkflowPage = () => {
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
-        date: new Date().toISOString().split('T')[0],
+        date: localToday(),
         time: '18:00',
         origin: 'Setter',
         examen: ''
@@ -178,7 +174,7 @@ const CloserWorkflowPage = () => {
         documento_identidad: '',
         enviar_mensaje: true,
         sold_in_call: true,
-        date: new Date().toISOString().split('T')[0]
+        date: localToday()
     });
 
     // Sincronizar email del closer en cuanto esté cargado en la sesión
@@ -310,7 +306,7 @@ const CloserWorkflowPage = () => {
             setNewAgendaForm({
                 lead_name: '',
                 instagram: '',
-                date: new Date().toISOString().split('T')[0],
+                date: localToday(),
                 time: '18:00',
                 origin: 'Setter',
                 examen: ''
@@ -593,7 +589,7 @@ const CloserWorkflowPage = () => {
         setModalTab('act');
         setDecisionPath([]);
         setReasonInput('');
-        const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        const tomorrowStr = localDateFromNow(1);
 
         // Recordatorio pre-llamada: si el lead ya tiene uno guardado, prellenarlo; si no,
         // sugerir 2 horas antes de la hora de la cita como default editable.
@@ -875,7 +871,7 @@ const CloserWorkflowPage = () => {
                         documento_identidad: '',
                         enviar_mensaje: true,
                         sold_in_call: true,
-                        date: new Date().toISOString().split('T')[0]
+                        date: localToday()
                     });
                     setSalePrompt({ apptId: leadId });
                 }
@@ -1559,7 +1555,7 @@ const CloserWorkflowPage = () => {
                                 documento_identidad: '',
                                 enviar_mensaje: true,
                                 sold_in_call: true,
-                                date: new Date().toISOString().split('T')[0]
+                                date: localToday()
                             });
                             setSaleStep(1);
                             setSaleModalOpen(true);
@@ -1944,11 +1940,11 @@ const CloserWorkflowPage = () => {
                                 <button
                                     key={cd.k}
                                     onClick={() => {
-                                        const dt = cd.d === null ? '' : new Date(Date.now() + cd.d * 86400000).toISOString().split('T')[0];
+                                        const dt = cd.d === null ? '' : localDateFromNow(cd.d);
                                         setSessionForm(prev => ({ ...prev, fecha_seguimiento: dt }));
                                     }}
                                     className={`py-2 px-3 border rounded-xl text-left transition-all cursor-pointer font-bold text-[10px] uppercase flex flex-col gap-0.5 ${
-                                        (cd.d === null && !sessionForm.fecha_seguimiento) || (cd.d !== null && sessionForm.fecha_seguimiento === new Date(Date.now() + cd.d * 86400000).toISOString().split('T')[0])
+                                        (cd.d === null && !sessionForm.fecha_seguimiento) || (cd.d !== null && sessionForm.fecha_seguimiento === localDateFromNow(cd.d))
                                             ? 'bg-violet-650/10 border-violet-500/50 text-violet-400'
                                             : 'bg-slate-900 border-slate-800 text-slate-450 hover:border-slate-700'
                                     }`}
@@ -1987,7 +1983,7 @@ const CloserWorkflowPage = () => {
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
                                         result: sessionForm.result === 'tomada' ? 'Show up' : 'No Show',
                                         closer_notes: sessionForm.notes || 'Programó seguimiento',
-                                        fecha_seguimiento: sessionForm.fecha_seguimiento || new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                                        fecha_seguimiento: sessionForm.fecha_seguimiento || localDateFromNow(1),
                                         seguimiento_tipo: sessionForm.result === 'tomada' ? 'tomada' : 'no_tomada',
                                         seguimiento_sub: sessionForm.rmot || 'Seguimiento programado',
                                         seguimiento_intento: 1,
@@ -2050,7 +2046,7 @@ const CloserWorkflowPage = () => {
                                     documento_identidad: '',
                                     enviar_mensaje: true,
                                     sold_in_call: true,
-                                    date: new Date().toISOString().split('T')[0]
+                                    date: localToday()
                                 });
                                 setSaleStep(1);
                                 setSaleModalOpen(true);
@@ -2098,7 +2094,7 @@ const CloserWorkflowPage = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 {option(() => {
                                     const delayDays = [0, 3, 7, 14][Math.min(3, seq)];
-                                    const nextDate = new Date(Date.now() + delayDays * 86400000).toISOString().split('T')[0];
+                                    const nextDate = localDateFromNow(delayDays);
                                     setSessionForm(prev => ({ ...prev, fecha_seguimiento: nextDate, sig_action: 'next' }));
                                 }, 'ok', `Programar Seguimiento ${Math.min(4, seq + 1)}`, `Sugerido para +${[0, 3, 7, 14][Math.min(3, seq)]} días`)}
                                 {option(() => {
@@ -2215,7 +2211,7 @@ const CloserWorkflowPage = () => {
                                     documento_identidad: '',
                                     enviar_mensaje: true,
                                     sold_in_call: false,
-                                    date: new Date().toISOString().split('T')[0]
+                                    date: localToday()
                                 });
                                 setSaleStep(2);
                                 setSaleModalOpen(true);
@@ -3514,7 +3510,7 @@ const CloserWorkflowPage = () => {
                                                         const monto = i === n - 1 ? Math.round((rest - each * (n - 1)) * 100) / 100 : each;
                                                         const d = new Date();
                                                         d.setMonth(d.getMonth() + i + 1);
-                                                        return { n: i + 1, monto, fecha: d.toISOString().split('T')[0] };
+                                                        return { n: i + 1, monto, fecha: toLocalDateStr(d) };
                                                     });
                                                     return (
                                                         <div className="rounded-xl border border-slate-800 overflow-hidden">

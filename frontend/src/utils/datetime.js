@@ -32,3 +32,18 @@ export function browserTimezone() {
         return null;
     }
 }
+
+// Fecha calendario LOCAL (YYYY-MM-DD) de un Date. Nunca usar `date.toISOString().split('T')[0]`
+// directamente: eso da la fecha en UTC, que puede ser "mañana" varias horas antes de medianoche
+// local en zonas UTC negativas (ej. 21:00 en UTC-4 ya es la 1am UTC del día siguiente).
+export function toLocalDateStr(date) {
+    return splitLocalDateTime(date.toISOString()).date;
+}
+
+export function localToday() {
+    return toLocalDateStr(new Date());
+}
+
+export function localDateFromNow(days) {
+    return toLocalDateStr(new Date(Date.now() + days * 86400000));
+}
