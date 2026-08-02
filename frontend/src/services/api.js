@@ -8,14 +8,20 @@ const api = axios.create({
 let csrfToken = null;
 let csrfTokenPromise = null;
 
-// Obtiene o solicita el token CSRF una sola vez de forma compartida
-const fetchCsrfToken = () => {
+// Obtiene o solicita el token CSRF una sola vez de forma compartida.
+// forceRefresh descarta el token cacheado (usado cuando el backend lo rechaza por vencido).
+const fetchCsrfToken = (forceRefresh = false) => {
+    if (forceRefresh) {
+        csrfToken = null;
+        csrfTokenPromise = null;
+    }
     if (csrfToken) return Promise.resolve(csrfToken);
     if (csrfTokenPromise) return csrfTokenPromise;
 
     csrfTokenPromise = axios.get("/api/auth/csrf-token", { withCredentials: true })
         .then(res => {
             csrfToken = res.data.csrf_token;
+            csrfTokenPromise = null;
             return csrfToken;
         })
         .catch(err => {
@@ -51,13 +57,30 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
         if (error.response && error.response.status === 401) {
             // Allow requests to skip global auth error handling (e.g. background fetches)
             if (!error.config?.skipAuthError) {
                 window.dispatchEvent(new Event("auth-unauthorized"));
             }
         }
+
+        // Token CSRF vencido (sesiones/formularios largos, ej. el modal de seguimiento con el
+        // paso de referidos): en vez de fallar y obligar a recargar la página, se refresca el
+        // token y se reintenta la petición original una sola vez.
+        const isCsrfExpired = error.response
+            && error.response.status === 400
+            && typeof error.response.data === 'string'
+            && error.response.data.includes('CSRF');
+        if (isCsrfExpired && error.config && !error.config._csrfRetried) {
+            error.config._csrfRetried = true;
+            const freshToken = await fetchCsrfToken(true);
+            if (freshToken) {
+                error.config.headers['X-CSRFToken'] = freshToken;
+                return api.request(error.config);
+            }
+        }
+
         return Promise.reject(error);
     }
 );
