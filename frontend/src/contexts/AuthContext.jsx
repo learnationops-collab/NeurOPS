@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import { browserTimezone } from '../utils/datetime';
 
 const AuthContext = createContext();
 
@@ -27,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (username, password) => {
-        const response = await api.post('/auth/login', { username, password });
+        const response = await api.post('/auth/login', { username, password, timezone: browserTimezone() });
         const { user: userData, token } = response.data;
 
         setUser(userData);

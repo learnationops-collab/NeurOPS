@@ -32,6 +32,19 @@ def login():
     # 4. Login Session (Optional / Legacy support)
     login_user(user, remember=True)
 
+    # Sincronizar la timezone del usuario con la detectada por su navegador en cada login,
+    # para que los cálculos de "día calendario" en el backend (dashboard, mazo del closer, etc.)
+    # siempre reflejen su zona horaria real en vez de un valor manual desactualizado.
+    tz_from_browser = data.get('timezone')
+    if tz_from_browser and tz_from_browser != user.timezone:
+        import pytz
+        try:
+            pytz.timezone(tz_from_browser)
+            user.timezone = tz_from_browser
+            db.session.commit()
+        except Exception:
+            pass
+
     # 5. Generate Token (Primary Auth Method)
     token = user.get_auth_token()
 

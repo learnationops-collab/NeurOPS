@@ -391,7 +391,8 @@ def user_operations(id):
         user.email = email or user.email
         user.role = data.get('role', user.role)
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
-        if 'is_active' in data: 
+        if 'timezone' in data: user.timezone = data['timezone']
+        if 'is_active' in data:
             if user.id == current_user.id and data['is_active'] is False:
                 return jsonify({"message": "No puedes desactivar tu propia cuenta"}), 400
             user.is_active = data['is_active']
