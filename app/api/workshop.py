@@ -268,7 +268,11 @@ def prefill_workshop_metrics():
         return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
         
     import pytz
-    la_paz_tz = pytz.timezone('America/La_Paz')
+    from flask_login import current_user
+    try:
+        la_paz_tz = pytz.timezone(current_user.timezone or 'America/La_Paz')
+    except Exception:
+        la_paz_tz = pytz.timezone('America/La_Paz')
     start_local = datetime.combine(dt, time.min)
     end_local = datetime.combine(dt, time.max)
     

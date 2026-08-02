@@ -390,8 +390,11 @@ def get_qualified_forms():
         
     import pytz
     from datetime import datetime, time
-    la_paz_tz = pytz.timezone('America/La_Paz')
-    
+    try:
+        la_paz_tz = pytz.timezone(current_user.timezone or 'America/La_Paz')
+    except Exception:
+        la_paz_tz = pytz.timezone('America/La_Paz')
+
     if start_date:
         try:
             sd = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -538,11 +541,14 @@ def update_qualified_form(client_id):
             new_date = parse_date_robustly(data['created_at'])
             
             import pytz
-            la_paz_tz = pytz.timezone('America/La_Paz')
+            try:
+                la_paz_tz = pytz.timezone(current_user.timezone or 'America/La_Paz')
+            except Exception:
+                la_paz_tz = pytz.timezone('America/La_Paz')
             if new_date.tzinfo is not None:
                 new_date = new_date.astimezone(la_paz_tz).replace(tzinfo=None)
-            
-            # Convertir de America/La_Paz local a UTC naive para guardar en created_at
+
+            # Convertir de la timezone local del usuario a UTC naive para guardar en created_at
             utc_date = la_paz_tz.localize(new_date).astimezone(pytz.UTC).replace(tzinfo=None)
             client.created_at = utc_date
             

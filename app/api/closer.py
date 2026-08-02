@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 import json
+import pytz
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification
@@ -8,6 +9,19 @@ from datetime import date, timedelta, datetime
 from sqlalchemy import or_
 
 bp = Blueprint('closer_api', __name__)
+
+
+def _user_day_bounds_utc(user, day):
+    """Convierte el rango [00:00, 23:59:59.999999] del día calendario `day` en la
+    zona horaria del usuario a límites UTC naive reales, para filtrar Appointment.start_time."""
+    from datetime import time as time_cls
+    try:
+        tz = pytz.timezone(user.timezone or 'America/La_Paz')
+    except Exception:
+        tz = pytz.timezone('America/La_Paz')
+    start_utc = tz.localize(datetime.combine(day, time_cls.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+    end_utc = tz.localize(datetime.combine(day, time_cls.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+    return start_utc, end_utc
 
 @bp.route('/dashboard', methods=['GET'])
 @login_required
@@ -1363,12 +1377,11 @@ def get_closer_deck():
 
     if step == 'confirmations':
         # Pipeline de confirmación: citas no procesadas por el closer desde hoy en adelante
-        from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             today_local = date.today()
-        start_utc = datetime.combine(today_local, time.min)
+        start_utc, _ = _user_day_bounds_utc(current_user, today_local)
         query = Appointment.query.filter(
             Appointment.start_time >= start_utc,
             Appointment.closer_processed == False,
@@ -1376,14 +1389,12 @@ def get_closer_deck():
         )
     elif step == 'calls':
         # Llamadas confirmadas sin reportar (incluye 1ra y 2da call), de la fecha seleccionada hacia atrás
-        from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             today_local = date.today()
 
-        # Margen de 12h para zonas horarias (UTC-4/5/6) para incluir llamadas de la noche local
-        end_utc = datetime.combine(today_local, time.max) + timedelta(hours=12)
+        _, end_utc = _user_day_bounds_utc(current_user, today_local)
 
         query = Appointment.query.filter(
             Appointment.start_time <= end_utc,
@@ -1401,15 +1412,13 @@ def get_closer_deck():
         )
     elif step == 'agendas':
         # Mantener compatibilidad con agendas anteriores
-        from datetime import time
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             today_local = date.today()
-            
-        start_utc = datetime.combine(today_local, time.min)
-        end_utc = datetime.combine(today_local, time.max)
-        
+
+        start_utc, end_utc = _user_day_bounds_utc(current_user, today_local)
+
         query = Appointment.query.filter(
             Appointment.start_time >= start_utc,
             Appointment.start_time <= end_utc
@@ -1466,15 +1475,13 @@ def get_closer_deck_counts():
     if not selected_date_str:
         selected_date_str = today.isoformat()
         
-    from datetime import time
     try:
         today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except ValueError:
         today_local = date.today()
-        
-    start_utc = datetime.combine(today_local, time.min)
-    end_utc_calls = datetime.combine(today_local, time.max) + timedelta(hours=12)
-    
+
+    start_utc, end_utc_calls = _user_day_bounds_utc(current_user, today_local)
+
     query_confirmations = Appointment.query.filter(
         Appointment.start_time >= start_utc,
         Appointment.closer_processed == False,

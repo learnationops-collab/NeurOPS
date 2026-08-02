@@ -1766,24 +1766,23 @@ class CloserService:
         # Obtener cumplimiento de reportes diarios
         import pytz
         from datetime import datetime, date, timedelta
-        
-        try:
-            tz = pytz.timezone('America/La_Paz')
-        except Exception:
-            tz = pytz.UTC
-            
-        today_local = datetime.now(tz).date()
-        yesterday_local = today_local - timedelta(days=1)
-        
+
         active_closers = User.query.filter_by(role='closer', is_active=True).all()
-        
+
         closer_reports_status = []
         al_dia_count = 0
         vencidos_count = 0
-        
+
         for c in active_closers:
+            try:
+                c_tz = pytz.timezone(c.timezone or 'America/La_Paz')
+            except Exception:
+                c_tz = pytz.UTC
+            today_local = datetime.now(c_tz).date()
+            yesterday_local = today_local - timedelta(days=1)
+
             last_report = CloserDailyReport.query.filter_by(closer_id=c.id).order_by(CloserDailyReport.date.desc()).first()
-            
+
             if last_report:
                 last_date = last_report.date
                 # Al día = hizo el reporte de ayer o hoy
