@@ -104,6 +104,7 @@ const CloserWorkflowPage = () => {
     // Estado del árbol de decisiones del modal de lead v7 (pestaña, paso actual, camino recorrido y formulario de sesión)
     const [modalTab, setModalTab] = useState('act');
     const [modalStep, setModalStep] = useState('root');
+    const [modalFlowLabel, setModalFlowLabel] = useState('');
     const [decisionPath, setDecisionPath] = useState([]);
     const [sessionForm, setSessionForm] = useState({});
 
@@ -617,11 +618,22 @@ const CloserWorkflowPage = () => {
 
         // 2. Determinar paso inicial del árbol por contexto
         if (activeStep === 'confirmations' || lead.fase === 'confirm') {
-            setModalStep('confirm');
+            // Un lead ya "Confirmado" no tiene nada más que confirmar: se abre directo en el
+            // reporte de resultado de la llamada, igual que si viniera de la pestaña Llamadas.
+            const normalizedResult = (lead.result || '').toLowerCase();
+            if (normalizedResult === 'confirmado') {
+                setModalStep('root');
+                setModalFlowLabel('Reporte de llamada');
+            } else {
+                setModalStep('confirm');
+                setModalFlowLabel('Proceso de confirmación');
+            }
         } else if (activeStep === 'seguimientos' || lead.fase === 'seg') {
             setModalStep(lead.tipo === 'cerrada' ? 'segventa' : 'seg');
+            setModalFlowLabel('Seguimiento');
         } else {
             setModalStep('root');
+            setModalFlowLabel('Reporte de llamada');
         }
 
         setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
@@ -2913,7 +2925,7 @@ const CloserWorkflowPage = () => {
                                 <div style={{ flex: 1 }}>
                                     <h3>{(selectedLead.lead_name || 'Sin Nombre').toUpperCase()}</h3>
                                     <p>
-                                        {activeStep === 'confirmations' ? 'Proceso de confirmación' : activeStep === 'calls' ? 'Reporte de llamada' : 'Seguimiento'}
+                                        {modalFlowLabel}
                                         {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
                                     </p>
                                 </div>
