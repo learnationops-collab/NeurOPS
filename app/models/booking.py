@@ -38,6 +38,12 @@ class Appointment(db.Model):
     seguimiento_sub = db.Column(db.String(255), nullable=True)
     seguimiento_intento = db.Column(db.Integer, default=1, server_default='1')
 
+    # Recordatorio PRE-llamada (distinto del seguimiento post-llamada de arriba): mientras el lead
+    # sigue en el pipeline de confirmación ("Por confirmar"/"Conversando"), le permite al closer
+    # dejarse un aviso para volver a escribirle antes de que llegue la hora de la cita. DateTime UTC
+    # real (no String) porque necesita compararse con la hora actual para calcular "vencido"/"hoy".
+    pre_call_reminder_at = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')

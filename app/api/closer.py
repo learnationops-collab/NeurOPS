@@ -1351,6 +1351,7 @@ def _format_appointment_for_deck(a):
         "seguimiento_tipo": getattr(a, 'seguimiento_tipo', None),
         "seguimiento_sub": getattr(a, 'seguimiento_sub', None),
         "seguimiento_intento": getattr(a, 'seguimiento_intento', None) or 1,
+        "pre_call_reminder_at": a.pre_call_reminder_at.isoformat() if getattr(a, 'pre_call_reminder_at', None) else None,
         "examen": a.examen or ""
     }
 
@@ -1580,11 +1581,14 @@ def process_closer_card(appt_id):
         appt.seguimiento_sub = data['seguimiento_sub']
     if 'seguimiento_intento' in data:
         appt.seguimiento_intento = data['seguimiento_intento']
+    if 'pre_call_reminder_at' in data:
+        val = data['pre_call_reminder_at']
+        appt.pre_call_reminder_at = datetime.fromisoformat(val.replace('Z', '')) if val else None
 
     # Si es una actualización de confirmación rápida (con o sin nota adjunta), no marcamos
     # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
     # (Por confirmar / Conversando / Confirmado), no se resolvió ni salió del mazo.
-    confirm_only_keys = {'confirm_status', 'closer_notes'}
+    confirm_only_keys = {'confirm_status', 'closer_notes', 'pre_call_reminder_at'}
     if 'confirm_status' in data and set(data.keys()).issubset(confirm_only_keys):
         pass
     else:

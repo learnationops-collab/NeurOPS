@@ -16,6 +16,7 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 import SeguimientosPane from './components/SeguimientosPane';
+import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -296,7 +297,7 @@ const CloserWorkflowPage = () => {
         setProcessingId('new_agenda');
         try {
             const payload = {
-                start_time: `${newAgendaForm.date}T${newAgendaForm.time}:00`,
+                start_time: localInputsToUtcIso(newAgendaForm.date, newAgendaForm.time),
                 origin: newAgendaForm.origin,
                 client_data: {
                     name: newAgendaForm.lead_name,
@@ -593,11 +594,29 @@ const CloserWorkflowPage = () => {
         setDecisionPath([]);
         setReasonInput('');
         const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+        // Recordatorio pre-llamada: si el lead ya tiene uno guardado, prellenarlo; si no,
+        // sugerir 2 horas antes de la hora de la cita como default editable.
+        let defaultReminder = '';
+        if (lead.pre_call_reminder_at) {
+            const { date, time } = splitLocalDateTime(lead.pre_call_reminder_at);
+            defaultReminder = date && time ? `${date}T${time}` : '';
+        } else if (lead.start_time) {
+            const startDate = parseUtcIso(lead.start_time);
+            if (startDate) {
+                const suggested = new Date(startDate.getTime() - 2 * 60 * 60 * 1000);
+                const { date, time } = splitLocalDateTime(suggested.toISOString());
+                defaultReminder = date && time ? `${date}T${time}` : '';
+            }
+        }
+
         setSessionForm({
             confirm_status: null,
             notes: lead.closer_notes || lead.notes || '',
             result: lead.closer_result || lead.result || 'Pendiente',
-            fecha_seguimiento: tomorrowStr
+            fecha_seguimiento: tomorrowStr,
+            pre_call_reminder_at: defaultReminder,
+            pre_call_reminder_enabled: !!lead.pre_call_reminder_at
         });
 
         // 2. Determinar paso inicial del árbol por contexto
@@ -682,13 +701,12 @@ const CloserWorkflowPage = () => {
     const renderKanbanCard = (a, phase) => {
         const isViewed = selectedLead?.id === a.id;
         
-        // Formatear fecha y hora legible
-        const apptDate = a.start_time ? a.start_time.split('T')[0] : '';
-        const apptTime = a.start_time ? a.start_time.split('T')[1]?.substring(0, 5) : '';
-        
+        // Formatear fecha y hora legible (hora LOCAL del navegador, no UTC crudo)
+        const { date: apptDate, time: apptTime } = splitLocalDateTime(a.start_time);
+
         // Calcular etiqueta "Hoy", "Mañana", etc.
         let dateLabel = apptDate;
-        const todayStr = new Date().toISOString().split('T')[0];
+        const { date: todayStr } = splitLocalDateTime(new Date().toISOString());
         if (apptDate === todayStr) {
             dateLabel = 'Hoy';
         } else {
@@ -697,7 +715,21 @@ const CloserWorkflowPage = () => {
                 if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`;
             } catch (e) {}
         }
-        
+
+        // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
+        // hoy (ámbar) si es el día calendario local actual, oculto si es un día futuro.
+        let reminderBadge = null;
+        const reminderDate = parseUtcIso(a.pre_call_reminder_at);
+        if (reminderDate) {
+            const now = new Date();
+            const { date: reminderDay, time: reminderTime } = splitLocalDateTime(a.pre_call_reminder_at);
+            if (reminderDate <= now) {
+                reminderBadge = { label: `Recordatorio vencido · ${reminderTime}`, cls: 'bg-red-500/15 border-red-500/40 text-red-400' };
+            } else if (reminderDay === todayStr) {
+                reminderBadge = { label: `Recordatorio hoy ${reminderTime}`, cls: 'bg-amber-500/15 border-amber-500/40 text-amber-400' };
+            }
+        }
+
         return (
             <div 
                 key={a.id} 
@@ -718,6 +750,11 @@ const CloserWorkflowPage = () => {
                     {a.examen && (
                         <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                             {a.examen}
+                        </span>
+                    )}
+                    {reminderBadge && (
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${reminderBadge.cls}`}>
+                            {reminderBadge.label}
                         </span>
                     )}
                 </div>
@@ -926,30 +963,17 @@ const CloserWorkflowPage = () => {
         }
     };
 
-    // Formatear fecha para input datetime-local
+    // Formatear fecha para input datetime-local (hora LOCAL del navegador, no UTC crudo)
     const formatToDatetimeLocal = (dateStr) => {
-        if (!dateStr) return '';
-        try {
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return '';
-            const offset = d.getTimezoneOffset();
-            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-            return localDate.toISOString().slice(0, 16);
-        } catch (e) {
-            return '';
-        }
+        const { date, time } = splitLocalDateTime(dateStr);
+        return date && time ? `${date}T${time}` : '';
     };
 
-    // Formatear hora de inicio
+    // Formatear hora de inicio (hora LOCAL del navegador, no UTC crudo)
     const formatTimeOnly = (isoStr) => {
-        if (!isoStr) return '';
-        try {
-            const d = new Date(isoStr);
-            if (isNaN(d.getTime())) return '';
-            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch (e) {
-            return '';
-        }
+        const d = parseUtcIso(isoStr);
+        if (!d) return '';
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     // Navegación de pasos del modal de venta
@@ -1106,11 +1130,27 @@ const CloserWorkflowPage = () => {
         const pcRemaining = confirmationsPipeline.porConfirmar.filter(a => a.id !== selectedLead.id).length;
         const cvRemaining = confirmationsPipeline.conversando.filter(a => a.id !== selectedLead.id).length;
 
+        // Misma derivación de "etapa actual" que usa el paso de confirmación al renderizar
+        const normalizedCurrentResult = (selectedLead.result || '').toLowerCase();
+        const isPorConfirmar = normalizedCurrentResult !== 'confirmado'
+            && normalizedCurrentResult !== 'conversando' && normalizedCurrentResult !== 'contactado';
+
+        let reminderPayload;
+        if (isPorConfirmar) {
+            if (sessionForm.pre_call_reminder_enabled && sessionForm.pre_call_reminder_at) {
+                const [d, t] = sessionForm.pre_call_reminder_at.split('T');
+                reminderPayload = localInputsToUtcIso(d, t);
+            } else {
+                reminderPayload = null;
+            }
+        }
+
         setProcessingId(selectedLead.id);
         try {
             await api.post(`/closer/deck/${selectedLead.id}`, {
                 confirm_status: newStatus,
-                closer_notes: sessionForm.notes
+                closer_notes: sessionForm.notes,
+                ...(reminderPayload !== undefined ? { pre_call_reminder_at: reminderPayload } : {})
             });
             setSelectedLead(null);
             fetchAgendas();
@@ -1186,7 +1226,7 @@ const CloserWorkflowPage = () => {
         try {
             if (sessionForm.result === 'agendo' && sessionForm.nueva_fecha_agenda) {
                 await api.patch(`/closer/appointments/${selectedLead.id}`, {
-                    start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                    start_time: localInputsToUtcIso(sessionForm.nueva_fecha_agenda, sessionForm.nueva_hora_agenda || '12:00')
                 });
                 await api.post(`/closer/deck/${selectedLead.id}`, {
                     confirm_status: 'por_confirmar',
@@ -1371,6 +1411,30 @@ const CloserWorkflowPage = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {currentKey === 'por_confirmar' && (
+                                <div className="q space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!sessionForm.pre_call_reminder_enabled}
+                                            onChange={(e) => setSessionForm(prev => ({ ...prev, pre_call_reminder_enabled: e.target.checked }))}
+                                            className="w-4 h-4 accent-violet-500"
+                                        />
+                                        <h4 className="text-[10px] font-black uppercase text-slate-400">
+                                            Recordarme escribirle antes de la llamada
+                                        </h4>
+                                    </label>
+                                    {sessionForm.pre_call_reminder_enabled && (
+                                        <input
+                                            type="datetime-local"
+                                            value={sessionForm.pre_call_reminder_at || ''}
+                                            onChange={(e) => setSessionForm(prev => ({ ...prev, pre_call_reminder_at: e.target.value }))}
+                                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium"
+                                        />
+                                    )}
+                                </div>
+                            )}
 
                             <div className="q space-y-3">
                                 <h4 className="text-[10px] font-black uppercase text-slate-400">Otras acciones</h4>
@@ -1613,7 +1677,7 @@ const CloserWorkflowPage = () => {
                                 setProcessingId(selectedLead.id);
                                 try {
                                     await api.patch(`/closer/appointments/${selectedLead.id}`, {
-                                        start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                                        start_time: localInputsToUtcIso(sessionForm.nueva_fecha_agenda, sessionForm.nueva_hora_agenda || '12:00')
                                     });
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
                                         confirm_status: 'por_confirmar',
@@ -1831,7 +1895,7 @@ const CloserWorkflowPage = () => {
                                 setProcessingId(selectedLead.id);
                                 try {
                                     await api.patch(`/closer/appointments/${selectedLead.id}`, {
-                                        start_time: `${sessionForm.nueva_fecha_agenda}T${sessionForm.nueva_hora_agenda || '12:00'}:00`
+                                        start_time: localInputsToUtcIso(sessionForm.nueva_fecha_agenda, sessionForm.nueva_hora_agenda || '12:00')
                                     });
                                     await api.post(`/closer/deck/${selectedLead.id}`, {
                                         confirm_status: 'por_confirmar',
