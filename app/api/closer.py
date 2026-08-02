@@ -1644,6 +1644,20 @@ def delete_deck_appointment(appt_id):
         return jsonify({"error": str(e)}), 400
 
 
+@bp.route('/team-members', methods=['GET'])
+@login_required
+def get_team_members():
+    if current_user.role not in ['closer', 'setter', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import User
+    members = User.query.filter(
+        User.role.in_(['closer', 'setter']),
+        or_(User.is_active == True, User.is_active == None)
+    ).order_by(User.username.asc()).all()
+    return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in members]), 200
+
+
 @bp.route('/deck/referrals/manual', methods=['POST'])
 @login_required
 def create_manual_referral():

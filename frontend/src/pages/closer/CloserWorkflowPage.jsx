@@ -148,6 +148,25 @@ const CloserWorkflowPage = () => {
     // Estado para reprogramación individual
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
 
+    // Equipo (menciones) para el modal de seguimiento — fetch perezoso, una sola vez
+    const [teamMembers, setTeamMembers] = useState(null);
+    const fetchTeamMembers = useCallback(async () => {
+        if (teamMembers !== null) return;
+        try {
+            const res = await api.get('/closer/team-members');
+            setTeamMembers(res.data || []);
+        } catch (err) {
+            console.error("Error al cargar el equipo:", err);
+            setTeamMembers([]);
+        }
+    }, [teamMembers]);
+
+    useEffect(() => {
+        if (modalStep === 'seg' || modalStep === 'segventa') {
+            fetchTeamMembers();
+        }
+    }, [modalStep, fetchTeamMembers]);
+
     // Flujo de registro de venta directo post-Show Up
     const [salePrompt, setSalePrompt] = useState({ apptId: null });
     const [saleModalOpen, setSaleModalOpen] = useState(false);
@@ -607,13 +626,24 @@ const CloserWorkflowPage = () => {
             }
         }
 
+        const isSeguimientoLead = activeStep === 'seguimientos' || lead.fase === 'seg';
+
         setSessionForm({
             confirm_status: null,
             notes: lead.closer_notes || lead.notes || '',
-            result: lead.closer_result || lead.result || 'Pendiente',
+            // Para seguimientos, "result" trackea el resultado de ESTE intento (no_resp/contesto/...) y
+            // debe arrancar vacío; para el resto de flujos sigue reflejando el estado actual del lead.
+            result: isSeguimientoLead ? null : (lead.closer_result || lead.result || 'Pendiente'),
             fecha_seguimiento: tomorrowStr,
             pre_call_reminder_at: defaultReminder,
-            pre_call_reminder_enabled: !!lead.pre_call_reminder_at
+            pre_call_reminder_enabled: !!lead.pre_call_reminder_at,
+            modalidad: [],
+            sig_action: null,
+            cierre_motivo: null,
+            fecha_seguimiento_cobro_next: localDateFromNow(3),
+            refs_ask: undefined,
+            refs_rows: [],
+            showRefsStep: false
         });
 
         // 2. Determinar paso inicial del árbol por contexto
@@ -1229,9 +1259,78 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    // Abre el modal de venta/cobro con los datos del lead precargados. Se llama DESPUÉS de
+    // persistir el cierre del seguimiento (antes se abría de inmediato al hacer clic en la
+    // opción, sin guardar nada de lo que el closer ya había escrito).
+    const openSaleModalForLead = (lead, isCierreVenta) => {
+        setSalePrompt({ apptId: lead.id });
+        setSaleForm({
+            lead_id: lead.id,
+            email_vendedor: user?.email || '',
+            nombre_cliente: lead.lead_name || '',
+            telefono: lead.phone || '',
+            mail_cliente: lead.email || '',
+            programa: isCierreVenta ? 'RR' : (lead.programa_code || 'RR'),
+            tipo_pago_simple: isCierreVenta ? 'completo' : 'parcial',
+            monto: '',
+            segundo_pago: '',
+            fecha_cobro: '',
+            metodo_pago: 'Stripe',
+            examen_lead: lead.examen || '',
+            notes: '',
+            estado: 'Completada',
+            instagram: lead.instagram || '',
+            setter: lead.setter_name || '',
+            documento_identidad: '',
+            enviar_mensaje: true,
+            sold_in_call: isCierreVenta,
+            date: localToday()
+        });
+        setSaleStep(isCierreVenta ? 1 : 2);
+        setSaleModalOpen(true);
+    };
+
     const saveSeguimientoReport = async () => {
         setProcessingId(selectedLead.id);
         try {
+            // 1. Referidos con datos de contacto: cada uno crea su propia agenda nueva
+            // (reusa el mismo endpoint del modal de "Referido manual").
+            if (sessionForm.refs_ask === 'si' && sessionForm.refs_rows?.length) {
+                for (const row of sessionForm.refs_rows) {
+                    if (!row.nombre?.trim() || !row.contacto?.trim()) continue;
+                    try {
+                        await api.post('/closer/deck/referrals/manual', {
+                            from_lead_id: selectedLead.id,
+                            lead_name: row.nombre.trim(),
+                            contact: row.contacto.trim(),
+                            notes: `Referido durante seguimiento de ${selectedLead.lead_name || 'el lead'}.`
+                        });
+                    } catch (e) {
+                        console.error("Error al crear referido:", e);
+                        toast.error(`No se pudo crear el referido ${row.nombre}`);
+                    }
+                }
+            }
+
+            const modalidadPrefix = modalStep === 'seg' && sessionForm.modalidad?.length
+                ? `[Modalidad: ${sessionForm.modalidad.join(', ')}] `
+                : '';
+            let refsNote = '';
+            if (sessionForm.refs_ask === 'si') {
+                const rows = sessionForm.refs_rows || [];
+                const conContacto = rows.filter(r => r.nombre?.trim() && r.contacto?.trim());
+                const sinContacto = rows.filter(r => r.nombre?.trim() && !r.contacto?.trim());
+                const parts = [];
+                if (conContacto.length) parts.push(`${conContacto.length} referido(s) con datos → agenda creada`);
+                if (sinContacto.length) parts.push(`Referido(s) sin datos: ${sinContacto.map(r => r.nombre.trim()).join(', ')}`);
+                if (parts.length) refsNote = ` | Referidos: ${parts.join('; ')}`;
+            } else if (sessionForm.refs_ask === 'no') {
+                refsNote = ' | Se pidieron referidos, no dejó.';
+            } else if (sessionForm.refs_ask === null) {
+                refsNote = ' | No se pidieron referidos.';
+            }
+            const finalNotes = `${modalidadPrefix}${sessionForm.notes}${refsNote}`;
+
             if (sessionForm.result === 'agendo' && sessionForm.nueva_fecha_agenda) {
                 await api.patch(`/closer/appointments/${selectedLead.id}`, {
                     start_time: localInputsToUtcIso(sessionForm.nueva_fecha_agenda, sessionForm.nueva_hora_agenda || '12:00')
@@ -1239,32 +1338,53 @@ const CloserWorkflowPage = () => {
                 await api.post(`/closer/deck/${selectedLead.id}`, {
                     confirm_status: 'por_confirmar',
                     result: 'Pendiente',
-                    closer_notes: sessionForm.notes
+                    closer_notes: finalNotes
                 });
                 toast.success("Lead reagendado y enviado a confirmación");
-            } else if (sessionForm.sig_action === 'next') {
-                // Continúa la cadencia: NO se marca como realizado (sigue vivo en el pool/asignados),
-                // se incrementa el intento y se guarda la nueva fecha ya calculada por la cadencia automática.
-                const nextIntento = Math.min(4, (selectedLead.seguimiento_intento || 1) + 1);
+                setSelectedLead(null);
+                fetchAgendas();
+            } else if (sessionForm.result === 'cerro' || sessionForm.result === 'pago') {
+                // Se persiste el cierre del seguimiento ANTES de abrir venta/cobro.
                 await api.post(`/closer/deck/${selectedLead.id}`, {
-                    closer_notes: sessionForm.notes,
-                    seguimiento_realizado: false,
-                    seguimiento_intento: nextIntento,
-                    seguimiento_tipo: selectedLead.seguimiento_tipo || (sessionForm.result === 'contesto' ? 'tomada' : 'no_tomada'),
-                    fecha_seguimiento: sessionForm.fecha_seguimiento || null
-                });
-                toast.success(`Seguimiento ${nextIntento} de 4 programado`);
-            } else {
-                const payload = {
-                    closer_notes: sessionForm.notes,
+                    closer_notes: finalNotes,
                     seguimiento_realizado: true,
-                    fecha_seguimiento: sessionForm.fecha_seguimiento || null
+                    fecha_seguimiento: null
+                });
+                const leadSnapshot = selectedLead;
+                setSelectedLead(null);
+                fetchAgendas();
+                openSaleModalForLead(leadSnapshot, sessionForm.result === 'cerro');
+            } else if (sessionForm.sig_action === 'close') {
+                await api.post(`/closer/deck/${selectedLead.id}`, {
+                    closer_notes: `${finalNotes} | Motivo de cierre: ${sessionForm.cierre_motivo}`,
+                    seguimiento_realizado: true,
+                    fecha_seguimiento: null
+                });
+                toast.success("Seguimiento cerrado");
+                setSelectedLead(null);
+                fetchAgendas();
+            } else {
+                // Continúa la cadencia: NO se marca como realizado (sigue vivo en el pool/asignados),
+                // se incrementa el intento y se guarda la fecha del próximo contacto.
+                const nextIntento = Math.min(4, (selectedLead.seguimiento_intento || 1) + 1);
+                const payload = {
+                    closer_notes: finalNotes,
+                    seguimiento_realizado: false,
+                    seguimiento_intento: nextIntento
                 };
+                if (modalStep === 'segventa') {
+                    payload.fecha_seguimiento = sessionForm.fecha_seguimiento_cobro_next || null;
+                    payload.fecha_seguimiento_cobro = sessionForm.fecha_seguimiento_cobro_next || null;
+                    payload.seguimiento_tipo = 'cerrada';
+                } else {
+                    payload.fecha_seguimiento = sessionForm.fecha_seguimiento || null;
+                    payload.seguimiento_tipo = selectedLead.seguimiento_tipo || (sessionForm.result === 'contesto' ? 'tomada' : 'no_tomada');
+                }
                 await api.post(`/closer/deck/${selectedLead.id}`, payload);
-                toast.success("Seguimiento guardado correctamente");
+                toast.success(`Seguimiento ${nextIntento} de 4 programado`);
+                setSelectedLead(null);
+                fetchAgendas();
             }
-            setSelectedLead(null);
-            fetchAgendas();
         } catch (err) {
             console.error("Error en saveSeguimientoReport:", err);
             toast.error("Error al guardar el seguimiento");
@@ -1330,6 +1450,103 @@ const CloserWorkflowPage = () => {
                 <span className="text-xs font-black uppercase tracking-wider leading-none">{label}</span>
                 {sub && <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight mt-0.5">{sub}</span>}
             </button>
+        );
+
+        // Chips de menciones (equipo) debajo de las notas del seguimiento — insertan "@usuario " en el texto.
+        const mencionesChips = (teamMembers && teamMembers.length > 0) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Mencionar:</span>
+                {teamMembers.filter(m => m.username !== user?.username).map(m => (
+                    <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSessionForm(prev => ({
+                            ...prev,
+                            notes: `${prev.notes || ''}${prev.notes && !prev.notes.endsWith(' ') ? ' ' : ''}@${m.username} `
+                        }))}
+                        className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:border-violet-500/40 hover:text-violet-400 transition-all cursor-pointer"
+                    >
+                        @{m.username}
+                    </button>
+                ))}
+            </div>
+        );
+
+        // Último paso antes de guardar un seguimiento con contacto humano real: preguntar por
+        // referidos. Reemplaza el contenido normal de 'seg'/'segventa' mientras está activo.
+        const renderRefsStep = () => (
+            <div className="space-y-4">
+                <div className="p-3 bg-pink-500/5 border border-pink-500/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-pink-400 text-center">
+                    ▸ Último paso antes de guardar. Se pregunta en todo contacto real.
+                </div>
+                <div className="q req space-y-2">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400">
+                        ¿Le pediste referidos a {(selectedLead.lead_name || 'el lead').split(' ')[0]}?
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {option(() => setSessionForm(prev => ({
+                            ...prev, refs_ask: 'si', refs_rows: prev.refs_rows?.length ? prev.refs_rows : [{ nombre: '', contacto: '' }]
+                        })), 'ok', 'Sí, dejó referidos', 'Cargá los datos abajo', sessionForm.refs_ask === 'si')}
+                        {option(() => setSessionForm(prev => ({ ...prev, refs_ask: 'no', refs_rows: [] })), 'no', 'Se lo pedí, no dejó', 'Cuenta como solicitado', sessionForm.refs_ask === 'no')}
+                        {option(() => setSessionForm(prev => ({ ...prev, refs_ask: null, refs_rows: [] })), 'bad', 'No se lo pedí', 'No cuenta como solicitado', sessionForm.refs_ask === null)}
+                    </div>
+                </div>
+
+                {sessionForm.refs_ask === 'si' && (
+                    <div className="space-y-2">
+                        <p className="text-[10px] text-slate-500 font-medium">Con nombre y contacto entran directo a Confirmaciones. Sin contacto, se anota para pedirle los datos después.</p>
+                        {(sessionForm.refs_rows || []).map((row, i) => (
+                            <div key={i} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center">
+                                <span className="text-[10px] font-black text-slate-500">{i + 1}</span>
+                                <input
+                                    placeholder="Nombre del referido"
+                                    value={row.nombre}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, refs_rows: prev.refs_rows.map((r, ri) => ri === i ? { ...r, nombre: e.target.value } : r) }))}
+                                    className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                                />
+                                <input
+                                    placeholder="@instagram o teléfono"
+                                    value={row.contacto}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, refs_rows: prev.refs_rows.map((r, ri) => ri === i ? { ...r, contacto: e.target.value } : r) }))}
+                                    className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                                />
+                                <button
+                                    onClick={() => setSessionForm(prev => ({ ...prev, refs_rows: prev.refs_rows.filter((_, ri) => ri !== i) }))}
+                                    className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            onClick={() => setSessionForm(prev => ({ ...prev, refs_rows: [...(prev.refs_rows || []), { nombre: '', contacto: '' }] }))}
+                            className="text-[10px] font-black uppercase text-violet-400 hover:text-violet-300 cursor-pointer"
+                        >
+                            + Agregar otro referido
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                    <button
+                        onClick={() => setSessionForm(prev => ({ ...prev, showRefsStep: false }))}
+                        className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    >
+                        Volver
+                    </button>
+                    <button
+                        onClick={saveSeguimientoReport}
+                        disabled={
+                            sessionForm.refs_ask === undefined ||
+                            (sessionForm.refs_ask === 'si' && !(sessionForm.refs_rows || []).some(r => r.nombre?.trim())) ||
+                            processingId === selectedLead.id
+                        }
+                        className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                    >
+                        {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar y cerrar'}
+                    </button>
+                </div>
+            </div>
         );
 
         if (modalStep === 'confirm') {
@@ -2022,7 +2239,25 @@ const CloserWorkflowPage = () => {
         }
 
         if (modalStep === 'seg') {
+            if (sessionForm.showRefsStep) return renderRefsStep();
+
             const seq = selectedLead.seguimiento_intento || 1;
+            const isCierra = sessionForm.result === 'cerro';
+            const isAgendo = sessionForm.result === 'agendo';
+            const needsSig = sessionForm.result && !isAgendo && !isCierra;
+            const canComplete = !!sessionForm.result
+                && sessionForm.notes.trim().length >= 10
+                && (sessionForm.modalidad || []).length > 0
+                && (!isAgendo || (sessionForm.nueva_fecha_agenda && sessionForm.nueva_hora_agenda))
+                && (!needsSig || (sessionForm.sig_action === 'next' ? !!sessionForm.fecha_seguimiento : (sessionForm.sig_action === 'close' && !!sessionForm.cierre_motivo)));
+            const btnLabel = isCierra ? 'Continuar al reporte de venta →' : 'Completar Seguimiento';
+            const needsRefs = ['contesto', 'agendo', 'cerro'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
+
+            const toggleModalidad = (m) => setSessionForm(prev => ({
+                ...prev,
+                modalidad: prev.modalidad.includes(m) ? prev.modalidad.filter(x => x !== m) : [...prev.modalidad, m]
+            }));
+
             return (
                 <div className="space-y-4">
                     <div className="p-3 bg-[#111219]/90 border border-slate-900 rounded-2xl text-xs font-bold text-slate-350 flex justify-between">
@@ -2033,44 +2268,30 @@ const CloserWorkflowPage = () => {
                     <div className="q req space-y-2">
                         <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con este contacto?</h4>
                         <div className="grid grid-cols-2 gap-2">
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', 'Lo hice, no contestó')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Contestó', 'Estamos conversando')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'agendo' })), 'ok', 'Contestó y agendó', 'Vuelve al meet')}
-                            {option(() => {
-                                setSalePrompt({ apptId: selectedLead.id });
-                                setSaleForm({
-                                    lead_id: selectedLead.id,
-                                    email_vendedor: user?.email || '',
-                                    nombre_cliente: selectedLead.lead_name || '',
-                                    telefono: selectedLead.phone || '',
-                                    mail_cliente: selectedLead.email || '',
-                                    programa: 'RR',
-                                    tipo_pago_simple: 'completo',
-                                    monto: '',
-                                    segundo_pago: '',
-                                    fecha_cobro: '',
-                                    metodo_pago: 'Stripe',
-                                    examen_lead: selectedLead.examen || '',
-                                    notes: '',
-                                    estado: 'Completada',
-                                    instagram: selectedLead.instagram || '',
-                                    setter: selectedLead.setter_name || '',
-                                    documento_identidad: '',
-                                    enviar_mensaje: true,
-                                    sold_in_call: true,
-                                    date: localToday()
-                                });
-                                setSaleStep(1);
-                                setSaleModalOpen(true);
-                            }, 'ok', 'Cerró la venta', 'Registrar pago')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', 'Lo hice, no contestó', sessionForm.result === 'no_resp')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Contestó', 'Estamos conversando', sessionForm.result === 'contesto')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'agendo' })), 'ok', 'Contestó y agendó', 'Vuelve al meet', sessionForm.result === 'agendo')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'cerro' })), 'ok', 'Cerró la venta', 'Registrar pago', sessionForm.result === 'cerro')}
+                        </div>
+                        {isCierra && (
+                            <p className="text-[10px] text-slate-500 font-medium">Al continuar se abre el reporte de venta con los datos del lead ya cargados.</p>
+                        )}
+                    </div>
+
+                    <div className="q req space-y-2">
+                        <h4 className="text-[10px] font-black uppercase text-slate-400">Modalidad</h4>
+                        <p className="text-[10px] text-slate-500 font-medium">Podés marcar las dos si hiciste ambas.</p>
+                        <div className="flex gap-2">
+                            {option(() => toggleModalidad('Mensaje'), 'info', 'Mensaje', null, (sessionForm.modalidad || []).includes('Mensaje'))}
+                            {option(() => toggleModalidad('Llamada'), 'info', 'Llamada', null, (sessionForm.modalidad || []).includes('Llamada'))}
                         </div>
                     </div>
 
-                    {sessionForm.result === 'agendo' && (
+                    {isAgendo && (
                         <div className="grid grid-cols-2 gap-3 p-4 bg-slate-950/20 border border-slate-850 rounded-2xl">
                             <div className="space-y-1.5 text-left">
                                 <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Fecha <span className="rq text-pink-500">*</span></label>
-                                <input 
+                                <input
                                     type="date"
                                     value={sessionForm.nueva_fecha_agenda}
                                     onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_fecha_agenda: e.target.value }))}
@@ -2079,7 +2300,7 @@ const CloserWorkflowPage = () => {
                             </div>
                             <div className="space-y-1.5 text-left">
                                 <label className="text-[10px] text-slate-500 font-bold uppercase block">Nueva Hora <span className="rq text-pink-500">*</span></label>
-                                <input 
+                                <input
                                     type="time"
                                     value={sessionForm.nueva_hora_agenda}
                                     onChange={(e) => setSessionForm(prev => ({ ...prev, nueva_hora_agenda: e.target.value }))}
@@ -2098,9 +2319,10 @@ const CloserWorkflowPage = () => {
                             placeholder="Le mandé el caso de Ana, mismo examen y mismo miedo de no pasar. Vio el mensaje pero no contestó..."
                             className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
                         />
+                        {mencionesChips}
                     </div>
 
-                    {sessionForm.result && sessionForm.result !== 'agendo' && (
+                    {needsSig && (
                         <div className="q space-y-2">
                             <h4 className="text-[10px] font-black uppercase text-slate-400">¿Y ahora qué hacemos?</h4>
                             <div className="grid grid-cols-2 gap-3">
@@ -2108,32 +2330,36 @@ const CloserWorkflowPage = () => {
                                     const delayDays = [0, 3, 7, 14][Math.min(3, seq)];
                                     const nextDate = localDateFromNow(delayDays);
                                     setSessionForm(prev => ({ ...prev, fecha_seguimiento: nextDate, sig_action: 'next' }));
-                                }, 'ok', `Programar Seguimiento ${Math.min(4, seq + 1)}`, `Sugerido para +${[0, 3, 7, 14][Math.min(3, seq)]} días`)}
-                                {option(() => {
-                                    setReasonInput('');
-                                    setReasonModal({
-                                        show: true,
-                                        title: "Cerrar Seguimiento",
-                                        description: `¿Seguro que deseas dar por cerrado el seguimiento de ${selectedLead.lead_name}? Ingresa motivo:`,
-                                        placeholder: "No califica, compró en otro lado, pidió no ser contactado...",
-                                        confirmText: "Cerrar Seguimiento",
-                                        requireText: true,
-                                        actionType: 'close_follow_up',
-                                        apptId: selectedLead.id
-                                    });
-                                }, 'bad', 'Cerrar Seguimiento', 'Lead frío o agotado')}
+                                }, 'ok', `Programar Seguimiento ${Math.min(4, seq + 1)}`, `Sugerido para +${[0, 3, 7, 14][Math.min(3, seq)]} días`, sessionForm.sig_action === 'next')}
+                                {option(() => setSessionForm(prev => ({ ...prev, sig_action: 'close' })), 'bad', 'Cerrar Seguimiento', 'Lead frío o agotado', sessionForm.sig_action === 'close')}
                             </div>
+                            {sessionForm.sig_action === 'close' && (
+                                <div className="q req space-y-2 pt-2">
+                                    <h4 className="text-[10px] font-black uppercase text-slate-400">¿Por qué se cierra?</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['Pidió que no lo contacten', 'Se agotaron los 4 intentos', 'Compró en otro lado', 'Ya no califica'].map(motivo => (
+                                            option(() => setSessionForm(prev => ({ ...prev, cierre_motivo: motivo })), 'bad', motivo, null, sessionForm.cierre_motivo === motivo)
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     <div className="flex justify-between items-center pt-2 border-t border-slate-850">
                         <div />
                         <button
-                            onClick={saveSeguimientoReport}
-                            disabled={!sessionForm.notes.trim() || !sessionForm.result || processingId === selectedLead.id}
+                            onClick={() => {
+                                if (needsRefs) {
+                                    setSessionForm(prev => ({ ...prev, showRefsStep: true }));
+                                } else {
+                                    saveSeguimientoReport();
+                                }
+                            }}
+                            disabled={!canComplete || processingId === selectedLead.id}
                             className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
                         >
-                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Completar Seguimiento'}
+                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
                         </button>
                     </div>
                 </div>
@@ -2141,6 +2367,16 @@ const CloserWorkflowPage = () => {
         }
 
         if (modalStep === 'segventa') {
+            if (sessionForm.showRefsStep) return renderRefsStep();
+
+            const isPago = sessionForm.result === 'pago';
+            const needsCobroDate = sessionForm.result === 'no_resp' || sessionForm.result === 'contesto';
+            const canComplete = !!sessionForm.result
+                && sessionForm.notes.trim().length >= 10
+                && (!needsCobroDate || !!sessionForm.fecha_seguimiento_cobro_next);
+            const btnLabel = isPago ? 'Continuar al registro de cobro →' : 'Completar Cobro';
+            const needsRefs = ['contesto', 'pago'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
+
             return (
                 <div className="space-y-4">
                     <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-emerald-450 text-center">
@@ -2199,37 +2435,27 @@ const CloserWorkflowPage = () => {
                     <div className="q req space-y-2">
                         <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con el cobro?</h4>
                         <div className="grid grid-cols-3 gap-2">
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando')}
-                            {option(() => {
-                                setSalePrompt({ apptId: selectedLead.id });
-                                setSaleForm({
-                                    lead_id: selectedLead.id,
-                                    email_vendedor: user?.email || '',
-                                    nombre_cliente: selectedLead.lead_name || '',
-                                    telefono: selectedLead.phone || '',
-                                    mail_cliente: selectedLead.email || '',
-                                    programa: selectedLead.programa_code || 'RR',
-                                    tipo_pago_simple: 'parcial',
-                                    monto: '',
-                                    segundo_pago: '',
-                                    fecha_cobro: '',
-                                    metodo_pago: 'Stripe',
-                                    examen_lead: selectedLead.examen || '',
-                                    notes: '',
-                                    estado: 'Completada',
-                                    instagram: selectedLead.instagram || '',
-                                    setter: selectedLead.setter_name || '',
-                                    documento_identidad: '',
-                                    enviar_mensaje: true,
-                                    sold_in_call: false,
-                                    date: localToday()
-                                });
-                                setSaleStep(2);
-                                setSaleModalOpen(true);
-                            }, 'ok', 'Registrar Cobro')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago' })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
                         </div>
+                        {isPago && (
+                            <p className="text-[10px] text-slate-500 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
+                        )}
                     </div>
+
+                    {needsCobroDate && (
+                        <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase block">¿Cuándo es el siguiente seguimiento de cobro? <span className="rq text-pink-500">*</span></label>
+                            <input
+                                type="date"
+                                value={sessionForm.fecha_seguimiento_cobro_next}
+                                onChange={(e) => setSessionForm(prev => ({ ...prev, fecha_seguimiento_cobro_next: e.target.value }))}
+                                className="w-full max-w-[220px] bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                            />
+                            <p className="text-[10px] text-slate-500 font-medium">Puede ser hoy mismo si quedaste en volver a escribirle más tarde.</p>
+                        </div>
+                    )}
 
                     <div className="space-y-1.5 text-left">
                         <label className="text-[10px] text-slate-500 font-bold uppercase block">Qué sucedió exactamente (Requerido)</label>
@@ -2240,16 +2466,23 @@ const CloserWorkflowPage = () => {
                             placeholder="Le recordé la cuota de este mes. Dijo que cobra el viernes y transfiere a primera hora del lunes..."
                             className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
                         />
+                        {mencionesChips}
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t border-slate-850">
                         <div />
                         <button
-                            onClick={saveSeguimientoReport}
-                            disabled={!sessionForm.notes.trim() || !sessionForm.result || processingId === selectedLead.id}
+                            onClick={() => {
+                                if (needsRefs) {
+                                    setSessionForm(prev => ({ ...prev, showRefsStep: true }));
+                                } else {
+                                    saveSeguimientoReport();
+                                }
+                            }}
+                            disabled={!canComplete || processingId === selectedLead.id}
                             className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
                         >
-                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Completar Cobro'}
+                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
                         </button>
                     </div>
                 </div>
