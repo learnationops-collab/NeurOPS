@@ -139,8 +139,6 @@ strong {
     /* Classic Blue */
     --brand-secondary: #6366f1;
     /* Indigo */
-    --brand-navy: #f8fafc;
-    /* Light BG Base */
     --bg-app: fixed linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
     /* Soft Blue Gradient */
 
@@ -164,7 +162,6 @@ strong {
     --brand-primary: #2563eb;
     /* Royal Blue */
     --brand-secondary: #4f46e5;
-    --brand-navy: #ffffff;
     --bg-app: #f5f5f7;
     /* Mac-like Light Gray */
 
