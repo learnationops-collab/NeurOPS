@@ -439,17 +439,16 @@ def get_all_agendas():
 @bp.route('/reset-appointments', methods=['POST'])
 @login_required
 def reset_appointments():
-    if current_user.role not in ['closer', 'admin']:
+    # Endpoint destructivo global (resetea TODAS las citas de TODOS los closers a
+    # Nueva/Terminada, sin excepción). Restringido a admin: estaba accesible para
+    # el rol 'closer' pese a no tener ningún filtro por closer_id pese a lo que
+    # decía el comentario original, permitiendo que cualquier closer borrara el
+    # estado del pipeline completo del sistema con una sola petición.
+    if current_user.role != 'admin':
         return jsonify({"message": "Forbidden"}), 403
-        
+
     from app.models import Appointment
     try:
-        # Actualizar todas las citas del closer actual (o todas si es admin?)
-        # Siguiendo el requerimiento: "establecer todas las agendas de la base de datos"
-        # Pero por seguridad solemos filtrar. Si el usuario pide "todas", lo hacemos global o por usuario.
-        # Dado que es para testing, lo aplicaremos a las del usuario autenticado para evitar desastres globales
-        # si no se especifica. Pero el usuario dice "todas las agendas de la base de datos".
-        
         appointments = Appointment.query.all()
         for appt in appointments:
             appt.last_stage = 'Nueva'
@@ -805,7 +804,12 @@ def get_events():
 @bp.route('/events/<int:id>', methods=['PATCH'])
 @login_required
 def update_event(id):
-    # Allows updating event settings
+    # Configura duración/buffer de un evento de agendamiento compartido por todo el
+    # equipo. No tenía ningún chequeo de rol (solo login), así que cualquier usuario
+    # autenticado (setter, triage, call_confirmer, etc.) podía modificarlo.
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
     event = Event.query.get_or_404(id)
     data = request.get_json() or {}
     
