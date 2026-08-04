@@ -60,9 +60,9 @@ const LoginPage = () => {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">Usuario</label>
+              <label className="text-xs font-bold uppercase tracking-widest ml-1 opacity-60" style={{ color: 'var(--text-on-card)' }}>Usuario</label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted group-focus-within:text-primary transition-colors">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-colors" style={{ color: 'var(--text-on-card)' }}>
                   <User size={18} />
                 </div>
                 <input
@@ -70,16 +70,16 @@ const LoginPage = () => {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                  className="input-theme block w-full pl-11 pr-4 py-4 placeholder:opacity-40 focus:ring-2 focus:ring-primary/50 transition-all font-bold"
                   placeholder="Nombre de usuario"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">Contraseña</label>
+              <label className="text-xs font-bold uppercase tracking-widest ml-1 opacity-60" style={{ color: 'var(--text-on-card)' }}>Contraseña</label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted group-focus-within:text-primary transition-colors">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-colors" style={{ color: 'var(--text-on-card)' }}>
                   <Lock size={18} />
                 </div>
                 <input
@@ -87,13 +87,14 @@ const LoginPage = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-12 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                  className="input-theme block w-full pl-11 pr-12 py-4 placeholder:opacity-40 focus:ring-2 focus:ring-primary/50 transition-all font-bold"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted hover:text-base transition-all"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center opacity-60 hover:opacity-100 transition-all"
+                  style={{ color: 'var(--text-on-card)' }}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
