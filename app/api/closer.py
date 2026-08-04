@@ -10,6 +10,29 @@ from sqlalchemy import or_
 
 bp = Blueprint('closer_api', __name__)
 
+# Barrido automático del backlog de confirmaciones nunca atendidas (ver
+# CloserService.archive_stale_backlog y bitácora del 4 de agosto de 2026).
+# No hay scheduler/cron en este proyecto, así que se dispara oportunistamente
+# desde el endpoint más frecuentado del mazo del closer (/deck/counts), con un
+# límite de una vez cada 6h por proceso para no ejecutar el barrido en cada
+# petición (en el caso normal, sin nada que archivar, es una consulta barata).
+_LAST_BACKLOG_SWEEP_TS = [0.0]
+_BACKLOG_SWEEP_INTERVAL_SECONDS = 6 * 3600
+_BACKLOG_SWEEP_DAYS = 30
+
+def _maybe_auto_archive_backlog():
+    import time
+    now = time.time()
+    if now - _LAST_BACKLOG_SWEEP_TS[0] < _BACKLOG_SWEEP_INTERVAL_SECONDS:
+        return
+    _LAST_BACKLOG_SWEEP_TS[0] = now
+    try:
+        result = CloserService.archive_stale_backlog(days=_BACKLOG_SWEEP_DAYS)
+        if result['count']:
+            print(f"[Auto Backlog Cleanup] {result['count']} citas archivadas como Lead Perdido (>{_BACKLOG_SWEEP_DAYS} días sin confirmar)")
+    except Exception as e:
+        print(f"[Auto Backlog Cleanup Error] {e}")
+
 
 def _user_day_bounds_utc(user, day):
     """Convierte el rango [00:00, 23:59:59.999999] del día calendario `day` en la
@@ -1482,7 +1505,9 @@ def get_closer_deck():
 def get_closer_deck_counts():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
-        
+
+    _maybe_auto_archive_backlog()
+
     selected_date_str = request.args.get('selected_date')
     today = date.today()
     if not selected_date_str:

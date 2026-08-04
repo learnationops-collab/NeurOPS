@@ -1896,3 +1896,43 @@ class CloserService:
                 "deposit_conversion_rate": conversion_señas_rate
             }
         }
+
+    @staticmethod
+    def archive_stale_backlog(days=30, dry_run=False, limit=None):
+        """Archiva citas que nunca fueron confirmadas (result/closer_result siguen en
+        'Pendiente'/vacío, closer_processed=False) y cuya fecha ya pasó hace más de
+        `days` días. Las marca como 'Lead Perdido' (mismo estado terminal que usa un
+        closer al descartar manualmente un lead, vía CloserService.process_agenda),
+        para que dejen de acumularse invisibles fuera de la ventana de "Confirmaciones"
+        del mazo del closer sin perder el registro histórico de la cita.
+
+        Corte por fecha en UTC absoluto (no por zona horaria de cada closer): es un
+        barrido de mantenimiento en segundo plano, no una vista para el usuario, así
+        que una imprecisión de pocas horas contra el corte real de cada closer es
+        aceptable y evita tener que iterar closer por closer.
+        """
+        cutoff_utc = datetime.utcnow() - timedelta(days=days)
+
+        query = Appointment.query.filter(
+            Appointment.start_time < cutoff_utc,
+            Appointment.closer_processed == False,
+            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        )
+        if limit:
+            query = query.limit(limit)
+
+        appointments = query.all()
+        archived_ids = [a.id for a in appointments]
+
+        if dry_run:
+            return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": True}
+
+        note = f"[Sistema] Archivado automáticamente: sin confirmar ni procesar tras {days}+ días desde su fecha."
+        for appt in appointments:
+            appt.closer_result = 'Lead Perdido'
+            appt.closer_processed = True
+            appt.seguimiento_realizado = True
+            appt.closer_notes = f"{appt.closer_notes}\n{note}".strip() if appt.closer_notes else note
+
+        db.session.commit()
+        return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": False}

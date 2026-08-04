@@ -771,6 +771,34 @@ def import_database():
     except Exception as e:
         return jsonify({"message": f"Error al procesar el archivo: {str(e)}"}), 500
 
+@bp.route('/admin/tools/backlog-cleanup', methods=['GET', 'POST'])
+@login_required
+@operator_required
+def backlog_cleanup():
+    """Herramienta de limpieza del backlog de citas nunca confirmadas (ver bitácora
+    del 4 de agosto de 2026). GET = previsualización (dry run, no modifica nada).
+    POST = ejecución real, archiva como 'Lead Perdido'."""
+    from app.services.closer_service import CloserService
+
+    days = request.args.get('days', 30, type=int) if request.method == 'GET' else (request.get_json() or {}).get('days', 30)
+    try:
+        days = max(1, int(days))
+    except (TypeError, ValueError):
+        days = 30
+
+    dry_run = request.method == 'GET'
+    result = CloserService.archive_stale_backlog(days=days, dry_run=dry_run)
+
+    if dry_run:
+        return jsonify({
+            "message": f"{result['count']} citas nunca confirmadas quedarían archivadas (más de {days} días de antigüedad).",
+            **result
+        }), 200
+    return jsonify({
+        "message": f"{result['count']} citas archivadas como 'Lead Perdido' por antigüedad (más de {days} días sin confirmar).",
+        **result
+    }), 200
+
 @bp.route('/admin/tools/migrate-leads', methods=['POST'])
 @login_required
 @admin_required
