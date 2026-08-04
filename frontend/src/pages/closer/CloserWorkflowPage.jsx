@@ -49,6 +49,7 @@ const CloserWorkflowPage = () => {
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
     const [activeView, setActiveView] = useState('inbox');
     const [reportSent, setReportSent] = useState(false);
+    const [sendingReport, setSendingReport] = useState(false);
     
     // Estado del reporte v6
     const [referrals, setReferrals] = useState({ rf1: 0, rf2: 0, rf3: 0, rf4: 0, rf5: 0 });
@@ -3136,13 +3137,27 @@ const CloserWorkflowPage = () => {
                     {!reportSent && (
                         <div className="flex items-center gap-4 pt-2">
                             <button
-                                onClick={() => {
-                                    setReportSent(true);
-                                    toast.success("Reporte del día enviado con éxito");
+                                disabled={sendingReport}
+                                onClick={async () => {
+                                    setSendingReport(true);
+                                    try {
+                                        await api.post('/closer/deck/daily-report', {
+                                            referrals_sourced: referrals.rf1,
+                                            referrals_scheduled: referrals.rf2,
+                                            reflections: { victory: reflection.win, opportunity: reflection.fix }
+                                        });
+                                        setReportSent(true);
+                                        toast.success("Reporte del día enviado con éxito");
+                                    } catch (err) {
+                                        toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
+                                    } finally {
+                                        setSendingReport(false);
+                                    }
                                 }}
-                                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer"
+                                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
                             >
-                                Enviar reporte al sistema
+                                {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
+                                {sendingReport ? 'Enviando...' : 'Enviar reporte al sistema'}
                             </button>
                         </div>
                     )}

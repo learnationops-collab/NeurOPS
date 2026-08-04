@@ -1562,6 +1562,56 @@ def get_closer_deck_counts():
     }), 200
 
 
+@bp.route('/deck/daily-report', methods=['POST'])
+@login_required
+def send_daily_report():
+    """Arma, guarda y envía a Discord el reporte diario del closer autenticado, calculado a
+    partir de sus agendas/ventas reales del día (ver CloserService.compute_daily_report_fields).
+    Reemplaza al botón "Enviar reporte al sistema" del mazo, que hasta ahora no llamaba a ningún
+    endpoint (ver bitácora). Solo recibe del cliente lo que el sistema no puede saber por sí
+    solo: referidos pedidos/dados y la reflexión diaria."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json() or {}
+    today_local = datetime.now(pytz.timezone(current_user.timezone or 'America/La_Paz')).date()
+
+    try:
+        computed = CloserService.compute_daily_report_fields(current_user.id, today_local)
+    except Exception as e:
+        return jsonify({"error": f"Error al calcular el reporte: {str(e)}"}), 500
+
+    computed['referrals_sourced'] = int(data.get('referrals_sourced') or 0)
+    computed['referrals_scheduled'] = int(data.get('referrals_scheduled') or 0)
+    computed['reflections'] = data.get('reflections') or None
+    computed['reflection_victory'] = (data.get('reflections') or {}).get('victory') if isinstance(data.get('reflections'), dict) else None
+    computed['reflection_opportunity'] = (data.get('reflections') or {}).get('opportunity') if isinstance(data.get('reflections'), dict) else None
+    computed['is_non_working_day'] = bool(data.get('is_non_working_day', False))
+
+    from app.models import CloserDailyReport
+    report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=today_local).first()
+    if report:
+        for key, val in computed.items():
+            setattr(report, key, val)
+    else:
+        report = CloserDailyReport(closer_id=current_user.id, date=today_local, **computed)
+        db.session.add(report)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar el reporte: {str(e)}"}), 500
+
+    try:
+        from app.api.public.closer import _trigger_closer_report_discord
+        _trigger_closer_report_discord(report)
+    except Exception as e:
+        print(f"[Daily Report Discord Error] {e}")
+
+    return jsonify({"message": "Reporte del día enviado con éxito", "report_id": report.id}), 200
+
+
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
 @login_required
 def process_closer_card(appt_id):

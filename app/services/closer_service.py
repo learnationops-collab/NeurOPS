@@ -1629,8 +1629,13 @@ class CloserService:
         total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
         total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
 
-        # Cierres reales excluyen las cuotas
-        total_sales = final_pif_count + final_split_count + final_deposit_count + final_upsell_count + final_renovacion_count
+        # Cierres reales: una venta empieza en primer pago (split) o pago completo (PIF), mas
+        # upsells/renovaciones. La seña es una promesa de compra, no una venta — se excluye de
+        # total_sales y se reporta aparte (sales.deposit / deposit_conversions), igual que ya
+        # distinguia _prepare_report_data (close_rate_operativo vs close_rate_promesa).
+        total_sales = final_pif_count + final_split_count + final_upsell_count + final_renovacion_count
+        # Ventas + señas: usado solo para el "close rate promesa" (compromiso de compra total)
+        total_sales_with_deposits = total_sales + final_deposit_count
         # Efectivo total recaudado incluye las cuotas, upsells y renovaciones
         total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash + final_upsell_cash + final_renovacion_cash
         total_cash_neto = final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto + final_installment_cash_neto + final_upsell_cash_neto + final_renovacion_cash_neto
@@ -1887,8 +1892,14 @@ class CloserService:
                 "show_rate": div(total_attended, total_scheduled),
                 "no_show_rate": div(total_no_show, total_scheduled),
                 "cancel_rate": div(total_canceled, total_scheduled),
+                # close_rate / offer_to_sale: solo ventas reales (PIF/Split/Upsell/Renovacion), la
+                # seña NO cuenta como venta (es una promesa de compra, no un cierre).
                 "close_rate": div(total_sales, total_attended),
                 "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
+                # close_rate_promesa / offer_to_deposit: ventas + señas, para medir "compromiso de
+                # compra" total (cuantas ofertas terminan en algun tipo de compromiso, cerrado o no).
+                "close_rate_promesa": div(total_sales_with_deposits, total_attended),
+                "offer_to_deposit": div(final_deposit_count, float(stats.offers_made or 0)),
                 "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent)),
                 "pitch_rate": div(val(stats.offers_made), total_attended),
                 "decision_maker_rate": div(val(stats.decision_makers), total_attended),
@@ -1936,3 +1947,173 @@ class CloserService:
 
         db.session.commit()
         return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": False}
+
+    @staticmethod
+    def _resolve_sale_identifiers(user):
+        """Mismo mapeo username->emails usado en get_comprehensive_stats, para cruzar
+        FinancialSale.email_vendedor con el closer autenticado (username o email de fallback)."""
+        if not user:
+            return []
+        username_lower = (user.username or '').lower()
+        mapping = {
+            'jean carlo': ['jeancarlo@thelearnation.com'],
+            'marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
+            'guillermo': ['guillermo@thelearnation.com'],
+            'tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
+            'mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
+            'mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
+            'iñaki': ['iñaki', 'inaki'],
+            'rafael': ['rafael'],
+            'mateo': ['mateo'],
+            'belén': ['mbelenamerise@gmail.com', 'belen'],
+            'valery': ['valeryjohana.cabrera@gmail.com', 'valery']
+        }
+        for key, val_list in mapping.items():
+            if key in username_lower:
+                return val_list
+        return [user.email] if user.email else []
+
+    @staticmethod
+    def compute_daily_report_fields(closer_id, day_local):
+        """Calcula los campos de CloserDailyReport para `closer_id` en el día calendario
+        `day_local` (fecha en la zona horaria del propio closer), a partir de datos reales:
+        Appointment (llamadas, decision makers, seguimientos cerrados) y FinancialSale (ventas,
+        ya con la misma clasificación de tipo_pago usada en el dashboard de admin — la seña se
+        reporta aparte, no como venta).
+
+        No fabrica valores para 'slots' ni 'offers_made': hoy no existe ninguna señal persistida
+        de "oferta presentada" (se pregunta en el árbol de decisión del mazo, pero la respuesta
+        nunca se guarda en la base de datos) ni de "slots disponibles configurados". Quedan en 0
+        hasta que se agregue esa persistencia — mejor un 0 honesto que un número inventado.
+        """
+        import pytz
+        from datetime import time as time_cls
+        from app.models import User, Appointment, FinancialSale
+
+        user = User.query.get(closer_id)
+        try:
+            tz = pytz.timezone((user.timezone if user else None) or 'America/La_Paz')
+        except Exception:
+            tz = pytz.timezone('America/La_Paz')
+        start_utc = tz.localize(datetime.combine(day_local, time_cls.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = tz.localize(datetime.combine(day_local, time_cls.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        appts = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.start_time >= start_utc,
+            Appointment.start_time <= end_utc
+        ).all()
+
+        SECOND_CALL_RESULTS = {'2th call', '2da call', '2da Call'.lower(), 'segunda llamada', 'segunda agenda'}
+
+        def is_second_call(a):
+            r = (a.result or '').strip().lower()
+            cr = (a.closer_result or '').strip().lower()
+            return r in SECOND_CALL_RESULTS or cr == '2da call'
+
+        buckets = {
+            'fc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
+            'sc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
+        }
+        decision_makers = 0
+        rescheduled_total = 0
+
+        for a in appts:
+            bucket = buckets['sc'] if is_second_call(a) else buckets['fc']
+            bucket['scheduled'] += 1
+            cr = (a.closer_result or '').strip().lower()
+            r = (a.result or '').strip().lower()
+            if cr == 'show up':
+                bucket['attended'] += 1
+                if a.with_decision_maker is True:
+                    decision_makers += 1
+            elif cr == 'no show':
+                bucket['no_show'] += 1
+            elif cr in ('cancelado', 'cancelada') or r in ('cancelado', 'cancelada'):
+                bucket['canceled'] += 1
+            elif cr in ('reagendado', 'reagendada') or r in ('reagendado', 'reagendada') or a.is_rescheduled:
+                bucket['rescheduled'] += 1
+                rescheduled_total += 1
+
+        # Seguimientos resueltos ese día: la fecha en que estaban asignados venció justo hoy y
+        # ya quedaron marcados como realizados (mejor proxy disponible sin un timestamp de
+        # "resuelto el"; fecha_seguimiento es un string 'YYYY-MM-DD' asignado por el closer).
+        day_str = day_local.isoformat()
+        follow_ups_closed = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.seguimiento_realizado == True,
+            Appointment.fecha_seguimiento.like(f"{day_str}%")
+        ).count()
+
+        # Ventas del día: misma clasificación de tipo_pago que CloserService.get_comprehensive_stats,
+        # cruzando por email_vendedor (o los alias de closer conocidos).
+        identifiers = CloserService._resolve_sale_identifiers(user)
+        sales_q = FinancialSale.query.filter(
+            FinancialSale.date >= start_utc, FinancialSale.date <= end_utc,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        )
+        if identifiers:
+            sales_q = sales_q.filter(FinancialSale.email_vendedor.in_(identifiers))
+        sales = sales_q.all()
+
+        sale_buckets = {
+            'pif': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+            'split': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+            'deposit': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+            'installment': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+        }
+        for sale in sales:
+            tipo_lower = (sale.tipo_pago or '').lower()
+            monto_val = float(sale.monto or 0.0)
+            if 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
+                key = 'deposit'
+            elif 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+                key = 'pif'
+            elif 'cuota' in tipo_lower or 'installment' in tipo_lower:
+                key = 'installment'
+            else:
+                key = 'split'
+            sale_buckets[key]['count'] += 1
+            sale_buckets[key]['cash'] += monto_val
+            if sale.sold_in_call:
+                sale_buckets[key]['ic_count'] += 1
+                sale_buckets[key]['ic_cash'] += monto_val
+
+        return {
+            'slots': 0,
+            'offers_made': 0,
+            'decision_makers': decision_makers,
+            'rescheduled_calls': rescheduled_total,
+            'first_call_scheduled': buckets['fc']['scheduled'],
+            'first_call_attended': buckets['fc']['attended'],
+            'first_call_no_show': buckets['fc']['no_show'],
+            'first_call_rescheduled': buckets['fc']['rescheduled'],
+            'first_call_canceled': buckets['fc']['canceled'],
+            'second_call_scheduled': buckets['sc']['scheduled'],
+            'second_call_attended': buckets['sc']['attended'],
+            'second_call_no_show': buckets['sc']['no_show'],
+            'second_call_rescheduled': buckets['sc']['rescheduled'],
+            'second_call_canceled': buckets['sc']['canceled'],
+            'pif_count': sale_buckets['pif']['count'],
+            'pif_cash_collected': sale_buckets['pif']['cash'],
+            'pif_in_call_count': sale_buckets['pif']['ic_count'],
+            'pif_in_call_cash': sale_buckets['pif']['ic_cash'],
+            'split_count': sale_buckets['split']['count'],
+            'split_cash_collected': sale_buckets['split']['cash'],
+            'split_in_call_count': sale_buckets['split']['ic_count'],
+            'split_in_call_cash': sale_buckets['split']['ic_cash'],
+            'deposit_count': sale_buckets['deposit']['count'],
+            'deposit_cash_collected': sale_buckets['deposit']['cash'],
+            'deposit_in_call_count': sale_buckets['deposit']['ic_count'],
+            'deposit_in_call_cash': sale_buckets['deposit']['ic_cash'],
+            'installment_count': sale_buckets['installment']['count'],
+            'installment_cash_collected': sale_buckets['installment']['cash'],
+            'installment_in_call_count': sale_buckets['installment']['ic_count'],
+            'installment_in_call_cash': sale_buckets['installment']['ic_cash'],
+            'follow_ups_sent': 0,
+            'follow_ups_replied': 0,
+            'follow_ups_closed': follow_ups_closed,
+            'recoveries_contacted': 0,
+            'recoveries_replied': 0,
+            'recoveries_scheduled': 0,
+        }
