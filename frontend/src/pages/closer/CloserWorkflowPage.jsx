@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,7 +21,7 @@ import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, l
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
 const CloserWorkflowPage = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showOperatorControls, setShowOperatorControls] = useState(false);
 
@@ -2594,6 +2594,15 @@ const CloserWorkflowPage = () => {
                             {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
                         </div>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => { if (window.confirm('¿Cerrar sesión?')) logout(); }}
+                        title="Cerrar sesión"
+                        className="ml-2 w-9 h-9 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
+                    >
+                        <LogOut size={16} />
+                    </button>
                 </div>
             </header>
 
