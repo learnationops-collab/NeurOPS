@@ -105,6 +105,15 @@ class SheetsService:
                 except Exception as conv_err:
                     logger.error(f"[Down Payment Conversion Sheets Hook Error] {conv_err}")
 
+                # Reflejar la venta también en Enrollment/Payment (sistema de cuotas/inscripciones),
+                # que "Declarar Venta" no tocaba pese a ser lo que alimenta el dashboard personal
+                # del closer dentro de su propio mazo. FinancialSale sigue siendo la fuente de las
+                # métricas de admin (no se toca esa ruta); esto es un espejo, no un reemplazo.
+                try:
+                    SheetsService._sync_enrollment_payment(payload, sale)
+                except Exception as sync_err:
+                    logger.error(f"[Enrollment/Payment Sync Error] {sync_err}")
+
                 # Enviar webhook a n8n en segundo plano si está activo
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
@@ -129,6 +138,85 @@ class SheetsService:
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
             return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible."}
+
+    @staticmethod
+    def _sync_enrollment_payment(payload, sale):
+        """Refleja una venta de 'Ventas_DB' (ya guardada como FinancialSale) también en
+        Enrollment/Payment, para que el dashboard personal del closer (que lee de ahí, no de
+        FinancialSale) y el sistema de cuotas queden consistentes con lo que el closer declaró.
+        No falla la venta si algo acá no encaja (programa/closer no resuelto): FinancialSale ya
+        quedó guardado, que es lo que de verdad importa para las métricas de admin."""
+        from app.services.booking_service import BookingService
+        from app.models import Client, Program, Enrollment, Payment, PaymentMethod, User
+
+        tipo_pago_raw = str(payload.get('tipo_pago') or '')
+        if ' - ' not in tipo_pago_raw:
+            return
+        program_code, tipo_simple = [p.strip() for p in tipo_pago_raw.split(' - ', 1)]
+        tipo_simple_lower = tipo_simple.lower()
+
+        PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
+        keyword = PROGRAM_KEYWORDS.get(program_code.upper())
+        program = None
+        if keyword:
+            program = Program.query.filter(Program.is_active == True, Program.name.ilike(f'%{keyword}%')).first()
+        if not program:
+            logger.warning(f"[Enrollment Sync] No se pudo resolver el programa activo para código '{program_code}', se omite el espejo a Enrollment/Payment.")
+            return
+
+        PAYMENT_TYPE_MAP = {
+            'completo': 'full',
+            'parcial': 'first_payment',
+            'seña': 'down_payment',
+            'cuota': 'installment',
+            'renovacion': 'renewal',
+            'renovación': 'renewal',
+            'upsell': 'upsell',
+        }
+        payment_type = PAYMENT_TYPE_MAP.get(tipo_simple_lower, 'full')
+
+        closer = None
+        email_vendedor = payload.get('email_vendedor')
+        if email_vendedor:
+            closer = User.query.filter(db.func.lower(User.email) == email_vendedor.strip().lower()).first()
+
+        client = BookingService.create_or_update_client({
+            'name': payload.get('nombre_cliente'),
+            'email': payload.get('mail_cliente'),
+            'instagram': payload.get('instagram'),
+            'phone': payload.get('telefono'),
+        })
+        if not client:
+            return
+
+        enrollment = Enrollment.query.filter_by(client_id=client.id, program_id=program.id).first()
+        if not enrollment:
+            enrollment = Enrollment(client_id=client.id, program_id=program.id, closer_id=closer.id if closer else None)
+            db.session.add(enrollment)
+            db.session.flush()
+        elif closer and not enrollment.closer_id:
+            enrollment.closer_id = closer.id
+
+        payment_method = None
+        metodo_pago = payload.get('metodo_pago')
+        if metodo_pago:
+            payment_method = PaymentMethod.query.filter(db.func.lower(PaymentMethod.name) == metodo_pago.strip().lower()).first()
+
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=payment_method.id if payment_method else None,
+            amount=float(payload.get('monto') or 0.0),
+            payment_type=payment_type,
+            status='completed',
+            date=sale.date
+        )
+        db.session.add(payment)
+
+        if payment_type in ('full', 'first_payment') and (not enrollment.enrollment_date or payment.date < enrollment.enrollment_date):
+            enrollment.enrollment_date = payment.date
+
+        db.session.commit()
+        logger.info(f"[Enrollment Sync] Payment creado (enrollment_id={enrollment.id}, tipo={payment_type}, monto={payment.amount}) reflejando FinancialSale id={sale.id}.")
 
     @staticmethod
     def update_in_sheets(tabla, marca_temporal, payload):
