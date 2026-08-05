@@ -1404,22 +1404,22 @@ def get_closer_deck():
     selected_date_str = request.args.get('selected_date') or today.isoformat()
 
     if step == 'confirmations':
-        # Pipeline de confirmación: citas sin procesar por el closer, desde 30 días atrás
-        # (respecto a la fecha seleccionada) en adelante, sin límite superior. Antes filtraba
-        # solo con un límite inferior de "hoy en adelante" (start_time >= start_utc), lo que
-        # hacía que una cita nunca confirmada (result sigue en 'Pendiente'/None) se volviera
-        # invisible para siempre en cuanto pasaba su fecha: no calificaba para "Llamadas" (exige
-        # result ya confirmado) ni seguía apareciendo acá. Mismo patrón de bug ya corregido para
-        # "Llamadas" (ver bitácora), pero acá NO se puede quitar el límite por completo: hay
-        # backlogs históricos de miles de citas nunca confirmadas (algunas de 2024) que, sin
-        # ventana, inundarían la cola en vivo del closer y enterrarían lo realmente urgente.
+        # Pipeline de confirmación: citas sin procesar por el closer, desde hoy en adelante
+        # (sin límite superior) — pre-contacto para llamadas que todavía no ocurrieron. Las
+        # vencidas (de días anteriores) NO deben aparecer acá: eso es intencional, confirmado
+        # por el usuario. Antes (4 de agosto) esta vista también absorbía el backlog de vencidas
+        # con una ventana de 30 días, porque en ese momento "Llamadas" las excluía por completo
+        # y quedaban huérfanas. Ya no es necesario: "Llamadas" ahora incluye todo lo vencido sin
+        # procesar sin importar el estado de confirmación en que haya quedado (ver bitácora), así
+        # que el backlog vive únicamente ahí — evita que la misma cita aparezca duplicada en las
+        # dos pestañas.
         try:
-            anchor_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+            today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
-            anchor_local = date.today()
-        backlog_start_utc, _ = _user_day_bounds_utc(current_user, anchor_local - timedelta(days=30))
+            today_local = date.today()
+        start_utc, _ = _user_day_bounds_utc(current_user, today_local)
         query = Appointment.query.filter(
-            Appointment.start_time >= backlog_start_utc,
+            Appointment.start_time >= start_utc,
             Appointment.closer_processed == False,
             or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
         )
@@ -1528,11 +1528,10 @@ def get_closer_deck_counts():
     except ValueError:
         today_local = date.today()
 
-    backlog_start_utc, _ = _user_day_bounds_utc(current_user, today_local - timedelta(days=30))
-    _, end_utc_calls = _user_day_bounds_utc(current_user, today_local)
+    start_utc, end_utc_calls = _user_day_bounds_utc(current_user, today_local)
 
     query_confirmations = Appointment.query.filter(
-        Appointment.start_time >= backlog_start_utc,
+        Appointment.start_time >= start_utc,
         Appointment.closer_processed == False,
         or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
     )

@@ -1459,18 +1459,14 @@ const CloserWorkflowPage = () => {
     const renderActionStepContent = () => {
         const option = (fn, type, label, sub, selected = false) => (
             <button
+                type="button"
                 onClick={fn}
-                className={`opt h-auto p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1 relative overflow-hidden group ${
-                    type === 'ok' ? 'bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-400' :
-                    type === 'no' ? 'bg-rose-500/5 border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/40 text-rose-450' :
-                    type === 'bad' ? 'bg-rose-600/10 border-rose-600/20 hover:bg-rose-600/15 hover:border-rose-600/45 text-rose-400' :
-                    type === 'pink' ? 'bg-pink-500/5 border-pink-500/20 hover:bg-pink-500/10 hover:border-pink-500/40 text-pink-400' :
-                    'bg-slate-900 border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-slate-350'
-                } ${selected ? 'ring-2 ring-violet-500 border-violet-500/60' : ''}`}
+                data-t={type}
+                className={`opt ${selected ? 'sel' : ''}`}
             >
-                {selected && <Check size={14} className="absolute top-3 right-3 text-violet-400" />}
-                <span className="text-xs font-black uppercase tracking-wider leading-none">{label}</span>
-                {sub && <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight mt-0.5">{sub}</span>}
+                {selected && <Check size={13} className="absolute top-3 right-3 text-white" />}
+                {label}
+                {sub && <small>{sub}</small>}
             </button>
         );
 
@@ -1585,28 +1581,26 @@ const CloserWorkflowPage = () => {
 
             return (
                 <div className="space-y-6">
-                    {/* Pipeline visual */}
-                    <div className="flex items-center gap-3 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl overflow-x-auto justify-center font-bold">
+                    {/* Banda de pipeline (v7) */}
+                    <div className="pipe">
                         {steps.map((st, i) => (
                             <React.Fragment key={st.k}>
-                                <div className={`text-center space-y-0.5 ${i <= currentIdx ? 'text-violet-400' : 'text-slate-500'}`}>
-                                    <div className="text-[10px] font-black uppercase tracking-widest">{st.label}</div>
-                                    <div className="text-[8px] font-bold uppercase tracking-wider text-slate-550">{st.desc}</div>
+                                <div className={`pstep ${i < currentIdx ? 'done' : ''} ${i === currentIdx ? 'cur' : ''}`}>
+                                    <div className="pn">{st.label}</div>
+                                    <div className="pd">{st.desc}</div>
                                 </div>
-                                {i < 2 && <span className="text-slate-700 text-xs">›</span>}
+                                {i < steps.length - 1 && <span className="parrow">›</span>}
                             </React.Fragment>
                         ))}
                     </div>
 
                     {currentKey === 'confirmado' ? (
                         <div className="space-y-4">
-                            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs text-emerald-450 font-bold uppercase tracking-wide text-center">
-                                ✓ Este lead ya asiste seguro a la llamada.
-                            </div>
-                            <div className="q space-y-3">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400">Otras acciones de confirmación</h4>
+                            <div className="note">✓ Este lead ya está confirmado: no bloquea nada.</div>
+                            <div className="q">
+                                <h4>Otras acciones</h4>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Cambiar fecha')}
+                                    {option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Cambia fecha')}
                                     {option(() => {
                                         setReasonInput('');
                                         setReasonModal({
@@ -1625,11 +1619,9 @@ const CloserWorkflowPage = () => {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            <div className="q req space-y-2">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                                    <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">1</span>
-                                    ¿En qué va el proceso? (Requerido)
-                                </h4>
+                            <div className={`q req ${sessionForm.notes.trim().length >= 10 ? 'done' : ''}`}>
+                                <h4><span className="num">1</span>¿En qué va el proceso?</h4>
+                                <p>Sin esto no se puede avanzar. Es lo que ve el resto del equipo.</p>
                                 <textarea
                                     rows={3}
                                     value={sessionForm.notes}
@@ -1639,11 +1631,8 @@ const CloserWorkflowPage = () => {
                                 />
                             </div>
 
-                            <div className="q req space-y-2">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                                    <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">2</span>
-                                    ¿Ya hubo contacto con el prospecto?
-                                </h4>
+                            <div className={`q req ${sessionForm.confirm_status ? 'done' : ''}`}>
+                                <h4><span className="num">2</span>{currentKey === 'por_confirmar' ? '¿Ya hubo contacto?' : '¿Confirmó que asiste?'}</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     {currentKey === 'por_confirmar' ? (
                                         <>
@@ -1683,8 +1672,8 @@ const CloserWorkflowPage = () => {
                                 </div>
                             )}
 
-                            <div className="q space-y-3">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400">Otras acciones</h4>
+                            <div className="q">
+                                <h4>Otras acciones</h4>
                                 <div className={`grid ${currentKey === 'conversando' ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
                                     {currentKey === 'conversando' && option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Pidió otra fecha')}
                                     {option(() => {
@@ -1727,7 +1716,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">1</span>
+                        <span className="num">1</span>
                         ¿Qué pasó con esta llamada de hoy?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -1744,7 +1733,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">2</span>
+                        <span className="num">2</span>
                         ¿Estuvo presente el tomador de decisiones?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -1765,7 +1754,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">3</span>
+                        <span className="num">3</span>
                         ¿Se hizo la presentación de la oferta?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -1780,7 +1769,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">4</span>
+                        <span className="num">4</span>
                         ¿Se cerró la venta?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -1822,7 +1811,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">5</span>
+                        <span className="num">5</span>
                         Se presentó la oferta pero no se cerró. ¿Siguiente acción?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -1852,7 +1841,7 @@ const CloserWorkflowPage = () => {
             return (
                 <div className="q space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
-                        <span className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[9px]">4</span>
+                        <span className="num">4</span>
                         No se le presentó la oferta. ¿Siguiente paso?
                     </h4>
                     <div className="grid grid-cols-3 gap-2.5">
