@@ -152,13 +152,25 @@ def search_closer_leads():
     results = []
     seen_emails = set()
     seen_instagrams = set()
-    
+    seen_phones = set()
+
     for l in leads:
-        if l.email:
-            seen_emails.add(l.email.strip().lower())
-        if l.instagram:
-            seen_instagrams.add(l.instagram.strip().replace('@', '').lower())
-            
+        # Deduplicar contra otras filas Client duplicadas para la misma persona real (la
+        # deduplicación automática de clientes no atrapa el 100% de los casos — ver
+        # ClientDedupService) — de lo contrario el mismo cliente aparece varias veces en la
+        # búsqueda, uno por cada fila duplicada.
+        email_norm = l.email.strip().lower() if l.email else None
+        ig_norm = l.instagram.strip().replace('@', '').lower() if l.instagram else None
+        phone_norm = l.phone.strip()[-8:] if l.phone and len(l.phone.strip()) >= 8 else None
+        if (email_norm and email_norm in seen_emails) or (ig_norm and ig_norm in seen_instagrams) or (phone_norm and phone_norm in seen_phones):
+            continue
+        if email_norm:
+            seen_emails.add(email_norm)
+        if ig_norm:
+            seen_instagrams.add(ig_norm)
+        if phone_norm:
+            seen_phones.add(phone_norm)
+
         # Buscar cita más reciente en Appointment local
         appt = Appointment.query.filter_by(client_id=l.id).order_by(Appointment.start_time.desc()).first()
         appt_data = None
