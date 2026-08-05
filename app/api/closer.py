@@ -1908,6 +1908,40 @@ def search_closer_deck_leads():
     } for a in appointments]), 200
 
 
+@bp.route('/sales/client-state', methods=['GET'])
+@login_required
+def get_sales_client_state():
+    """Estado de pago de un cliente para un programa (RR/AL/SI): cuánto pagó, cuánto le
+    falta, y qué tipos de pago corresponden a continuación según la secuencia de negocio
+    (Seña->Parcial/Completo->Cuota->Renovación/Upsell). Usado por el modal de Declarar Venta
+    para no volver a pedir el monto total y para deshabilitar tipos de pago inválidos."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.sales_consistency_service import SalesConsistencyService
+    from app.services.booking_service import BookingService
+
+    programa = (request.args.get('programa') or 'RR').strip().upper()
+    client_id = request.args.get('client_id', type=int)
+
+    if not client_id:
+        # Resolver por email/instagram/teléfono si todavía no hay un client_id conocido
+        # (ej. lead sintético de búsqueda global sin cita local aún).
+        email = request.args.get('email')
+        instagram = request.args.get('instagram')
+        phone = request.args.get('phone')
+        if email or instagram or phone:
+            client = BookingService.create_or_update_client({
+                'name': request.args.get('name'), 'email': email, 'instagram': instagram, 'phone': phone
+            })
+            client_id = client.id if client else None
+
+    state = SalesConsistencyService.get_client_payment_state(client_id, programa)
+    state['allowed_types'] = SalesConsistencyService.get_allowed_types(client_id, programa)
+    state['client_id'] = client_id
+    return jsonify(state), 200
+
+
 @bp.route('/deck/card/<int:appt_id>', methods=['GET'])
 @login_required
 def get_closer_deck_card(appt_id):

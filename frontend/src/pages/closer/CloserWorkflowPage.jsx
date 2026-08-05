@@ -175,6 +175,7 @@ const CloserWorkflowPage = () => {
     const [submittingSale, setSubmittingSale] = useState(false);
     const [saleForm, setSaleForm] = useState({
         lead_id: '',
+        client_id: null,
         email_vendedor: user?.email || '',
         nombre_cliente: '',
         telefono: '',
@@ -204,6 +205,52 @@ const CloserWorkflowPage = () => {
             setSaleForm(prev => ({ ...prev, email_vendedor: user.email }));
         }
     }, [user]);
+
+    // Estado de pago del cliente para el programa seleccionado (cuánto ya pagó, cuánto le
+    // falta, qué tipos de pago corresponden a continuación) — evita volver a pedir el monto
+    // total de un programa que el cliente ya viene pagando, y deshabilita tipos de pago que
+    // romperían la secuencia (ej. Cuota sin Parcial previo).
+    const [saleClientState, setSaleClientState] = useState(null);
+    const [loadingSaleState, setLoadingSaleState] = useState(false);
+    const [settleBalanceWithSale, setSettleBalanceWithSale] = useState(false);
+
+    useEffect(() => {
+        if (!saleModalOpen) {
+            setSaleClientState(null);
+            setSettleBalanceWithSale(false);
+            return;
+        }
+        setLoadingSaleState(true);
+        const params = saleForm.client_id
+            ? { client_id: saleForm.client_id, programa: saleForm.programa }
+            : { email: saleForm.mail_cliente, instagram: saleForm.instagram, phone: saleForm.telefono, name: saleForm.nombre_cliente, programa: saleForm.programa };
+        api.get('/closer/sales/client-state', { params })
+            .then(res => {
+                setSaleClientState(res.data);
+                // Sugerir precio total / saldo restante en vez de forzar a retipear el monto
+                // del programa que este cliente ya viene pagando (no pisa lo que el closer ya escribió).
+                if (res.data?.total_paid > 0) {
+                    setSaleForm(prev => ({
+                        ...prev,
+                        precio_total: prev.precio_total || String(res.data.program_price || ''),
+                        monto: prev.monto || (res.data.balance_remaining > 0 ? String(res.data.balance_remaining) : prev.monto)
+                    }));
+                }
+                // Si el tipo de pago actualmente elegido ya no corresponde para este cliente,
+                // saltar al primer tipo permitido en vez de dejar seleccionada una opción
+                // deshabilitada (el backend igual bloquea, esto es solo para no confundir).
+                const allowed = res.data?.allowed_types || {};
+                setSaleForm(prev => {
+                    const current = (prev.tipo_pago_simple || '').toLowerCase();
+                    if (allowed[current]?.ok !== false) return prev;
+                    const TIPO_OPTION_VALUES = { completo: 'completo', parcial: 'parcial', 'seña': 'Seña', cuota: 'Cuota', renovacion: 'Renovacion', upsell: 'Upsell' };
+                    const firstAllowed = Object.keys(allowed).find(k => allowed[k].ok);
+                    return firstAllowed ? { ...prev, tipo_pago_simple: TIPO_OPTION_VALUES[firstAllowed] || prev.tipo_pago_simple } : prev;
+                });
+            })
+            .catch(err => { console.error('Error al obtener el estado de pago del cliente:', err); setSaleClientState(null); })
+            .finally(() => setLoadingSaleState(false));
+    }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
 
     // Búsqueda global con debounce
     useEffect(() => {
@@ -942,6 +989,7 @@ const CloserWorkflowPage = () => {
                     const igUser = appt.instagram ? (appt.instagram.startsWith('@') ? appt.instagram : `@${appt.instagram}`) : '';
                     setSaleForm({
                         lead_id: appt.client_id || '',
+                        client_id: appt.client_id || null,
                         email_vendedor: user?.email || '',
                         nombre_cliente: appt.lead_name || '',
                         telefono: appt.phone || '',
@@ -1093,6 +1141,31 @@ const CloserWorkflowPage = () => {
         setSaleStep(prev => prev - 1);
     };
 
+    const buildSalePayload = (tipoOverride, montoOverride, commentOverride) => ({
+        email_vendedor: saleForm.email_vendedor,
+        nombre_cliente: saleForm.nombre_cliente,
+        telefono: saleForm.telefono ? saleForm.telefono.replace(/\+/g, '').trim() : '',
+        mail_cliente: saleForm.mail_cliente,
+        tipo_pago: `${saleForm.programa} - ${tipoOverride ?? saleForm.tipo_pago_simple}`,
+        monto: montoOverride ?? (parseFloat(saleForm.monto) || 0.0),
+        segundo_pago: commentOverride ?? (saleForm.segundo_pago || ''),
+        metodo_pago: saleForm.metodo_pago,
+        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),
+        instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
+        estado: saleForm.estado,
+        setter: saleForm.setter || '',
+        documento_identidad: saleForm.documento_identidad || '',
+        marca_temporal: (() => {
+            const selectedDate = new Date(saleForm.date);
+            const now = new Date();
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            return selectedDate.toLocaleString("es-ES");
+        })(),
+        enviar_webhook: true,
+        enviar_mensaje: saleForm.enviar_mensaje,
+        sold_in_call: saleForm.sold_in_call
+    });
+
     const handleRegisterSale = async () => {
         if (!saleForm.date) {
             toast.error("La fecha de la venta es obligatoria");
@@ -1100,34 +1173,22 @@ const CloserWorkflowPage = () => {
         }
         setSubmittingSale(true);
         try {
-            // Formatear payload exactamente para Google Sheets (Ventas_DB)
-            const payload = {
-                email_vendedor: saleForm.email_vendedor,
-                nombre_cliente: saleForm.nombre_cliente,
-                telefono: saleForm.telefono ? saleForm.telefono.replace(/\+/g, '').trim() : '',
-                mail_cliente: saleForm.mail_cliente,
-                tipo_pago: `${saleForm.programa} - ${saleForm.tipo_pago_simple}`,
-                monto: parseFloat(saleForm.monto) || 0.0,
-                segundo_pago: saleForm.segundo_pago || '',
-                metodo_pago: saleForm.metodo_pago,
-                examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),
-                instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
-                estado: saleForm.estado,
-                setter: saleForm.setter || '',
-                documento_identidad: saleForm.documento_identidad || '',
-                marca_temporal: (() => {
-                    const selectedDate = new Date(saleForm.date);
-                    const now = new Date();
-                    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-                    return selectedDate.toLocaleString("es-ES");
-                })(),
-                enviar_webhook: true,
-                enviar_mensaje: saleForm.enviar_mensaje,
-                sold_in_call: saleForm.sold_in_call
-            };
+            // Renovación/Upsell con saldo pendiente del programa actual: si el closer activó
+            // "liquidar saldo junto con esta venta", primero se registra una Cuota que cierra
+            // el saldo restante, y solo si eso funciona se continúa con la venta principal.
+            const isRenewalOrUpsell = ['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple);
+            if (isRenewalOrUpsell && settleBalanceWithSale && saleClientState?.balance_remaining > 0) {
+                const settlePayload = buildSalePayload('Cuota', saleClientState.balance_remaining, 'Liquidación de saldo previo a Renovación/Upsell');
+                const settleRes = await api.post('/sheets/push?tabla=Ventas_DB', settlePayload);
+                if (settleRes.data.status !== 'success') {
+                    toast.error(settleRes.data.message || "No se pudo liquidar el saldo pendiente");
+                    setSubmittingSale(false);
+                    return;
+                }
+            }
 
-            const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
-            
+            const res = await api.post('/sheets/push?tabla=Ventas_DB', buildSalePayload());
+
             if (res.data.status === 'success') {
                 toast.success("Venta declarada y sincronizada correctamente");
                 const savedApptId = salePrompt.apptId;
@@ -1313,6 +1374,7 @@ const CloserWorkflowPage = () => {
         setSalePrompt({ apptId: lead.id });
         setSaleForm({
             lead_id: lead.id,
+            client_id: lead.client_id || null,
             email_vendedor: user?.email || '',
             nombre_cliente: lead.lead_name || '',
             telefono: lead.phone || '',
@@ -1802,6 +1864,7 @@ const CloserWorkflowPage = () => {
                             setSalePrompt({ apptId: selectedLead.id });
                             setSaleForm({
                                 lead_id: selectedLead.id,
+                                client_id: selectedLead.client_id || null,
                                 email_vendedor: user?.email || '',
                                 nombre_cliente: selectedLead.lead_name || '',
                                 telefono: selectedLead.phone || '',
@@ -3797,17 +3860,52 @@ const CloserWorkflowPage = () => {
                                                 <select
                                                     value={saleForm.tipo_pago_simple}
                                                     onChange={e => setSaleForm({ ...saleForm, tipo_pago_simple: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer disabled:opacity-40"
                                                     required
                                                 >
-                                                    <option value="completo">Completo (PIF)</option>
-                                                    <option value="parcial">Parcial (Primer Pago)</option>
-                                                    <option value="Seña">Seña (Promesa)</option>
-                                                    <option value="Cuota">Cuotas</option>
-                                                    <option value="Renovacion">Renovación</option>
-                                                    <option value="Upsell">Upsell</option>
+                                                    {[
+                                                        { value: 'completo', label: 'Completo (PIF)' },
+                                                        { value: 'parcial', label: 'Parcial (Primer Pago)' },
+                                                        { value: 'Seña', label: 'Seña (Promesa)' },
+                                                        { value: 'Cuota', label: 'Cuotas' },
+                                                        { value: 'Renovacion', label: 'Renovación' },
+                                                        { value: 'Upsell', label: 'Upsell' },
+                                                    ].map(opt => {
+                                                        const rule = saleClientState?.allowed_types?.[opt.value.toLowerCase()];
+                                                        const disabled = rule ? !rule.ok : false;
+                                                        return (
+                                                            <option key={opt.value} value={opt.value} disabled={disabled} title={disabled ? rule.reason : undefined}>
+                                                                {opt.label}{disabled ? ' — no disponible' : ''}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
+                                                {(() => {
+                                                    const rule = saleClientState?.allowed_types?.[(saleForm.tipo_pago_simple || '').toLowerCase()];
+                                                    if (rule && !rule.ok) {
+                                                        return <p className="text-[9px] text-rose-400 font-bold mt-1">{rule.reason}</p>;
+                                                    }
+                                                    return null;
+                                                })()}
                                             </div>
+                                            {saleClientState && saleClientState.total_paid > 0 && (
+                                                <div className="md:col-span-2 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl text-[10px] font-bold text-violet-300 uppercase tracking-wide">
+                                                    Este cliente ya pagó ${saleClientState.total_paid.toFixed(2)} de ${saleClientState.program_price.toFixed(2)} en {saleForm.programa} — saldo restante ${saleClientState.balance_remaining.toFixed(2)}.
+                                                </div>
+                                            )}
+                                            {['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple) && saleClientState?.can_settle_balance_with_installment && (
+                                                <div className="md:col-span-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                                                    <label className="flex items-center gap-2 text-[10px] font-bold text-amber-300 uppercase tracking-wide cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settleBalanceWithSale}
+                                                            onChange={e => setSettleBalanceWithSale(e.target.checked)}
+                                                            className="rounded"
+                                                        />
+                                                        Incluir el pago del saldo pendiente (${saleClientState.balance_remaining.toFixed(2)}) junto con esta venta
+                                                    </label>
+                                                </div>
+                                            )}
                                             {saleForm.tipo_pago_simple !== 'completo' && (
                                                 <div className="space-y-1 text-left">
                                                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Total (USD) *</label>

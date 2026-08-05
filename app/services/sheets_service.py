@@ -74,6 +74,17 @@ class SheetsService:
                     'phone': payload.get('telefono'),
                 })
 
+                # Validar secuencia de pago (Seña->Parcial/Completo->Cuota->Renovación/Upsell)
+                # ANTES de guardar la venta. Bloqueo duro con motivo explicable, para que el
+                # closer pueda corregir el tipo de pago en vez de un error genérico.
+                program_code, tipo_simple = SheetsService.parse_tipo_pago(payload.get('tipo_pago'))
+                if program_code and client:
+                    from app.services.sales_consistency_service import SalesConsistencyService
+                    ok, reason, _ = SalesConsistencyService.validate_next_payment_type(client.id, program_code, tipo_simple)
+                    if not ok:
+                        logger.warning(f"[SHEETS POST] Venta rechazada por secuencia de pago inválida (client_id={client.id}, tipo={tipo_simple}): {reason}")
+                        return {"status": "error", "message": reason}
+
                 sale = FinancialSale(
                     client_id=client.id if client else None,
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
@@ -155,14 +166,42 @@ class SheetsService:
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
 
     @staticmethod
+    def _extract_tipo_keyword(text):
+        """Reduce cualquier variante de texto libre ('Con Seña', 'parcial', 'RENOVACIÓN'...) a
+        una de las 6 palabras clave canónicas usadas en todo el sistema. Datos históricos tienen
+        de todo: mayúsculas/minúsculas mezcladas, con/sin acento, con prefijo 'Con '."""
+        import re, unicodedata
+        t = unicodedata.normalize('NFKD', str(text or '')).encode('ascii', 'ignore').decode('ascii').strip().lower()
+        t = re.sub(r'^con\s+', '', t)
+        if 'complet' in t or t == 'pif':
+            return 'completo'
+        if 'parcial' in t:
+            return 'parcial'
+        if 'sena' in t or 'deposit' in t:
+            return 'seña'
+        if 'cuota' in t or 'installment' in t:
+            return 'cuota'
+        if 'renovaci' in t or 'renewal' in t:
+            return 'renovacion'
+        if 'upsell' in t:
+            return 'upsell'
+        return None
+
+    @staticmethod
     def parse_tipo_pago(tipo_pago_raw):
-        """Separa el string plano 'CODE - tipo' (ej. 'RR - parcial') usado en FinancialSale.tipo_pago
-        en (program_code, tipo_simple_lower). Devuelve (None, None) si no tiene el formato esperado."""
-        tipo_pago_raw = str(tipo_pago_raw or '')
-        if ' - ' not in tipo_pago_raw:
-            return None, None
-        program_code, tipo_simple = [p.strip() for p in tipo_pago_raw.split(' - ', 1)]
-        return program_code.upper(), tipo_simple.lower()
+        """Separa el string de FinancialSale.tipo_pago en (program_code, tipo_simple_canonico).
+        Tolera las variantes reales encontradas en datos históricos: separador '-' con o sin
+        espacios, código de programa en minúsculas, y texto sin ningún prefijo de programa
+        (en ese caso program_code es None, pero igual se intenta extraer el tipo de pago)."""
+        import re
+        raw = str(tipo_pago_raw or '')
+        match = re.match(r'^\s*([A-Za-z]{2,3})\s*-\s*(.+)$', raw)
+        if not match:
+            return None, SheetsService._extract_tipo_keyword(raw)
+        program_code = match.group(1).strip().upper()
+        if program_code not in SheetsService.PROGRAM_KEYWORDS:
+            return None, SheetsService._extract_tipo_keyword(raw)
+        return program_code, SheetsService._extract_tipo_keyword(match.group(2))
 
     @staticmethod
     def resolve_program(program_code):
@@ -200,7 +239,6 @@ class SheetsService:
             'seña': 'down_payment',
             'cuota': 'installment',
             'renovacion': 'renewal',
-            'renovación': 'renewal',
             'upsell': 'upsell',
         }
         payment_type = PAYMENT_TYPE_MAP.get(tipo_simple_lower, 'full')
