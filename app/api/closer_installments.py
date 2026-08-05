@@ -29,7 +29,12 @@ def create_installment_plan():
     except (TypeError, ValueError):
         return jsonify({"error": "Datos numéricos inválidos"}), 400
 
-    plans = InstallmentService.create_plan(appointment_id, total, cobrado_hoy, num_cuotas)
+    if not appt.client_id:
+        return jsonify({"error": "Esta cita no tiene un cliente asociado"}), 400
+
+    plans = InstallmentService.create_plan(appt.client_id, appointment_id, total, cobrado_hoy, num_cuotas)
+    if plans is None:
+        return jsonify({"error": "Este cliente ya tiene un plan de cuotas con pagos registrados — no se puede recrear desde cero. Marcá la cuota correspondiente como pagada en vez de definir un plan nuevo."}), 409
     return jsonify({"cuotas": [p.to_dict() for p in plans]}), 201
 
 

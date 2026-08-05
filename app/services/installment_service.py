@@ -14,11 +14,20 @@ def _add_months(d, months):
 
 class InstallmentService:
     @staticmethod
-    def create_plan(appointment_id, total, cobrado_hoy, num_cuotas, start_date=None):
+    def create_plan(client_id, appointment_id, total, cobrado_hoy, num_cuotas, start_date=None):
         """Genera el cronograma de cuotas restantes (saldo dividido en partes iguales,
-        una por mes), igual al plan()/plan2() del prototipo v7. Reemplaza cualquier
-        plan previo de la misma cita."""
-        InstallmentPlan.query.filter_by(appointment_id=appointment_id).delete()
+        una por mes). El plan pertenece al cliente (client_id), no a una cita puntual —
+        cualquier cita futura de ese mismo cliente encuentra el mismo plan.
+
+        Protección: si ya existe un plan para este cliente con al menos una cuota pagada,
+        NO se borra ni se recrea (perdería el historial de cobros) — se devuelve None para
+        que el caller lo trate como error. Solo se reemplaza un plan que sigue 100% pendiente
+        (ej. el closer corrigió el número de cuotas antes de que se cobrara ninguna)."""
+        existing = InstallmentPlan.query.filter_by(client_id=client_id).all()
+        if any(p.estado == 'pagado' for p in existing):
+            return None
+
+        InstallmentPlan.query.filter_by(client_id=client_id).delete()
 
         rest = max(0.0, float(total) - float(cobrado_hoy))
         n = max(1, int(num_cuotas))
@@ -33,6 +42,7 @@ class InstallmentService:
         for i in range(n):
             monto = round(rest - each * (n - 1), 2) if i == n - 1 else each
             plan = InstallmentPlan(
+                client_id=client_id,
                 appointment_id=appointment_id,
                 numero_cuota=i + 1,
                 monto=monto,
@@ -46,9 +56,21 @@ class InstallmentService:
         return plans
 
     @staticmethod
-    def get_plan(appointment_id):
-        return InstallmentPlan.query.filter_by(appointment_id=appointment_id) \
+    def get_plan_by_client(client_id):
+        return InstallmentPlan.query.filter_by(client_id=client_id) \
             .order_by(InstallmentPlan.numero_cuota.asc()).all()
+
+    @staticmethod
+    def get_plan(appointment_id):
+        """Compat: resuelve el cliente de la cita y devuelve SU plan completo (no solo lo
+        creado desde esta cita puntual), para que cualquier cita del mismo cliente vea el
+        mismo cronograma."""
+        from app.models import Appointment
+        appt = Appointment.query.get(appointment_id)
+        if not appt or not appt.client_id:
+            return InstallmentPlan.query.filter_by(appointment_id=appointment_id) \
+                .order_by(InstallmentPlan.numero_cuota.asc()).all()
+        return InstallmentService.get_plan_by_client(appt.client_id)
 
     @staticmethod
     def update_cuota(cuota, monto=None, fecha_vencimiento=None, estado=None):

@@ -10,6 +10,12 @@ class InstallmentPlan(db.Model):
     __tablename__ = 'installment_plans'
     id = db.Column(db.Integer, primary_key=True)
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False, index=True)
+    # Cliente dueño del plan (fuente de verdad para buscarlo, ver bitácora): un pago de cuota
+    # puede reportarse desde una cita distinta a la que originó el plan (ej. una llamada de
+    # cobro puntual), así que buscar solo por appointment_id perdía el plan y lo recreaba desde
+    # cero, borrando el historial de cuotas ya pagadas. appointment_id se conserva como
+    # referencia de qué cita originó esta versión del plan.
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
     numero_cuota = db.Column(db.Integer, nullable=False)
     monto = db.Column(db.Float, nullable=False)
     fecha_vencimiento = db.Column(db.Date, nullable=False)

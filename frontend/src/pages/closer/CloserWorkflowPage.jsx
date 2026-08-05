@@ -253,6 +253,36 @@ const CloserWorkflowPage = () => {
             .finally(() => setLoadingSaleState(false));
     }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
 
+    // Plan de cuotas YA existente de este cliente (de un Parcial declarado antes). Al registrar
+    // una Cuota hay que marcar cuál de las cuotas ya planificadas se está pagando, no volver a
+    // armar el cronograma desde cero (eso borraba el historial de cuotas ya cobradas).
+    const [saleExistingCuotas, setSaleExistingCuotas] = useState([]);
+    const [loadingSaleCuotas, setLoadingSaleCuotas] = useState(false);
+    const [selectedCuotaId, setSelectedCuotaId] = useState(null);
+    const isCuotaPayment = (saleForm.tipo_pago_simple || '').toLowerCase() === 'cuota';
+
+    useEffect(() => {
+        if (!saleModalOpen || !isCuotaPayment || !salePrompt.apptId) {
+            setSaleExistingCuotas([]);
+            setSelectedCuotaId(null);
+            return;
+        }
+        setLoadingSaleCuotas(true);
+        api.get(`/closer/installments/${salePrompt.apptId}`)
+            .then(res => {
+                const cuotas = res.data?.cuotas || [];
+                setSaleExistingCuotas(cuotas);
+                const pendientes = cuotas.filter(c => c.estado !== 'pagado');
+                if (pendientes.length > 0) {
+                    setSelectedCuotaId(pendientes[0].id);
+                    setSaleForm(prev => ({ ...prev, monto: prev.monto || String(pendientes[0].monto) }));
+                }
+            })
+            .catch(err => console.error('Error al cargar el plan de cuotas existente:', err))
+            .finally(() => setLoadingSaleCuotas(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [saleModalOpen, isCuotaPayment, salePrompt.apptId]);
+
     // Búsqueda global con debounce
     useEffect(() => {
         if (searchQuery.trim().length < 2) {
@@ -1223,8 +1253,22 @@ const CloserWorkflowPage = () => {
                     }
                 }
 
-                // Si no fue pago completo, guardar el plan de cuotas configurado
-                if (savedApptId && saleForm.tipo_pago_simple !== 'completo' && saleForm.precio_total) {
+                if (isCuotaPayment && selectedCuotaId) {
+                    // Ya existía un plan: esto es UNA cuota de ese plan cobrándose, no un plan
+                    // nuevo — marcarla pagada en vez de recrear todo el cronograma (eso borraba
+                    // el historial de cuotas ya cobradas).
+                    try {
+                        await api.patch(`/closer/installments/cuota/${selectedCuotaId}`, {
+                            estado: 'pagado',
+                            monto: parseFloat(saleForm.monto) || 0
+                        });
+                    } catch (e) {
+                        console.error("Error al marcar la cuota como pagada:", e);
+                        toast.error("La venta se guardó, pero hubo un error al marcar la cuota como pagada");
+                    }
+                } else if (savedApptId && saleForm.tipo_pago_simple !== 'completo' && saleForm.precio_total) {
+                    // Primera vez que se define el plan (Parcial), o Cuota sin plan previo (caso
+                    // de datos históricos incompletos) — acá sí corresponde crear el cronograma.
                     const total = parseFloat(saleForm.precio_total) || 0;
                     const cobradoHoy = parseFloat(saleForm.monto) || 0;
                     if (total > cobradoHoy) {
@@ -4008,8 +4052,62 @@ const CloserWorkflowPage = () => {
                                             <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                                                 Pago único: se cobra todo hoy, no hay saldo ni cronograma de cuotas.
                                             </div>
+                                        ) : isCuotaPayment && (loadingSaleCuotas || saleExistingCuotas.length > 0) ? (
+                                            <div className="space-y-3 pt-2 border-t border-slate-800">
+                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">¿Cuál cuota del plan ya existente se está pagando?</h4>
+                                                {loadingSaleCuotas ? (
+                                                    <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
+                                                ) : (
+                                                    <div className="rounded-xl border border-slate-800 overflow-hidden">
+                                                        <table className="w-full text-xs">
+                                                            <thead className="bg-slate-950/60">
+                                                                <tr>
+                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase"></th>
+                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
+                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
+                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
+                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {saleExistingCuotas.map(c => {
+                                                                    const isPagado = c.estado === 'pagado';
+                                                                    const isVencida = c.estado === 'vencido';
+                                                                    return (
+                                                                        <tr key={c.id} className={`border-t border-slate-850 ${isPagado ? 'opacity-40' : 'cursor-pointer hover:bg-slate-900/40'} ${selectedCuotaId === c.id ? 'bg-violet-500/10' : ''}`}
+                                                                            onClick={() => { if (!isPagado) { setSelectedCuotaId(c.id); setSaleForm(prev => ({ ...prev, monto: String(c.monto) })); } }}
+                                                                        >
+                                                                            <td className="px-3 py-2">
+                                                                                {!isPagado && <input type="radio" checked={selectedCuotaId === c.id} onChange={() => {}} className="cursor-pointer" />}
+                                                                            </td>
+                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
+                                                                            <td className="px-3 py-2 font-bold text-slate-300">${Number(c.monto).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                                            <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
+                                                                            <td className="px-3 py-2">
+                                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                                                                    isPagado ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                                                    isVencida ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                                                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                                                }`}>{isPagado ? 'Pagada' : isVencida ? 'Vencida' : 'Pendiente'}</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                <p className="text-[9px] text-slate-550 font-medium">
+                                                    Elegí cualquier cuota pendiente (podés adelantar una futura o pagar una vencida) — se marca como pagada con el monto de arriba, sin tocar el resto del plan.
+                                                </p>
+                                            </div>
                                         ) : (
                                             <div className="space-y-3 pt-2 border-t border-slate-800">
+                                                {isCuotaPayment && (
+                                                    <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wide">
+                                                        Este cliente no tiene un plan de cuotas previo registrado — se creará uno nuevo con esta cuota.
+                                                    </p>
+                                                )}
                                                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">Plan de Cuotas (Próximos Pagos)</h4>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1 text-left">
