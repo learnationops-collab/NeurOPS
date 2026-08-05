@@ -166,6 +166,11 @@ class CloserDashboardService:
                 'close_llamada': pct['close_rate'],
                 'close_presentacion': pct['offer_to_sale']
             },
+            'conversion_senas': {
+                'oferta_a_sena': pct.get('offer_to_deposit', 0),
+                'sena_a_venta_real': pct.get('deposit_conversion_rate', 0),
+                'close_rate_promesa': pct.get('close_rate_promesa', 0)
+            },
             'cash_mix': {
                 'nuevas_ventas': round(sales['pif']['cash'] + sales['split']['cash'], 2),
                 'cobro_cuotas': round(sales['installment']['cash'], 2),

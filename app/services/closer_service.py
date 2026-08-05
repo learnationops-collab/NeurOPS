@@ -815,6 +815,12 @@ class CloserService:
             else:
                 appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
 
+        if 'offer_presented' in data:
+            if data['offer_presented'] is None or data['offer_presented'] == '':
+                appt.offer_presented = None
+            else:
+                appt.offer_presented = data['offer_presented'] == True or data['offer_presented'] in ('true', 'True', '1', 1)
+
         if role == 'closer' or not role:
             # Manejo del estado del Closer (closer_result)
             if new_status:
@@ -1983,14 +1989,14 @@ class CloserService:
         días anteriores que el closer efectivamente procesó hoy (via Appointment.updated_at), para
         que limpiar agendas atrasadas también cuente como trabajo del día en el reporte.
 
-        No fabrica valores para 'slots' ni 'offers_made': hoy no existe ninguna señal persistida
-        de "oferta presentada" (se pregunta en el árbol de decisión del mazo, pero la respuesta
-        nunca se guarda en la base de datos) ni de "slots disponibles configurados". Quedan en 0
-        hasta que se agregue esa persistencia — mejor un 0 honesto que un número inventado.
+        No fabrica valores para 'slots': no existe ninguna señal persistida de "slots
+        disponibles configurados". Queda en 0 — mejor un 0 honesto que un número inventado.
+        'offers_made' sí se calcula a partir de Appointment.offer_presented.
         """
         import pytz
         from datetime import time as time_cls
         from app.models import User, Appointment, FinancialSale
+        from app.services.sheets_service import SheetsService
 
         user = User.query.get(closer_id)
         try:
@@ -2032,6 +2038,7 @@ class CloserService:
             'sc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
         }
         decision_makers = 0
+        offers_made = 0
         rescheduled_total = 0
 
         for a in appts:
@@ -2043,6 +2050,8 @@ class CloserService:
                 bucket['attended'] += 1
                 if a.with_decision_maker is True:
                     decision_makers += 1
+                if a.offer_presented is True:
+                    offers_made += 1
             elif cr == 'no show':
                 bucket['no_show'] += 1
             elif cr in ('cancelado', 'cancelada') or r in ('cancelado', 'cancelada'):
@@ -2077,16 +2086,22 @@ class CloserService:
             'split': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
             'deposit': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
             'installment': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+            'renewal': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
+            'upsell': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
         }
         for sale in sales:
-            tipo_lower = (sale.tipo_pago or '').lower()
+            _, tipo = SheetsService.parse_tipo_pago(sale.tipo_pago)
             monto_val = float(sale.monto or 0.0)
-            if 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
+            if tipo == 'seña':
                 key = 'deposit'
-            elif 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+            elif tipo == 'completo':
                 key = 'pif'
-            elif 'cuota' in tipo_lower or 'installment' in tipo_lower:
+            elif tipo == 'cuota':
                 key = 'installment'
+            elif tipo == 'renovacion':
+                key = 'renewal'
+            elif tipo == 'upsell':
+                key = 'upsell'
             else:
                 key = 'split'
             sale_buckets[key]['count'] += 1
@@ -2097,7 +2112,7 @@ class CloserService:
 
         return {
             'slots': 0,
-            'offers_made': 0,
+            'offers_made': offers_made,
             'decision_makers': decision_makers,
             'rescheduled_calls': rescheduled_total,
             'first_call_scheduled': buckets['fc']['scheduled'],
@@ -2126,6 +2141,14 @@ class CloserService:
             'installment_cash_collected': sale_buckets['installment']['cash'],
             'installment_in_call_count': sale_buckets['installment']['ic_count'],
             'installment_in_call_cash': sale_buckets['installment']['ic_cash'],
+            'renewal_count': sale_buckets['renewal']['count'],
+            'renewal_cash_collected': sale_buckets['renewal']['cash'],
+            'renewal_in_call_count': sale_buckets['renewal']['ic_count'],
+            'renewal_in_call_cash': sale_buckets['renewal']['ic_cash'],
+            'upsell_count': sale_buckets['upsell']['count'],
+            'upsell_cash_collected': sale_buckets['upsell']['cash'],
+            'upsell_in_call_count': sale_buckets['upsell']['ic_count'],
+            'upsell_in_call_cash': sale_buckets['upsell']['ic_cash'],
             'follow_ups_sent': 0,
             'follow_ups_replied': 0,
             'follow_ups_closed': follow_ups_closed,

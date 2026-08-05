@@ -118,6 +118,8 @@ const normalizeStats = (s) => {
             decision_maker_rate: s.percentages?.decision_maker_rate ?? 0,
             rescheduled_rate: s.percentages?.rescheduled_rate ?? 0,
             deposit_conversion_rate: s.percentages?.deposit_conversion_rate ?? 0,
+            close_rate_promesa: s.percentages?.close_rate_promesa ?? 0,
+            offer_to_deposit: s.percentages?.offer_to_deposit ?? 0,
         },
         metadata: {
             days_analyzed: s.metadata?.days_analyzed ?? 1,
@@ -872,6 +874,27 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             <div className="text-right">
                                 <span className="text-xs font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.pitch_rate, compStats?.percentages?.pitch_rate, false, true)}
+                            </div>
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="De las ofertas presentadas, qué porcentaje terminó en una Seña (compromiso de compra)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Oferta → Seña</span>
+                            <div className="text-right">
+                                <span className="text-xs font-black text-violet-400 tabular-nums">{stats.percentages.offer_to_deposit.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.offer_to_deposit, compStats?.percentages?.offer_to_deposit, false, true)}
+                            </div>
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="De las Señas registradas, qué porcentaje terminó convirtiéndose en una venta real (Completo o Parcial)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Seña → Venta Real</span>
+                            <div className="text-right">
+                                <span className="text-xs font-black text-emerald-400 tabular-nums">{stats.percentages.deposit_conversion_rate.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.deposit_conversion_rate, compStats?.percentages?.deposit_conversion_rate, false, true)}
+                            </div>
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="De las llamadas atendidas, qué porcentaje terminó en una venta o una Seña (compromiso de compra incluido)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Close Rate Promesa (con Señas)</span>
+                            <div className="text-right">
+                                <span className="text-xs font-black text-sky-400 tabular-nums">{stats.percentages.close_rate_promesa.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.close_rate_promesa, compStats?.percentages?.close_rate_promesa, false, true)}
                             </div>
                         </MetricWithTooltip>
                     </div>

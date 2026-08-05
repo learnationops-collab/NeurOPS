@@ -96,7 +96,7 @@ const CloserDashboard = ({ embedded = false }) => {
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} />
 
                 <SectionTitle>Calidad de la llamada</SectionTitle>
-                <PerformanceQuality rings={data.current.rings} />
+                <PerformanceQuality rings={data.current.rings} conversionSenas={data.current.conversion_senas} />
 
                 <SectionTitle>Dinero</SectionTitle>
                 <PerformanceMoney cashMix={data.current.cash_mix} cuotas={data.cuotas_por_cobrar} programas={data.current.programas} />

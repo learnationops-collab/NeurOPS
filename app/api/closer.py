@@ -1667,6 +1667,12 @@ def process_closer_card(appt_id):
         else:
             appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
 
+    if 'offer_presented' in data:
+        if data['offer_presented'] is None or data['offer_presented'] == '':
+            appt.offer_presented = None
+        else:
+            appt.offer_presented = data['offer_presented'] == True or data['offer_presented'] in ('true', 'True', '1', 1)
+
     if 'fecha_seguimiento' in data:
         appt.fecha_seguimiento = data['fecha_seguimiento']
     if 'fecha_seguimiento_cobro' in data:

@@ -1209,6 +1209,19 @@ const CloserWorkflowPage = () => {
                     }
                 }
 
+                // Persistir en la agenda si hubo decisor/presentación de oferta (viene del árbol
+                // de decisión) — necesario para las métricas de conversión de señas del dashboard.
+                if (savedApptId && (sessionForm.with_decision_maker !== undefined || sessionForm.offer_presented !== undefined)) {
+                    try {
+                        await api.post(`/closer/deck/${savedApptId}`, {
+                            with_decision_maker: sessionForm.with_decision_maker,
+                            offer_presented: sessionForm.offer_presented
+                        });
+                    } catch (e) {
+                        console.error("Error al guardar decisor/oferta presentada:", e);
+                    }
+                }
+
                 // Si no fue pago completo, guardar el plan de cuotas configurado
                 if (savedApptId && saleForm.tipo_pago_simple !== 'completo' && saleForm.precio_total) {
                     const total = parseFloat(saleForm.precio_total) || 0;
@@ -1845,8 +1858,14 @@ const CloserWorkflowPage = () => {
                         ¿Se hizo la presentación de la oferta?
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
-                        {option(() => addDecisionPath("Con presentation", "venta"), 'ok', 'Sí, se presentó')}
-                        {option(() => addDecisionPath("Sin presentación", "nopres"), 'no', 'No se presentó')}
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, offer_presented: true }));
+                            addDecisionPath("Con presentation", "venta");
+                        }, 'ok', 'Sí, se presentó')}
+                        {option(() => {
+                            setSessionForm(prev => ({ ...prev, offer_presented: false }));
+                            addDecisionPath("Sin presentación", "nopres");
+                        }, 'no', 'No se presentó')}
                     </div>
                 </div>
             );
@@ -2315,7 +2334,9 @@ const CloserWorkflowPage = () => {
                                         seguimiento_tipo: sessionForm.result === 'tomada' ? 'tomada' : 'no_tomada',
                                         seguimiento_sub: sessionForm.rmot || 'Seguimiento programado',
                                         seguimiento_intento: 1,
-                                        seguimiento_realizado: false
+                                        seguimiento_realizado: false,
+                                        with_decision_maker: sessionForm.with_decision_maker,
+                                        offer_presented: sessionForm.offer_presented
                                     });
                                     toast.success("Seguimiento programado con éxito");
                                     setSelectedLead(null);
