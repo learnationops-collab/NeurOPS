@@ -1995,6 +1995,7 @@ const CloserWorkflowPage = () => {
                                 date: localToday()
                             });
                             setSaleStep(1);
+                            setSelectedLead(null);
                             setSaleModalOpen(true);
                         }, 'ok', 'Sí, hubo venta', 'Registrar pago')}
                         {option(() => addDecisionPath("Sin venta", "nocierre"), 'no', 'No hubo venta')}
@@ -3719,7 +3720,7 @@ const CloserWorkflowPage = () => {
 
             {/* Prompt intermedio: ¿Hubo venta? */}
             <AnimatePresence>
-                {salePrompt.apptId && (
+                {salePrompt.apptId && !saleModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
