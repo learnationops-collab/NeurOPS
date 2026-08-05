@@ -3563,6 +3563,10 @@ const CloserWorkflowPage = () => {
                                         <span>◈ Examen</span>
                                         <b>{selectedLead.examen || 'MIR / ENARM'}</b>
                                     </div>
+                                    <div className="idc">
+                                        <span>▤ Grupo</span>
+                                        <b>{selectedLead.grupo || 'Grupo sin asignar'}</b>
+                                    </div>
                                     <div className="idc hl">
                                         <span>● Estado</span>
                                         <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>

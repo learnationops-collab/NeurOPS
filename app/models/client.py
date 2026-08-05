@@ -18,6 +18,10 @@ class Client(db.Model):
     # Se autoasigna por programa al registrar el primer pago (AL 1000 / RR 1500 / SI 2000) y
     # queda editable en cada pago siguiente — ver SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.
     total_amount = db.Column(db.Float, nullable=True)
+    # Grupo de Calendly ("grupo 1"/"grupo 2"/"grupo 3", tal como llega en el JSON de n8n al
+    # agendar). Clientes previos a este campo (o sin grupo en el payload) quedan en None —
+    # se muestra como "Grupo sin asignar" en vez de fabricar un valor.
+    grupo = db.Column(db.String(50), nullable=True)
 
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

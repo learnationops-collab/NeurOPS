@@ -485,7 +485,7 @@ class BookingService:
         return None
 
     @staticmethod
-    def find_or_create_client(nombre, email, instagram, phone):
+    def find_or_create_client(nombre, email, instagram, phone, grupo=None):
         """Busca o crea un cliente usando cruzado inteligente de campos."""
         email_clean = str(email).strip().lower() if email and '@' in str(email) else None
         ig_clean = str(instagram).strip().replace('@', '').lower() if instagram and str(instagram).lower() not in ('n/a', 'none', '') else None
@@ -505,6 +505,8 @@ class BookingService:
         if not client and phone_clean and len(phone_clean) >= 8:
             client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
             
+        grupo_clean = str(grupo).strip() if grupo and str(grupo).strip() else None
+
         # 4. Crear si no existe
         if not client:
             import uuid
@@ -512,7 +514,8 @@ class BookingService:
                 full_name=nombre or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
                 email=email_clean or f"no-email-{uuid.uuid4().hex[:12]}@neurops.com",
                 phone=phone_clean,
-                instagram=ig_clean
+                instagram=ig_clean,
+                grupo=grupo_clean
             )
             db.session.add(client)
             db.session.flush()
@@ -526,7 +529,9 @@ class BookingService:
                 client.phone = phone_clean
             if ig_clean and not client.instagram:
                 client.instagram = ig_clean
-                
+            if grupo_clean and not client.grupo:
+                client.grupo = grupo_clean
+
         return client
 
     @staticmethod
@@ -534,13 +539,14 @@ class BookingService:
         """Sincroniza un registro de agenda financiera con la tabla de citas."""
         if not agenda:
             return None
-            
+
         # 1. Obtener o crear Cliente
         client = BookingService.find_or_create_client(
             nombre=agenda.lead,
             email=agenda.mail,
             instagram=agenda.instagram,
-            phone=agenda.whatsapp
+            phone=agenda.whatsapp,
+            grupo=getattr(agenda, 'grupo', None)
         )
         
         # 2. Resolver Closer

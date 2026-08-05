@@ -63,6 +63,7 @@ class FinancialAgenda(db.Model):
     mail = db.Column(db.String(255), nullable=True)
     instagram = db.Column(db.String(255), nullable=True)
     estado = db.Column(db.String(255), nullable=True, default="Pendiente", server_default="Pendiente")
+    grupo = db.Column(db.String(50), nullable=True)  # "grupo 1"/"grupo 2"/"grupo 3" tal como llega de Calendly vía n8n
     encargado_triage = db.Column(db.String(255), nullable=True)
     fecha_seguimiento = db.Column(db.String(255), nullable=True)
     seguimiento_realizado = db.Column(db.Boolean, default=False, server_default='0')

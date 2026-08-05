@@ -200,6 +200,7 @@ def search_closer_leads():
             "email": l.email,
             "phone": l.phone,
             "instagram": l.instagram,
+            "grupo": l.grupo or "Grupo sin asignar",
             "appointment": appt_data
         })
         
@@ -1357,6 +1358,7 @@ def _format_appointment_for_deck(a):
         "email": a.client.email if a.client else "",
         "phone": a.client.phone if a.client else "",
         "instagram": a.client.instagram if a.client else "",
+        "grupo": (a.client.grupo if a.client else None) or "Grupo sin asignar",
         "start_time": a.start_time.isoformat() if a.start_time else None,
         "origin": a.origin,
         "result": confirmer_result,

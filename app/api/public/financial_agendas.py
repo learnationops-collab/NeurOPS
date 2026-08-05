@@ -108,6 +108,7 @@ def receive_financial_agendas():
 
         from app.services.booking_service import BookingService
         raw_closer = item.get('closer') or item.get('vendedor')
+        grupo_val = (item.get('grupo') or '').strip() or None
 
         if existing:
             # Actualizar datos de agenda existente
@@ -119,6 +120,7 @@ def receive_financial_agendas():
             existing.date = agenda_date
             existing.registro = registro_val
             existing.estado = item.get('estado') or existing.estado
+            existing.grupo = grupo_val or existing.grupo
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
             existing.raw_data = item
             agendas_created.append(existing)
@@ -135,6 +137,7 @@ def receive_financial_agendas():
                 whatsapp=item.get('whatsapp') or item.get('phone') or item.get('telefono') or 'N/A',
                 mail=item.get('mail') or item.get('email') or 'N/A',
                 estado=item.get('estado') or 'Pendiente',
+                grupo=grupo_val,
                 encargado_triage=encargado_triage_val,
                 raw_data=item
             )
