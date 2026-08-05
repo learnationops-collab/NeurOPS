@@ -1595,7 +1595,8 @@ const CloserWorkflowPage = () => {
                 await api.post(`/closer/deck/${selectedLead.id}`, {
                     confirm_status: 'por_confirmar',
                     result: 'Pendiente',
-                    closer_notes: finalNotes
+                    closer_notes: finalNotes,
+                    contact_result: sessionForm.result
                 });
                 toast.success("Lead reagendado y enviado a confirmación");
                 setSelectedLead(null);
@@ -1605,7 +1606,8 @@ const CloserWorkflowPage = () => {
                 await api.post(`/closer/deck/${selectedLead.id}`, {
                     closer_notes: finalNotes,
                     seguimiento_realizado: true,
-                    fecha_seguimiento: null
+                    fecha_seguimiento: null,
+                    contact_result: sessionForm.result
                 });
                 const leadSnapshot = selectedLead;
                 setSelectedLead(null);
@@ -1615,7 +1617,8 @@ const CloserWorkflowPage = () => {
                 await api.post(`/closer/deck/${selectedLead.id}`, {
                     closer_notes: `${finalNotes} | Motivo de cierre: ${sessionForm.cierre_motivo}`,
                     seguimiento_realizado: true,
-                    fecha_seguimiento: null
+                    fecha_seguimiento: null,
+                    contact_result: sessionForm.result
                 });
                 toast.success("Seguimiento cerrado");
                 setSelectedLead(null);
@@ -1627,7 +1630,8 @@ const CloserWorkflowPage = () => {
                 const payload = {
                     closer_notes: finalNotes,
                     seguimiento_realizado: false,
-                    seguimiento_intento: nextIntento
+                    seguimiento_intento: nextIntento,
+                    contact_result: sessionForm.result
                 };
                 if (modalStep === 'segventa') {
                     payload.fecha_seguimiento = sessionForm.fecha_seguimiento_cobro_next || null;

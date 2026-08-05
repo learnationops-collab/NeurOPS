@@ -1733,6 +1733,10 @@ def process_closer_card(appt_id):
         val = data['pre_call_reminder_at']
         appt.pre_call_reminder_at = datetime.fromisoformat(val.replace('Z', '')) if val else None
 
+    if data.get('contact_result'):
+        appt.last_contact_outcome = data['contact_result']
+        appt.last_contact_at = datetime.utcnow()
+
     # Si es una actualización de confirmación rápida (con o sin nota adjunta), no marcamos
     # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
     # (Por confirmar / Conversando / Confirmado), no se resolvió ni salió del mazo.

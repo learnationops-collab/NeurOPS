@@ -2060,14 +2060,40 @@ class CloserService:
                 bucket['rescheduled'] += 1
                 rescheduled_total += 1
 
-        # Seguimientos resueltos ese día: la fecha en que estaban asignados venció justo hoy y
-        # ya quedaron marcados como realizados (mejor proxy disponible sin un timestamp de
-        # "resuelto el"; fecha_seguimiento es un string 'YYYY-MM-DD' asignado por el closer).
-        day_str = day_local.isoformat()
+        # Actividad de seguimientos del día: se apoya en `last_contact_at`/`last_contact_outcome`
+        # (seteados por POST /closer/deck/<id> cada vez que el closer procesa una tarjeta de
+        # Seguimientos con `contact_result`), NO en `fecha_seguimiento` — ese campo se limpia a
+        # NULL al cerrar un seguimiento, así que un `LIKE` sobre su valor nunca hubiera detectado
+        # los cierres de hoy (bug encontrado en esta misma pasada: subcontaba `follow_ups_closed`).
+        from app.services.closer_followup_service import CloserFollowUpService
+        contacted_today = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.last_contact_at >= start_utc,
+            Appointment.last_contact_at <= end_utc,
+            Appointment.last_contact_outcome.isnot(None)
+        ).all()
+
+        follow_ups_sent = follow_ups_replied = 0
+        recoveries_contacted = recoveries_replied = recoveries_scheduled = 0
+        for a in contacted_today:
+            tipo = CloserFollowUpService._effective_tipo(a) or a.seguimiento_tipo
+            replied = a.last_contact_outcome != 'no_resp'
+            if tipo == 'tomada':
+                follow_ups_sent += 1
+                if replied:
+                    follow_ups_replied += 1
+            elif tipo == 'no_tomada':
+                recoveries_contacted += 1
+                if replied:
+                    recoveries_replied += 1
+                if a.last_contact_outcome == 'agendo':
+                    recoveries_scheduled += 1
+
         follow_ups_closed = Appointment.query.filter(
             Appointment.closer_id == closer_id,
             Appointment.seguimiento_realizado == True,
-            Appointment.fecha_seguimiento.like(f"{day_str}%")
+            Appointment.last_contact_at >= start_utc,
+            Appointment.last_contact_at <= end_utc
         ).count()
 
         # Ventas del día: misma clasificación de tipo_pago que CloserService.get_comprehensive_stats,
@@ -2149,10 +2175,10 @@ class CloserService:
             'upsell_cash_collected': sale_buckets['upsell']['cash'],
             'upsell_in_call_count': sale_buckets['upsell']['ic_count'],
             'upsell_in_call_cash': sale_buckets['upsell']['ic_cash'],
-            'follow_ups_sent': 0,
-            'follow_ups_replied': 0,
+            'follow_ups_sent': follow_ups_sent,
+            'follow_ups_replied': follow_ups_replied,
             'follow_ups_closed': follow_ups_closed,
-            'recoveries_contacted': 0,
-            'recoveries_replied': 0,
-            'recoveries_scheduled': 0,
+            'recoveries_contacted': recoveries_contacted,
+            'recoveries_replied': recoveries_replied,
+            'recoveries_scheduled': recoveries_scheduled,
         }

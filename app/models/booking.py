@@ -44,6 +44,14 @@ class Appointment(db.Model):
     seguimiento_sub = db.Column(db.String(255), nullable=True)
     seguimiento_intento = db.Column(db.Integer, default=1, server_default='1')
 
+    # Resultado del último intento de contacto de seguimiento ('no_resp'/'contesto'/'agendo'/
+    # 'cerro'/'pago', tal como lo reporta el closer al procesar una tarjeta de Seguimientos) y
+    # cuándo se registró. Distinto de `updated_at` (que cualquier edición de la cita toca) —
+    # necesario para que el reporte diario pueda contar "contactados"/"respondidos" del día sin
+    # confundir un intento de contacto real con cualquier otro cambio a la cita.
+    last_contact_outcome = db.Column(db.String(20), nullable=True)
+    last_contact_at = db.Column(db.DateTime, nullable=True)
+
     # Recordatorio PRE-llamada (distinto del seguimiento post-llamada de arriba): mientras el lead
     # sigue en el pipeline de confirmación ("Por confirmar"/"Conversando"), le permite al closer
     # dejarse un aviso para volver a escribirle antes de que llegue la hora de la cita. DateTime UTC
