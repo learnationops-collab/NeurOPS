@@ -14,6 +14,10 @@ class Client(db.Model):
     dolores = db.Column(db.Text, nullable=True) # Dolores del prospecto
     form_data = db.Column(db.JSON, nullable=True) # Datos del formulario de calificacion externa
     follow_up_status = db.Column(db.String(50), nullable=True, default='Por contactar')
+    # Total a pagar por el cliente (ya no por programa/Enrollment: un solo total por cliente).
+    # Se autoasigna por programa al registrar el primer pago (AL 1000 / RR 1500 / SI 2000) y
+    # queda editable en cada pago siguiente — ver SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.
+    total_amount = db.Column(db.Float, nullable=True)
 
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

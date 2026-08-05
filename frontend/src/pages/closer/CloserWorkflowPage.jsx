@@ -228,15 +228,13 @@ const CloserWorkflowPage = () => {
         api.get('/closer/sales/client-state', { params })
             .then(res => {
                 setSaleClientState(res.data);
-                // Sugerir precio total / saldo restante en vez de forzar a retipear el monto
-                // del programa que este cliente ya viene pagando (no pisa lo que el closer ya escribió).
-                if (res.data?.total_paid > 0) {
-                    setSaleForm(prev => ({
-                        ...prev,
-                        precio_total: prev.precio_total || String(res.data.program_price || ''),
-                        monto: prev.monto || (res.data.balance_remaining > 0 ? String(res.data.balance_remaining) : prev.monto)
-                    }));
-                }
+                // Sugerir el Total del cliente (ya pagando o recién autoasignado por programa:
+                // AL 1000 / RR 1500 / SI 2000) sin pisar lo que el closer ya haya escrito a mano.
+                setSaleForm(prev => ({
+                    ...prev,
+                    precio_total: prev.precio_total || String(res.data.program_price || ''),
+                    monto: (res.data?.total_paid > 0 && !prev.monto && res.data.balance_remaining > 0) ? String(res.data.balance_remaining) : prev.monto
+                }));
                 // Si el tipo de pago actualmente elegido ya no corresponde para este cliente,
                 // saltar al primer tipo permitido en vez de dejar seleccionada una opción
                 // deshabilitada (el backend igual bloquea, esto es solo para no confundir).
@@ -1179,6 +1177,7 @@ const CloserWorkflowPage = () => {
         mail_cliente: saleForm.mail_cliente,
         tipo_pago: `${saleForm.programa} - ${tipoOverride ?? saleForm.tipo_pago_simple}`,
         monto: montoOverride ?? (parseFloat(saleForm.monto) || 0.0),
+        precio_total: parseFloat(saleForm.precio_total) || undefined,
         segundo_pago: commentOverride ?? (saleForm.segundo_pago || ''),
         metodo_pago: saleForm.metodo_pago,
         examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),

@@ -85,6 +85,22 @@ class SheetsService:
                         logger.warning(f"[SHEETS POST] Venta rechazada por secuencia de pago inválida (client_id={client.id}, tipo={tipo_simple}): {reason}")
                         return {"status": "error", "message": reason}
 
+                # Total del cliente (no por programa/Enrollment): el closer lo declara en el
+                # "Precio Total" del formulario de venta (o el monto mismo si es pago Completo).
+                # Se actualiza en cada pago donde venga un valor válido — es editable a
+                # propósito, no solo se fija en el primer pago. Si el cliente todavía no tiene
+                # ninguno guardado, se autoasigna el default del programa.
+                if client and program_code:
+                    precio_total_raw = payload.get('precio_total')
+                    if precio_total_raw in (None, ''):
+                        precio_total_raw = payload.get('monto') if tipo_simple == 'completo' else None
+                    precio_total_val = SheetsService._parse_float(precio_total_raw)
+                    if precio_total_val and precio_total_val > 0:
+                        client.total_amount = precio_total_val
+                    elif client.total_amount is None:
+                        from app.services.sales_consistency_service import SalesConsistencyService
+                        client.total_amount = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
+
                 sale = FinancialSale(
                     client_id=client.id if client else None,
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),

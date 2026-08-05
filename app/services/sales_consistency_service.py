@@ -15,6 +15,12 @@ class SalesConsistencyService:
 
     TIPOS_VALIDOS = {'completo', 'parcial', 'seña', 'cuota', 'renovacion', 'upsell'}
 
+    # Total por defecto que se autoasigna a un cliente según el programa de su primer pago,
+    # cuando todavía no tiene un Client.total_amount propio guardado. Una vez que el closer
+    # declara un pago con un "Precio Total" distinto, ese valor pasa a ser el total del
+    # cliente (Client.total_amount) y reemplaza este default en todas las consultas futuras.
+    PROGRAM_DEFAULT_TOTALS = {'AL': 1000.0, 'RR': 1500.0, 'SI': 2000.0}
+
     @staticmethod
     def _normalize_tipo(tipo_pago_simple):
         from app.services.sheets_service import SheetsService
@@ -22,12 +28,16 @@ class SalesConsistencyService:
 
     @staticmethod
     def get_client_payment_state(client_id, program_code):
-        from app.models import FinancialSale
+        from app.models import FinancialSale, Client
         from app.services.sheets_service import SheetsService
 
         program_code = (program_code or '').strip().upper()
-        program = SheetsService.resolve_program(program_code)
-        program_price = float(program.price) if program else 0.0
+
+        client = Client.query.get(client_id) if client_id else None
+        if client and client.total_amount is not None:
+            program_price = float(client.total_amount)
+        else:
+            program_price = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
 
         all_sales = []
         if client_id:
