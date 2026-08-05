@@ -3475,7 +3475,14 @@ const CloserWorkflowPage = () => {
                                 Actualizar
                             </button>
                         </div>
-                        <p className="text-xs text-slate-400">Esto es lo que se va a mandar a Discord — sale directo de lo que ya quedó registrado en la bandeja, no hay nada que completar a mano acá.</p>
+                        <p className="text-xs text-slate-400">Esto es lo que se va a mandar a Discord — sale directo de lo que ya quedó registrado en la bandeja, no hay nada que completar a mano acá. Si algo no cuadra, corregilo en la bandeja y volvé a "Actualizar".</p>
+
+                        {reportDate === localToday() && dailyActivity && (dailyActivity.pendientes_confirmar > 0 || dailyActivity.pendientes_llamar > 0) && (
+                            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-amber-300 text-xs font-bold">
+                                <span className="text-lg">⏳</span>
+                                Todavía te quedan <b>{dailyActivity.pendientes_confirmar}</b> por confirmar y <b>{dailyActivity.pendientes_llamar}</b> por llamar hoy.
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {[
@@ -3486,9 +3493,10 @@ const CloserWorkflowPage = () => {
                                 { label: 'Seguimientos configurados', value: dailyActivity?.seguimientos_configurados, color: 'text-violet-400' },
                                 { label: 'Seguimientos hechos', value: dailyActivity?.seguimientos_hechos, color: 'text-indigo-400' },
                                 { label: 'Referidos capturados', value: dailyActivity?.referidos_capturados, color: 'text-blue-400' },
+                                { label: 'Ventas', value: dailyActivity?.ventas_count, color: 'text-lime-400', suffix: dailyActivity ? ` ($${(dailyActivity.ventas_cash || 0).toLocaleString()})` : '' },
                             ].map(stat => (
                                 <div key={stat.label} className="bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
-                                    <b className={`text-2xl font-black block ${stat.color}`}>{dailyActivity ? (stat.value ?? 0) : '—'}</b>
+                                    <b className={`text-2xl font-black block ${stat.color}`}>{dailyActivity ? (stat.value ?? 0) : '—'}{stat.suffix || ''}</b>
                                     <small className="text-[10px] text-slate-500 font-bold uppercase">{stat.label}</small>
                                 </div>
                             ))}

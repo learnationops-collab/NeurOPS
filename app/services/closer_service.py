@@ -1996,20 +1996,37 @@ class CloserService:
         """Resumen en vivo de lo que el closer efectivamente tocó hoy en su bandeja — pensado para
         que se vea en la pestaña "Reporte del día" ANTES de enviarlo, como un mini-dashboard que
         confirma que lo que se va a mandar a Discord tiene sentido, sin tener que adivinarlo.
-        Distinto de `compute_daily_report_fields` (que arma los ~40 campos del reporte formal):
-        acá se cuenta por *acción tomada hoy* (`Appointment.updated_at` dentro de la ventana del
-        día — mismo criterio ya usado para "backlog resuelto hoy"), no por fecha original de la
-        cita, para que reportar un día anterior siga mostrando lo que realmente se hizo ese día."""
-        from app.models import User, Appointment
+        Distinto de `compute_daily_report_fields` (que arma los ~40 campos del reporte formal, y
+        cuyos totales de ventas se reutilizan acá tal cual).
+
+        Se apoya en `LeadEventLog` (un evento real por cada guardado del closer vía
+        POST /closer/deck/<id>, con su `user_id` real — ver `BookingService.log_lead_event`),
+        NO en `Appointment.updated_at`: la primera versión de este resumen usaba `updated_at` y
+        dio números absurdos en pruebas reales (65 "confirmados"/42 "show ups" en un solo día)
+        porque cualquier sincronización de fondo que toque la fila (ej. el webhook de n8n
+        `/public/financial-agendas` resincronizando agendas en lote) también actualiza
+        `updated_at`, sin que el closer haya hecho nada — `LeadEventLog` solo se escribe cuando
+        ESTE closer específico guarda algo desde el mazo. Se cuentan citas *distintas* (no
+        eventos: una misma cita puede guardarse varias veces en el día) por su estado ACTUAL, así
+        que si una cita pasó por dos estados hoy, cuenta una sola vez en el estado en que quedó.
+
+        Nota honesta: esto sigue sin poder distinguir trabajo real del closer de sesiones de
+        prueba que actuaron "como" este closer (ej. verificaciones de desarrollo simulando su
+        usuario) — ambas quedan bajo el mismo `user_id`. En un entorno compartido de desarrollo
+        estos números pueden seguir inflados por pruebas del mismo día."""
+        from app.models import User, Appointment, LeadEventLog, FinancialSale
 
         user = User.query.get(closer_id)
         start_utc, end_utc = CloserService._day_bounds_utc(user, day_local)
 
-        touched_today = Appointment.query.filter(
-            Appointment.closer_id == closer_id,
-            Appointment.updated_at >= start_utc,
-            Appointment.updated_at <= end_utc
-        ).all()
+        touched_appt_ids = {
+            row[0] for row in db.session.query(LeadEventLog.appointment_id).filter(
+                LeadEventLog.user_id == closer_id,
+                LeadEventLog.created_at >= start_utc,
+                LeadEventLog.created_at <= end_utc
+            ).distinct().all()
+        }
+        touched_today = Appointment.query.filter(Appointment.id.in_(touched_appt_ids)).all() if touched_appt_ids else []
 
         conversando = confirmados = show_ups = reagendas = 0
         seguimientos_configurados = 0
@@ -2041,6 +2058,32 @@ class CloserService:
             Appointment.origin.like('Referido de%')
         ).count()
 
+        # Pendientes AHORA (no es "lo que se tocó hoy" — es "lo que todavía falta"), solo tiene
+        # sentido para el día de hoy: mismo criterio que step=confirmations/calls del mazo.
+        pendientes_confirmar = pendientes_llamar = None
+        if day_local == datetime.now(pytz.timezone(user.timezone or 'America/La_Paz') if user else pytz.UTC).date():
+            pendientes_confirmar = Appointment.query.filter(
+                Appointment.closer_id == closer_id,
+                Appointment.start_time >= start_utc,
+                Appointment.closer_processed == False,
+                or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+            ).count()
+            pendientes_llamar = Appointment.query.filter(
+                Appointment.closer_id == closer_id,
+                Appointment.start_time <= end_utc,
+                Appointment.closer_processed == False,
+                or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '', Appointment.closer_result == '2da call'),
+                or_(Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']), Appointment.result == None, Appointment.result == '')
+            ).count()
+
+        # Ventas del día: mismos totales ya calculados en compute_daily_report_fields, para no
+        # duplicar la lógica de clasificación de tipo_pago.
+        sale_fields = CloserService.compute_daily_report_fields(closer_id, day_local)
+        ventas_count = (sale_fields['pif_count'] + sale_fields['split_count'] + sale_fields['deposit_count']
+                         + sale_fields['installment_count'] + sale_fields['renewal_count'] + sale_fields['upsell_count'])
+        ventas_cash = (sale_fields['pif_cash_collected'] + sale_fields['split_cash_collected'] + sale_fields['deposit_cash_collected']
+                        + sale_fields['installment_cash_collected'] + sale_fields['renewal_cash_collected'] + sale_fields['upsell_cash_collected'])
+
         return {
             'conversando': conversando,
             'confirmados': confirmados,
@@ -2049,6 +2092,10 @@ class CloserService:
             'seguimientos_configurados': seguimientos_configurados,
             'seguimientos_hechos': seguimientos_hechos,
             'referidos_capturados': referidos_capturados,
+            'ventas_count': ventas_count,
+            'ventas_cash': round(ventas_cash, 2),
+            'pendientes_confirmar': pendientes_confirmar,
+            'pendientes_llamar': pendientes_llamar,
         }
 
     @staticmethod
