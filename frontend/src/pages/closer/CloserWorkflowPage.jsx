@@ -21,6 +21,8 @@ import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, l
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -115,6 +117,8 @@ const CloserWorkflowPage = () => {
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
+        phone: '',
+        email: '',
         date: localToday(),
         time: '18:00',
         origin: 'Setter',
@@ -126,7 +130,9 @@ const CloserWorkflowPage = () => {
         from_lead_id: null,
         from_lead_name: '',
         lead_name: '',
-        contact: '',
+        instagram: '',
+        phone: '',
+        email: '',
         notes: ''
     });
     const [refSearchQuery, setRefSearchQuery] = useState('');
@@ -383,6 +389,22 @@ const CloserWorkflowPage = () => {
             toast.error("El nombre del prospecto es obligatorio");
             return;
         }
+        if (!newAgendaForm.phone.trim()) {
+            toast.error("El teléfono del prospecto es obligatorio");
+            return;
+        }
+        if (!newAgendaForm.instagram.trim()) {
+            toast.error("El Instagram del prospecto es obligatorio");
+            return;
+        }
+        if (!newAgendaForm.email.trim()) {
+            toast.error("El correo del prospecto es obligatorio");
+            return;
+        }
+        if (!isValidEmail(newAgendaForm.email.trim())) {
+            toast.error("El correo del prospecto no es válido");
+            return;
+        }
         if (!newAgendaForm.date || !newAgendaForm.time) {
             toast.error("La fecha y hora son obligatorias");
             return;
@@ -394,7 +416,9 @@ const CloserWorkflowPage = () => {
                 origin: newAgendaForm.origin,
                 client_data: {
                     name: newAgendaForm.lead_name,
-                    instagram: newAgendaForm.instagram ? newAgendaForm.instagram.replace('@', '').trim() : ''
+                    instagram: newAgendaForm.instagram.replace('@', '').trim(),
+                    phone: newAgendaForm.phone.trim(),
+                    email: newAgendaForm.email.trim()
                 }
             };
             await api.post('/closer/appointments', payload);
@@ -403,6 +427,8 @@ const CloserWorkflowPage = () => {
             setNewAgendaForm({
                 lead_name: '',
                 instagram: '',
+                phone: '',
+                email: '',
                 date: localToday(),
                 time: '18:00',
                 origin: 'Setter',
@@ -427,12 +453,30 @@ const CloserWorkflowPage = () => {
             toast.error("El nombre del referido es obligatorio");
             return;
         }
+        if (!manualRefForm.phone.trim()) {
+            toast.error("El teléfono del referido es obligatorio");
+            return;
+        }
+        if (!manualRefForm.instagram.trim()) {
+            toast.error("El Instagram del referido es obligatorio");
+            return;
+        }
+        if (!manualRefForm.email.trim()) {
+            toast.error("El correo del referido es obligatorio");
+            return;
+        }
+        if (!isValidEmail(manualRefForm.email.trim())) {
+            toast.error("El correo del referido no es válido");
+            return;
+        }
         setProcessingId('manual_ref');
         try {
             const payload = {
                 from_lead_id: manualRefForm.from_lead_id,
                 lead_name: manualRefForm.lead_name,
-                contact: manualRefForm.contact,
+                instagram: manualRefForm.instagram.replace('@', '').trim(),
+                phone: manualRefForm.phone.trim(),
+                email: manualRefForm.email.trim(),
                 notes: manualRefForm.notes
             };
             await api.post('/closer/deck/referrals/manual', payload);
@@ -442,7 +486,9 @@ const CloserWorkflowPage = () => {
                 from_lead_id: null,
                 from_lead_name: '',
                 lead_name: '',
-                contact: '',
+                instagram: '',
+                phone: '',
+                email: '',
                 notes: ''
             });
             fetchAgendas();
@@ -4429,6 +4475,28 @@ const CloserWorkflowPage = () => {
                                     </div>
                                 </div>
 
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Teléfono <span className="text-pink-500">*</span></label>
+                                        <input
+                                            value={newAgendaForm.phone}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, phone: e.target.value }))}
+                                            placeholder="+52 55 1234 5678"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Correo <span className="text-pink-500">*</span></label>
+                                        <input
+                                            type="email"
+                                            value={newAgendaForm.email}
+                                            onChange={(e) => setNewAgendaForm(prev => ({ ...prev, email: e.target.value }))}
+                                            placeholder="carla@mail.com"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-slate-400 uppercase">Fecha <span className="text-pink-500">*</span></label>
@@ -4578,11 +4646,33 @@ const CloserWorkflowPage = () => {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Instagram o teléfono</label>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Instagram <span className="text-pink-500">*</span></label>
                                         <input
-                                            value={manualRefForm.contact}
-                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, contact: e.target.value }))}
-                                            placeholder="@usuario o +52 ..."
+                                            value={manualRefForm.instagram}
+                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, instagram: e.target.value }))}
+                                            placeholder="@usuario"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Teléfono <span className="text-pink-500">*</span></label>
+                                        <input
+                                            value={manualRefForm.phone}
+                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, phone: e.target.value }))}
+                                            placeholder="+52 55 1234 5678"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Correo <span className="text-pink-500">*</span></label>
+                                        <input
+                                            type="email"
+                                            value={manualRefForm.email}
+                                            onChange={(e) => setManualRefForm(prev => ({ ...prev, email: e.target.value }))}
+                                            placeholder="carla@mail.com"
                                             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
                                         />
                                     </div>
@@ -4607,7 +4697,7 @@ const CloserWorkflowPage = () => {
                                 <button
                                     type="button"
                                     onClick={handleSaveManualRef}
-                                    disabled={!manualRefForm.from_lead_id || !manualRefForm.lead_name.trim() || processingId === 'manual_ref'}
+                                    disabled={!manualRefForm.from_lead_id || !manualRefForm.lead_name.trim() || !manualRefForm.phone.trim() || !manualRefForm.instagram.trim() || !manualRefForm.email.trim() || processingId === 'manual_ref'}
                                     className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
                                 >
                                     {processingId === 'manual_ref' ? 'Guardando...' : 'Crear referido'}

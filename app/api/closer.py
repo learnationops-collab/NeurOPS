@@ -1772,6 +1772,9 @@ def create_manual_referral():
     from_lead_id = data.get('from_lead_id')
     lead_name = (data.get('lead_name') or '').strip()
     contact = (data.get('contact') or '').strip()
+    phone = (data.get('phone') or '').strip() or None
+    instagram = (data.get('instagram') or '').strip().replace('@', '') or None
+    email = (data.get('email') or '').strip() or None
     notes = (data.get('notes') or '').strip()
 
     if not from_lead_id:
@@ -1793,19 +1796,22 @@ def create_manual_referral():
 
         referrer_name = referrer_client.full_name if referrer_client else f"Lead #{from_lead_id}"
 
-        # Clasificar contacto
-        instagram = None
-        phone = None
-        if contact:
+        # El modal "Referido manual" envía teléfono/instagram/correo por separado (los 3
+        # obligatorios ahí). El flujo rápido de "¿le pediste referidos?" durante un seguimiento
+        # sigue enviando un único campo `contact` libre (instagram o teléfono) sin obligar nada
+        # — se clasifica acá como antes, solo cuando no llegaron los campos explícitos.
+        if not phone and not instagram and contact:
             if '@' in contact or not contact.replace('+', '').replace(' ', '').replace('-', '').isdigit():
                 instagram = contact.replace('@', '').strip()
             else:
                 phone = contact
 
+        contact_display = contact or ', '.join(filter(None, [phone, f"@{instagram}" if instagram else None, email])) or 'N/A'
+
         # Crear o buscar cliente referido
         ref_client = BookingService.find_or_create_client(
             nombre=lead_name,
-            email=None,
+            email=email,
             instagram=instagram,
             phone=phone
         )
@@ -1818,14 +1824,14 @@ def create_manual_referral():
             start_time=now,
             origin=f"Referido de {referrer_name}",
             last_stage='Nueva',
-            closer_notes=f"Referido por {referrer_name}. Contacto: {contact or 'N/A'}. Notas: {notes}",
+            closer_notes=f"Referido por {referrer_name}. Contacto: {contact_display}. Notas: {notes}",
             closer_processed=False
         )
         db.session.add(appt)
 
         # Dejar comentario en el perfil del cliente origen
         if referrer_client:
-            comment_text = f"💡 Referencia otorgada: creó un nuevo referido '{lead_name}' ({contact or 'Sin contacto'}). Contexto: {notes}"
+            comment_text = f"💡 Referencia otorgada: creó un nuevo referido '{lead_name}' ({contact_display}). Contexto: {notes}"
             comment = Comment(
                 text=comment_text,
                 comment_type='client',
