@@ -1980,6 +1980,78 @@ class CloserService:
         return [user.email] if user.email else []
 
     @staticmethod
+    def _day_bounds_utc(user, day_local):
+        import pytz
+        from datetime import time as time_cls
+        try:
+            tz = pytz.timezone((user.timezone if user else None) or 'America/La_Paz')
+        except Exception:
+            tz = pytz.timezone('America/La_Paz')
+        start_utc = tz.localize(datetime.combine(day_local, time_cls.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = tz.localize(datetime.combine(day_local, time_cls.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+        return start_utc, end_utc
+
+    @staticmethod
+    def get_daily_activity_summary(closer_id, day_local):
+        """Resumen en vivo de lo que el closer efectivamente tocó hoy en su bandeja — pensado para
+        que se vea en la pestaña "Reporte del día" ANTES de enviarlo, como un mini-dashboard que
+        confirma que lo que se va a mandar a Discord tiene sentido, sin tener que adivinarlo.
+        Distinto de `compute_daily_report_fields` (que arma los ~40 campos del reporte formal):
+        acá se cuenta por *acción tomada hoy* (`Appointment.updated_at` dentro de la ventana del
+        día — mismo criterio ya usado para "backlog resuelto hoy"), no por fecha original de la
+        cita, para que reportar un día anterior siga mostrando lo que realmente se hizo ese día."""
+        from app.models import User, Appointment
+
+        user = User.query.get(closer_id)
+        start_utc, end_utc = CloserService._day_bounds_utc(user, day_local)
+
+        touched_today = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.updated_at >= start_utc,
+            Appointment.updated_at <= end_utc
+        ).all()
+
+        conversando = confirmados = show_ups = reagendas = 0
+        seguimientos_configurados = 0
+        for a in touched_today:
+            result_lower = (a.result or '').strip().lower()
+            closer_result_lower = (a.closer_result or '').strip().lower()
+            if result_lower == 'conversando':
+                conversando += 1
+            if result_lower == 'confirmado':
+                confirmados += 1
+            if closer_result_lower == 'show up':
+                show_ups += 1
+            if a.is_rescheduled or result_lower in ('reagendado', 'reagendada') or closer_result_lower in ('reagendado', 'reagendada'):
+                reagendas += 1
+            if not a.seguimiento_realizado and a.fecha_seguimiento:
+                seguimientos_configurados += 1
+
+        seguimientos_hechos = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.seguimiento_realizado == True,
+            Appointment.last_contact_at >= start_utc,
+            Appointment.last_contact_at <= end_utc
+        ).count()
+
+        referidos_capturados = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.created_at >= start_utc,
+            Appointment.created_at <= end_utc,
+            Appointment.origin.like('Referido de%')
+        ).count()
+
+        return {
+            'conversando': conversando,
+            'confirmados': confirmados,
+            'show_ups': show_ups,
+            'reagendas': reagendas,
+            'seguimientos_configurados': seguimientos_configurados,
+            'seguimientos_hechos': seguimientos_hechos,
+            'referidos_capturados': referidos_capturados,
+        }
+
+    @staticmethod
     def compute_daily_report_fields(closer_id, day_local):
         """Calcula los campos de CloserDailyReport para `closer_id` en el día calendario
         `day_local` (fecha en la zona horaria del propio closer), a partir de datos reales:

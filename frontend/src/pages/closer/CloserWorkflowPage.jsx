@@ -63,14 +63,19 @@ const CloserWorkflowPage = () => {
     const [todayReportSent, setTodayReportSent] = useState(false);
 
     // Estado del reporte v6
-    const [referrals, setReferrals] = useState({ rf1: 0, rf2: 0, rf3: 0, rf4: 0, rf5: 0 });
     const [reflection, setReflection] = useState({ win: '', fix: '' });
     const [offDaysMode, setOffDaysMode] = useState(null); // 0 = no, 1 = si
     const [selectedOffDays, setSelectedOffDays] = useState(new Set());
     const [submittingReport, setSubmittingReport] = useState(false);
+    // Resumen en vivo de lo que el closer tocó ese día (Conversando/Confirmados/Show ups/
+    // Reagendas/Seguimientos/Referidos) — reemplaza los inputs manuales de referidos: todo sale
+    // de CloserService.get_daily_activity_summary.
+    const [dailyActivity, setDailyActivity] = useState(null);
+    const [reportStatusRefreshKey, setReportStatusRefreshKey] = useState(0);
 
     // Consultar si el día elegido ya tiene un reporte enviado (y precargar lo que ya se había
-    // escrito) cada vez que se entra a la pestaña de reporte o se cambia el día a reportar.
+    // escrito) cada vez que se entra a la pestaña de reporte, se cambia el día a reportar, o se
+    // pide un refresh manual (botón "Actualizar" del resumen, tras corregir algo en la bandeja).
     useEffect(() => {
         if (activeView !== 'report') return;
         setLoadingReportStatus(true);
@@ -79,13 +84,13 @@ const CloserWorkflowPage = () => {
                 const d = res.data || {};
                 setReportSent(!!d.sent);
                 setReportSentAt(d.sent_at || null);
-                setReferrals(prev => ({ ...prev, rf1: d.referrals_sourced || 0, rf2: d.referrals_scheduled || 0 }));
                 setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
+                setDailyActivity(d.activity || null);
                 if (reportDate === localToday()) setTodayReportSent(!!d.sent);
             })
             .catch(err => console.error('Error al consultar el estado del reporte:', err))
             .finally(() => setLoadingReportStatus(false));
-    }, [activeView, reportDate]);
+    }, [activeView, reportDate, reportStatusRefreshKey]);
 
     // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
     // entre a la pestaña de reporte — el dock decora "✓ Reporte enviado" desde el inicio.
@@ -3452,50 +3457,41 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
 
-                    {/* Referidos */}
+                    {/* Resumen en vivo — lo que el sistema ya tiene registrado para ese día, sacado
+                        directo de la bandeja (nada se tipea a mano). Si algo no cuadra, se corrige
+                        desde la bandeja y se vuelve acá: el mismo useEffect que carga esto se
+                        vuelve a disparar al reentrar a la pestaña. */}
                     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Referidos del día
-                        </h3>
-                        <p className="text-xs text-slate-400">El único embudo que el sistema no puede ver solo.</p>
-                        
-                        <div className="grid grid-cols-1 gap-3">
-                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">0</div>
-                                <div className="flex-1 min-w-0">
-                                    <b className="text-xs font-bold block text-white">Llamadas tomadas hoy</b>
-                                    <small className="text-[10px] text-slate-500">Automático</small>
-                                </div>
-                                <div className="text-lg font-black text-pink-400">{counts.calls}</div>
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Resumen de {reportDate === localToday() ? 'hoy' : reportDate}
+                            </h3>
+                            <button
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5"
+                                disabled={loadingReportStatus}
+                                onClick={() => setReportStatusRefreshKey(k => k + 1)}
+                            >
+                                {loadingReportStatus ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                Actualizar
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-400">Esto es lo que se va a mandar a Discord — sale directo de lo que ya quedó registrado en la bandeja, no hay nada que completar a mano acá.</p>
 
-                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">1</div>
-                                <div className="flex-1 min-w-0">
-                                    <b className="text-xs font-bold block text-white">¿A cuántas les pediste referido?</b>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {[
+                                { label: 'Conversando', value: dailyActivity?.conversando, color: 'text-sky-400' },
+                                { label: 'Confirmados', value: dailyActivity?.confirmados, color: 'text-emerald-400' },
+                                { label: 'Show ups', value: dailyActivity?.show_ups, color: 'text-pink-400' },
+                                { label: 'Reagendas', value: dailyActivity?.reagendas, color: 'text-amber-400' },
+                                { label: 'Seguimientos configurados', value: dailyActivity?.seguimientos_configurados, color: 'text-violet-400' },
+                                { label: 'Seguimientos hechos', value: dailyActivity?.seguimientos_hechos, color: 'text-indigo-400' },
+                                { label: 'Referidos capturados', value: dailyActivity?.referidos_capturados, color: 'text-blue-400' },
+                            ].map(stat => (
+                                <div key={stat.label} className="bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
+                                    <b className={`text-2xl font-black block ${stat.color}`}>{dailyActivity ? (stat.value ?? 0) : '—'}</b>
+                                    <small className="text-[10px] text-slate-500 font-bold uppercase">{stat.label}</small>
                                 </div>
-                                <input 
-                                    type="number" 
-                                    min="0"
-                                    value={referrals.rf1}
-                                    onChange={(e) => setReferrals(prev => ({ ...prev, rf1: parseInt(e.target.value) || 0 }))}
-                                    className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-center font-bold text-sm text-white"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-4 bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black text-white">2</div>
-                                <div className="flex-1 min-w-0">
-                                    <b className="text-xs font-bold block text-white">¿Cuántas te dieron referido?</b>
-                                </div>
-                                <input 
-                                    type="number" 
-                                    min="0"
-                                    value={referrals.rf2}
-                                    onChange={(e) => setReferrals(prev => ({ ...prev, rf2: parseInt(e.target.value) || 0 }))}
-                                    className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-center font-bold text-sm text-white"
-                                />
-                            </div>
+                            ))}
                         </div>
                     </div>
 
@@ -3538,8 +3534,6 @@ const CloserWorkflowPage = () => {
                                 try {
                                     const res = await api.post('/closer/deck/daily-report', {
                                         date: reportDate,
-                                        referrals_sourced: referrals.rf1,
-                                        referrals_scheduled: referrals.rf2,
                                         reflections: { victory: reflection.win, opportunity: reflection.fix }
                                     });
                                     setReportSent(true);

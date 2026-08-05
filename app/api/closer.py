@@ -1603,6 +1603,12 @@ def get_daily_report_status():
     from app.models import CloserDailyReport
     report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=day_local).first()
 
+    try:
+        activity = CloserService.get_daily_activity_summary(current_user.id, day_local)
+    except Exception as e:
+        activity = None
+        print(f"[Daily Report Activity Error] {e}")
+
     return jsonify({
         "date": day_local.isoformat(),
         "sent": bool(report),
@@ -1610,7 +1616,8 @@ def get_daily_report_status():
         "referrals_sourced": report.referrals_sourced if report else 0,
         "referrals_scheduled": report.referrals_scheduled if report else 0,
         "reflection_victory": report.reflection_victory if report else "",
-        "reflection_opportunity": report.reflection_opportunity if report else ""
+        "reflection_opportunity": report.reflection_opportunity if report else "",
+        "activity": activity
     }), 200
 
 
@@ -1620,10 +1627,12 @@ def send_daily_report():
     """Arma, guarda y envía a Discord el reporte diario del closer autenticado, calculado a
     partir de sus agendas/ventas reales del día (ver CloserService.compute_daily_report_fields).
     Reemplaza al botón "Enviar reporte al sistema" del mazo, que hasta ahora no llamaba a ningún
-    endpoint (ver bitácora). Solo recibe del cliente lo que el sistema no puede saber por sí
-    solo: referidos pedidos/dados y la reflexión diaria. Acepta `date` opcional ('YYYY-MM-DD')
-    para reportar un día anterior en vez de hoy — reenviar el mismo día actualiza el reporte
-    existente en vez de duplicarlo (y reenvía a Discord)."""
+    endpoint (ver bitácora). Los referidos ya no se piden manualmente (antes 2 inputs numéricos
+    en el frontend): se cuentan solos a partir de los referidos con datos reales que ya quedaron
+    registrados en el sistema ese día (ver CloserService.get_daily_activity_summary). Lo único
+    que el sistema no puede saber por sí solo es la reflexión diaria. Acepta `date` opcional
+    ('YYYY-MM-DD') para reportar un día anterior en vez de hoy — reenviar el mismo día actualiza
+    el reporte existente en vez de duplicarlo (y reenvía a Discord)."""
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
@@ -1635,8 +1644,18 @@ def send_daily_report():
     except Exception as e:
         return jsonify({"error": f"Error al calcular el reporte: {str(e)}"}), 500
 
-    computed['referrals_sourced'] = int(data.get('referrals_sourced') or 0)
-    computed['referrals_scheduled'] = int(data.get('referrals_scheduled') or 0)
+    # "Pedidos" no tiene ninguna señal automática confiable en el sistema (a diferencia de
+    # "Concretados": un referido real, con datos, que efectivamente entró como agenda) — se
+    # reporta el mismo número real en vez de inventar un "pedidos" que nadie está registrando,
+    # o dejarlo en 0 al lado de un número real (mismo criterio que 'slots': honesto antes que
+    # fabricado).
+    try:
+        activity = CloserService.get_daily_activity_summary(current_user.id, day_local)
+        referidos_reales = activity.get('referidos_capturados', 0)
+    except Exception:
+        referidos_reales = 0
+    computed['referrals_sourced'] = referidos_reales
+    computed['referrals_scheduled'] = referidos_reales
     computed['reflections'] = data.get('reflections') or None
     computed['reflection_victory'] = (data.get('reflections') or {}).get('victory') if isinstance(data.get('reflections'), dict) else None
     computed['reflection_opportunity'] = (data.get('reflections') or {}).get('opportunity') if isinstance(data.get('reflections'), dict) else None
