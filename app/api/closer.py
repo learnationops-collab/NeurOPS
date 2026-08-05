@@ -1574,6 +1574,46 @@ def get_closer_deck_counts():
     }), 200
 
 
+def _resolve_report_date(current_user, date_str):
+    """Resuelve la fecha calendario (zona horaria del closer) para la que se arma/consulta el
+    reporte diario. Acepta 'YYYY-MM-DD' explícito (para reportar días anteriores); si no viene,
+    o es inválido, cae a "hoy" en la zona horaria del closer. Nunca permite una fecha futura —
+    no hay datos que reportar todavía."""
+    today_local = datetime.now(pytz.timezone(current_user.timezone or 'America/La_Paz')).date()
+    if not date_str:
+        return today_local
+    try:
+        parsed = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return today_local
+    return min(parsed, today_local)
+
+
+@bp.route('/deck/daily-report', methods=['GET'])
+@login_required
+def get_daily_report_status():
+    """Consulta si ya existe un reporte guardado para el closer autenticado en una fecha dada
+    (por defecto hoy) — permite que el frontend sepa, al elegir un día anterior, si ya se
+    reportó o si todavía falta, y precargar lo que ya se había escrito (referidos/reflexión)."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    day_local = _resolve_report_date(current_user, request.args.get('date'))
+
+    from app.models import CloserDailyReport
+    report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=day_local).first()
+
+    return jsonify({
+        "date": day_local.isoformat(),
+        "sent": bool(report),
+        "sent_at": report.created_at.isoformat() if report and getattr(report, 'created_at', None) else None,
+        "referrals_sourced": report.referrals_sourced if report else 0,
+        "referrals_scheduled": report.referrals_scheduled if report else 0,
+        "reflection_victory": report.reflection_victory if report else "",
+        "reflection_opportunity": report.reflection_opportunity if report else ""
+    }), 200
+
+
 @bp.route('/deck/daily-report', methods=['POST'])
 @login_required
 def send_daily_report():
@@ -1581,15 +1621,17 @@ def send_daily_report():
     partir de sus agendas/ventas reales del día (ver CloserService.compute_daily_report_fields).
     Reemplaza al botón "Enviar reporte al sistema" del mazo, que hasta ahora no llamaba a ningún
     endpoint (ver bitácora). Solo recibe del cliente lo que el sistema no puede saber por sí
-    solo: referidos pedidos/dados y la reflexión diaria."""
+    solo: referidos pedidos/dados y la reflexión diaria. Acepta `date` opcional ('YYYY-MM-DD')
+    para reportar un día anterior en vez de hoy — reenviar el mismo día actualiza el reporte
+    existente en vez de duplicarlo (y reenvía a Discord)."""
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
-    today_local = datetime.now(pytz.timezone(current_user.timezone or 'America/La_Paz')).date()
+    day_local = _resolve_report_date(current_user, data.get('date'))
 
     try:
-        computed = CloserService.compute_daily_report_fields(current_user.id, today_local)
+        computed = CloserService.compute_daily_report_fields(current_user.id, day_local)
     except Exception as e:
         return jsonify({"error": f"Error al calcular el reporte: {str(e)}"}), 500
 
@@ -1601,12 +1643,12 @@ def send_daily_report():
     computed['is_non_working_day'] = bool(data.get('is_non_working_day', False))
 
     from app.models import CloserDailyReport
-    report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=today_local).first()
+    report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=day_local).first()
     if report:
         for key, val in computed.items():
             setattr(report, key, val)
     else:
-        report = CloserDailyReport(closer_id=current_user.id, date=today_local, **computed)
+        report = CloserDailyReport(closer_id=current_user.id, date=day_local, **computed)
         db.session.add(report)
 
     try:
@@ -1621,7 +1663,7 @@ def send_daily_report():
     except Exception as e:
         print(f"[Daily Report Discord Error] {e}")
 
-    return jsonify({"message": "Reporte del día enviado con éxito", "report_id": report.id}), 200
+    return jsonify({"message": "Reporte del día enviado con éxito", "report_id": report.id, "date": day_local.isoformat()}), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])

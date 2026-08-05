@@ -53,13 +53,47 @@ const CloserWorkflowPage = () => {
     const [activeView, setActiveView] = useState('inbox');
     const [reportSent, setReportSent] = useState(false);
     const [sendingReport, setSendingReport] = useState(false);
-    
+    // Día que se está reportando (por defecto hoy) — permite reportar días anteriores sin
+    // límite, para que el closer pueda ponerse al día si se le pasó alguno.
+    const [reportDate, setReportDate] = useState(localToday());
+    const [reportSentAt, setReportSentAt] = useState(null);
+    const [loadingReportStatus, setLoadingReportStatus] = useState(false);
+    // Estado de HOY específicamente (independiente del día que se esté viendo en el selector de
+    // arriba) — es lo que decora el dock flotante ("✓ Reporte enviado"), que siempre habla de hoy.
+    const [todayReportSent, setTodayReportSent] = useState(false);
+
     // Estado del reporte v6
     const [referrals, setReferrals] = useState({ rf1: 0, rf2: 0, rf3: 0, rf4: 0, rf5: 0 });
     const [reflection, setReflection] = useState({ win: '', fix: '' });
     const [offDaysMode, setOffDaysMode] = useState(null); // 0 = no, 1 = si
     const [selectedOffDays, setSelectedOffDays] = useState(new Set());
     const [submittingReport, setSubmittingReport] = useState(false);
+
+    // Consultar si el día elegido ya tiene un reporte enviado (y precargar lo que ya se había
+    // escrito) cada vez que se entra a la pestaña de reporte o se cambia el día a reportar.
+    useEffect(() => {
+        if (activeView !== 'report') return;
+        setLoadingReportStatus(true);
+        api.get('/closer/deck/daily-report', { params: { date: reportDate } })
+            .then(res => {
+                const d = res.data || {};
+                setReportSent(!!d.sent);
+                setReportSentAt(d.sent_at || null);
+                setReferrals(prev => ({ ...prev, rf1: d.referrals_sourced || 0, rf2: d.referrals_scheduled || 0 }));
+                setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
+                if (reportDate === localToday()) setTodayReportSent(!!d.sent);
+            })
+            .catch(err => console.error('Error al consultar el estado del reporte:', err))
+            .finally(() => setLoadingReportStatus(false));
+    }, [activeView, reportDate]);
+
+    // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
+    // entre a la pestaña de reporte — el dock decora "✓ Reporte enviado" desde el inicio.
+    useEffect(() => {
+        api.get('/closer/deck/daily-report', { params: { date: localToday() } })
+            .then(res => setTodayReportSent(!!res.data?.sent))
+            .catch(() => {});
+    }, []);
 
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
@@ -3342,25 +3376,53 @@ const CloserWorkflowPage = () => {
                 </div>
                 ) : activeView === 'report' ? (
                 <div className="space-y-6 text-left">
+                    {/* Selector de día a reportar — por defecto hoy, pero se puede retroceder para
+                        ponerse al día con reportes atrasados. */}
+                    <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+                        <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Reportando el día</label>
+                            <input
+                                type="date"
+                                max={localToday()}
+                                value={reportDate}
+                                onChange={(e) => setReportDate(e.target.value)}
+                                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                            />
+                        </div>
+                        {reportDate !== localToday() && (
+                            <button
+                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer"
+                                onClick={() => setReportDate(localToday())}
+                            >
+                                Volver a hoy
+                            </button>
+                        )}
+                        {loadingReportStatus && <Loader2 size={14} className="animate-spin text-slate-500" />}
+                    </div>
+
                     {/* REPORTE DEL DÍA v6 (v-report) */}
                     {reportSent ? (
                         <div className="bg-gradient-to-r from-emerald-500/20 to-blue-600/20 border border-emerald-500/50 rounded-3xl p-6 flex items-center gap-5">
                             <div className="text-4xl">✅</div>
                             <div className="flex-1">
-                                <h4 className="text-xl font-black text-white">Reporte del día enviado</h4>
+                                <h4 className="text-xl font-black text-white">Reporte del {reportDate === localToday() ? 'día' : reportDate} enviado</h4>
                                 <p className="text-xs text-slate-300 mt-1">
-                                    {counts.confirmations} confirmados · {counts.calls} llamadas · {counts.seguimientos} seguimientos. Deuda de burpees: <b>{Math.max(0, 50 - counts.seguimientos)}</b>. Ya no te queda nada por completar hoy.
+                                    {reportDate === localToday()
+                                        ? <>{counts.confirmations} confirmados · {counts.calls} llamadas · {counts.seguimientos} seguimientos. Deuda de burpees: <b>{Math.max(0, 50 - counts.seguimientos)}</b>. Ya no te queda nada por completar hoy.</>
+                                        : 'Podés editar los referidos o la reflexión de abajo y volver a enviarlo — se actualiza, no se duplica.'}
                                 </p>
                             </div>
                             <div className="text-right">
                                 <b className="text-xs font-black uppercase text-emerald-400 block">Enviado</b>
-                                <small className="text-xs text-slate-400">{new Date().toLocaleDateString('es-ES')} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                                <small className="text-xs text-slate-400">
+                                    {reportSentAt ? `${new Date(reportSentAt).toLocaleDateString('es-ES')} · ${new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'}
+                                </small>
                             </div>
                         </div>
-                    ) : (
+                    ) : reportDate === localToday() ? (
                         <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
-                            (counts.confirmations + counts.calls) > 0 
-                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' 
+                            (counts.confirmations + counts.calls) > 0
+                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
                                 : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
                         }`}>
                             <div className="flex items-center gap-3">
@@ -3370,8 +3432,8 @@ const CloserWorkflowPage = () => {
                                         {(counts.confirmations + counts.calls) > 0 ? 'Bandeja al día' : 'Bandeja con pendientes'}
                                     </h4>
                                     <p className="text-xs text-slate-400">
-                                        {(counts.confirmations + counts.calls) > 0 
-                                            ? 'Nadie sin tocar y llamadas reportadas.' 
+                                        {(counts.confirmations + counts.calls) > 0
+                                            ? 'Nadie sin tocar y llamadas reportadas.'
                                             : `Quedan agendas por tocar o llamadas por reportar.`}
                                     </p>
                                 </div>
@@ -3379,6 +3441,10 @@ const CloserWorkflowPage = () => {
                             <button className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-white transition-all cursor-pointer" onClick={() => setActiveView('inbox')}>
                                 Ir a la bandeja
                             </button>
+                        </div>
+                    ) : (
+                        <div className="p-5 rounded-2xl border bg-amber-500/10 border-amber-500/40 text-amber-300 text-xs font-bold">
+                            Todavía no hay reporte para el {reportDate}. Se va a armar con las agendas y ventas reales que quedaron registradas ese día.
                         </div>
                     )}
 
@@ -3458,34 +3524,36 @@ const CloserWorkflowPage = () => {
                         </div>
                     </div>
 
-                    {/* Enviar reporte */}
-                    {!reportSent && (
-                        <div className="flex items-center gap-4 pt-2">
-                            <button
-                                disabled={sendingReport}
-                                onClick={async () => {
-                                    setSendingReport(true);
-                                    try {
-                                        await api.post('/closer/deck/daily-report', {
-                                            referrals_sourced: referrals.rf1,
-                                            referrals_scheduled: referrals.rf2,
-                                            reflections: { victory: reflection.win, opportunity: reflection.fix }
-                                        });
-                                        setReportSent(true);
-                                        toast.success("Reporte del día enviado con éxito");
-                                    } catch (err) {
-                                        toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
-                                    } finally {
-                                        setSendingReport(false);
-                                    }
-                                }}
-                                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
-                            >
-                                {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
-                                {sendingReport ? 'Enviando...' : 'Enviar reporte al sistema'}
-                            </button>
-                        </div>
-                    )}
+                    {/* Enviar/actualizar reporte — reenviar el mismo día actualiza el reporte
+                        existente y lo reenvía a Discord, no lo duplica. */}
+                    <div className="flex items-center gap-4 pt-2">
+                        <button
+                            disabled={sendingReport}
+                            onClick={async () => {
+                                setSendingReport(true);
+                                try {
+                                    const res = await api.post('/closer/deck/daily-report', {
+                                        date: reportDate,
+                                        referrals_sourced: referrals.rf1,
+                                        referrals_scheduled: referrals.rf2,
+                                        reflections: { victory: reflection.win, opportunity: reflection.fix }
+                                    });
+                                    setReportSent(true);
+                                    setReportSentAt(new Date().toISOString());
+                                    if (res.data?.date === localToday()) setTodayReportSent(true);
+                                    toast.success(res.data?.date === localToday() ? "Reporte del día enviado con éxito" : `Reporte del ${res.data?.date || reportDate} enviado con éxito`);
+                                } catch (err) {
+                                    toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
+                                } finally {
+                                    setSendingReport(false);
+                                }
+                            }}
+                            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
+                        >
+                            {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
+                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte al sistema'}
+                        </button>
+                    </div>
                 </div>
                 ) : activeView === 'cleanup' ? (
                     <ClientCleanupPane />
@@ -4725,7 +4793,7 @@ const CloserWorkflowPage = () => {
             </AnimatePresence>
 
             {/* DOCK FLOTANTE v6 */}
-            <div className={`dock-v6 ${reportSent ? 'done-v6' : ''}`}>
+            <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>
                 <button 
                     className={`dk-v6 ${activeView === 'inbox' ? 'on' : ''}`}
                     onClick={() => setActiveView('inbox')}
@@ -4736,10 +4804,10 @@ const CloserWorkflowPage = () => {
                     )}
                 </button>
                 <button
-                    className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${reportSent ? 'sent' : ''}`}
+                    className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${todayReportSent ? 'sent' : ''}`}
                     onClick={() => setActiveView('report')}
                 >
-                    {reportSent ? (
+                    {todayReportSent ? (
                         <span>✓ Reporte enviado</span>
                     ) : (
                         <span>📊 Reporte del día</span>

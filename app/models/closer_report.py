@@ -1,3 +1,4 @@
+from datetime import datetime
 from app import db
 
 
@@ -9,6 +10,9 @@ class CloserDailyReport(db.Model):
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
+    # Cuándo se envió/actualizó este reporte (distinto de `date`, que es el día que reporta —
+    # puede reportarse un día anterior, ver `_resolve_report_date` en app/api/closer.py).
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # --- GENERALES ---
     slots = db.Column(db.Integer, default=0)
