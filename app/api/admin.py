@@ -799,6 +799,28 @@ def backlog_cleanup():
         **result
     }), 200
 
+@bp.route('/admin/tools/client-dedup', methods=['GET', 'POST'])
+@login_required
+@operator_required
+def client_dedup():
+    """Fusiona clientes duplicados (mismo email/instagram/teléfono normalizado, con nombre
+    compatible para instagram/teléfono). GET = previsualización (dry run, no modifica nada).
+    POST = ejecución real, fusiona y borra los duplicados."""
+    from app.services.client_dedup_service import ClientDedupService
+
+    dry_run = request.method == 'GET'
+    result = ClientDedupService.run_full_dedup(dry_run=dry_run)
+
+    if dry_run:
+        return jsonify({
+            "message": f"Se encontraron {result['groups_found']} grupos de clientes duplicados ({result['clients_to_merge']} clientes se fusionarían).",
+            **result
+        }), 200
+    return jsonify({
+        "message": f"Se fusionaron {result['clients_merged']} clientes duplicados en {result['groups_merged']} grupos.",
+        **result
+    }), 200
+
 @bp.route('/admin/tools/migrate-leads', methods=['POST'])
 @login_required
 @admin_required

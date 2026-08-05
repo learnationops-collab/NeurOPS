@@ -93,18 +93,43 @@ class BookingService:
         client = None
         if client_id:
             client = Client.query.get(client_id)
-        
-        # Búsqueda por email
-        if not client and email_clean:
-            client = Client.query.filter(db.func.lower(Client.email) == email_clean).first()
-            
-        # Búsqueda por instagram
-        if not client and ig_clean:
-            client = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
 
-        # Búsqueda por teléfono
-        if not client and phone_clean and len(phone_clean) >= 8:
-            client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
+        if not client:
+            # Buscamos por las 3 vías SIN cortar en el primer match (a diferencia de antes) para
+            # poder detectar si email/instagram/teléfono apuntan a clientes YA duplicados entre
+            # sí en la base — y fusionarlos acá mismo, evitando crear un cuarto registro más.
+            found = {}  # client_id -> (fuente, Client)
+            if email_clean:
+                m = Client.query.filter(db.func.lower(Client.email) == email_clean).first()
+                if m and m.id not in found:
+                    found[m.id] = ('email', m)
+            if ig_clean:
+                m = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                if m and m.id not in found:
+                    found[m.id] = ('instagram', m)
+            if phone_clean and len(phone_clean) >= 8:
+                m = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
+                if m and m.id not in found:
+                    found[m.id] = ('phone', m)
+
+            if len(found) == 1:
+                client = next(iter(found.values()))[1]
+            elif len(found) > 1:
+                from app.services.client_dedup_service import ClientDedupService, _names_compatible
+                # El email es la señal más fuerte: si hubo match por email, es el sobreviviente.
+                by_email = [m for source, m in found.values() if source == 'email']
+                survivor = by_email[0] if by_email else next(iter(found.values()))[1]
+                to_merge = []
+                for source, m in found.values():
+                    if m.id == survivor.id:
+                        continue
+                    # Instagram/teléfono son señales más débiles (recicladas entre cuentas
+                    # distintas) — solo se fusionan acá si además el nombre es compatible.
+                    if source == 'email' or _names_compatible(survivor.full_name, m.full_name):
+                        to_merge.append(m.id)
+                if to_merge:
+                    ClientDedupService.merge_clients(survivor.id, to_merge, matched_on='auto-on-write')
+                client = Client.query.get(survivor.id)
 
         if not client:
             import uuid
