@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta
 from app import db
-from app.models import Appointment, Enrollment, Program, Payment, FinancialSale
+from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
 from sqlalchemy import or_, func
 
 # Cadencia automática de reintentos (días desde el intento anterior), igual al prototipo v7.
@@ -216,11 +216,25 @@ class CloserFollowUpService:
             selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
             selected_date = date.today()
-        start_dt = datetime.combine(selected_date, time.min)
-        end_dt = datetime.combine(selected_date, time.max)
+
+        # Ventana del día en UTC, en la zona horaria del propio closer (mismo criterio que
+        # CloserService._day_bounds_utc). Antes esta función calculaba start_dt/end_dt pero
+        # nunca los usaba para filtrar la query — contaba TODOS los seguimientos marcados como
+        # hechos en la historia completa del closer, no solo los del día (bug real: llegó a
+        # mostrar "196 de 50" con meta "cumplida" en un día sin ningún seguimiento hecho).
+        import pytz
+        user = User.query.get(closer_id) if closer_id else None
+        try:
+            tz = pytz.timezone((user.timezone if user else None) or 'America/La_Paz')
+        except Exception:
+            tz = pytz.timezone('America/La_Paz')
+        start_utc = tz.localize(datetime.combine(selected_date, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = tz.localize(datetime.combine(selected_date, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
 
         q = Appointment.query.filter(
             Appointment.seguimiento_realizado == True,
+            Appointment.last_contact_at >= start_utc,
+            Appointment.last_contact_at <= end_utc
         )
         if closer_id:
             q = q.filter(Appointment.closer_id == closer_id)

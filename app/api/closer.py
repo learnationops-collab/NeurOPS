@@ -673,7 +673,7 @@ def update_appointment(id):
     appt = Appointment.query.get_or_404(id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
-        
+
     data = request.get_json() or {}
     if 'start_time' in data:
         try:
@@ -1694,9 +1694,9 @@ def process_closer_card(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
-        
+
     data = request.get_json() or {}
-    
+
     # Actualizar campos de la agenda
     if 'keyword' in data:
         appt.keyword = data['keyword']
@@ -1851,7 +1851,7 @@ def create_manual_referral():
 
     try:
         from app.services.booking_service import BookingService
-        from app.models import Client, Appointment, Comment, db
+        from app.models import Client, Appointment, Comment, User, db
 
         # Resolver lead / cliente origen
         referrer_client = None
@@ -1883,10 +1883,19 @@ def create_manual_referral():
             phone=phone
         )
 
-        # Crear cita para el referido
+        # Crear cita para el referido. closer_id es NOT NULL en la base — un admin/setter
+        # creando el referido a nombre de otro closer no puede dejarlo sin dueño (quedaría
+        # huérfano, invisible en cualquier pool de Seguimientos): hereda el closer del lead que
+        # lo refirió, y si tampoco tiene, cae al mismo fallback ya usado en
+        # BookingService.sync_financial_agenda_to_appointment.
+        closer_id_for_referral = current_user.id if current_user.role == 'closer' else (origin_appt.closer_id if origin_appt else None)
+        if not closer_id_for_referral:
+            fallback_closer = User.query.filter_by(role='closer').first() or User.query.filter_by(role='admin').first()
+            closer_id_for_referral = fallback_closer.id if fallback_closer else current_user.id
+
         now = datetime.utcnow()
         appt = Appointment(
-            closer_id=current_user.id if current_user.role == 'closer' else None,
+            closer_id=closer_id_for_referral,
             client_id=ref_client.id,
             start_time=now,
             origin=f"Referido de {referrer_name}",
@@ -2056,16 +2065,23 @@ def get_client_full_history(client_id):
 def get_closer_deck_card(appt_id):
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
-        
+
     appt = Appointment.query.get_or_404(appt_id)
+    can_edit = True
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
         if appt.origin == 'ManyChat' or not appt.closer_id:
             appt.closer_id = current_user.id
             db.session.commit()
         else:
-            return jsonify({"message": "Forbidden"}), 403
-        
-    return jsonify(_format_appointment_for_deck(appt)), 200
+            # Pertenece a otro closer: el buscador global no filtra por dueño (a propósito, para
+            # poder ubicar cualquier lead del sistema), así que abrirla desde ahí no debe 403 —
+            # se sirve en modo solo lectura en vez de bloquear por completo.
+            can_edit = False
+
+    card = _format_appointment_for_deck(appt)
+    card['can_edit'] = can_edit
+    card['owner_closer_name'] = None if can_edit else (appt.closer.username if appt.closer else None)
+    return jsonify(card), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['GET'])
