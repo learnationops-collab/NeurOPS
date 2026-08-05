@@ -1979,7 +1979,9 @@ class CloserService:
         `day_local` (fecha en la zona horaria del propio closer), a partir de datos reales:
         Appointment (llamadas, decision makers, seguimientos cerrados) y FinancialSale (ventas,
         ya con la misma clasificación de tipo_pago usada en el dashboard de admin — la seña se
-        reporta aparte, no como venta).
+        reporta aparte, no como venta). Incluye tanto las citas agendadas hoy como el backlog de
+        días anteriores que el closer efectivamente procesó hoy (via Appointment.updated_at), para
+        que limpiar agendas atrasadas también cuente como trabajo del día en el reporte.
 
         No fabrica valores para 'slots' ni 'offers_made': hoy no existe ninguna señal persistida
         de "oferta presentada" (se pregunta en el árbol de decisión del mazo, pero la respuesta
@@ -1998,11 +2000,25 @@ class CloserService:
         start_utc = tz.localize(datetime.combine(day_local, time_cls.min)).astimezone(pytz.UTC).replace(tzinfo=None)
         end_utc = tz.localize(datetime.combine(day_local, time_cls.max)).astimezone(pytz.UTC).replace(tzinfo=None)
 
-        appts = Appointment.query.filter(
+        appts_today = Appointment.query.filter(
             Appointment.closer_id == closer_id,
             Appointment.start_time >= start_utc,
             Appointment.start_time <= end_utc
         ).all()
+
+        # Backlog resuelto hoy: citas de días anteriores (start_time fuera de la ventana de hoy)
+        # que el closer efectivamente procesó hoy (closer_processed=True Y updated_at cae en la
+        # ventana de hoy). Sin esto, limpiar backlog atrasado (ver "② Llamadas") no se reflejaría
+        # nunca en el reporte del día en que realmente se hizo el trabajo.
+        backlog_resolved_today = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.start_time < start_utc,
+            Appointment.closer_processed == True,
+            Appointment.updated_at >= start_utc,
+            Appointment.updated_at <= end_utc
+        ).all()
+
+        appts = appts_today + backlog_resolved_today
 
         SECOND_CALL_RESULTS = {'2th call', '2da call', '2da Call'.lower(), 'segunda llamada', 'segunda agenda'}
 

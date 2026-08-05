@@ -18,6 +18,11 @@ class Appointment(db.Model):
     with_decision_maker = db.Column(db.Boolean, nullable=True)
     linked_call = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Última vez que se modificó cualquier campo de la cita. Permite distinguir "cuándo pasó la
+    # llamada" (start_time) de "cuándo el closer efectivamente la procesó" — necesario para que
+    # el reporte diario pueda contar trabajo de limpieza de backlog hecho hoy sobre citas de
+    # días/meses anteriores, algo que start_time por sí solo no puede reflejar.
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Campos de flujo de mazo secuencial (Setter & Closer)
     setter_processed = db.Column(db.Boolean, default=False, nullable=False)
