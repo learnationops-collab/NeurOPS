@@ -56,6 +56,18 @@ class CloserDailyReport(db.Model):
     installment_in_call_count = db.Column(db.Integer, default=0)
     installment_in_call_cash = db.Column(db.Float, default=0.0)
 
+    # --- VENTAS: Renovación ---
+    renewal_count = db.Column(db.Integer, default=0)
+    renewal_cash_collected = db.Column(db.Float, default=0.0)
+    renewal_in_call_count = db.Column(db.Integer, default=0)
+    renewal_in_call_cash = db.Column(db.Float, default=0.0)
+
+    # --- VENTAS: Upsell ---
+    upsell_count = db.Column(db.Integer, default=0)
+    upsell_cash_collected = db.Column(db.Float, default=0.0)
+    upsell_in_call_count = db.Column(db.Integer, default=0)
+    upsell_in_call_cash = db.Column(db.Float, default=0.0)
+
     # --- SEGUIMIENTOS ---
     follow_ups_sent = db.Column(db.Integer, default=0)
     follow_ups_replied = db.Column(db.Integer, default=0)

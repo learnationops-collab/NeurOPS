@@ -55,14 +55,27 @@ class SheetsService:
         if tabla == "Ventas_DB":
             try:
                 from app.models.financial import FinancialSale
+                from app.services.booking_service import BookingService
                 from datetime import datetime
-                
+
                 sale_date = datetime.utcnow()
                 marca_temp = payload.get('marca_temporal')
                 if marca_temp:
                     sale_date = SheetsService._parse_date(marca_temp)
-                    
+
+                # Resolver/crear el Client ANTES de guardar la venta (y no solo dentro del
+                # espejo a Enrollment/Payment) para que FinancialSale quede agrupada por
+                # identidad real de cliente desde el momento en que se crea, en vez de
+                # depender únicamente de coincidencias de texto libre en cada consulta.
+                client = BookingService.create_or_update_client({
+                    'name': payload.get('nombre_cliente'),
+                    'email': payload.get('mail_cliente'),
+                    'instagram': payload.get('instagram'),
+                    'phone': payload.get('telefono'),
+                })
+
                 sale = FinancialSale(
+                    client_id=client.id if client else None,
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
                     nombre_cliente=SheetsService._to_str(payload.get('nombre_cliente')),
                     telefono=SheetsService._to_str(payload.get('telefono')),
@@ -110,7 +123,7 @@ class SheetsService:
                 # del closer dentro de su propio mazo. FinancialSale sigue siendo la fuente de las
                 # métricas de admin (no se toca esa ruta); esto es un espejo, no un reemplazo.
                 try:
-                    SheetsService._sync_enrollment_payment(payload, sale)
+                    SheetsService._sync_enrollment_payment(payload, sale, client)
                 except Exception as sync_err:
                     logger.error(f"[Enrollment/Payment Sync Error] {sync_err}")
 
@@ -139,27 +152,44 @@ class SheetsService:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
             return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible."}
 
+    PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
+
     @staticmethod
-    def _sync_enrollment_payment(payload, sale):
+    def parse_tipo_pago(tipo_pago_raw):
+        """Separa el string plano 'CODE - tipo' (ej. 'RR - parcial') usado en FinancialSale.tipo_pago
+        en (program_code, tipo_simple_lower). Devuelve (None, None) si no tiene el formato esperado."""
+        tipo_pago_raw = str(tipo_pago_raw or '')
+        if ' - ' not in tipo_pago_raw:
+            return None, None
+        program_code, tipo_simple = [p.strip() for p in tipo_pago_raw.split(' - ', 1)]
+        return program_code.upper(), tipo_simple.lower()
+
+    @staticmethod
+    def resolve_program(program_code):
+        """Resuelve el Program activo a partir del código corto (RR/AL/SI) usado en tipo_pago."""
+        from app.models import Program
+        keyword = SheetsService.PROGRAM_KEYWORDS.get((program_code or '').upper())
+        if not keyword:
+            return None
+        return Program.query.filter(Program.is_active == True, Program.name.ilike(f'%{keyword}%')).first()
+
+    @staticmethod
+    def _sync_enrollment_payment(payload, sale, client):
         """Refleja una venta de 'Ventas_DB' (ya guardada como FinancialSale) también en
         Enrollment/Payment, para que el dashboard personal del closer (que lee de ahí, no de
         FinancialSale) y el sistema de cuotas queden consistentes con lo que el closer declaró.
         No falla la venta si algo acá no encaja (programa/closer no resuelto): FinancialSale ya
         quedó guardado, que es lo que de verdad importa para las métricas de admin."""
-        from app.services.booking_service import BookingService
-        from app.models import Client, Program, Enrollment, Payment, PaymentMethod, User
+        from app.models import Enrollment, Payment, PaymentMethod, User
 
-        tipo_pago_raw = str(payload.get('tipo_pago') or '')
-        if ' - ' not in tipo_pago_raw:
+        if not client:
             return
-        program_code, tipo_simple = [p.strip() for p in tipo_pago_raw.split(' - ', 1)]
-        tipo_simple_lower = tipo_simple.lower()
 
-        PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
-        keyword = PROGRAM_KEYWORDS.get(program_code.upper())
-        program = None
-        if keyword:
-            program = Program.query.filter(Program.is_active == True, Program.name.ilike(f'%{keyword}%')).first()
+        program_code, tipo_simple_lower = SheetsService.parse_tipo_pago(payload.get('tipo_pago'))
+        if not program_code:
+            return
+
+        program = SheetsService.resolve_program(program_code)
         if not program:
             logger.warning(f"[Enrollment Sync] No se pudo resolver el programa activo para código '{program_code}', se omite el espejo a Enrollment/Payment.")
             return
@@ -179,15 +209,6 @@ class SheetsService:
         email_vendedor = payload.get('email_vendedor')
         if email_vendedor:
             closer = User.query.filter(db.func.lower(User.email) == email_vendedor.strip().lower()).first()
-
-        client = BookingService.create_or_update_client({
-            'name': payload.get('nombre_cliente'),
-            'email': payload.get('mail_cliente'),
-            'instagram': payload.get('instagram'),
-            'phone': payload.get('telefono'),
-        })
-        if not client:
-            return
 
         enrollment = Enrollment.query.filter_by(client_id=client.id, program_id=program.id).first()
         if not enrollment:

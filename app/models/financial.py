@@ -4,6 +4,7 @@ from app import db
 class FinancialSale(db.Model):
     __tablename__ = 'financial_sales'
     id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
     email_vendedor = db.Column(db.String(255), nullable=True)
     nombre_cliente = db.Column(db.String(255), nullable=True)
     telefono = db.Column(db.String(255), nullable=True)
@@ -24,9 +25,12 @@ class FinancialSale(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial (basada en marca_temporal)
 
+    client = db.relationship('Client', backref=db.backref('financial_sales', lazy='dynamic'))
+
     def to_dict(self):
         return {
             "id": self.id,
+            "client_id": self.client_id,
             "email_vendedor": self.email_vendedor,
             "nombre_cliente": self.nombre_cliente,
             "telefono": self.telefono,

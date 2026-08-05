@@ -16,6 +16,7 @@ from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
 from .alert import AlertRule, Alert
 from .installment import InstallmentPlan
+from .client_merge_log import ClientMergeLog
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -31,6 +32,6 @@ __all__ = [
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction', 'WorkshopEvent',
     'AlertRule', 'Alert',
-    'InstallmentPlan'
+    'InstallmentPlan', 'ClientMergeLog'
 ]
 
