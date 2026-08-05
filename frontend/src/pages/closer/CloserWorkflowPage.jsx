@@ -907,7 +907,13 @@ const CloserWorkflowPage = () => {
     // Renderizar una tarjeta individual del Kanban de confirmación (v6)
     const renderKanbanCard = (a, phase) => {
         const isViewed = selectedLead?.id === a.id;
-        
+
+        // Un referido manual se crea sin fecha real de cita (todavía no se acordó una) —
+        // el backend le pone start_time=ahora solo para que entre al pipeline de confirmación
+        // como cualquier otra agenda. Mostrar esa hora tal cual confundía al closer (parecía
+        // una cita ya coordinada a una hora exacta); en vez de eso se marca "Por agendar".
+        const isPendingReferral = (a.origin || '').startsWith('Referido de');
+
         // Formatear fecha y hora legible (hora LOCAL del navegador, no UTC crudo)
         const { date: apptDate, time: apptTime } = splitLocalDateTime(a.start_time);
 
@@ -945,15 +951,20 @@ const CloserWorkflowPage = () => {
             >
                 <div className="when-v6 soon-v6">
                     <span className="wd-v6"></span>
-                    {dateLabel} · {apptTime}
+                    {isPendingReferral ? 'Por agendar' : `${dateLabel} · ${apptTime}`}
                 </div>
                 <b>{a.lead_name || 'Sin Nombre'}</b>
                 <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
-                
+
                 <div className="flex gap-1.5 flex-wrap mt-2">
                     <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                         {a.origin || 'Meta Ads'}
                     </span>
+                    {isPendingReferral && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
+                            Contactar y acordar fecha
+                        </span>
+                    )}
                     {a.examen && (
                         <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                             {a.examen}
