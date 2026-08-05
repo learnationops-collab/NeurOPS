@@ -3587,17 +3587,25 @@ const CloserWorkflowPage = () => {
                                         {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
                                     </p>
                                 </div>
-                                <button
-                                    className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30 mr-2"
-                                    title="Eliminar lead"
-                                    onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
-                                >
-                                    <X size={16} className="rotate-45" />
-                                </button>
+                                {selectedLead.can_edit !== false && (
+                                    <button
+                                        className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30 mr-2"
+                                        title="Eliminar lead"
+                                        onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
+                                    >
+                                        <X size={16} className="rotate-45" />
+                                    </button>
+                                )}
                                 <button className="x" onClick={() => setSelectedLead(null)}>
                                     ×
                                 </button>
                             </div>
+
+                            {selectedLead.can_edit === false && (
+                                <div className="mx-5 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-bold text-amber-300 uppercase tracking-wide">
+                                    Este lead pertenece a {selectedLead.owner_closer_name || 'otro closer'} — solo podés consultarlo, no editarlo ni declarar ventas sobre él.
+                                </div>
+                            )}
 
                             {/* Pestañas ltabs v7 */}
                             <div className="ltabs">
@@ -3650,23 +3658,31 @@ const CloserWorkflowPage = () => {
                                 {/* Contenido por pestaña */}
                                 {modalTab === 'act' && (
                                     <div id="paneAct">
-                                        <div className="trail">
-                                            <span style={{ fontSize: '9.5px', fontWeight: 800, textTransform: 'uppercase', color: '#8C99E0' }}>Camino:</span>
-                                            {decisionPath.length === 0 ? (
-                                                <span className="crumb" style={{ background: 'rgba(255,255,255,.06)', color: '#D1D8FF', borderColor: 'rgba(255,255,255,.12)' }}>
-                                                    Raíz
-                                                </span>
-                                            ) : (
-                                                decisionPath.map((crumb, idx) => (
-                                                    <span key={idx} className="crumb">
-                                                        {crumb}
-                                                    </span>
-                                                ))
-                                            )}
-                                        </div>
-                                        <div id="ldBody">
-                                            {renderActionStepContent()}
-                                        </div>
+                                        {selectedLead.can_edit === false ? (
+                                            <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(245,158,11,.4)' }}>
+                                                No podés reportar la llamada, declarar una venta ni tomar ninguna acción sobre este lead — pertenece a {selectedLead.owner_closer_name || 'otro closer'}. Usá la pestaña "Formulario" para consultar sus datos.
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="trail">
+                                                    <span style={{ fontSize: '9.5px', fontWeight: 800, textTransform: 'uppercase', color: '#8C99E0' }}>Camino:</span>
+                                                    {decisionPath.length === 0 ? (
+                                                        <span className="crumb" style={{ background: 'rgba(255,255,255,.06)', color: '#D1D8FF', borderColor: 'rgba(255,255,255,.12)' }}>
+                                                            Raíz
+                                                        </span>
+                                                    ) : (
+                                                        decisionPath.map((crumb, idx) => (
+                                                            <span key={idx} className="crumb">
+                                                                {crumb}
+                                                            </span>
+                                                        ))
+                                                    )}
+                                                </div>
+                                                <div id="ldBody">
+                                                    {renderActionStepContent()}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 
@@ -3722,36 +3738,38 @@ const CloserWorkflowPage = () => {
                                             </div>
                                         )}
 
-                                        <div className="pt-4 border-t border-slate-800 space-y-3">
-                                            <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
-                                            <textarea
-                                                rows={3}
-                                                value={reasonInput}
-                                                onChange={(e) => setReasonInput(e.target.value)}
-                                                placeholder="Escribe una nota interna para ti o para el equipo..."
-                                                className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
-                                            />
-                                            <div className="flex flex-wrap gap-2 items-center pt-1">
-                                                <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
-                                                {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
-                                                    <button
-                                                        key={m}
-                                                        type="button"
-                                                        onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
-                                                        className="chipbtn"
-                                                    >
-                                                        {m}
-                                                    </button>
-                                                ))}
+                                        {selectedLead.can_edit !== false && (
+                                            <div className="pt-4 border-t border-slate-800 space-y-3">
+                                                <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
+                                                <textarea
+                                                    rows={3}
+                                                    value={reasonInput}
+                                                    onChange={(e) => setReasonInput(e.target.value)}
+                                                    placeholder="Escribe una nota interna para ti o para el equipo..."
+                                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                                                />
+                                                <div className="flex flex-wrap gap-2 items-center pt-1">
+                                                    <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
+                                                    {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
+                                                        <button
+                                                            key={m}
+                                                            type="button"
+                                                            onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
+                                                            className="chipbtn"
+                                                        >
+                                                            {m}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    onClick={addLeadNote}
+                                                    disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
+                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                                >
+                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={addLeadNote}
-                                                disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
-                                                className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                                            >
-                                                {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
-                                            </button>
-                                        </div>
+                                        )}
 
                                         <div className="pt-4 border-t border-slate-800 space-y-2">
                                             <label className="text-[10px] font-black uppercase text-slate-400">Comentarios e Hilo</label>
