@@ -1194,20 +1194,37 @@ header.top-v6 {
 }
 
 .opt {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   text-align: left;
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 13px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: all .2s;
-  background: rgba(255,255,255,.01);
-  border: 1px solid var(--v6-bd);
+  transition: .16s;
+  background: rgba(255,255,255,.035);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #C7CCEB;
 }
 .opt:hover {
-  background: rgba(255,255,255,.03);
-  border-color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.24);
+  color: #fff;
+  transform: translateY(-1px);
 }
+.opt small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8C99E0;
+  margin-top: 4px;
+}
+.opt.sel { color: #fff; }
+.opt.sel[data-t="ok"] { border-color: #22C55E; background: rgba(34,197,94,.14); box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
+.opt.sel[data-t="no"] { border-color: #F59E0B; background: rgba(245,158,11,.14); box-shadow: 0 0 0 3px rgba(245,158,11,.12); }
+.opt.sel[data-t="bad"] { border-color: #EF4444; background: rgba(239,68,68,.14); box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+.opt.sel[data-t="info"] { border-color: #6D8BFF; background: rgba(19,35,198,.46); box-shadow: 0 0 0 3px rgba(96,165,250,.16); }
+.opt.sel[data-t="pink"] { border-color: #FF3FA4; background: rgba(255,63,164,.16); box-shadow: 0 0 0 3px rgba(255,63,164,.14); }
 
 /* ===== Print Media Styles ===== */
 @media print {
@@ -1592,4 +1609,122 @@ header.top-v6 {
   background: rgba(34, 197, 94, .12);
   border: 1px solid rgba(34, 197, 94, .32);
   color: #86EFAC;
+}
+
+/* ==========================================================================
+   BANDA DE PIPELINE (etapa de confirmación) v7 (closer-workspace-v7.html)
+   ========================================================================== */
+.pipe {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, .30);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 6px;
+  margin-bottom: 20px;
+}
+.pstep {
+  flex: 1;
+  text-align: center;
+  padding: 14px 8px;
+  border-radius: 12px;
+  transition: .22s;
+  position: relative;
+}
+.pstep .pn {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #8C99E0;
+}
+.pstep .pd {
+  font-size: 10px;
+  color: #8C99E0;
+  margin-top: 3px;
+  font-weight: 500;
+}
+.pstep.done .pn {
+  color: #86EFAC;
+}
+.pstep.done::before {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 11px;
+  color: #86EFAC;
+}
+.pstep.cur {
+  background: linear-gradient(135deg, #1323C6, #FF3FA4);
+  box-shadow: 0 6px 22px rgba(19, 35, 198, .48);
+}
+.pstep.cur .pn,
+.pstep.cur .pd {
+  color: #fff;
+}
+.parrow {
+  color: #8C99E0;
+  font-size: 13px;
+  flex: none;
+  padding: 0 2px;
+}
+
+/* PREGUNTAS DEL ÁRBOL DE DECISIÓN v7 */
+.q > h4 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -.01em;
+  text-transform: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #fff;
+}
+.q > h4 .num {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1323C6, #FF3FA4);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  flex: none;
+  color: #fff;
+}
+.q > p {
+  font-size: 12px;
+  color: #8C99E0;
+  margin-bottom: 4px;
+}
+.q.req > h4::after {
+  content: 'obligatorio';
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #FCD34D;
+  background: rgba(245, 158, 11, .13);
+  border: 1px solid rgba(245, 158, 11, .32);
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+.q.req.done > h4::after {
+  content: '✓ listo';
+  color: #86EFAC;
+  background: rgba(34, 197, 94, .13);
+  border-color: rgba(34, 197, 94, .32);
+}
+
+.note {
+  font-size: 12.5px;
+  color: #D1D8FF;
+  background: rgba(19, 35, 198, .24);
+  border-left: 3px solid #6366F1;
+  padding: 11px 14px;
+  border-radius: 0 10px 10px 0;
+  margin-bottom: 15px;
 }
