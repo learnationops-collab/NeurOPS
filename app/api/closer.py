@@ -1948,6 +1948,36 @@ def get_sales_client_state():
     return jsonify(state), 200
 
 
+@bp.route('/cleanup-queue', methods=['GET'])
+@login_required
+def get_cleanup_queue():
+    """Cola de limpieza diaria: hasta 10 clientes cuyo registro de agendas/pagos tiene algo
+    que revisar (secuencia de pago inconsistente, oferta sin seguimiento, fusión reciente,
+    descuadre entre ventas y pagos)."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.client_cleanup_service import ClientCleanupService
+    limit = request.args.get('limit', 10, type=int)
+    items = ClientCleanupService.get_cleanup_queue(current_user.id, limit=limit)
+    return jsonify(items), 200
+
+
+@bp.route('/clients/<int:client_id>/full-history', methods=['GET'])
+@login_required
+def get_client_full_history(client_id):
+    """Historial completo de un cliente: todas sus agendas, ventas declaradas y pagos
+    (Enrollment/Payment), para que el closer pueda auditarlo de una sola vista."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.client_cleanup_service import ClientCleanupService
+    history = ClientCleanupService.get_client_full_history(client_id)
+    if not history:
+        return jsonify({"message": "Cliente no encontrado"}), 404
+    return jsonify(history), 200
+
+
 @bp.route('/deck/card/<int:appt_id>', methods=['GET'])
 @login_required
 def get_closer_deck_card(appt_id):
