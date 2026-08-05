@@ -69,7 +69,12 @@ class CloserFollowUpService:
             )
         )
         if closer_id:
-            q = q.filter(Appointment.closer_id == closer_id)
+            # Además de las propias, se incluyen las de closers dados de baja (User.is_active ==
+            # False): quedan huérfanas en la práctica —nadie las va a seguir— así que cualquier
+            # closer activo puede tomarlas. Distinto de "sin asignar": closer_id es NOT NULL en
+            # la base, un lead sin dueño no puede existir como fila.
+            inactive_closer_ids = db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
+            q = q.filter(or_(Appointment.closer_id == closer_id, Appointment.closer_id.in_(inactive_closer_ids)))
         return q
 
     @staticmethod
@@ -131,7 +136,11 @@ class CloserFollowUpService:
             'fecha_seguimiento': a.fecha_seguimiento or None,
             'call_date': a.start_time.isoformat() if a.start_time else None,
             'days_since_call': days_since_call,
-            'closer_notes': a.closer_notes or ''
+            'closer_notes': a.closer_notes or '',
+            # Solo relevante cuando el pool incluyó leads de un closer dado de baja (ver
+            # _base_query) — permite mostrar "de {owner_closer_name}" en vez de que parezca
+            # propio. None cuando el closer sigue activo (caso normal).
+            'owner_closer_name': a.closer.username if (a.closer and a.closer.is_active is False) else None
         }
         if include_debt:
             data['deuda'] = CloserFollowUpService._client_debt(a.client_id)

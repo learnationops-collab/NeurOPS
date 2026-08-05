@@ -66,7 +66,12 @@ def schedule_followup(appt_id):
 
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
+        from app.models import User
+        owner = User.query.get(appt.closer_id)
+        if owner and owner.is_active is False:
+            appt.closer_id = current_user.id
+        else:
+            return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
     tipo = data.get('tipo')

@@ -672,7 +672,12 @@ def update_appointment(id):
     
     appt = Appointment.query.get_or_404(id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
+        from app.models import User
+        owner = User.query.get(appt.closer_id)
+        if current_user.role == 'closer' and owner and owner.is_active is False:
+            appt.closer_id = current_user.id
+        else:
+            return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
     if 'start_time' in data:
@@ -1693,7 +1698,14 @@ def process_closer_card(appt_id):
         
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
+        from app.models import User
+        owner = User.query.get(appt.closer_id)
+        if owner and owner.is_active is False:
+            # Closer dado de baja: el lead queda huérfano en la práctica (nadie lo va a
+            # trabajar) — el primer closer activo que lo procesa se lo queda.
+            appt.closer_id = current_user.id
+        else:
+            return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
 

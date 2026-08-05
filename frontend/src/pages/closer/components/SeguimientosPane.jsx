@@ -28,6 +28,11 @@ const SeguimientoRow = ({ item, tipo, onClick }) => (
                     {item.seguimiento_sub || 'Sin subestado'}
                 </span>
                 {item.origin && <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">{item.origin}</span>}
+                {item.owner_closer_name && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        De {item.owner_closer_name} (baja)
+                    </span>
+                )}
                 {item.days_since_call !== null && (
                     <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                         Call hace {item.days_since_call}d
