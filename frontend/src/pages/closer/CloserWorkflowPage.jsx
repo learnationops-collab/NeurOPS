@@ -736,6 +736,31 @@ const CloserWorkflowPage = () => {
         return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
     }, [filteredAgendas, activeStep]);
 
+    // Sistema de "lote diario" (v7): en vez de enfrentar de una todo el backlog de "② Llamadas",
+    // se ofrece un lote aleatorio de N leads a la vez — mismo flujo de tarjeta→modal→guardar de
+    // siempre, sin ningún cambio ahí. El progreso se deriva de cuántos ids del lote siguen en la
+    // lista (al guardar un reporte, closer_processed pasa a true y el lead sale de "Llamadas" solo).
+    const BATCH_SIZE = 10;
+    const [batchMode, setBatchMode] = useState(false);
+    const [batchIds, setBatchIds] = useState([]);
+
+    const batchItems = useMemo(() => {
+        if (!batchMode) return [];
+        const idSet = new Set(batchIds);
+        return filteredAgendas.filter(a => idSet.has(a.id));
+    }, [filteredAgendas, batchMode, batchIds]);
+
+    const startBatch = () => {
+        const pool = [...filteredAgendas];
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const picked = pool.slice(0, BATCH_SIZE).map(a => a.id);
+        setBatchIds(picked);
+        setBatchMode(true);
+    };
+
     // Actualización rápida del estado de confirmación desde el Kanban (v6)
     const handleQuickConfirmStatus = async (apptId, status, e) => {
         if (e) e.stopPropagation();
@@ -2800,6 +2825,66 @@ const CloserWorkflowPage = () => {
                     ) : (
                         /* Renderizado clásico de Lista para Llamadas */
                         <>
+                            {/* Notificación / progreso de Lote Diario (v7) */}
+                            {activeStep === 'calls' && (
+                                batchMode ? (
+                                    batchItems.length === 0 ? (
+                                        <div className="bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 rounded-[2rem] p-6 flex items-center gap-5">
+                                            <div className="text-4xl">🎉</div>
+                                            <div className="flex-1">
+                                                <h4 className="text-lg font-black text-white">¡Lote completado!</h4>
+                                                <p className="text-xs text-emerald-200 mt-1">Procesaste {batchIds.length} leads atrasados. {filteredAgendas.length > 0 ? `Todavía quedan ${filteredAgendas.length} en la cola.` : 'No queda ninguno pendiente. 👏'}</p>
+                                            </div>
+                                            {filteredAgendas.length > 0 && (
+                                                <button
+                                                    onClick={startBatch}
+                                                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
+                                                >
+                                                    Otro lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setBatchMode(false)}
+                                                className="px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
+                                            >
+                                                Terminar por hoy
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-violet-500/10 border border-violet-500/30 rounded-[2rem] p-5 flex items-center gap-4">
+                                            <div className="text-2xl">🎯</div>
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-black text-white">Lote en progreso</h4>
+                                                <p className="text-[11px] text-violet-200 mt-0.5">{batchIds.length - batchItems.length} de {batchIds.length} completados. Seguí tocando tarjetas hasta vaciar el lote.</p>
+                                            </div>
+                                            <div className="w-32 h-2 bg-slate-900 rounded-full overflow-hidden shrink-0">
+                                                <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.round(((batchIds.length - batchItems.length) / batchIds.length) * 100)}%` }} />
+                                            </div>
+                                            <button
+                                                onClick={() => setBatchMode(false)}
+                                                className="text-[10px] font-black uppercase text-slate-400 hover:text-white underline cursor-pointer shrink-0"
+                                            >
+                                                Salir del lote
+                                            </button>
+                                        </div>
+                                    )
+                                ) : filteredAgendas.length > 0 && (
+                                    <div className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-5 flex items-center gap-4">
+                                        <div className="text-2xl">📋</div>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-black text-white">Tenés {filteredAgendas.length} lead{filteredAgendas.length !== 1 ? 's' : ''} atrasado{filteredAgendas.length !== 1 ? 's' : ''} por procesar</h4>
+                                            <p className="text-[11px] text-slate-400 mt-0.5">No hace falta hacerlos todos hoy — con un lote de {Math.min(BATCH_SIZE, filteredAgendas.length)} al azar ya mantenés el sistema al día.</p>
+                                        </div>
+                                        <button
+                                            onClick={startBatch}
+                                            className="px-5 py-3 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
+                                        >
+                                            Procesar lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
+                                        </button>
+                                    </div>
+                                )
+                            )}
+
                             {/* Sección Especial: Mensajes de Leads sin Agenda */}
                             {unreadNoAgenda.length > 0 && (
                                 <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
@@ -2893,12 +2978,16 @@ const CloserWorkflowPage = () => {
                             )}
 
                             {/* Contenedor de la Lista */}
+                            {!(activeStep === 'calls' && batchMode && batchItems.length === 0) && (
                             <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
+                                {(() => {
+                                    const displayList = (activeStep === 'calls' && batchMode) ? batchItems : filteredAgendas;
+                                    return (
                                 <div className="flex justify-between items-center border-b border-slate-900 pb-4">
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="checkbox"
-                                            checked={filteredAgendas.length > 0 && selectedIds.size === filteredAgendas.length}
+                                            checked={displayList.length > 0 && selectedIds.size === displayList.length}
                                             onChange={toggleSelectAll}
                                             className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
                                         />
@@ -2907,16 +2996,18 @@ const CloserWorkflowPage = () => {
                                         </span>
                                     </div>
                                     <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                        {filteredAgendas.length} Citas en Lista
+                                        {displayList.length} Citas en Lista
                                     </span>
                                 </div>
+                                    );
+                                })()}
 
                                 {loading ? (
                                     <div className="flex flex-col items-center justify-center py-20 gap-3">
                                         <Loader2 className="animate-spin text-violet-500" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando agendas...</span>
                                     </div>
-                                ) : filteredAgendas.length === 0 ? (
+                                ) : (activeStep === 'calls' && batchMode ? batchItems : filteredAgendas).length === 0 ? (
                                     <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
                                         {activeStep === 'calls' ? '👏 Ninguna llamada pendiente de reportar. ¡Bandeja limpia!' : '👏 No tienes agendas programadas.'}
                                     </div>
@@ -3016,6 +3107,17 @@ const CloserWorkflowPage = () => {
                                             );
                                         };
 
+                                        if (activeStep === 'calls' && batchMode) {
+                                            // Modo lote: solo las cartas del lote actual, siempre lista plana (nunca son tantas como para necesitar agrupar).
+                                            return (
+                                                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                    <AnimatePresence initial={false}>
+                                                        {batchItems.map(renderCard)}
+                                                    </AnimatePresence>
+                                                </div>
+                                            );
+                                        }
+
                                         if (callsGroupedByMonth) {
                                             // Muchas llamadas pendientes: agrupadas por mes/año, mes más reciente primero.
                                             return (
@@ -3046,6 +3148,7 @@ const CloserWorkflowPage = () => {
                                     })()
                                 )}
                             </div>
+                            )}
                         </>
                     )}
                 </div>
