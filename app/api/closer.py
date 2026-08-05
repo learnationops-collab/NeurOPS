@@ -1424,7 +1424,16 @@ def get_closer_deck():
             or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
         )
     elif step == 'calls':
-        # Llamadas confirmadas sin reportar (incluye 1ra y 2da call), de la fecha seleccionada hacia atrás
+        # Llamadas cuyo horario ya llegó (o es de hoy) y el closer nunca reportó qué pasó
+        # realmente (Show up / No Show / Canceló), de la fecha seleccionada hacia atrás.
+        # Antes exigía `result` ya en 'Confirmado'/2da call explícito, lo que dejaba afuera
+        # para siempre cualquier cita atascada en un estado intermedio de confirmación
+        # (Contactado, conversando, o directamente nunca tocada) apenas pasaba su horario —
+        # aunque la llamada ya hubiera ocurrido (o no) y siguiera sin closer_result terminal.
+        # Esto también dejaba esas citas fuera del pool de Seguimientos (CloserFollowUpService.
+        # _base_query exige un closer_result ya terminal para poder derivar el tipo), así que
+        # este mismo cambio destraba ambas pestañas. Se excluyen Cancelada/Reagendada, que
+        # pertenecen a la pestaña "Reagendar".
         try:
             today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
@@ -1434,16 +1443,17 @@ def get_closer_deck():
 
         query = Appointment.query.filter(
             Appointment.start_time <= end_utc,
-            or_(
-                Appointment.result.in_(['Confirmado', '2TH Call', '2da Call', '2da call', 'Segunda llamada', 'Segunda agenda']),
-                Appointment.closer_result == '2da call'
-            ),
             Appointment.closer_processed == False,
             or_(
                 Appointment.closer_result == 'Pendiente',
                 Appointment.closer_result == None,
                 Appointment.closer_result == '',
                 Appointment.closer_result == '2da call'
+            ),
+            or_(
+                Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+                Appointment.result == None,
+                Appointment.result == ''
             )
         )
     elif step == 'agendas':
@@ -1529,16 +1539,17 @@ def get_closer_deck_counts():
     
     query_calls = Appointment.query.filter(
         Appointment.start_time <= end_utc_calls,
-        or_(
-            Appointment.result.in_(['Confirmado', '2TH Call', '2da Call', '2da call', 'Segunda llamada', 'Segunda agenda']),
-            Appointment.closer_result == '2da call'
-        ),
         Appointment.closer_processed == False,
         or_(
             Appointment.closer_result == 'Pendiente',
             Appointment.closer_result == None,
             Appointment.closer_result == '',
             Appointment.closer_result == '2da call'
+        ),
+        or_(
+            Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+            Appointment.result == None,
+            Appointment.result == ''
         )
     )
     

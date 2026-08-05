@@ -715,6 +715,27 @@ const CloserWorkflowPage = () => {
         return { porConfirmar, conversando, confirmado };
     }, [filteredAgendas]);
 
+    // Agrupación por mes para "② Llamadas" cuando hay muchas citas vencidas sin reportar (v7):
+    // agrupar solo si la lista es grande, para no complicar el caso normal de pocas pendientes.
+    const CALLS_GROUP_THRESHOLD = 10;
+    const callsGroupedByMonth = useMemo(() => {
+        if (activeStep !== 'calls' || filteredAgendas.length <= CALLS_GROUP_THRESHOLD) return null;
+        const groups = {};
+        filteredAgendas.forEach(a => {
+            const d = parseUtcIso(a.start_time);
+            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'sin-fecha';
+            if (!groups[key]) {
+                groups[key] = {
+                    key,
+                    label: d ? d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : 'Sin fecha',
+                    items: []
+                };
+            }
+            groups[key].items.push(a);
+        });
+        return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
+    }, [filteredAgendas, activeStep]);
+
     // Actualización rápida del estado de confirmación desde el Kanban (v6)
     const handleQuickConfirmStatus = async (apptId, status, e) => {
         if (e) e.stopPropagation();
@@ -2908,106 +2929,132 @@ const CloserWorkflowPage = () => {
                                     </div>
                                 ) : filteredAgendas.length === 0 ? (
                                     <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                        👏 No tienes agendas programadas.
+                                        {activeStep === 'calls' ? '👏 Ninguna llamada pendiente de reportar. ¡Bandeja limpia!' : '👏 No tienes agendas programadas.'}
                                     </div>
                                 ) : (
-                                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                        <AnimatePresence initial={false}>
-                                            {filteredAgendas.map((a) => {
-                                                const isSelected = selectedIds.has(a.id);
-                                                const isViewed = selectedLead?.id === a.id;
-                                                
-                                                return (
-                                                    <motion.div
-                                                        key={a.id}
-                                                        layout
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, scale: 0.95 }}
-                                                        onClick={() => handleSelectLead(a)}
-                                                        className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                            isViewed 
-                                                                ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
-                                                                : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-center justify-between gap-4">
-                                                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={(e) => toggleSelect(a.id, e)}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                                />
-                                                                
-                                                                <div className="min-w-0 space-y-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                                                            <Clock size={10} />
-                                                                            {formatTimeOnly(a.start_time)}
-                                                                        </span>
-                                                                        <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
-                                                                            {a.lead_name || 'Sin Nombre'}
-                                                                            {a.unread_comment && (
-                                                                                <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
-                                                                                    Mensaje nuevo
-                                                                                </span>
-                                                                            )}
-                                                                        </h4>
-                                                                    </div>
-                                                                    
-                                                                    <div className="flex items-center gap-2 flex-wrap mt-1">
-                                                                        <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
-                                                                            {a.origin || 'Sheets'}
-                                                                        </span>
-                                                                        <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
-                                                                            Confirmer: {a.result || 'Pendiente'}
-                                                                        </span>
-                                                                        {a.fecha_seguimiento && (
-                                                                            <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                                                <Calendar size={10} />
-                                                                                Seguimiento: {a.fecha_seguimiento}
+                                    (() => {
+                                        const renderCard = (a) => {
+                                            const isSelected = selectedIds.has(a.id);
+                                            const isViewed = selectedLead?.id === a.id;
+
+                                            return (
+                                                <motion.div
+                                                    key={a.id}
+                                                    layout
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    onClick={() => handleSelectLead(a)}
+                                                    className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
+                                                        isViewed
+                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]'
+                                                            : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={(e) => toggleSelect(a.id, e)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
+                                                            />
+
+                                                            <div className="min-w-0 space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                                                        <Clock size={10} />
+                                                                        {formatTimeOnly(a.start_time)}
+                                                                    </span>
+                                                                    <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
+                                                                        {a.lead_name || 'Sin Nombre'}
+                                                                        {a.unread_comment && (
+                                                                            <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
+                                                                                Mensaje nuevo
                                                                             </span>
                                                                         )}
-                                                                        {a.instagram && (
-                                                                            <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
-                                                                                @{a.instagram}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
+                                                                    </h4>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                                                    <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
+                                                                        {a.origin || 'Sheets'}
+                                                                    </span>
+                                                                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
+                                                                        Confirmer: {a.result || 'Pendiente'}
+                                                                    </span>
+                                                                    {a.fecha_seguimiento && (
+                                                                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                                            <Calendar size={10} />
+                                                                            Seguimiento: {a.fecha_seguimiento}
+                                                                        </span>
+                                                                    )}
+                                                                    {a.instagram && (
+                                                                        <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
+                                                                            @{a.instagram}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
-
-                                                            <div className="flex items-center gap-3 shrink-0">
-                                                                {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
-                                                                    <button
-                                                                        onClick={(e) => handleMarkFollowUpDone(a, e)}
-                                                                        disabled={processingId === a.id}
-                                                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                                                                    >
-                                                                        {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                                        Marcar Realizado
-                                                                    </button>
-                                                                )}
-                                                                <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
-                                                                    a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
-                                                                    a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                                                    a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
-                                                                    a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
-                                                                    a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
-                                                                    'bg-slate-500/10 text-slate-450 border border-slate-500/20'
-                                                                }`}>
-                                                                    {a.closer_result || 'Pendiente'}
-                                                                </span>
-                                                                <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
-                                                            </div>
                                                         </div>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </AnimatePresence>
-                                    </div>
+
+                                                        <div className="flex items-center gap-3 shrink-0">
+                                                            {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
+                                                                <button
+                                                                    onClick={(e) => handleMarkFollowUpDone(a, e)}
+                                                                    disabled={processingId === a.id}
+                                                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
+                                                                >
+                                                                    {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                                    Marcar Realizado
+                                                                </button>
+                                                            )}
+                                                            <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
+                                                                a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
+                                                                a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
+                                                                a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
+                                                                a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
+                                                                a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
+                                                                'bg-slate-500/10 text-slate-450 border border-slate-500/20'
+                                                            }`}>
+                                                                {a.closer_result || 'Pendiente'}
+                                                            </span>
+                                                            <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        };
+
+                                        if (callsGroupedByMonth) {
+                                            // Muchas llamadas pendientes: agrupadas por mes/año, mes más reciente primero.
+                                            return (
+                                                <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                    {callsGroupedByMonth.map(group => (
+                                                        <div key={group.key} className="space-y-3">
+                                                            <div className="flex items-center gap-3 sticky top-0 bg-[#111219] py-1 z-10">
+                                                                <span className="text-xs font-black uppercase tracking-widest text-violet-400 capitalize">{group.label}</span>
+                                                                <span className="text-[10px] font-black bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded-lg">{group.items.length}</span>
+                                                                <div className="flex-1 h-px bg-slate-900" />
+                                                            </div>
+                                                            <AnimatePresence initial={false}>
+                                                                {group.items.map(renderCard)}
+                                                            </AnimatePresence>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                <AnimatePresence initial={false}>
+                                                    {filteredAgendas.map(renderCard)}
+                                                </AnimatePresence>
+                                            </div>
+                                        );
+                                    })()
                                 )}
                             </div>
                         </>
