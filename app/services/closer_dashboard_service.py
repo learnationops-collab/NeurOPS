@@ -1,8 +1,8 @@
 from datetime import date, datetime, time, timedelta
-from app import db
-from app.models import User, Enrollment, Program, Payment, Appointment
+from app.models import User, Appointment, InstallmentPlan, Client
 from app.services.closer_service import CloserService
-from sqlalchemy import func
+
+PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
 
 
 class CloserDashboardService:
@@ -28,8 +28,13 @@ class CloserDashboardService:
             return today, today
         if period == '7d':
             return today - timedelta(days=6), today
+        if period == '30d':
+            return today - timedelta(days=29), today
         if period == '90':
             return today - timedelta(days=89), today
+        if period == 'mes_pasado':
+            last_month_end = today.replace(day=1) - timedelta(days=1)
+            return last_month_end.replace(day=1), last_month_end
         return today.replace(day=1), today
 
     @staticmethod
@@ -48,33 +53,36 @@ class CloserDashboardService:
 
     @staticmethod
     def _pending_collections(closer_id, limit=15):
-        """Cuotas por cobrar: aproximación real (Program.price - total pagado)
-        sin fecha de vencimiento, ya que ese campo no existe en el modelo."""
-        q = Enrollment.query.join(Program, Enrollment.program_id == Program.id)
+        """Cuotas por cobrar: cronograma real de cobro (InstallmentPlan), la misma
+        fuente que usa el flujo de ventas del closer para declarar y cobrar cuotas.
+
+        Antes se leía de Enrollment/Payment (sistema legado sin datos recientes,
+        ver installment.py), por lo que la deuda total pendiente siempre daba $0
+        aunque hubiera cuotas reales pendientes de cobro."""
+        q = InstallmentPlan.query.filter(InstallmentPlan.estado != 'pagado')
         if closer_id:
-            q = q.filter(Enrollment.closer_id == closer_id)
-        enrollments = q.all()
-        if not enrollments:
+            q = q.join(Appointment, InstallmentPlan.appointment_id == Appointment.id) \
+                 .filter(Appointment.closer_id == closer_id)
+        plans = q.all()
+        if not plans:
             return [], 0.0
 
-        e_ids = [e.id for e in enrollments]
-        paid_rows = db.session.query(Payment.enrollment_id, func.sum(Payment.amount)) \
-            .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed') \
-            .group_by(Payment.enrollment_id).all()
-        paid_map = {eid: float(total or 0) for eid, total in paid_rows}
+        client_ids = {p.client_id for p in plans if p.client_id}
+        clients = {c.id: c for c in Client.query.filter(Client.id.in_(client_ids)).all()} if client_ids else {}
 
         rows = []
         total_pending = 0.0
-        for e in enrollments:
-            paid = paid_map.get(e.id, 0.0)
-            pending = max(0.0, (e.program.price or 0.0) - paid)
-            if pending > 1:
-                rows.append({
-                    'client_name': (e.client.full_name or e.client.email) if e.client else 'Sin nombre',
-                    'program': e.program.name,
-                    'pending_amount': round(pending, 2)
-                })
-                total_pending += pending
+        for p in plans:
+            if not p.monto or p.monto <= 1:
+                continue
+            client = clients.get(p.client_id)
+            program_name = PROGRAM_NAMES.get(p.programa_code, p.programa_code or 'Sin programa')
+            rows.append({
+                'client_name': (client.full_name or client.email) if client else 'Sin nombre',
+                'program': f"Cuota {p.numero_cuota} · {program_name}",
+                'pending_amount': round(p.monto, 2)
+            })
+            total_pending += p.monto
 
         rows.sort(key=lambda r: r['pending_amount'], reverse=True)
         return rows[:limit], round(total_pending, 2)

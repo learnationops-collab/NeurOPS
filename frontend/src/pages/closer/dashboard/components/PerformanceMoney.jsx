@@ -46,7 +46,7 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-secondary" /> Cuotas por cobrar
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">Saldo pendiente histórico (no filtrado por período, sin fecha de vencimiento registrada).</p>
+                <p className="text-[11px] text-muted mt-1 mb-5">Saldo pendiente histórico según el plan de cuotas de cada cliente (no filtrado por período).</p>
                 <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
                     {cuotas.rows.length > 0 ? cuotas.rows.map((c, i) => (
                         <div key={i} className="flex items-center justify-between py-2 border-b border-base/60 last:border-0">
