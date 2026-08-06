@@ -14,7 +14,9 @@ export const computeDelta = (current, previous) => {
 export const PERIOD_LABELS = {
     hoy: 'hoy',
     '7d': 'últimos 7 días',
+    '30d': 'últimos 30 días',
     mes: 'este mes',
+    mes_pasado: 'el mes pasado',
     '90': 'últimos 90 días'
 };
 

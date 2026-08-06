@@ -3,7 +3,9 @@ import React from 'react';
 const PERIODS = [
     { id: 'hoy', label: 'Hoy' },
     { id: '7d', label: '7 días' },
+    { id: '30d', label: '30 días' },
     { id: 'mes', label: 'Este mes' },
+    { id: 'mes_pasado', label: 'Mes pasado' },
     { id: '90', label: '90 días' }
 ];
 
