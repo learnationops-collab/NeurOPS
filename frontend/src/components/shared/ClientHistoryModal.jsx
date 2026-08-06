@@ -1,8 +1,63 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Save } from 'lucide-react';
 import api from '../../services/api';
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
+
+const CUOTA_ESTADO_CLS = {
+    vencido: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    pendiente: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    pagado: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+};
+
+const CuotaRow = ({ cuota, onSaved }) => {
+    const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
+    const [saving, setSaving] = useState(false);
+    const dirty = fecha !== (cuota.fecha_vencimiento || '');
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            const res = await api.patch(`/closer/installments/cuota/${cuota.id}`, { fecha_vencimiento: fecha });
+            onSaved(res.data);
+        } catch (err) {
+            console.error('Error al actualizar fecha de cuota:', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-between gap-3 text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${CUOTA_ESTADO_CLS[cuota.estado] || CUOTA_ESTADO_CLS.pendiente}`}>
+                    {cuota.estado}
+                </span>
+                <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
+                <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+                <input
+                    type="date"
+                    value={fecha || ''}
+                    disabled={cuota.estado === 'pagado'}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 disabled:opacity-50"
+                />
+                {dirty && (
+                    <button
+                        onClick={save}
+                        disabled={saving}
+                        title="Guardar nueva fecha"
+                        className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
+                    >
+                        {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
 
 // Resumen de un cliente (agendas, ventas, inscripciones/pagos) en una sola vista — reutilizado
 // desde la cola de limpieza y desde la búsqueda global del mazo del closer, para que cualquier
@@ -51,6 +106,23 @@ const ClientHistoryModal = ({ clientId, onClose }) => {
                                         <span className="text-slate-300">{a.start_time ? new Date(a.start_time).toLocaleDateString('es-ES') : '—'} · {a.origin || 'Sin origen'}</span>
                                         <span className="text-slate-500 font-bold uppercase">{a.closer_result || a.result || 'Pendiente'}</span>
                                     </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Cuotas por cobrar ({history.installments.length})</h4>
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                {history.installments.length === 0 && <p className="text-[10px] text-slate-600">Sin plan de cuotas registrado.</p>}
+                                {history.installments.map(c => (
+                                    <CuotaRow
+                                        key={c.id}
+                                        cuota={c}
+                                        onSaved={(updated) => setHistory(prev => ({
+                                            ...prev,
+                                            installments: prev.installments.map(i => i.id === updated.id ? updated : i)
+                                        }))}
+                                    />
                                 ))}
                             </div>
                         </div>

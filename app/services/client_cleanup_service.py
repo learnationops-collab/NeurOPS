@@ -137,6 +137,7 @@ class ClientCleanupService:
     @staticmethod
     def get_client_full_history(client_id):
         from app.models import Client, Appointment, FinancialSale, Enrollment, Payment
+        from app.services.installment_service import InstallmentService
 
         client = Client.query.get(client_id)
         if not client:
@@ -145,6 +146,7 @@ class ClientCleanupService:
         appointments = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
         sales = FinancialSale.query.filter_by(client_id=client_id).order_by(FinancialSale.date.desc()).all()
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
+        cuotas = InstallmentService.get_plan_by_client(client_id)
 
         return {
             'client': {'id': client.id, 'full_name': client.full_name, 'email': client.email, 'instagram': client.instagram, 'phone': client.phone},
@@ -158,5 +160,9 @@ class ClientCleanupService:
                 'total_paid': e.total_paid, 'program_price': e.program.price if e.program else None,
                 'payments': [{'id': p.id, 'amount': p.amount, 'payment_type': p.payment_type, 'status': p.status, 'date': p.date.isoformat() if p.date else None}
                              for p in Payment.query.filter_by(enrollment_id=e.id).all()]
-            } for e in enrollments]
+            } for e in enrollments],
+            # Plan de cuotas (InstallmentPlan) — distinto de Enrollment/Payment (sistema legado):
+            # es el cronograma real que arma el closer al declarar un Parcial. Las fechas de
+            # vencimiento son editables desde el frontend vía PATCH /closer/installments/cuota/<id>.
+            'installments': [c.to_dict() for c in cuotas]
         }

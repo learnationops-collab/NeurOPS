@@ -7,7 +7,9 @@ bp = Blueprint('closer_installments_api', __name__)
 
 
 def _can_access(appt):
-    return current_user.role == 'admin' or appt.closer_id == current_user.id
+    # Cualquier closer puede consultar/editar el plan de cuotas de cualquier cliente (mismo
+    # criterio ya aplicado al resto del flujo del closer en esta sesión).
+    return current_user.role in ('admin', 'closer')
 
 
 @bp.route('/installments', methods=['POST'])
