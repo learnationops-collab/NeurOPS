@@ -163,7 +163,120 @@ class CloserFollowUpService:
         return grouped
 
     @staticmethod
+    def _cerrada_pool_items(closer_id):
+        """"Llamadas cerradas" del pool: TODO cliente al que este closer le haya vendido algo
+        (FinancialSale.email_vendedor resuelto por CloserService._resolve_sale_identifiers),
+        con su deuda y programa — no solo los que alguna vez se etiquetaron explícitamente como
+        `seguimiento_tipo='cerrada'` (que dependía de pasar por el flujo de cobro pendiente al
+        declarar la venta, dejando afuera a la enorme mayoría de clientes ya cerrados). Antes de
+        este fix la pestaña "Llamadas cerradas" quedaba casi siempre vacía — el usuario lo
+        reportó: "no hay ningún registro para poder agregarle seguimiento"."""
+        from app.models import User, Client, FinancialSale
+        from app.services.closer_service import CloserService
+
+        if not closer_id:
+            return []
+        user = User.query.get(closer_id)
+        identifiers = CloserService._resolve_sale_identifiers(user)
+        if not identifiers:
+            return []
+
+        sales = FinancialSale.query.filter(
+            FinancialSale.email_vendedor.in_(identifiers),
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ).all()
+
+        # FinancialSale.client_id debería estar poblado (backfill de una pasada anterior de esta
+        # sesión) pero en esta copia local de la base la gran mayoría quedó en NULL — en vez de
+        # depender ciegamente de esa columna, se resuelve el cliente con el mismo cruce
+        # email/instagram/teléfono que usa el resto del sistema (BookingService.find_or_create_client),
+        # sin crear nada nuevo (solo lectura).
+        def resolve_client(sale):
+            if sale.client_id:
+                return Client.query.get(sale.client_id)
+            email_clean = sale.mail_cliente.strip().lower() if sale.mail_cliente and '@' in sale.mail_cliente else None
+            ig_clean = sale.instagram.strip().replace('@', '').lower() if sale.instagram and sale.instagram.lower() not in ('n/a', '') else None
+            phone_clean = sale.telefono.strip() if sale.telefono and sale.telefono.lower() not in ('n/a', '') else None
+            if email_clean:
+                c = Client.query.filter(func.lower(Client.email) == email_clean).first()
+                if c:
+                    return c
+            if ig_clean:
+                c = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                if c:
+                    return c
+            if phone_clean and len(phone_clean) >= 8:
+                c = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
+                if c:
+                    return c
+            return None
+
+        client_ids = set()
+        for s in sales:
+            c = resolve_client(s)
+            if c:
+                client_ids.add(c.id)
+
+        items = []
+        for cid in client_ids:
+            client = Client.query.get(cid)
+            if not client:
+                continue
+            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
+            if not appt:
+                continue
+            days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
+            items.append({
+                'id': appt.id,
+                'lead_name': client.full_name or client.email or 'Sin Nombre',
+                'instagram': client.instagram or '',
+                'origin': appt.origin or '',
+                'examen': appt.examen or '',
+                'seguimiento_tipo': 'cerrada',
+                'seguimiento_sub': appt.seguimiento_sub or '',
+                'seguimiento_intento': appt.seguimiento_intento or 1,
+                'fecha_seguimiento': appt.fecha_seguimiento or None,
+                'call_date': appt.start_time.isoformat() if appt.start_time else None,
+                'days_since_call': days_since_call,
+                'closer_notes': appt.closer_notes or '',
+                'owner_closer_name': None,
+                'deuda': CloserFollowUpService._client_debt(cid),
+                'programa_code': CloserFollowUpService._client_program_code(cid),
+                'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid))
+            })
+        return items
+
+    @staticmethod
     def get_pool(closer_id, tipo=None, sub=None, days_since=None, programa=None, deuda=None):
+        if tipo == 'cerrada':
+            serialized = CloserFollowUpService._cerrada_pool_items(closer_id)
+            if sub:
+                serialized = [s for s in serialized if (s.get('seguimiento_sub') or '') == sub]
+            if days_since:
+                def matches_days(d):
+                    if d is None:
+                        return False
+                    if days_since == '14':
+                        return d <= 14
+                    if days_since == '30':
+                        return d <= 30
+                    if days_since == '+30':
+                        return d > 30
+                    return True
+                serialized = [s for s in serialized if matches_days(s['days_since_call'])]
+            if programa:
+                serialized = [s for s in serialized if s.get('programa_code') == programa]
+            if deuda:
+                def matches_deuda_c(s):
+                    debt = s.get('deuda', 0)
+                    if deuda == 'con':
+                        return debt > 0
+                    if deuda == 'sin':
+                        return debt <= 0
+                    return True
+                serialized = [s for s in serialized if matches_deuda_c(s)]
+            return serialized
+
         q = CloserFollowUpService._base_query(closer_id).filter(
             or_(Appointment.fecha_seguimiento == None, Appointment.fecha_seguimiento == '')
         )
@@ -215,8 +328,9 @@ class CloserFollowUpService:
         counts = {'no_tomada': 0, 'tomada': 0, 'cerrada': 0}
         for a in q.all():
             key = CloserFollowUpService._effective_tipo(a)
-            if key in counts:
+            if key in counts and key != 'cerrada':
                 counts[key] += 1
+        counts['cerrada'] = len(CloserFollowUpService._cerrada_pool_items(closer_id))
         return counts
 
     @staticmethod
