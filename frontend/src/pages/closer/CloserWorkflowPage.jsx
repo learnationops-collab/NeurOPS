@@ -236,6 +236,7 @@ const CloserWorkflowPage = () => {
         monto: '',
         precio_total: '',
         num_cuotas: 3,
+        cuotaFechas: {},
         segundo_pago: '',
         fecha_cobro: '',
         metodo_pago: 'Stripe',
@@ -1405,11 +1406,14 @@ const CloserWorkflowPage = () => {
                     const cobradoHoy = parseFloat(saleForm.monto) || 0;
                     if (total > cobradoHoy) {
                         try {
+                            const numCuotas = parseInt(saleForm.num_cuotas) || 1;
+                            const fechas = Array.from({ length: numCuotas }, (_, i) => saleForm.cuotaFechas?.[i + 1] || null);
                             await api.post('/closer/installments', {
                                 appointment_id: savedApptId,
                                 total,
                                 cobrado_hoy: cobradoHoy,
-                                num_cuotas: parseInt(saleForm.num_cuotas) || 1
+                                num_cuotas: numCuotas,
+                                fechas
                             });
                         } catch (e) {
                             console.error("Error al guardar el plan de cuotas:", e);
@@ -4334,11 +4338,13 @@ const CloserWorkflowPage = () => {
                                                     const rest = Math.max(0, total - now);
                                                     if (rest <= 0) return null;
                                                     const each = Math.round((rest / n) * 100) / 100;
+                                                    const overrides = saleForm.cuotaFechas || {};
                                                     const rows = Array.from({ length: n }, (_, i) => {
                                                         const monto = i === n - 1 ? Math.round((rest - each * (n - 1)) * 100) / 100 : each;
                                                         const d = new Date();
                                                         d.setMonth(d.getMonth() + i + 1);
-                                                        return { n: i + 1, monto, fecha: toLocalDateStr(d) };
+                                                        const numero = i + 1;
+                                                        return { n: numero, monto, fecha: overrides[numero] || toLocalDateStr(d) };
                                                     });
                                                     return (
                                                         <div className="rounded-xl border border-slate-800 overflow-hidden">
@@ -4347,7 +4353,7 @@ const CloserWorkflowPage = () => {
                                                                     <tr>
                                                                         <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
                                                                         <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
+                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence — cuándo la vas a cobrar</th>
                                                                         <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
                                                                     </tr>
                                                                 </thead>
@@ -4356,7 +4362,17 @@ const CloserWorkflowPage = () => {
                                                                         <tr key={r.n} className="border-t border-slate-850">
                                                                             <td className="px-3 py-2 font-bold text-white">Cuota {r.n}</td>
                                                                             <td className="px-3 py-2 font-bold text-slate-300">${r.monto.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">{r.fecha}</td>
+                                                                            <td className="px-3 py-2">
+                                                                                <input
+                                                                                    type="date"
+                                                                                    value={r.fecha}
+                                                                                    onChange={(e) => setSaleForm(prev => ({
+                                                                                        ...prev,
+                                                                                        cuotaFechas: { ...prev.cuotaFechas, [r.n]: e.target.value }
+                                                                                    }))}
+                                                                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                                                                                />
+                                                                            </td>
                                                                             <td className="px-3 py-2"><span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Pendiente</span></td>
                                                                         </tr>
                                                                     ))}
@@ -4365,7 +4381,7 @@ const CloserWorkflowPage = () => {
                                                         </div>
                                                     );
                                                 })()}
-                                                <p className="text-[9px] text-slate-550 font-medium">Se guarda automáticamente al declarar la venta. Las fechas y montos se pueden ajustar después.</p>
+                                                <p className="text-[9px] text-slate-550 font-medium">Se guarda automáticamente al declarar la venta con las fechas que dejes arriba (por defecto, una por mes) — también se pueden ajustar después.</p>
                                             </div>
                                         )}
                                     </div>

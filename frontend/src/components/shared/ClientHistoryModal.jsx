@@ -114,8 +114,15 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
 // Cuando un cliente debe dinero pero nunca tuvo un InstallmentPlan armado (el Parcial se
 // declaró sin pasar por el armador de cronograma del modal de venta — el caso más común en
 // ventas históricas), acá se puede crear uno directamente sobre el saldo pendiente real.
+const defaultCuotaDate = (i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + i + 1);
+    return d.toISOString().slice(0, 10);
+};
+
 const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
     const [numCuotas, setNumCuotas] = useState(3);
+    const [fechas, setFechas] = useState({});
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
 
@@ -123,11 +130,13 @@ const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
         setCreating(true);
         setError('');
         try {
+            const fechasList = Array.from({ length: numCuotas }, (_, i) => fechas[i] || null);
             const res = await api.post('/closer/installments', {
                 appointment_id: appointmentId,
                 total: deuda,
                 cobrado_hoy: 0,
-                num_cuotas: numCuotas
+                num_cuotas: numCuotas,
+                fechas: fechasList
             });
             onCreated(res.data.cuotas);
         } catch (err) {
@@ -137,10 +146,12 @@ const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
         }
     };
 
+    const cadaUna = deuda / (numCuotas || 1);
+
     return (
         <div className="bg-slate-950/40 border border-amber-500/20 rounded-lg p-3 space-y-2">
             <p className="text-[10px] text-amber-300 font-bold">
-                Debe {money(deuda)} y no tiene plan de cuotas armado — se puede repartir ese saldo en cuotas ahora.
+                Debe {money(deuda)} y no tiene plan de cuotas armado — se puede repartir ese saldo en cuotas ahora, eligiendo cuándo cobrar cada una.
             </p>
             <div className="flex items-center gap-2">
                 <label className="text-[9px] text-slate-500 font-bold uppercase">Cuotas</label>
@@ -149,19 +160,32 @@ const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
                     min="1"
                     max="12"
                     value={numCuotas}
-                    onChange={(e) => setNumCuotas(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setNumCuotas(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
                 />
-                <span className="text-[9px] text-slate-500">de {money(deuda / (numCuotas || 1))} cada una</span>
-                <button
-                    onClick={crear}
-                    disabled={creating || !appointmentId}
-                    title={!appointmentId ? 'Este cliente no tiene ninguna agenda registrada' : 'Crear plan de cuotas'}
-                    className="ml-auto px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase disabled:opacity-50 cursor-pointer"
-                >
-                    {creating ? <Loader2 size={11} className="animate-spin" /> : 'Crear plan'}
-                </button>
+                <span className="text-[9px] text-slate-500">de {money(cadaUna)} cada una</span>
             </div>
+            <div className="space-y-1">
+                {Array.from({ length: numCuotas }, (_, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                        <span className="text-slate-400 w-16">Cuota {i + 1}</span>
+                        <input
+                            type="date"
+                            value={fechas[i] || defaultCuotaDate(i)}
+                            onChange={(e) => setFechas(prev => ({ ...prev, [i]: e.target.value }))}
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                        />
+                    </div>
+                ))}
+            </div>
+            <button
+                onClick={crear}
+                disabled={creating || !appointmentId}
+                title={!appointmentId ? 'Este cliente no tiene ninguna agenda registrada' : 'Crear plan de cuotas'}
+                className="px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase disabled:opacity-50 cursor-pointer"
+            >
+                {creating ? <Loader2 size={11} className="animate-spin" /> : 'Crear plan'}
+            </button>
             {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
         </div>
     );

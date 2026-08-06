@@ -14,10 +14,16 @@ def _add_months(d, months):
 
 class InstallmentService:
     @staticmethod
-    def create_plan(client_id, appointment_id, total, cobrado_hoy, num_cuotas, start_date=None):
+    def create_plan(client_id, appointment_id, total, cobrado_hoy, num_cuotas, start_date=None, fechas=None):
         """Genera el cronograma de cuotas restantes (saldo dividido en partes iguales,
-        una por mes). El plan pertenece al cliente (client_id), no a una cita puntual —
-        cualquier cita futura de ese mismo cliente encuentra el mismo plan.
+        una por mes por defecto). El plan pertenece al cliente (client_id), no a una cita
+        puntual — cualquier cita futura de ese mismo cliente encuentra el mismo plan.
+
+        `fechas` (opcional): lista de fechas ('YYYY-MM-DD' o `date`) para sobreescribir el
+        vencimiento automático de cada cuota, en orden (fechas[0] → cuota 1, etc.) — el closer
+        define cuándo le va a cobrar cada cuota a ESE cliente en particular al momento de
+        registrar el primer pago, en vez de aceptar siempre +1/+2/+3 meses. Una fecha faltante o
+        inválida en la lista cae al cálculo automático para esa cuota puntual.
 
         Protección: si ya existe un plan para este cliente con al menos una cuota pagada,
         NO se borra ni se recrea (perdería el historial de cobros) — se devuelve None para
@@ -41,12 +47,21 @@ class InstallmentService:
         plans = []
         for i in range(n):
             monto = round(rest - each * (n - 1), 2) if i == n - 1 else each
+
+            fecha_vencimiento = _add_months(base_date, i + 1)
+            if fechas and i < len(fechas) and fechas[i]:
+                try:
+                    raw = fechas[i]
+                    fecha_vencimiento = raw if isinstance(raw, date) else datetime.strptime(str(raw), '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    pass
+
             plan = InstallmentPlan(
                 client_id=client_id,
                 appointment_id=appointment_id,
                 numero_cuota=i + 1,
                 monto=monto,
-                fecha_vencimiento=_add_months(base_date, i + 1),
+                fecha_vencimiento=fecha_vencimiento,
                 estado='pendiente'
             )
             db.session.add(plan)
