@@ -138,6 +138,7 @@ class ClientCleanupService:
     def get_client_full_history(client_id):
         from app.models import Client, Appointment, FinancialSale, Enrollment, Payment
         from app.services.installment_service import InstallmentService
+        from app.services.closer_followup_service import CloserFollowUpService
 
         client = Client.query.get(client_id)
         if not client:
@@ -147,9 +148,17 @@ class ClientCleanupService:
         sales = FinancialSale.query.filter_by(client_id=client_id).order_by(FinancialSale.date.desc()).all()
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
         cuotas = InstallmentService.get_plan_by_client(client_id)
+        # Código de programa (AL/RR/SI) resuelto desde la última venta real del cliente — lo
+        # necesita el frontend para armar el "tipo_pago" ("RR - Cuota") al reportar el pago de
+        # una cuota marcada como pagada desde este historial, igual formato que usa
+        # "Declarar Venta" en el resto del sistema.
+        programa_code = CloserFollowUpService._client_program_code(client_id)
 
         return {
-            'client': {'id': client.id, 'full_name': client.full_name, 'email': client.email, 'instagram': client.instagram, 'phone': client.phone},
+            'client': {
+                'id': client.id, 'full_name': client.full_name, 'email': client.email,
+                'instagram': client.instagram, 'phone': client.phone, 'programa_code': programa_code
+            },
             'appointments': [{
                 'id': a.id, 'start_time': a.start_time.isoformat() if a.start_time else None,
                 'result': a.result, 'closer_result': a.closer_result, 'origin': a.origin

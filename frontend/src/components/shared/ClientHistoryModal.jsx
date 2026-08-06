@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, X, Save, Check, DollarSign } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
 
@@ -10,7 +11,7 @@ const CUOTA_ESTADO_CLS = {
     pagado: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 };
 
-const CuotaRow = ({ cuota, onSaved }) => {
+const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
     const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
     const [saving, setSaving] = useState(false);
     const [marking, setMarking] = useState(false);
@@ -26,6 +27,46 @@ const CuotaRow = ({ cuota, onSaved }) => {
         } finally {
             setFlag(false);
         }
+    };
+
+    // Marcar una cuota como pagada tiene que reportarse igual que cualquier otra venta —
+    // mismo POST /sheets/push?tabla=Ventas_DB que usa "Declarar Venta" (crea el FinancialSale
+    // local y dispara el webhook de n8n hacia Discord), en el mismo orden: primero se reporta
+    // la venta, y solo si eso funciona se marca la cuota como pagada.
+    const markAsPaid = async () => {
+        setMarking(true);
+        try {
+            const payload = {
+                email_vendedor: vendedorEmail || '',
+                nombre_cliente: client?.full_name || '',
+                telefono: client?.phone || '',
+                mail_cliente: client?.email || '',
+                tipo_pago: `${client?.programa_code || 'RR'} - Cuota`,
+                monto: cuota.monto,
+                segundo_pago: `Cuota ${cuota.numero_cuota}`,
+                metodo_pago: 'Stripe',
+                examen: '',
+                instagram: client?.instagram ? client.instagram.replace(/@/g, '').trim() : '',
+                estado: 'Completada',
+                setter: '',
+                documento_identidad: '',
+                marca_temporal: new Date().toLocaleString('es-ES'),
+                enviar_webhook: true,
+                enviar_mensaje: true,
+                sold_in_call: false
+            };
+            const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
+            if (res.data?.status !== 'success') {
+                console.error('No se pudo reportar el pago de la cuota:', res.data);
+                setMarking(false);
+                return;
+            }
+        } catch (err) {
+            console.error('Error al reportar el pago de la cuota:', err);
+            setMarking(false);
+            return;
+        }
+        await patch({ estado: 'pagado' }, setMarking);
     };
 
     return (
@@ -57,9 +98,9 @@ const CuotaRow = ({ cuota, onSaved }) => {
                 )}
                 {cuota.estado !== 'pagado' && (
                     <button
-                        onClick={() => patch({ estado: 'pagado' }, setMarking)}
+                        onClick={markAsPaid}
                         disabled={marking}
-                        title="Marcar cuota como pagada"
+                        title="Marcar cuota como pagada (reporta a Discord vía n8n, igual que una venta)"
                         className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
                     >
                         {marking ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
@@ -75,6 +116,7 @@ const CuotaRow = ({ cuota, onSaved }) => {
 // closer pueda consultar (y confirmar) el historial completo de cualquier cliente sin tener que
 // abrir cada agenda por separado.
 const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSale }) => {
+    const { user } = useAuth();
     const [history, setHistory] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -145,6 +187,8 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                     <CuotaRow
                                         key={c.id}
                                         cuota={c}
+                                        client={history.client}
+                                        vendedorEmail={user?.email}
                                         onSaved={(updated) => setHistory(prev => ({
                                             ...prev,
                                             installments: prev.installments.map(i => i.id === updated.id ? updated : i)
