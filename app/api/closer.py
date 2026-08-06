@@ -1565,23 +1565,25 @@ def get_closer_deck_counts():
         )
     )
     
-    query_seg = Appointment.query.filter(
-        or_(
-            Appointment.fecha_seguimiento.like(f"{selected_date_str}%"),
-            Appointment.fecha_seguimiento_cobro.like(f"{selected_date_str}%")
-        ),
-        or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado == None)
-    )
-    
     if current_user.role != 'admin':
         query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
         query_calls = query_calls.filter_by(closer_id=current_user.id)
-        query_seg = query_seg.filter_by(closer_id=current_user.id)
+
+    # "Seguimientos a hacer hoy" tiene que ser la misma cuenta que ve el closer al abrir la
+    # pestaña ③ Seguimientos (CloserFollowUpService.get_today_grouped): vencidos + de hoy, con
+    # el tipo efectivo derivado cuando el closer nunca etiquetó explícitamente la cita. La
+    # query anterior (fecha_seguimiento LIKE 'hoy%') solo contaba seguimientos con fecha EXACTA
+    # de hoy — cualquier backlog atrasado (la inmensa mayoría en la práctica) quedaba afuera,
+    # por eso el contador casi siempre marcaba 0 pese a haber trabajo real pendiente.
+    from app.services.closer_followup_service import CloserFollowUpService
+    seg_closer_id = current_user.id if current_user.role != 'admin' else None
+    seg_grouped = CloserFollowUpService.get_today_grouped(seg_closer_id, selected_date_str)
+    seguimientos_count = sum(len(v) for v in seg_grouped.values())
 
     return jsonify({
         "confirmations": query_confirmations.count(),
         "calls": query_calls.count(),
-        "seguimientos": query_seg.count()
+        "seguimientos": seguimientos_count
     }), 200
 
 
