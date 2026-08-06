@@ -165,7 +165,16 @@ class ClientCleanupService:
             },
             'appointments': [{
                 'id': a.id, 'start_time': a.start_time.isoformat() if a.start_time else None,
-                'result': a.result, 'closer_result': a.closer_result, 'origin': a.origin
+                'result': a.result, 'closer_result': a.closer_result, 'origin': a.origin,
+                # Campos de seguimiento (ver 'Bandeja' → pestaña Seguimientos): se exponen acá
+                # para que la búsqueda global pueda mostrar hechos/pendientes de este cliente sin
+                # tener que abrir cada agenda por separado.
+                'fecha_seguimiento': getattr(a, 'fecha_seguimiento', None),
+                'seguimiento_realizado': bool(getattr(a, 'seguimiento_realizado', False)),
+                'seguimiento_tipo': getattr(a, 'seguimiento_tipo', None),
+                'seguimiento_sub': getattr(a, 'seguimiento_sub', None),
+                'last_contact_at': a.last_contact_at.isoformat() if getattr(a, 'last_contact_at', None) else None,
+                'last_contact_outcome': getattr(a, 'last_contact_outcome', None)
             } for a in appointments],
             'financial_sales': [s.to_dict() for s in sales],
             'enrollments': [{

@@ -192,6 +192,70 @@ const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
     );
 };
 
+const CONTACT_OUTCOME_LABELS = {
+    no_resp: 'No respondió',
+    contesto: 'Contestó',
+    agendo: 'Agendó',
+    cerro: 'Cerró la venta',
+    pago: 'Pagó'
+};
+
+// Programar un seguimiento próximo directamente desde el resumen del cliente, sin tener que
+// pasar por el árbol de decisión completo de una llamada — para cuando el closer ya sabe
+// cuándo quiere volver a contactar a este cliente y no hay ninguna cita puntual que procesar.
+const AddFollowUpForm = ({ appointmentId, onCreated }) => {
+    const [fecha, setFecha] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        return d.toISOString().slice(0, 10);
+    });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    const programar = async () => {
+        if (!appointmentId) return;
+        setSaving(true);
+        setError('');
+        try {
+            const res = await api.post(`/closer/deck/${appointmentId}`, {
+                fecha_seguimiento: fecha,
+                seguimiento_tipo: 'tomada',
+                seguimiento_sub: 'Seguimiento manual desde historial',
+                seguimiento_intento: 1,
+                seguimiento_realizado: false
+            });
+            onCreated(fecha);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al programar el seguimiento');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="bg-slate-950/40 border border-violet-500/20 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2">
+                <label className="text-[9px] text-slate-500 font-bold uppercase">Próximo contacto</label>
+                <input
+                    type="date"
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                />
+                <button
+                    onClick={programar}
+                    disabled={saving || !appointmentId}
+                    title={!appointmentId ? 'Este cliente no tiene ninguna agenda registrada' : 'Programar seguimiento'}
+                    className="px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase disabled:opacity-50 cursor-pointer"
+                >
+                    {saving ? <Loader2 size={11} className="animate-spin" /> : 'Programar seguimiento'}
+                </button>
+            </div>
+            {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
+        </div>
+    );
+};
+
 // Resumen de un cliente (agendas, ventas, inscripciones/pagos) en una sola vista — reutilizado
 // desde la cola de limpieza y desde la búsqueda global del mazo del closer, para que cualquier
 // closer pueda consultar (y confirmar) el historial completo de cualquier cliente sin tener que
@@ -210,6 +274,8 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
     }, [clientId]);
 
     const mostRecentAppointmentId = history?.appointments?.[0]?.id || null;
+    const seguimientosPorHacer = (history?.appointments || []).filter(a => a.fecha_seguimiento && !a.seguimiento_realizado);
+    const seguimientosHechos = (history?.appointments || []).filter(a => a.seguimiento_realizado || a.last_contact_at);
 
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -257,6 +323,49 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                         <span className="text-slate-500 font-bold uppercase">{a.closer_result || a.result || 'Pendiente'}</span>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Seguimientos</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1">Por hacer ({seguimientosPorHacer.length})</p>
+                                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                                        {seguimientosPorHacer.length === 0 && <p className="text-[10px] text-slate-600">Sin seguimientos pendientes.</p>}
+                                        {seguimientosPorHacer.map(a => (
+                                            <div
+                                                key={a.id}
+                                                onClick={() => onOpenAppointment && onOpenAppointment(a.id)}
+                                                className={`flex justify-between text-[10px] bg-slate-950/40 border border-amber-500/20 rounded-lg px-3 py-2 ${onOpenAppointment ? 'cursor-pointer hover:border-amber-500/40 hover:bg-slate-900/60 transition-all' : ''}`}
+                                            >
+                                                <span className="text-slate-300">Próximo contacto: {a.fecha_seguimiento}</span>
+                                                <span className="text-amber-400 font-bold uppercase">{a.seguimiento_sub || a.seguimiento_tipo || 'Pendiente'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1">Hechos ({seguimientosHechos.length})</p>
+                                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                                        {seguimientosHechos.length === 0 && <p className="text-[10px] text-slate-600">Sin seguimientos realizados todavía.</p>}
+                                        {seguimientosHechos.map(a => (
+                                            <div key={a.id} className="flex justify-between text-[10px] bg-slate-950/40 border border-emerald-500/20 rounded-lg px-3 py-2">
+                                                <span className="text-slate-300">{a.last_contact_at ? new Date(a.last_contact_at).toLocaleDateString('es-ES') : '—'}</span>
+                                                <span className="text-emerald-400 font-bold uppercase">{CONTACT_OUTCOME_LABELS[a.last_contact_outcome] || (a.seguimiento_realizado ? 'Cerrado' : 'Contactado')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <AddFollowUpForm
+                                    appointmentId={mostRecentAppointmentId}
+                                    onCreated={(fecha) => setHistory(prev => ({
+                                        ...prev,
+                                        appointments: prev.appointments.map(a => a.id === mostRecentAppointmentId
+                                            ? { ...a, fecha_seguimiento: fecha, seguimiento_realizado: false }
+                                            : a)
+                                    }))}
+                                />
                             </div>
                         </div>
 
