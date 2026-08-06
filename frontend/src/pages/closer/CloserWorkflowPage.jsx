@@ -17,7 +17,6 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 import SeguimientosPane from './components/SeguimientosPane';
-import ClientCleanupPane from './components/ClientCleanupPane';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -3648,8 +3647,6 @@ const CloserWorkflowPage = () => {
                         </button>
                     </div>
                 </div>
-                ) : activeView === 'cleanup' ? (
-                    <ClientCleanupPane />
                 ) : (
                     <CloserDashboard embedded />
                 )}
@@ -4951,12 +4948,6 @@ const CloserWorkflowPage = () => {
                     onClick={() => setActiveView('dashboard')}
                 >
                     <span>📈 Dashboard</span>
-                </button>
-                <button
-                    className={`dk-v6 ${activeView === 'cleanup' ? 'on' : ''}`}
-                    onClick={() => setActiveView('cleanup')}
-                >
-                    <span>🧹 Limpieza</span>
                 </button>
             </div>
 
