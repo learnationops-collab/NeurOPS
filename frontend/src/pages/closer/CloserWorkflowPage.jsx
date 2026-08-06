@@ -65,6 +65,10 @@ const CloserWorkflowPage = () => {
 
     // Estado del reporte v6
     const [reflection, setReflection] = useState({ win: '', fix: '' });
+    // Único número del reporte que el sistema no puede calcular solo (no existe ninguna señal
+    // persistida de "slots disponibles configurados" ese día) — se pide a mano, todo lo demás
+    // sale de la Bandeja.
+    const [reportSlots, setReportSlots] = useState('');
     const [offDaysMode, setOffDaysMode] = useState(null); // 0 = no, 1 = si
     const [selectedOffDays, setSelectedOffDays] = useState(new Set());
     const [submittingReport, setSubmittingReport] = useState(false);
@@ -86,6 +90,7 @@ const CloserWorkflowPage = () => {
                 setReportSent(!!d.sent);
                 setReportSentAt(d.sent_at || null);
                 setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
+                setReportSlots(d.slots !== null && d.slots !== undefined ? String(d.slots) : '');
                 setDailyActivity(d.activity || null);
                 if (reportDate === localToday()) setTodayReportSent(!!d.sent);
             })
@@ -3555,6 +3560,26 @@ const CloserWorkflowPage = () => {
                         </div>
                     </div>
 
+                    {/* Slots Disponibles — el único número de este reporte que el sistema no puede
+                        calcular solo, porque no hay ningún lugar de la Bandeja donde se defina
+                        cuántos cupos de agenda tenía el closer disponibles ese día. */}
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-3">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span> Slots disponibles
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                            Único dato que no se puede sacar solo de la Bandeja — cuántos cupos de agenda tenías configurados hoy en total. Todo lo demás de este reporte es automático.
+                        </p>
+                        <input
+                            type="number"
+                            min="0"
+                            value={reportSlots}
+                            onChange={(e) => setReportSlots(e.target.value)}
+                            placeholder="ej. 15"
+                            className="w-full sm:w-48 bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all"
+                        />
+                    </div>
+
                     {/* Reflexión Diaria */}
                     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
                         <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
@@ -3590,10 +3615,15 @@ const CloserWorkflowPage = () => {
                         <button
                             disabled={sendingReport}
                             onClick={async () => {
+                                if (reportSlots.trim() === '') {
+                                    toast.error('Ingresá los slots disponibles del día — es el único dato que no se calcula solo.');
+                                    return;
+                                }
                                 setSendingReport(true);
                                 try {
                                     const res = await api.post('/closer/deck/daily-report', {
                                         date: reportDate,
+                                        slots: parseInt(reportSlots) || 0,
                                         reflections: { victory: reflection.win, opportunity: reflection.fix }
                                     });
                                     setReportSent(true);

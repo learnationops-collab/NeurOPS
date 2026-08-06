@@ -1628,6 +1628,10 @@ def get_daily_report_status():
         "referrals_scheduled": report.referrals_scheduled if report else 0,
         "reflection_victory": report.reflection_victory if report else "",
         "reflection_opportunity": report.reflection_opportunity if report else "",
+        # Único campo que el sistema no puede calcular solo (no hay ninguna señal persistida de
+        # "slots disponibles configurados" — ver CloserService.compute_daily_report_fields): se
+        # precarga lo que ya se había guardado para este día, si lo hay.
+        "slots": report.slots if report else None,
         "activity": activity
     }), 200
 
@@ -1667,6 +1671,13 @@ def send_daily_report():
         referidos_reales = 0
     computed['referrals_sourced'] = referidos_reales
     computed['referrals_scheduled'] = referidos_reales
+    # 'slots' (cupos disponibles configurados ese día) es el único número de este reporte que
+    # no existe como señal persistida en ningún lado del sistema — a diferencia de todo lo demás
+    # acá, no se puede derivar de la Bandeja. Es el único campo que el closer completa a mano.
+    try:
+        computed['slots'] = int(data.get('slots') or 0)
+    except (TypeError, ValueError):
+        computed['slots'] = 0
     computed['reflections'] = data.get('reflections') or None
     computed['reflection_victory'] = (data.get('reflections') or {}).get('victory') if isinstance(data.get('reflections'), dict) else None
     computed['reflection_opportunity'] = (data.get('reflections') or {}).get('opportunity') if isinstance(data.get('reflections'), dict) else None
