@@ -317,7 +317,7 @@ const CloserWorkflowPage = () => {
             return;
         }
         setLoadingSaleCuotas(true);
-        api.get(`/closer/installments/${salePrompt.apptId}`)
+        api.get(`/closer/installments/${salePrompt.apptId}`, { params: { programa_code: saleForm.programa } })
             .then(res => {
                 const cuotas = res.data?.cuotas || [];
                 setSaleExistingCuotas(cuotas);
@@ -330,7 +330,7 @@ const CloserWorkflowPage = () => {
             .catch(err => console.error('Error al cargar el plan de cuotas existente:', err))
             .finally(() => setLoadingSaleCuotas(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [saleModalOpen, isCuotaPayment, salePrompt.apptId]);
+    }, [saleModalOpen, isCuotaPayment, salePrompt.apptId, saleForm.programa]);
 
     // Búsqueda global con debounce
     useEffect(() => {
@@ -1413,11 +1413,12 @@ const CloserWorkflowPage = () => {
                                 total,
                                 cobrado_hoy: cobradoHoy,
                                 num_cuotas: numCuotas,
-                                fechas
+                                fechas,
+                                programa_code: saleForm.programa
                             });
                         } catch (e) {
                             console.error("Error al guardar el plan de cuotas:", e);
-                            toast.error("La venta se guardó, pero hubo un error al guardar el plan de cuotas");
+                            toast.error(e.response?.data?.error || "La venta se guardó, pero hubo un error al guardar el plan de cuotas");
                         }
                     }
                 }

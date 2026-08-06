@@ -120,7 +120,7 @@ const defaultCuotaDate = (i) => {
     return d.toISOString().slice(0, 10);
 };
 
-const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
+const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
     const [numCuotas, setNumCuotas] = useState(3);
     const [fechas, setFechas] = useState({});
     const [creating, setCreating] = useState(false);
@@ -136,7 +136,8 @@ const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
                 total: deuda,
                 cobrado_hoy: 0,
                 num_cuotas: numCuotas,
-                fechas: fechasList
+                fechas: fechasList,
+                programa_code: programaCode
             });
             onCreated(res.data.cuotas);
         } catch (err) {
@@ -267,6 +268,7 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                         <CreatePlanForm
                                             deuda={history.client.deuda}
                                             appointmentId={mostRecentAppointmentId}
+                                            programaCode={history.client.programa_code}
                                             onCreated={(cuotas) => setHistory(prev => ({ ...prev, installments: cuotas }))}
                                         />
                                     ) : (

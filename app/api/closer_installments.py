@@ -37,10 +37,15 @@ def create_installment_plan():
     # Fechas de cobro elegidas por el closer para cada cuota (en orden), en vez de aceptar
     # siempre el cálculo automático de +1/+2/+3 meses.
     fechas = data.get('fechas') if isinstance(data.get('fechas'), list) else None
+    # Programa (AL/RR/SI) al que pertenece este plan — un cliente puede tener planes
+    # independientes por programa; sin esto, el plan de un programa distinto (ej. AL) bloqueaba
+    # por error la creación del plan de otro (ej. RR) apenas el cliente tuviera CUALQUIER cuota
+    # ya pagada en cualquier programa. Bug real reportado por un closer.
+    programa_code = (data.get('programa_code') or '').strip().upper() or None
 
-    plans = InstallmentService.create_plan(appt.client_id, appointment_id, total, cobrado_hoy, num_cuotas, fechas=fechas)
+    plans = InstallmentService.create_plan(appt.client_id, appointment_id, total, cobrado_hoy, num_cuotas, fechas=fechas, programa_code=programa_code)
     if plans is None:
-        return jsonify({"error": "Este cliente ya tiene un plan de cuotas con pagos registrados — no se puede recrear desde cero. Marcá la cuota correspondiente como pagada en vez de definir un plan nuevo."}), 409
+        return jsonify({"error": "Este cliente ya tiene un plan de cuotas de este programa con pagos registrados — no se puede recrear desde cero. Marcá la cuota correspondiente como pagada en vez de definir un plan nuevo."}), 409
     return jsonify({"cuotas": [p.to_dict() for p in plans]}), 201
 
 
@@ -53,7 +58,11 @@ def get_installment_plan(appointment_id):
     if not _can_access(appt):
         return jsonify({"message": "Forbidden"}), 403
 
-    plans = InstallmentService.get_plan(appointment_id)
+    # Sin programa_code: cuotas de TODOS los programas del cliente (uso general, ej. pantalla de
+    # seguimiento de cobro). Con programa_code: solo las de ese programa (uso específico, ej.
+    # elegir qué cuota se está pagando al declarar una venta tipo Cuota para un programa dado).
+    programa_code = (request.args.get('programa_code') or '').strip().upper() or None
+    plans = InstallmentService.get_plan(appointment_id, programa_code=programa_code)
     return jsonify({"cuotas": [p.to_dict() for p in plans]}), 200
 
 
