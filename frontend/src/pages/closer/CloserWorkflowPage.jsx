@@ -2,14 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { 
+import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, History
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import ClientHistoryModal from '../../components/shared/ClientHistoryModal';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
@@ -124,6 +125,10 @@ const CloserWorkflowPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searching, setSearching] = useState(false);
+    // Resumen de cliente (agendas/ventas/pagos) abierto desde un resultado de búsqueda — la
+    // búsqueda ya deduplica por cliente, así que este resumen es la vista principal para revisar
+    // qué pasó con él antes de decidir accionar sobre una cita puntual.
+    const [historyClientId, setHistoryClientId] = useState(null);
 
     // Modal de Seguimiento tras cambio de estado / venta
     const [followUpModal, setFollowUpModal] = useState({
@@ -2827,9 +2832,9 @@ const CloserWorkflowPage = () => {
                                         }
                                         
                                         return (
-                                            <div 
-                                                key={l.id || Math.random()} 
-                                                className="sres-v6" 
+                                            <div
+                                                key={l.id || Math.random()}
+                                                className="sres-v6"
                                                 onClick={() => handleSelectSearchResult(l)}
                                             >
                                                 <div className="flex-1 min-w-0">
@@ -2838,6 +2843,16 @@ const CloserWorkflowPage = () => {
                                                         {l.instagram ? `@${l.instagram.replace('@', '')}` : 'Sin Instagram'} • {l.phone || 'Sin Teléfono'} • {appt?.examen || 'Sin Examen'}
                                                     </div>
                                                 </div>
+                                                {l.id && (
+                                                    <button
+                                                        type="button"
+                                                        title="Ver historial del cliente"
+                                                        onClick={(e) => { e.stopPropagation(); setShowSearchResults(false); setHistoryClientId(l.id); }}
+                                                        className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                                                    >
+                                                        <History size={13} />
+                                                    </button>
+                                                )}
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
                                                     {label}
                                                 </span>
@@ -4815,6 +4830,10 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {historyClientId && (
+                <ClientHistoryModal clientId={historyClientId} onClose={() => setHistoryClientId(null)} />
+            )}
 
             {/* DOCK FLOTANTE v6 */}
             <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>
