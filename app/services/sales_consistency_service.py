@@ -1,4 +1,4 @@
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 
 class SalesConsistencyService:
@@ -39,10 +39,29 @@ class SalesConsistencyService:
         else:
             program_price = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
 
-        all_sales = []
+        # Cruzar por client_id Y por email/instagram/teléfono normalizados, no solo por
+        # client_id: se detectó (reportado por un closer real que no podía declarar una Cuota
+        # porque el sistema no encontraba su Parcial anterior) que FinancialSale.client_id está
+        # NULL en prácticamente todas las filas de esta base local pese al backfill documentado
+        # en una pasada anterior — depender solo de esa columna deja invisible casi todo el
+        # historial real de pagos de un cliente. Mismo criterio de cruce que el resto del sistema
+        # (BookingService.find_or_create_client).
+        sale_filters = []
         if client_id:
+            sale_filters.append(FinancialSale.client_id == client_id)
+        if client:
+            if client.email and '@' in client.email:
+                sale_filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
+            if client.instagram and client.instagram.lower() not in ('n/a', ''):
+                ig_clean = client.instagram.strip().replace('@', '').lower()
+                sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
+            if client.phone and len(client.phone.strip()) >= 8:
+                sale_filters.append(FinancialSale.telefono.like(f"%{client.phone.strip()[-8:]}%"))
+
+        all_sales = []
+        if sale_filters:
             all_sales = FinancialSale.query.filter(
-                FinancialSale.client_id == client_id,
+                or_(*sale_filters),
                 or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
             ).order_by(FinancialSale.date.asc()).all()
 
