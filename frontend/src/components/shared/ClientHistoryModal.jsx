@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Save } from 'lucide-react';
+import { Loader2, X, Save, Check, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
@@ -13,17 +13,18 @@ const CUOTA_ESTADO_CLS = {
 const CuotaRow = ({ cuota, onSaved }) => {
     const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
     const [saving, setSaving] = useState(false);
+    const [marking, setMarking] = useState(false);
     const dirty = fecha !== (cuota.fecha_vencimiento || '');
 
-    const save = async () => {
-        setSaving(true);
+    const patch = async (payload, setFlag) => {
+        setFlag(true);
         try {
-            const res = await api.patch(`/closer/installments/cuota/${cuota.id}`, { fecha_vencimiento: fecha });
+            const res = await api.patch(`/closer/installments/cuota/${cuota.id}`, payload);
             onSaved(res.data);
         } catch (err) {
-            console.error('Error al actualizar fecha de cuota:', err);
+            console.error('Error al actualizar cuota:', err);
         } finally {
-            setSaving(false);
+            setFlag(false);
         }
     };
 
@@ -46,12 +47,22 @@ const CuotaRow = ({ cuota, onSaved }) => {
                 />
                 {dirty && (
                     <button
-                        onClick={save}
+                        onClick={() => patch({ fecha_vencimiento: fecha }, setSaving)}
                         disabled={saving}
                         title="Guardar nueva fecha"
                         className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
                     >
                         {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                    </button>
+                )}
+                {cuota.estado !== 'pagado' && (
+                    <button
+                        onClick={() => patch({ estado: 'pagado' }, setMarking)}
+                        disabled={marking}
+                        title="Marcar cuota como pagada"
+                        className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
+                    >
+                        {marking ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                     </button>
                 )}
             </div>
@@ -63,7 +74,7 @@ const CuotaRow = ({ cuota, onSaved }) => {
 // desde la cola de limpieza y desde la búsqueda global del mazo del closer, para que cualquier
 // closer pueda consultar (y confirmar) el historial completo de cualquier cliente sin tener que
 // abrir cada agenda por separado.
-const ClientHistoryModal = ({ clientId, onClose }) => {
+const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSale }) => {
     const [history, setHistory] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -75,14 +86,26 @@ const ClientHistoryModal = ({ clientId, onClose }) => {
             .finally(() => setLoading(false));
     }, [clientId]);
 
+    const mostRecentAppointmentId = history?.appointments?.[0]?.id || null;
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-[2rem] p-6 space-y-5">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-black text-white uppercase italic tracking-tight">
+                <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-black text-white uppercase italic tracking-tight truncate">
                         {history?.client?.full_name || 'Historial del cliente'}
                     </h3>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white cursor-pointer"><X size={20} /></button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {onRegisterSale && history?.client && (
+                            <button
+                                onClick={() => onRegisterSale(history.client, mostRecentAppointmentId)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                <DollarSign size={12} /> Registrar venta / pago
+                            </button>
+                        )}
+                        <button onClick={onClose} className="text-slate-500 hover:text-white cursor-pointer"><X size={20} /></button>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -102,7 +125,11 @@ const ClientHistoryModal = ({ clientId, onClose }) => {
                             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                                 {history.appointments.length === 0 && <p className="text-[10px] text-slate-600">Sin agendas registradas.</p>}
                                 {history.appointments.map(a => (
-                                    <div key={a.id} className="flex justify-between text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
+                                    <div
+                                        key={a.id}
+                                        onClick={() => onOpenAppointment && onOpenAppointment(a.id)}
+                                        className={`flex justify-between text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2 ${onOpenAppointment ? 'cursor-pointer hover:border-violet-500/40 hover:bg-slate-900/60 transition-all' : ''}`}
+                                    >
                                         <span className="text-slate-300">{a.start_time ? new Date(a.start_time).toLocaleDateString('es-ES') : '—'} · {a.origin || 'Sin origen'}</span>
                                         <span className="text-slate-500 font-bold uppercase">{a.closer_result || a.result || 'Pendiente'}</span>
                                     </div>

@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, History
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -393,38 +393,70 @@ const CloserWorkflowPage = () => {
         return () => document.removeEventListener('click', handleOutsideClick);
     }, []);
 
-    // Seleccionar lead desde resultados de búsqueda global
+    // Seleccionar lead desde resultados de búsqueda global — abre el resumen del cliente
+    // (agendas, ventas, cuotas) en vez de saltar directo a la última cita puntual: desde ahí el
+    // closer ve todo lo que pasó con ese cliente antes de decidir qué hacer (abrir una agenda
+    // específica, declarar una venta, marcar una cuota como pagada).
     const handleSelectSearchResult = async (lead) => {
         setShowSearchResults(false);
         setSearchQuery('');
-        
-        if (lead.appointment && lead.appointment.id) {
-            // Si tiene cita en la base de datos local, la cargamos completa
-            setLoading(true);
-            try {
-                const res = await api.get(`/closer/deck/card/${lead.appointment.id}`);
-                if (res.data) {
-                    setSelectedLead(res.data);
-                }
-            } catch (err) {
-                console.error("Error al cargar card de cita:", err);
-                toast.error("Error al cargar la ficha de la cita");
-            } finally {
-                setLoading(false);
-            }
-        } else {
-            // Cita simulada o datos de lead básicos
-            setSelectedLead({
-                id: lead.id ? -lead.id : -Math.floor(Math.random() * 100000), // id negativo para sintéticos
-                lead_name: lead.username || "Sin Nombre",
-                email: lead.email || "",
-                phone: lead.phone || "",
-                instagram: lead.instagram || "",
-                origin: lead.appointment?.setter_name ? "Setter" : "Desconocido",
-                setter_name: lead.appointment?.setter_name || "Sin Asignar",
-                closer_result: "Pendiente"
-            });
+
+        if (lead.id) {
+            setHistoryClientId(lead.id);
+            return;
         }
+
+        // Sin Client todavía (lead sintético desde FinancialAgenda, sin fila propia en la base
+        // local) — no hay historial de cliente que mostrar, se abre la ficha simple de siempre.
+        setSelectedLead({
+            id: -Math.floor(Math.random() * 100000),
+            lead_name: lead.username || "Sin Nombre",
+            email: lead.email || "",
+            phone: lead.phone || "",
+            instagram: lead.instagram || "",
+            origin: lead.appointment?.setter_name ? "Setter" : "Desconocido",
+            setter_name: lead.appointment?.setter_name || "Sin Asignar",
+            closer_result: "Pendiente"
+        });
+    };
+
+    // Abrir una agenda puntual desde el resumen del cliente (ClientHistoryModal) — mismo fetch
+    // que antes hacía el click directo de un resultado de búsqueda.
+    const handleOpenAppointmentFromHistory = async (appointmentId) => {
+        setHistoryClientId(null);
+        setLoading(true);
+        try {
+            const res = await api.get(`/closer/deck/card/${appointmentId}`);
+            if (res.data) {
+                setSelectedLead(res.data);
+            }
+        } catch (err) {
+            console.error("Error al cargar card de cita:", err);
+            toast.error("Error al cargar la ficha de la cita");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // "Registrar venta/pago" desde el resumen del cliente — abre el mismo modal de Declarar
+    // Venta de siempre, precargado con los datos del cliente, anclado a su agenda más reciente
+    // (el modal necesita una cita de referencia para el plan de cuotas y el registro del pago).
+    const handleRegisterSaleFromHistory = (client, mostRecentAppointmentId) => {
+        setHistoryClientId(null);
+        if (!mostRecentAppointmentId) {
+            toast.error("Este cliente no tiene ninguna agenda registrada todavía — creale una agenda antes de declarar una venta.");
+            return;
+        }
+        openSaleModalForLead({
+            id: mostRecentAppointmentId,
+            client_id: client.id,
+            lead_name: client.full_name,
+            phone: client.phone,
+            email: client.email,
+            instagram: client.instagram,
+            examen: '',
+            setter_name: ''
+        }, true);
     };
 
     // Crear Nueva Agenda (Modal v7)
@@ -2843,14 +2875,14 @@ const CloserWorkflowPage = () => {
                                                         {l.instagram ? `@${l.instagram.replace('@', '')}` : 'Sin Instagram'} • {l.phone || 'Sin Teléfono'} • {appt?.examen || 'Sin Examen'}
                                                     </div>
                                                 </div>
-                                                {l.id && (
+                                                {appt?.id && (
                                                     <button
                                                         type="button"
-                                                        title="Ver historial del cliente"
-                                                        onClick={(e) => { e.stopPropagation(); setShowSearchResults(false); setHistoryClientId(l.id); }}
+                                                        title="Abrir la última agenda directamente"
+                                                        onClick={(e) => { e.stopPropagation(); setShowSearchResults(false); handleOpenAppointmentFromHistory(appt.id); }}
                                                         className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
                                                     >
-                                                        <History size={13} />
+                                                        <Calendar size={13} />
                                                     </button>
                                                 )}
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
@@ -4832,7 +4864,12 @@ const CloserWorkflowPage = () => {
             </AnimatePresence>
 
             {historyClientId && (
-                <ClientHistoryModal clientId={historyClientId} onClose={() => setHistoryClientId(null)} />
+                <ClientHistoryModal
+                    clientId={historyClientId}
+                    onClose={() => setHistoryClientId(null)}
+                    onOpenAppointment={handleOpenAppointmentFromHistory}
+                    onRegisterSale={handleRegisterSaleFromHistory}
+                />
             )}
 
             {/* DOCK FLOTANTE v6 */}
