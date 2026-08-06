@@ -256,6 +256,67 @@ const AddFollowUpForm = ({ appointmentId, onCreated }) => {
     );
 };
 
+// Registrar un seguimiento que YA pasó (ej. el closer le escribió al cliente por WhatsApp
+// fuera del mazo) sin tener que abrir el árbol de decisión completo de una llamada — guarda
+// el resultado del contacto con la fecha/hora de ahora, distinto de "Programar seguimiento"
+// (que deja una fecha a futuro sin marcar ningún contacto real todavía).
+const LogDoneFollowUpForm = ({ appointmentId, onLogged }) => {
+    const [resultado, setResultado] = useState('contesto');
+    const [nota, setNota] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    const registrar = async () => {
+        if (!appointmentId) return;
+        setSaving(true);
+        setError('');
+        try {
+            const payload = { contact_result: resultado };
+            if (nota.trim()) payload.closer_notes = nota.trim();
+            await api.post(`/closer/deck/${appointmentId}`, payload);
+            onLogged(resultado);
+            setNota('');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al registrar el seguimiento');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="bg-slate-950/40 border border-emerald-500/20 rounded-lg p-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[9px] text-slate-500 font-bold uppercase">Ya contacté, resultado</label>
+                <select
+                    value={resultado}
+                    onChange={(e) => setResultado(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 cursor-pointer"
+                >
+                    {Object.entries(CONTACT_OUTCOME_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                </select>
+                <button
+                    onClick={registrar}
+                    disabled={saving || !appointmentId}
+                    title={!appointmentId ? 'Este cliente no tiene ninguna agenda registrada' : 'Registrar seguimiento ya hecho'}
+                    className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase disabled:opacity-50 cursor-pointer"
+                >
+                    {saving ? <Loader2 size={11} className="animate-spin" /> : 'Registrar seguimiento hecho'}
+                </button>
+            </div>
+            <input
+                type="text"
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                placeholder="Nota opcional (ej. qué dijo, por dónde se le contactó...)"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-[10px] text-slate-200 placeholder-slate-600"
+            />
+            {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
+        </div>
+    );
+};
+
 // Resumen de un cliente (agendas, ventas, inscripciones/pagos) en una sola vista — reutilizado
 // desde la cola de limpieza y desde la búsqueda global del mazo del closer, para que cualquier
 // closer pueda consultar (y confirmar) el historial completo de cualquier cliente sin tener que
@@ -357,6 +418,15 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                         ))}
                                     </div>
                                 </div>
+                                <LogDoneFollowUpForm
+                                    appointmentId={mostRecentAppointmentId}
+                                    onLogged={(resultado) => setHistory(prev => ({
+                                        ...prev,
+                                        appointments: prev.appointments.map(a => a.id === mostRecentAppointmentId
+                                            ? { ...a, last_contact_outcome: resultado, last_contact_at: new Date().toISOString() }
+                                            : a)
+                                    }))}
+                                />
                                 <AddFollowUpForm
                                     appointmentId={mostRecentAppointmentId}
                                     onCreated={(fecha) => setHistory(prev => ({
