@@ -234,6 +234,7 @@ class CloserFollowUpService:
             # cobrar sin tener que abrir el historial completo del cliente.
             next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
                 .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+            deuda_val = CloserFollowUpService._client_debt(cid)
             proxima_cuota = None
             if next_cuota:
                 proxima_cuota = {
@@ -241,7 +242,22 @@ class CloserFollowUpService:
                     'numero_cuota': next_cuota.numero_cuota,
                     'monto': next_cuota.monto,
                     'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
-                    'vencida': next_cuota.fecha_vencimiento < date.today()
+                    'vencida': next_cuota.fecha_vencimiento < date.today(),
+                    'sin_plan': False
+                }
+            elif deuda_val > 0.01:
+                # Debe dinero pero nunca se le armó un plan de cuotas (InstallmentPlan) — pasa
+                # cuando el Parcial se declaró sin pasar por el armador de cronograma, algo muy
+                # común en ventas históricas. Reportado por el usuario: "todos los que deben
+                # dinero [deberían] tener cuotas pendientes" — sin esto, esos clientes se veían
+                # como "sin cuotas pendientes" pese a deber, invisibles para el recordatorio.
+                proxima_cuota = {
+                    'id': None,
+                    'numero_cuota': None,
+                    'monto': deuda_val,
+                    'fecha_vencimiento': None,
+                    'vencida': False,
+                    'sin_plan': True
                 }
 
             items.append({
@@ -259,17 +275,20 @@ class CloserFollowUpService:
                 'days_since_call': days_since_call,
                 'closer_notes': appt.closer_notes or '',
                 'owner_closer_name': None,
-                'deuda': CloserFollowUpService._client_debt(cid),
+                'deuda': deuda_val,
                 'programa_code': CloserFollowUpService._client_program_code(cid),
                 'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
                 'proxima_cuota': proxima_cuota
             })
 
         # Ordenar por urgencia de cobro: cuotas vencidas primero (las más atrasadas primero),
-        # luego las próximas a vencer, y al final los clientes sin ninguna cuota pendiente.
+        # luego las próximas a vencer, luego deuda sin plan de cuotas armado, y al final los
+        # clientes al día (sin nada pendiente de cobrar).
         def urgency_key(item):
             pc = item.get('proxima_cuota')
             if not pc:
+                return (3, '')
+            if pc.get('sin_plan'):
                 return (2, '')
             return (0 if pc['vencida'] else 1, pc['fecha_vencimiento'])
         items.sort(key=urgency_key)

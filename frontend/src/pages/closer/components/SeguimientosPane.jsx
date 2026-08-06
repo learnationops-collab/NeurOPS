@@ -63,11 +63,17 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
             <div className="shrink-0 text-right">
                 {tipo === 'cerrada' ? (
                     pc ? (
-                        <span className={`text-[9px] font-black uppercase tracking-wider ${pc.vencida ? 'text-rose-400' : 'text-amber-400'}`}>
-                            {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
-                        </span>
+                        pc.sin_plan ? (
+                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">
+                                Debe {money(pc.monto)} · sin plan de cuotas
+                            </span>
+                        ) : (
+                            <span className={`text-[9px] font-black uppercase tracking-wider ${pc.vencida ? 'text-rose-400' : 'text-amber-400'}`}>
+                                {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
+                            </span>
+                        )
                     ) : (
-                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Sin cuotas pendientes</span>
+                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Al día</span>
                     )
                 ) : item.fecha_seguimiento ? (
                     <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">Seguimiento {item.seguimiento_intento} de 4</span>
