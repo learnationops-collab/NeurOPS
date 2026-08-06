@@ -3097,7 +3097,7 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} />
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} onOpenClientHistory={setHistoryClientId} />
                     ) : (
                         /* Renderizado clásico de Lista para Llamadas */
                         <>

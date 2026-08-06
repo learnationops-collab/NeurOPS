@@ -85,7 +85,7 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
     );
 };
 
-const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
+const SeguimientosPane = ({ selectedDate, onOpenLead, onOpenClientHistory }) => {
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
     const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
     const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
@@ -141,6 +141,12 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
     };
 
     const openLead = (item, tipo) => {
+        // "Llamadas cerradas" abre el resumen del cliente (ventas, cuotas, y el armador de plan
+        // si debe pero nunca tuvo uno) en vez del árbol de decisión de llamada, que no aplica acá.
+        if (tipo === 'cerrada' && onOpenClientHistory && item.client_id) {
+            onOpenClientHistory(item.client_id);
+            return;
+        }
         onOpenLead({
             id: item.id,
             lead_name: item.lead_name,

@@ -151,13 +151,17 @@ class ClientCleanupService:
         # Código de programa (AL/RR/SI) resuelto desde la última venta real del cliente — lo
         # necesita el frontend para armar el "tipo_pago" ("RR - Cuota") al reportar el pago de
         # una cuota marcada como pagada desde este historial, igual formato que usa
-        # "Declarar Venta" en el resto del sistema.
+        # "Declarar Venta" en el resto del sistema. `deuda`/`total_amount` se exponen para poder
+        # armar un plan de cuotas nuevo desde acá cuando el cliente debe pero nunca tuvo uno
+        # (ver CloserFollowUpService._cerrada_pool_items, mismo hallazgo).
         programa_code = CloserFollowUpService._client_program_code(client_id)
+        deuda = CloserFollowUpService._client_debt(client_id)
 
         return {
             'client': {
                 'id': client.id, 'full_name': client.full_name, 'email': client.email,
-                'instagram': client.instagram, 'phone': client.phone, 'programa_code': programa_code
+                'instagram': client.instagram, 'phone': client.phone, 'programa_code': programa_code,
+                'total_amount': client.total_amount, 'deuda': deuda
             },
             'appointments': [{
                 'id': a.id, 'start_time': a.start_time.isoformat() if a.start_time else None,

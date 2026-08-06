@@ -111,6 +111,62 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
     );
 };
 
+// Cuando un cliente debe dinero pero nunca tuvo un InstallmentPlan armado (el Parcial se
+// declaró sin pasar por el armador de cronograma del modal de venta — el caso más común en
+// ventas históricas), acá se puede crear uno directamente sobre el saldo pendiente real.
+const CreatePlanForm = ({ deuda, appointmentId, onCreated }) => {
+    const [numCuotas, setNumCuotas] = useState(3);
+    const [creating, setCreating] = useState(false);
+    const [error, setError] = useState('');
+
+    const crear = async () => {
+        setCreating(true);
+        setError('');
+        try {
+            const res = await api.post('/closer/installments', {
+                appointment_id: appointmentId,
+                total: deuda,
+                cobrado_hoy: 0,
+                num_cuotas: numCuotas
+            });
+            onCreated(res.data.cuotas);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Error al crear el plan de cuotas');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    return (
+        <div className="bg-slate-950/40 border border-amber-500/20 rounded-lg p-3 space-y-2">
+            <p className="text-[10px] text-amber-300 font-bold">
+                Debe {money(deuda)} y no tiene plan de cuotas armado — se puede repartir ese saldo en cuotas ahora.
+            </p>
+            <div className="flex items-center gap-2">
+                <label className="text-[9px] text-slate-500 font-bold uppercase">Cuotas</label>
+                <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={numCuotas}
+                    onChange={(e) => setNumCuotas(parseInt(e.target.value) || 1)}
+                    className="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                />
+                <span className="text-[9px] text-slate-500">de {money(deuda / (numCuotas || 1))} cada una</span>
+                <button
+                    onClick={crear}
+                    disabled={creating || !appointmentId}
+                    title={!appointmentId ? 'Este cliente no tiene ninguna agenda registrada' : 'Crear plan de cuotas'}
+                    className="ml-auto px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase disabled:opacity-50 cursor-pointer"
+                >
+                    {creating ? <Loader2 size={11} className="animate-spin" /> : 'Crear plan'}
+                </button>
+            </div>
+            {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
+        </div>
+    );
+};
+
 // Resumen de un cliente (agendas, ventas, inscripciones/pagos) en una sola vista — reutilizado
 // desde la cola de limpieza y desde la búsqueda global del mazo del closer, para que cualquier
 // closer pueda consultar (y confirmar) el historial completo de cualquier cliente sin tener que
@@ -182,7 +238,17 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                         <div>
                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Cuotas por cobrar ({history.installments.length})</h4>
                             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                {history.installments.length === 0 && <p className="text-[10px] text-slate-600">Sin plan de cuotas registrado.</p>}
+                                {history.installments.length === 0 && (
+                                    (history.client.deuda || 0) > 0.01 ? (
+                                        <CreatePlanForm
+                                            deuda={history.client.deuda}
+                                            appointmentId={mostRecentAppointmentId}
+                                            onCreated={(cuotas) => setHistory(prev => ({ ...prev, installments: cuotas }))}
+                                        />
+                                    ) : (
+                                        <p className="text-[10px] text-slate-600">Sin plan de cuotas registrado.</p>
+                                    )
+                                )}
                                 {history.installments.map(c => (
                                     <CuotaRow
                                         key={c.id}
