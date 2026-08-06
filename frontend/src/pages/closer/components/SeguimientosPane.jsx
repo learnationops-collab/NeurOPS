@@ -16,49 +16,68 @@ const chipCls = {
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 };
 
-const SeguimientoRow = ({ item, tipo, onClick }) => (
-    <div
-        onClick={onClick}
-        className="p-4 rounded-2xl border border-slate-900/60 bg-black/20 hover:bg-slate-900/50 hover:border-slate-800 transition-all cursor-pointer flex items-center justify-between gap-4"
-    >
-        <div className="min-w-0 flex-1">
-            <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
-            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
-                    {item.seguimiento_sub || 'Sin subestado'}
-                </span>
-                {item.origin && <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">{item.origin}</span>}
-                {item.owner_closer_name && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        De {item.owner_closer_name} (baja)
-                    </span>
-                )}
-                {item.days_since_call !== null && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                        Call hace {item.days_since_call}d
-                    </span>
-                )}
-                {tipo === 'cerrada' && item.programa_nombre && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                        {item.programa_nombre}
-                    </span>
-                )}
-                {tipo === 'cerrada' && typeof item.deuda === 'number' && (
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
-                        {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
-                    </span>
+const cuotaDateLabel = (fechaStr) => {
+    if (!fechaStr) return '';
+    const d = new Date(`${fechaStr}T00:00:00`);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+};
+
+const SeguimientoRow = ({ item, tipo, onClick }) => {
+    const pc = item.proxima_cuota;
+    return (
+        <div
+            onClick={onClick}
+            className="p-4 rounded-2xl border border-slate-900/60 bg-black/20 hover:bg-slate-900/50 hover:border-slate-800 transition-all cursor-pointer flex items-center justify-between gap-4"
+        >
+            <div className="min-w-0 flex-1">
+                <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
+                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {tipo !== 'cerrada' && (
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
+                            {item.seguimiento_sub || 'Sin subestado'}
+                        </span>
+                    )}
+                    {item.origin && <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">{item.origin}</span>}
+                    {item.owner_closer_name && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            De {item.owner_closer_name} (baja)
+                        </span>
+                    )}
+                    {item.days_since_call !== null && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                            Call hace {item.days_since_call}d
+                        </span>
+                    )}
+                    {tipo === 'cerrada' && item.programa_nombre && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                            {item.programa_nombre}
+                        </span>
+                    )}
+                    {tipo === 'cerrada' && typeof item.deuda === 'number' && (
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                            {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
+                        </span>
+                    )}
+                </div>
+            </div>
+            <div className="shrink-0 text-right">
+                {tipo === 'cerrada' ? (
+                    pc ? (
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${pc.vencida ? 'text-rose-400' : 'text-amber-400'}`}>
+                            {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
+                        </span>
+                    ) : (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Sin cuotas pendientes</span>
+                    )
+                ) : item.fecha_seguimiento ? (
+                    <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">Seguimiento {item.seguimiento_intento} de 4</span>
+                ) : (
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Asignar fecha</span>
                 )}
             </div>
         </div>
-        <div className="shrink-0 text-right">
-            {item.fecha_seguimiento ? (
-                <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">Seguimiento {item.seguimiento_intento} de 4</span>
-            ) : (
-                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Asignar fecha</span>
-            )}
-        </div>
-    </div>
-);
+    );
+};
 
 const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });

@@ -217,6 +217,8 @@ class CloserFollowUpService:
             if c:
                 client_ids.add(c.id)
 
+        from app.models import InstallmentPlan
+
         items = []
         for cid in client_ids:
             client = Client.query.get(cid)
@@ -226,8 +228,25 @@ class CloserFollowUpService:
             if not appt:
                 continue
             days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
+
+            # El recordatorio de cobro vive acá: la próxima cuota pendiente de este cliente (la
+            # más próxima a vencer primero), para que el closer sepa exactamente qué y cuándo
+            # cobrar sin tener que abrir el historial completo del cliente.
+            next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
+                .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+            proxima_cuota = None
+            if next_cuota:
+                proxima_cuota = {
+                    'id': next_cuota.id,
+                    'numero_cuota': next_cuota.numero_cuota,
+                    'monto': next_cuota.monto,
+                    'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
+                    'vencida': next_cuota.fecha_vencimiento < date.today()
+                }
+
             items.append({
                 'id': appt.id,
+                'client_id': cid,
                 'lead_name': client.full_name or client.email or 'Sin Nombre',
                 'instagram': client.instagram or '',
                 'origin': appt.origin or '',
@@ -242,8 +261,19 @@ class CloserFollowUpService:
                 'owner_closer_name': None,
                 'deuda': CloserFollowUpService._client_debt(cid),
                 'programa_code': CloserFollowUpService._client_program_code(cid),
-                'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid))
+                'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
+                'proxima_cuota': proxima_cuota
             })
+
+        # Ordenar por urgencia de cobro: cuotas vencidas primero (las más atrasadas primero),
+        # luego las próximas a vencer, y al final los clientes sin ninguna cuota pendiente.
+        def urgency_key(item):
+            pc = item.get('proxima_cuota')
+            if not pc:
+                return (2, '')
+            return (0 if pc['vencida'] else 1, pc['fecha_vencimiento'])
+        items.sort(key=urgency_key)
+
         return items
 
     @staticmethod
