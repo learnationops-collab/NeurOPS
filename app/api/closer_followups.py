@@ -65,13 +65,13 @@ def schedule_followup(appt_id):
         return jsonify({"message": "Forbidden"}), 403
 
     appt = Appointment.query.get_or_404(appt_id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    # Cualquier closer puede programar seguimiento sobre cualquier lead (ver process_closer_card
+    # para el mismo criterio). Si el dueño quedó inactivo, se reasigna al closer que lo trabaja.
+    if current_user.role == 'closer' and appt.closer_id != current_user.id:
         from app.models import User
         owner = User.query.get(appt.closer_id)
         if owner and owner.is_active is False:
             appt.closer_id = current_user.id
-        else:
-            return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
     tipo = data.get('tipo')

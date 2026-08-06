@@ -683,13 +683,11 @@ def update_appointment(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
-        from app.models import User
-        owner = User.query.get(appt.closer_id)
-        if current_user.role == 'closer' and owner and owner.is_active is False:
-            appt.closer_id = current_user.id
-        else:
-            return jsonify({"message": "Forbidden"}), 403
+    # Cualquier closer puede configurar cualquier lead, no solo el suyo asignado (decisión del
+    # usuario: bloquear por dueño solo generaba fricción sin necesidad real de aislamiento entre
+    # closers). Los setters siguen limitados a lo que ellos mismos agendaron.
+    if current_user.role not in ('admin', 'closer') and appt.setter_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
     if 'start_time' in data:
@@ -1173,9 +1171,7 @@ def update_appointment_stage(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
-        
+
     data = request.get_json() or {}
     new_stage = data.get('stage')
     
@@ -1195,9 +1191,7 @@ def update_appointment_outcome(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
-        
+
     data = request.get_json() or {}
     outcome = data.get('outcome')
     
@@ -1709,15 +1703,16 @@ def process_closer_card(appt_id):
         return jsonify({"message": "Forbidden"}), 403
         
     appt = Appointment.query.get_or_404(appt_id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    # Cualquier closer puede procesar cualquier lead (decisión del usuario: bloquear por dueño
+    # no aportaba nada). Si el dueño actual ya no está activo, el lead se reasigna al closer que
+    # lo trabaja — para un dueño activo, se edita sin robárselo de su pipeline.
+    if current_user.role not in ('admin', 'closer'):
+        return jsonify({"message": "Forbidden"}), 403
+    if current_user.role == 'closer' and appt.closer_id != current_user.id:
         from app.models import User
         owner = User.query.get(appt.closer_id)
         if owner and owner.is_active is False:
-            # Closer dado de baja: el lead queda huérfano en la práctica (nadie lo va a
-            # trabajar) — el primer closer activo que lo procesa se lo queda.
             appt.closer_id = current_user.id
-        else:
-            return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
 
@@ -2091,20 +2086,23 @@ def get_closer_deck_card(appt_id):
         return jsonify({"message": "Forbidden"}), 403
 
     appt = Appointment.query.get_or_404(appt_id)
-    can_edit = True
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
-        if appt.origin == 'ManyChat' or not appt.closer_id:
+    # Cualquier closer puede abrir y editar cualquier lead (decisión del usuario: el buscador
+    # global no filtra por dueño a propósito, para poder ubicar cualquier lead del sistema, y
+    # bloquear la edición ahí solo generaba fricción sin aislamiento real entre closers). Se
+    # sigue reasignando el `closer_id` cuando el dueño actual quedó huérfano (ManyChat sin
+    # asignar, o el dueño ya no está activo) para que el lead entre al pipeline de quien lo
+    # trabaja; si el dueño sigue activo, se edita sin quitárselo de su propio pipeline.
+    is_owner = appt.closer_id == current_user.id
+    if current_user.role == 'closer' and not is_owner:
+        from app.models import User
+        owner = User.query.get(appt.closer_id)
+        if appt.origin == 'ManyChat' or not appt.closer_id or (owner and owner.is_active is False):
             appt.closer_id = current_user.id
             db.session.commit()
-        else:
-            # Pertenece a otro closer: el buscador global no filtra por dueño (a propósito, para
-            # poder ubicar cualquier lead del sistema), así que abrirla desde ahí no debe 403 —
-            # se sirve en modo solo lectura en vez de bloquear por completo.
-            can_edit = False
 
     card = _format_appointment_for_deck(appt)
-    card['can_edit'] = can_edit
-    card['owner_closer_name'] = None if can_edit else (appt.closer.username if appt.closer else None)
+    card['can_edit'] = True
+    card['owner_closer_name'] = None if appt.closer_id == current_user.id else (appt.closer.username if appt.closer else None)
     return jsonify(card), 200
 
 
