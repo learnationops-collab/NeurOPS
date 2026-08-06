@@ -1408,7 +1408,12 @@ const CloserWorkflowPage = () => {
                     // Primera vez que se define el plan (Parcial), o Cuota sin plan previo (caso
                     // de datos históricos incompletos) — acá sí corresponde crear el cronograma.
                     const total = parseFloat(saleForm.precio_total) || 0;
-                    const cobradoHoy = parseFloat(saleForm.monto) || 0;
+                    // "Cobrado hoy" para el cronograma tiene que incluir TODO lo que el cliente ya
+                    // pagó antes (ej. una Seña previa), no solo el monto de esta transacción puntual
+                    // — si no, el saldo a financiar se recalcula sobre el total completo otra vez y
+                    // se le cobran de más las cuotas restantes.
+                    const pagadoAntes = saleClientState?.total_paid || 0;
+                    const cobradoHoy = pagadoAntes + (parseFloat(saleForm.monto) || 0);
                     if (total > cobradoHoy) {
                         try {
                             const numCuotas = parseInt(saleForm.num_cuotas) || 1;
@@ -4358,13 +4363,14 @@ const CloserWorkflowPage = () => {
                                                     <div className="space-y-1 text-left">
                                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo a Financiar</label>
                                                         <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-violet-400">
-                                                            ${Math.max(0, (parseFloat(saleForm.precio_total) || 0) - (parseFloat(saleForm.monto) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                            ${Math.max(0, (parseFloat(saleForm.precio_total) || 0) - (saleClientState?.total_paid || 0) - (parseFloat(saleForm.monto) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 {(() => {
                                                     const total = parseFloat(saleForm.precio_total) || 0;
-                                                    const now = parseFloat(saleForm.monto) || 0;
+                                                    // Igual que en el submit: descontar lo ya pagado antes, no solo el monto de hoy.
+                                                    const now = (saleClientState?.total_paid || 0) + (parseFloat(saleForm.monto) || 0);
                                                     const n = Math.max(1, parseInt(saleForm.num_cuotas) || 1);
                                                     const rest = Math.max(0, total - now);
                                                     if (rest <= 0) return null;
