@@ -166,14 +166,20 @@ class CloserFollowUpService:
         return grouped
 
     @staticmethod
-    def send_due_reminders(selected_date_str=None):
+    def send_due_reminders(selected_date_str=None, reminder_hour=10):
         """Recorre TODOS los seguimientos pendientes para hoy (vencidos + de hoy, mismo criterio
         que get_today_grouped) de TODOS los closers activos, y le avisa a cada closer por
         WhatsApp (Whatchimp) los que todavía no tienen recordatorio enviado hoy — pensado para
-        que un cron externo llame a este método varias veces al día sin reenviar spam: cada cita
-        se marca (`followup_reminder_sent_at`) apenas se envía, y no se vuelve a tocar hasta que
-        cambie de día. Si el closer no tiene `two_chat_number` configurado (ver Gestión de
-        Equipo), se cuenta como omitido en vez de fallar todo el lote."""
+        que el scheduler interno (ver reminder_scheduler.py) llame a este método cada 15 minutos
+        sin reenviar spam: cada cita se marca (`followup_reminder_sent_at`) apenas se envía, y no
+        se vuelve a tocar hasta que cambie de día. Si el closer no tiene `two_chat_number`
+        configurado (ver Gestión de Equipo), se cuenta como omitido en vez de fallar todo el lote.
+
+        `reminder_hour`: recién se envía una vez que son las `reminder_hour` o más pasadas en la
+        zona horaria de CADA closer (`User.timezone`, mismo patrón que `_user_day_bounds_utc`) —
+        no la hora del servidor. Un closer en un huso distinto no recibe su aviso a la hora de
+        otro; cada uno lo recibe a su propia hora local."""
+        import pytz
         from app.services.whatchimp_service import WhatchimpService
 
         selected_date_str = selected_date_str or date.today().isoformat()
@@ -186,7 +192,7 @@ class CloserFollowUpService:
         )
         items = q.all()
 
-        sent, skipped_no_phone, failed, already_sent = 0, 0, 0, 0
+        sent, skipped_no_phone, failed, already_sent, gated_before_hour = 0, 0, 0, 0, 0
         for a in items:
             if a.followup_reminder_sent_at and a.followup_reminder_sent_at.date() == today:
                 already_sent += 1
@@ -195,6 +201,14 @@ class CloserFollowUpService:
             closer = a.closer
             if not closer or not closer.is_active or not closer.two_chat_number:
                 skipped_no_phone += 1
+                continue
+
+            try:
+                tz = pytz.timezone(closer.timezone or 'America/La_Paz')
+            except Exception:
+                tz = pytz.timezone('America/La_Paz')
+            if datetime.now(tz).hour < reminder_hour:
+                gated_before_hour += 1
                 continue
 
             tipo_key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
@@ -225,6 +239,7 @@ class CloserFollowUpService:
             "sent": sent,
             "already_sent_today": already_sent,
             "skipped_no_phone": skipped_no_phone,
+            "gated_before_hour": gated_before_hour,
             "failed": failed,
             "total_pending": len(items)
         }

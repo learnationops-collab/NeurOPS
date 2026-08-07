@@ -175,4 +175,7 @@ def create_app(config_class=Config):
             response["trace"] = traceback.format_exc()
         return jsonify(response), 500
 
+    from app.services.reminder_scheduler import start_scheduler
+    start_scheduler(app)
+
     return app
