@@ -103,5 +103,6 @@ def cron_send_followup_reminders():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     selected_date = request.args.get('date')
-    result = CloserFollowUpService.send_due_reminders(selected_date)
+    slot = request.args.get('slot', 'am')
+    result = CloserFollowUpService.send_due_reminders(selected_date, slot=slot)
     return jsonify({"status": "success", **result}), 200

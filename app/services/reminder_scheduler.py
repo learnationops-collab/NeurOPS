@@ -24,8 +24,11 @@ def _should_start():
 
 def start_scheduler(app):
     """Arranca (una sola vez por proceso) el job que revisa cada 15 minutos si hay seguimientos
-    pendientes para avisarle a algún closer por WhatsApp, respetando la hora local de cada uno
-    (ver CloserFollowUpService.send_due_reminders, reminder_hour=10 por defecto)."""
+    pendientes para avisarle a algún closer por WhatsApp, respetando la hora local de cada uno.
+    Dos franjas por día (10am y 4pm, ver CloserFollowUpService.REMINDER_SLOTS) — cada tick
+    intenta las dos; cada una tiene su propio gate de hora y su propio campo de "ya enviado hoy",
+    así que un closer puede recibir hasta dos avisos por día mientras le queden seguimientos
+    pendientes sin resolver."""
     global _scheduler
     if _scheduler is not None:
         return
@@ -40,12 +43,13 @@ def start_scheduler(app):
     def _tick():
         with app.app_context():
             from app.services.closer_followup_service import CloserFollowUpService
-            try:
-                result = CloserFollowUpService.send_due_reminders()
-                if result.get('sent'):
-                    logger.info(f"[ReminderScheduler] Recordatorios enviados: {result}")
-            except Exception as e:
-                logger.error(f"[ReminderScheduler] Error en el tick: {e}")
+            for slot in CloserFollowUpService.REMINDER_SLOTS:
+                try:
+                    result = CloserFollowUpService.send_due_reminders(slot=slot)
+                    if result.get('sent'):
+                        logger.info(f"[ReminderScheduler] Recordatorios enviados: {result}")
+                except Exception as e:
+                    logger.error(f"[ReminderScheduler] Error en el tick (slot {slot}): {e}")
 
     from datetime import datetime
     _scheduler = BackgroundScheduler(daemon=True)

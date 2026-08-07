@@ -58,11 +58,14 @@ class Appointment(db.Model):
     # real (no String) porque necesita compararse con la hora actual para calcular "vencido"/"hoy".
     pre_call_reminder_at = db.Column(db.DateTime, nullable=True)
 
-    # Último recordatorio de seguimiento enviado por WhatsApp (Whatchimp) al closer dueño de
-    # esta cita. Evita reenviar el mismo aviso en cada corrida del cron mientras el seguimiento
-    # siga pendiente para hoy — se resetea solo cuando cambia de día (comparado por fecha, no
-    # por igualdad exacta de datetime) o si vuelve a quedar pendiente tras haberse reprogramado.
+    # Recordatorios de seguimiento enviados por WhatsApp (Whatchimp) al closer dueño de esta
+    # cita — dos franjas independientes por día (10am y 4pm locales del closer, ver
+    # CloserFollowUpService.REMINDER_SLOTS), cada una con su propio campo para no pisarse entre
+    # sí. Evitan reenviar el mismo aviso en cada tick del scheduler mientras el seguimiento siga
+    # pendiente para hoy — se resetean solos al cambiar de día (comparado por fecha, no por
+    # igualdad exacta de datetime).
     followup_reminder_sent_at = db.Column(db.DateTime, nullable=True)
+    followup_reminder_sent_pm_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
