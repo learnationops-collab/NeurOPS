@@ -394,6 +394,18 @@ const TeamManagementPage = () => {
                                             />
                                         </div>
 
+                                        <div className="space-y-2 col-span-2">
+                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Número de WhatsApp (recordatorios de seguimiento)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ej: 525620873819 (código de país + número, sin +, opcional)"
+                                                className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
+                                                value={formData.two_chat_number}
+                                                onChange={(e) => setFormData({ ...formData, two_chat_number: e.target.value })}
+                                            />
+                                            <p className="text-[10px] text-muted/70 font-bold uppercase ml-1">Si se deja vacío, este closer no recibe avisos automáticos de seguimiento por WhatsApp.</p>
+                                        </div>
+
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Rol Operativo</label>
                                             <select
