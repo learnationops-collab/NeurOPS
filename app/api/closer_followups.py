@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -88,3 +89,19 @@ def schedule_followup(appt_id):
     )
     db.session.commit()
     return jsonify({"message": "Seguimiento programado", "id": appt.id}), 200
+
+
+@bp.route('/followups/cron/send-reminders', methods=['GET'])
+def cron_send_followup_reminders():
+    """Le avisa por WhatsApp (Whatchimp) a cada closer activo los seguimientos que tiene
+    pendientes para hoy (vencidos + de hoy) y todavía no le avisamos en el día. Pensado para un
+    cron externo (mismo patrón/token que /api/sheets/cron-sync) — llamarlo varias veces al día
+    es seguro, no reenvía lo ya avisado hoy."""
+    token = request.args.get('token')
+    expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
+    if not token or token != expected_token:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    selected_date = request.args.get('date')
+    result = CloserFollowUpService.send_due_reminders(selected_date)
+    return jsonify({"status": "success", **result}), 200

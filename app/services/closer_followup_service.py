@@ -1,7 +1,10 @@
+import logging
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
 from sqlalchemy import or_, func
+
+logger = logging.getLogger(__name__)
 
 # Cadencia automática de reintentos (días desde el intento anterior), igual al prototipo v7.
 CADENCIA = [0, 3, 7, 14]
@@ -161,6 +164,70 @@ class CloserFollowUpService:
             key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
             grouped[key].append(CloserFollowUpService._serialize(a, include_debt=(key == 'cerrada')))
         return grouped
+
+    @staticmethod
+    def send_due_reminders(selected_date_str=None):
+        """Recorre TODOS los seguimientos pendientes para hoy (vencidos + de hoy, mismo criterio
+        que get_today_grouped) de TODOS los closers activos, y le avisa a cada closer por
+        WhatsApp (Whatchimp) los que todavía no tienen recordatorio enviado hoy — pensado para
+        que un cron externo llame a este método varias veces al día sin reenviar spam: cada cita
+        se marca (`followup_reminder_sent_at`) apenas se envía, y no se vuelve a tocar hasta que
+        cambie de día. Si el closer no tiene `two_chat_number` configurado (ver Gestión de
+        Equipo), se cuenta como omitido en vez de fallar todo el lote."""
+        from app.services.whatchimp_service import WhatchimpService
+
+        selected_date_str = selected_date_str or date.today().isoformat()
+        today = date.today()
+
+        q = CloserFollowUpService._base_query(None).filter(
+            Appointment.fecha_seguimiento.isnot(None),
+            Appointment.fecha_seguimiento != '',
+            Appointment.fecha_seguimiento <= selected_date_str
+        )
+        items = q.all()
+
+        sent, skipped_no_phone, failed, already_sent = 0, 0, 0, 0
+        for a in items:
+            if a.followup_reminder_sent_at and a.followup_reminder_sent_at.date() == today:
+                already_sent += 1
+                continue
+
+            closer = a.closer
+            if not closer or not closer.is_active or not closer.two_chat_number:
+                skipped_no_phone += 1
+                continue
+
+            tipo_key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
+            lead_name = a.client.full_name or a.client.email if a.client else 'Sin Nombre'
+            lead_phone = a.client.phone if a.client else None
+
+            try:
+                WhatchimpService.send_followup_reminder(
+                    closer_name=closer.username,
+                    tipo_key=tipo_key,
+                    lead_name=lead_name,
+                    lead_phone=lead_phone,
+                    closer_phone=closer.two_chat_number
+                )
+                # datetime.now() (hora local del servidor), no utcnow(): se compara contra
+                # date.today() (también local) más abajo — mezclar local y UTC hacía que la
+                # comparación de "día" fallara cerca de medianoche UTC y reenviara el mismo
+                # recordatorio en cada corrida (bug encontrado en la verificación de esta pasada).
+                a.followup_reminder_sent_at = datetime.now()
+                db.session.commit()
+                sent += 1
+            except Exception as e:
+                db.session.rollback()
+                failed += 1
+                logger.error(f"[Whatchimp Reminder] Error enviando a {closer.username} (appt {a.id}): {e}")
+
+        return {
+            "sent": sent,
+            "already_sent_today": already_sent,
+            "skipped_no_phone": skipped_no_phone,
+            "failed": failed,
+            "total_pending": len(items)
+        }
 
     @staticmethod
     def _cerrada_pool_items(closer_id):
