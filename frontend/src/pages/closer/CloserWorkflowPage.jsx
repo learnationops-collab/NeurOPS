@@ -853,6 +853,31 @@ const CloserWorkflowPage = () => {
             } finally {
                 setProcessingId(null);
             }
+        } else if (actionType === 'lost_no_show' || actionType === 'lost_after_pres' || actionType === 'lost_no_pres') {
+            // Descarte post-llamada (no show reiterado, perdido tras presentar oferta, o sin
+            // presentación) — a diferencia de 'confirm_discard'/'no_lead' (pre-llamada, prospecto
+            // nunca calificado), acá el lead sí llegó a estar en el funnel de cierre, así que se
+            // marca 'Lead Perdido' en vez de 'No Lead'. Faltaba este branch por completo: el modal
+            // se cerraba sin llamar a ningún endpoint, así que "Descartar lead" no hacía nada
+            // (reportado por un closer real intentando descartar por bloqueo tras un No Show).
+            setProcessingId(apptId);
+            // Si venía de "No Show" con un motivo puntual elegido (ej. "Bloqueó / desapareció"),
+            // se antepone al comentario libre en vez de perderse — mismo formato que ya usa el
+            // camino de "Programar seguimiento" (sessionForm.rmot) para no show/cancelación.
+            const fullNote = actionType === 'lost_no_show' && sessionForm.motivo
+                ? `${sessionForm.motivo}. ${note}`
+                : note;
+            try {
+                await api.post(`/closer/appointments/${apptId}/process`, { status: 'Lead Perdido', role: 'closer', note: fullNote });
+                toast.success("Lead marcado como perdido");
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error(err);
+                toast.error("Error al descartar el lead");
+            } finally {
+                setProcessingId(null);
+            }
         }
     };
 
