@@ -16,6 +16,15 @@ const chipCls = {
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 };
 
+// Estado activo del botón de pool — usa el mismo color por tipo que sus chips (rose/amber/emerald)
+// para que se note con claridad cuál está seleccionado, en vez de un violeta genérico que casi no
+// se distinguía del estado inactivo.
+const activePoolBtnCls = {
+    rose: 'bg-rose-500/15 border-rose-400 ring-2 ring-rose-500/30',
+    amber: 'bg-amber-500/15 border-amber-400 ring-2 ring-amber-500/30',
+    emerald: 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-500/30'
+};
+
 const cuotaDateLabel = (fechaStr) => {
     if (!fechaStr) return '';
     const d = new Date(`${fechaStr}T00:00:00`);
@@ -229,22 +238,26 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
                     </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {Object.keys(TIPOS).map(tipo => (
-                        <button
-                            key={tipo}
-                            onClick={() => togglePool(tipo)}
-                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                                openPool === tipo ? 'bg-violet-650/10 border-violet-500/50' : 'bg-slate-900/60 border-slate-850 hover:border-slate-700'
-                            }`}
-                        >
-                            <span className="text-xl">{TIPOS[tipo].icon}</span>
-                            <div className="flex-1 min-w-0">
-                                <b className="text-xs font-black text-white block truncate">{TIPOS[tipo].label}</b>
-                                <span className="text-[9px] text-slate-500 font-bold uppercase">{TIPOS[tipo].desc}</span>
-                            </div>
-                            <span className="text-sm font-black text-slate-300">{poolCounts[tipo]}</span>
-                        </button>
-                    ))}
+                    {Object.keys(TIPOS).map(tipo => {
+                        const isActive = openPool === tipo;
+                        return (
+                            <button
+                                key={tipo}
+                                onClick={() => togglePool(tipo)}
+                                aria-pressed={isActive}
+                                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                                    isActive ? activePoolBtnCls[TIPOS[tipo].cls] : 'bg-slate-900/60 border-slate-850 hover:border-slate-700'
+                                }`}
+                            >
+                                <span className="text-xl">{TIPOS[tipo].icon}</span>
+                                <div className="flex-1 min-w-0">
+                                    <b className={`text-xs font-black block truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>{TIPOS[tipo].label}</b>
+                                    <span className="text-[9px] text-slate-500 font-bold uppercase">{TIPOS[tipo].desc}</span>
+                                </div>
+                                <span className={`text-sm font-black ${isActive ? 'text-white' : 'text-slate-300'}`}>{poolCounts[tipo]}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {openPool && (
