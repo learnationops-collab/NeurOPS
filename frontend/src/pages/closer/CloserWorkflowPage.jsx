@@ -3790,14 +3790,6 @@ const CloserWorkflowPage = () => {
                                 {/* Ficha idcard v7 */}
                                 <div className="idcard">
                                     <div className="idc">
-                                        <span>◎ Instagram</span>
-                                        <b>@{String(selectedLead.instagram || 'no_ig').replace('@', '')}</b>
-                                    </div>
-                                    <div className="idc">
-                                        <span>⤴ Fuente</span>
-                                        <b>{selectedLead.origin || 'Sheets'}</b>
-                                    </div>
-                                    <div className="idc">
                                         <span>◈ Examen</span>
                                         <b>{selectedLead.examen || 'MIR / ENARM'}</b>
                                     </div>
@@ -3815,21 +3807,6 @@ const CloserWorkflowPage = () => {
                                             <b>{formatIdcardDate(selectedLead.enrollment_date)}</b>
                                         </div>
                                     )}
-                                    <div className="idc">
-                                        <span>☎ Teléfono</span>
-                                        {selectedLead.phone ? (
-                                            <a
-                                                href={waLinkForPhone(selectedLead.phone, selectedLead.lead_name)}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-emerald-400 hover:text-emerald-300 transition-colors"
-                                            >
-                                                <b>{selectedLead.phone}</b>
-                                            </a>
-                                        ) : (
-                                            <b>Sin teléfono</b>
-                                        )}
-                                    </div>
                                     <div className="idc hl">
                                         <span>● Estado</span>
                                         <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
