@@ -3804,7 +3804,11 @@ const CloserWorkflowPage = () => {
 
                                 {selectedLead.client_id && (
                                     <button
-                                        onClick={() => setHistoryClientId(selectedLead.client_id)}
+                                        onClick={() => {
+                                            const clientId = selectedLead.client_id;
+                                            setSelectedLead(null);
+                                            setHistoryClientId(clientId);
+                                        }}
                                         className="w-full text-[9.5px] font-black uppercase tracking-wide text-violet-350 hover:text-violet-300 py-1.5 transition-colors cursor-pointer"
                                     >
                                         Ver historial completo del cliente →
