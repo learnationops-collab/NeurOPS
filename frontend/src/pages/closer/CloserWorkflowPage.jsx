@@ -92,6 +92,15 @@ const CloserWorkflowPage = () => {
     // de CloserService.get_daily_activity_summary.
     const [dailyActivity, setDailyActivity] = useState(null);
     const [reportStatusRefreshKey, setReportStatusRefreshKey] = useState(0);
+    // Trabajo atrasado de días ANTERIORES al que se está reportando (confirmaciones nunca
+    // gestionadas, llamadas confirmadas sin registrar su resultado, seguimientos vencidos sin
+    // marcar como hechos) — bloquea el envío del reporte hasta que se resuelva (ver
+    // CloserService.get_previous_days_pending).
+    const [pendingPreviousDays, setPendingPreviousDays] = useState(null);
+    // Si "slots" no tiene valor guardado para el día elegido, se sugiere automáticamente el
+    // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
+    // días) — sigue siendo editable, no es un valor fijo.
+    const [reportSlotsIsDefault, setReportSlotsIsDefault] = useState(false);
 
     // Consultar si el día elegido ya tiene un reporte enviado (y precargar lo que ya se había
     // escrito) cada vez que se entra a la pestaña de reporte, se cambia el día a reportar, o se
@@ -105,8 +114,18 @@ const CloserWorkflowPage = () => {
                 setReportSent(!!d.sent);
                 setReportSentAt(d.sent_at || null);
                 setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
-                setReportSlots(d.slots !== null && d.slots !== undefined ? String(d.slots) : '');
+                if (d.slots !== null && d.slots !== undefined) {
+                    setReportSlots(String(d.slots));
+                    setReportSlotsIsDefault(false);
+                } else if (d.slots_last_value !== null && d.slots_last_value !== undefined) {
+                    setReportSlots(String(d.slots_last_value));
+                    setReportSlotsIsDefault(true);
+                } else {
+                    setReportSlots('');
+                    setReportSlotsIsDefault(false);
+                }
                 setDailyActivity(d.activity || null);
+                setPendingPreviousDays(d.pending_previous_days || null);
                 if (reportDate === localToday()) setTodayReportSent(!!d.sent);
             })
             .catch(err => console.error('Error al consultar el estado del reporte:', err))
@@ -3580,6 +3599,34 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
 
+                    {/* Bloqueo por trabajo atrasado de días ANTERIORES — no se puede enviar el
+                        reporte mientras quede backlog sin resolver de antes de este día (el mismo
+                        backend lo rechaza con 409 aunque se intente igual). */}
+                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
+                        <div className="p-5 rounded-2xl border bg-rose-500/10 border-rose-500/40 space-y-2">
+                            <div className="flex items-center gap-2 text-rose-300 text-xs font-black uppercase tracking-wide">
+                                <span className="text-lg">🚫</span> No podés enviar el reporte — tenés tareas atrasadas de días anteriores
+                            </div>
+                            <ul className="text-xs text-rose-200 font-bold space-y-1 list-disc list-inside">
+                                {pendingPreviousDays.confirmaciones_pendientes > 0 && (
+                                    <li>{pendingPreviousDays.confirmaciones_pendientes} confirmación(es) nunca gestionada(s)</li>
+                                )}
+                                {pendingPreviousDays.llamadas_sin_registrar > 0 && (
+                                    <li>{pendingPreviousDays.llamadas_sin_registrar} llamada(s) confirmada(s) sin registrar su resultado</li>
+                                )}
+                                {pendingPreviousDays.seguimientos_sin_realizar > 0 && (
+                                    <li>{pendingPreviousDays.seguimientos_sin_realizar} seguimiento(s) asignado(s) sin realizar</li>
+                                )}
+                            </ul>
+                            <button
+                                className="mt-1 px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-black uppercase text-white transition-all cursor-pointer"
+                                onClick={() => setActiveView('inbox')}
+                            >
+                                Ir a resolver la bandeja
+                            </button>
+                        </div>
+                    )}
+
                     {/* Resumen en vivo — lo que el sistema ya tiene registrado para ese día, sacado
                         directo de la bandeja (nada se tipea a mano). Si algo no cuadra, se corrige
                         desde la bandeja y se vuelve acá: el mismo useEffect que carga esto se
@@ -3640,10 +3687,15 @@ const CloserWorkflowPage = () => {
                             type="number"
                             min="0"
                             value={reportSlots}
-                            onChange={(e) => setReportSlots(e.target.value)}
+                            onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
                             placeholder="ej. 15"
-                            className="w-full sm:w-48 bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all"
+                            className={`w-full sm:w-48 bg-slate-950/60 border rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all ${reportSlotsIsDefault ? 'border-violet-600/60' : 'border-slate-800'}`}
                         />
+                        {reportSlotsIsDefault && (
+                            <p className="text-[10px] text-violet-350 font-bold uppercase tracking-wide">
+                                Sugerido a partir de tu último reporte — editalo si hoy cambió.
+                            </p>
+                        )}
                     </div>
 
                     {/* Reflexión Diaria */}
@@ -3679,8 +3731,13 @@ const CloserWorkflowPage = () => {
                         existente y lo reenvía a Discord, no lo duplica. */}
                     <div className="flex items-center gap-4 pt-2">
                         <button
-                            disabled={sendingReport}
+                            disabled={sendingReport || (pendingPreviousDays && pendingPreviousDays.total > 0)}
+                            title={pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
                             onClick={async () => {
+                                if (pendingPreviousDays && pendingPreviousDays.total > 0) {
+                                    toast.error('Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.');
+                                    return;
+                                }
                                 if (reportSlots.trim() === '') {
                                     toast.error('Ingresá los slots disponibles del día — es el único dato que no se calcula solo.');
                                     return;
@@ -3697,12 +3754,15 @@ const CloserWorkflowPage = () => {
                                     if (res.data?.date === localToday()) setTodayReportSent(true);
                                     toast.success(res.data?.date === localToday() ? "Reporte del día enviado con éxito" : `Reporte del ${res.data?.date || reportDate} enviado con éxito`);
                                 } catch (err) {
+                                    if (err.response?.status === 409 && err.response?.data?.pending_previous_days) {
+                                        setPendingPreviousDays(err.response.data.pending_previous_days);
+                                    }
                                     toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
                                 } finally {
                                     setSendingReport(false);
                                 }
                             }}
-                            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
+                            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
                         >
                             {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
                             {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte al sistema'}

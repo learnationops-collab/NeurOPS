@@ -2099,6 +2099,62 @@ class CloserService:
         }
 
     @staticmethod
+    def get_previous_days_pending(closer_id, day_local):
+        """Trabajo atrasado de días ANTERIORES a `day_local` (no incluye el propio día que se
+        está reportando) en las 3 categorías del mazo — usado para bloquear el envío del reporte
+        diario mientras quede backlog sin resolver (pedido del usuario: "no debería poder
+        mandar su reporte si tiene tareas pendientes de días anteriores").
+
+        - `confirmaciones_pendientes`: citas de días anteriores que nunca se confirmaron (el
+          `result` nunca llegó a 'Confirmado') antes de que pasara su fecha.
+        - `llamadas_sin_registrar`: citas de días anteriores que sí se confirmaron pero cuyo
+          resultado real (Show up/No show/etc.) nunca se reportó.
+          Ambas categorías son mutuamente excluyentes (se dividen por si el `result` llegó a
+          'Confirmado' o no) y juntas cubren todo `Appointment.closer_processed == False` de
+          antes de `day_local` — mismo criterio ya usado por `GET /closer/deck/counts` para la
+          pestaña "② Llamadas", solo que acá acotado a ANTES del día reportado, no desde hoy en
+          adelante (ese es un backlog real, no el flujo normal de agendas futuras por confirmar).
+        - `seguimientos_sin_realizar`: seguimientos con `fecha_seguimiento` ya vencida (antes de
+          `day_local`) que nunca se marcaron como hechos (`seguimiento_realizado`), mismo criterio
+          que la pestaña "③ Seguimientos"."""
+        from sqlalchemy import func
+        from app.services.closer_followup_service import CloserFollowUpService
+
+        user = User.query.get(closer_id)
+        start_of_day_utc, _ = CloserService._day_bounds_utc(user, day_local)
+
+        overdue = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.start_time < start_of_day_utc,
+            Appointment.closer_processed == False,
+            or_(
+                Appointment.closer_result == 'Pendiente', Appointment.closer_result == None,
+                Appointment.closer_result == '', Appointment.closer_result == '2da call'
+            ),
+            or_(
+                Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+                Appointment.result == None, Appointment.result == ''
+            )
+        )
+        confirmaciones_pendientes = overdue.filter(func.lower(Appointment.result) != 'confirmado').count()
+        llamadas_sin_registrar = overdue.filter(func.lower(Appointment.result) == 'confirmado').count()
+
+        seg_grouped = CloserFollowUpService.get_today_grouped(closer_id, day_local.isoformat())
+        seguimientos_sin_realizar = 0
+        for items in seg_grouped.values():
+            for item in items:
+                fecha = item.get('fecha_seguimiento')
+                if fecha and fecha < day_local.isoformat():
+                    seguimientos_sin_realizar += 1
+
+        return {
+            'confirmaciones_pendientes': confirmaciones_pendientes,
+            'llamadas_sin_registrar': llamadas_sin_registrar,
+            'seguimientos_sin_realizar': seguimientos_sin_realizar,
+            'total': confirmaciones_pendientes + llamadas_sin_registrar + seguimientos_sin_realizar
+        }
+
+    @staticmethod
     def compute_daily_report_fields(closer_id, day_local):
         """Calcula los campos de CloserDailyReport para `closer_id` en el día calendario
         `day_local` (fecha en la zona horaria del propio closer), a partir de datos reales:

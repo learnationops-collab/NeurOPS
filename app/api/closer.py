@@ -1649,6 +1649,21 @@ def get_daily_report_status():
         activity = None
         print(f"[Daily Report Activity Error] {e}")
 
+    try:
+        pending_previous_days = CloserService.get_previous_days_pending(current_user.id, day_local)
+    except Exception as e:
+        pending_previous_days = None
+        print(f"[Daily Report Pending Backlog Error] {e}")
+
+    # Valor de slots del reporte MÁS RECIENTE anterior a este (de cualquier día previo, no solo
+    # ayer) — para prellenar el input cuando este día todavía no tiene reporte propio, así el
+    # closer no tiene que volver a escribir la misma cifra de siempre (pedido del usuario).
+    last_report_with_slots = CloserDailyReport.query.filter(
+        CloserDailyReport.closer_id == current_user.id,
+        CloserDailyReport.date < day_local,
+        CloserDailyReport.slots.isnot(None)
+    ).order_by(CloserDailyReport.date.desc()).first()
+
     return jsonify({
         "date": day_local.isoformat(),
         "sent": bool(report),
@@ -1661,7 +1676,9 @@ def get_daily_report_status():
         # "slots disponibles configurados" — ver CloserService.compute_daily_report_fields): se
         # precarga lo que ya se había guardado para este día, si lo hay.
         "slots": report.slots if report else None,
-        "activity": activity
+        "slots_last_value": last_report_with_slots.slots if last_report_with_slots else None,
+        "activity": activity,
+        "pending_previous_days": pending_previous_days
     }), 200
 
 
@@ -1682,6 +1699,21 @@ def send_daily_report():
 
     data = request.get_json() or {}
     day_local = _resolve_report_date(current_user, data.get('date'))
+
+    # Bloqueo de envío si queda trabajo atrasado de días ANTERIORES sin resolver (pedido del
+    # usuario) — no se puede pasar por alto reenviando con `force`: es una validación de datos
+    # reales, no una advertencia descartable. El admin queda exento (puede reportar en nombre de
+    # un closer para destrabar una situación puntual).
+    if current_user.role != 'admin':
+        try:
+            pending = CloserService.get_previous_days_pending(current_user.id, day_local)
+        except Exception as e:
+            return jsonify({"error": f"Error al validar pendientes de días anteriores: {str(e)}"}), 500
+        if pending['total'] > 0:
+            return jsonify({
+                "error": "Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.",
+                "pending_previous_days": pending
+            }), 409
 
     try:
         computed = CloserService.compute_daily_report_fields(current_user.id, day_local)
