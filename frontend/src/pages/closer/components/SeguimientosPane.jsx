@@ -158,6 +158,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
             client_id: item.client_id,
             lead_name: item.lead_name,
             instagram: item.instagram,
+            phone: item.phone,
             examen: item.examen,
             origin: item.origin,
             fase: 'seg',

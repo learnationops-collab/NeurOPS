@@ -31,6 +31,14 @@ const formatIdcardDate = (iso) => {
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+// Link de WhatsApp para contactar al lead directamente desde la ficha durante el seguimiento.
+const waLinkForPhone = (phone, leadName) => {
+    const clean = phone ? phone.replace(/\D/g, '') : '';
+    if (!clean) return null;
+    const greeting = `Hola ${leadName || ''}, te saluda tu asesor de NeurOPS. ¿Cómo estás?`.replace(/\s+/g, ' ').trim();
+    return `https://wa.me/${clean}?text=${encodeURIComponent(greeting)}`;
+};
+
 const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -457,6 +465,7 @@ const CloserWorkflowPage = () => {
                     client_id: stage.client_id,
                     lead_name: stage.lead_name,
                     instagram: stage.instagram,
+                    phone: stage.phone,
                     examen: stage.examen,
                     origin: stage.origin,
                     closer_notes: stage.closer_notes,
@@ -3723,6 +3732,16 @@ const CloserWorkflowPage = () => {
                                         {modalFlowLabel}
                                         {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
                                     </p>
+                                    {selectedLead.phone && (
+                                        <a
+                                            href={waLinkForPhone(selectedLead.phone, selectedLead.lead_name)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 mt-1 text-[10.5px] font-black text-emerald-400 hover:text-emerald-300 transition-colors"
+                                        >
+                                            <Phone size={11} /> {selectedLead.phone}
+                                        </a>
+                                    )}
                                 </div>
                                 {selectedLead.can_edit !== false && (
                                     <button
@@ -3796,6 +3815,21 @@ const CloserWorkflowPage = () => {
                                             <b>{formatIdcardDate(selectedLead.enrollment_date)}</b>
                                         </div>
                                     )}
+                                    <div className="idc">
+                                        <span>☎ Teléfono</span>
+                                        {selectedLead.phone ? (
+                                            <a
+                                                href={waLinkForPhone(selectedLead.phone, selectedLead.lead_name)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                                            >
+                                                <b>{selectedLead.phone}</b>
+                                            </a>
+                                        ) : (
+                                            <b>Sin teléfono</b>
+                                        )}
+                                    </div>
                                     <div className="idc hl">
                                         <span>● Estado</span>
                                         <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
