@@ -575,27 +575,45 @@ class BookingService:
         
         # 5. Mapear estado
         estado_clean = str(agenda.estado).strip().lower() if agenda.estado else ""
-        
+
         # Conservar valores existentes
         existing_result = appt.result if appt else None
         existing_closer_result = appt.closer_result if appt else 'Pendiente'
-        
+
         result = existing_result
         closer_result = existing_closer_result
-        
+
+        # Una vez que el Closer avanzó el pipeline de confirmación DENTRO de NeurOPS
+        # (por_confirmar → conversando → confirmado, ver modalStep 'confirm' en
+        # CloserWorkflowPage.jsx), ese estado es autoritativo — no debe pisarse con un valor
+        # potencialmente desactualizado de la hoja de cálculo (la hoja la mantiene el Call
+        # Confirmer por separado y no siempre refleja en tiempo real lo que el closer ya hizo).
+        # Mismo criterio que ya usaba _format_appointment_for_deck (app/api/closer.py) para
+        # decidir qué mostrar, pero acá faltaba aplicarlo también al GUARDAR: un cliente
+        # reportó que sus agendas marcadas "Confirmado" desaparecían solas de esa columna —
+        # el resync masivo de /public/financial-agendas/sync-appointments (o cualquier edición
+        # del sheet que dispare el webhook por-item) las revertía a 'Pendiente'/'Agendado' sin
+        # que el closer hiciera nada. Cancelado/Reagendado sí se siguen aplicando siempre: son
+        # señales reales de un evento externo, no un default desactualizado.
+        CLOSER_CONFIRM_STAGES = ('por_confirmar', 'conversando', 'confirmado')
+        existing_result_lower = (existing_result or '').strip().lower()
+        closer_owns_confirm_stage = existing_result_lower in CLOSER_CONFIRM_STAGES
+
         # Si es un estado del Call Confirmer (antes de la llamada)
-        if estado_clean in ('pendiente', '', 'agendado', 'agendada', 'confirmado', 'confirmada', 'sin respuesta', 'contactado', 'contactada', 'cancelado', 'cancelada', 'reagendado', 'reagendada'):
-            if estado_clean in ('pendiente', ''):
-                result = 'Pendiente'
-            elif estado_clean in ('agendado', 'agendada'):
-                result = 'Agendado'
-            elif estado_clean in ('confirmado', 'confirmada'):
-                result = 'Confirmado'
-            elif estado_clean == 'sin respuesta':
-                result = 'Sin respuesta'
-            elif estado_clean in ('contactado', 'contactada'):
-                result = 'Contactado'
-            elif estado_clean in ('cancelado', 'cancelada'):
+        if estado_clean in ('pendiente', '', 'agendado', 'agendada', 'confirmado', 'confirmada', 'sin respuesta', 'contactado', 'contactada'):
+            if not closer_owns_confirm_stage:
+                if estado_clean in ('pendiente', ''):
+                    result = 'Pendiente'
+                elif estado_clean in ('agendado', 'agendada'):
+                    result = 'Agendado'
+                elif estado_clean in ('confirmado', 'confirmada'):
+                    result = 'Confirmado'
+                elif estado_clean == 'sin respuesta':
+                    result = 'Sin respuesta'
+                elif estado_clean in ('contactado', 'contactada'):
+                    result = 'Contactado'
+        elif estado_clean in ('cancelado', 'cancelada', 'reagendado', 'reagendada'):
+            if estado_clean in ('cancelado', 'cancelada'):
                 result = 'Cancelado'
             elif estado_clean in ('reagendado', 'reagendada'):
                 result = 'Reagendado'
