@@ -102,6 +102,15 @@ class CloserFollowUpService:
         return round(total_debt, 2)
 
     @staticmethod
+    def _client_enrollment_date(client_id):
+        """Fecha de ingreso real del cliente al programa (Enrollment más reciente) — distinta
+        de la fecha de la cita/agenda. None si el cliente nunca se inscribió formalmente."""
+        if not client_id:
+            return None
+        enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
+        return enrollment.enrollment_date if enrollment else None
+
+    @staticmethod
     def _client_program_code(client_id):
         """Codigo de programa (AL/RR/SI) resuelto desde la ultima venta oficial del cliente en FinancialSale."""
         if not client_id:
@@ -129,6 +138,7 @@ class CloserFollowUpService:
         days_since_call = (date.today() - a.start_time.date()).days if a.start_time else None
         data = {
             'id': a.id,
+            'client_id': a.client_id,
             'lead_name': a.client.full_name or a.client.email if a.client else 'Sin Nombre',
             'instagram': a.client.instagram if a.client else '',
             'origin': a.origin or '',
@@ -149,6 +159,8 @@ class CloserFollowUpService:
             data['deuda'] = CloserFollowUpService._client_debt(a.client_id)
             data['programa_code'] = CloserFollowUpService._client_program_code(a.client_id)
             data['programa_nombre'] = PROGRAM_CODE_NAMES.get(data['programa_code'])
+            enrollment_dt = CloserFollowUpService._client_enrollment_date(a.client_id)
+            data['enrollment_date'] = enrollment_dt.isoformat() if enrollment_dt else None
         return data
 
     @staticmethod
@@ -334,6 +346,7 @@ class CloserFollowUpService:
             next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
                 .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
             deuda_val = CloserFollowUpService._client_debt(cid)
+            enrollment_dt = CloserFollowUpService._client_enrollment_date(cid)
             proxima_cuota = None
             if next_cuota:
                 proxima_cuota = {
@@ -374,6 +387,7 @@ class CloserFollowUpService:
                 'days_since_call': days_since_call,
                 'closer_notes': appt.closer_notes or '',
                 'owner_closer_name': None,
+                'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
                 'deuda': deuda_val,
                 'programa_code': CloserFollowUpService._client_program_code(cid),
                 'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
@@ -393,6 +407,97 @@ class CloserFollowUpService:
         items.sort(key=urgency_key)
 
         return items
+
+    @staticmethod
+    def get_client_lead_stage(client_id):
+        """Clasifica en qué etapa está un lead para que la búsqueda global del closer abra el
+        modal correspondiente (en vez del resumen genérico del cliente): 'cerrada' (ya compró
+        algo — seguimiento de cobranza/renovación/upsell), 'confirm' (tiene agenda(s) futura(s)
+        sin confirmar), 'call' (la fecha de la cita ya pasó y el closer no reportó qué pasó),
+        'seg' (llamada tomada/no tomada con seguimiento pendiente) o 'none' (sin nada accionable
+        — cliente sin citas locales). Devuelve None si el client_id no existe."""
+        from app.models import Client, InstallmentPlan
+
+        client = Client.query.get(client_id)
+        if not client:
+            return None
+
+        if CloserFollowUpService._client_has_sale(client):
+            appt = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).first()
+            enrollment_dt = CloserFollowUpService._client_enrollment_date(client_id)
+            deuda_val = CloserFollowUpService._client_debt(client_id)
+            next_cuota = InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
+                .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+            proxima_cuota = None
+            if next_cuota:
+                proxima_cuota = {
+                    'id': next_cuota.id,
+                    'numero_cuota': next_cuota.numero_cuota,
+                    'monto': next_cuota.monto,
+                    'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
+                    'vencida': next_cuota.fecha_vencimiento < date.today(),
+                    'sin_plan': False
+                }
+            elif deuda_val > 0.01:
+                proxima_cuota = {'id': None, 'numero_cuota': None, 'monto': deuda_val, 'fecha_vencimiento': None, 'vencida': False, 'sin_plan': True}
+            programa_code = CloserFollowUpService._client_program_code(client_id)
+            return {
+                'stage': 'cerrada',
+                'client_id': client_id,
+                'appointment_id': appt.id if appt else None,
+                'lead_name': client.full_name or client.email or 'Sin Nombre',
+                'instagram': client.instagram or '',
+                'origin': appt.origin if appt else '',
+                'examen': appt.examen if appt else '',
+                'closer_notes': appt.closer_notes if appt else '',
+                'seguimiento_intento': (appt.seguimiento_intento if appt else 1) or 1,
+                'call_date': appt.start_time.isoformat() if appt and appt.start_time else None,
+                'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
+                'deuda': deuda_val,
+                'programa_code': programa_code,
+                'programa_nombre': PROGRAM_CODE_NAMES.get(programa_code),
+                'proxima_cuota': proxima_cuota
+            }
+
+        appts = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
+        if not appts:
+            return {'stage': 'none', 'client_id': client_id}
+
+        now = datetime.utcnow()
+        pending = [a for a in appts if not a.closer_processed and (a.closer_result or '').strip().lower() in ('', 'pendiente', '2da call')]
+        confirm_candidates = sorted([a for a in pending if a.start_time and a.start_time > now], key=lambda a: a.start_time)
+        call_candidates = [a for a in pending if not (a.start_time and a.start_time > now)]
+
+        if confirm_candidates:
+            return {
+                'stage': 'confirm',
+                'client_id': client_id,
+                'appointments': [{
+                    'id': a.id,
+                    'start_time': a.start_time.isoformat() if a.start_time else None,
+                    'result': a.result or '',
+                    'lead_name': client.full_name or client.email or 'Sin Nombre'
+                } for a in confirm_candidates]
+            }
+
+        if call_candidates:
+            call_candidates.sort(key=lambda a: a.start_time or datetime.min, reverse=True)
+            return {'stage': 'call', 'client_id': client_id, 'appointment_id': call_candidates[0].id}
+
+        seg_candidates = [a for a in appts if not a.seguimiento_realizado and CloserFollowUpService._effective_tipo(a)]
+        if seg_candidates:
+            seg_candidates.sort(key=lambda a: a.fecha_seguimiento or '')
+            chosen = seg_candidates[0]
+            return {
+                'stage': 'seg',
+                'tipo': CloserFollowUpService._effective_tipo(chosen),
+                'client_id': client_id,
+                'appointment_id': chosen.id
+            }
+
+        # Nada pendiente por confirmar/reportar/seguir — el cliente sigue teniendo citas, así
+        # que se abre la más reciente en modo reporte de llamada (permite revisar/corregir).
+        return {'stage': 'call', 'client_id': client_id, 'appointment_id': appts[0].id}
 
     @staticmethod
     def get_pool(closer_id, tipo=None, sub=None, days_since=None, programa=None, deuda=None):

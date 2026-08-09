@@ -23,6 +23,14 @@ const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', '
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+// Fecha corta legible para las fichas de lead (fecha de agendamiento / fecha de ingreso).
+const formatIdcardDate = (iso) => {
+    if (!iso) return null;
+    const d = parseUtcIso(iso) || new Date(iso);
+    if (!d || isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -129,10 +137,14 @@ const CloserWorkflowPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searching, setSearching] = useState(false);
-    // Resumen de cliente (agendas/ventas/pagos) abierto desde un resultado de búsqueda — la
-    // búsqueda ya deduplica por cliente, así que este resumen es la vista principal para revisar
-    // qué pasó con él antes de decidir accionar sobre una cita puntual.
+    // Historial completo del cliente (agendas/ventas/pagos) — accesible como vista secundaria
+    // desde el modal de etapa (botón "Ver historial completo"), ya no es lo que abre por
+    // defecto un resultado de búsqueda (ver handleSelectSearchResult).
     const [historyClientId, setHistoryClientId] = useState(null);
+
+    // Selector de agenda cuando la búsqueda global encuentra un lead con varias agendas
+    // pendientes de confirmar — el closer elige a cuál de todas le está marcando el estado.
+    const [agendaPicker, setAgendaPicker] = useState({ open: false, appointments: [] });
 
     // Modal de Seguimiento tras cambio de estado / venta
     const [followUpModal, setFollowUpModal] = useState({
@@ -398,49 +410,85 @@ const CloserWorkflowPage = () => {
         return () => document.removeEventListener('click', handleOutsideClick);
     }, []);
 
-    // Seleccionar lead desde resultados de búsqueda global — abre el resumen del cliente
-    // (agendas, ventas, cuotas) en vez de saltar directo a la última cita puntual: desde ahí el
-    // closer ve todo lo que pasó con ese cliente antes de decidir qué hacer (abrir una agenda
-    // específica, declarar una venta, marcar una cuota como pagada).
+    // Seleccionar lead desde resultados de búsqueda global — en vez de abrir siempre el resumen
+    // genérico del cliente, resuelve en qué etapa real está (confirmación pendiente, llamada por
+    // reportar, seguimiento en curso, o llamada cerrada/cobranza) y abre el modal correspondiente
+    // a esa etapa (GET /closer/leads/<client_id>/stage). Si tiene varias agendas pendientes de
+    // confirmar, se muestra un selector para elegir sobre cuál marcar el estado.
     const handleSelectSearchResult = async (lead) => {
         setShowSearchResults(false);
         setSearchQuery('');
 
-        if (lead.id) {
-            setHistoryClientId(lead.id);
+        if (!lead.id) {
+            // Sin Client todavía (lead sintético desde FinancialAgenda, sin fila propia en la
+            // base local) — no hay etapa que resolver, se abre la ficha simple de siempre.
+            setSelectedLead({
+                id: -Math.floor(Math.random() * 100000),
+                lead_name: lead.username || "Sin Nombre",
+                email: lead.email || "",
+                phone: lead.phone || "",
+                instagram: lead.instagram || "",
+                origin: lead.appointment?.setter_name ? "Setter" : "Desconocido",
+                setter_name: lead.appointment?.setter_name || "Sin Asignar",
+                closer_result: "Pendiente"
+            });
             return;
         }
 
-        // Sin Client todavía (lead sintético desde FinancialAgenda, sin fila propia en la base
-        // local) — no hay historial de cliente que mostrar, se abre la ficha simple de siempre.
-        setSelectedLead({
-            id: -Math.floor(Math.random() * 100000),
-            lead_name: lead.username || "Sin Nombre",
-            email: lead.email || "",
-            phone: lead.phone || "",
-            instagram: lead.instagram || "",
-            origin: lead.appointment?.setter_name ? "Setter" : "Desconocido",
-            setter_name: lead.appointment?.setter_name || "Sin Asignar",
-            closer_result: "Pendiente"
-        });
-    };
-
-    // Abrir una agenda puntual desde el resumen del cliente (ClientHistoryModal) — mismo fetch
-    // que antes hacía el click directo de un resultado de búsqueda.
-    const handleOpenAppointmentFromHistory = async (appointmentId) => {
-        setHistoryClientId(null);
         setLoading(true);
         try {
-            const res = await api.get(`/closer/deck/card/${appointmentId}`);
-            if (res.data) {
-                setSelectedLead(res.data);
+            const res = await api.get(`/closer/leads/${lead.id}/stage`);
+            const stage = res.data;
+
+            if (stage.stage === 'confirm') {
+                if (stage.appointments.length > 1) {
+                    setAgendaPicker({ open: true, appointments: stage.appointments });
+                } else if (stage.appointments.length === 1) {
+                    const a = stage.appointments[0];
+                    handleSelectLead({ id: a.id, fase: 'confirm', result: a.result });
+                } else {
+                    toast.error('Este cliente no tiene agendas pendientes de confirmar.');
+                }
+            } else if (stage.stage === 'seg') {
+                handleSelectLead({ id: stage.appointment_id, fase: 'seg', tipo: stage.tipo });
+            } else if (stage.stage === 'cerrada') {
+                handleSelectLead({
+                    id: stage.appointment_id,
+                    client_id: stage.client_id,
+                    lead_name: stage.lead_name,
+                    instagram: stage.instagram,
+                    examen: stage.examen,
+                    origin: stage.origin,
+                    closer_notes: stage.closer_notes,
+                    seguimiento_intento: stage.seguimiento_intento,
+                    call_date: stage.call_date,
+                    enrollment_date: stage.enrollment_date,
+                    deuda: stage.deuda,
+                    programa_nombre: stage.programa_nombre,
+                    programa_code: stage.programa_code,
+                    proxima_cuota: stage.proxima_cuota,
+                    fase: 'seg',
+                    tipo: 'cerrada'
+                });
+            } else if (stage.stage === 'call') {
+                handleSelectLead({ id: stage.appointment_id, fase: 'call' });
+            } else {
+                toast.error('Este cliente no tiene ninguna agenda activa — se abre su historial completo.');
+                setHistoryClientId(lead.id);
             }
         } catch (err) {
-            console.error("Error al cargar card de cita:", err);
-            toast.error("Error al cargar la ficha de la cita");
+            console.error("Error al resolver la etapa del lead:", err);
+            toast.error("Error al abrir el lead");
         } finally {
             setLoading(false);
         }
+    };
+
+    // Abrir una agenda puntual específica desde el historial completo del cliente — reporte de
+    // llamada de esa cita (misma ruta que "llamada por reportar" de la búsqueda global).
+    const handleOpenAppointmentFromHistory = (appointmentId) => {
+        setHistoryClientId(null);
+        handleSelectLead({ id: appointmentId, fase: 'call' });
     };
 
     // "Registrar venta/pago" desde el resumen del cliente — abre el mismo modal de Declarar
@@ -850,8 +898,13 @@ const CloserWorkflowPage = () => {
             showRefsStep: false
         });
 
-        // 2. Determinar paso inicial del árbol por contexto
-        if (activeStep === 'confirmations' || lead.fase === 'confirm') {
+        // 2. Determinar paso inicial del árbol por contexto. `lead.fase`, cuando viene
+        // explícito (ej. desde la búsqueda global, que ya resolvió la etapa real del lead en
+        // el backend — ver handleSelectSearchResult), manda sobre `activeStep` (la pestaña que
+        // esté abierta en ese momento no debería reinterpretar la etapa de un lead ajeno a
+        // ella). `activeStep` solo se usa como respaldo cuando `lead.fase` no viene seteado
+        // (tarjetas del mazo, que dependen de la pestaña donde viven).
+        if (lead.fase === 'confirm' || (lead.fase === undefined && activeStep === 'confirmations')) {
             // Un lead ya "Confirmado" no tiene nada más que confirmar: se abre directo en el
             // reporte de resultado de la llamada, igual que si viniera de la pestaña Llamadas.
             const normalizedResult = (lead.result || '').toLowerCase();
@@ -862,7 +915,7 @@ const CloserWorkflowPage = () => {
                 setModalStep('confirm');
                 setModalFlowLabel('Proceso de confirmación');
             }
-        } else if (activeStep === 'seguimientos' || lead.fase === 'seg') {
+        } else if (lead.fase === 'seg' || (lead.fase === undefined && activeStep === 'seguimientos')) {
             setModalStep(lead.tipo === 'cerrada' ? 'segventa' : 'seg');
             setModalFlowLabel('Seguimiento');
         } else {
@@ -3111,7 +3164,7 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} onOpenClientHistory={setHistoryClientId} />
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} />
                     ) : (
                         /* Renderizado clásico de Lista para Llamadas */
                         <>
@@ -3733,11 +3786,30 @@ const CloserWorkflowPage = () => {
                                         <span>▤ Grupo</span>
                                         <b>{selectedLead.grupo || 'Grupo sin asignar'}</b>
                                     </div>
+                                    <div className="idc">
+                                        <span>◐ Fecha agendamiento</span>
+                                        <b>{formatIdcardDate(selectedLead.start_time || selectedLead.call_date) || 'Sin fecha'}</b>
+                                    </div>
+                                    {formatIdcardDate(selectedLead.enrollment_date) && (
+                                        <div className="idc">
+                                            <span>✓ Fecha de ingreso</span>
+                                            <b>{formatIdcardDate(selectedLead.enrollment_date)}</b>
+                                        </div>
+                                    )}
                                     <div className="idc hl">
                                         <span>● Estado</span>
                                         <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
                                     </div>
                                 </div>
+
+                                {selectedLead.client_id && (
+                                    <button
+                                        onClick={() => setHistoryClientId(selectedLead.client_id)}
+                                        className="w-full text-[9.5px] font-black uppercase tracking-wide text-violet-350 hover:text-violet-300 py-1.5 transition-colors cursor-pointer"
+                                    >
+                                        Ver historial completo del cliente →
+                                    </button>
+                                )}
 
                                 {/* Contenido por pestaña */}
                                 {modalTab === 'act' && (
@@ -4921,6 +4993,49 @@ const CloserWorkflowPage = () => {
                     onRegisterSale={handleRegisterSaleFromHistory}
                 />
             )}
+
+            {/* Selector de agenda — lead con varias agendas pendientes de confirmar encontrado
+                desde la búsqueda global: elegir sobre cuál se está marcando el estado. */}
+            <AnimatePresence>
+                {agendaPicker.open && (
+                    <div className="ov on">
+                        <motion.div
+                            initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 18, scale: 0.97 }}
+                            transition={{ duration: 0.2 }}
+                            className="md"
+                            style={{ maxWidth: 420 }}
+                        >
+                            <div className="mdh">
+                                <div style={{ flex: 1 }}>
+                                    <h3>ELEGÍ LA AGENDA</h3>
+                                    <p>Este lead tiene varias agendas pendientes de confirmar</p>
+                                </div>
+                                <button className="x" onClick={() => setAgendaPicker({ open: false, appointments: [] })}>×</button>
+                            </div>
+                            <div className="mdb space-y-2">
+                                {agendaPicker.appointments.map(a => (
+                                    <button
+                                        key={a.id}
+                                        onClick={() => {
+                                            setAgendaPicker({ open: false, appointments: [] });
+                                            handleSelectLead({ id: a.id, fase: 'confirm', result: a.result });
+                                        }}
+                                        className="w-full text-left px-4 py-3 bg-slate-950/60 hover:bg-slate-900 border border-slate-800 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-3"
+                                    >
+                                        <div>
+                                            <div className="text-xs font-black text-white">{formatIdcardDate(a.start_time) || 'Sin fecha'}</div>
+                                            <div className="text-[10px] font-bold text-slate-500">{a.result || 'Pendiente'}</div>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-500" />
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* DOCK FLOTANTE v6 */}
             <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>

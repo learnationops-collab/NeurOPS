@@ -254,6 +254,22 @@ def search_closer_leads():
     return jsonify(results), 200
 
 
+@bp.route('/leads/<int:client_id>/stage', methods=['GET'])
+@login_required
+def get_lead_stage(client_id):
+    """Clasifica en qué etapa está un cliente (confirmación pendiente, llamada por reportar,
+    seguimiento en curso o llamada cerrada/cobranza) para que el buscador global abra el modal
+    correspondiente en vez del resumen genérico. Ver CloserFollowUpService.get_client_lead_stage."""
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.closer_followup_service import CloserFollowUpService
+    result = CloserFollowUpService.get_client_lead_stage(client_id)
+    if result is None:
+        return jsonify({"message": "Cliente no encontrado"}), 404
+    return jsonify(result), 200
+
+
 @bp.route('/appointments/by-instagram', methods=['GET'])
 @login_required
 def get_appointment_by_instagram():
@@ -1290,6 +1306,14 @@ def get_client_details(client_id):
     })
 
 
+def _latest_enrollment_date(client_id):
+    """Fecha de ingreso real al programa (Enrollment más reciente) de un cliente, o None."""
+    if not client_id:
+        return None
+    enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
+    return enrollment.enrollment_date.isoformat() if enrollment and enrollment.enrollment_date else None
+
+
 def _format_appointment_for_deck(a):
     # Formatear cita para el mazo Closer con datos de contacto y triage
     from app.models import SurveyAnswer, SurveyQuestion
@@ -1392,7 +1416,10 @@ def _format_appointment_for_deck(a):
         "seguimiento_sub": getattr(a, 'seguimiento_sub', None),
         "seguimiento_intento": getattr(a, 'seguimiento_intento', None) or 1,
         "pre_call_reminder_at": a.pre_call_reminder_at.isoformat() if getattr(a, 'pre_call_reminder_at', None) else None,
-        "examen": a.examen or ""
+        "examen": a.examen or "",
+        # Fecha de ingreso real al programa (Enrollment más reciente) — distinta de start_time
+        # (que es la fecha de la cita/agenda). Solo existe si el cliente ya se inscribió.
+        "enrollment_date": _latest_enrollment_date(a.client_id)
     }
 
 @bp.route('/deck', methods=['GET'])
