@@ -594,7 +594,7 @@ const CloserWorkflowPage = () => {
             fetchAgendas();
         } catch (err) {
             console.error("Error al crear agenda:", err);
-            toast.error("Error al crear la agenda");
+            toast.error(err.response?.data?.error || "Error al crear la agenda");
         } finally {
             setProcessingId(null);
         }

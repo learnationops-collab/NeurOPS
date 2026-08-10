@@ -777,19 +777,40 @@ def create_appointment():
         if not start_time:
             return jsonify({"error": "Formato de fecha inválido (start_time)"}), 400
 
+        if not Client.query.get(lead_id):
+            return jsonify({"error": "No se encontró el cliente indicado para esta agenda."}), 400
+
         # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', setter_id=None)
         setter_id = current_user.id if current_user.role in ['setter', 'closer'] else None
-        
+        target_closer_id = current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id) # Fallback mostly for admins/setters to pick closer
+
+        # Chequeo de conflicto de horario ANTES de crear, con el mismo criterio que usa
+        # BookingService.create_appointment internamente (closer_processed == False y result no
+        # cancelado/reprogramado) — así el mensaje puede decir exactamente CUÁL es la cita que
+        # choca (con quién y a qué hora) en vez del genérico "ya existe una cita o no se pudo
+        # crear la agenda" que no distinguía esto de cualquier otro fallo (reportado por un
+        # closer real: el error no explicaba la causa).
+        conflicting = Appointment.query.filter_by(closer_id=target_closer_id, start_time=start_time).filter(
+            Appointment.closer_processed == False,
+            or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
+        ).first()
+        if conflicting:
+            conflicting_name = conflicting.client.full_name if conflicting.client else 'otro lead'
+            return jsonify({
+                "error": f"Ya tenés una agenda con {conflicting_name} a esa misma hora ({start_time.strftime('%d/%m/%Y %H:%M')}) — elegí otro horario.",
+                "conflicting_appointment_id": conflicting.id
+            }), 409
+
         appt = BookingService.create_appointment(
             client_id=lead_id,
-            closer_id=current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id), # Fallback mostly for admins/setters to pick closer
+            closer_id=target_closer_id,
             start_time_utc=start_time,
             origin=data.get('origin') or 'Manual Closer',
             setter_id=setter_id
         )
-        
+
         if not appt:
-            return jsonify({"error": "Ya existe una cita agendada en este horario para este closer o no se pudo crear la agenda"}), 400
+            return jsonify({"error": "No se pudo crear la agenda por un motivo inesperado — probá de nuevo o avisá a soporte si se repite."}), 400
 
         db.session.commit()
         
