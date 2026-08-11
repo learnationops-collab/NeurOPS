@@ -11,7 +11,7 @@ from app.decorators import admin_required, operator_required, role_required
 import pandas as pd
 import io
 import json
-from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification
+from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -112,6 +112,29 @@ def delete_recurring_expense(id):
 def generate_recurring_expenses():
     success, message = FinancialService.generate_monthly_recurring_expenses()
     return jsonify({"message": message}), 200 if success else 400
+
+@bp.route('/admin/feature-toggles/<string:key>', methods=['GET'])
+@login_required
+@operator_required
+def get_feature_toggle(key):
+    toggle = FeatureToggle.query.filter_by(key=key).first()
+    if not toggle:
+        return jsonify({"key": key, "is_active": False, "updated_at": None, "updated_by": None}), 200
+    return jsonify(toggle.to_dict()), 200
+
+@bp.route('/admin/feature-toggles/<string:key>', methods=['PATCH'])
+@login_required
+@operator_required
+def update_feature_toggle(key):
+    data = request.get_json() or {}
+    toggle = FeatureToggle.query.filter_by(key=key).first()
+    if not toggle:
+        toggle = FeatureToggle(key=key)
+        db.session.add(toggle)
+    toggle.is_active = bool(data.get('is_active'))
+    toggle.updated_by_id = current_user.id
+    db.session.commit()
+    return jsonify(toggle.to_dict()), 200
 
 @bp.route('/admin/finance/sales', methods=['GET'])
 @login_required
