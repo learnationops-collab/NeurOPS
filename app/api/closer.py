@@ -1376,7 +1376,70 @@ def _latest_enrollment_date(client_id):
     return enrollment.enrollment_date.isoformat() if enrollment and enrollment.enrollment_date else None
 
 
-def _format_appointment_for_deck(a):
+def _normalize_phone_digits(phone):
+    # Últimos 8 dígitos (suficiente para no confundir dos números distintos, pero tolera que un
+    # lado tenga el código de país y el otro no, o distinto formato de espacios/guiones/'+').
+    import re
+    if not phone:
+        return None
+    digits = re.sub(r'\D', '', str(phone))
+    return digits[-8:] if len(digits) >= 8 else None
+
+def _normalize_instagram_handle(ig):
+    if not ig or not isinstance(ig, str):
+        return None
+    v = ig.strip().lstrip('@').lower()
+    return v or None
+
+def _form_data_has_useful_answers(fd):
+    # Client.form_data casi siempre existe como columna (server_default), pero para la mayoría
+    # de los leads guarda solo el literal `null` o metadatos de contacto sin ninguna respuesta
+    # real de calificación — sin esto, cualquier fd no-vacío se mostraba como "completado".
+    if not isinstance(fd, dict):
+        return False
+    ignore = {'nombre', 'telefono', 'instagram', 'fuente_form', 'submitted_at'}
+    return any(k not in ignore and fd.get(k) not in (None, '', 'n/a') for k in fd)
+
+def _recover_form_data_by_contact(client):
+    # El formulario de calificación de n8n (Client.form_data) a veces queda en un Client distinto
+    # del que terminó vinculado a la Appointment real (ej. el matching por instagram/teléfono al
+    # momento de la sumisión no encontró al cliente porque todavía no existía, o el formato del
+    # teléfono no coincidía exactamente) — acá se reintenta el cruce en el momento de mostrar el
+    # modal, tolerando formatos de teléfono distintos (comparando solo los últimos 8 dígitos).
+    if not client:
+        return None
+    email = (client.email or '').strip().lower() or None
+    ig = _normalize_instagram_handle(client.instagram)
+    phone_digits = _normalize_phone_digits(client.phone)
+    if not email and not ig and not phone_digits:
+        return None
+
+    from app.models import Client
+    from sqlalchemy import func, or_
+
+    filters = []
+    if email:
+        filters.append(func.lower(Client.email) == email)
+    if ig:
+        filters.append(func.lower(Client.instagram) == ig)
+    if phone_digits:
+        filters.append(Client.phone.like(f"%{phone_digits}%"))
+    if not filters:
+        return None
+
+    candidates = Client.query.filter(Client.id != client.id, Client.form_data.isnot(None), or_(*filters)).all()
+
+    best_fd, best_submitted = None, ''
+    for cand in candidates:
+        fd = cand.form_data if isinstance(cand.form_data, dict) else None
+        if not _form_data_has_useful_answers(fd):
+            continue
+        submitted = fd.get('submitted_at') or ''
+        if best_fd is None or submitted > best_submitted:
+            best_fd, best_submitted = fd, submitted
+    return best_fd
+
+def _format_appointment_for_deck(a, recover_form=False):
     # Formatear cita para el mazo Closer con datos de contacto y triage
     from app.models import SurveyAnswer, SurveyQuestion
     survey_answers = []
@@ -1394,6 +1457,17 @@ def _format_appointment_for_deck(a):
     # modal solo leía survey_answers, así que un lead que sí había respondido el formulario de n8n
     # aparecía como si no hubiera respondido nada.
     form_data = a.client.form_data if (a.client and isinstance(a.client.form_data, dict)) else {}
+    # Si el cliente vinculado a esta cita no tiene respuestas útiles, se intenta recuperar el
+    # formulario real desde otro Client con el mismo teléfono/correo/instagram (ver
+    # _recover_form_data_by_contact). Solo se activa cuando `recover_form=True` (vista de un lead
+    # puntual en el modal) — evitar esta búsqueda extra por cada tarjeta del mazo cuando se listan
+    # muchas citas a la vez (GET /deck), donde sería un N+1 innecesario.
+    form_data_recovered = False
+    if recover_form and a.client and not _form_data_has_useful_answers(form_data):
+        recovered = _recover_form_data_by_contact(a.client)
+        if recovered:
+            form_data = recovered
+            form_data_recovered = True
     # Resolver dinámicamente el resultado real del confirmer sin depender de campos corrompidos históricos
     from app.models.financial import FinancialAgenda
     from sqlalchemy import or_
@@ -1477,6 +1551,7 @@ def _format_appointment_for_deck(a):
         "setter_name": a.setter.username if a.setter else "Sin Setter",
         "survey_answers": survey_answers,
         "form_data": form_data,
+        "form_data_recovered": form_data_recovered,
         "setter_processed": a.setter_processed,
         "closer_processed": a.closer_processed,
         "fecha_seguimiento": getattr(a, 'fecha_seguimiento', None),
@@ -2245,7 +2320,7 @@ def get_closer_deck_card(appt_id):
             appt.closer_id = current_user.id
             db.session.commit()
 
-    card = _format_appointment_for_deck(appt)
+    card = _format_appointment_for_deck(appt, recover_form=True)
     card['can_edit'] = True
     card['owner_closer_name'] = None if appt.closer_id == current_user.id else (appt.closer.username if appt.closer else None)
     return jsonify(card), 200

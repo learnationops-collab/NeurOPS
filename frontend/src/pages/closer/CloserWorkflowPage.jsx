@@ -4077,6 +4077,11 @@ const CloserWorkflowPage = () => {
                                                 </div>
                                                 {formAnswers.length > 0 ? (
                                                     <>
+                                                        {selectedLead.form_data_recovered && (
+                                                            <div className="text-[9px] font-bold uppercase tracking-wide text-amber-400 pb-1">
+                                                                ⚠ Recuperado de otro registro con el mismo teléfono/instagram/correo — verificá que corresponda a este lead.
+                                                            </div>
+                                                        )}
                                                         {formAnswers.map(ans => (
                                                             renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer), `fd-${ans.key}`)
                                                         ))}
