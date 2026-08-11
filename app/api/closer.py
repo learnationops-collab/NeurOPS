@@ -3,7 +3,7 @@ import json
 import pytz
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 from sqlalchemy import or_
@@ -2500,6 +2500,85 @@ def get_unread_no_agenda_closer():
                 "unread_comment": True,
                 "start_time": None
             })
-            
+
     return jsonify(results), 200
+
+@bp.route('/leads-audit/status', methods=['GET'])
+@login_required
+def get_leads_audit_status():
+    toggle = FeatureToggle.query.filter_by(key='closer_leads_audit').first()
+    return jsonify({"enabled": bool(toggle and toggle.is_active)}), 200
+
+@bp.route('/leads-audit', methods=['GET'])
+@login_required
+def get_leads_audit():
+    if current_user.role not in ['closer', 'admin', 'operator']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    toggle = FeatureToggle.query.filter_by(key='closer_leads_audit').first()
+    if not (toggle and toggle.is_active) and current_user.role == 'closer':
+        return jsonify({"error": "La auditoría de leads no está activa en este momento"}), 403
+
+    closer_id = current_user.id
+    if current_user.role in ('admin', 'operator'):
+        requested = request.args.get('closer_id')
+        if requested:
+            closer_id = int(requested)
+
+    month_param = request.args.get('month')
+    try:
+        if month_param:
+            year, mon = [int(x) for x in month_param.split('-')]
+        else:
+            today = date.today()
+            year, mon = today.year, today.month
+        start = datetime(year, mon, 1)
+        end = datetime(year + 1, 1, 1) if mon == 12 else datetime(year, mon + 1, 1)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Parámetro month inválido, use YYYY-MM"}), 400
+
+    appts_in_month = Appointment.query.filter(
+        Appointment.closer_id == closer_id,
+        Appointment.start_time >= start,
+        Appointment.start_time < end
+    ).all()
+    client_ids = sorted({a.client_id for a in appts_in_month})
+
+    leads = []
+    for client_id in client_ids:
+        client = Client.query.get(client_id)
+        if not client:
+            continue
+
+        appts = Appointment.query.filter_by(closer_id=closer_id, client_id=client_id).order_by(Appointment.start_time.asc()).all()
+
+        enrollments = Enrollment.query.filter_by(closer_id=closer_id, client_id=client_id).all()
+        payments = []
+        for e in enrollments:
+            for p in e.payments.order_by(Payment.date.asc()).all():
+                payments.append({
+                    "id": p.id,
+                    "enrollment_id": e.id,
+                    "amount": p.amount,
+                    "date": p.date.isoformat() if p.date else None,
+                    "payment_type": p.payment_type,
+                    "status": p.status
+                })
+
+        leads.append({
+            "client_id": client.id,
+            "full_name": client.full_name or "Sin Nombre",
+            "email": client.email,
+            "phone": client.phone,
+            "appointments": [{
+                "id": a.id,
+                "closer_result": a.closer_result,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "start_time": a.start_time.isoformat() if a.start_time else None
+            } for a in appts],
+            "payments": payments
+        })
+
+    leads.sort(key=lambda r: r['full_name'])
+    return jsonify({"month": f"{year}-{mon:02d}", "leads": leads}), 200
 
