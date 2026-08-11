@@ -271,7 +271,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
                             >
                                 <option value="">Fecha de la call: cualquiera</option>
                                 <option value="14">Últimos 14 días</option>
-                                <option value="30">Últimos 30 días</option>
+                                <option value="30">Entre 15 y 30 días</option>
                                 <option value="+30">Más de 30 días</option>
                             </select>
                             {openPool === 'cerrada' && (

@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
-from sqlalchemy import or_, func
+from sqlalchemy import or_, and_, func
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,12 @@ class CloserFollowUpService:
             return 'no_tomada'
         if cr == 'show up' and not CloserFollowUpService._client_has_sale(a.client):
             return 'tomada'
+        # Agenda vencida (la fecha de la cita ya pasó) que el closer nunca llegó a procesar
+        # (mismo criterio que CloserService.archive_stale_backlog, sin esperar los 30 días de
+        # ese barrido de mantenimiento): cuenta como "no tomada" — nadie la reportó, así que hay
+        # que hacer seguimiento igual que a un No Show.
+        if cr in ('', 'pendiente') and not a.closer_processed and a.start_time and a.start_time < datetime.utcnow():
+            return 'no_tomada'
         return None
 
     @staticmethod
@@ -68,7 +74,15 @@ class CloserFollowUpService:
             or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado.is_(None)),
             or_(
                 Appointment.seguimiento_tipo.isnot(None),
-                func.lower(Appointment.closer_result).in_(DERIVABLE_NO_TOMADA | {'show up'})
+                func.lower(Appointment.closer_result).in_(DERIVABLE_NO_TOMADA | {'show up'}),
+                # Agendas vencidas nunca procesadas por el closer (ver _effective_tipo) — mismo
+                # criterio de datos que CloserService.archive_stale_backlog, sin el corte de 30
+                # días de ese barrido.
+                and_(
+                    Appointment.start_time < datetime.utcnow(),
+                    Appointment.closer_processed == False,
+                    or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+                )
             )
         )
         if closer_id:
@@ -512,10 +526,13 @@ class CloserFollowUpService:
                 def matches_days(d):
                     if d is None:
                         return False
+                    # Rangos excluyentes (0-14 / 15-30 / 31+), no acumulativos — antes "30"
+                    # incluía también lo que ya mostraba "14", así que cambiar de un filtro a
+                    # otro nunca sacaba nada de la lista, solo agregaba.
                     if days_since == '14':
                         return d <= 14
                     if days_since == '30':
-                        return d <= 30
+                        return 14 < d <= 30
                     if days_since == '+30':
                         return d > 30
                     return True
@@ -552,10 +569,13 @@ class CloserFollowUpService:
             def matches_days(d):
                 if d is None:
                     return False
+                # Rangos excluyentes (0-14 / 15-30 / 31+), no acumulativos — antes "30" incluía
+                # también lo que ya mostraba "14", así que cambiar de un filtro a otro nunca
+                # sacaba nada de la lista, solo agregaba.
                 if days_since == '14':
                     return d <= 14
                 if days_since == '30':
-                    return d <= 30
+                    return 14 < d <= 30
                 if days_since == '+30':
                     return d > 30
                 return True
