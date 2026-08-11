@@ -266,10 +266,14 @@ const CloserWorkflowPage = () => {
     }, [teamMembers]);
 
     useEffect(() => {
-        if (modalStep === 'seg' || modalStep === 'segventa') {
+        if (selectedLead) {
             fetchTeamMembers();
         }
-    }, [modalStep, fetchTeamMembers]);
+    }, [selectedLead, fetchTeamMembers]);
+
+    // Reasignar lead a otro closer — estado del selector inline en la ficha del modal.
+    const [reassignOpen, setReassignOpen] = useState(false);
+    const [reassigning, setReassigning] = useState(false);
 
     // Flujo de registro de venta directo post-Show Up
     const [salePrompt, setSalePrompt] = useState({ apptId: null });
@@ -683,6 +687,26 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    // Reasignar el lead abierto a otro closer — pase de mano rápido, sin necesidad de admin ni
+    // de ser el dueño actual (mismo criterio permisivo del resto del flujo: cualquier closer
+    // puede editar cualquier lead).
+    const handleReassignLead = async (newCloserId) => {
+        if (!selectedLead?.id || !newCloserId) return;
+        setReassigning(true);
+        try {
+            const res = await api.patch(`/closer/appointments/${selectedLead.id}/reassign`, { closer_id: Number(newCloserId) });
+            setSelectedLead(prev => prev ? { ...prev, closer_id: res.data.closer_id, closer_name: res.data.closer_name, owner_closer_name: null } : prev);
+            setReassignOpen(false);
+            toast.success(`Lead reasignado a ${res.data.closer_name}`);
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al reasignar lead:", err);
+            toast.error(err.response?.data?.error || "Error al reasignar el lead");
+        } finally {
+            setReassigning(false);
+        }
+    };
+
     // Obtener contadores de las pestañas
     const fetchCounts = async () => {
         try {
@@ -923,6 +947,7 @@ const CloserWorkflowPage = () => {
         setModalTab('act');
         setDecisionPath([]);
         setReasonInput('');
+        setReassignOpen(false);
         const tomorrowStr = localDateFromNow(1);
 
         // Recordatorio pre-llamada: si el lead ya tiene uno guardado, prellenarlo; si no,
@@ -3908,6 +3933,42 @@ const CloserWorkflowPage = () => {
                                         <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
                                     </div>
                                 </div>
+
+                                {/* Responsable del lead — pase de mano rápido a otro closer, sin
+                                    pasar por admin (ver PATCH /closer/appointments/<id>/reassign). */}
+                                {selectedLead.id > 0 && (
+                                    <div className="w-full bg-black/20 border border-slate-900/60 rounded-xl px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-[9.5px] font-bold uppercase tracking-wide text-slate-400">
+                                                Responsable: <b className="text-white">{selectedLead.closer_name || 'Sin asignar'}</b>
+                                            </span>
+                                            <button
+                                                onClick={() => setReassignOpen(v => !v)}
+                                                className="text-[9.5px] font-black uppercase tracking-wide text-violet-350 hover:text-violet-300 transition-colors cursor-pointer"
+                                            >
+                                                {reassignOpen ? 'Cancelar' : 'Cambiar de closer'}
+                                            </button>
+                                        </div>
+                                        {reassignOpen && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <select
+                                                    disabled={reassigning}
+                                                    defaultValue=""
+                                                    onChange={(e) => e.target.value && handleReassignLead(e.target.value)}
+                                                    className="flex-1 bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                                                >
+                                                    <option value="" disabled>Elegí un closer...</option>
+                                                    {(teamMembers || [])
+                                                        .filter(m => m.role === 'closer' && m.id !== selectedLead.closer_id)
+                                                        .map(m => (
+                                                            <option key={m.id} value={m.id}>{m.username}</option>
+                                                        ))}
+                                                </select>
+                                                {reassigning && <Loader2 size={14} className="animate-spin text-violet-400 shrink-0" />}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {selectedLead.client_id && (
                                     <button

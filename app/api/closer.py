@@ -716,6 +716,47 @@ def update_appointment(id):
     db.session.commit()
     return jsonify({"message": "Agenda actualizada con éxito"}), 200
 
+@bp.route('/appointments/<int:id>/reassign', methods=['PATCH'])
+@login_required
+def reassign_appointment(id):
+    """Cambia el closer responsable de un lead. Cualquier closer puede reasignar cualquier
+    lead a cualquier otro closer activo (mismo criterio permisivo que el resto del flujo:
+    "cualquier closer puede editar cualquier lead", ver update_appointment/process_agenda) —
+    pensado para pases de mano rápidos entre compañeros, no requiere ser dueño ni admin."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    appt = Appointment.query.get_or_404(id)
+    data = request.get_json() or {}
+    new_closer_id = data.get('closer_id')
+    if not new_closer_id:
+        return jsonify({"error": "closer_id es requerido"}), 400
+
+    from app.models import User
+    new_closer = User.query.filter_by(id=new_closer_id, role='closer').first()
+    if not new_closer or new_closer.is_active is False:
+        return jsonify({"error": "El closer seleccionado no existe o no está activo"}), 400
+
+    if appt.closer_id == new_closer.id:
+        return jsonify({"error": "Este lead ya pertenece a ese closer"}), 400
+
+    old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
+    appt.closer_id = new_closer.id
+
+    if appt.client_id:
+        db.session.add(ClientComment(
+            client_id=appt.client_id,
+            author_id=current_user.id,
+            text=f"Lead reasignado de {old_closer_name} a {new_closer.username} (por {current_user.username})."
+        ))
+
+    db.session.commit()
+    return jsonify({
+        "message": "Lead reasignado con éxito",
+        "closer_id": new_closer.id,
+        "closer_name": new_closer.username
+    }), 200
+
 @bp.route('/appointments/<int:id>', methods=['GET'])
 @login_required
 def get_appointment(id):
@@ -1440,7 +1481,10 @@ def _format_appointment_for_deck(a):
         "examen": a.examen or "",
         # Fecha de ingreso real al programa (Enrollment más reciente) — distinta de start_time
         # (que es la fecha de la cita/agenda). Solo existe si el cliente ya se inscribió.
-        "enrollment_date": _latest_enrollment_date(a.client_id)
+        "enrollment_date": _latest_enrollment_date(a.client_id),
+        # Closer dueño actual del lead, para el selector de "Reasignar a otro closer" en el modal.
+        "closer_id": a.closer_id,
+        "closer_name": a.closer.username if a.closer else None
     }
 
 @bp.route('/deck', methods=['GET'])

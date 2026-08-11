@@ -168,7 +168,10 @@ class CloserFollowUpService:
             # Solo relevante cuando el pool incluyó leads de un closer dado de baja (ver
             # _base_query) — permite mostrar "de {owner_closer_name}" en vez de que parezca
             # propio. None cuando el closer sigue activo (caso normal).
-            'owner_closer_name': a.closer.username if (a.closer and a.closer.is_active is False) else None
+            'owner_closer_name': a.closer.username if (a.closer and a.closer.is_active is False) else None,
+            # Closer dueño actual, para el selector de "Reasignar a otro closer" en el modal.
+            'closer_id': a.closer_id,
+            'closer_name': a.closer.username if a.closer else None
         }
         if include_debt:
             data['deuda'] = CloserFollowUpService._client_debt(a.client_id)
@@ -403,6 +406,8 @@ class CloserFollowUpService:
                 'days_since_call': days_since_call,
                 'closer_notes': appt.closer_notes or '',
                 'owner_closer_name': None,
+                'closer_id': appt.closer_id,
+                'closer_name': appt.closer.username if appt.closer else None,
                 'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
                 'deuda': deuda_val,
                 'programa_code': CloserFollowUpService._client_program_code(cid),
