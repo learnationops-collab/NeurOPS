@@ -9,7 +9,8 @@ import {
     Users,
     Share2,
     UserCheck,
-    History
+    History,
+    ClipboardList
 } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
@@ -17,6 +18,7 @@ import TeamManagementPage from '../../admin/team/TeamManagementPage';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
 import CloserAliasesPanel from '../../../components/operations/CloserAliasesPanel';
 import BitacoraPanel from '../../../components/operations/BitacoraPanel';
+import LeadsAuditTogglePanel from '../../../components/operations/LeadsAuditTogglePanel';
 import Card from '../../../components/ui/Card';
 
 const OperationsSettingsPage = () => {
@@ -25,6 +27,7 @@ const OperationsSettingsPage = () => {
     const sections = [
         { id: 'team', label: 'Gestión de Equipo', icon: Users },
         { id: 'closer_aliases', label: 'Alias de Closers', icon: UserCheck },
+        { id: 'leads_audit', label: 'Auditoría de Leads', icon: ClipboardList },
         { id: 'bitacora', label: 'Bitácora de Cambios', icon: History },
         { id: 'marketing', label: 'Marketing UTMs', icon: Share2 },
         { id: 'database', label: 'Base de Datos', icon: Database },
@@ -69,6 +72,12 @@ const OperationsSettingsPage = () => {
                     {activeSection === 'closer_aliases' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <CloserAliasesPanel />
+                        </div>
+                    )}
+
+                    {activeSection === 'leads_audit' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <LeadsAuditTogglePanel />
                         </div>
                     )}
 
