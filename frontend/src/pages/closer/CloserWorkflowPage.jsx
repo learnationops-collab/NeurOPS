@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -3902,7 +3902,7 @@ const CloserWorkflowPage = () => {
                                         title="Eliminar lead"
                                         onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
                                     >
-                                        <X size={16} className="rotate-45" />
+                                        <Trash2 size={16} />
                                     </button>
                                 )}
                                 <button className="x" onClick={() => setSelectedLead(null)}>
