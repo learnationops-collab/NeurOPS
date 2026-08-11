@@ -347,6 +347,7 @@ h6 {
     box-shadow: var(--shadow-main);
     transition: all 0.3s ease;
     --text-main: var(--text-on-card);
+    --color-text-base: var(--text-on-card);
     color: var(--text-main);
 }
 
@@ -357,6 +358,7 @@ h6 {
     border-right: var(--glass-border);
     transition: all 0.3s ease;
     --text-main: var(--text-on-card);
+    --color-text-base: var(--text-on-card);
     color: var(--text-main);
     border-radius: 0 !important;
 }
@@ -370,6 +372,7 @@ h6 {
 .bg-surface {
     background: var(--bg-card);
     --text-main: var(--text-on-card);
+    --color-text-base: var(--text-on-card);
     color: var(--text-main);
 }
 
