@@ -16,6 +16,7 @@ import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
+import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
@@ -67,6 +68,14 @@ const CloserWorkflowPage = () => {
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
     const [activeView, setActiveView] = useState('inbox');
+    // Pestaña temporal "Auditoría" — solo visible mientras Operaciones la tenga activada
+    // (ver LeadsAuditTogglePanel.jsx y GET /closer/leads-audit/status).
+    const [auditEnabled, setAuditEnabled] = useState(false);
+    useEffect(() => {
+        api.get('/closer/leads-audit/status')
+            .then(res => setAuditEnabled(!!res.data?.enabled))
+            .catch(() => setAuditEnabled(false));
+    }, []);
     const [reportSent, setReportSent] = useState(false);
     const [sendingReport, setSendingReport] = useState(false);
     // Día que se está reportando (por defecto hoy) — permite reportar días anteriores sin
@@ -3794,6 +3803,8 @@ const CloserWorkflowPage = () => {
                         </button>
                     </div>
                 </div>
+                ) : activeView === 'auditoria' ? (
+                    <CloserLeadsAudit embedded />
                 ) : (
                     <CloserDashboard embedded />
                 )}
@@ -5164,6 +5175,14 @@ const CloserWorkflowPage = () => {
                 >
                     <span>📈 Dashboard</span>
                 </button>
+                {auditEnabled && (
+                    <button
+                        className={`dk-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
+                        onClick={() => setActiveView('auditoria')}
+                    >
+                        <span>🗂️ Auditoría</span>
+                    </button>
+                )}
             </div>
 
             <OperatorControls
