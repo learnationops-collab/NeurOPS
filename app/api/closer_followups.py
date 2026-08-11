@@ -93,16 +93,15 @@ def schedule_followup(appt_id):
 
 @bp.route('/followups/cron/send-reminders', methods=['GET'])
 def cron_send_followup_reminders():
-    """Le avisa por WhatsApp (Whatchimp) a cada closer activo los seguimientos que tiene
-    pendientes para hoy (vencidos + de hoy) y todavía no le avisamos en el día. Pensado para un
-    cron externo (mismo patrón/token que /api/sheets/cron-sync) — llamarlo varias veces al día
-    es seguro, no reenvía lo ya avisado hoy."""
+    """Avanza la cola de recordatorios de seguimiento por WhatsApp (Whatchimp): manda como mucho
+    REMINDERS_PER_HOUR por closer por hora, dentro de su horario laboral local. Pensado para un
+    cron externo (mismo patrón/token que /api/sheets/cron-sync) como alternativa al scheduler
+    interno — llamarlo de más es seguro, el propio goteo evita reenviar."""
     token = request.args.get('token')
     expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
     if not token or token != expected_token:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     selected_date = request.args.get('date')
-    slot = request.args.get('slot', 'am')
-    result = CloserFollowUpService.send_due_reminders(selected_date, slot=slot)
+    result = CloserFollowUpService.send_due_reminders(selected_date)
     return jsonify({"status": "success", **result}), 200
