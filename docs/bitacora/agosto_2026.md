@@ -1,5 +1,10 @@
 # Bitácora - Agosto 2026
 
+- **11 de Agosto de 2026** *(fix: el botón "Eliminar lead" del modal de detalle mostraba un ícono de "+" en vez de una papelera, [CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+  - **Reportado por el usuario**: en la esquina superior del modal de detalle de lead, el botón que elimina al prospecto se veía como un signo "+".
+  - **Diagnóstico**: el botón usaba el ícono `X` de `lucide-react` rotado 45° (`<X className="rotate-45" />`) para simular visualmente una papelera/cruz de eliminar — a esa rotación, una X se ve como un "+", no como una cruz de "eliminar".
+  - **Corrección**: se reemplaza por el ícono `Trash2` (papelera) de `lucide-react`, sin rotación. Único punto del archivo con este patrón (`rotate-45` no aparece en ningún otro lugar).
+
 - **11 de Agosto de 2026** *(continuación — se elimina `followup_reminder_sent_pm_at`, la columna que quedó sin uso tras la cola de recordatorios, [booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY], nueva migración `b40bb66b18bc`)**:
   - **Continuación de la deuda anotada en la entrada anterior**: al reemplazar las dos franjas fijas de recordatorios (10am/4pm, la vieja `CloserFollowUpService.REMINDER_SLOTS`) por la cola con goteo de 2 por hora, `Appointment.followup_reminder_sent_pm_at` (el campo de la franja de las 4pm) dejó de leerse y escribirse — la cola usa únicamente `followup_reminder_sent_at`. En esa pasada se dejó la columna a propósito para no mezclar una migración destructiva con un cambio de comportamiento; acá se completa la limpieza.
   - **Verificación previa a tocar nada**: confirmado por grep que la única referencia en todo el código (backend y frontend) era la propia definición de la columna en el modelo — ningún servicio, endpoint ni componente la leía. `REMINDER_SLOTS` tampoco tiene ya ninguna referencia viva.

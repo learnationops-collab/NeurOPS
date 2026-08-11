@@ -1387,6 +1387,13 @@ def _format_appointment_for_deck(a):
                 "question": question.text,
                 "answer": answer.answer
             })
+
+    # Respuestas del formulario de calificación que llega por n8n. Viven en Client.form_data (JSON
+    # suelto, ver POST /public/financial-agendas/form), NO en SurveyAnswer — esa tabla es la
+    # encuesta propia de la página de reserva, otro origen distinto. La pestaña "Formulario" del
+    # modal solo leía survey_answers, así que un lead que sí había respondido el formulario de n8n
+    # aparecía como si no hubiera respondido nada.
+    form_data = a.client.form_data if (a.client and isinstance(a.client.form_data, dict)) else {}
     # Resolver dinámicamente el resultado real del confirmer sin depender de campos corrompidos históricos
     from app.models.financial import FinancialAgenda
     from sqlalchemy import or_
@@ -1469,6 +1476,7 @@ def _format_appointment_for_deck(a):
         "setter_id": a.setter_id,
         "setter_name": a.setter.username if a.setter else "Sin Setter",
         "survey_answers": survey_answers,
+        "form_data": form_data,
         "setter_processed": a.setter_processed,
         "closer_processed": a.closer_processed,
         "fecha_seguimiento": getattr(a, 'fecha_seguimiento', None),

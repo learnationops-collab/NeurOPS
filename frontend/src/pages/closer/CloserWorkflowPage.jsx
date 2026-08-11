@@ -1867,19 +1867,51 @@ const CloserWorkflowPage = () => {
         }
     };
 
-    const renderFormQuestion = (q, a, c = 'info') => {
-        const borderCls = 
+    const renderFormQuestion = (q, a, c = 'info', key = undefined) => {
+        const borderCls =
             c === 'good' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' :
             c === 'bad' ? 'border-rose-500/20 bg-rose-500/5 text-rose-400' :
             c === 'warn' ? 'border-amber-500/20 bg-amber-500/5 text-amber-400' :
             'border-slate-850 bg-slate-950/30 text-slate-300';
 
         return (
-            <div className={`p-4 rounded-2xl border text-left flex flex-col gap-1 ${borderCls}`}>
+            <div key={key} className={`p-4 rounded-2xl border text-left flex flex-col gap-1 ${borderCls}`}>
                 <div className="text-[10px] text-slate-500 font-bold uppercase leading-none">{q}</div>
                 <div className="text-xs font-black leading-normal mt-1">{a || 'Sin respuesta'}</div>
             </div>
         );
+    };
+
+    // Etiquetas legibles de las respuestas del formulario de n8n (Client.form_data). Mismas que ya
+    // usa FormsManagementPage para este mismo JSON, para que closer y operaciones lean lo mismo.
+    // El orden de este objeto define el orden en que se muestran las respuestas.
+    const FORM_DATA_LABELS = {
+        examen: 'Examen / Dolor principal',
+        puntaje: 'Puntaje / Calificación',
+        profesion: 'Profesión',
+        empleo: 'Empleo actual',
+        formacion: 'Formación requerida / Meta',
+        interes: 'Interés',
+        inversion: 'Capacidad de inversión',
+        apoyo: 'Apoyo / Red familiar'
+    };
+
+    // Campos de form_data que NO son respuestas del formulario: datos de contacto ya visibles en la
+    // cabecera/ficha del modal, o metadata interna. Se excluyen para no duplicar ni ensuciar.
+    const FORM_DATA_HIDDEN = new Set(['nombre', 'telefono', 'instagram', 'fuente_form', 'submitted_at']);
+
+    // Respuestas reales del formulario: primero las conocidas en el orden de FORM_DATA_LABELS, y
+    // después cualquier campo nuevo que n8n empiece a mandar (para no perderlo si cambia el form).
+    const getFormDataAnswers = (formData) => {
+        if (!formData || typeof formData !== 'object') return [];
+        const hasValue = (k) => !FORM_DATA_HIDDEN.has(k) && formData[k] !== null && formData[k] !== undefined && String(formData[k]).trim() !== '';
+        const known = Object.keys(FORM_DATA_LABELS).filter(hasValue);
+        const extra = Object.keys(formData).filter(k => hasValue(k) && !(k in FORM_DATA_LABELS));
+        return [...known, ...extra].map(k => ({
+            key: k,
+            question: FORM_DATA_LABELS[k] || k.replace(/_/g, ' '),
+            answer: String(formData[k])
+        }));
     };
 
     const getCalificacionColor = (text) => {
@@ -4014,37 +4046,70 @@ const CloserWorkflowPage = () => {
                                     </div>
                                 )}
 
-                                {modalTab === 'form' && (
-                                    <div id="paneForm">
-                                        <div className="fsec">
-                                            <div className="fh">
-                                                <b>Calificación externa</b>
-                                                <span className="tagx" style={{ background: 'rgba(99,102,241,.2)', color: '#A5B4FC' }}>n8n</span>
-                                                <hr />
+                                {modalTab === 'form' && (() => {
+                                    const formAnswers = getFormDataAnswers(selectedLead.form_data);
+                                    const surveyAnswers = selectedLead.survey_answers || [];
+                                    const fuenteForm = selectedLead.form_data?.fuente_form;
+                                    const submittedAt = selectedLead.form_data?.submitted_at;
+                                    return (
+                                        <div id="paneForm">
+                                            <div className="fsec">
+                                                <div className="fh">
+                                                    <b>Datos del lead</b>
+                                                    <span className="tagx" style={{ background: 'rgba(99,102,241,.2)', color: '#A5B4FC' }}>n8n</span>
+                                                    <hr />
+                                                </div>
+                                                {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
+                                                {renderFormQuestion("Fuente del Lead", fuenteForm || selectedLead.origin || 'Meta Ads')}
+                                                {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
                                             </div>
-                                            {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
-                                            {renderFormQuestion("Fuente del Lead", selectedLead.origin || 'Meta Ads')}
-                                            {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
-                                        </div>
 
-                                        <div className="fsec" style={{ marginTop: '20px' }}>
-                                            <div className="fh">
-                                                <b>Encuesta de cita</b>
-                                                <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>✓ completada</span>
-                                                <hr />
+                                            {/* Respuestas del formulario de calificación de n8n (Client.form_data). */}
+                                            <div className="fsec" style={{ marginTop: '20px' }}>
+                                                <div className="fh">
+                                                    <b>Formulario de calificación</b>
+                                                    {formAnswers.length > 0 && (
+                                                        <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>
+                                                            ✓ {formAnswers.length} respuesta{formAnswers.length === 1 ? '' : 's'}
+                                                        </span>
+                                                    )}
+                                                    <hr />
+                                                </div>
+                                                {formAnswers.length > 0 ? (
+                                                    <>
+                                                        {formAnswers.map(ans => (
+                                                            renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer), `fd-${ans.key}`)
+                                                        ))}
+                                                        {submittedAt && (
+                                                            <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500 pt-1">
+                                                                Respondido el {formatIdcardDate(submittedAt) || submittedAt}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
+                                                        Este lead no completó el formulario de calificación.
+                                                    </div>
+                                                )}
                                             </div>
-                                            {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 ? (
-                                                selectedLead.survey_answers.map((ans, idx) => (
-                                                    renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer))
-                                                ))
-                                            ) : (
-                                                <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
-                                                    No hay respuestas a la encuesta registradas.
+
+                                            {/* Encuesta propia de la página de reserva (SurveyAnswer) — origen distinto
+                                                del formulario de n8n de arriba. Solo se muestra si tiene respuestas. */}
+                                            {surveyAnswers.length > 0 && (
+                                                <div className="fsec" style={{ marginTop: '20px' }}>
+                                                    <div className="fh">
+                                                        <b>Encuesta de cita</b>
+                                                        <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>✓ completada</span>
+                                                        <hr />
+                                                    </div>
+                                                    {surveyAnswers.map((ans, idx) => (
+                                                        renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer), `sa-${idx}`)
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {modalTab === 'set' && (
                                     <div id="paneSet" className="space-y-4">
