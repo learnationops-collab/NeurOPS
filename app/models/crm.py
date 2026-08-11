@@ -1,6 +1,24 @@
 from datetime import datetime
 from app import db
 
+class FeatureToggle(db.Model):
+    __tablename__ = 'feature_toggles'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(64), unique=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=False)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updated_by = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            "key": self.key,
+            "is_active": bool(self.is_active),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_by": self.updated_by.username if self.updated_by else None
+        }
+
 class Pipeline(db.Model):
     __tablename__ = 'pipelines'
     id = db.Column(db.Integer, primary_key=True)
