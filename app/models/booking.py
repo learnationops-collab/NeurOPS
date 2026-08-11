@@ -63,10 +63,6 @@ class Appointment(db.Model):
     # sirve a la vez para no repetir el mismo aviso en el día y para contar cuántos se mandaron
     # en la última hora y respetar el límite por closer.
     followup_reminder_sent_at = db.Column(db.DateTime, nullable=True)
-    # Sobra desde que las dos franjas fijas (10am/4pm) se reemplazaron por la cola con goteo —
-    # ya no se lee ni se escribe. Se deja la columna para no meter un DROP en el mismo cambio;
-    # queda pendiente eliminarla en una migración aparte.
-    followup_reminder_sent_pm_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
