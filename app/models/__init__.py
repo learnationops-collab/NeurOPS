@@ -14,6 +14,7 @@ from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember,
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
+from .workshop_lead import WorkshopLead
 from .alert import AlertRule, Alert
 from .installment import InstallmentPlan
 from .client_merge_log import ClientMergeLog
@@ -31,6 +32,7 @@ __all__ = [
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction', 'WorkshopEvent',
+    'WorkshopLead',
     'AlertRule', 'Alert',
     'InstallmentPlan', 'ClientMergeLog'
 ]
