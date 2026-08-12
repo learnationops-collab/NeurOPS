@@ -7,6 +7,7 @@ import WorkshopCardsView from './components/WorkshopCardsView';
 import WorkshopTableView from './components/WorkshopTableView';
 import WorkshopFunnelView from './components/WorkshopFunnelView';
 import WorkshopFormModal from './components/WorkshopFormModal';
+import WorkshopLandingView from './components/WorkshopLandingView';
 
 const initialFormData = {
     date: '',
@@ -35,7 +36,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel'
+    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
     
     // Formulario & Prefill
@@ -346,10 +347,25 @@ const WorkshopDashboardPage = () => {
                     >
                         Análisis de Embudo (Funnel)
                     </button>
+                    {/* La grabación es OTRO embudo que el workshop en vivo: mismo
+                        producto, fuente distinta ('workshop landing'). */}
+                    <button
+                        onClick={() => setActiveTab('landing')}
+                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'landing' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
+                        }`}
+                    >
+                        Landing de la Grabación
+                    </button>
                 </div>
 
                 {/* Area Principal de Contenido */}
-                {loading ? (
+                {/* La landing va PRIMERO y fuera de los guards de abajo: sus datos
+                    no dependen de que haya workshops en vivo cargados, asi que el
+                    "no hay workshops registrados" no tiene que taparla. */}
+                {activeTab === 'landing' ? (
+                    <WorkshopLandingView />
+                ) : loading ? (
                     <div className="flex flex-col items-center justify-center py-40 space-y-4">
                         <Loader2 size={48} className="animate-spin text-indigo-500" />
                         <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs">Cargando inteligencia de workshops...</p>
