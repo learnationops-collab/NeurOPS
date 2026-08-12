@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
 from app.decorators import admin_required
+from app.services.fuente_service import es_workshop_vivo
 from datetime import datetime
 import logging
 
@@ -289,7 +290,10 @@ def prefill_workshop_metrics():
     for c in clients:
         fd = c.form_data or {}
         fuente = fd.get('fuente_form') or fd.get('fuente') or ''
-        if 'workshop' in str(fuente).lower():
+        # es_workshop_vivo EXCLUYE 'workshop landing'. Antes era `'workshop' in
+        # fuente`, un substring, asi que las aplicaciones de la grabacion se
+        # sumaban aca y inflaban las metricas del workshop en vivo.
+        if es_workshop_vivo(fuente):
             aplicaciones_count += 1
             
     # 2. Agendas Exitosas - buscar por registro (texto local), created_at (UTC) y raw_data fuente
@@ -309,11 +313,11 @@ def prefill_workshop_metrics():
     
     workshop_agendas = []
     for a in agendas:
-        # Detectar fuente workshop desde nombre O raw_data['fuente']
-        nombre_val = str(a.nombre or '').lower()
+        # Detectar fuente workshop desde nombre O raw_data['fuente'], dejando
+        # AFUERA la grabacion ('workshop landing'), que es otro embudo y se
+        # mide en /api/workshop/landing/*.
         raw = a.raw_data or {}
-        fuente_raw = str(raw.get('fuente') or raw.get('fuente_form') or '').lower()
-        if 'workshop' in nombre_val or 'workshop' in fuente_raw:
+        if es_workshop_vivo(a.nombre, raw.get('fuente'), raw.get('fuente_form')):
             workshop_agendas.append(a)
             
     agendas_count = len(workshop_agendas)
