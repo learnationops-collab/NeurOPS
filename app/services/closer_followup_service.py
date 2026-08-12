@@ -148,7 +148,21 @@ class CloserFollowUpService:
         return code if code in PROGRAM_CODE_NAMES else None
 
     @staticmethod
-    def _serialize(a, include_debt=False):
+    def _dias_retraso(fecha_seguimiento, reference_date=None):
+        """Días de retraso de un seguimiento: cuántos días pasaron desde la fecha en que estaba
+        agendado. Positivo = atrasado, 0 = toca hoy, negativo = todavía no le toca. None si la
+        cita no tiene fecha de seguimiento asignada (todo el pool sin fecha) o si el valor
+        guardado no es una fecha ISO válida (`fecha_seguimiento` es texto libre en la base)."""
+        if not fecha_seguimiento:
+            return None
+        try:
+            programada = date.fromisoformat(str(fecha_seguimiento)[:10])
+        except ValueError:
+            return None
+        return ((reference_date or date.today()) - programada).days
+
+    @staticmethod
+    def _serialize(a, include_debt=False, reference_date=None):
         days_since_call = (date.today() - a.start_time.date()).days if a.start_time else None
         data = {
             'id': a.id,
@@ -162,6 +176,10 @@ class CloserFollowUpService:
             'seguimiento_sub': a.seguimiento_sub or '',
             'seguimiento_intento': a.seguimiento_intento or 1,
             'fecha_seguimiento': a.fecha_seguimiento or None,
+            # Días de retraso respecto de la fecha en que estaba agendado el seguimiento (no de
+            # la fecha de la call, que es `days_since_call`): es lo que le dice al closer cuánto
+            # hace que debería haber contactado a este lead.
+            'dias_retraso': CloserFollowUpService._dias_retraso(a.fecha_seguimiento, reference_date),
             'call_date': a.start_time.isoformat() if a.start_time else None,
             'days_since_call': days_since_call,
             'closer_notes': a.closer_notes or '',
@@ -189,10 +207,16 @@ class CloserFollowUpService:
             Appointment.fecha_seguimiento <= selected_date_str
         )
         items = q.order_by(Appointment.fecha_seguimiento.asc()).all()
+        # El retraso se mide contra el día que el closer está mirando (no contra hoy): si revisa
+        # un día pasado, ve el retraso que había ese día, coherente con la lista que se le muestra.
+        try:
+            reference_date = date.fromisoformat(selected_date_str[:10])
+        except (TypeError, ValueError):
+            reference_date = date.today()
         grouped = {'no_tomada': [], 'tomada': [], 'cerrada': []}
         for a in items:
             key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
-            grouped[key].append(CloserFollowUpService._serialize(a, include_debt=(key == 'cerrada')))
+            grouped[key].append(CloserFollowUpService._serialize(a, include_debt=(key == 'cerrada'), reference_date=reference_date))
         return grouped
 
     # Cola de recordatorios: en vez de mandar de golpe TODOS los seguimientos pendientes (un
@@ -425,6 +449,7 @@ class CloserFollowUpService:
                 'seguimiento_sub': appt.seguimiento_sub or '',
                 'seguimiento_intento': appt.seguimiento_intento or 1,
                 'fecha_seguimiento': appt.fecha_seguimiento or None,
+                'dias_retraso': CloserFollowUpService._dias_retraso(appt.fecha_seguimiento),
                 'call_date': appt.start_time.isoformat() if appt.start_time else None,
                 'days_since_call': days_since_call,
                 'closer_notes': appt.closer_notes or '',

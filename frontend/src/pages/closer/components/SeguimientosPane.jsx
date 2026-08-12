@@ -31,8 +31,24 @@ const cuotaDateLabel = (fechaStr) => {
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
 };
 
+// Días de retraso del seguimiento (backend `dias_retraso`: días transcurridos desde la fecha en
+// que estaba agendado). Distinto de "Call hace Nd", que mide desde la fecha de la llamada.
+// Se colorea por gravedad para que el closer priorice de un vistazo lo más atrasado.
+const retrasoBadge = (dias) => {
+    if (typeof dias !== 'number') return null;
+    if (dias > 0) {
+        const cls = dias >= 7
+            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+            : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        return { cls, text: `⏰ ${dias}d de retraso` };
+    }
+    if (dias === 0) return { cls: 'bg-violet-500/10 text-violet-300 border-violet-500/20', text: 'Para hoy' };
+    return { cls: 'bg-slate-900 text-slate-400 border-slate-850', text: `En ${Math.abs(dias)}d` };
+};
+
 const SeguimientoRow = ({ item, tipo, onClick }) => {
     const pc = item.proxima_cuota;
+    const retraso = retrasoBadge(item.dias_retraso);
     return (
         <div
             onClick={onClick}
@@ -41,6 +57,11 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
             <div className="min-w-0 flex-1">
                 <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
                 <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {retraso && (
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${retraso.cls}`}>
+                            {retraso.text}
+                        </span>
+                    )}
                     {tipo !== 'cerrada' && (
                         <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
                             {item.seguimiento_sub || 'Sin subestado'}
@@ -183,7 +204,12 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
         );
     }
 
-    const totalHoy = grouped.no_tomada.length + grouped.tomada.length + grouped.cerrada.length;
+    const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
+    const totalHoy = itemsHoy.length;
+    // Cuántos de los seguimientos del día vienen arrastrados de días anteriores, y cuánto es el
+    // peor retraso — el resumen que el closer necesita antes de mirar fila por fila.
+    const atrasados = itemsHoy.filter(i => typeof i.dias_retraso === 'number' && i.dias_retraso > 0);
+    const maxRetraso = atrasados.reduce((max, i) => Math.max(max, i.dias_retraso), 0);
 
     return (
         <div className="space-y-6">
@@ -208,7 +234,14 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
                         <h3 className="text-sm font-black text-white">📅 Asignados para hoy</h3>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
                     </div>
-                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {atrasados.length > 0 && (
+                            <span className="text-[10px] font-black bg-rose-500/10 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-xl">
+                                {atrasados.length} atrasado{atrasados.length === 1 ? '' : 's'} · hasta {maxRetraso}d
+                            </span>
+                        )}
+                        <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
+                    </div>
                 </div>
                 {totalHoy === 0 ? (
                     <div className="text-center py-8 text-emerald-400 text-xs font-bold">✓ Todos los seguimientos de hoy están resueltos.</div>
