@@ -6,7 +6,6 @@ Estas rutas las llama el navegador de un visitante anónimo, así que:
   · NUNCA devuelven datos personales. El contador expone un entero y nada más:
     la landing es pública y cualquiera puede pegarle.
 """
-import re
 import logging
 from datetime import datetime, timedelta
 
@@ -35,43 +34,13 @@ def _limpiar(valor, largo=MAX_TEXTO):
     return texto[:largo]
 
 
-def _normalizar_telefono(raw, prefijo=None):
-    """Devuelve el teléfono en E.164 ('+549112233...') o None si no es usable.
-
-    No valida contra el plan de numeración de cada país —eso necesitaría una
-    librería como phonenumbers y no está en requirements—. Solo garantiza el
-    formato: un '+' y entre 8 y 15 dígitos, que es lo que pide E.164.
-    """
-    if not raw:
-        return None
-
-    texto = str(raw).strip()
-    tiene_mas = texto.startswith('+')
-    digitos = re.sub(r'\D', '', texto)
-
-    if not digitos:
-        return None
-
-    # Si el visitante no escribió el '+' pero eligió prefijo en el selector,
-    # lo anteponemos salvo que ya lo haya tipeado dentro del número.
-    if not tiene_mas and prefijo:
-        pref_digitos = re.sub(r'\D', '', str(prefijo))
-        if pref_digitos and not digitos.startswith(pref_digitos):
-            digitos = pref_digitos + digitos
-
-    if not (8 <= len(digitos) <= 15):
-        return None
-
-    return '+' + digitos
-
-
 @bp.route('/public/workshop-lead', methods=['POST'])
 def crear_workshop_lead():
     """Alta de un lead desde el gate de la landing.
 
-    Es idempotente por teléfono dentro de una ventana corta: si la misma persona
-    reintenta (la landing reencola los envíos fallidos), se actualiza el registro
-    existente en vez de duplicarlo.
+    Es idempotente por dedupe_key: la landing reintenta los envíos fallidos, y
+    sin esto un POST que llegó pero cuya respuesta se perdió generaría una fila
+    nueva en cada reintento. Con la misma clave se actualiza la fila existente.
     """
     data = request.get_json(silent=True) or {}
 
@@ -79,30 +48,22 @@ def crear_workshop_lead():
     if not nombre:
         return jsonify({"status": "error", "message": "El nombre es obligatorio"}), 400
 
-    telefono = _normalizar_telefono(data.get('phone'), data.get('phone_country'))
+    clave = _limpiar(data.get('dedupe_key'), 64)
     examen = _limpiar(data.get('examen'), 40)
     if examen and examen not in EXAMENES_CONOCIDOS:
         examen = examen[:40]
 
     try:
         lead = None
-        if telefono:
-            # Ventana de 6 h: reintentos y recargas de la misma persona caen acá.
-            # Más allá de eso lo tratamos como un lead nuevo (volvió otro día).
-            desde = datetime.utcnow() - timedelta(hours=6)
-            lead = WorkshopLead.query.filter(
-                WorkshopLead.phone == telefono,
-                WorkshopLead.created_at >= desde
-            ).order_by(WorkshopLead.created_at.desc()).first()
+        if clave:
+            lead = WorkshopLead.query.filter(WorkshopLead.dedupe_key == clave).first()
 
         if lead is None:
-            lead = WorkshopLead()
+            lead = WorkshopLead(dedupe_key=clave)
             db.session.add(lead)
 
         lead.nombre = nombre
         lead.apellido = _limpiar(data.get('apellido'))
-        lead.phone = telefono
-        lead.phone_country = _limpiar(data.get('phone_country'), 8)
         lead.profesion = _limpiar(data.get('profesion'), 60)
         lead.etapa = _limpiar(data.get('etapa'), 60)
         lead.examen = examen
@@ -118,8 +79,8 @@ def crear_workshop_lead():
         db.session.commit()
 
         logging.info(
-            "[workshop-lead] %s · %s · %s · utm=%s",
-            lead.full_name, lead.phone or 'sin teléfono', lead.examen, lead.utm_source
+            "[workshop-lead] %s · %s · utm=%s",
+            lead.full_name, lead.examen, lead.utm_source
         )
 
         return jsonify({"status": "success", "id": lead.id}), 201

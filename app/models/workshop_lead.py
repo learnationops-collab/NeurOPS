@@ -10,18 +10,22 @@ class WorkshopLead(db.Model):
     que completa el gate, sin validar ni deduplicar contra el CRM. El pase a
     `Client` es una decisión comercial posterior (la marca `promoted_client_id`).
 
-    El teléfono se guarda normalizado en E.164 (`+5491122334455`) para que el
-    setter pueda abrir WhatsApp sin limpiarlo a mano.
+    OJO: el gate NO pide dato de contacto. Esto mide el embudo (cuánta gente
+    entra a la clase, con qué perfil y desde qué anuncio), no habilita
+    seguimiento comercial: no hay forma de escribirle a nadie de esta tabla.
     """
     __tablename__ = 'workshop_leads'
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Identifica UNA completada del gate. La landing reintenta los envíos
+    # fallidos, y sin esta clave un POST que llegó pero cuya respuesta se perdió
+    # generaría una fila nueva en cada reintento.
+    dedupe_key = db.Column(db.String(64), index=True, unique=True, nullable=True)
+
     # --- Datos del gate ---
     nombre = db.Column(db.String(80), nullable=False)
     apellido = db.Column(db.String(80), nullable=True)
-    phone = db.Column(db.String(24), index=True, nullable=True)   # E.164
-    phone_country = db.Column(db.String(8), nullable=True)        # prefijo elegido, ej '+54'
     profesion = db.Column(db.String(60), nullable=True)
     etapa = db.Column(db.String(60), nullable=True)
     examen = db.Column(db.String(40), nullable=True)
@@ -49,22 +53,13 @@ class WorkshopLead(db.Model):
     def full_name(self):
         return ' '.join(p for p in [self.nombre, self.apellido] if p).strip()
 
-    @property
-    def whatsapp_url(self):
-        """Link directo al chat, listo para que el setter lo abra."""
-        if not self.phone:
-            return None
-        return 'https://wa.me/' + self.phone.lstrip('+')
-
     def to_dict(self):
         return {
             "id": self.id,
+            "dedupe_key": self.dedupe_key,
             "nombre": self.nombre,
             "apellido": self.apellido,
             "full_name": self.full_name,
-            "phone": self.phone,
-            "phone_country": self.phone_country,
-            "whatsapp_url": self.whatsapp_url,
             "profesion": self.profesion,
             "etapa": self.etapa,
             "examen": self.examen,
@@ -82,4 +77,4 @@ class WorkshopLead(db.Model):
         }
 
     def __repr__(self):
-        return f'<WorkshopLead {self.full_name} {self.phone or "sin teléfono"}>'
+        return f'<WorkshopLead {self.full_name} · {self.examen or "sin examen"}>'
