@@ -351,6 +351,7 @@ from . import lead_roadmap
 from . import finance
 from . import new_clients
 from . import workshop_lead
+from . import landing_session
 
 
 @bp.route('/public/clients/search', methods=['GET'])

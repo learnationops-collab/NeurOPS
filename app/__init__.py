@@ -120,6 +120,9 @@ def create_app(config_class=Config):
     csrf.exempt(sheets_bp) # Exento para scripts externos de Google Sheets
 
     from app.api.workshop import bp as workshop_bp
+    # Cuelga las rutas /landing/* del mismo blueprint. Va ANTES de registrarlo:
+    # despues de register_blueprint, Flask ya no acepta rutas nuevas.
+    from app.api import workshop_landing  # noqa: F401
     app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
 
     from app.api.metrics import bp as metrics_bp
