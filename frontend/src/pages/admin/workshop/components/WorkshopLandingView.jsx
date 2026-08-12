@@ -33,11 +33,11 @@ const fmtFecha = (iso) => {
 
 const ETAPAS = {
     entro: { texto: 'Entró', color: 'bg-slate-800 text-slate-400 border-slate-700' },
-    abrio_gate: { texto: 'Abrió el form', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    abrio_gate: { texto: 'Abrió el registro', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     completo_gate: { texto: 'Se registró', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
     dio_play: { texto: 'Dio play', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
-    vio_oferta: { texto: 'Vio la oferta', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-    clic_agenda: { texto: 'Clic en agendar', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    vio_oferta: { texto: 'Llegó a la oferta', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+    clic_agenda: { texto: 'Clic en Calendly', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
 };
 
 const Chip = ({ etapa }) => {
@@ -183,15 +183,41 @@ const WorkshopLandingView = () => {
                     </div>
                     <div className="space-y-4">
                         <PasoEmbudo label="Entraron" valor={visitas} base={visitas} pctPaso={null} />
-                        <PasoEmbudo label="Abrieron el formulario" valor={e.abrio_gate || 0} base={visitas} pctPaso={c.visita_a_gate} />
+                        <PasoEmbudo label="Abrieron el registro" valor={e.abrio_gate || 0} base={visitas} pctPaso={c.visita_a_gate} />
                         <PasoEmbudo label="Se registraron" valor={e.completo_gate || 0} base={visitas} pctPaso={c.gate_a_registro} />
                         <PasoEmbudo label="Dieron play" valor={e.dio_play || 0} base={visitas} pctPaso={c.registro_a_play} />
-                        <PasoEmbudo label="Llegaron a la oferta" valor={e.vio_oferta || 0} base={visitas} pctPaso={c.play_a_oferta} />
-                        <PasoEmbudo label="Clic en agendar" valor={e.clic_agenda || 0} base={visitas} pctPaso={c.oferta_a_agenda} />
+                        <PasoEmbudo label="Llegaron a la oferta (en pantalla)" valor={e.vio_oferta || 0} base={visitas} pctPaso={c.play_a_oferta} />
+                        <PasoEmbudo label="Clic en Calendly" valor={e.clic_agenda || 0} base={visitas} pctPaso={c.oferta_a_agenda} />
                     </div>
                     <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
                         El porcentaje es respecto del paso anterior. La barra, respecto del total de visitas.
                     </p>
+
+                    {/* Qué mide cada paso. Sin esto "abrió el registro" y "llegó a
+                        la oferta" se prestan a confundirse con Calendly. */}
+                    <div className="pt-4 border-t border-slate-800 space-y-2">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">De dónde sale cada dato</p>
+                        <dl className="space-y-1.5 text-[10px] leading-relaxed">
+                            {[
+                                ['Entraron', 'Cargaron /replay/. Una fila por visita.'],
+                                ['Abrieron el registro', 'Tocaron un botón de "Ver la clase" y se les abrió el formulario de 4 pasos (nombre, profesión, etapa, examen). NO es Calendly.'],
+                                ['Se registraron', 'Completaron esos 4 pasos. Acá es donde aparecen en la lista de abajo con nombre.'],
+                                ['Dieron play', 'Tocaron el póster y se montó el reproductor de Loom.'],
+                                ['Llegaron a la oferta', 'El bloque de la Sesión de Aceleración entró de verdad en su pantalla, al menos un cuarto. No alcanza con que se haya desbloqueado.'],
+                                ['Clic en Calendly', 'Tocaron el botón de agendar. Recién acá aparece el formulario de Calendly, que es otro y vive fuera de la landing.'],
+                            ].map(([t, d]) => (
+                                <div key={t} className="flex gap-2">
+                                    <dt className="font-black text-slate-300 shrink-0">{t}:</dt>
+                                    <dd className="text-slate-500 font-medium">{d}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <p className="text-[9px] text-slate-600 font-medium leading-relaxed pt-1">
+                            El embudo mide <span className="text-slate-400 font-bold">cada visita por separado</span>. Quien ya se
+                            registró antes y vuelve entra directo a la clase: va a figurar como "entró → dio play" sin los pasos
+                            de registro, porque en esa visita no los hizo.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="space-y-6">
@@ -223,7 +249,7 @@ const WorkshopLandingView = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Kpi label="Video visto" value={fmtDuracion(p.promedio_video_segundos)}
                              sub="promedio de quienes dieron play" icon={Video} colorClass="text-rose-400" />
-                        <Kpi label="Clic en agendar" value={e.clic_agenda || 0}
+                        <Kpi label="Clic en Calendly" value={e.clic_agenda || 0}
                              sub={`${c.oferta_a_agenda || 0}% de los que vieron la oferta`}
                              icon={MousePointerClick} colorClass="text-emerald-400" />
                     </div>
