@@ -106,6 +106,9 @@ const CloserWorkflowPage = () => {
     // marcar como hechos) — bloquea el envío del reporte hasta que se resuelva (ver
     // CloserService.get_previous_days_pending).
     const [pendingPreviousDays, setPendingPreviousDays] = useState(null);
+    // Si ese atraso además TRABA el envío del reporte, o solo se avisa. Lo decide el toggle
+    // `bloqueo_reporte_backlog` desde Operaciones → Configuración, no el frontend.
+    const [backlogBlocksReport, setBacklogBlocksReport] = useState(false);
     // Si "slots" no tiene valor guardado para el día elegido, se sugiere automáticamente el
     // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
     // días) — sigue siendo editable, no es un valor fijo.
@@ -142,6 +145,7 @@ const CloserWorkflowPage = () => {
                 }
                 setDailyActivity(d.activity || null);
                 setPendingPreviousDays(d.pending_previous_days || null);
+                setBacklogBlocksReport(!!d.backlog_blocks_report);
                 if (reportDate === localToday()) setTodayReportSent(!!d.sent);
             })
             .catch(err => console.error('Error al consultar el estado del reporte:', err))
@@ -3697,15 +3701,19 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
 
-                    {/* Bloqueo por trabajo atrasado de días ANTERIORES — no se puede enviar el
-                        reporte mientras quede backlog sin resolver de antes de este día (el mismo
-                        backend lo rechaza con 409 aunque se intente igual). */}
+                    {/* Trabajo atrasado de días ANTERIORES. Si el bloqueo está activo (toggle
+                        `bloqueo_reporte_backlog` en Operaciones), traba el envío y el backend lo
+                        rechaza con 409 aunque se intente igual. Si está suspendido, se sigue
+                        mostrando el mismo detalle pero como recordatorio, sin trabar nada. */}
                     {pendingPreviousDays && pendingPreviousDays.total > 0 && (
-                        <div className="p-5 rounded-2xl border bg-rose-500/10 border-rose-500/40 space-y-2">
-                            <div className="flex items-center gap-2 text-rose-300 text-xs font-black uppercase tracking-wide">
-                                <span className="text-lg">🚫</span> No podés enviar el reporte — tenés tareas atrasadas de días anteriores
+                        <div className={`p-5 rounded-2xl border space-y-2 ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/40' : 'bg-amber-500/10 border-amber-500/40'}`}>
+                            <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-wide ${backlogBlocksReport ? 'text-rose-300' : 'text-amber-300'}`}>
+                                <span className="text-lg">{backlogBlocksReport ? '🚫' : '⏳'}</span>
+                                {backlogBlocksReport
+                                    ? 'No podés enviar el reporte — tenés tareas atrasadas de días anteriores'
+                                    : 'Tenés tareas atrasadas de días anteriores'}
                             </div>
-                            <ul className="text-xs text-rose-200 font-bold space-y-1 list-disc list-inside">
+                            <ul className={`text-xs font-bold space-y-1 list-disc list-inside ${backlogBlocksReport ? 'text-rose-200' : 'text-amber-200'}`}>
                                 {pendingPreviousDays.confirmaciones_pendientes > 0 && (
                                     <li>{pendingPreviousDays.confirmaciones_pendientes} confirmación(es) nunca gestionada(s)</li>
                                 )}
@@ -3716,8 +3724,13 @@ const CloserWorkflowPage = () => {
                                     <li>{pendingPreviousDays.seguimientos_sin_realizar} seguimiento(s) asignado(s) sin realizar</li>
                                 )}
                             </ul>
+                            {!backlogBlocksReport && (
+                                <p className="text-[11px] text-amber-200/80 font-bold">
+                                    Podés enviar el reporte igual mientras te ponés al día, pero esto sigue contando como atraso.
+                                </p>
+                            )}
                             <button
-                                className="mt-1 px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-black uppercase text-white transition-all cursor-pointer"
+                                className={`mt-1 px-4 py-2 rounded-xl text-xs font-black uppercase text-white transition-all cursor-pointer ${backlogBlocksReport ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'}`}
                                 onClick={() => setActiveView('inbox')}
                             >
                                 Ir a resolver la bandeja
@@ -3851,10 +3864,10 @@ const CloserWorkflowPage = () => {
                         existente y lo reenvía a Discord, no lo duplica. */}
                     <div className="flex items-center gap-4 pt-2">
                         <button
-                            disabled={sendingReport || (pendingPreviousDays && pendingPreviousDays.total > 0)}
-                            title={pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
+                            disabled={sendingReport || (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0)}
+                            title={backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
                             onClick={async () => {
-                                if (pendingPreviousDays && pendingPreviousDays.total > 0) {
+                                if (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0) {
                                     toast.error('Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.');
                                     return;
                                 }

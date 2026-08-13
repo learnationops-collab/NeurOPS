@@ -20,6 +20,20 @@ _LAST_BACKLOG_SWEEP_TS = [0.0]
 _BACKLOG_SWEEP_INTERVAL_SECONDS = 6 * 3600
 _BACKLOG_SWEEP_DAYS = 30
 
+# Toggle del bloqueo de envío del reporte diario cuando el closer arrastra trabajo de días
+# anteriores (confirmaciones sin gestionar, llamadas sin registrar, seguimientos sin hacer).
+# Se maneja como FeatureToggle en vez de constante en código para poder suspenderlo y
+# reactivarlo desde Operaciones → Configuración sin un deploy — que es justo el caso de uso:
+# se suspende mientras el equipo se pone al día y se vuelve a activar después.
+# SIN FILA EN LA TABLA = SUSPENDIDO (mismo criterio que el resto de los toggles del proyecto:
+# `bool(toggle and toggle.is_active)`), así que el bloqueo arranca apagado.
+REPORT_BACKLOG_BLOCK_TOGGLE_KEY = 'bloqueo_reporte_backlog'
+
+
+def _backlog_block_enabled():
+    toggle = FeatureToggle.query.filter_by(key=REPORT_BACKLOG_BLOCK_TOGGLE_KEY).first()
+    return bool(toggle and toggle.is_active)
+
 def _maybe_auto_archive_backlog():
     import time
     now = time.time()
@@ -1826,7 +1840,10 @@ def get_daily_report_status():
         "slots": report.slots if report else None,
         "slots_last_value": last_report_with_slots.slots if last_report_with_slots else None,
         "activity": activity,
-        "pending_previous_days": pending_previous_days
+        "pending_previous_days": pending_previous_days,
+        # Si el atraso de días anteriores traba el envío o solo se avisa. El frontend lo necesita
+        # para saber si deshabilitar el botón: el atraso se sigue mostrando en los dos casos.
+        "backlog_blocks_report": _backlog_block_enabled()
     }), 200
 
 
@@ -1849,10 +1866,10 @@ def send_daily_report():
     day_local = _resolve_report_date(current_user, data.get('date'))
 
     # Bloqueo de envío si queda trabajo atrasado de días ANTERIORES sin resolver (pedido del
-    # usuario) — no se puede pasar por alto reenviando con `force`: es una validación de datos
-    # reales, no una advertencia descartable. El admin queda exento (puede reportar en nombre de
-    # un closer para destrabar una situación puntual).
-    if current_user.role != 'admin':
+    # usuario) — el admin queda exento (puede reportar en nombre de un closer para destrabar una
+    # situación puntual). El bloqueo solo aplica si el toggle está encendido: mientras está
+    # apagado el atraso se sigue calculando y mostrando, pero como aviso, no como traba.
+    if _backlog_block_enabled() and current_user.role != 'admin':
         try:
             pending = CloserService.get_previous_days_pending(current_user.id, day_local)
         except Exception as e:
