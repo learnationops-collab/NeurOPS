@@ -2065,6 +2065,16 @@ class CloserService:
             Appointment.origin.like('Referido de%')
         ).count()
 
+        # Agendas del día (citas cuya hora cae en el día, sin importar en qué estado quedaron):
+        # es el piso lógico de los "slots disponibles" que el closer escribe a mano en el reporte
+        # — un cupo ocupado sigue siendo un cupo, así que nunca puede haber más agendas que slots.
+        # Se devuelve para poder avisarle en pantalla si escribe un número imposible.
+        agendas_del_dia = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.start_time >= start_utc,
+            Appointment.start_time <= end_utc
+        ).count()
+
         # Pendientes AHORA (no es "lo que se tocó hoy" — es "lo que todavía falta"), solo tiene
         # sentido para el día de hoy: mismo criterio que step=confirmations/calls del mazo.
         pendientes_confirmar = pendientes_llamar = None
@@ -2099,6 +2109,7 @@ class CloserService:
             'seguimientos_configurados': seguimientos_configurados,
             'seguimientos_hechos': seguimientos_hechos,
             'referidos_capturados': referidos_capturados,
+            'agendas_del_dia': agendas_del_dia,
             'ventas_count': ventas_count,
             'ventas_cash': round(ventas_cash, 2),
             'pendientes_confirmar': pendientes_confirmar,

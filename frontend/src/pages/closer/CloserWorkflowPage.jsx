@@ -110,6 +110,13 @@ const CloserWorkflowPage = () => {
     // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
     // días) — sigue siendo editable, no es un valor fijo.
     const [reportSlotsIsDefault, setReportSlotsIsDefault] = useState(false);
+    // Aviso en vivo si los slots escritos no llegan a las agendas del día: un cupo agendado
+    // sigue siendo un cupo, así que ese número es imposible (venía pasando en reportes reales).
+    const slotsPorDebajoDeAgendas = (
+        reportSlots.trim() !== '' &&
+        dailyActivity?.agendas_del_dia !== undefined &&
+        Number(reportSlots) < dailyActivity.agendas_del_dia
+    );
 
     // Consultar si el día elegido ya tiene un reporte enviado (y precargar lo que ya se había
     // escrito) cada vez que se entra a la pestaña de reporte, se cambia el día a reportar, o se
@@ -3766,23 +3773,45 @@ const CloserWorkflowPage = () => {
 
                     {/* Slots Disponibles — el único número de este reporte que el sistema no puede
                         calcular solo, porque no hay ningún lugar de la Bandeja donde se defina
-                        cuántos cupos de agenda tenía el closer disponibles ese día. */}
+                        cuántos cupos de agenda tenía el closer disponibles ese día. Se venía
+                        escribiendo mal (reportes con menos slots que agendas del día, que es
+                        imposible: un cupo ocupado sigue siendo un cupo), así que la explicación
+                        es explícita y hay un aviso en vivo si el número no cierra. */}
                     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-3">
                         <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span> Slots disponibles
                         </h3>
                         <p className="text-xs text-slate-400">
-                            Único dato que no se puede sacar solo de la Bandeja — cuántos cupos de agenda tenías configurados hoy en total. Todo lo demás de este reporte es automático.
+                            Único dato que no se puede sacar solo de la Bandeja — todo lo demás de este reporte es automático.
                         </p>
+                        <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 space-y-2">
+                            <p className="text-xs text-slate-300 font-bold">Cómo se cuenta: <span className="text-violet-300">cupos ocupados + cupos que quedaron libres</span>.</p>
+                            <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
+                                <li>Es la <b className="text-slate-300">capacidad total</b> de agenda que abriste ese día, no los huecos que sobraron.</li>
+                                <li>Un cupo que se agendó <b className="text-slate-300">sigue contando</b> — la agenda no lo elimina, lo ocupa.</li>
+                                <li>Por eso <b className="text-slate-300">nunca puede ser menor que tus agendas del día</b>.</li>
+                                <li>Ejemplo: abriste 10 cupos, se agendaron 6 y 4 quedaron vacíos → escribís <b className="text-slate-300">10</b>, no 4 ni 6.</li>
+                            </ul>
+                            {dailyActivity?.agendas_del_dia !== undefined && (
+                                <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+                                    Ese día tenés <b className="text-white">{dailyActivity.agendas_del_dia}</b> agenda(s) registradas: los slots tienen que ser <b className="text-white">{dailyActivity.agendas_del_dia}</b> o más.
+                                </p>
+                            )}
+                        </div>
                         <input
                             type="number"
                             min="0"
                             value={reportSlots}
                             onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
                             placeholder="ej. 15"
-                            className={`w-full sm:w-48 bg-slate-950/60 border rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all ${reportSlotsIsDefault ? 'border-violet-600/60' : 'border-slate-800'}`}
+                            className={`w-full sm:w-48 bg-slate-950/60 border rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all ${slotsPorDebajoDeAgendas ? 'border-amber-500' : reportSlotsIsDefault ? 'border-violet-600/60' : 'border-slate-800'}`}
                         />
-                        {reportSlotsIsDefault && (
+                        {slotsPorDebajoDeAgendas && (
+                            <p className="text-[11px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
+                                ⚠️ Escribiste {reportSlots} slots pero ese día tenés {dailyActivity.agendas_del_dia} agenda(s). Los cupos que se agendaron también cuentan — el número tiene que ser {dailyActivity.agendas_del_dia} o más.
+                            </p>
+                        )}
+                        {reportSlotsIsDefault && !slotsPorDebajoDeAgendas && (
                             <p className="text-[10px] text-violet-350 font-bold uppercase tracking-wide">
                                 Sugerido a partir de tu último reporte — editalo si hoy cambió.
                             </p>
