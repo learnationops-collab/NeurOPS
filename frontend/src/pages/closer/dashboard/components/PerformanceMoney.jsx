@@ -3,14 +3,15 @@ import Card from '../../../../components/ui/Card';
 import { money } from '../performanceUtils';
 
 const CASH_KEYS = [
-    { key: 'nuevas_ventas', label: 'Nuevas ventas', color: '#FF3FA4' },
-    { key: 'cobro_cuotas', label: 'Cobro de cuotas', color: '#6366F1' },
-    { key: 'depositos', label: 'Depósitos / reservas', color: '#F59E0B' },
-    { key: 'upsell_renovacion', label: 'Upsell + renovación', color: '#22C55E' }
+    { key: 'nuevas_ventas', label: 'Nuevas ventas', note: 'PIF + Split Pay', color: '#FF3FA4' },
+    { key: 'cobro_cuotas', label: 'Cobro de cuotas', note: 'de ventas ya cerradas', color: '#6366F1' },
+    { key: 'senas', label: 'Señas', note: 'reservas, todavía no son venta', color: '#F59E0B' },
+    { key: 'upsell_renovacion', label: 'Upsell + renovación', note: 'clientes que ya habían comprado', color: '#22C55E' },
+    { key: 'otros', label: 'Sin clasificar', note: 'tipo de pago no reconocido', color: '#94A3B8' }
 ];
 
 const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
-    const total = Object.values(cashMix).reduce((a, b) => a + b, 0) || 1;
+    const total = Object.values(cashMix).reduce((a, b) => a + (b?.cash || 0), 0) || 1;
     const pmax = Math.max(1, ...programas.map(p => p.count));
 
     return (
@@ -19,16 +20,25 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Composición del cash
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">De dónde vino la plata que efectivamente entró.</p>
+                <p className="text-[11px] text-muted mt-1 mb-5">De dónde vino la plata que efectivamente entró, y con cuántos pagos.</p>
                 <div className="space-y-3.5">
                     {CASH_KEYS.map(k => {
-                        const v = cashMix[k.key] || 0;
+                        const bucket = cashMix[k.key] || { cash: 0, count: 0 };
+                        const v = bucket.cash || 0;
+                        const n = bucket.count || 0;
                         const q = Math.round((v / total) * 100);
+                        if (!v && !n && k.key === 'otros') return null;
                         return (
                             <div key={k.key}>
-                                <div className="flex justify-between text-[12.5px] font-semibold">
-                                    <span>{k.label}</span>
-                                    <span><b>{money(v)}</b> <span className="text-muted text-[11px]">{q}%</span></span>
+                                <div className="flex justify-between text-[12.5px] font-semibold gap-2">
+                                    <span className="min-w-0">
+                                        {k.label}
+                                        <span className="block text-[10px] font-normal text-muted leading-tight">{k.note}</span>
+                                    </span>
+                                    <span className="text-right shrink-0">
+                                        <b>{money(v)}</b> <span className="text-muted text-[11px]">{q}%</span>
+                                        <span className="block text-[10px] font-bold text-muted leading-tight">{n} pago{n === 1 ? '' : 's'}</span>
+                                    </span>
                                 </div>
                                 <div className="h-1.5 rounded-full bg-surface-hover mt-1.5 overflow-hidden">
                                     <div className="h-full rounded-full" style={{ width: `${q}%`, background: k.color }} />

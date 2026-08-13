@@ -232,11 +232,21 @@ class CloserDashboardService:
                 'sena_a_venta_real': pct.get('deposit_conversion_rate', 0),
                 'close_rate_promesa': pct.get('close_rate_promesa', 0)
             },
+            # Cada bucket lleva su cantidad de pagos además del monto: sin eso no se puede
+            # distinguir "poco cash porque hubo pocos pagos" de "poco cash porque los pagos
+            # fueron chicos" (pedido del usuario para las señas, aplicado a las 5 categorías).
             'cash_mix': {
-                'nuevas_ventas': round(sales['pif']['cash'] + sales['split']['cash'], 2),
-                'cobro_cuotas': round(sales['installment']['cash'], 2),
-                'depositos': round(sales['deposit']['cash'], 2),
-                'upsell_renovacion': round(sales['upsell']['cash'] + sales['renovacion']['cash'], 2)
+                'nuevas_ventas': {
+                    'cash': round(sales['pif']['cash'] + sales['split']['cash'], 2),
+                    'count': sales['pif']['count'] + sales['split']['count']
+                },
+                'cobro_cuotas': {'cash': round(sales['installment']['cash'], 2), 'count': sales['installment']['count']},
+                'senas': {'cash': round(sales['deposit']['cash'], 2), 'count': sales['deposit']['count']},
+                'upsell_renovacion': {
+                    'cash': round(sales['upsell']['cash'] + sales['renovacion']['cash'], 2),
+                    'count': sales['upsell']['count'] + sales['renovacion']['count']
+                },
+                'otros': {'cash': round(sales.get('otros', {}).get('cash', 0), 2), 'count': sales.get('otros', {}).get('count', 0)}
             },
             'programas': sales['program_tickets'],
             'actividad': {
