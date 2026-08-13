@@ -56,15 +56,34 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-secondary" /> Cuotas por cobrar
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">Saldo pendiente histórico según el plan de cuotas de cada cliente (no filtrado por período).</p>
-                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                <p className="text-[11px] text-muted mt-1 mb-4">Saldo pendiente histórico según el plan de cuotas de cada cliente (no filtrado por período).</p>
+                {/* Vencido vs. por vencer: un total alto puede ser un plan recién firmado con todo
+                    su cronograma a futuro (normal) o plata que había que cobrar y no se cobró. */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className={`rounded-xl px-3 py-2.5 border ${cuotas.vencido > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-main/60 border-base'}`}>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted">Vencido</p>
+                        <b className={`text-lg font-black block ${cuotas.vencido > 0 ? 'text-rose-400' : 'text-base'}`}>{money(cuotas.vencido)}</b>
+                        <span className="text-[10px] text-muted">{cuotas.count_vencido} cuota{cuotas.count_vencido === 1 ? '' : 's'}</span>
+                    </div>
+                    <div className="rounded-xl px-3 py-2.5 border bg-main/60 border-base">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted">Por vencer</p>
+                        <b className="text-lg font-black block">{money(cuotas.por_vencer)}</b>
+                        <span className="text-[10px] text-muted">{cuotas.count - cuotas.count_vencido} cuota{cuotas.count - cuotas.count_vencido === 1 ? '' : 's'}</span>
+                    </div>
+                </div>
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                     {cuotas.rows.length > 0 ? cuotas.rows.map((c, i) => (
                         <div key={i} className="flex items-center justify-between py-2 border-b border-base/60 last:border-0">
                             <div className="min-w-0">
                                 <b className="text-[12px] block truncate">{c.client_name}</b>
                                 <span className="text-[10px] text-muted">{c.program}</span>
                             </div>
-                            <b className="text-[12.5px] shrink-0 ml-2">{money(c.pending_amount)}</b>
+                            <div className="shrink-0 ml-2 text-right">
+                                <b className="text-[12.5px] block">{money(c.pending_amount)}</b>
+                                <span className={`text-[10px] ${c.is_overdue ? 'text-rose-400 font-bold' : 'text-muted'}`}>
+                                    {c.is_overdue ? `vencida hace ${c.days_overdue}d` : c.due_date ? `vence ${c.due_date}` : 'sin fecha'}
+                                </span>
+                            </div>
                         </div>
                     )) : (
                         <div className="text-center py-8 text-[11px] text-muted">Sin cuotas pendientes</div>

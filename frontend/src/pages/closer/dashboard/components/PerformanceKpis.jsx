@@ -38,7 +38,9 @@ const PerformanceKpis = ({ current, previous, deuda, coverage }) => {
                 <KpiCard hero label="Cash collected" value={money(k.cash_collected)} current={k.cash_collected} previous={pk?.cash_collected} />
                 <KpiCard label="Ventas cerradas" value={k.ventas} current={k.ventas} previous={pk?.ventas} note="solo PIF + Split Pay" />
                 <KpiCard label="Ticket promedio" value={money(k.ticket_promedio)} current={k.ticket_promedio} previous={pk?.ticket_promedio} note="solo PIF + Split Pay" />
-                <KpiCard label="Deuda total pendiente" value={money(deuda)} note="saldo histórico, no filtrado por período" />
+                <KpiCard label="Deuda total pendiente" value={money(k.deuda_total_pendiente ?? deuda)}
+                    note={k.deuda_vencida > 0 ? `${money(k.deuda_vencida)} ya vencidos · saldo histórico` : 'saldo histórico, no filtrado por período'}
+                    warning={k.deuda_vencida > 0 ? 'Hay cuotas con la fecha de vencimiento ya pasada sin cobrar.' : null} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <KpiCard sm label="Close rate s/ llamada" value={pct(k.close_rate_llamada)} current={k.close_rate_llamada} previous={pk?.close_rate_llamada}

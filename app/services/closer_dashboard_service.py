@@ -58,34 +58,64 @@ class CloserDashboardService:
 
         Antes se leía de Enrollment/Payment (sistema legado sin datos recientes,
         ver installment.py), por lo que la deuda total pendiente siempre daba $0
-        aunque hubiera cuotas reales pendientes de cobro."""
+        aunque hubiera cuotas reales pendientes de cobro.
+
+        Se separa lo **vencido** (fecha de vencimiento ya pasada y sigue sin pagarse: plata que
+        había que cobrar y no se cobró) de lo **por vencer** (cronograma normal a futuro). Sin esa
+        distinción un total grande no dice nada — puede ser un problema de cobranza o simplemente
+        un plan de cuotas recién firmado."""
+        hoy = date.today()
         q = InstallmentPlan.query.filter(InstallmentPlan.estado != 'pagado')
         if closer_id:
             q = q.join(Appointment, InstallmentPlan.appointment_id == Appointment.id) \
                  .filter(Appointment.closer_id == closer_id)
         plans = q.all()
-        if not plans:
-            return [], 0.0
 
+        empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'count': 0, 'count_vencido': 0}
+        if not plans:
+            return [], empty
+
+        # El nombre se resuelve por `client_id` del plan y, si viene vacío (planes creados antes
+        # de ese campo), por el cliente de la cita que lo originó — antes esas filas se mostraban
+        # como "Sin nombre", que no sirve para ir a cobrar.
         client_ids = {p.client_id for p in plans if p.client_id}
+        appt_ids = {p.appointment_id for p in plans if not p.client_id and p.appointment_id}
+        appts = {a.id: a for a in Appointment.query.filter(Appointment.id.in_(appt_ids)).all()} if appt_ids else {}
+        client_ids |= {a.client_id for a in appts.values() if a.client_id}
         clients = {c.id: c for c in Client.query.filter(Client.id.in_(client_ids)).all()} if client_ids else {}
 
         rows = []
-        total_pending = 0.0
+        totals = dict(empty)
         for p in plans:
             if not p.monto or p.monto <= 1:
                 continue
             client = clients.get(p.client_id)
+            if not client and p.appointment_id in appts:
+                client = clients.get(appts[p.appointment_id].client_id)
             program_name = PROGRAM_NAMES.get(p.programa_code, p.programa_code or 'Sin programa')
+            vencida = bool(p.fecha_vencimiento and p.fecha_vencimiento < hoy)
+            monto = round(p.monto, 2)
             rows.append({
                 'client_name': (client.full_name or client.email) if client else 'Sin nombre',
                 'program': f"Cuota {p.numero_cuota} · {program_name}",
-                'pending_amount': round(p.monto, 2)
+                'pending_amount': monto,
+                'due_date': p.fecha_vencimiento.isoformat() if p.fecha_vencimiento else None,
+                'is_overdue': vencida,
+                'days_overdue': (hoy - p.fecha_vencimiento).days if vencida else 0
             })
-            total_pending += p.monto
+            totals['total'] += monto
+            totals['count'] += 1
+            if vencida:
+                totals['vencido'] += monto
+                totals['count_vencido'] += 1
+            else:
+                totals['por_vencer'] += monto
 
-        rows.sort(key=lambda r: r['pending_amount'], reverse=True)
-        return rows[:limit], round(total_pending, 2)
+        # Lo vencido primero (y dentro de eso, lo más atrasado), que es lo que hay que cobrar hoy.
+        rows.sort(key=lambda r: (not r['is_overdue'], -r['days_overdue'], -r['pending_amount']))
+        for k in ('total', 'vencido', 'por_vencer'):
+            totals[k] = round(totals[k], 2)
+        return rows[:limit], totals
 
     @staticmethod
     def _reports_coverage(closer_id, start, end, active_closers):
@@ -328,9 +358,15 @@ class CloserDashboardService:
             alerts.append({'type': 'warning', 'icon': '🔁', 'title': f"{round(cancel_resched_rate,1)}% entre cancelaciones y reprogramaciones",
                             'text': 'Revisar el guion de confirmación y el recordatorio previo a la llamada.'})
 
-        if pending > 0 and pending > current['kpis']['cash_collected'] * 2:
-            alerts.append({'type': 'danger', 'icon': '💰', 'title': f"${pending:,.0f} en cuotas pendientes de cobro",
-                            'text': 'Saldo total adeudado por clientes (no filtrado por período). Cash comprometido que todavía no entró a caja.'})
+        # La alerta de deuda ahora se dispara por lo VENCIDO, no por el total: un total alto puede
+        # ser simplemente un plan de cuotas recién firmado con todo su cronograma a futuro, que no
+        # es un problema. Lo vencido sí: es plata que había que cobrar y no se cobró.
+        vencido = pending.get('vencido', 0)
+        if vencido > 0:
+            alerts.append({'type': 'danger', 'icon': '💰',
+                            'title': f"${vencido:,.0f} en cuotas vencidas sin cobrar",
+                            'text': f"{pending.get('count_vencido', 0)} cuota(s) con la fecha de vencimiento ya pasada. "
+                                    f"Del saldo total pendiente (${pending.get('total', 0):,.0f}, no filtrado por período)."})
 
         fu = current['actividad']['follow_ups']
         resp_rate = round(fu['replied'] / fu['sent'] * 100, 1) if fu['sent'] else 0
@@ -353,8 +389,9 @@ class CloserDashboardService:
             previous_stats = CloserService.get_comprehensive_stats(closer_id, prev_start, prev_end, agg_type='sum')
             previous = CloserDashboardService._build_period_block(previous_stats)
 
-        cuotas_rows, cuotas_total = CloserDashboardService._pending_collections(closer_id)
-        current['kpis']['deuda_total_pendiente'] = cuotas_total
+        cuotas_rows, cuotas_totals = CloserDashboardService._pending_collections(closer_id)
+        current['kpis']['deuda_total_pendiente'] = cuotas_totals['total']
+        current['kpis']['deuda_vencida'] = cuotas_totals['vencido']
 
         active_closers = User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
         coverage = CloserDashboardService._reports_coverage(closer_id, start, end, active_closers)
@@ -390,9 +427,9 @@ class CloserDashboardService:
             'previous': previous,
             'reports_productivity': current_stats['reports_productivity'],
             'reports_coverage': coverage,
-            'cuotas_por_cobrar': {'rows': cuotas_rows, 'total': cuotas_total},
+            'cuotas_por_cobrar': {'rows': cuotas_rows, **cuotas_totals},
             'fuente': CloserDashboardService._source_performance(closer_id, start, end),
             'ranking': ranking,
             'closers': [{'id': c.id, 'username': c.username} for c in active_closers],
-            'alerts': CloserDashboardService._build_alerts(current, cuotas_total, coverage)
+            'alerts': CloserDashboardService._build_alerts(current, cuotas_totals, coverage)
         }
