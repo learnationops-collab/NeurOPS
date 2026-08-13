@@ -1,7 +1,10 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
+import MetricTip from './MetricTip';
+import { tip } from '../metricSources';
 
 const FUNNEL_COLORS = ['#6366F1', '#7C5CE0', '#9B4FD8', '#C441C8', '#E639B0', '#FF3FA4'];
+const FUNNEL_METRICS = ['funnel_slots', 'funnel_agendas', 'funnel_confirmadas', 'funnel_asistencias', 'funnel_presentaciones', 'funnel_ventas'];
 
 /* Confirmaciones del período vs. de agendas posteriores: solo las primeras son un paso de este
    embudo. Las próximas son pipeline hacia adelante — mezclarlas infla el confirmation rate con
@@ -14,14 +17,20 @@ const ConfirmacionesCard = ({ confirmaciones }) => (
         <p className="text-[11px] text-muted mt-1 mb-5">Las del período y las de agendas que todavía no llegaron son dos cosas distintas.</p>
         <div className="grid grid-cols-2 gap-3">
             <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted">De este período</p>
+                <div className="flex items-start justify-between gap-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted">De este período</p>
+                    <MetricTip iconOnly {...tip('confirm_periodo')} />
+                </div>
                 <p className="text-2xl font-black tracking-tighter mt-1 text-emerald-400">{confirmaciones.del_periodo}</p>
                 <p className="text-[10px] text-muted mt-0.5 leading-tight">
                     de {confirmaciones.agendas_periodo} agendas · {confirmaciones.rate_periodo}%
                 </p>
             </div>
             <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted">Próximas agendas</p>
+                <div className="flex items-start justify-between gap-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted">Próximas agendas</p>
+                    <MetricTip iconOnly {...tip('confirm_proximas')} />
+                </div>
                 <p className="text-2xl font-black tracking-tighter mt-1 text-teal-400">{confirmaciones.proximas}</p>
                 <p className="text-[10px] text-muted mt-0.5 leading-tight">
                     de {confirmaciones.agendas_proximas} por venir · {confirmaciones.rate_proximas}%
@@ -43,13 +52,13 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, confirmaciones }) => {
         const width = Math.max(6, Math.round((v / max) * 100));
         const conv = i ? (values[i - 1] ? Math.round((v / values[i - 1]) * 100) : 0) : null;
         if (i && conv !== null && conv < worst.rate) worst = { idx: i, rate: conv };
-        return { label: labels[i], v, width, conv };
+        return { label: labels[i], v, width, conv, metric: FUNNEL_METRICS[i] };
     });
 
     const losses = [
-        { name: 'No show', icon: '😶', ...perdidas.no_show, color: '#EF4444' },
-        { name: 'Cancelaciones', icon: '🚫', ...perdidas.cancelaciones, color: '#F59E0B' },
-        { name: 'Reprogramaciones', icon: '🔁', ...perdidas.reprogramaciones, color: '#60A5FA' }
+        { name: 'No show', icon: '😶', metric: 'perdida_no_show', ...perdidas.no_show, color: '#EF4444' },
+        { name: 'Cancelaciones', icon: '🚫', metric: 'perdida_cancelaciones', ...perdidas.cancelaciones, color: '#F59E0B' },
+        { name: 'Reprogramaciones', icon: '🔁', metric: 'perdida_reprogramaciones', ...perdidas.reprogramaciones, color: '#60A5FA' }
     ];
 
     return (
@@ -70,7 +79,10 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, confirmaciones }) => {
                 <div className="space-y-2">
                     {rows.map((r, i) => (
                         <div key={r.label} className="flex items-center gap-3">
-                            <div className="w-28 shrink-0 text-[11px] font-bold text-muted">{r.label}</div>
+                            <div className="w-32 shrink-0 text-[11px] font-bold text-muted flex items-center gap-1.5">
+                                <span className="truncate">{r.label}</span>
+                                <MetricTip iconOnly {...tip(r.metric)} />
+                            </div>
                             <div className="flex-1 h-8 rounded-lg bg-main border border-base overflow-hidden relative">
                                 <div
                                     className="h-full flex items-center pl-3 text-[12px] font-black text-white rounded-lg transition-all"
@@ -111,7 +123,10 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, confirmaciones }) => {
                                 {l.icon}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <b className="text-[13px] block">{l.name}</b>
+                                <b className="text-[13px] flex items-center gap-1.5">
+                                    {l.name}
+                                    <MetricTip iconOnly {...tip(l.metric)} />
+                                </b>
                                 <div className="h-1.5 rounded-full bg-surface-hover mt-1 overflow-hidden">
                                     <div className="h-full rounded-full" style={{ width: `${Math.min(100, l.rate * 2.5)}%`, background: l.color }} />
                                 </div>

@@ -1,13 +1,15 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
+import MetricTip from './MetricTip';
 import { money } from '../performanceUtils';
+import { tip } from '../metricSources';
 
 const CASH_KEYS = [
-    { key: 'nuevas_ventas', label: 'Nuevas ventas', note: 'PIF + Split Pay', color: '#FF3FA4' },
-    { key: 'cobro_cuotas', label: 'Cobro de cuotas', note: 'de ventas ya cerradas', color: '#6366F1' },
-    { key: 'senas', label: 'Señas', note: 'reservas, todavía no son venta', color: '#F59E0B' },
-    { key: 'upsell_renovacion', label: 'Upsell + renovación', note: 'clientes que ya habían comprado', color: '#22C55E' },
-    { key: 'otros', label: 'Sin clasificar', note: 'tipo de pago no reconocido', color: '#94A3B8' }
+    { key: 'nuevas_ventas', metric: 'cash_nuevas_ventas', label: 'Nuevas ventas', note: 'PIF + Split Pay', color: '#FF3FA4' },
+    { key: 'cobro_cuotas', metric: 'cash_cobro_cuotas', label: 'Cobro de cuotas', note: 'de ventas ya cerradas', color: '#6366F1' },
+    { key: 'senas', metric: 'cash_senas', label: 'Señas', note: 'reservas, todavía no son venta', color: '#F59E0B' },
+    { key: 'upsell_renovacion', metric: 'cash_upsell_renovacion', label: 'Upsell + renovación', note: 'clientes que ya habían comprado', color: '#22C55E' },
+    { key: 'otros', metric: 'cash_otros', label: 'Sin clasificar', note: 'tipo de pago no reconocido', color: '#94A3B8' }
 ];
 
 const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
@@ -32,7 +34,7 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                             <div key={k.key}>
                                 <div className="flex justify-between text-[12.5px] font-semibold gap-2">
                                     <span className="min-w-0">
-                                        {k.label}
+                                        <span className="inline-flex items-center gap-1.5">{k.label} <MetricTip iconOnly {...tip(k.metric)} /></span>
                                         <span className="block text-[10px] font-normal text-muted leading-tight">{k.note}</span>
                                     </span>
                                     <span className="text-right shrink-0">
@@ -61,12 +63,12 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                     su cronograma a futuro (normal) o plata que había que cobrar y no se cobró. */}
                 <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className={`rounded-xl px-3 py-2.5 border ${cuotas.vencido > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-main/60 border-base'}`}>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted">Vencido</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted flex items-center gap-1.5">Vencido <MetricTip iconOnly {...tip('deuda_vencida')} /></p>
                         <b className={`text-lg font-black block ${cuotas.vencido > 0 ? 'text-rose-400' : 'text-base'}`}>{money(cuotas.vencido)}</b>
                         <span className="text-[10px] text-muted">{cuotas.count_vencido} cuota{cuotas.count_vencido === 1 ? '' : 's'}</span>
                     </div>
                     <div className="rounded-xl px-3 py-2.5 border bg-main/60 border-base">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted">Por vencer</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted flex items-center gap-1.5">Por vencer <MetricTip iconOnly {...tip('deuda_por_vencer')} /></p>
                         <b className="text-lg font-black block">{money(cuotas.por_vencer)}</b>
                         <span className="text-[10px] text-muted">{cuotas.count - cuotas.count_vencido} cuota{cuotas.count - cuotas.count_vencido === 1 ? '' : 's'}</span>
                     </div>
@@ -97,6 +99,7 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
             <Card variant="surface" padding="p-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Programas vendidos
+                    <MetricTip iconOnly {...tip('programas')} />
                 </h3>
                 <p className="text-[11px] text-muted mt-1 mb-5">Unidades y ticket promedio por programa.</p>
                 <div className="space-y-3.5">

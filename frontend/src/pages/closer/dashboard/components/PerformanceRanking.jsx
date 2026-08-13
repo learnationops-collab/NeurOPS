@@ -1,6 +1,8 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
+import MetricTip from './MetricTip';
 import { money } from '../performanceUtils';
+import { tip } from '../metricSources';
 
 const ALERT_STYLES = {
     danger: 'bg-rose-500/10 border-rose-500/30',
@@ -20,12 +22,12 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
                             <tr className="text-[8.5px] font-black uppercase tracking-widest text-muted border-b border-base">
                                 <th className="text-left py-2 w-10"></th>
                                 <th className="text-left py-2">Closer</th>
-                                <th className="text-right py-2">Cash</th>
-                                <th className="text-right py-2">Ventas</th>
-                                <th className="text-right py-2">Show rate</th>
-                                <th className="text-right py-2">Close s/ pres.</th>
-                                <th className="text-right py-2">Ticket</th>
-                                <th className="text-right py-2">Reportes enviados</th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Cash <MetricTip iconOnly {...tip('cash_collected')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Ventas <MetricTip iconOnly {...tip('ventas')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Show rate <MetricTip iconOnly {...tip('q_show_rate')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Close s/ pres. <MetricTip iconOnly {...tip('q_close_presentacion')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Ticket <MetricTip iconOnly {...tip('ticket_promedio')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Reportes enviados <MetricTip iconOnly {...tip('rank_reportes')} /></span></th>
                                 <th className="text-right py-2">Sin enviar</th>
                             </tr>
                         </thead>

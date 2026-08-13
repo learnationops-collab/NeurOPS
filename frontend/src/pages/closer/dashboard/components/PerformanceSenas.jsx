@@ -1,6 +1,8 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
+import MetricTip from './MetricTip';
 import { money } from '../performanceUtils';
+import { tip } from '../metricSources';
 
 /* Las señas no son ventas: son reservas. Esta sección responde dos preguntas distintas —
    con qué frecuencia se consiguen (sobre presentaciones y sobre llamadas asistidas) y en qué
@@ -8,19 +10,21 @@ import { money } from '../performanceUtils';
    POSTERIORES a la seña del mismo cliente, así que las señas recientes aparecen como pendientes
    hasta que efectivamente paguen. */
 
-const Stat = ({ label, value, note, color }) => (
+const Stat = ({ label, value, note, color, metric }) => (
     <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
-        <p className="text-[9px] font-black uppercase tracking-widest text-muted">{label}</p>
+        <p className="text-[9px] font-black uppercase tracking-widest text-muted flex items-center justify-between gap-2">
+            <span>{label}</span>{metric && <MetricTip iconOnly {...tip(metric)} />}
+        </p>
         <p className="text-2xl font-black tracking-tighter mt-1" style={color ? { color } : undefined}>{value}</p>
         {note && <p className="text-[10px] text-muted mt-0.5 leading-tight">{note}</p>}
     </div>
 );
 
-const Bar = ({ label, count, rate, note, color }) => (
+const Bar = ({ label, count, rate, note, color, metric }) => (
     <div>
         <div className="flex justify-between text-[12.5px] font-semibold gap-2">
             <span className="min-w-0">
-                {label}
+                <span className="inline-flex items-center gap-1.5">{label} {metric && <MetricTip iconOnly {...tip(metric)} />}</span>
                 <span className="block text-[10px] font-normal text-muted leading-tight">{note}</span>
             </span>
             <span className="text-right shrink-0"><b>{count}</b> <span className="text-muted text-[11px]">{rate}%</span></span>
@@ -44,13 +48,13 @@ const PerformanceSenas = ({ senas }) => {
                     Una seña es una reserva, no una venta — por eso no entra en el close rate ni en el ticket promedio.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                    <Stat label="Señas del período" value={senas.count} note={`${money(senas.cash)} cobrados`} color="#F59E0B" />
-                    <Stat label="Seña promedio" value={money(senas.ticket_promedio)} note="monto de reserva" />
-                    <Stat label="Por presentación" value={`${senas.por_presentacion}%`} note={`sobre ${senas.presentaciones} presentaciones`} color="#A78BFA" />
-                    <Stat label="Por llamada" value={`${senas.por_llamada}%`} note={`sobre ${senas.asistencias} asistencias`} color="#60A5FA" />
+                    <Stat metric="senas_count" label="Señas del período" value={senas.count} note={`${money(senas.cash)} cobrados`} color="#F59E0B" />
+                    <Stat metric="senas_ticket" label="Seña promedio" value={money(senas.ticket_promedio)} note="monto de reserva" />
+                    <Stat metric="senas_por_presentacion" label="Por presentación" value={`${senas.por_presentacion}%`} note={`sobre ${senas.presentaciones} presentaciones`} color="#A78BFA" />
+                    <Stat metric="senas_por_llamada" label="Por llamada" value={`${senas.por_llamada}%`} note={`sobre ${senas.asistencias} asistencias`} color="#60A5FA" />
                 </div>
                 <div className="flex justify-between text-[12px] font-bold border-t border-base mt-4 pt-3">
-                    <span className="text-muted">Close rate con señas (cierres + reservas)</span>
+                    <span className="text-muted inline-flex items-center gap-1.5">Close rate con señas (cierres + reservas) <MetricTip iconOnly {...tip('senas_close_promesa')} /></span>
                     <b>{senas.close_rate_promesa}%</b>
                 </div>
             </Card>
@@ -65,9 +69,9 @@ const PerformanceSenas = ({ senas }) => {
                 {senas.seguidas > 0 ? (
                     <>
                         <div className="space-y-3.5">
-                            <Bar label="Pasaron a pago completo" note="PIF — pagó todo el programa" count={senas.a_pif} rate={senas.a_pif_rate} color="#22C55E" />
-                            <Bar label="Pasaron a Split Pay" note="primer pago, resto en cuotas" count={senas.a_split} rate={senas.a_split_rate} color="#6366F1" />
-                            <Bar label="Todavía sin pago" note="la reserva no se cerró (o es reciente)" count={senas.pendientes} rate={senas.pendientes_rate} color="#EF4444" />
+                            <Bar metric="senas_a_pif" label="Pasaron a pago completo" note="PIF — pagó todo el programa" count={senas.a_pif} rate={senas.a_pif_rate} color="#22C55E" />
+                            <Bar metric="senas_a_split" label="Pasaron a Split Pay" note="primer pago, resto en cuotas" count={senas.a_split} rate={senas.a_split_rate} color="#6366F1" />
+                            <Bar metric="senas_pendientes" label="Todavía sin pago" note="la reserva no se cerró (o es reciente)" count={senas.pendientes} rate={senas.pendientes_rate} color="#EF4444" />
                         </div>
                         <div className="flex justify-between text-[13px] font-black border-t border-base mt-4 pt-3">
                             <span>Conversión total</span><span>{senas.conversion_total}%</span>

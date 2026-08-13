@@ -10,6 +10,7 @@ import PerformanceSenas from './components/PerformanceSenas';
 import PerformanceMoney from './components/PerformanceMoney';
 import PerformanceActivity from './components/PerformanceActivity';
 import PerformanceRanking from './components/PerformanceRanking';
+import DataSourceLegend from './components/DataSourceLegend';
 import { PERIOD_LABELS, COMPARE_LABELS } from './performanceUtils';
 
 const SectionTitle = ({ children }) => (
@@ -89,6 +90,10 @@ const CloserDashboard = ({ embedded = false }) => {
                         showClosersFilter={user?.role === 'admin'}
                     />
                 </header>
+
+                <div className="mt-6">
+                    <DataSourceLegend coverage={data.reports_coverage} />
+                </div>
 
                 <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
