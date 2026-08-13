@@ -25,7 +25,7 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
                                 <th className="text-right py-2">Show rate</th>
                                 <th className="text-right py-2">Close s/ pres.</th>
                                 <th className="text-right py-2">Ticket</th>
-                                <th className="text-right py-2">Reportes</th>
+                                <th className="text-right py-2">Reportes enviados</th>
                                 <th className="text-right py-2">Sin enviar</th>
                             </tr>
                         </thead>

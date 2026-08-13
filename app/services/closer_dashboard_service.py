@@ -154,7 +154,8 @@ class CloserDashboardService:
                 'name': c.username,
                 'dias_con_reporte': dias,
                 'dias_periodo': dias_periodo,
-                'faltantes': dias_periodo - dias
+                'faltantes': dias_periodo - dias,
+                'pct': round(dias / dias_periodo * 100, 1) if dias_periodo else 0
             }
 
         total_esperados = dias_periodo * len(closers)
@@ -411,7 +412,10 @@ class CloserDashboardService:
                 'show_rate': c_block['rings']['show_rate'],
                 'close_rate_presentacion': c_block['rings']['close_presentacion'],
                 'ticket_promedio': c_block['kpis']['ticket_promedio'],
-                'reports_status': c_stats['reports_productivity']['al_dia_pct'],
+                # Cobertura de reportes de ESTE closer en el período. Antes esta columna mostraba
+                # `reports_productivity.al_dia_pct`, que se calcula sobre todos los closers activos
+                # sin filtrar: cada fila del ranking repetía el mismo número global.
+                'reports_status': (c_coverage or {}).get('pct', 0),
                 # Presentaciones del período: sirve para leer el close rate del ranking sin
                 # confundirse cuando supera el 100% por reportes faltantes.
                 'presentaciones': c_block['funnel']['values'][4],
