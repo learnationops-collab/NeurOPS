@@ -102,7 +102,7 @@ const CloserDashboard = ({ embedded = false }) => {
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />
 
                 <SectionTitle>Calidad de la llamada</SectionTitle>
-                <PerformanceQuality rings={data.current.rings} />
+                <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel} confirmaciones={data.current.confirmaciones} />
 
                 <SectionTitle>Señas <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· reservas, no ventas</span></SectionTitle>
                 <PerformanceSenas senas={data.current.senas} />
