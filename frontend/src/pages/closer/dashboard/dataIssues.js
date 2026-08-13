@@ -7,6 +7,10 @@
  *
  * `view` es la pestaña del mazo del closer a la que lleva el botón ('report' | 'inbox'). Cuando el
  * dashboard se abre suelto (vista de admin) no hay adónde navegar y solo se muestran los pasos.
+ *
+ * `days` son los días concretos que hay que reportar: cada uno se renderiza como un acceso directo
+ * que abre el reporte YA POSICIONADO en esa fecha, para no tener que descubrir a mano cuáles
+ * faltan ni ir cambiando el selector de a uno.
  */
 
 export const detectIssues = (data) => {
@@ -36,12 +40,12 @@ export const detectIssues = (data) => {
                 : 'Revisá que las llamadas del período tengan su resultado registrado con la oferta marcada.',
             view: 'report',
             actionLabel: 'Ir al reporte del día',
+            days: coverage?.dias_faltantes || [],
             steps: [
-                'Abrí la pestaña "Reporte del día" desde la barra de abajo.',
-                'Cambiá el selector de fecha al día que te falta reportar.',
+                'Tocá uno de los días de acá abajo: abre el reporte ya posicionado en esa fecha.',
                 'Revisá el "Resumen del día": sale solo de lo que ya quedó en la bandeja, no hay nada que escribir a mano salvo los slots.',
                 'Tocá "Enviar reporte al sistema".',
-                'Repetí por cada día faltante. El dashboard se corrige solo en cuanto estén todos.'
+                'Volvé y repetí con el día siguiente. El dashboard se corrige solo en cuanto estén todos.'
             ]
         });
     }
@@ -58,11 +62,11 @@ export const detectIssues = (data) => {
             fix: 'Enviá los reportes de los días que faltan.',
             view: 'report',
             actionLabel: 'Ir al reporte del día',
+            days: coverage?.dias_faltantes || [],
             steps: [
-                'Abrí la pestaña "Reporte del día".',
-                'Cambiá el selector de fecha a un día sin reportar.',
+                'Tocá uno de los días de acá abajo: abre el reporte ya posicionado en esa fecha.',
                 'Revisá el resumen y enviá el reporte.',
-                'Repetí por cada día faltante.'
+                'Volvé y repetí con el día siguiente.'
             ]
         });
     }

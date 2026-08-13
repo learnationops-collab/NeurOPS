@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
 import FixIssueModal from './FixIssueModal';
+import MissingDaysPicker from './MissingDaysPicker';
 
 /* Datos que no se pueden creer, con su arreglo. Va arriba de todo a propósito: si el embudo está
    incompleto, leer los KPIs de abajo lleva a conclusiones falsas, así que esto tiene que verse
@@ -94,6 +95,10 @@ const DataIssuesPanel = ({ issues, onNavigate }) => {
                                                 </button>
                                             )}
                                         </div>
+                                        <MissingDaysPicker
+                                            days={issue.days}
+                                            onPick={(date) => onNavigate && onNavigate(issue.view, { date })}
+                                        />
                                     </div>
                                 </div>
                             </div>

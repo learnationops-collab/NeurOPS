@@ -3908,7 +3908,15 @@ const CloserWorkflowPage = () => {
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : (
-                    <CloserDashboard embedded onNavigate={setActiveView} />
+                    <CloserDashboard
+                        embedded
+                        onNavigate={(view, opts) => {
+                            // El dashboard puede pedir un día concreto ("te falta el reporte del 5"),
+                            // así que la pestaña se abre ya posicionada en esa fecha.
+                            if (opts?.date) setReportDate(opts.date);
+                            setActiveView(view);
+                        }}
+                    />
                 )}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}

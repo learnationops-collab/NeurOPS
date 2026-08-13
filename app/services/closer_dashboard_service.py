@@ -147,16 +147,23 @@ class CloserDashboardService:
             CloserDailyReport.date <= last_day
         ).all()
 
+        # Todos los días del período hasta hoy, para poder decir CUÁLES faltan y no solo cuántos:
+        # con la lista concreta el closer puede ir directo a cada día en vez de tener que
+        # descubrir a mano cuáles no mandó.
+        todos_los_dias = [start + timedelta(days=i) for i in range(dias_periodo)]
+
         por_closer = {}
         for c in closers:
-            dias = len({d for cid, d in reported if cid == c.id})
+            con_reporte = {d for cid, d in reported if cid == c.id}
+            dias = len(con_reporte)
             por_closer[c.id] = {
                 'closer_id': c.id,
                 'name': c.username,
                 'dias_con_reporte': dias,
                 'dias_periodo': dias_periodo,
                 'faltantes': dias_periodo - dias,
-                'pct': round(dias / dias_periodo * 100, 1) if dias_periodo else 0
+                'pct': round(dias / dias_periodo * 100, 1) if dias_periodo else 0,
+                'dias_faltantes': [d.isoformat() for d in todos_los_dias if d not in con_reporte]
             }
 
         total_esperados = dias_periodo * len(closers)
@@ -169,6 +176,10 @@ class CloserDashboardService:
             'dias_esperados': total_esperados,
             'pct': round(total_con_reporte / total_esperados * 100, 1) if total_esperados else 0,
             'faltantes': total_esperados - total_con_reporte,
+            # Solo cuando el dashboard está acotado a UN closer: es la lista que el frontend
+            # convierte en accesos directos a cada día. Con "todos los closers" no hay una lista
+            # única que tenga sentido (cada uno debe los suyos), así que queda vacía.
+            'dias_faltantes': rows[0]['dias_faltantes'] if (closer_id and len(rows) == 1) else [],
             'detalle': rows
         }
 

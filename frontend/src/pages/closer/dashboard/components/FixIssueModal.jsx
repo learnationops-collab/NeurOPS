@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight } from 'lucide-react';
+import MissingDaysPicker from './MissingDaysPicker';
 
 /* Modal de "cómo lo arreglo": los pasos concretos para corregir un dato que no se puede creer,
    con el botón que lleva directo al lugar donde se arregla. Va por portal a <body> para no
@@ -78,6 +79,16 @@ const FixIssueModal = ({ issue, onClose, onNavigate }) => {
                             ))}
                         </ol>
                     </div>
+
+                    {issue.days?.length > 0 && onNavigate && (
+                        <div className="rounded-2xl border border-base bg-main/60 p-4">
+                            <MissingDaysPicker
+                                dense
+                                days={issue.days}
+                                onPick={(date) => { onNavigate(issue.view, { date }); onClose(); }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center justify-end gap-2 p-6 pt-0">
