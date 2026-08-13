@@ -3,7 +3,38 @@ import Card from '../../../../components/ui/Card';
 
 const FUNNEL_COLORS = ['#6366F1', '#7C5CE0', '#9B4FD8', '#C441C8', '#E639B0', '#FF3FA4'];
 
-const PerformanceFunnel = ({ funnel, perdidas, coverage }) => {
+/* Confirmaciones del período vs. de agendas posteriores: solo las primeras son un paso de este
+   embudo. Las próximas son pipeline hacia adelante — mezclarlas infla el confirmation rate con
+   trabajo que todavía no se llamó. */
+const ConfirmacionesCard = ({ confirmaciones }) => (
+    <Card variant="surface" padding="p-6">
+        <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Confirmaciones
+        </h3>
+        <p className="text-[11px] text-muted mt-1 mb-5">Las del período y las de agendas que todavía no llegaron son dos cosas distintas.</p>
+        <div className="grid grid-cols-2 gap-3">
+            <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted">De este período</p>
+                <p className="text-2xl font-black tracking-tighter mt-1 text-emerald-400">{confirmaciones.del_periodo}</p>
+                <p className="text-[10px] text-muted mt-0.5 leading-tight">
+                    de {confirmaciones.agendas_periodo} agendas · {confirmaciones.rate_periodo}%
+                </p>
+            </div>
+            <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted">Próximas agendas</p>
+                <p className="text-2xl font-black tracking-tighter mt-1 text-teal-400">{confirmaciones.proximas}</p>
+                <p className="text-[10px] text-muted mt-0.5 leading-tight">
+                    de {confirmaciones.agendas_proximas} por venir · {confirmaciones.rate_proximas}%
+                </p>
+            </div>
+        </div>
+        <p className="text-[10px] text-muted mt-3 leading-snug">
+            El paso «Confirmadas» del embudo usa solo las del período. Las próximas no entran: su llamada todavía no pasó.
+        </p>
+    </Card>
+);
+
+const PerformanceFunnel = ({ funnel, perdidas, coverage, confirmaciones }) => {
     const { labels, values } = funnel;
     const max = values[0] || 1;
 
@@ -22,14 +53,14 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage }) => {
     ];
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-4 items-start">
             <Card variant="surface" padding="p-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Embudo completo
                 </h3>
                 <p className="text-[11px] text-muted mt-1 mb-1">Conversión de cada paso respecto al paso anterior. «Ventas» cuenta solo PIF y Split Pay.</p>
                 <p className="text-[11px] text-muted mb-5">
-                    Slots, agendas, asistencias y presentaciones salen de los reportes diarios; las ventas, del registro financiero.
+                    Slots, agendas, asistencias y presentaciones salen de los reportes diarios; las confirmadas y las ventas, de las agendas y del registro financiero.
                     {coverage && (
                         <span className={coverage.faltantes > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
                             {' '}{coverage.dias_con_reporte} de {coverage.dias_esperados} reportes enviados ({coverage.pct}%).
@@ -65,7 +96,10 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage }) => {
                 )}
             </Card>
 
-            <Card variant="surface" padding="p-6">
+            <div className="space-y-4">
+                {confirmaciones && <ConfirmacionesCard confirmaciones={confirmaciones} />}
+
+                <Card variant="surface" padding="p-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-secondary" /> Pérdidas de agenda
                 </h3>
@@ -89,7 +123,8 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage }) => {
                         </div>
                     ))}
                 </div>
-            </Card>
+                </Card>
+            </div>
         </div>
     );
 };

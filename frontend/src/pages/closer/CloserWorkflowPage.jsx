@@ -3768,7 +3768,10 @@ const CloserWorkflowPage = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {[
                                 { label: 'Conversando', value: dailyActivity?.conversando, color: 'text-sky-400' },
-                                { label: 'Confirmados', value: dailyActivity?.confirmados, color: 'text-emerald-400' },
+                                // Confirmar la llamada de hoy y confirmar una agenda futura son dos
+                                // trabajos distintos — se muestran separados (pedido del usuario).
+                                { label: 'Confirmados de este día', value: dailyActivity?.confirmados_hoy, color: 'text-emerald-400' },
+                                { label: 'Confirmados de próximas agendas', value: dailyActivity?.confirmados_proximos, color: 'text-teal-400' },
                                 { label: 'Show ups', value: dailyActivity?.show_ups, color: 'text-pink-400' },
                                 { label: 'Reagendas', value: dailyActivity?.reagendas, color: 'text-amber-400' },
                                 { label: 'Seguimientos configurados', value: dailyActivity?.seguimientos_configurados, color: 'text-violet-400' },

@@ -2036,6 +2036,7 @@ class CloserService:
         touched_today = Appointment.query.filter(Appointment.id.in_(touched_appt_ids)).all() if touched_appt_ids else []
 
         conversando = confirmados = show_ups = reagendas = 0
+        confirmados_hoy = confirmados_proximos = 0
         seguimientos_configurados = 0
         for a in touched_today:
             result_lower = (a.result or '').strip().lower()
@@ -2044,6 +2045,14 @@ class CloserService:
                 conversando += 1
             if result_lower == 'confirmado':
                 confirmados += 1
+                # Confirmar la llamada de hoy y confirmar una agenda de la semana que viene son
+                # dos trabajos distintos (pedido del usuario): el primero es el embudo del día,
+                # el segundo es pipeline hacia adelante. Se cuentan por separado según la fecha
+                # de la cita, no según cuándo se la tocó.
+                if a.start_time and a.start_time > end_utc:
+                    confirmados_proximos += 1
+                elif a.start_time and a.start_time >= start_utc:
+                    confirmados_hoy += 1
             if closer_result_lower == 'show up':
                 show_ups += 1
             if a.is_rescheduled or result_lower in ('reagendado', 'reagendada') or closer_result_lower in ('reagendado', 'reagendada'):
@@ -2104,6 +2113,8 @@ class CloserService:
         return {
             'conversando': conversando,
             'confirmados': confirmados,
+            'confirmados_hoy': confirmados_hoy,
+            'confirmados_proximos': confirmados_proximos,
             'show_ups': show_ups,
             'reagendas': reagendas,
             'seguimientos_configurados': seguimientos_configurados,

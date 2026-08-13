@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta
+from sqlalchemy import func
 from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
 
@@ -172,6 +173,50 @@ class CloserDashboardService:
         }
 
     @staticmethod
+    def _confirmations(closer_id, start, end):
+        """Confirmaciones separadas en dos cosas que no son lo mismo (pedido del usuario):
+
+        - `del_periodo`: agendas **cuya llamada cae dentro del período** y que llegaron a
+          'Confirmado'. Es el paso real del embudo: de las agendas de estos días, cuántas se
+          confirmaron. `result` se queda en 'Confirmado' después de la llamada (el resultado
+          real vive en `closer_result`), así que sigue siendo válido para agendas ya pasadas.
+        - `proximas`: agendas con fecha **posterior al período**, ya confirmadas. No pertenecen a
+          este embudo — son pipeline hacia adelante. Mezclarlas con las de arriba infla el
+          confirmation rate del período con trabajo que todavía no se llamó.
+
+        Se lee de `Appointment` y no de los reportes diarios porque ahí no existe ningún campo de
+        confirmaciones: el embudo venía aproximando «Confirmadas» como `agendas − canceladas −
+        reprogramadas`, que no es una confirmación sino "todo lo que no se cayó" (daba 97,9% de
+        confirmation rate en agosto contra 55,8% real)."""
+        start_dt = datetime.combine(start, time.min)
+        end_dt = datetime.combine(end, time.max)
+
+        def base():
+            q = Appointment.query
+            return q.filter(Appointment.closer_id == closer_id) if closer_id else q
+
+        confirmado = func.lower(func.coalesce(Appointment.result, '')) == 'confirmado'
+
+        agendas_periodo = base().filter(
+            Appointment.start_time >= start_dt, Appointment.start_time <= end_dt).count()
+        del_periodo = base().filter(
+            Appointment.start_time >= start_dt, Appointment.start_time <= end_dt, confirmado).count()
+        agendas_proximas = base().filter(Appointment.start_time > end_dt).count()
+        proximas = base().filter(Appointment.start_time > end_dt, confirmado).count()
+
+        def rate(n, d):
+            return round(n / d * 100, 1) if d else 0
+
+        return {
+            'del_periodo': del_periodo,
+            'agendas_periodo': agendas_periodo,
+            'rate_periodo': rate(del_periodo, agendas_periodo),
+            'proximas': proximas,
+            'agendas_proximas': agendas_proximas,
+            'rate_proximas': rate(proximas, agendas_proximas)
+        }
+
+    @staticmethod
     def _bucket_source(origin):
         origin_l = (origin or '').lower()
         for label, keywords in CloserDashboardService.SOURCE_BUCKETS:
@@ -213,7 +258,7 @@ class CloserDashboardService:
         return rows
 
     @staticmethod
-    def _build_period_block(stats):
+    def _build_period_block(stats, confirmaciones=None):
         g = stats['general']
         ag = stats['agendas']['totals']
         sales = stats['sales']
@@ -222,7 +267,12 @@ class CloserDashboardService:
 
         slots = g['slots']
         agendas = ag['scheduled']
-        confirmadas = max(0, agendas - ag['canceled'] - ag['rescheduled'])
+        # «Confirmadas» sale del conteo real de agendas confirmadas del período (ver
+        # _confirmations). Antes se aproximaba como `agendas − canceladas − reprogramadas`, que no
+        # es una confirmación sino "todo lo que no se cayó": daba 97,9% de confirmation rate en
+        # agosto contra 55,8% real. El fallback viejo queda solo para las llamadas sin
+        # `confirmaciones` (el período de comparación se calcula con sus propias confirmaciones).
+        confirmadas = confirmaciones['del_periodo'] if confirmaciones else max(0, agendas - ag['canceled'] - ag['rescheduled'])
         asistencias = ag['attended']
         presentaciones = min(g['offers_made'], asistencias) if asistencias else g['offers_made']
         ventas = sales['totals']['count']
@@ -253,13 +303,19 @@ class CloserDashboardService:
                 'reprogramaciones': {'count': ag['rescheduled'], 'rate': rate(ag['rescheduled'], agendas)}
             },
             'rings': {
-                'confirmation_rate': rate(confirmadas, agendas),
+                # Mismo numerador Y denominador que la tarjeta de Confirmaciones (ambos de
+                # Appointment), para no mostrar dos "confirmation rate" que difieren por decimales
+                # solo porque uno divide por las agendas de los reportes y el otro por las reales.
+                'confirmation_rate': confirmaciones['rate_periodo'] if confirmaciones else rate(confirmadas, agendas),
                 'show_rate': pct['show_rate'],
                 'show_sobre_confirmada': rate(asistencias, confirmadas),
                 'pitch_rate': pct['pitch_rate'],
                 'close_llamada': pct['close_rate'],
                 'close_presentacion': pct['offer_to_sale']
             },
+            # Confirmaciones del período vs. de agendas posteriores al período: son dos cosas
+            # distintas y solo la primera pertenece a este embudo (ver _confirmations).
+            'confirmaciones': confirmaciones,
             # Las señas se analizan aparte porque no son ventas: son reservas. Lo que importa es
             # con qué frecuencia se consiguen (sobre presentaciones y sobre llamadas asistidas) y
             # en qué terminan (pago completo, split, o nada todavía).
@@ -383,12 +439,14 @@ class CloserDashboardService:
         prev_start, prev_end = CloserDashboardService._comparison_range(start, end, compare)
 
         current_stats = CloserService.get_comprehensive_stats(closer_id, start, end, agg_type='sum')
-        current = CloserDashboardService._build_period_block(current_stats)
+        current = CloserDashboardService._build_period_block(
+            current_stats, CloserDashboardService._confirmations(closer_id, start, end))
 
         previous = None
         if prev_start:
             previous_stats = CloserService.get_comprehensive_stats(closer_id, prev_start, prev_end, agg_type='sum')
-            previous = CloserDashboardService._build_period_block(previous_stats)
+            previous = CloserDashboardService._build_period_block(
+                previous_stats, CloserDashboardService._confirmations(closer_id, prev_start, prev_end))
 
         cuotas_rows, cuotas_totals = CloserDashboardService._pending_collections(closer_id)
         current['kpis']['deuda_total_pendiente'] = cuotas_totals['total']
@@ -401,7 +459,8 @@ class CloserDashboardService:
         ranking = []
         for c in active_closers:
             c_stats = CloserService.get_comprehensive_stats(c.id, start, end, agg_type='sum')
-            c_block = CloserDashboardService._build_period_block(c_stats)
+            c_block = CloserDashboardService._build_period_block(
+                c_stats, CloserDashboardService._confirmations(c.id, start, end))
             c_coverage = coverage_by_closer.get(c.id) or CloserDashboardService._reports_coverage(
                 c.id, start, end, active_closers)
             ranking.append({

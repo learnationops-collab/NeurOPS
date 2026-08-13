@@ -94,7 +94,7 @@ const CloserDashboard = ({ embedded = false }) => {
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
 
                 <SectionTitle>Dónde se cae el embudo</SectionTitle>
-                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} />
+                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />
 
                 <SectionTitle>Calidad de la llamada</SectionTitle>
                 <PerformanceQuality rings={data.current.rings} />
