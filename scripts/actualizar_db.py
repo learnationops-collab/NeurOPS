@@ -27,8 +27,17 @@ from app.models import (
     GoogleCalendarToken, UTMLog, LandingTracking, ConversationalMessage,
     LeadEventLog, ExcludedSale, ClientComment, event_closers,
     TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving,
-    AlertRule, Alert
+    AlertRule, Alert, ClientMergeLog, CloserAlias, CommentNotification,
+    FeatureToggle, InstallmentPlan, LandingSession, WorkshopEvent, WorkshopLead
 )
+
+def safe(text):
+    """Texto imprimible en la consola de Windows (cp1252). Los mensajes de error de SQLAlchemy
+    incluyen las filas que fallaron, y ahí aparecen emojis y acentos de datos reales: sin esto
+    el propio `print` del except revienta con UnicodeEncodeError y tapa el error original."""
+    enc = (sys.stdout.encoding or 'utf-8')
+    return str(text).encode(enc, errors='replace').decode(enc, errors='replace')
+
 
 def actualizar():
     load_dotenv()
@@ -55,24 +64,27 @@ def actualizar():
             LandingTracking, ConversationalMessage, ExcludedSale,
             PaymentMethod, ManychatAdLead,
             TeamMember, MonthlyPaymentMethodBalance, MonthlySaving, AlertRule,
+            WorkshopEvent,
             
             # Dependencia Nivel 1
             Event, WorkshopButton, PipelineStage, Client, AdSet, 
             MarketingBudget, PublicRegistration, GoogleCalendarToken, UTMLog,
-            Availability, WeeklyAvailability, Alert,
+            Availability, WeeklyAvailability, Alert, CloserAlias, FeatureToggle,
             
             # Dependencia Nivel 2
             Lead, Ad, WorkshopTemplateSent, UserViewSetting,
             SurveyQuestion, ClientComment, MonthlyPayroll,
+            ClientMergeLog, WorkshopLead,
             
             # Dependencia Nivel 3
             Appointment, Enrollment, AdPeriodSpend, LeadAnswer, 
             WorkshopInteraction, SetterDailyStats, CloserDailyStats,
             CloserDailyReport, TriageDailyReport, TriageTrackerReport,
-            FinancialSale, FinancialAgenda, LeadEventLog,
+            FinancialSale, FinancialAgenda, LeadEventLog, LandingSession,
             
             # Dependencia Nivel 4
-            Payment, SurveyAnswer, Notification, Comment, DailyReportAnswer
+            Payment, SurveyAnswer, Notification, Comment, DailyReportAnswer,
+            InstallmentPlan, CommentNotification
         ]
 
         # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
@@ -85,16 +97,20 @@ def actualizar():
             print("Limpiada tabla event_closers.")
         except Exception as e:
             db.session.rollback()
-            print(f"Advertencia al limpiar event_closers: {e}")
+            print(safe(f"Advertencia al limpiar event_closers: {e}"))
 
-        # Limpiar el resto de modelos
+        # Limpiar el resto de modelos. Se hace commit por modelo, no uno solo al final: el
+        # `rollback()` del except deshacía TODOS los borrados acumulados en la transacción, no
+        # solo el que falló. Con una tabla inexistente en local (una migración sin aplicar, por
+        # ejemplo) el borrado quedaba a medias y la copia posterior moría con UNIQUE constraint
+        # sobre tablas que ya se creían vacías.
         for model in reversed(modelos):
             try:
                 db.session.query(model).delete()
+                db.session.commit()
             except Exception as e:
                 db.session.rollback()
-                print(f"Advertencia al limpiar {model.__tablename__}: {e}")
-        db.session.commit()
+                print(safe(f"Advertencia al limpiar {model.__tablename__}: {e}"))
         print("Limpieza de modelos completada.")
 
         # 2. Copiar todos los registros desde producción
@@ -121,7 +137,7 @@ def actualizar():
                 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error: {e}")
+                print(safe(f"Error: {e}"))
 
         # Sincronizar event_closers (tabla de asociación Many-to-Many)
         try:
