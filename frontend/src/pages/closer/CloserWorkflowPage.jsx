@@ -3933,8 +3933,12 @@ const CloserWorkflowPage = () => {
                 )}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
-            <AnimatePresence>
-                {selectedLead && (
+            {/* Sin AnimatePresence a propósito: con esta versión de framer-motion el overlay nunca
+                se desmontaba al cerrarse (se quedaba fijo tapando la pantalla, con o sin motion
+                component como hijo directo), y la única salida era recargar la página. Era la razón
+                real de que un seguimiento resuelto "no desapareciera". La animación de entrada se
+                mantiene; se pierde solo el fundido de salida, que dura 0,2s y no lo extraña nadie. */}
+            {selectedLead && (
                     <div className="ov on" id="ovLead">
                         <motion.div
                             initial={{ opacity: 0, y: 18, scale: 0.97 }}
@@ -4253,11 +4257,11 @@ const CloserWorkflowPage = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+            )}
 
             {/* Modal de decisión: Con / Sin Decisor */}
-            <AnimatePresence>
+            {/* Ver ovLead: AnimatePresence deja estos overlays pegados al cerrarse */}
+            <>
                 {decisionMakerPrompt.apptId && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
@@ -4296,10 +4300,10 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* Prompt intermedio: ¿Hubo venta? */}
-            <AnimatePresence>
+            <>
                 {salePrompt.apptId && !saleModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
@@ -4351,10 +4355,10 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* Modal de declaración de venta por pasos */}
-            <AnimatePresence>
+            <>
                 {saleModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
@@ -4941,10 +4945,10 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* Modal de Motivo / Razón de Cambio (Reemplazo de window.prompt) */}
-            <AnimatePresence>
+            <>
                 {reasonModal.show && (
                     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
                         <motion.div
@@ -5012,7 +5016,7 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* Modal de Configuración de Seguimiento */}
             <TriageFollowUpModal
@@ -5028,7 +5032,7 @@ const CloserWorkflowPage = () => {
             />
 
             {/* Modal Nueva Agenda v7 (ovNew) */}
-            <AnimatePresence>
+            <>
                 {newAgendaModalOpen && (
                     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
@@ -5152,10 +5156,10 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* Modal Referido Manual v7 (ovRef) */}
-            <AnimatePresence>
+            <>
                 {manualRefModalOpen && (
                     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
@@ -5300,7 +5304,7 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {historyClientId && (
                 <ClientHistoryModal
@@ -5313,7 +5317,7 @@ const CloserWorkflowPage = () => {
 
             {/* Selector de agenda — lead con varias agendas pendientes de confirmar encontrado
                 desde la búsqueda global: elegir sobre cuál se está marcando el estado. */}
-            <AnimatePresence>
+            <>
                 {agendaPicker.open && (
                     <div className="ov on">
                         <motion.div
@@ -5352,7 +5356,7 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
 
             {/* DOCK FLOTANTE v6 */}
             <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>
@@ -5408,7 +5412,7 @@ const CloserWorkflowPage = () => {
             />
 
             {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
-            <AnimatePresence>
+            <>
                 {celebration && (
                     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
                         <motion.div
@@ -5451,7 +5455,7 @@ const CloserWorkflowPage = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </>
         </div>
         </div>
     );
