@@ -165,6 +165,9 @@ const CloserWorkflowPage = () => {
 
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
+    // Señal de recarga para la pestaña de seguimientos (ver fetchAgendas): sube en cada acción
+    // que modifica el mazo para que el panel vuelva a pedir sus propios datos.
+    const [seguimientosRefreshKey, setSeguimientosRefreshKey] = useState(0);
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
@@ -731,8 +734,12 @@ const CloserWorkflowPage = () => {
         }
     };
 
-    // Cargar agendas del día del closer
-    const fetchAgendas = async () => {
+    // Cargar agendas del día del closer.
+    // `refreshSeguimientos`: la pestaña de seguimientos no se alimenta de `agendas` sino de sus
+    // propios endpoints (/closer/followups/*), así que cualquier acción que recargue el mazo debe
+    // avisarle para que un seguimiento recién resuelto desaparezca sin recargar la página. Se
+    // apaga solo en la carga por cambio de pestaña/día, donde el panel ya se monta pidiendo datos.
+    const fetchAgendas = async ({ refreshSeguimientos = true } = {}) => {
         setLoading(true);
         try {
             const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
@@ -761,11 +768,14 @@ const CloserWorkflowPage = () => {
             toast.error("Error al cargar las agendas");
         } finally {
             setLoading(false);
+            // Aunque falle la carga del mazo: la acción que la disparó ya se guardó, y el panel
+            // de seguimientos tiene que reflejarla igual.
+            if (refreshSeguimientos) setSeguimientosRefreshKey(k => k + 1);
         }
     };
 
     useEffect(() => {
-        fetchAgendas();
+        fetchAgendas({ refreshSeguimientos: false });
     }, [activeStep, selectedDate]);
 
     // Cargar el plan de cuotas real al abrir el seguimiento de cobro de un cliente ya cerrado
@@ -3297,7 +3307,7 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} />
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} />
                     ) : (
                         /* Renderizado clásico de Lista para Llamadas */
                         <>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 
@@ -115,7 +115,10 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
     );
 };
 
-const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
+// `refreshKey` sube desde CloserWorkflowPage cada vez que una acción toca el mazo (resolver un
+// seguimiento, programar el siguiente, registrar una venta...). Sin esa señal, el panel se
+// quedaba con la lista vieja y el seguimiento recién hecho solo desaparecía al recargar la página.
+const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
     const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
     const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
@@ -125,8 +128,14 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
     const [poolLoading, setPoolLoading] = useState(false);
     const [poolFilters, setPoolFilters] = useState({ sub: '', days_since: '', programa: '', deuda: '' });
 
+    // La pantalla completa de "Cargando seguimientos..." solo tiene sentido cuando no hay nada que
+    // mostrar todavía (primer render o cambio de día). En una recarga por acción, la lista se
+    // reemplaza en silencio para no hacer parpadear el panel entero.
+    const loadedDateRef = useRef(null);
+    const loadedPoolRef = useRef(null);
+
     const fetchMain = useCallback(async () => {
-        setLoading(true);
+        if (loadedDateRef.current !== selectedDate) setLoading(true);
         try {
             const [todayRes, countsRes, goalRes] = await Promise.all([
                 api.get(`/closer/followups/today?selected_date=${selectedDate}`),
@@ -139,15 +148,17 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
         } catch (err) {
             console.error('Error cargando seguimientos', err);
         } finally {
+            loadedDateRef.current = selectedDate;
             setLoading(false);
         }
-    }, [selectedDate]);
+    }, [selectedDate, refreshKey]);
 
     useEffect(() => { fetchMain(); }, [fetchMain]);
 
     const fetchPool = useCallback(async () => {
         if (!openPool) return;
-        setPoolLoading(true);
+        const poolSignature = JSON.stringify([openPool, poolFilters]);
+        if (loadedPoolRef.current !== poolSignature) setPoolLoading(true);
         try {
             const params = new URLSearchParams({ tipo: openPool });
             if (poolFilters.sub) params.set('sub', poolFilters.sub);
@@ -159,9 +170,10 @@ const SeguimientosPane = ({ selectedDate, onOpenLead }) => {
         } catch (err) {
             console.error('Error cargando pool de seguimientos', err);
         } finally {
+            loadedPoolRef.current = JSON.stringify([openPool, poolFilters]);
             setPoolLoading(false);
         }
-    }, [openPool, poolFilters]);
+    }, [openPool, poolFilters, refreshKey]);
 
     useEffect(() => { fetchPool(); }, [fetchPool]);
 
