@@ -1,5 +1,5 @@
 from datetime import date, datetime, time, timedelta
-from app.models import User, Appointment, InstallmentPlan, Client
+from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
 
 PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
@@ -86,6 +86,59 @@ class CloserDashboardService:
 
         rows.sort(key=lambda r: r['pending_amount'], reverse=True)
         return rows[:limit], round(total_pending, 2)
+
+    @staticmethod
+    def _reports_coverage(closer_id, start, end, active_closers):
+        """Cuántos días del período tienen reporte diario enviado, por closer.
+
+        Es el dato que hace falta para poder leer el embudo sin confundirse: los pasos
+        Agendas → Confirmadas → Asistencias → Presentaciones salen SOLO de los reportes diarios
+        (`CloserDailyReport`), mientras que las Ventas salen de `FinancialSale`, que cubre el
+        período entero haya o no reporte. Un día sin reporte le saca presentaciones al
+        denominador pero no le saca ventas al numerador — por eso un closer con reportes
+        faltantes puede mostrar un close rate por encima del 100% sin que haya ningún error de
+        cálculo. El corte es contra hoy: los días futuros del mes en curso no se cuentan como
+        faltantes."""
+        last_day = min(end, date.today())
+        if last_day < start:
+            return None
+
+        dias_periodo = (last_day - start).days + 1
+        closers = [c for c in active_closers if not closer_id or c.id == closer_id]
+        if not closers:
+            return None
+
+        reported = CloserDailyReport.query.with_entities(
+            CloserDailyReport.closer_id, CloserDailyReport.date
+        ).filter(
+            CloserDailyReport.closer_id.in_([c.id for c in closers]),
+            CloserDailyReport.date >= start,
+            CloserDailyReport.date <= last_day
+        ).all()
+
+        por_closer = {}
+        for c in closers:
+            dias = len({d for cid, d in reported if cid == c.id})
+            por_closer[c.id] = {
+                'closer_id': c.id,
+                'name': c.username,
+                'dias_con_reporte': dias,
+                'dias_periodo': dias_periodo,
+                'faltantes': dias_periodo - dias
+            }
+
+        total_esperados = dias_periodo * len(closers)
+        total_con_reporte = sum(r['dias_con_reporte'] for r in por_closer.values())
+        rows = sorted(por_closer.values(), key=lambda r: r['faltantes'], reverse=True)
+
+        return {
+            'dias_periodo': dias_periodo,
+            'dias_con_reporte': total_con_reporte,
+            'dias_esperados': total_esperados,
+            'pct': round(total_con_reporte / total_esperados * 100, 1) if total_esperados else 0,
+            'faltantes': total_esperados - total_con_reporte,
+            'detalle': rows
+        }
 
     @staticmethod
     def _bucket_source(origin):
@@ -197,8 +250,32 @@ class CloserDashboardService:
         }
 
     @staticmethod
-    def _build_alerts(current, pending):
+    def _build_alerts(current, pending, coverage=None):
         alerts = []
+
+        # Close rate imposible: hay más ventas registradas que presentaciones reportadas. No es un
+        # error de cálculo — es que las ventas salen de FinancialSale (período completo) y las
+        # presentaciones de los reportes diarios (solo los días efectivamente reportados).
+        ventas = current['kpis']['ventas']
+        presentaciones = current['funnel']['values'][4]
+        if ventas > presentaciones:
+            faltan = coverage['faltantes'] if coverage else 0
+            detalle = f" Faltan {faltan} reporte(s) diario(s) en el período." if faltan else ""
+            alerts.append({
+                'type': 'danger', 'icon': '📉',
+                'title': f"Close rate s/ presentación por encima del 100% ({current['kpis']['close_rate_presentacion']}%)",
+                'text': (f"Hay {ventas:g} venta(s) registrada(s) contra {presentaciones:g} presentación(es) reportada(s). "
+                         f"Las ventas se leen del registro financiero de todo el período, las presentaciones solo de los "
+                         f"reportes diarios enviados.{detalle}")
+            })
+        elif coverage and coverage['faltantes'] > 0:
+            alerts.append({
+                'type': 'warning', 'icon': '📝',
+                'title': f"{coverage['faltantes']} día(s) sin reporte diario en el período",
+                'text': (f"Cobertura de {coverage['pct']}%. Todo el embudo salvo las ventas sale de los reportes "
+                         f"diarios: los días sin reporte no aparecen en agendas, asistencias ni presentaciones.")
+            })
+
         funnel_vals = current['funnel']['values']
         funnel_labels = current['funnel']['labels']
         worst_idx, worst_rate = None, 100
@@ -252,10 +329,15 @@ class CloserDashboardService:
         current['kpis']['deuda_total_pendiente'] = cuotas_total
 
         active_closers = User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
+        coverage = CloserDashboardService._reports_coverage(closer_id, start, end, active_closers)
+        coverage_by_closer = {r['closer_id']: r for r in (coverage or {}).get('detalle', [])}
+
         ranking = []
         for c in active_closers:
             c_stats = CloserService.get_comprehensive_stats(c.id, start, end, agg_type='sum')
             c_block = CloserDashboardService._build_period_block(c_stats)
+            c_coverage = coverage_by_closer.get(c.id) or CloserDashboardService._reports_coverage(
+                c.id, start, end, active_closers)
             ranking.append({
                 'closer_id': c.id,
                 'name': c.username,
@@ -264,7 +346,11 @@ class CloserDashboardService:
                 'show_rate': c_block['rings']['show_rate'],
                 'close_rate_presentacion': c_block['rings']['close_presentacion'],
                 'ticket_promedio': c_block['kpis']['ticket_promedio'],
-                'reports_status': c_stats['reports_productivity']['al_dia_pct']
+                'reports_status': c_stats['reports_productivity']['al_dia_pct'],
+                # Presentaciones del período: sirve para leer el close rate del ranking sin
+                # confundirse cuando supera el 100% por reportes faltantes.
+                'presentaciones': c_block['funnel']['values'][4],
+                'reportes_faltantes': (c_coverage or {}).get('faltantes', 0)
             })
         ranking.sort(key=lambda r: r['cash_collected'], reverse=True)
 
@@ -275,9 +361,10 @@ class CloserDashboardService:
             'current': current,
             'previous': previous,
             'reports_productivity': current_stats['reports_productivity'],
+            'reports_coverage': coverage,
             'cuotas_por_cobrar': {'rows': cuotas_rows, 'total': cuotas_total},
             'fuente': CloserDashboardService._source_performance(closer_id, start, end),
             'ranking': ranking,
             'closers': [{'id': c.id, 'username': c.username} for c in active_closers],
-            'alerts': CloserDashboardService._build_alerts(current, cuotas_total)
+            'alerts': CloserDashboardService._build_alerts(current, cuotas_total, coverage)
         }

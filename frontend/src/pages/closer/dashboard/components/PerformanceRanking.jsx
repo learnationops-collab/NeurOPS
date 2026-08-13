@@ -26,6 +26,7 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
                                 <th className="text-right py-2">Close s/ pres.</th>
                                 <th className="text-right py-2">Ticket</th>
                                 <th className="text-right py-2">Reportes</th>
+                                <th className="text-right py-2">Sin enviar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -44,12 +45,17 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
                                     <td className="py-2.5 text-right">{r.ventas}</td>
                                     <td className="py-2.5 text-right">{r.show_rate}%</td>
                                     <td className="py-2.5 text-right">
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${r.close_rate_presentacion >= 40 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                            {r.close_rate_presentacion}%
+                                        <span
+                                            title={r.close_rate_presentacion > 100
+                                                ? `${r.ventas} ventas sobre ${r.presentaciones} presentaciones reportadas — le faltan ${r.reportes_faltantes} reporte(s) diario(s) en el período`
+                                                : `${r.ventas} ventas sobre ${r.presentaciones} presentaciones`}
+                                            className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${r.close_rate_presentacion > 100 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : r.close_rate_presentacion >= 40 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                            {r.close_rate_presentacion}%{r.close_rate_presentacion > 100 ? ' ⚠️' : ''}
                                         </span>
                                     </td>
                                     <td className="py-2.5 text-right">{money(r.ticket_promedio)}</td>
                                     <td className="py-2.5 text-right">{r.reports_status}%</td>
+                                    <td className={`py-2.5 text-right font-black ${r.reportes_faltantes > 0 ? 'text-amber-400' : 'text-muted'}`}>{r.reportes_faltantes}</td>
                                 </tr>
                             ))}
                         </tbody>

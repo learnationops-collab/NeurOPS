@@ -3,7 +3,7 @@ import Card from '../../../../components/ui/Card';
 
 const FUNNEL_COLORS = ['#6366F1', '#7C5CE0', '#9B4FD8', '#C441C8', '#E639B0', '#FF3FA4'];
 
-const PerformanceFunnel = ({ funnel, perdidas }) => {
+const PerformanceFunnel = ({ funnel, perdidas, coverage }) => {
     const { labels, values } = funnel;
     const max = values[0] || 1;
 
@@ -11,9 +11,8 @@ const PerformanceFunnel = ({ funnel, perdidas }) => {
     const rows = values.map((v, i) => {
         const width = Math.max(6, Math.round((v / max) * 100));
         const conv = i ? (values[i - 1] ? Math.round((v / values[i - 1]) * 100) : 0) : null;
-        const acum = Math.round((v / max) * 100);
         if (i && conv !== null && conv < worst.rate) worst = { idx: i, rate: conv };
-        return { label: labels[i], v, width, conv, acum };
+        return { label: labels[i], v, width, conv };
     });
 
     const losses = [
@@ -28,7 +27,15 @@ const PerformanceFunnel = ({ funnel, perdidas }) => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Embudo completo
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">Conversión respecto al paso anterior y acumulada desde slots.</p>
+                <p className="text-[11px] text-muted mt-1 mb-1">Conversión de cada paso respecto al paso anterior. «Ventas» cuenta solo PIF y Split Pay.</p>
+                <p className="text-[11px] text-muted mb-5">
+                    Slots, agendas, asistencias y presentaciones salen de los reportes diarios; las ventas, del registro financiero.
+                    {coverage && (
+                        <span className={coverage.faltantes > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                            {' '}{coverage.dias_con_reporte} de {coverage.dias_esperados} reportes enviados ({coverage.pct}%).
+                        </span>
+                    )}
+                </p>
                 <div className="space-y-2">
                     {rows.map((r, i) => (
                         <div key={r.label} className="flex items-center gap-3">
@@ -41,10 +48,9 @@ const PerformanceFunnel = ({ funnel, perdidas }) => {
                                     {r.v}
                                 </div>
                             </div>
-                            <div className={`w-12 text-right text-[11px] font-black ${r.conv === null ? 'text-muted' : r.conv < 50 ? 'text-rose-400' : r.conv < 70 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            <div className={`w-12 text-right text-[11px] font-black ${r.conv === null ? 'text-muted' : r.conv > 100 ? 'text-amber-400' : r.conv < 50 ? 'text-rose-400' : r.conv < 70 ? 'text-amber-400' : 'text-emerald-400'}`}>
                                 {r.conv === null ? '—' : `${r.conv}%`}
                             </div>
-                            <div className="w-12 text-right text-[10px] font-bold text-muted">{i ? `${r.acum}%` : '100%'}</div>
                         </div>
                     ))}
                 </div>
