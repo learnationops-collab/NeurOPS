@@ -196,6 +196,8 @@ class CloserDashboardService:
         presentaciones = min(g['offers_made'], asistencias) if asistencias else g['offers_made']
         ventas = sales['totals']['count']
         cash = sales['totals']['cash']
+        dep = sales['deposit']
+        conv = sales['deposit_conversions']
 
         def rate(n, d):
             return round(n / d * 100, 1) if d else 0
@@ -227,9 +229,25 @@ class CloserDashboardService:
                 'close_llamada': pct['close_rate'],
                 'close_presentacion': pct['offer_to_sale']
             },
-            'conversion_senas': {
-                'oferta_a_sena': pct.get('offer_to_deposit', 0),
-                'sena_a_venta_real': pct.get('deposit_conversion_rate', 0),
+            # Las señas se analizan aparte porque no son ventas: son reservas. Lo que importa es
+            # con qué frecuencia se consiguen (sobre presentaciones y sobre llamadas asistidas) y
+            # en qué terminan (pago completo, split, o nada todavía).
+            'senas': {
+                'count': dep['count'],
+                'cash': round(dep['cash'], 2),
+                'ticket_promedio': round(dep['cash'] / dep['count'], 2) if dep['count'] else 0,
+                'por_presentacion': pct.get('offer_to_deposit', 0),
+                'por_llamada': pct.get('deposit_rate_llamada', 0),
+                'presentaciones': presentaciones,
+                'asistencias': asistencias,
+                'seguidas': conv.get('total', 0),
+                'a_pif': conv.get('to_pif', 0),
+                'a_pif_rate': conv.get('rate_pif', 0),
+                'a_split': conv.get('to_split', 0),
+                'a_split_rate': conv.get('rate_split', 0),
+                'pendientes': conv.get('pending', 0),
+                'pendientes_rate': conv.get('rate_pending', 0),
+                'conversion_total': conv.get('rate', 0),
                 'close_rate_promesa': pct.get('close_rate_promesa', 0)
             },
             # Cada bucket lleva su cantidad de pagos además del monto: sin eso no se puede

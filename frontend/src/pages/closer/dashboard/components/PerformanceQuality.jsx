@@ -20,7 +20,7 @@ const Ring = ({ pct, label, note, color }) => {
     );
 };
 
-const PerformanceQuality = ({ rings, conversionSenas }) => {
+const PerformanceQuality = ({ rings }) => {
     const items = [
         { key: 'confirmation_rate', label: 'Confirmation rate', note: 'Agendas que se confirman', color: '#6366F1' },
         { key: 'show_rate', label: 'Show rate', note: 'Agendas que asisten', color: '#60A5FA' },
@@ -30,32 +30,16 @@ const PerformanceQuality = ({ rings, conversionSenas }) => {
         { key: 'close_presentacion', label: 'Close s/ presentación', note: 'Ofertas que cierran', color: '#FF3FA4' }
     ];
 
-    const senasItems = [
-        { key: 'oferta_a_sena', label: 'Oferta → Seña', note: 'Ofertas que dejan seña', color: '#A78BFA' },
-        { key: 'sena_a_venta_real', label: 'Seña → Venta real', note: 'Señas que se cierran', color: '#34D399' },
-        { key: 'close_rate_promesa', label: 'Close con señas', note: 'Asistencias que prometen o cierran', color: '#22D3EE' }
-    ];
-
+    // Las señas ya no viven acá: tienen su propia sección (PerformanceSenas), donde se ven con
+    // sus dos denominadores (presentación y llamada) y con su destino real, no solo como 3 anillos.
     return (
-        <div className="space-y-4">
-            <Card variant="surface" padding="p-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-                    {items.map(it => (
-                        <Ring key={it.key} pct={rings[it.key] ?? 0} label={it.label} note={it.note} color={it.color} />
-                    ))}
-                </div>
-            </Card>
-            {conversionSenas && (
-                <Card variant="surface" padding="p-6">
-                    <div className="text-[10.5px] font-black uppercase tracking-wider text-muted mb-3">Conversión de Señas</div>
-                    <div className="grid grid-cols-3 gap-3">
-                        {senasItems.map(it => (
-                            <Ring key={it.key} pct={conversionSenas[it.key] ?? 0} label={it.label} note={it.note} color={it.color} />
-                        ))}
-                    </div>
-                </Card>
-            )}
-        </div>
+        <Card variant="surface" padding="p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+                {items.map(it => (
+                    <Ring key={it.key} pct={rings[it.key] ?? 0} label={it.label} note={it.note} color={it.color} />
+                ))}
+            </div>
+        </Card>
     );
 };
 

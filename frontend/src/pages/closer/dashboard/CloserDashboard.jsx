@@ -6,6 +6,7 @@ import PerformanceFilters from './components/PerformanceFilters';
 import PerformanceKpis from './components/PerformanceKpis';
 import PerformanceFunnel from './components/PerformanceFunnel';
 import PerformanceQuality from './components/PerformanceQuality';
+import PerformanceSenas from './components/PerformanceSenas';
 import PerformanceMoney from './components/PerformanceMoney';
 import PerformanceActivity from './components/PerformanceActivity';
 import PerformanceRanking from './components/PerformanceRanking';
@@ -96,7 +97,10 @@ const CloserDashboard = ({ embedded = false }) => {
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} />
 
                 <SectionTitle>Calidad de la llamada</SectionTitle>
-                <PerformanceQuality rings={data.current.rings} conversionSenas={data.current.conversion_senas} />
+                <PerformanceQuality rings={data.current.rings} />
+
+                <SectionTitle>Señas <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· reservas, no ventas</span></SectionTitle>
+                <PerformanceSenas senas={data.current.senas} />
 
                 <SectionTitle>Dinero</SectionTitle>
                 <PerformanceMoney cashMix={data.current.cash_mix} cuotas={data.cuotas_por_cobrar} programas={data.current.programas} />
