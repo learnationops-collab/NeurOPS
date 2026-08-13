@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,6 +18,7 @@ import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import LeadEditModal from './components/LeadEditModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -113,6 +114,8 @@ const CloserWorkflowPage = () => {
     // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
     // días) — sigue siendo editable, no es un valor fijo.
     const [reportSlotsIsDefault, setReportSlotsIsDefault] = useState(false);
+    // Lead cuya ficha se está corrigiendo (nombre/teléfono/correo/instagram/fecha de la llamada).
+    const [editingLead, setEditingLead] = useState(null);
     // Aviso en vivo si los slots escritos no llegan a las agendas del día: un cupo agendado
     // sigue siendo un cupo, así que ese número es imposible (venía pasando en reportes reales).
     const slotsPorDebajoDeAgendas = (
@@ -3951,6 +3954,15 @@ const CloserWorkflowPage = () => {
                                 </div>
                                 {selectedLead.can_edit !== false && (
                                     <button
+                                        className="p-2 hover:bg-violet-500/20 text-violet-300 rounded-xl transition-all cursor-pointer border border-violet-500/30 mr-2"
+                                        title="Corregir datos del lead (nombre, teléfono, correo, fecha)"
+                                        onClick={() => setEditingLead(selectedLead)}
+                                    >
+                                        <Pencil size={16} />
+                                    </button>
+                                )}
+                                {selectedLead.can_edit !== false && (
+                                    <button
                                         className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30 mr-2"
                                         title="Eliminar lead"
                                         onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
@@ -5368,6 +5380,17 @@ const CloserWorkflowPage = () => {
                     </button>
                 )}
             </div>
+
+            {/* Corrección de la ficha del lead: nombre, teléfono, correo, instagram y fecha/hora
+                de la llamada. Al guardar se recarga el mazo y se cierra el modal de detalle, para
+                que el lead vuelva a leerse con los datos nuevos en vez de los de la copia vieja. */}
+            {editingLead && (
+                <LeadEditModal
+                    lead={editingLead}
+                    onClose={() => setEditingLead(null)}
+                    onSaved={() => { setSelectedLead(null); fetchAgendas(); }}
+                />
+            )}
 
             <OperatorControls
                 isOpen={showOperatorControls}
