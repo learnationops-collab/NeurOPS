@@ -4,6 +4,39 @@ from sqlalchemy import or_
 from datetime import datetime, time, timedelta, date
 import pytz
 
+# Nombre visible de cada programa a partir del código corto que trae `FinancialSale.tipo_pago`
+# ("RR - Parcial", "AL - Completo", ...), tal como lo separa SheetsService.parse_tipo_pago.
+PROGRAM_LABELS = {'RR': 'Residency Roadmap', 'AL': 'Ace Learners', 'SI': 'Specialist Initiative'}
+
+# Qué cuenta como qué a partir del tipo canónico de SheetsService.parse_tipo_pago. Solo 'completo'
+# (PIF: paga todo el programa de una) y 'parcial' (Split Pay: primer pago que abre un plan de
+# cuotas) son VENTAS. La seña es una reserva, la cuota es el cobro de una venta ya hecha antes, y
+# upsell/renovación son cash de un cliente que ya había comprado — ninguno abre una venta nueva.
+SALE_TIPO_TO_BUCKET = {
+    'completo': 'pif',
+    'parcial': 'split',
+    'seña': 'deposit',
+    'cuota': 'installment',
+    'upsell': 'upsell',
+    'renovacion': 'renovacion',
+}
+REAL_SALE_TIPOS = ('completo', 'parcial')
+
+
+def _program_from_examen(examen):
+    """Programa deducido del campo libre `examen` de la venta, para las filas cuyo `tipo_pago`
+    no trae prefijo de programa (ej. 'Parcial' a secas). Solo se usa como respaldo: el prefijo
+    del propio `tipo_pago` manda."""
+    t = (examen or '').upper()
+    if 'RR' in t or 'RESIDENCY' in t or 'ROADMAP' in t:
+        return 'Residency Roadmap'
+    if 'AL' in t or 'ACE' in t or 'LEARNER' in t:
+        return 'Ace Learners'
+    if 'SI' in t or 'SPECIALIST' in t or 'INITIATIVE' in t or 'INICIATIVE' in t:
+        return 'Specialist Initiative'
+    return None
+
+
 class CloserService:
     @staticmethod
     def get_leads_pagination(closer_id, page=1, per_page=50, filters=None):
@@ -1489,121 +1522,87 @@ class CloserService:
             
         sales_rows = sales_query.filter(*sales_filters).group_by(FinancialSale.tipo_pago).all()
         
-        official_pif_count = 0.0
-        official_pif_cash = 0.0
-        official_pif_cash_neto = 0.0
-        official_split_count = 0.0
-        official_split_cash = 0.0
-        official_split_cash_neto = 0.0
-        official_deposit_count = 0.0
-        official_deposit_cash = 0.0
-        official_deposit_cash_neto = 0.0
-        official_installment_count = 0.0
-        official_installment_cash = 0.0
-        official_installment_cash_neto = 0.0
-        official_upsell_count = 0.0
-        official_upsell_cash = 0.0
-        official_upsell_cash_neto = 0.0
-        official_renovacion_count = 0.0
-        official_renovacion_cash = 0.0
-        official_renovacion_cash_neto = 0.0
-        
+        # Clasificación del tipo de pago: se delega en SheetsService.parse_tipo_pago, el mismo
+        # parser canónico que ya usan el alta de ventas y el reporte diario del closer. Antes esto
+        # era una cadena de `in` sobre el string crudo con dos agujeros: "Parcial" (el Split Pay
+        # real de los datos) no matcheaba ninguna rama y solo terminaba contado como split por caer
+        # en el `else`, y ese mismo `else` se tragaba cualquier etiqueta desconocida ("Ace Learner",
+        # "Desconocido"), inflando los Split Pays con filas que no son una venta. Ahora lo que no
+        # se reconoce va a `otros`: suma al cash, no a las ventas.
+        from app.services.sheets_service import SheetsService
+
+        sale_buckets = {
+            k: {'count': 0.0, 'cash': 0.0, 'cash_neto': 0.0}
+            for k in ('pif', 'split', 'deposit', 'installment', 'upsell', 'renovacion', 'otros')
+        }
+
         for tipo, count, cash, cash_neto in sales_rows:
-            tipo_lower = (tipo or '').lower()
-            cash_val = float(cash or 0.0)
-            cash_neto_val = float(cash_neto or 0.0)
-            count_val = float(count or 0.0)
-            
-            if 'upsell' in tipo_lower:
-                official_upsell_count += count_val
-                official_upsell_cash += cash_val
-                official_upsell_cash_neto += cash_neto_val
-            elif 'renovacion' in tipo_lower or 'renovación' in tipo_lower:
-                official_renovacion_count += count_val
-                official_renovacion_cash += cash_val
-                official_renovacion_cash_neto += cash_neto_val
-            elif 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
-                official_pif_count += count_val
-                official_pif_cash += cash_val
-                official_pif_cash_neto += cash_neto_val
-            elif 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
-                official_deposit_count += count_val
-                official_deposit_cash += cash_val
-                official_deposit_cash_neto += cash_neto_val
-            elif 'primer pago' in tipo_lower or 'split' in tipo_lower:
-                official_split_count += count_val
-                official_split_cash += cash_val
-                official_split_cash_neto += cash_neto_val
-            elif 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower:
-                official_installment_count += count_val
-                official_installment_cash += cash_val
-                official_installment_cash_neto += cash_neto_val
-            else:
-                # Si no matchea palabras clave de cuota pero es un pago fraccionado, verificar si es posterior
-                is_subsequent = False
-                import re
-                match = re.search(r'pago\s*(\d+)', tipo_lower)
-                if match:
-                    num = int(match.group(1))
-                    if num > 1:
-                        is_subsequent = True
-                
-                if is_subsequent:
-                    official_installment_count += count_val
-                    official_installment_cash += cash_val
-                    official_installment_cash_neto += cash_neto_val
-                else:
-                    official_split_count += count_val
-                    official_split_cash += cash_val
-                    official_split_cash_neto += cash_neto_val
+            _, tipo_simple = SheetsService.parse_tipo_pago(tipo)
+            bucket = sale_buckets[SALE_TIPO_TO_BUCKET.get(tipo_simple, 'otros')]
+            bucket['count'] += float(count or 0.0)
+            bucket['cash'] += float(cash or 0.0)
+            bucket['cash_neto'] += float(cash_neto or 0.0)
 
         # Scale official sales metrics by aggregation type
-        final_pif_count = round(official_pif_count / days_count, 2) if agg_type == 'avg' else official_pif_count
-        final_pif_cash = round(official_pif_cash / days_count, 2) if agg_type == 'avg' else official_pif_cash
-        final_pif_cash_neto = round(official_pif_cash_neto / days_count, 2) if agg_type == 'avg' else official_pif_cash_neto
-        
-        final_split_count = round(official_split_count / days_count, 2) if agg_type == 'avg' else official_split_count
-        final_split_cash = round(official_split_cash / days_count, 2) if agg_type == 'avg' else official_split_cash
-        final_split_cash_neto = round(official_split_cash_neto / days_count, 2) if agg_type == 'avg' else official_split_cash_neto
-        
-        final_deposit_count = round(official_deposit_count / days_count, 2) if agg_type == 'avg' else official_deposit_count
-        final_deposit_cash = round(official_deposit_cash / days_count, 2) if agg_type == 'avg' else official_deposit_cash
-        final_deposit_cash_neto = round(official_deposit_cash_neto / days_count, 2) if agg_type == 'avg' else official_deposit_cash_neto
-        
-        final_installment_count = round(official_installment_count / days_count, 2) if agg_type == 'avg' else official_installment_count
-        final_installment_cash = round(official_installment_cash / days_count, 2) if agg_type == 'avg' else official_installment_cash
-        final_installment_cash_neto = round(official_installment_cash_neto / days_count, 2) if agg_type == 'avg' else official_installment_cash_neto
+        def scale(v):
+            return round(v / days_count, 2) if agg_type == 'avg' else v
 
-        final_upsell_count = round(official_upsell_count / days_count, 2) if agg_type == 'avg' else official_upsell_count
-        final_upsell_cash = round(official_upsell_cash / days_count, 2) if agg_type == 'avg' else official_upsell_cash
-        final_upsell_cash_neto = round(official_upsell_cash_neto / days_count, 2) if agg_type == 'avg' else official_upsell_cash_neto
+        final_pif_count = scale(sale_buckets['pif']['count'])
+        final_pif_cash = scale(sale_buckets['pif']['cash'])
+        final_pif_cash_neto = scale(sale_buckets['pif']['cash_neto'])
 
-        final_renovacion_count = round(official_renovacion_count / days_count, 2) if agg_type == 'avg' else official_renovacion_count
-        final_renovacion_cash = round(official_renovacion_cash / days_count, 2) if agg_type == 'avg' else official_renovacion_cash
-        final_renovacion_cash_neto = round(official_renovacion_cash_neto / days_count, 2) if agg_type == 'avg' else official_renovacion_cash_neto
+        final_split_count = scale(sale_buckets['split']['count'])
+        final_split_cash = scale(sale_buckets['split']['cash'])
+        final_split_cash_neto = scale(sale_buckets['split']['cash_neto'])
 
-        # Calcular conversión de señas en venta real (PIF o Split)
-        señas_convertidas = 0
-        total_señas = 0
-        
-        # Recuperar todas las transacciones individuales de tipo "seña" del closer en el periodo consultado
+        final_deposit_count = scale(sale_buckets['deposit']['count'])
+        final_deposit_cash = scale(sale_buckets['deposit']['cash'])
+        final_deposit_cash_neto = scale(sale_buckets['deposit']['cash_neto'])
+
+        final_installment_count = scale(sale_buckets['installment']['count'])
+        final_installment_cash = scale(sale_buckets['installment']['cash'])
+        final_installment_cash_neto = scale(sale_buckets['installment']['cash_neto'])
+
+        final_upsell_count = scale(sale_buckets['upsell']['count'])
+        final_upsell_cash = scale(sale_buckets['upsell']['cash'])
+        final_upsell_cash_neto = scale(sale_buckets['upsell']['cash_neto'])
+
+        final_renovacion_count = scale(sale_buckets['renovacion']['count'])
+        final_renovacion_cash = scale(sale_buckets['renovacion']['cash'])
+        final_renovacion_cash_neto = scale(sale_buckets['renovacion']['cash_neto'])
+
+        final_otros_count = scale(sale_buckets['otros']['count'])
+        final_otros_cash = scale(sale_buckets['otros']['cash'])
+        final_otros_cash_neto = scale(sale_buckets['otros']['cash_neto'])
+
+        # Seguimiento de las señas del período: en qué terminó cada reserva. Se mira si el MISMO
+        # cliente (cruzado por instagram/mail/teléfono, que es todo lo que trae FinancialSale)
+        # tiene después un pago completo (PIF) o un primer pago de split, y se cuenta cada destino
+        # por separado — no es lo mismo que la seña termine pagando el programa entero que que
+        # termine abriendo un plan de cuotas.
+        #
+        # El corte por fecha (`date >= seña.date`) es nuevo y arregla un falso positivo real: sin
+        # él se aceptaba como "conversión" una venta ANTERIOR a la seña (un cliente que ya había
+        # comprado meses atrás y ahora dejó una seña de otro programa quedaba convertido de entrada).
         señas_rows_periodo = FinancialSale.query.filter(
             *sales_filters,
             or_(
                 FinancialSale.tipo_pago.ilike('%seña%'),
+                FinancialSale.tipo_pago.ilike('%sena%'),
                 FinancialSale.tipo_pago.ilike('%deposito%'),
                 FinancialSale.tipo_pago.ilike('%deposit%')
             )
         ).all()
-        
+
         total_señas = len(señas_rows_periodo)
-        
+        señas_a_pif = 0
+        señas_a_split = 0
+
         for seña in señas_rows_periodo:
-            # Buscar si el mismo cliente tiene una venta posterior/igual de tipo PIF/Split
             ig_norm = seña.instagram.strip().lstrip('@').lower() if seña.instagram else None
             email_norm = seña.mail_cliente.strip().lower() if seña.mail_cliente else None
             tel_norm = seña.telefono.strip() if seña.telefono else None
-            
+
             sub_filters = []
             if ig_norm and ig_norm != 'n/a' and len(ig_norm) > 2:
                 sub_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_norm)
@@ -1611,22 +1610,32 @@ class CloserService:
                 sub_filters.append(func.lower(FinancialSale.mail_cliente) == email_norm)
             if tel_norm and tel_norm != 'n/a' and len(tel_norm) > 4:
                 sub_filters.append(FinancialSale.telefono == tel_norm)
-                
-            if sub_filters:
-                venta_definitiva = FinancialSale.query.filter(
-                    or_(*sub_filters),
-                    FinancialSale.id != seña.id,
-                    ~or_(
-                        FinancialSale.tipo_pago.ilike('%seña%'),
-                        FinancialSale.tipo_pago.ilike('%deposito%'),
-                        FinancialSale.tipo_pago.ilike('%deposit%')
-                    )
-                ).first()
-                
-                if venta_definitiva:
-                    señas_convertidas += 1
-                    
-        conversion_señas_rate = round((señas_convertidas / total_señas * 100), 1) if total_señas > 0 else 0.0
+
+            if not sub_filters:
+                continue
+
+            posteriores_q = FinancialSale.query.filter(
+                or_(*sub_filters),
+                FinancialSale.id != seña.id
+            )
+            if seña.date:
+                posteriores_q = posteriores_q.filter(FinancialSale.date >= seña.date)
+
+            for venta in posteriores_q.order_by(FinancialSale.date.asc()).all():
+                _, tipo_simple = SheetsService.parse_tipo_pago(venta.tipo_pago)
+                if tipo_simple == 'completo':
+                    señas_a_pif += 1
+                    break
+                if tipo_simple == 'parcial':
+                    señas_a_split += 1
+                    break
+
+        señas_convertidas = señas_a_pif + señas_a_split
+
+        def pct_senas(n):
+            return round(n / total_señas * 100, 1) if total_señas > 0 else 0.0
+
+        conversion_señas_rate = pct_senas(señas_convertidas)
 
         # Totals
         total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
@@ -1635,16 +1644,21 @@ class CloserService:
         total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
         total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
 
-        # Cierres reales: una venta empieza en primer pago (split) o pago completo (PIF), mas
-        # upsells/renovaciones. La seña es una promesa de compra, no una venta — se excluye de
-        # total_sales y se reporta aparte (sales.deposit / deposit_conversions), igual que ya
-        # distinguia _prepare_report_data (close_rate_operativo vs close_rate_promesa).
-        total_sales = final_pif_count + final_split_count + final_upsell_count + final_renovacion_count
+        # Cierres reales: SOLO pago completo (PIF) y primer pago de split. Son los únicos dos
+        # tipos que abren una venta nueva a partir de una presentación, que es lo que miden los
+        # close rates. Quedan fuera: la seña (es una reserva, se analiza aparte en
+        # deposit_conversions), la cuota (cobro de una venta ya cerrada antes), y upsell/renovación
+        # (cash de un cliente que ya había comprado — antes se sumaban acá e inflaban el close rate
+        # por encima del 100%).
+        total_sales = final_pif_count + final_split_count
         # Ventas + señas: usado solo para el "close rate promesa" (compromiso de compra total)
         total_sales_with_deposits = total_sales + final_deposit_count
-        # Efectivo total recaudado incluye las cuotas, upsells y renovaciones
-        total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash + final_upsell_cash + final_renovacion_cash
-        total_cash_neto = final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto + final_installment_cash_neto + final_upsell_cash_neto + final_renovacion_cash_neto
+        # Efectivo total recaudado incluye las cuotas, upsells, renovaciones y lo no clasificable
+        total_cash = (final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash
+                      + final_upsell_cash + final_renovacion_cash + final_otros_cash)
+        total_cash_neto = (final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto
+                           + final_installment_cash_neto + final_upsell_cash_neto
+                           + final_renovacion_cash_neto + final_otros_cash_neto)
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
@@ -1655,53 +1669,29 @@ class CloserService:
         total_pif_split_count = 0.0
 
         for sale in all_sales:
-            tipo_lower = (sale.tipo_pago or '').lower()
+            program_code, tipo_simple = SheetsService.parse_tipo_pago(sale.tipo_pago)
+
+            # Solo cuentan las ventas reales (PIF y Split Pay). Antes el filtro era por descarte
+            # ("todo lo que no sea seña ni cuota"), así que cuotas mal etiquetadas, upsells,
+            # renovaciones y filas sin tipo reconocible entraban al ticket promedio y lo bajaban.
+            if tipo_simple not in REAL_SALE_TIPOS:
+                continue
+
             monto_val = float(sale.monto or 0.0)
+            # El programa sale del prefijo del propio tipo_pago ("RR - Parcial"). El respaldo por
+            # `examen` solo aplica si no vino prefijo: antes se buscaba "AL" dentro del string
+            # crudo del tipo, y "PARCIAL" contiene "AL", así que toda venta sin prefijo terminaba
+            # atribuida a Ace Learners.
+            prog_name = PROGRAM_LABELS.get(program_code) or _program_from_examen(sale.examen) or "Sin Programa"
 
-            is_pif = 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower
-            is_deposit = 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower
-            is_installment = 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower
+            if prog_name not in program_data:
+                program_data[prog_name] = {"cash": 0.0, "count": 0}
 
-            is_subsequent = False
-            if not is_pif and not is_deposit and not is_installment:
-                import re
-                match = re.search(r'pago\s*(\d+)', tipo_lower)
-                if match:
-                    num = int(match.group(1))
-                    if num > 1:
-                        is_subsequent = True
+            program_data[prog_name]["cash"] += monto_val
+            program_data[prog_name]["count"] += 1
 
-            if is_installment or is_subsequent:
-                is_installment = True
-
-            # Solo cuentan pagos PIF y Split Pays
-            if is_pif or (not is_deposit and not is_installment):
-                prog_raw = (sale.tipo_pago or '').upper()
-                examen_raw = (sale.examen or '').upper()
-
-                if "RR" in prog_raw or "RESIDENCY" in prog_raw or "ROADMAP" in prog_raw:
-                    prog_name = "Residency Roadmap"
-                elif "AL" in prog_raw or "ACE" in prog_raw or "LEARNERS" in prog_raw:
-                    prog_name = "Ace Learners"
-                elif "SI" in prog_raw or "SPECIALIST" in prog_raw or "INITIATIVE" in prog_raw or "INICIATIVE" in prog_raw:
-                    prog_name = "Specialist Initiative"
-                elif "RR" in examen_raw or "RESIDENCY" in examen_raw or "ROADMAP" in examen_raw:
-                    prog_name = "Residency Roadmap"
-                elif "AL" in examen_raw or "ACE" in examen_raw or "LEARNERS" in examen_raw:
-                    prog_name = "Ace Learners"
-                elif "SI" in examen_raw or "SPECIALIST" in examen_raw or "INITIATIVE" in examen_raw or "INICIATIVE" in examen_raw:
-                    prog_name = "Specialist Initiative"
-                else:
-                    prog_name = "Sin Programa"
-
-                if prog_name not in program_data:
-                    program_data[prog_name] = {"cash": 0.0, "count": 0}
-
-                program_data[prog_name]["cash"] += monto_val
-                program_data[prog_name]["count"] += 1
-
-                total_pif_split_cash += monto_val
-                total_pif_split_count += 1
+            total_pif_split_cash += monto_val
+            total_pif_split_count += 1
 
         general_average_ticket = round(total_pif_split_cash / total_pif_split_count, 2) if total_pif_split_count > 0 else 0.0
 
@@ -1879,7 +1869,21 @@ class CloserService:
                 "installment": {"count": final_installment_count, "cash": final_installment_cash, "cash_neto": final_installment_cash_neto, "in_call_count": 0, "in_call_cash": 0},
                 "upsell": {"count": final_upsell_count, "cash": final_upsell_cash, "cash_neto": final_upsell_cash_neto, "in_call_count": 0, "in_call_cash": 0},
                 "renovacion": {"count": final_renovacion_count, "cash": final_renovacion_cash, "cash_neto": final_renovacion_cash_neto, "in_call_count": 0, "in_call_cash": 0},
-                "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
+                # Pagos cuyo tipo no se pudo reconocer ("Ace Learner", "Desconocido"...): entran al
+                # cash total pero no cuentan como venta ni como cuota. Si este bucket crece, hay
+                # etiquetas nuevas que normalizar en el origen (Ventas_DB).
+                "otros": {"count": final_otros_count, "cash": final_otros_cash, "cash_neto": final_otros_cash_neto, "in_call_count": 0, "in_call_cash": 0},
+                "deposit_conversions": {
+                    "total": total_señas,
+                    "converted": señas_convertidas,
+                    "rate": conversion_señas_rate,
+                    "to_pif": señas_a_pif,
+                    "to_split": señas_a_split,
+                    "rate_pif": pct_senas(señas_a_pif),
+                    "rate_split": pct_senas(señas_a_split),
+                    "pending": max(0, total_señas - señas_convertidas),
+                    "rate_pending": pct_senas(max(0, total_señas - señas_convertidas))
+                },
                 "general_average_ticket": scaled_general_avg,
                 "program_tickets": scaled_program_tickets,
                 "discrepancies": discrepancies,
@@ -1898,14 +1902,17 @@ class CloserService:
                 "show_rate": div(total_attended, total_scheduled),
                 "no_show_rate": div(total_no_show, total_scheduled),
                 "cancel_rate": div(total_canceled, total_scheduled),
-                # close_rate / offer_to_sale: solo ventas reales (PIF/Split/Upsell/Renovacion), la
-                # seña NO cuenta como venta (es una promesa de compra, no un cierre).
+                # close_rate / offer_to_sale: solo ventas reales (PIF + Split Pay). Ni la seña
+                # (promesa de compra), ni la cuota, ni upsell/renovación cuentan como cierre.
                 "close_rate": div(total_sales, total_attended),
                 "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
                 # close_rate_promesa / offer_to_deposit: ventas + señas, para medir "compromiso de
                 # compra" total (cuantas ofertas terminan en algun tipo de compromiso, cerrado o no).
                 "close_rate_promesa": div(total_sales_with_deposits, total_attended),
                 "offer_to_deposit": div(final_deposit_count, float(stats.offers_made or 0)),
+                # Señas sobre llamadas asistidas: complementa offer_to_deposit (que es sobre
+                # ofertas presentadas) para ver la tasa de reserva desde los dos denominadores.
+                "deposit_rate_llamada": div(final_deposit_count, total_attended),
                 "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent)),
                 "pitch_rate": div(val(stats.offers_made), total_attended),
                 "decision_maker_rate": div(val(stats.decision_makers), total_attended),
@@ -2290,21 +2297,17 @@ class CloserService:
             'renewal': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
             'upsell': {'count': 0, 'cash': 0.0, 'ic_count': 0, 'ic_cash': 0.0},
         }
+        # Mismo criterio de clasificación que get_comprehensive_stats (ver SALE_TIPO_TO_BUCKET):
+        # un tipo que el parser no reconoce ya NO se cuenta como Split Pay — antes cualquier
+        # etiqueta rara ("Ace Learner", "Desconocido") caía en el `else` y se reportaba como una
+        # venta parcial que nunca existió.
+        DAILY_TIPO_TO_BUCKET = dict(SALE_TIPO_TO_BUCKET, renovacion='renewal')
         for sale in sales:
             _, tipo = SheetsService.parse_tipo_pago(sale.tipo_pago)
+            key = DAILY_TIPO_TO_BUCKET.get(tipo)
+            if not key:
+                continue
             monto_val = float(sale.monto or 0.0)
-            if tipo == 'seña':
-                key = 'deposit'
-            elif tipo == 'completo':
-                key = 'pif'
-            elif tipo == 'cuota':
-                key = 'installment'
-            elif tipo == 'renovacion':
-                key = 'renewal'
-            elif tipo == 'upsell':
-                key = 'upsell'
-            else:
-                key = 'split'
             sale_buckets[key]['count'] += 1
             sale_buckets[key]['cash'] += monto_val
             if sale.sold_in_call:
