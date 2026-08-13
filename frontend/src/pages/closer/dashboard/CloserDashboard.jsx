@@ -11,7 +11,9 @@ import PerformanceMoney from './components/PerformanceMoney';
 import PerformanceActivity from './components/PerformanceActivity';
 import PerformanceRanking from './components/PerformanceRanking';
 import DataSourceLegend from './components/DataSourceLegend';
+import DataIssuesPanel from './components/DataIssuesPanel';
 import { PERIOD_LABELS, COMPARE_LABELS } from './performanceUtils';
+import { detectIssues } from './dataIssues';
 
 const SectionTitle = ({ children }) => (
     <h2 className="text-[11.5px] font-black tracking-widest uppercase text-muted mt-10 mb-4 flex items-center gap-3 first:mt-0">
@@ -20,7 +22,10 @@ const SectionTitle = ({ children }) => (
     </h2>
 );
 
-const CloserDashboard = ({ embedded = false }) => {
+/* `onNavigate` lo pasa CloserWorkflowPage: permite que los botones de "arreglar este dato"
+   lleven directo a la pestaña donde se corrige (el reporte del día o la bandeja). Cuando el
+   dashboard se abre suelto (ruta de admin) no se pasa, y los avisos muestran solo los pasos. */
+const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     const { user } = useAuth();
 
     const [period, setPeriod] = useState('mes');
@@ -91,7 +96,8 @@ const CloserDashboard = ({ embedded = false }) => {
                     />
                 </header>
 
-                <div className="mt-6">
+                <div className="mt-6 space-y-4">
+                    <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
                     <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
 

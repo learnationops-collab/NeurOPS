@@ -3908,7 +3908,7 @@ const CloserWorkflowPage = () => {
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : (
-                    <CloserDashboard embedded />
+                    <CloserDashboard embedded onNavigate={setActiveView} />
                 )}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
