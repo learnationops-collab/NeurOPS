@@ -50,6 +50,19 @@ class FinancialSale(db.Model):
             "date": self.date.isoformat() if self.date else None
         }
 
+def map_closer_result_to_display(closer_result):
+    # Traduce el closer_result interno de la cita al estado post call que se muestra al usuario
+    if not closer_result:
+        return None
+    equivalencias = {
+        'Show up': 'Show Up',
+        'No Show': 'No Show',
+        'Cancelado': 'Cancelada',
+        'Reagendado': 'Reagendada',
+        '2da call': '2TH Call'
+    }
+    return equivalencias.get(closer_result, closer_result)
+
 class FinancialAgenda(db.Model):
     __tablename__ = 'financial_agendas'
     id = db.Column(db.Integer, primary_key=True)
@@ -152,20 +165,9 @@ class FinancialAgenda(db.Model):
                 if appt.setter:
                     setter_name = appt.setter.username
                 
-                closer_res = appt.closer_result
-                if closer_res:
-                    if closer_res == 'Show up':
-                        display_estado = 'Show Up'
-                    elif closer_res == 'No Show':
-                        display_estado = 'No Show'
-                    elif closer_res == 'Cancelado':
-                        display_estado = 'Cancelada'
-                    elif closer_res == 'Reagendado':
-                        display_estado = 'Reagendada'
-                    elif closer_res == '2da call':
-                        display_estado = '2TH Call'
-                    else:
-                        display_estado = closer_res
+                mapped_res = map_closer_result_to_display(appt.closer_result)
+                if mapped_res:
+                    display_estado = mapped_res
 
         return {
             "id": self.id,

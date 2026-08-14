@@ -1056,20 +1056,85 @@ def get_unread_no_agenda_triage():
             
     return jsonify(results), 200
 
+def _resolve_closer_results(agendas):
+    # Resuelve en lote el estado post call de cada agenda (cliente + cita del mismo dia)
+    from app.models import Appointment
+    from app.models.financial import map_closer_result_to_display
+
+    resultados = {}
+    if not agendas:
+        return resultados
+
+    agendas_por_ig = {}
+    agendas_por_mail = {}
+    for a in agendas:
+        ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
+        mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+        if ig_clean:
+            agendas_por_ig.setdefault(ig_clean, []).append(a)
+        if mail_clean:
+            agendas_por_mail.setdefault(mail_clean, []).append(a)
+
+    client_filters = []
+    if agendas_por_ig:
+        client_filters.append(func.lower(func.replace(Client.instagram, '@', '')).in_(list(agendas_por_ig.keys())))
+    if agendas_por_mail:
+        client_filters.append(func.lower(Client.email).in_(list(agendas_por_mail.keys())))
+    if not client_filters:
+        return resultados
+
+    cliente_por_agenda = {}
+    for c in Client.query.filter(or_(*client_filters)).all():
+        c_ig = c.instagram.strip().replace('@', '').lower() if c.instagram else None
+        c_mail = c.email.strip().lower() if c.email else None
+        for a in agendas_por_ig.get(c_ig, []) + agendas_por_mail.get(c_mail, []):
+            cliente_por_agenda.setdefault(a.id, c.id)
+
+    client_ids = set(cliente_por_agenda.values())
+    if not client_ids:
+        return resultados
+
+    citas_por_cliente = {}
+    for appt in Appointment.query.filter(Appointment.client_id.in_(list(client_ids))).all():
+        citas_por_cliente.setdefault(appt.client_id, []).append(appt)
+
+    for a in agendas:
+        client_id = cliente_por_agenda.get(a.id)
+        if not client_id or not a.date:
+            continue
+        for appt in citas_por_cliente.get(client_id, []):
+            if appt.start_time and appt.start_time.date() == a.date.date():
+                mapped = map_closer_result_to_display(appt.closer_result)
+                if mapped:
+                    resultados[a.id] = mapped
+                break
+
+    return resultados
+
 @bp.route('/public/financial-agendas/potential-leads', methods=['GET'])
 @login_required
 def get_potential_leads():
-    # Retorna los ultimos N leads potenciales sin ventas cerradas
+    # Retorna los ultimos N leads potenciales sin ventas cerradas, respetando los
+    # filtros activos del tablero salvo que se pida explicitamente ignorarlos
     limit = request.args.get('limit', default=1000, type=int)
+    apply_filters = request.args.get('apply_filters', default='true', type=str).strip().lower() not in ('false', '0', 'no')
     try:
-        from app.models import FinancialSale, FinancialAgenda
+        from app.models import FinancialSale
 
         # Obtener datos de ventas para filtrar compradores
         sales = FinancialSale.query.all()
         sold_emails = {s.mail_cliente.strip().lower() for s in sales if s.mail_cliente}
         sold_instagrams = {s.instagram.strip().replace('@', '').lower() for s in sales if s.instagram}
 
-        agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
+        if apply_filters:
+            _, query, closer_results = _build_agenda_queries()
+        else:
+            query = FinancialAgenda.query.order_by(FinancialAgenda.date.desc())
+            closer_results = []
+
+        agendas = query.all()
+        closer_results_lower = {cr.lower() for cr in closer_results}
+        estados_post_call = _resolve_closer_results(agendas)
 
         potential_leads = []
         seen_emails = set()
@@ -1090,6 +1155,10 @@ def get_potential_leads():
             if ig_clean and ig_clean in sold_instagrams:
                 continue
 
+            estado_post_call = estados_post_call.get(a.id) or (a.estado or "Pendiente")
+            if closer_results_lower and estado_post_call.strip().lower() not in closer_results_lower:
+                continue
+
             # Evitar duplicados (agenda mas reciente primero)
             if mail_clean and mail_clean in seen_emails:
                 continue
@@ -1106,11 +1175,20 @@ def get_potential_leads():
                 seen_phones.add(phone_clean)
 
             potential_leads.append({
+                "id": a.id,
                 "date": a.date.isoformat() if a.date else (a.fecha_meet or ""),
+                "registro": a.registro or (a.created_at.isoformat() if a.created_at else ""),
                 "lead": a.lead or a.nombre or "Sin Nombre",
                 "whatsapp": a.whatsapp or "",
                 "mail": a.mail or "",
-                "instagram": a.instagram or ""
+                "instagram": a.instagram or "",
+                "nombre": a.nombre or "",
+                "closer": a.closer or "",
+                "encargado_triage": a.encargado_triage or "",
+                "estado": a.estado or "Pendiente",
+                "closer_result": estado_post_call,
+                "zona_geografica": a.zona_geografica or "",
+                "fecha_seguimiento": a.fecha_seguimiento or ""
             })
 
         return jsonify(potential_leads), 200
