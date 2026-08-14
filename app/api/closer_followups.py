@@ -96,7 +96,11 @@ def cron_send_followup_reminders():
     """Avanza la cola de recordatorios de seguimiento por WhatsApp (Whatchimp): manda como mucho
     REMINDERS_PER_HOUR por closer por hora, dentro de su horario laboral local. Pensado para un
     cron externo (mismo patrón/token que /api/sheets/cron-sync) como alternativa al scheduler
-    interno — llamarlo de más es seguro, el propio goteo evita reenviar."""
+    interno — llamarlo de más es seguro, el propio goteo evita reenviar.
+
+    Con los recordatorios desactivados (estado por defecto, ver `reminders_enabled`) responde
+    200 con `disabled: true` y no envía nada — así un cron externo ya configurado no empieza a
+    fallar, simplemente no manda mensajes."""
     token = request.args.get('token')
     expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
     if not token or token != expected_token:

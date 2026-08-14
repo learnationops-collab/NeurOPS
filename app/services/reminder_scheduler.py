@@ -14,6 +14,12 @@ def _should_start():
     lanzar el proceso real (evita que corra duplicado)."""
     if os.environ.get('DISABLE_REMINDER_SCHEDULER', '').lower() == 'true':
         return False
+    # Recordatorios apagados (estado por defecto desde el 14/08/2026): no tiene sentido tickear
+    # cada 15 minutos para que `send_due_reminders` corte en la primera línea. El corte de verdad
+    # vive en el servicio, así que el endpoint de cron externo queda cubierto igual.
+    from app.services.closer_followup_service import reminders_enabled
+    if not reminders_enabled():
+        return False
     if len(sys.argv) > 1 and sys.argv[1] in ('db', 'shell', 'create-admin', 'routes'):
         return False
     from flask import current_app
@@ -27,14 +33,17 @@ def start_scheduler(app):
     pendientes para avisarle a algún closer por WhatsApp, respetando la hora local de cada uno.
     El goteo real (cuántos y cuándo) lo decide CloserFollowUpService.send_due_reminders: como
     mucho REMINDERS_PER_HOUR por closer por hora, dentro de su horario laboral local — así que
-    correr esto cada 15 minutos solo le da oportunidad de avanzar la cola, no manda de más."""
+    correr esto cada 15 minutos solo le da oportunidad de avanzar la cola, no manda de más.
+
+    Hoy los recordatorios están desactivados (ver `reminders_enabled` en closer_followup_service):
+    el scheduler no arranca salvo que se defina `FOLLOWUP_REMINDERS_ENABLED=true`."""
     global _scheduler
     if _scheduler is not None:
         return
 
     with app.app_context():
         if not _should_start():
-            logger.info("[ReminderScheduler] No se arranca en este proceso (CLI o proceso watcher del reloader).")
+            logger.info("[ReminderScheduler] No se arranca en este proceso (recordatorios desactivados, CLI o proceso watcher del reloader).")
             return
 
     from apscheduler.schedulers.background import BackgroundScheduler

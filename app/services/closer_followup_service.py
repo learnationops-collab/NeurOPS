@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
@@ -21,6 +22,15 @@ PROGRAM_CODE_NAMES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Sp
 # closer_result que implican "no_tomada" aunque el closer nunca haya programado explícitamente
 # un seguimiento (ej. reportó la llamada como No Show pero cerró el modal sin asignar fecha).
 DERIVABLE_NO_TOMADA = {'no show', 'cancelado', 'cancelada'}
+
+
+def reminders_enabled():
+    """Interruptor de los recordatorios de seguimiento por WhatsApp a los closers. Apagado por
+    defecto (pedido del usuario): para volver a activarlos alcanza con definir la variable de
+    entorno `FOLLOWUP_REMINDERS_ENABLED=true`, sin tocar código. Se lee en cada llamada (no una
+    sola vez al importar el módulo) para que cambiar la variable en el hosting surta efecto con
+    solo reiniciar el proceso."""
+    return os.environ.get('FOLLOWUP_REMINDERS_ENABLED', '').strip().lower() in ('true', '1', 'yes')
 
 
 class CloserFollowUpService:
@@ -248,7 +258,24 @@ class CloserFollowUpService:
         minutos: llamarlo de más es inofensivo, el límite por hora y el "una vez por día por
         cita" hacen que las corridas extra no manden nada. Si el closer no tiene
         `two_chat_number` configurado (ver Gestión de Equipo), se cuenta como omitido en vez de
-        fallar todo el lote."""
+        fallar todo el lote.
+
+        Los recordatorios están **desactivados por defecto** (ver `reminders_enabled`): mientras
+        lo estén, esta función no toca la base ni llama a Whatchimp y devuelve `disabled: True`.
+        La cola en pantalla (`get_today_grouped`, pool, meta diaria) sigue funcionando igual — lo
+        único que se apaga es el envío de mensajes."""
+        if not reminders_enabled():
+            return {
+                "disabled": True,
+                "sent": 0,
+                "already_sent_today": 0,
+                "skipped_no_phone": 0,
+                "gated_outside_hours": 0,
+                "throttled": 0,
+                "failed": 0,
+                "total_pending": 0
+            }
+
         import pytz
         from app.services.whatchimp_service import WhatchimpService
 
