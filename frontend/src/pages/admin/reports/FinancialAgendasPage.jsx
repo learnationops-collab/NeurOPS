@@ -21,6 +21,7 @@ import {
     Building,
     RefreshCw,
     Download,
+    Check,
     X
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
@@ -30,6 +31,98 @@ import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
 import { useAuth } from '../../../contexts/AuthContext';
 
+
+// Filtro de selección múltiple con el mismo estilo de píldora del resto de la barra.
+// El valor se guarda como string separado por comas para viajar tal cual al backend.
+const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selected = value ? value.split(',').filter(Boolean) : [];
+
+    const toggleOption = (opt) => {
+        const next = selected.includes(opt)
+            ? selected.filter(v => v !== opt)
+            : [...selected, opt];
+        onChange(next.join(','));
+    };
+
+    const resumen = selected.length === 0
+        ? placeholder
+        : (selected.length === 1 ? selected[0] : `${selected.length} seleccionados`);
+
+    return (
+        <div ref={containerRef} className="relative">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-2 border p-2.5 rounded-2xl transition-colors cursor-pointer ${
+                    selected.length > 0
+                        ? 'bg-primary/10 border-primary/30'
+                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                }`}
+            >
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider max-w-[150px] truncate">{resumen}</span>
+                <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full right-0 z-[80] mt-2 w-60 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between px-1 pb-1.5 border-b border-slate-800">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+                        {selected.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => onChange('')}
+                                className="text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-wider transition-colors cursor-pointer"
+                            >
+                                Limpiar
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar pr-0.5">
+                        {options.length === 0 && (
+                            <p className="px-2 py-1.5 text-[10px] font-bold text-slate-500">Sin opciones disponibles</p>
+                        )}
+                        {options.map((opt) => {
+                            const isSelected = selected.includes(opt);
+                            return (
+                                <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => toggleOption(opt)}
+                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs font-bold transition-all cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-primary/20 text-white'
+                                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                    }`}
+                                >
+                                    <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 transition-all ${
+                                        isSelected ? 'bg-primary border-primary' : 'border-slate-600'
+                                    }`}>
+                                        {isSelected && <Check size={10} className="text-white" />}
+                                    </span>
+                                    <span className="truncate">{opt}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 // Celda que muestra el número y el porcentaje en lugares diferentes de forma vertical
 const HoverPercentCell = ({ value, total, className = "" }) => {
@@ -413,7 +506,7 @@ const FinancialAgendasPage = () => {
             });
 
             const potentials = response.data || [];
-            
+
             if (potentials.length === 0) {
                 alert("No se encontraron clientes potenciales (leads agendados sin ventas registradas).");
                 return;
@@ -793,80 +886,45 @@ const FinancialAgendasPage = () => {
                 {/* Filtros de Clasificación (Estado, Closer, Fuente) */}
                 <div className="flex flex-wrap items-center gap-3">
                     {/* Selector de Estado */}
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado pre call</span>
-                        <select
-                            value={estado}
-                            onChange={(e) => setEstado(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
-                        >
-                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
-                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <MultiSelectPill
+                        label="Estado pre call"
+                        options={['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada']}
+                        value={estado}
+                        onChange={setEstado}
+                    />
 
                     {/* Selector de Estado de Closing */}
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado post call</span>
-                        <select
-                            value={closer_result}
-                            onChange={(e) => setCloserResult(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
-                        >
-                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {['Pendiente', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', '2TH Call', 'Cerrada'].map(st => (
-                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <MultiSelectPill
+                        label="Estado post call"
+                        options={['Pendiente', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', '2TH Call', 'Cerrada']}
+                        value={closer_result}
+                        onChange={setCloserResult}
+                    />
 
                     {/* Selector de Closer */}
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Closer</span>
-                        <select
-                            value={closer}
-                            onChange={(e) => setCloser(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
-                        >
-                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {uniqueClosers.map(cl => (
-                                <option key={cl} value={cl} className="bg-slate-900 text-white font-semibold">{cl}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <MultiSelectPill
+                        label="Closer"
+                        options={uniqueClosers}
+                        value={closer}
+                        onChange={setCloser}
+                    />
 
                     {/* Selector de Fuente */}
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Fuente</span>
-                        <select
-                            value={fuente}
-                            onChange={(e) => setFuente(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
-                        >
-                            <option value="" className="bg-slate-900 text-white font-semibold">Todas</option>
-                            {uniqueSources.map(src => (
-                                <option key={src} value={src} className="bg-slate-900 text-white font-semibold">{src}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <MultiSelectPill
+                        label="Fuente"
+                        options={uniqueSources}
+                        value={fuente}
+                        onChange={setFuente}
+                        placeholder="Todas"
+                    />
 
                     {/* Selector de Triaje */}
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Call Confirmer</span>
-                        <select
-                            value={encargadoTriage}
-                            onChange={(e) => setEncargadoTriage(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
-                        >
-                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            <option value="Sin Asignar" className="bg-slate-900 text-white font-semibold">Sin Asignar</option>
-                            {uniqueTriage.map(tg => (
-                                <option key={tg} value={tg} className="bg-slate-900 text-white font-semibold">{tg}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <MultiSelectPill
+                        label="Call Confirmer"
+                        options={['Sin Asignar', ...uniqueTriage]}
+                        value={encargadoTriage}
+                        onChange={setEncargadoTriage}
+                    />
 
                     {/* Botón para Limpiar todos los Filtros */}
                     {(estado || closer || fuente || encargadoTriage || closer_result || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
@@ -1443,13 +1501,13 @@ const FinancialAgendasPage = () => {
                                 Leads sin ventas registradas
                             </p>
                         </div>
-                        
+
                         <div className="p-5 md:p-6 space-y-4 text-left">
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                                     Cantidad de Leads a Exportar (últimos agendados)
                                 </label>
-                                <input 
+                                <input
                                     type="number"
                                     min="1"
                                     max="5000"
@@ -1463,7 +1521,7 @@ const FinancialAgendasPage = () => {
                                 </p>
                             </div>
                         </div>
-                        
+
                         {/* Footer Fijo */}
                         <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex gap-3">
                             <button 

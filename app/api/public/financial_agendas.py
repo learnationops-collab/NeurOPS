@@ -21,6 +21,101 @@ def parse_date_robustly(val):
     except:
         return datetime.utcnow()
 
+def _split_multi(raw_value):
+    # Los filtros del tablero envian una o varias opciones separadas por coma
+    if not raw_value:
+        return []
+    return [part.strip() for part in raw_value.split(',') if part.strip()]
+
+def _build_agenda_queries():
+    # Construye la consulta filtrada por fechas y la consulta con el resto de filtros
+    # de la request actual. Devuelve (date_query, query, closer_results) donde
+    # closer_results son los estados post call pedidos (se filtran en memoria porque
+    # se calculan a partir de la cita asociada).
+    start_date_str = request.args.get('start_date', default='', type=str).strip()
+    end_date_str = request.args.get('end_date', default='', type=str).strip()
+    date_filter_by = request.args.get('date_filter_by', default='meet', type=str).strip().lower()
+    search = request.args.get('search', default='', type=str).strip()
+
+    estados = _split_multi(request.args.get('estado', default='', type=str))
+    closers = _split_multi(request.args.get('closer', default='', type=str))
+    fuentes = _split_multi(request.args.get('fuente', default='', type=str))
+    encargados_triage = _split_multi(request.args.get('encargado_triage', default='', type=str))
+    closer_results = _split_multi(request.args.get('closer_result', default='', type=str))
+
+    # Consulta base filtrada únicamente por fechas
+    date_query = FinancialAgenda.query
+
+    if date_filter_by == 'created':
+        if start_date_str:
+            date_query = date_query.filter(FinancialAgenda.registro >= start_date_str)
+        if end_date_str:
+            date_query = date_query.filter(FinancialAgenda.registro <= f"{end_date_str}T23:59:59")
+    else:
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                end_date = None
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
+                    except ValueError:
+                        pass
+
+                # Filtro para fecha de cita (date)
+                date_conds = [FinancialAgenda.date >= start_date]
+                if end_date:
+                    date_conds.append(FinancialAgenda.date <= end_date)
+
+                # Filtro para fecha de seguimiento (fecha_seguimiento)
+                followup_conds = [FinancialAgenda.fecha_seguimiento >= start_date_str]
+                if end_date_str:
+                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{end_date_str}T23:59:59")
+                else:
+                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{start_date_str}T23:59:59")
+
+                date_query = date_query.filter(or_(
+                    and_(*date_conds),
+                    and_(*followup_conds)
+                ))
+            except ValueError:
+                pass
+
+    # La consulta principal aplica además los filtros específicos de estado, closer, fuente y búsqueda
+    query = date_query
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(
+            FinancialAgenda.lead.ilike(search_pattern),
+            FinancialAgenda.nombre.ilike(search_pattern),
+            FinancialAgenda.closer.ilike(search_pattern),
+            FinancialAgenda.mail.ilike(search_pattern),
+            FinancialAgenda.whatsapp.ilike(search_pattern)
+        ))
+
+    if estados:
+        query = query.filter(FinancialAgenda.estado.in_(estados))
+    if closers:
+        query = query.filter(FinancialAgenda.closer.in_(closers))
+    if fuentes:
+        query = query.filter(FinancialAgenda.nombre.in_(fuentes))
+    if encargados_triage:
+        triage_conds = []
+        asignados = [t for t in encargados_triage if t != 'Sin Asignar']
+        if 'Sin Asignar' in encargados_triage:
+            triage_conds.append(or_(FinancialAgenda.encargado_triage == None, FinancialAgenda.encargado_triage == ''))
+        if asignados:
+            triage_conds.append(FinancialAgenda.encargado_triage.in_(asignados))
+        query = query.filter(or_(*triage_conds))
+
+    if date_filter_by == 'created':
+        query = query.order_by(FinancialAgenda.registro.desc())
+    else:
+        query = query.order_by(FinancialAgenda.date.desc())
+
+    return date_query, query, closer_results
+
 @bp.route('/public/financial-agendas', methods=['POST'])
 def receive_financial_agendas():
     # Recibe datos de agendas desde Excel/Apps Script/n8n
@@ -212,86 +307,10 @@ def get_financial_agendas():
 
     page = request.args.get('page', default=None, type=int)
     limit = request.args.get('limit', default=10, type=int)
-    search = request.args.get('search', default='', type=str).strip()
-    start_date_str = request.args.get('start_date', default='', type=str).strip()
-    end_date_str = request.args.get('end_date', default='', type=str).strip()
-    date_filter_by = request.args.get('date_filter_by', default='meet', type=str).strip().lower()
-    
-    estado = request.args.get('estado', default='', type=str).strip()
-    closer = request.args.get('closer', default='', type=str).strip()
-    fuente = request.args.get('fuente', default='', type=str).strip()
-    encargado_triage = request.args.get('encargado_triage', default='', type=str).strip()
-    
-    # Consulta base filtrada únicamente por fechas
-    date_query = FinancialAgenda.query
-    
-    if date_filter_by == 'created':
-        if start_date_str:
-            date_query = date_query.filter(FinancialAgenda.registro >= start_date_str)
-        if end_date_str:
-            date_query = date_query.filter(FinancialAgenda.registro <= f"{end_date_str}T23:59:59")
-    else:
-        if start_date_str:
-            try:
-                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-                end_date = None
-                if end_date_str:
-                    try:
-                        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
-                    except ValueError:
-                        pass
-                
-                # Filtro para fecha de cita (date)
-                date_conds = [FinancialAgenda.date >= start_date]
-                if end_date:
-                    date_conds.append(FinancialAgenda.date <= end_date)
-                
-                # Filtro para fecha de seguimiento (fecha_seguimiento)
-                followup_conds = [FinancialAgenda.fecha_seguimiento >= start_date_str]
-                if end_date_str:
-                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{end_date_str}T23:59:59")
-                else:
-                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{start_date_str}T23:59:59")
 
-                date_query = date_query.filter(or_(
-                    and_(*date_conds),
-                    and_(*followup_conds)
-                ))
-            except ValueError:
-                pass
+    date_query, query, closer_results = _build_agenda_queries()
+    closer_results_lower = {cr.lower() for cr in closer_results}
 
-    # La consulta principal aplica además los filtros específicos de estado, closer, fuente y búsqueda
-    query = date_query
-    
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(or_(
-            FinancialAgenda.lead.ilike(search_pattern),
-            FinancialAgenda.nombre.ilike(search_pattern),
-            FinancialAgenda.closer.ilike(search_pattern),
-            FinancialAgenda.mail.ilike(search_pattern),
-            FinancialAgenda.whatsapp.ilike(search_pattern)
-        ))
-    
-    if estado:
-        query = query.filter(FinancialAgenda.estado == estado)
-    if closer:
-        query = query.filter(FinancialAgenda.closer == closer)
-    if fuente:
-        query = query.filter(FinancialAgenda.nombre == fuente)
-    if encargado_triage:
-        if encargado_triage == 'Sin Asignar':
-            query = query.filter(or_(FinancialAgenda.encargado_triage == None, FinancialAgenda.encargado_triage == ''))
-        else:
-            query = query.filter(FinancialAgenda.encargado_triage == encargado_triage)
-        
-    closer_result = request.args.get('closer_result', default='', type=str).strip()
-    
-    if date_filter_by == 'created':
-        query = query.order_by(FinancialAgenda.registro.desc())
-    else:
-        query = query.order_by(FinancialAgenda.date.desc())
-        
     all_agendas = query.all()
     
     # Obtener notificaciones no leídas para ordenar
@@ -361,9 +380,9 @@ def get_financial_agendas():
         dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
         dict_agenda["_sales_info"] = (s_count, has_deposit, has_full_sale)
         
-        if closer_result:
+        if closer_results_lower:
             agenda_closer_res = dict_agenda.get("closer_result") or "Pendiente"
-            if agenda_closer_res.strip().lower() != closer_result.strip().lower():
+            if agenda_closer_res.strip().lower() not in closer_results_lower:
                 continue
                 
         serialized_all.append(dict_agenda)
@@ -1044,33 +1063,33 @@ def get_potential_leads():
     limit = request.args.get('limit', default=1000, type=int)
     try:
         from app.models import FinancialSale, FinancialAgenda
-        
+
         # Obtener datos de ventas para filtrar compradores
         sales = FinancialSale.query.all()
         sold_emails = {s.mail_cliente.strip().lower() for s in sales if s.mail_cliente}
         sold_instagrams = {s.instagram.strip().replace('@', '').lower() for s in sales if s.instagram}
-        
+
         agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
-        
+
         potential_leads = []
         seen_emails = set()
         seen_instagrams = set()
         seen_phones = set()
-        
+
         for a in agendas:
             if len(potential_leads) >= limit:
                 break
-                
+
             mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
             ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
             phone_clean = a.whatsapp.strip() if a.whatsapp else None
-            
+
             # Ignorar compradores
             if mail_clean and mail_clean in sold_emails:
                 continue
             if ig_clean and ig_clean in sold_instagrams:
                 continue
-                
+
             # Evitar duplicados (agenda mas reciente primero)
             if mail_clean and mail_clean in seen_emails:
                 continue
@@ -1078,14 +1097,14 @@ def get_potential_leads():
                 continue
             if phone_clean and phone_clean in seen_phones:
                 continue
-                
+
             if mail_clean:
                 seen_emails.add(mail_clean)
             if ig_clean:
                 seen_instagrams.add(ig_clean)
             if phone_clean:
                 seen_phones.add(phone_clean)
-                
+
             potential_leads.append({
                 "date": a.date.isoformat() if a.date else (a.fecha_meet or ""),
                 "lead": a.lead or a.nombre or "Sin Nombre",
@@ -1093,7 +1112,7 @@ def get_potential_leads():
                 "mail": a.mail or "",
                 "instagram": a.instagram or ""
             })
-            
+
         return jsonify(potential_leads), 200
     except Exception as e:
         import logging
