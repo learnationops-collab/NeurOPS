@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../../services/api';
 import {
     Calendar as CalendarIcon,
@@ -1536,10 +1537,13 @@ const FinancialAgendasPage = () => {
                 </div>
             )}
 
-            {/* Modal de Configuración de Exportación de Leads Potenciales */}
-            {showExportModal && (
+            {/* Modal de Configuración de Exportación de Leads Potenciales.
+                Va por portal a <body>: la página vive dentro de un contenedor con `z-10`,
+                así que sin esto el `z-[100]` sólo ordena dentro de ese contenedor y el dock
+                inferior (`z-50`, hermano del contenedor) termina tapando los botones. */}
+            {showExportModal && createPortal(
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-lg w-full max-h-[85dvh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
                         {/* Cabecera Fija */}
                         <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
                             <h3 className="text-lg font-black text-white italic uppercase flex items-center gap-2">
@@ -1689,7 +1693,8 @@ const FinancialAgendasPage = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {statusActionModal.isOpen && (
