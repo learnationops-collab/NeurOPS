@@ -1449,6 +1449,8 @@ class CloserService:
     # agregadas no puedan clasificar distinto la misma cita.
     SECOND_CALL_RESULTS = {'2th call', '2da call', 'segunda llamada', 'segunda agenda'}
 
+    WEEKDAY_LABELS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
     @staticmethod
     def _stats_from_bandeja(closer_id, start_date, end_date):
         """Las métricas del embudo calculadas desde **la bandeja** (`Appointment` + `FinancialSale`),
@@ -1613,6 +1615,98 @@ class CloserService:
             rec_contacted=rec_contacted, rec_replied=rec_replied, rec_scheduled=rec_scheduled,
             ref_sourced=referidos, ref_scheduled=referidos
         )
+
+    @staticmethod
+    def get_missing_slots_days(closer_id, start_date, end_date):
+        """Días del período en los que el closer tuvo agendas pero nunca declaró cuántos cupos
+        había abierto. Los cupos son el **único** dato del dashboard que no se puede deducir de la
+        bandeja (ver _stats_from_bandeja), así que en vez de dejar el primer paso del embudo en un
+        número imposible —menos cupos que agendas— el dashboard se los pide al entrar.
+
+        Solo se piden los días **con agendas**: un día sin nada agendado no tiene cupos que
+        declarar y pedirlos sería ruido. Cada día viene con su cantidad de agendas, que es el piso
+        lógico del número (un cupo ocupado sigue siendo un cupo)."""
+        from collections import defaultdict
+        from app.models import Appointment, CloserDailyReport
+
+        start_dt, end_dt = CloserService._parse_range(start_date, end_date)
+        if not start_dt or not end_dt:
+            return []
+
+        agendas_por_dia = defaultdict(int)
+        q = Appointment.query.filter(Appointment.start_time >= start_dt, Appointment.start_time < end_dt)
+        if closer_id:
+            q = q.filter(Appointment.closer_id == closer_id)
+        for (start_time,) in q.with_entities(Appointment.start_time).all():
+            agendas_por_dia[start_time.date()] += 1
+
+        if not agendas_por_dia:
+            return []
+
+        declarados = {
+            r.date: r.slots
+            for r in CloserDailyReport.query.with_entities(CloserDailyReport.date, CloserDailyReport.slots).filter(
+                CloserDailyReport.closer_id == closer_id,
+                CloserDailyReport.date >= min(agendas_por_dia),
+                CloserDailyReport.date <= max(agendas_por_dia)
+            ).all()
+        } if closer_id else {}
+
+        pendientes = []
+        for dia in sorted(agendas_por_dia):
+            slots = declarados.get(dia)
+            if slots in (None, 0):
+                pendientes.append({
+                    'date': dia.isoformat(),
+                    'weekday': CloserService.WEEKDAY_LABELS[dia.weekday()],
+                    'agendas': agendas_por_dia[dia],
+                    'minimo': agendas_por_dia[dia]
+                })
+        return pendientes
+
+    @staticmethod
+    def save_slots_for_days(closer_id, dias):
+        """Guarda los cupos declarados por día, creando el `CloserDailyReport` si ese día todavía
+        no tenía uno. Rechaza cualquier valor menor a las agendas reales de ese día: un cupo que
+        se agendó sigue contando, así que menos cupos que agendas es imposible por definición —
+        era el error más común al escribirlos en el reporte diario."""
+        from app.models import Appointment, CloserDailyReport
+
+        guardados, rechazados = [], []
+        for raw_fecha, raw_slots in (dias or {}).items():
+            dia = CloserService._as_date(raw_fecha)
+            if not dia:
+                rechazados.append({'date': raw_fecha, 'motivo': 'fecha inválida'})
+                continue
+            try:
+                slots = int(raw_slots)
+            except (TypeError, ValueError):
+                rechazados.append({'date': raw_fecha, 'motivo': 'no es un número'})
+                continue
+
+            inicio = datetime.combine(dia, time.min)
+            agendas = Appointment.query.filter(
+                Appointment.closer_id == closer_id,
+                Appointment.start_time >= inicio,
+                Appointment.start_time < inicio + timedelta(days=1)
+            ).count()
+            if slots < agendas:
+                rechazados.append({
+                    'date': dia.isoformat(),
+                    'motivo': f'ese día tenés {agendas} agenda(s): los cupos no pueden ser menos'
+                })
+                continue
+
+            reporte = CloserDailyReport.query.filter_by(closer_id=closer_id, date=dia).first()
+            if not reporte:
+                reporte = CloserDailyReport(closer_id=closer_id, date=dia)
+                db.session.add(reporte)
+            reporte.slots = slots
+            guardados.append({'date': dia.isoformat(), 'slots': slots})
+
+        if guardados:
+            db.session.commit()
+        return {'guardados': guardados, 'rechazados': rechazados}
 
     @staticmethod
     def _as_date(value):

@@ -12,6 +12,7 @@ import PerformanceActivity from './components/PerformanceActivity';
 import PerformanceRanking from './components/PerformanceRanking';
 import DataSourceLegend from './components/DataSourceLegend';
 import DataIssuesPanel from './components/DataIssuesPanel';
+import SlotsPrompt from './components/SlotsPrompt';
 import { PERIOD_LABELS, COMPARE_LABELS } from './performanceUtils';
 import { detectIssues } from './dataIssues';
 
@@ -97,6 +98,11 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                 </header>
 
                 <div className="mt-6 space-y-4">
+                    {/* Los cupos de agenda son el único dato que no sale de la bandeja: se piden
+                        acá, arriba de todo, en vez de depender de que el closer mande el reporte
+                        diario de ese día. Al guardarlos se recarga el dashboard para que el primer
+                        paso del embudo deje de estar mal. */}
+                    {user?.role === 'closer' && <SlotsPrompt period={period} onSaved={fetchData} />}
                     <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
                     <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
