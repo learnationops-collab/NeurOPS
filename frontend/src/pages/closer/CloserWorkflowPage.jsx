@@ -25,6 +25,25 @@ const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', '
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+// Qué falta para poder guardar, en palabras y al lado del botón. Nace de un reporte real: un
+// closer completaba todo lo que la pantalla marcaba como obligatorio, tocaba "Completar
+// Seguimiento" y no pasaba nada — el botón estaba deshabilitado por un requisito que no se
+// mostraba en ningún lado, y un botón deshabilitado no da ninguna señal al tocarlo.
+const MissingFieldsHint = ({ items }) => (
+    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+        <p className="text-[10px] font-black uppercase tracking-wider text-amber-300">
+            {items.length === 1 ? 'Falta esto para poder guardar' : `Faltan ${items.length} cosas para poder guardar`}
+        </p>
+        <ul className="space-y-1">
+            {items.map(t => (
+                <li key={t} className="text-[11px] font-bold text-amber-200/90 flex gap-1.5">
+                    <span className="text-amber-400">•</span>{t}
+                </li>
+            ))}
+        </ul>
+    </div>
+);
+
 // Fecha corta legible para las fichas de lead (fecha de agendamiento / fecha de ingreso).
 const formatIdcardDate = (iso) => {
     if (!iso) return null;
@@ -2757,11 +2776,26 @@ const CloserWorkflowPage = () => {
             const isCierra = sessionForm.result === 'cerro';
             const isAgendo = sessionForm.result === 'agendo';
             const needsSig = sessionForm.result && !isAgendo && !isCierra;
-            const canComplete = !!sessionForm.result
-                && sessionForm.notes.trim().length >= 10
-                && (sessionForm.modalidad || []).length > 0
-                && (!isAgendo || (sessionForm.nueva_fecha_agenda && sessionForm.nueva_hora_agenda))
-                && (!needsSig || (sessionForm.sig_action === 'next' ? !!sessionForm.fecha_seguimiento : (sessionForm.sig_action === 'close' && !!sessionForm.cierre_motivo)));
+            // Qué falta para poder completar, en palabras. `canComplete` se deriva de esta lista
+            // (no al revés) para que no puedan divergir: si aparece un requisito nuevo, el closer
+            // lo ve nombrado. Antes esto era una sola expresión booleana y el botón simplemente
+            // quedaba gris sin decir por qué — un closer reportó "le doy y no continúa" teniendo
+            // completo todo lo que la pantalla marcaba como obligatorio (le faltaba elegir "¿y
+            // ahora qué hacemos?", que era requerido pero no estaba marcado como tal).
+            const notasLen = (sessionForm.notes || '').trim().length;
+            const faltantes = [];
+            if (!sessionForm.result) faltantes.push('Elegí qué pasó con este contacto');
+            if ((sessionForm.modalidad || []).length === 0) faltantes.push('Marcá la modalidad: mensaje, llamada o las dos');
+            if (notasLen < 10) faltantes.push(`Contá qué le dijiste y qué respondió (mínimo 10 caracteres, llevás ${notasLen})`);
+            if (isAgendo && !(sessionForm.nueva_fecha_agenda && sessionForm.nueva_hora_agenda)) {
+                faltantes.push('Poné la nueva fecha y hora de la agenda');
+            }
+            if (needsSig) {
+                if (!sessionForm.sig_action) faltantes.push('Elegí qué hacemos ahora: programar el próximo seguimiento o cerrarlo');
+                else if (sessionForm.sig_action === 'next' && !sessionForm.fecha_seguimiento) faltantes.push('Elegí la fecha del próximo seguimiento');
+                else if (sessionForm.sig_action === 'close' && !sessionForm.cierre_motivo) faltantes.push('Elegí por qué se cierra el seguimiento');
+            }
+            const canComplete = faltantes.length === 0;
             const btnLabel = isCierra ? 'Continuar al reporte de venta →' : 'Completar Seguimiento';
             const needsRefs = ['contesto', 'agendo', 'cerro'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
 
@@ -2777,7 +2811,7 @@ const CloserWorkflowPage = () => {
                         <span>Cadencia automática</span>
                     </div>
 
-                    <div className="q req space-y-2">
+                    <div className={`q req space-y-2 ${sessionForm.result ? 'done' : ''}`}>
                         <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con este contacto?</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', 'Lo hice, no contestó', sessionForm.result === 'no_resp')}
@@ -2790,9 +2824,9 @@ const CloserWorkflowPage = () => {
                         )}
                     </div>
 
-                    <div className="q req space-y-2">
+                    <div className={`q req space-y-2 ${(sessionForm.modalidad || []).length > 0 ? 'done' : ''}`}>
                         <h4 className="text-[10px] font-black uppercase text-slate-400">Modalidad</h4>
-                        <p className="text-[10px] text-slate-500 font-medium">Podés marcar las dos si hiciste ambas.</p>
+                        <p className="text-[10px] text-slate-500 font-medium">Marcá al menos una — podés marcar las dos si hiciste ambas.</p>
                         <div className="flex gap-2">
                             {option(() => toggleModalidad('Mensaje'), 'info', 'Mensaje', null, (sessionForm.modalidad || []).includes('Mensaje'))}
                             {option(() => toggleModalidad('Llamada'), 'info', 'Llamada', null, (sessionForm.modalidad || []).includes('Llamada'))}
@@ -2835,7 +2869,10 @@ const CloserWorkflowPage = () => {
                     </div>
 
                     {needsSig && (
-                        <div className="q space-y-2">
+                        // `req`: es obligatorio para poder completar el seguimiento (lo pide
+                        // `canComplete`), pero estaba sin marcar — el closer daba por hecho que
+                        // era opcional y no entendía por qué el botón no se activaba.
+                        <div className={`q req space-y-2 ${sessionForm.sig_action === 'next' || (sessionForm.sig_action === 'close' && sessionForm.cierre_motivo) ? 'done' : ''}`}>
                             <h4 className="text-[10px] font-black uppercase text-slate-400">¿Y ahora qué hacemos?</h4>
                             <div className="grid grid-cols-2 gap-3">
                                 {option(() => {
@@ -2858,6 +2895,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
 
+                    {faltantes.length > 0 && <MissingFieldsHint items={faltantes} />}
+
                     <div className="flex justify-between items-center pt-2 border-t border-slate-850">
                         <div />
                         <button
@@ -2869,7 +2908,7 @@ const CloserWorkflowPage = () => {
                                 }
                             }}
                             disabled={!canComplete || processingId === selectedLead.id}
-                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
                         >
                             {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
                         </button>
@@ -2883,9 +2922,14 @@ const CloserWorkflowPage = () => {
 
             const isPago = sessionForm.result === 'pago';
             const needsCobroDate = sessionForm.result === 'no_resp' || sessionForm.result === 'contesto';
-            const canComplete = !!sessionForm.result
-                && sessionForm.notes.trim().length >= 10
-                && (!needsCobroDate || !!sessionForm.fecha_seguimiento_cobro_next);
+            // Mismo criterio que el paso de seguimiento: la lista de faltantes es la fuente de
+            // verdad y el botón se deriva de ella, para que nunca quede gris sin explicación.
+            const notasLenCobro = (sessionForm.notes || '').trim().length;
+            const faltantesCobro = [];
+            if (!sessionForm.result) faltantesCobro.push('Elegí qué pasó con el cobro');
+            if (notasLenCobro < 10) faltantesCobro.push(`Contá qué le dijiste y qué respondió (mínimo 10 caracteres, llevás ${notasLenCobro})`);
+            if (needsCobroDate && !sessionForm.fecha_seguimiento_cobro_next) faltantesCobro.push('Elegí la fecha del próximo intento de cobro');
+            const canComplete = faltantesCobro.length === 0;
             const btnLabel = isPago ? 'Continuar al registro de cobro →' : 'Completar Cobro';
             const needsRefs = ['contesto', 'pago'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
 
@@ -2981,6 +3025,8 @@ const CloserWorkflowPage = () => {
                         {mencionesChips}
                     </div>
 
+                    {faltantesCobro.length > 0 && <MissingFieldsHint items={faltantesCobro} />}
+
                     <div className="flex justify-between items-center pt-2 border-t border-slate-850">
                         <div />
                         <button
@@ -2992,7 +3038,7 @@ const CloserWorkflowPage = () => {
                                 }
                             }}
                             disabled={!canComplete || processingId === selectedLead.id}
-                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
                         >
                             {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
                         </button>
