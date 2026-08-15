@@ -605,6 +605,96 @@ class CloserService:
         except Exception as global_err:
             print(f"[Sale Automation Global Error] {global_err}")
 
+    # Resultados de llamada que se consideran "sin reportar o mal reportados" y que una venta
+    # registrada contradice: si el lead compró, esa llamada la tomó. 'Show up' no está en la
+    # lista (ya es correcto) y 'Cancelado'/'Reagendado' tampoco: esas citas efectivamente no
+    # ocurrieron — la venta salió de OTRA llamada, no de la que se canceló.
+    RESULTS_OVERRIDABLE_BY_SALE = {'', 'pendiente', 'no show', '2da call'}
+
+    @staticmethod
+    def mark_sale_appointment_as_show_up(client_id, sale_date=None, dry_run=False):
+        """Marca como 'Show up' la agenda en la que se hizo una venta: un lead que compró
+        obviamente asistió a la llamada, pero el closer muchas veces registra la venta sin volver
+        a la bandeja a reportar el resultado, y la agenda queda en 'Pendiente' o incluso 'No Show'.
+
+        **Solo se toca la agenda más reciente anterior o igual a la fecha de la venta** (si no hay
+        ninguna previa, la más antigua posterior — caso de venta cargada antes que la agenda). No
+        se marca todo el historial del lead: un No Show real de hace dos meses sigue siendo un No
+        Show aunque la persona haya comprado después, y darlo por asistido falsearía el show rate.
+
+        Devuelve el dict de lo que cambió (o cambiaría, con `dry_run=True`), o None si no había
+        nada que corregir."""
+        if not client_id:
+            return None
+
+        appts = Appointment.query.filter_by(client_id=client_id).all()
+        if not appts:
+            return None
+
+        con_fecha = [a for a in appts if a.start_time]
+        if not con_fecha:
+            return None
+
+        if sale_date:
+            previas = [a for a in con_fecha if a.start_time <= sale_date]
+            objetivo = max(previas, key=lambda a: a.start_time) if previas else min(con_fecha, key=lambda a: a.start_time)
+        else:
+            objetivo = max(con_fecha, key=lambda a: a.start_time)
+
+        actual = (objetivo.closer_result or '').strip().lower()
+        if actual not in CloserService.RESULTS_OVERRIDABLE_BY_SALE:
+            return None
+
+        cambio = {
+            'appointment_id': objetivo.id,
+            'client_id': client_id,
+            'start_time': objetivo.start_time.isoformat(),
+            'closer_result_antes': objetivo.closer_result,
+            'result_antes': objetivo.result
+        }
+        if dry_run:
+            return cambio
+
+        objetivo.closer_result = 'Show up'
+        objetivo.closer_processed = True
+        # Una llamada a la que el lead asistió estaba confirmada, por definición. Sin esto el
+        # embudo mostraría más asistencias que confirmadas (ver _confirmations, que cuenta
+        # `result == 'Confirmado'`). No se pisan los estados terminales de la agenda.
+        if (objetivo.result or '').strip().lower() not in ('cancelado', 'cancelada', 'reagendado', 'reagendada'):
+            objetivo.result = 'Confirmado'
+        return cambio
+
+    @staticmethod
+    def backfill_show_up_from_sales(dry_run=True, limit=None):
+        """Pasada retroactiva de `mark_sale_appointment_as_show_up` sobre todas las ventas ya
+        registradas: corrige las agendas históricas de leads que compraron pero quedaron como
+        'Pendiente' o 'No Show'. Arranca en `dry_run` a propósito — primero se mira cuántas
+        cambiarían y recién después se aplica."""
+        from app.models import FinancialSale
+
+        sales = FinancialSale.query.filter(
+            FinancialSale.client_id.isnot(None),
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ).order_by(FinancialSale.date.asc()).all()
+
+        cambios, vistos = [], set()
+        for sale in sales:
+            clave = (sale.client_id, sale.date.date() if sale.date else None)
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            cambio = CloserService.mark_sale_appointment_as_show_up(sale.client_id, sale.date, dry_run=dry_run)
+            if cambio:
+                cambio['sale_id'] = sale.id
+                cambios.append(cambio)
+                if limit and len(cambios) >= limit:
+                    break
+
+        if not dry_run and cambios:
+            db.session.commit()
+
+        return {'total': len(cambios), 'dry_run': dry_run, 'cambios': cambios}
+
     @staticmethod
     def check_and_notify_down_payment_conversion(client_data, sale_data):
         """

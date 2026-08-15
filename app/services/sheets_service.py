@@ -154,6 +154,23 @@ class SheetsService:
                 except Exception as sync_err:
                     logger.error(f"[Enrollment/Payment Sync Error] {sync_err}")
 
+                # Una venta registrada prueba que el lead asistió a la llamada: se marca esa
+                # agenda como 'Show up' si había quedado sin reportar o como No Show (ver
+                # CloserService.mark_sale_appointment_as_show_up, que solo toca la agenda de la
+                # venta, no todo el historial del lead).
+                try:
+                    from app.services.closer_service import CloserService
+                    marcada = CloserService.mark_sale_appointment_as_show_up(
+                        client.id if client else None, sale_date
+                    )
+                    if marcada:
+                        db.session.commit()
+                        logger.info(f"[SALE SHOW UP] Agenda {marcada['appointment_id']} pasó de "
+                                    f"'{marcada['closer_result_antes']}' a 'Show up' por la venta {sale.id}.")
+                except Exception as show_err:
+                    db.session.rollback()
+                    logger.error(f"[SALE SHOW UP Error] {show_err}")
+
                 # Enviar webhook a n8n en segundo plano si está activo
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
