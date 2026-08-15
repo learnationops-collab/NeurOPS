@@ -385,21 +385,29 @@ class CloserDashboardService:
         ventas = current['kpis']['ventas']
         presentaciones = current['funnel']['values'][4]
         if ventas > presentaciones:
-            faltan = coverage['faltantes'] if coverage else 0
-            detalle = f" Faltan {faltan} reporte(s) diario(s) en el período." if faltan else ""
+            # Desde que el embudo se lee de la bandeja, esto ya no puede ser un desfase de fuentes
+            # (ventas del período completo contra presentaciones solo de los días reportados): es
+            # el check de "presentó la oferta" que no se está marcando al cerrar la llamada.
             alerts.append({
                 'type': 'danger', 'icon': '📉',
                 'title': f"Close rate s/ presentación por encima del 100% ({current['kpis']['close_rate_presentacion']}%)",
-                'text': (f"Hay {ventas:g} venta(s) registrada(s) contra {presentaciones:g} presentación(es) reportada(s). "
-                         f"Las ventas se leen del registro financiero de todo el período, las presentaciones solo de los "
-                         f"reportes diarios enviados.{detalle}")
+                'text': (f"Hay {ventas:g} venta(s) contra {presentaciones:g} presentación(es) registrada(s). "
+                         f"No se puede vender sin presentar: falta tildar «presentó la oferta» al registrar el "
+                         f"resultado de esas llamadas en la bandeja.")
             })
-        elif coverage and coverage['faltantes'] > 0:
+
+        # Los slots son lo único del dashboard que sigue dependiendo del reporte diario, así que
+        # el aviso apunta a eso y no a "te falta el reporte": el resto del embudo ya sale de la
+        # bandeja y no le falta nada.
+        slots = current['funnel']['values'][0]
+        agendas_funnel = current['funnel']['values'][1]
+        if coverage and coverage['faltantes'] > 0 and slots < agendas_funnel:
             alerts.append({
-                'type': 'warning', 'icon': '📝',
-                'title': f"{coverage['faltantes']} día(s) sin reporte diario en el período",
-                'text': (f"Cobertura de {coverage['pct']}%. Todo el embudo salvo las ventas sale de los reportes "
-                         f"diarios: los días sin reporte no aparecen en agendas, asistencias ni presentaciones.")
+                'type': 'warning', 'icon': '📅',
+                'title': f"Faltan los cupos de agenda de {coverage['faltantes']} día(s)",
+                'text': (f"Hay {agendas_funnel:g} agenda(s) contra {slots:g} cupo(s) declarado(s), que es imposible: "
+                         f"un cupo agendado sigue siendo un cupo. Los cupos son el único dato que el sistema no puede "
+                         f"deducir solo — cargá los días que faltan para que el primer paso del embudo sea real.")
             })
 
         funnel_vals = current['funnel']['values']

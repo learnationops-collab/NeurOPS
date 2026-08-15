@@ -1444,6 +1444,198 @@ class CloserService:
             'type_stats': type_stats
         }
 
+    # Resultados de `Appointment.result`/`closer_result` que marcan una 2ª llamada. Mismo criterio
+    # que compute_daily_report_fields, extraído acá para que el reporte diario y las métricas
+    # agregadas no puedan clasificar distinto la misma cita.
+    SECOND_CALL_RESULTS = {'2th call', '2da call', 'segunda llamada', 'segunda agenda'}
+
+    @staticmethod
+    def _stats_from_bandeja(closer_id, start_date, end_date):
+        """Las métricas del embudo calculadas desde **la bandeja** (`Appointment` + `FinancialSale`),
+        no desde los reportes diarios que el closer escribe a mano.
+
+        Pedido del usuario: "los datos del dashboard deben basarse en lo que se hace en la bandeja,
+        no en los reportes diarios". El problema de la fuente vieja: un día sin reporte enviado
+        simplemente no existía en el embudo (agendas, asistencias y presentaciones quedaban en
+        cero) mientras las ventas sí se contaban, porque salen de `FinancialSale` y cubren el
+        período completo. De ahí los close rates por encima del 100%. Ahora todo el embudo sale de
+        los mismos hechos registrados en la bandeja, así que no hay nada que "falte enviar" para
+        que un día cuente.
+
+        Devuelve un objeto con **exactamente los mismos atributos** que la consulta agregada de
+        `CloserDailyReport` que reemplaza (`fc_scheduled`, `offers_made`, `fu_sent`...), para que
+        las tres pantallas que consumen `get_comprehensive_stats` sigan funcionando sin tocarlas.
+
+        Única excepción: `slots` (los cupos de agenda que el closer abrió ese día) sigue saliendo
+        del reporte diario — no existe ninguna señal en la bandeja de la que se pueda derivar. El
+        dashboard le pide los días faltantes al entrar (ver /closer/dashboard/slots-pendientes)."""
+        from types import SimpleNamespace
+        from app.models import Appointment, CloserDailyReport, FinancialSale
+        from app.services.closer_followup_service import CloserFollowUpService
+        from sqlalchemy import func
+
+        start_dt, end_dt = CloserService._parse_range(start_date, end_date)
+
+        appt_filters = []
+        if closer_id:
+            appt_filters.append(Appointment.closer_id == closer_id)
+        if start_dt:
+            appt_filters.append(Appointment.start_time >= start_dt)
+        if end_dt:
+            appt_filters.append(Appointment.start_time < end_dt)
+
+        appts = Appointment.query.filter(*appt_filters).all()
+
+        buckets = {
+            'fc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
+            'sc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
+        }
+        decision_makers = offers_made = rescheduled_total = 0
+
+        for a in appts:
+            r = (a.result or '').strip().lower()
+            cr = (a.closer_result or '').strip().lower()
+            es_segunda = r in CloserService.SECOND_CALL_RESULTS or cr == '2da call'
+            bucket = buckets['sc'] if es_segunda else buckets['fc']
+            bucket['scheduled'] += 1
+
+            if cr == 'show up':
+                bucket['attended'] += 1
+                if a.with_decision_maker is True:
+                    decision_makers += 1
+                if a.offer_presented is True:
+                    offers_made += 1
+            elif cr == 'no show':
+                bucket['no_show'] += 1
+            elif cr in ('cancelado', 'cancelada') or r in ('cancelado', 'cancelada'):
+                bucket['canceled'] += 1
+            elif cr in ('reagendado', 'reagendada') or r in ('reagendado', 'reagendada') or a.is_rescheduled:
+                bucket['rescheduled'] += 1
+                rescheduled_total += 1
+
+        # Actividad de seguimientos: se mide por `last_contact_at`/`last_contact_outcome`, que el
+        # mazo escribe cada vez que el closer procesa una tarjeta de Seguimientos — el mismo
+        # criterio que ya usaba el reporte diario, solo que agregado sobre el período.
+        contact_filters = [Appointment.last_contact_outcome.isnot(None)]
+        if closer_id:
+            contact_filters.append(Appointment.closer_id == closer_id)
+        if start_dt:
+            contact_filters.append(Appointment.last_contact_at >= start_dt)
+        if end_dt:
+            contact_filters.append(Appointment.last_contact_at < end_dt)
+
+        fu_sent = fu_replied = rec_contacted = rec_replied = rec_scheduled = 0
+        for a in Appointment.query.filter(*contact_filters).all():
+            tipo = CloserFollowUpService._effective_tipo(a) or a.seguimiento_tipo
+            respondio = a.last_contact_outcome != 'no_resp'
+            if tipo == 'tomada':
+                fu_sent += 1
+                if respondio:
+                    fu_replied += 1
+            elif tipo == 'no_tomada':
+                rec_contacted += 1
+                if respondio:
+                    rec_replied += 1
+                if a.last_contact_outcome == 'agendo':
+                    rec_scheduled += 1
+
+        closed_filters = [Appointment.seguimiento_realizado == True]
+        if closer_id:
+            closed_filters.append(Appointment.closer_id == closer_id)
+        if start_dt:
+            closed_filters.append(Appointment.last_contact_at >= start_dt)
+        if end_dt:
+            closed_filters.append(Appointment.last_contact_at < end_dt)
+        fu_closed = Appointment.query.filter(*closed_filters).count()
+
+        # Referidos: agendas creadas en el período que nacieron como referido de otro lead (mismo
+        # filtro que get_daily_activity_summary). 'sourced' y 'scheduled' son el mismo número: un
+        # referido con datos entra directo como agenda, y no hay señal de "pedidos" que no
+        # terminaron en agenda — se reporta el número real en vez de inventar uno.
+        ref_filters = [Appointment.origin.like('Referido de%')]
+        if closer_id:
+            ref_filters.append(Appointment.closer_id == closer_id)
+        if start_dt:
+            ref_filters.append(Appointment.created_at >= start_dt)
+        if end_dt:
+            ref_filters.append(Appointment.created_at < end_dt)
+        referidos = Appointment.query.filter(*ref_filters).count()
+
+        # Ventas cerradas en la llamada: `FinancialSale.sold_in_call`, que es el dato real, en vez
+        # del conteo manual que el closer escribía en el reporte.
+        ic = {'pif': [0, 0.0], 'split': [0, 0.0], 'deposit': [0, 0.0]}
+        sale_filters = [
+            FinancialSale.sold_in_call == True,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ]
+        if start_dt:
+            sale_filters.append(FinancialSale.date >= start_dt)
+        if end_dt:
+            sale_filters.append(FinancialSale.date < end_dt)
+        identifiers = CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if closer_id else None
+        if identifiers:
+            sale_filters.append(FinancialSale.email_vendedor.in_(identifiers))
+        if not closer_id or identifiers:
+            from app.services.sheets_service import SheetsService
+            for sale in FinancialSale.query.filter(*sale_filters).all():
+                _, tipo = SheetsService.parse_tipo_pago(sale.tipo_pago)
+                key = {'completo': 'pif', 'parcial': 'split', 'seña': 'deposit'}.get(tipo)
+                if key:
+                    ic[key][0] += 1
+                    ic[key][1] += float(sale.monto or 0)
+
+        # `slots` es lo único que sigue viniendo del reporte diario: no hay forma de derivarlo de
+        # la bandeja (ver docstring).
+        slots_filters = []
+        if closer_id:
+            slots_filters.append(CloserDailyReport.closer_id == closer_id)
+        if start_date:
+            slots_filters.append(CloserDailyReport.date >= CloserService._as_date(start_date))
+        if end_date:
+            slots_filters.append(CloserDailyReport.date <= CloserService._as_date(end_date))
+        slots = db.session.query(func.sum(CloserDailyReport.slots)).filter(*slots_filters).scalar() or 0
+
+        return SimpleNamespace(
+            slots=slots,
+            offers_made=offers_made,
+            decision_makers=decision_makers,
+            rescheduled_calls=rescheduled_total,
+            fc_scheduled=buckets['fc']['scheduled'], fc_attended=buckets['fc']['attended'],
+            fc_no_show=buckets['fc']['no_show'], fc_rescheduled=buckets['fc']['rescheduled'],
+            fc_canceled=buckets['fc']['canceled'],
+            sc_scheduled=buckets['sc']['scheduled'], sc_attended=buckets['sc']['attended'],
+            sc_no_show=buckets['sc']['no_show'], sc_rescheduled=buckets['sc']['rescheduled'],
+            sc_canceled=buckets['sc']['canceled'],
+            pif_ic_count=ic['pif'][0], pif_ic_cash=ic['pif'][1],
+            split_ic_count=ic['split'][0], split_ic_cash=ic['split'][1],
+            deposit_ic_count=ic['deposit'][0], deposit_ic_cash=ic['deposit'][1],
+            fu_sent=fu_sent, fu_replied=fu_replied, fu_closed=fu_closed,
+            rec_contacted=rec_contacted, rec_replied=rec_replied, rec_scheduled=rec_scheduled,
+            ref_sourced=referidos, ref_scheduled=referidos
+        )
+
+    @staticmethod
+    def _as_date(value):
+        """'YYYY-MM-DD' | date | datetime → date. None si no se puede interpretar."""
+        if not value:
+            return None
+        if isinstance(value, str):
+            try:
+                return datetime.strptime(value, '%Y-%m-%d').date()
+            except ValueError:
+                return None
+        return value.date() if isinstance(value, datetime) else value
+
+    @staticmethod
+    def _parse_range(start_date, end_date):
+        """Rango [inicio, fin) en datetime para filtrar por `start_time`. El fin es exclusivo (día
+        siguiente a las 00:00), igual que el filtro que ya usaba get_comprehensive_stats."""
+        start_d = CloserService._as_date(start_date)
+        end_d = CloserService._as_date(end_date)
+        start_dt = datetime.combine(start_d, time.min) if start_d else None
+        end_dt = datetime.combine(end_d, time.min) + timedelta(days=1) if end_d else None
+        return start_dt, end_dt
+
     @staticmethod
     def get_comprehensive_stats(closer_id=None, start_date=None, end_date=None, agg_type='sum'):
         """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
@@ -1508,12 +1700,23 @@ class CloserService:
         for f in filters:
             query = query.filter(f)
 
-        stats = query.one()
-        
-        # Days count for averages
-        days_query = db.session.query(func.count(CloserDailyReport.id))
-        for f in filters:
-            days_query = days_query.filter(f)
+        # El embudo sale de la bandeja (Appointment + FinancialSale), no de los reportes diarios
+        # (ver _stats_from_bandeja): un día sin reporte enviado ya no borra las agendas,
+        # asistencias y presentaciones de ese día. La consulta agregada sobre CloserDailyReport
+        # de arriba queda solo para `slots`, que no tiene equivalente en la bandeja.
+        stats = CloserService._stats_from_bandeja(closer_id, start_date, end_date)
+
+        # Divisor para agg_type='avg': los días del período con actividad real en la bandeja, no
+        # la cantidad de reportes enviados. Con la fuente vieja, un closer que reportaba pocos
+        # días mostraba promedios inflados (dividía por 3 lo que había hecho en 20).
+        days_query = db.session.query(func.count(func.distinct(func.date(Appointment.start_time))))
+        if closer_id:
+            days_query = days_query.filter(Appointment.closer_id == closer_id)
+        _start_dt, _end_dt = CloserService._parse_range(start_date, end_date)
+        if _start_dt:
+            days_query = days_query.filter(Appointment.start_time >= _start_dt)
+        if _end_dt:
+            days_query = days_query.filter(Appointment.start_time < _end_dt)
         days_count = days_query.scalar() or 1
 
         # 2. Legacy Operational Stats (from Appointment model)

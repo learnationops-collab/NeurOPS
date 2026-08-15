@@ -25,7 +25,8 @@ export const detectIssues = (data) => {
     const faltantes = coverage?.faltantes || 0;
     const issues = [];
 
-    // 1. Close rate imposible — el síntoma más visible de los reportes faltantes.
+    // 1. Close rate imposible. Desde que el embudo se lee de la bandeja esto ya no puede ser un
+    //    desfase entre fuentes: es el check de "presentó la oferta" que no se está tildando.
     const closeRoto = k.close_rate_presentacion > 100 || k.close_rate_llamada > 100;
     if (closeRoto) {
         issues.push({
@@ -34,39 +35,37 @@ export const detectIssues = (data) => {
             icon: '📉',
             title: `Close rate por encima del 100% (${Math.max(k.close_rate_presentacion || 0, k.close_rate_llamada || 0)}%)`,
             affects: 'Close rate s/ llamada · Close rate s/ presentación · Embudo',
-            why: `Hay ${k.ventas} venta(s) registrada(s) contra ${presentaciones} presentación(es) reportada(s). Las ventas se leen del registro financiero, que cubre el período completo; las presentaciones salen de los reportes diarios, que solo existen los días que enviaste el reporte.`,
-            fix: faltantes > 0
-                ? `Enviá los ${faltantes} reporte(s) diario(s) que faltan en el período.`
-                : 'Revisá que las llamadas del período tengan su resultado registrado con la oferta marcada.',
-            view: 'report',
-            actionLabel: 'Ir al reporte del día',
-            days: coverage?.dias_faltantes || [],
+            why: `Hay ${k.ventas} venta(s) contra ${presentaciones} presentación(es) registrada(s). No se puede vender sin presentar: el paso "Presentaciones" solo cuenta las llamadas donde se tildó "presentó la oferta" al registrar el resultado.`,
+            fix: 'Revisá en la bandeja las llamadas de esas ventas y marcales la oferta presentada.',
+            view: 'inbox',
+            actionLabel: 'Ir a la bandeja',
             steps: [
-                'Tocá uno de los días de acá abajo: abre el reporte ya posicionado en esa fecha.',
-                'Revisá el "Resumen del día": sale solo de lo que ya quedó en la bandeja, no hay nada que escribir a mano salvo los slots.',
-                'Tocá "Enviar reporte al sistema".',
-                'Volvé y repetí con el día siguiente. El dashboard se corrige solo en cuanto estén todos.'
+                'Abrí la Bandeja y andá a la pestaña "② Llamadas".',
+                'Buscá las llamadas de los clientes que compraron en el período.',
+                'Confirmá que estén como "Show up" y tildá "presentó la oferta".',
+                'El close rate se recalcula solo con lo que quede en la bandeja.'
             ]
         });
     }
 
-    // 2. Reportes faltantes sin close rate roto todavía: el mismo problema, más temprano.
-    if (!closeRoto && faltantes > 0) {
+    // 2. Cupos de agenda sin cargar: lo ÚNICO que el dashboard no puede deducir de la bandeja.
+    //    Que haya más agendas que cupos es imposible — un cupo agendado sigue siendo un cupo.
+    if (faltantes > 0 && slots < agendas) {
         issues.push({
-            id: 'reportes_faltantes',
+            id: 'slots_faltantes',
             severity: 'warning',
-            icon: '📝',
-            title: `${faltantes} día(s) sin reporte diario en el período`,
-            affects: 'Agendas · Asistencias · Presentaciones · Slots · Seguimientos',
-            why: `Cobertura de ${coverage.pct}%. Todo el embudo salvo las ventas y las confirmaciones sale de los reportes diarios: los días sin reporte simplemente no existen en esos números, así que todo lo que se calcule sobre ellos queda por debajo de lo real.`,
-            fix: 'Enviá los reportes de los días que faltan.',
+            icon: '📅',
+            title: `Faltan los cupos de agenda de ${faltantes} día(s)`,
+            affects: 'Slots · primer paso del embudo · ocupación de agenda',
+            why: `Hay ${agendas} agenda(s) contra ${slots} cupo(s) declarado(s), que no puede ser: un cupo que se agendó sigue contando. Los cupos son el único dato que el sistema no puede sacar solo de la bandeja — todo el resto del embudo ya sale de ahí.`,
+            fix: 'Cargá los cupos totales de los días que faltan desde el aviso del dashboard.',
             view: 'report',
-            actionLabel: 'Ir al reporte del día',
+            actionLabel: 'Cargar los cupos que faltan',
             days: coverage?.dias_faltantes || [],
             steps: [
-                'Tocá uno de los días de acá abajo: abre el reporte ya posicionado en esa fecha.',
-                'Revisá el resumen y enviá el reporte.',
-                'Volvé y repetí con el día siguiente.'
+                'Son los cupos TOTALES del día: los que se agendaron más los que quedaron libres.',
+                'Ejemplo: abriste 10, se agendaron 6 y 4 quedaron vacíos → cargás 10, no 4 ni 6.',
+                'Nunca puede ser menor que tus agendas de ese día.'
             ]
         });
     }
