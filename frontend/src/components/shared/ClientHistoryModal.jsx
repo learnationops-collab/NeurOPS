@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, X, Save, Check, DollarSign } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -9,6 +10,201 @@ const CUOTA_ESTADO_CLS = {
     vencido: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
     pendiente: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     pagado: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+};
+
+// Corrección de una venta ya declarada, desde el historial del cliente. El closer podía
+// declarar ventas pero no arreglar un monto o un tipo de pago mal cargado: tenía que pedírselo
+// a Operaciones. Se edita, no se borra (dar de baja una venta sigue siendo solo de admin).
+const VentaRow = ({ venta, onSaved }) => {
+    const [abierto, setAbierto] = useState(false);
+    const [form, setForm] = useState({
+        monto: venta.monto ?? '',
+        tipo_pago: venta.tipo_pago || '',
+        metodo_pago: venta.metodo_pago || '',
+        estado: venta.estado || 'Completada'
+    });
+    // Apagado por defecto: corregir un typo no debería volver a disparar los mensajes que la
+    // automatización de n8n manda al cliente cuando se registra una venta.
+    const [enviarWebhook, setEnviarWebhook] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    const dirty = String(form.monto) !== String(venta.monto ?? '')
+        || form.tipo_pago !== (venta.tipo_pago || '')
+        || form.metodo_pago !== (venta.metodo_pago || '')
+        || form.estado !== (venta.estado || 'Completada');
+
+    const guardar = async () => {
+        setSaving(true);
+        try {
+            const res = await api.put(`/closer/sales/${venta.id}`, { ...form, enviar_webhook: enviarWebhook });
+            toast.success(res.data?.message || 'Venta actualizada');
+            setAbierto(false);
+            onSaved?.(res.data.sale);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'No se pudo actualizar la venta');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2 space-y-2">
+            <div className="flex justify-between items-center text-[10px] gap-2">
+                <span className="text-slate-300 truncate">
+                    {venta.date ? new Date(venta.date).toLocaleDateString('es-ES') : '—'} · {venta.tipo_pago}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-emerald-400 font-bold">{money(venta.monto)}</span>
+                    <button
+                        onClick={() => setAbierto(v => !v)}
+                        className="text-[9px] font-black uppercase text-violet-400 hover:text-violet-300 cursor-pointer"
+                    >
+                        {abierto ? 'Cerrar' : 'Corregir'}
+                    </button>
+                </div>
+            </div>
+
+            {abierto && (
+                <div className="space-y-2 pt-2 border-t border-slate-850">
+                    <div className="grid grid-cols-2 gap-2">
+                        <label className="space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                            <input
+                                type="number" min="0" value={form.monto}
+                                onChange={(e) => setForm(f => ({ ...f, monto: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
+                        <label className="space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
+                            <input
+                                value={form.tipo_pago}
+                                onChange={(e) => setForm(f => ({ ...f, tipo_pago: e.target.value }))}
+                                placeholder="RR - Completo"
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
+                        <label className="space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Método</span>
+                            <input
+                                value={form.metodo_pago}
+                                onChange={(e) => setForm(f => ({ ...f, metodo_pago: e.target.value }))}
+                                placeholder="Stripe"
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
+                        <label className="space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
+                            <select
+                                value={form.estado}
+                                onChange={(e) => setForm(f => ({ ...f, estado: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                            >
+                                <option value="Completada">Completada</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Anulada">Anulada</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label className="flex items-start gap-2 bg-slate-950/60 border border-slate-850 rounded-lg px-2 py-2 cursor-pointer">
+                        <input
+                            type="checkbox" checked={enviarWebhook}
+                            onChange={(e) => setEnviarWebhook(e.target.checked)}
+                            className="mt-0.5 accent-violet-500"
+                        />
+                        <span className="text-[9px] text-slate-400 font-bold leading-snug">
+                            Reenviar a la automatización (n8n)
+                            <span className="block text-slate-600 font-medium">
+                                Apagado, la corrección solo se guarda acá. Prendido, vuelve a disparar los mensajes
+                                automáticos al cliente como si fuera una venta nueva.
+                            </span>
+                        </span>
+                    </label>
+
+                    <button
+                        onClick={guardar}
+                        disabled={!dirty || saving}
+                        className="w-full h-8 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                        {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                        {dirty ? 'Guardar corrección' : 'Sin cambios'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Corrección de un pago ya cargado (Enrollment/Payment). Al guardar, el backend recalcula el
+// total pagado de la inscripción, que es de donde sale la deuda del cliente.
+const PagoRow = ({ pago, onSaved }) => {
+    const [abierto, setAbierto] = useState(false);
+    const [form, setForm] = useState({ amount: pago.amount ?? '', status: pago.status || 'completed' });
+    const [saving, setSaving] = useState(false);
+    const dirty = String(form.amount) !== String(pago.amount ?? '') || form.status !== (pago.status || 'completed');
+
+    const guardar = async () => {
+        setSaving(true);
+        try {
+            const res = await api.patch(`/closer/payments/${pago.id}`, form);
+            toast.success('Pago actualizado');
+            setAbierto(false);
+            onSaved?.(res.data.payment, res.data.enrollment_total_paid);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'No se pudo actualizar el pago');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-1">
+            <div className="flex justify-between items-center text-[9px] text-slate-500 gap-2">
+                <span className="truncate">{pago.payment_type} · {pago.status}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span>{money(pago.amount)}</span>
+                    <button
+                        onClick={() => setAbierto(v => !v)}
+                        className="text-[8px] font-black uppercase text-violet-400 hover:text-violet-300 cursor-pointer"
+                    >
+                        {abierto ? 'Cerrar' : 'Corregir'}
+                    </button>
+                </div>
+            </div>
+            {abierto && (
+                <div className="flex items-end gap-2 pb-1">
+                    <label className="flex-1 space-y-1">
+                        <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                        <input
+                            type="number" min="0" value={form.amount}
+                            onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                        />
+                    </label>
+                    <label className="flex-1 space-y-1">
+                        <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
+                        <select
+                            value={form.status}
+                            onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                        >
+                            <option value="completed">completed</option>
+                            <option value="pending">pending</option>
+                            <option value="failed">failed</option>
+                        </select>
+                    </label>
+                    <button
+                        onClick={guardar}
+                        disabled={!dirty || saving}
+                        className="h-7 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer"
+                    >
+                        {saving ? <Loader2 size={10} className="animate-spin" /> : 'Guardar'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 };
 
 const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
@@ -474,10 +670,14 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                                 {history.financial_sales.length === 0 && <p className="text-[10px] text-slate-600">Sin ventas registradas.</p>}
                                 {history.financial_sales.map(s => (
-                                    <div key={s.id} className="flex justify-between text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
-                                        <span className="text-slate-300">{s.date ? new Date(s.date).toLocaleDateString('es-ES') : '—'} · {s.tipo_pago}</span>
-                                        <span className="text-emerald-400 font-bold">{money(s.monto)}</span>
-                                    </div>
+                                    <VentaRow
+                                        key={s.id}
+                                        venta={s}
+                                        onSaved={(actualizada) => setHistory(prev => ({
+                                            ...prev,
+                                            financial_sales: prev.financial_sales.map(v => v.id === actualizada.id ? actualizada : v)
+                                        }))}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -493,10 +693,18 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                     </div>
                                     <div className="space-y-1">
                                         {e.payments.map(p => (
-                                            <div key={p.id} className="flex justify-between text-[9px] text-slate-500">
-                                                <span>{p.payment_type} · {p.status}</span>
-                                                <span>{money(p.amount)}</span>
-                                            </div>
+                                            <PagoRow
+                                                key={p.id}
+                                                pago={p}
+                                                onSaved={(actualizado, totalPagado) => setHistory(prev => ({
+                                                    ...prev,
+                                                    enrollments: prev.enrollments.map(en => en.id !== e.id ? en : {
+                                                        ...en,
+                                                        total_paid: totalPagado ?? en.total_paid,
+                                                        payments: en.payments.map(pp => pp.id === actualizado.id ? actualizado : pp)
+                                                    })
+                                                }))}
+                                            />
                                         ))}
                                     </div>
                                 </div>

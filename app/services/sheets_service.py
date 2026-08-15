@@ -519,6 +519,36 @@ class SheetsService:
             return 0.0
 
     @staticmethod
+    def build_sale_webhook_payload(sale):
+        """Payload de n8n armado a partir de una FinancialSale ya guardada. Extraído para que el
+        reenvío desde el panel de admin y la corrección de una venta desde el mazo del closer
+        manden exactamente lo mismo, en vez de dos diccionarios armados a mano que se separan."""
+        from datetime import datetime as _dt
+
+        documento_identidad = ''
+        if sale.raw_data and isinstance(sale.raw_data, dict):
+            documento_identidad = sale.raw_data.get('documento_identidad') or sale.raw_data.get('Documento de identidad') or ''
+
+        return {
+            "email_vendedor": sale.email_vendedor or '',
+            "nombre_cliente": sale.nombre_cliente or '',
+            "telefono": sale.telefono or '',
+            "mail_cliente": sale.mail_cliente or '',
+            "tipo_pago": sale.tipo_pago or '',
+            "monto": float(sale.monto or 0.0),
+            "segundo_pago": sale.segundo_pago or '',
+            "metodo_pago": sale.metodo_pago or '',
+            "examen": sale.examen or '',
+            "instagram": sale.instagram or '',
+            "setter": sale.setter or '',
+            "estado": sale.estado or 'Completada',
+            "documento_identidad": documento_identidad,
+            "marca_temporal": sale.marca_temporal or (sale.date.strftime('%d/%m/%Y %H:%M:%S') if sale.date else _dt.utcnow().strftime('%d/%m/%Y %H:%M:%S')),
+            "enviar_webhook": True,
+            "enviar_mensaje": True
+        }
+
+    @staticmethod
     def _trigger_n8n_webhook(payload):
         # Envia los datos de la venta a n8n de forma asincrona
         import os

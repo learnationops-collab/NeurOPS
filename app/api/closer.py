@@ -2286,6 +2286,144 @@ def get_sales_client_state():
     return jsonify(state), 200
 
 
+@bp.route('/sales/<int:sale_id>', methods=['PUT'])
+@login_required
+def update_closer_sale(sale_id):
+    """Corrección de una venta ya declarada, desde el historial del cliente en el mazo.
+
+    Hasta ahora el closer que se equivocaba en el monto o el tipo de pago tenía que pedirle a
+    Operaciones que lo corrigiera (el único endpoint de edición vivía en el panel de admin). Se
+    permite editar, **no borrar**: dar de baja una venta sigue siendo exclusivo de admin.
+
+    `enviar_webhook` (default **false**) decide si la corrección se reenvía a la automatización
+    de n8n. Va apagado por defecto a propósito: corregir un typo no debería volver a disparar los
+    mensajes al cliente que la automatización manda al registrar una venta — el closer lo prende
+    solo cuando la corrección sí tiene que salir hacia afuera."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import FinancialSale
+    sale = FinancialSale.query.get_or_404(sale_id)
+    data = request.get_json() or {}
+
+    CAMPOS = {
+        'tipo_pago': str, 'metodo_pago': str, 'monto': float, 'segundo_pago': str,
+        'examen': str, 'estado': str, 'nombre_cliente': str, 'mail_cliente': str,
+        'telefono': str, 'instagram': str, 'setter': str
+    }
+    cambios = {}
+    for campo, tipo in CAMPOS.items():
+        if campo not in data:
+            continue
+        valor = data[campo]
+        if tipo is float:
+            try:
+                valor = float(valor or 0)
+            except (TypeError, ValueError):
+                return jsonify({"error": f"'{campo}' tiene que ser un número"}), 400
+        else:
+            valor = (valor or '').strip()
+        anterior = getattr(sale, campo)
+        if anterior != valor:
+            cambios[campo] = {'antes': anterior, 'despues': valor}
+            setattr(sale, campo, valor)
+
+    if 'date' in data and data['date']:
+        try:
+            sale.date = datetime.fromisoformat(str(data['date']).replace('Z', ''))
+            cambios['date'] = {'despues': sale.date.isoformat()}
+        except ValueError:
+            return jsonify({"error": "Fecha inválida (se espera ISO 'YYYY-MM-DD' o 'YYYY-MM-DDTHH:MM')"}), 400
+
+    if not cambios:
+        return jsonify({"message": "No hubo cambios que guardar", "sale": sale.to_dict()}), 200
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar la venta: {str(e)}"}), 500
+
+    # Traza en el historial del lead: quién tocó qué, para que una corrección no sea un cambio
+    # silencioso sobre un registro financiero.
+    try:
+        from app.models import Appointment
+        from app.services.booking_service import BookingService
+        detalle = ', '.join(f"{k}: {v.get('antes')!r} → {v.get('despues')!r}" for k, v in cambios.items())
+        appt = Appointment.query.filter_by(client_id=sale.client_id).order_by(Appointment.start_time.desc()).first() if sale.client_id else None
+        if appt:
+            BookingService.log_lead_event(
+                appt.id, current_user.id, 'sale_edited',
+                f"{current_user.username} corrigió la venta {sale.id}. {detalle}"
+            )
+    except Exception as log_err:
+        print(f"[Sale Edit Log Error] {log_err}")
+
+    webhook_enviado = False
+    if data.get('enviar_webhook') in (True, 'true', 'True', 1, '1', 'on'):
+        try:
+            from app.services.sheets_service import SheetsService
+            SheetsService._trigger_n8n_webhook(SheetsService.build_sale_webhook_payload(sale))
+            webhook_enviado = True
+        except Exception as hook_err:
+            print(f"[Sale Edit Webhook Error] {hook_err}")
+
+    return jsonify({
+        "message": "Venta actualizada" + (" y reenviada a la automatización" if webhook_enviado else ""),
+        "sale": sale.to_dict(),
+        "cambios": list(cambios.keys()),
+        "webhook_enviado": webhook_enviado
+    }), 200
+
+
+@bp.route('/payments/<int:payment_id>', methods=['PATCH'])
+@login_required
+def update_closer_payment(payment_id):
+    """Corrección de un pago ya cargado (Payment, el sistema de inscripciones) desde el historial
+    del cliente. Igual que con las ventas: se edita, no se borra. Al cambiar el monto se
+    recalcula el total pagado de la inscripción, que es lo que alimenta la deuda del cliente."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import Payment, Enrollment
+    payment = Payment.query.get_or_404(payment_id)
+    data = request.get_json() or {}
+
+    if 'amount' in data:
+        try:
+            payment.amount = float(data['amount'] or 0)
+        except (TypeError, ValueError):
+            return jsonify({"error": "'amount' tiene que ser un número"}), 400
+    if 'payment_type' in data:
+        payment.payment_type = (data['payment_type'] or '').strip()
+    if 'status' in data:
+        payment.status = (data['status'] or '').strip() or 'completed'
+    if 'date' in data and data['date']:
+        try:
+            payment.date = datetime.fromisoformat(str(data['date']).replace('Z', ''))
+        except ValueError:
+            return jsonify({"error": "Fecha inválida"}), 400
+
+    # `Enrollment.total_paid` es una propiedad calculada sobre los pagos, no una columna: no se
+    # asigna, se recalcula sola al leerla después del commit.
+    enrollment = Enrollment.query.get(payment.enrollment_id) if payment.enrollment_id else None
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar el pago: {str(e)}"}), 500
+
+    return jsonify({
+        "message": "Pago actualizado",
+        "payment": {
+            'id': payment.id, 'amount': payment.amount, 'payment_type': payment.payment_type,
+            'status': payment.status, 'date': payment.date.isoformat() if payment.date else None
+        },
+        "enrollment_total_paid": enrollment.total_paid if enrollment else None
+    }), 200
+
+
 @bp.route('/cleanup-queue', methods=['GET'])
 @login_required
 def get_cleanup_queue():
