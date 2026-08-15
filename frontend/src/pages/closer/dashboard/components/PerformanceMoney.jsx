@@ -56,21 +56,27 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
 
             <Card variant="surface" padding="p-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-secondary" /> Cuotas por cobrar
+                    <span className="w-2 h-2 rounded-full bg-secondary" /> Deuda por cobrar
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-4">Saldo pendiente histórico según el plan de cuotas de cada cliente (no filtrado por período).</p>
-                {/* Vencido vs. por vencer: un total alto puede ser un plan recién firmado con todo
-                    su cronograma a futuro (normal) o plata que había que cobrar y no se cobró. */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
+                <p className="text-[11px] text-muted mt-1 mb-4">Lo que tus clientes todavía deben de su inscripción (histórico, no filtrado por período).</p>
+                {/* Tres estados, no dos: además de vencido y por vencer está el saldo SIN
+                    cronograma armado, que hoy es la mayor parte de la deuda y no figuraba en
+                    ningún lado — no está vencido porque no tiene fecha, así que se perdía. */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className={`rounded-xl px-3 py-2.5 border ${cuotas.vencido > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-main/60 border-base'}`}>
                         <p className="text-[9px] font-black uppercase tracking-widest text-muted flex items-center gap-1.5">Vencido <MetricTip iconOnly {...tip('deuda_vencida')} /></p>
                         <b className={`text-lg font-black block ${cuotas.vencido > 0 ? 'text-rose-400' : 'text-base'}`}>{money(cuotas.vencido)}</b>
-                        <span className="text-[10px] text-muted">{cuotas.count_vencido} cuota{cuotas.count_vencido === 1 ? '' : 's'}</span>
+                        <span className="text-[10px] text-muted">{cuotas.count_vencido} cliente{cuotas.count_vencido === 1 ? '' : 's'}</span>
                     </div>
                     <div className="rounded-xl px-3 py-2.5 border bg-main/60 border-base">
                         <p className="text-[9px] font-black uppercase tracking-widest text-muted flex items-center gap-1.5">Por vencer <MetricTip iconOnly {...tip('deuda_por_vencer')} /></p>
                         <b className="text-lg font-black block">{money(cuotas.por_vencer)}</b>
-                        <span className="text-[10px] text-muted">{cuotas.count - cuotas.count_vencido} cuota{cuotas.count - cuotas.count_vencido === 1 ? '' : 's'}</span>
+                        <span className="text-[10px] text-muted">con cuotas programadas</span>
+                    </div>
+                    <div className={`rounded-xl px-3 py-2.5 border ${cuotas.sin_plan > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-main/60 border-base'}`}>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted">Sin plan</p>
+                        <b className={`text-lg font-black block ${cuotas.sin_plan > 0 ? 'text-amber-400' : 'text-base'}`}>{money(cuotas.sin_plan)}</b>
+                        <span className="text-[10px] text-muted">{cuotas.count_sin_plan} cliente{cuotas.count_sin_plan === 1 ? '' : 's'} sin cronograma</span>
                     </div>
                 </div>
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
@@ -82,8 +88,12 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
                             </div>
                             <div className="shrink-0 ml-2 text-right">
                                 <b className="text-[12.5px] block">{money(c.pending_amount)}</b>
-                                <span className={`text-[10px] ${c.is_overdue ? 'text-rose-400 font-bold' : 'text-muted'}`}>
-                                    {c.is_overdue ? `vencida hace ${c.days_overdue}d` : c.due_date ? `vence ${c.due_date}` : 'sin fecha'}
+                                <span className={`text-[10px] ${c.is_overdue ? 'text-rose-400 font-bold' : c.sin_plan ? 'text-amber-400 font-bold' : 'text-muted'}`}>
+                                    {c.is_overdue
+                                        ? `vencida hace ${c.days_overdue}d`
+                                        : c.sin_plan
+                                            ? 'sin plan de cuotas'
+                                            : c.due_date ? `vence ${c.due_date}` : 'sin fecha'}
                                 </span>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 from sqlalchemy import func
+from app import db
 from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
 
@@ -54,67 +55,118 @@ class CloserDashboardService:
 
     @staticmethod
     def _pending_collections(closer_id, limit=15):
-        """Cuotas por cobrar: cronograma real de cobro (InstallmentPlan), la misma
-        fuente que usa el flujo de ventas del closer para declarar y cobrar cuotas.
+        """Deuda por cobrar, **por cliente**: lo que cada cliente todavía debe de su(s)
+        inscripción(es) — precio del programa menos lo efectivamente pagado, la misma definición
+        que usa `CloserFollowUpService._client_debt` en el pool de "Llamadas cerradas" desde donde
+        el closer efectivamente cobra.
 
-        Antes se leía de Enrollment/Payment (sistema legado sin datos recientes,
-        ver installment.py), por lo que la deuda total pendiente siempre daba $0
-        aunque hubiera cuotas reales pendientes de cobro.
+        Antes esto leía **solo** `InstallmentPlan` (el cronograma de cuotas), y en todo el sistema
+        existen 22 planes: 196 de los 204 clientes con saldo nunca tuvieron uno armado, así que
+        eran invisibles acá. El resultado era que el dashboard y la propia lista de trabajo del
+        closer mostraban dos números distintos para lo mismo — a Marlon el dashboard le decía $0
+        por cobrar mientras su pool listaba 75 clientes debiendo $47.256. Lo reportó el usuario
+        ("creo que la deuda no es correcta") y era exactamente eso.
 
-        Se separa lo **vencido** (fecha de vencimiento ya pasada y sigue sin pagarse: plata que
-        había que cobrar y no se cobró) de lo **por vencer** (cronograma normal a futuro). Sin esa
-        distinción un total grande no dice nada — puede ser un problema de cobranza o simplemente
-        un plan de cuotas recién firmado."""
+        El total se descompone en tres, que es lo que hace accionable el número:
+          - **vencido**: cuotas con fecha de vencimiento ya pasada y sin pagar. Plata que había
+            que cobrar y no se cobró.
+          - **por vencer**: cuotas con fecha futura. Cronograma normal, no es un problema.
+          - **sin plan**: saldo que no tiene ninguna cuota programada. No está vencido ni por
+            vencer: directamente nadie le armó un cronograma de cobro, que es el agujero
+            operativo real (la enorme mayoría de la deuda del sistema hoy).
+
+        Atribución: al **dueño actual de la agenda** del cliente (decisión del usuario), no a quien
+        firmó la venta."""
+        from app.models import Enrollment, Payment
+
         hoy = date.today()
-        q = InstallmentPlan.query.filter(InstallmentPlan.estado != 'pagado')
-        if closer_id:
-            q = q.join(Appointment, InstallmentPlan.appointment_id == Appointment.id) \
-                 .filter(Appointment.closer_id == closer_id)
-        plans = q.all()
+        empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'sin_plan': 0.0,
+                 'count': 0, 'count_vencido': 0, 'count_sin_plan': 0}
 
-        empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'count': 0, 'count_vencido': 0}
-        if not plans:
+        # 1. Deuda por cliente: precio del programa − pagos completados, sobre sus inscripciones.
+        pagado_por_enrollment = dict(
+            db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
+            .filter(Payment.status == 'completed').group_by(Payment.enrollment_id).all()
+        )
+        deuda_por_cliente, programas_por_cliente = {}, {}
+        for e in Enrollment.query.all():
+            if not e.program or not e.client_id:
+                continue
+            saldo = (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
+            if saldo <= 0.01:
+                continue
+            deuda_por_cliente[e.client_id] = deuda_por_cliente.get(e.client_id, 0.0) + saldo
+            programas_por_cliente.setdefault(e.client_id, []).append(e.program.name)
+
+        if not deuda_por_cliente:
             return [], empty
 
-        # El nombre se resuelve por `client_id` del plan y, si viene vacío (planes creados antes
-        # de ese campo), por el cliente de la cita que lo originó — antes esas filas se mostraban
-        # como "Sin nombre", que no sirve para ir a cobrar.
-        client_ids = {p.client_id for p in plans if p.client_id}
-        appt_ids = {p.appointment_id for p in plans if not p.client_id and p.appointment_id}
-        appts = {a.id: a for a in Appointment.query.filter(Appointment.id.in_(appt_ids)).all()} if appt_ids else {}
-        client_ids |= {a.client_id for a in appts.values() if a.client_id}
-        clients = {c.id: c for c in Client.query.filter(Client.id.in_(client_ids)).all()} if client_ids else {}
+        # 2. Atribución: el closer de la agenda más reciente de cada cliente.
+        dueño = {}
+        filas = db.session.query(Appointment.client_id, Appointment.closer_id, Appointment.start_time) \
+            .filter(Appointment.client_id.in_(deuda_por_cliente.keys())) \
+            .order_by(Appointment.start_time.asc()).all()
+        for client_id, owner_id, _ in filas:
+            dueño[client_id] = owner_id  # el orden ascendente deja el más reciente al final
 
-        rows = []
-        totals = dict(empty)
-        for p in plans:
-            if not p.monto or p.monto <= 1:
+        # 3. Cronograma de cobro, donde exista: cuotas pendientes por cliente.
+        cuotas_por_cliente = {}
+        for p in InstallmentPlan.query.filter(InstallmentPlan.estado != 'pagado').all():
+            cid = p.client_id
+            if not cid or not p.monto or p.monto <= 1:
                 continue
-            client = clients.get(p.client_id)
-            if not client and p.appointment_id in appts:
-                client = clients.get(appts[p.appointment_id].client_id)
-            program_name = PROGRAM_NAMES.get(p.programa_code, p.programa_code or 'Sin programa')
-            vencida = bool(p.fecha_vencimiento and p.fecha_vencimiento < hoy)
-            monto = round(p.monto, 2)
-            rows.append({
-                'client_name': (client.full_name or client.email) if client else 'Sin nombre',
-                'program': f"Cuota {p.numero_cuota} · {program_name}",
-                'pending_amount': monto,
-                'due_date': p.fecha_vencimiento.isoformat() if p.fecha_vencimiento else None,
-                'is_overdue': vencida,
-                'days_overdue': (hoy - p.fecha_vencimiento).days if vencida else 0
-            })
-            totals['total'] += monto
-            totals['count'] += 1
-            if vencida:
-                totals['vencido'] += monto
-                totals['count_vencido'] += 1
-            else:
-                totals['por_vencer'] += monto
+            cuotas_por_cliente.setdefault(cid, []).append(p)
 
-        # Lo vencido primero (y dentro de eso, lo más atrasado), que es lo que hay que cobrar hoy.
+        clientes = {c.id: c for c in Client.query.filter(Client.id.in_(deuda_por_cliente.keys())).all()}
+
+        rows, totals = [], dict(empty)
+        for client_id, deuda in deuda_por_cliente.items():
+            if closer_id and dueño.get(client_id) != closer_id:
+                continue
+
+            cuotas = cuotas_por_cliente.get(client_id, [])
+            vencido = sum(c.monto for c in cuotas if c.fecha_vencimiento and c.fecha_vencimiento < hoy)
+            por_vencer = sum(c.monto for c in cuotas if not c.fecha_vencimiento or c.fecha_vencimiento >= hoy)
+            # El cronograma puede sumar MÁS que la deuda real (cuotas armadas sobre un precio que
+            # después cambió, o pagos aplicados sin marcar la cuota como pagada). Se acota contra
+            # la deuda, priorizando lo vencido —que es la plata que importa— para que los tres
+            # estados sumen exactamente el total y la tarjeta no se contradiga sola.
+            vencido = min(vencido, deuda)
+            por_vencer = min(por_vencer, deuda - vencido)
+            sin_plan = round(deuda - vencido - por_vencer, 2)
+
+            cliente = clientes.get(client_id)
+            proxima = min(
+                (c for c in cuotas if c.fecha_vencimiento),
+                key=lambda c: c.fecha_vencimiento, default=None
+            )
+            esta_vencida = bool(proxima and proxima.fecha_vencimiento < hoy)
+            programas = programas_por_cliente.get(client_id, [])
+
+            rows.append({
+                'client_name': (cliente.full_name or cliente.email) if cliente else 'Sin nombre',
+                'program': ' · '.join(dict.fromkeys(programas)) or 'Sin programa',
+                'pending_amount': round(deuda, 2),
+                'due_date': proxima.fecha_vencimiento.isoformat() if proxima else None,
+                'is_overdue': esta_vencida,
+                'days_overdue': (hoy - proxima.fecha_vencimiento).days if esta_vencida else 0,
+                # Sin cronograma armado: no está atrasado, pero nadie lo va a cobrar solo.
+                'sin_plan': not cuotas
+            })
+            totals['total'] += deuda
+            totals['count'] += 1
+            totals['vencido'] += vencido
+            totals['por_vencer'] += por_vencer
+            totals['sin_plan'] += sin_plan
+            if esta_vencida:
+                totals['count_vencido'] += 1
+            if not cuotas:
+                totals['count_sin_plan'] += 1
+
+        # Lo vencido primero (y lo más atrasado antes), después lo más grande: es el orden en que
+        # conviene ponerse a cobrar.
         rows.sort(key=lambda r: (not r['is_overdue'], -r['days_overdue'], -r['pending_amount']))
-        for k in ('total', 'vencido', 'por_vencer'):
+        for k in ('total', 'vencido', 'por_vencer', 'sin_plan'):
             totals[k] = round(totals[k], 2)
         return rows[:limit], totals
 
@@ -434,15 +486,26 @@ class CloserDashboardService:
             alerts.append({'type': 'warning', 'icon': '🔁', 'title': f"{round(cancel_resched_rate,1)}% entre cancelaciones y reprogramaciones",
                             'text': 'Revisar el guion de confirmación y el recordatorio previo a la llamada.'})
 
-        # La alerta de deuda ahora se dispara por lo VENCIDO, no por el total: un total alto puede
-        # ser simplemente un plan de cuotas recién firmado con todo su cronograma a futuro, que no
-        # es un problema. Lo vencido sí: es plata que había que cobrar y no se cobró.
+        # La alerta de deuda se dispara por lo VENCIDO, no por el total: un total alto puede ser
+        # simplemente un plan de cuotas recién firmado con todo su cronograma a futuro, que no es
+        # un problema. Lo vencido sí: es plata que había que cobrar y no se cobró.
         vencido = pending.get('vencido', 0)
         if vencido > 0:
             alerts.append({'type': 'danger', 'icon': '💰',
                             'title': f"${vencido:,.0f} en cuotas vencidas sin cobrar",
-                            'text': f"{pending.get('count_vencido', 0)} cuota(s) con la fecha de vencimiento ya pasada. "
+                            'text': f"{pending.get('count_vencido', 0)} cliente(s) con una cuota cuya fecha ya pasó. "
                                     f"Del saldo total pendiente (${pending.get('total', 0):,.0f}, no filtrado por período)."})
+
+        # Saldo sin ningún cronograma de cobro armado. Hoy es la mayor parte de la deuda del
+        # sistema y no aparecía en ningún lado: no está vencido (no tiene fecha), así que la
+        # alerta anterior nunca lo mencionaba, y nadie lo va a cobrar por sí solo.
+        sin_plan = pending.get('sin_plan', 0)
+        if sin_plan > 0:
+            alerts.append({'type': 'warning', 'icon': '🗓️',
+                            'title': f"${sin_plan:,.0f} de deuda sin plan de cobro",
+                            'text': f"{pending.get('count_sin_plan', 0)} cliente(s) deben plata pero no tienen ninguna "
+                                    f"cuota programada: no figuran como vencidos porque no tienen fecha. Armales el "
+                                    f"plan de cuotas desde el historial del cliente para poder cobrarles."})
 
         fu = current['actividad']['follow_ups']
         resp_rate = round(fu['replied'] / fu['sent'] * 100, 1) if fu['sent'] else 0
