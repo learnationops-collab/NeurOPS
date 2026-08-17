@@ -44,6 +44,39 @@ const MissingFieldsHint = ({ items }) => (
     </div>
 );
 
+// Aviso por WhatsApp del seguimiento que se está programando: si lo quiere y a qué hora.
+// La hora es la del closer y es obligatoria para que salga el mensaje, así que al activar el
+// check sin hora se repone 09:00 en vez de dejar un aviso que nunca se enviaría.
+const AvisoSeguimientoWhatsApp = ({ enabled, time, onChange, fecha }) => (
+    <div className="space-y-2 p-3 bg-slate-950/40 border border-slate-850 rounded-2xl">
+        <label className="flex items-center gap-2 cursor-pointer">
+            <input
+                type="checkbox"
+                checked={!!enabled}
+                onChange={(e) => onChange({ enabled: e.target.checked, time: time || '09:00' })}
+                className="w-4 h-4 accent-violet-500"
+            />
+            <h4 className="text-[10px] font-black uppercase text-slate-400">
+                Avisarme por WhatsApp este seguimiento
+            </h4>
+        </label>
+        {enabled && (
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase text-slate-500">A las</span>
+                <input
+                    type="time"
+                    value={time || '09:00'}
+                    onChange={(e) => onChange({ enabled: true, time: e.target.value })}
+                    className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200"
+                />
+                <span className="text-[9px] font-medium text-slate-500 normal-case">
+                    hora tuya{fecha ? `, el ${fecha}` : ''}
+                </span>
+            </div>
+        )}
+    </div>
+);
+
 // Fecha corta legible para las fichas de lead (fecha de agendamiento / fecha de ingreso).
 const formatIdcardDate = (iso) => {
     if (!iso) return null;
@@ -1019,6 +1052,14 @@ const CloserWorkflowPage = () => {
             fecha_seguimiento: tomorrowStr,
             pre_call_reminder_at: defaultReminder,
             pre_call_reminder_enabled: !!lead.pre_call_reminder_at,
+            // Aviso del seguimiento por WhatsApp. Si el lead YA tiene un seguimiento programado
+            // se respeta lo que el closer haya elegido para él; si se está creando uno nuevo,
+            // viene activado. No sirve mirar `followup_reminder_enabled !== undefined`: la API
+            // siempre manda el campo (false cuando no hay aviso), así que el default nunca
+            // llegaría a aplicarse.
+            followup_reminder_enabled: lead.fecha_seguimiento ? !!lead.followup_reminder_enabled : true,
+            // El check sin hora no manda nada, así que la hora siempre arranca con un valor.
+            followup_reminder_time: lead.followup_reminder_time || '09:00',
             modalidad: [],
             sig_action: null,
             cierre_motivo: null,
@@ -1876,6 +1917,8 @@ const CloserWorkflowPage = () => {
                     payload.fecha_seguimiento = sessionForm.fecha_seguimiento_cobro_next || null;
                     payload.fecha_seguimiento_cobro = sessionForm.fecha_seguimiento_cobro_next || null;
                     payload.seguimiento_tipo = 'cerrada';
+                    payload.followup_reminder_enabled = !!sessionForm.followup_reminder_enabled;
+                    payload.followup_reminder_time = sessionForm.followup_reminder_time || null;
                 } else {
                     payload.fecha_seguimiento = sessionForm.fecha_seguimiento || null;
                     payload.seguimiento_tipo = selectedLead.seguimiento_tipo || (sessionForm.result === 'contesto' ? 'tomada' : 'no_tomada');
@@ -2718,6 +2761,16 @@ const CloserWorkflowPage = () => {
                             onChange={(e) => setSessionForm(prev => ({ ...prev, fecha_seguimiento: e.target.value }))}
                             className="w-full max-w-[200px] mt-2 bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200"
                         />
+                        {sessionForm.fecha_seguimiento && (
+                            <AvisoSeguimientoWhatsApp
+                                enabled={sessionForm.followup_reminder_enabled}
+                                time={sessionForm.followup_reminder_time}
+                                fecha={sessionForm.fecha_seguimiento}
+                                onChange={({ enabled, time }) => setSessionForm(prev => ({
+                                    ...prev, followup_reminder_enabled: enabled, followup_reminder_time: time
+                                }))}
+                            />
+                        )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -2747,7 +2800,9 @@ const CloserWorkflowPage = () => {
                                         seguimiento_intento: 1,
                                         seguimiento_realizado: false,
                                         with_decision_maker: sessionForm.with_decision_maker,
-                                        offer_presented: sessionForm.offer_presented
+                                        offer_presented: sessionForm.offer_presented,
+                                        followup_reminder_enabled: !!sessionForm.followup_reminder_enabled,
+                                        followup_reminder_time: sessionForm.followup_reminder_time || null
                                     });
                                     toast.success("Seguimiento programado con éxito");
                                     setSelectedLead(null);
@@ -3010,6 +3065,16 @@ const CloserWorkflowPage = () => {
                                 className="w-full max-w-[220px] bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
                             />
                             <p className="text-[10px] text-slate-500 font-medium">Puede ser hoy mismo si quedaste en volver a escribirle más tarde.</p>
+                            {sessionForm.fecha_seguimiento_cobro_next && (
+                                <AvisoSeguimientoWhatsApp
+                                    enabled={sessionForm.followup_reminder_enabled}
+                                    time={sessionForm.followup_reminder_time}
+                                    fecha={sessionForm.fecha_seguimiento_cobro_next}
+                                    onChange={({ enabled, time }) => setSessionForm(prev => ({
+                                        ...prev, followup_reminder_enabled: enabled, followup_reminder_time: time
+                                    }))}
+                                />
+                            )}
                         </div>
                     )}
 

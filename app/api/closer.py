@@ -1569,6 +1569,8 @@ def _format_appointment_for_deck(a, recover_form=False):
         "seguimiento_sub": getattr(a, 'seguimiento_sub', None),
         "seguimiento_intento": getattr(a, 'seguimiento_intento', None) or 1,
         "pre_call_reminder_at": a.pre_call_reminder_at.isoformat() if getattr(a, 'pre_call_reminder_at', None) else None,
+        "followup_reminder_enabled": bool(getattr(a, 'followup_reminder_enabled', False)),
+        "followup_reminder_time": getattr(a, 'followup_reminder_time', None),
         "examen": a.examen or "",
         # Fecha de ingreso real al programa (Enrollment más reciente) — distinta de start_time
         # (que es la fecha de la cita/agenda). Solo existe si el cliente ya se inscribió.
@@ -1988,6 +1990,11 @@ def process_closer_card(appt_id):
 
     if 'fecha_seguimiento' in data:
         appt.fecha_seguimiento = data['fecha_seguimiento']
+        # Cerrar el seguimiento (fecha en null) también apaga su aviso: si no, quedaría armado
+        # con una hora vieja esperando a que el lead se reabra.
+        if not data['fecha_seguimiento']:
+            appt.followup_reminder_enabled = False
+            appt.followup_reminder_time = None
     if 'fecha_seguimiento_cobro' in data:
         appt.fecha_seguimiento_cobro = data['fecha_seguimiento_cobro']
     if 'seguimiento_realizado' in data:
@@ -2001,6 +2008,14 @@ def process_closer_card(appt_id):
     if 'pre_call_reminder_at' in data:
         val = data['pre_call_reminder_at']
         appt.pre_call_reminder_at = datetime.fromisoformat(val.replace('Z', '')) if val else None
+
+    if 'followup_reminder_enabled' in data or 'followup_reminder_time' in data:
+        from app.services.closer_followup_service import CloserFollowUpService
+        CloserFollowUpService.apply_reminder_settings(
+            appt,
+            reminder_enabled=data.get('followup_reminder_enabled'),
+            reminder_time=data.get('followup_reminder_time')
+        )
 
     if data.get('contact_result'):
         appt.last_contact_outcome = data['contact_result']

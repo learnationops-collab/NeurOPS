@@ -25,12 +25,30 @@ DERIVABLE_NO_TOMADA = {'no show', 'cancelado', 'cancelada'}
 
 
 def reminders_enabled():
-    """Interruptor de los recordatorios de seguimiento por WhatsApp a los closers. Apagado por
-    defecto (pedido del usuario): para volver a activarlos alcanza con definir la variable de
-    entorno `FOLLOWUP_REMINDERS_ENABLED=true`, sin tocar código. Se lee en cada llamada (no una
-    sola vez al importar el módulo) para que cambiar la variable en el hosting surta efecto con
-    solo reiniciar el proceso."""
-    return os.environ.get('FOLLOWUP_REMINDERS_ENABLED', '').strip().lower() in ('true', '1', 'yes')
+    """Interruptor global de los recordatorios de seguimiento por WhatsApp.
+
+    Encendido por defecto desde el 16/08/2026. Estuvo apagado entre el 14 y el 16 porque el
+    mecanismo de entonces avisaba de todos los seguimientos automáticamente y saturaba; ahora
+    cada aviso lo pide el closer explícitamente al programar su seguimiento
+    (`followup_reminder_enabled` + `followup_reminder_time`), así que el interruptor global pasa
+    a ser solo un freno de emergencia: `FOLLOWUP_REMINDERS_ENABLED=false` corta todo sin tocar
+    código. Se lee en cada llamada para que cambiarlo en el hosting surta efecto con reiniciar."""
+    return os.environ.get('FOLLOWUP_REMINDERS_ENABLED', 'true').strip().lower() in ('true', '1', 'yes')
+
+
+def parse_reminder_time(valor):
+    """Normaliza la hora del aviso a 'HH:MM', o None si no es una hora válida.
+
+    Llega del `<input type="time">` del navegador, que manda 'HH:MM' o a veces 'HH:MM:SS'."""
+    if not valor:
+        return None
+    texto = str(valor).strip()
+    for formato in ('%H:%M', '%H:%M:%S'):
+        try:
+            return datetime.strptime(texto, formato).strftime('%H:%M')
+        except ValueError:
+            continue
+    return None
 
 
 class CloserFollowUpService:
@@ -190,6 +208,8 @@ class CloserFollowUpService:
             # la fecha de la call, que es `days_since_call`): es lo que le dice al closer cuánto
             # hace que debería haber contactado a este lead.
             'dias_retraso': CloserFollowUpService._dias_retraso(a.fecha_seguimiento, reference_date),
+            'followup_reminder_enabled': bool(a.followup_reminder_enabled),
+            'followup_reminder_time': a.followup_reminder_time or None,
             'call_date': a.start_time.isoformat() if a.start_time else None,
             'days_since_call': days_since_call,
             'closer_notes': a.closer_notes or '',
@@ -229,69 +249,51 @@ class CloserFollowUpService:
             grouped[key].append(CloserFollowUpService._serialize(a, include_debt=(key == 'cerrada'), reference_date=reference_date))
         return grouped
 
-    # Cola de recordatorios: en vez de mandar de golpe TODOS los seguimientos pendientes (un
-    # closer con 30 pendientes recibía 30 mensajes juntos), se envían de a REMINDERS_PER_HOUR por
-    # closer por hora, dentro de su horario laboral local — un goteo constante que le recuerda
-    # durante todo el día que tiene seguimientos por hacer, en vez de una avalancha que se ignora.
-    REMINDERS_PER_HOUR = 2
-    REMINDER_START_HOUR = 9
-    REMINDER_END_HOUR = 20
-
     @staticmethod
     def send_due_reminders(selected_date_str=None):
-        """Envía la siguiente tanda de la cola de recordatorios de seguimiento por WhatsApp
-        (Whatchimp). Candidatos: TODOS los seguimientos pendientes para hoy (vencidos + de hoy,
-        mismo criterio que get_today_grouped) de TODOS los closers activos.
+        """Manda los avisos de seguimiento por WhatsApp (Whatchimp) que ya llegaron a su hora.
 
-        Tres reglas de goteo, aplicadas por closer:
-          1. Solo dentro de su horario laboral local (REMINDER_START_HOUR a REMINDER_END_HOUR en
-             `User.timezone`, mismo patrón que `_user_day_bounds_utc`) — un closer en otro huso
-             no recibe avisos a la hora de otro.
-          2. Como mucho REMINDERS_PER_HOUR en la última hora (ventana deslizante sobre
-             `followup_reminder_sent_at`), así el ritmo es parejo y no depende de cuándo corra
-             el scheduler.
-          3. Cada cita se avisa una sola vez por día, y la cola se ordena por urgencia
-             (`fecha_seguimiento` ascendente: lo más vencido primero), así el goteo va rotando
-             por leads distintos en vez de repetir siempre el mismo.
+        Cada aviso lo pide el closer al programar el seguimiento: solo entran las citas con
+        `followup_reminder_enabled` y una `followup_reminder_time` guardada. Sin las dos cosas no
+        se manda nada — reemplaza al goteo automático de 2 por hora que avisaba de todo (ver
+        bitácora del 11 y 14 de agosto: saturaba y hubo que apagarlo entero).
 
-        Pensado para que el scheduler interno (ver reminder_scheduler.py) lo llame cada 15
-        minutos: llamarlo de más es inofensivo, el límite por hora y el "una vez por día por
-        cita" hacen que las corridas extra no manden nada. Si el closer no tiene
-        `two_chat_number` configurado (ver Gestión de Equipo), se cuenta como omitido en vez de
-        fallar todo el lote.
+        Reglas:
+          1. La hora guardada es local del closer (`User.timezone`), así que se compara contra su
+             reloj: uno en otro huso recibe el aviso a SU hora, no a la del servidor.
+          2. Se manda cuando esa hora ya pasó en el día de hoy. No hay ventana horaria impuesta:
+             la hora la eligió el closer, el sistema no la discute.
+          3. Una vez por día por cita (`followup_reminder_sent_at`). Un seguimiento vencido vuelve
+             a avisar al día siguiente a la misma hora mientras siga sin resolverse, que es
+             justamente lo que se le está recordando.
 
-        Los recordatorios están **desactivados por defecto** (ver `reminders_enabled`): mientras
-        lo estén, esta función no toca la base ni llama a Whatchimp y devuelve `disabled: True`.
-        La cola en pantalla (`get_today_grouped`, pool, meta diaria) sigue funcionando igual — lo
-        único que se apaga es el envío de mensajes."""
+        Pensado para que el scheduler lo llame cada pocos minutos: llamarlo de más es inofensivo,
+        el "una vez por día por cita" hace que las corridas extra no manden nada. Si el closer no
+        tiene `two_chat_number` configurado (ver Gestión de Equipo), se cuenta como omitido en vez
+        de fallar todo el lote."""
         if not reminders_enabled():
             return {
                 "disabled": True,
                 "sent": 0,
                 "already_sent_today": 0,
                 "skipped_no_phone": 0,
-                "gated_outside_hours": 0,
-                "throttled": 0,
+                "not_due_yet": 0,
                 "failed": 0,
-                "total_pending": 0
+                "total_opted_in": 0
             }
 
-        import pytz
         from app.services.whatchimp_service import WhatchimpService
+        from app.services.user_time_service import zona_del_usuario
 
         selected_date_str = selected_date_str or date.today().isoformat()
-        today = date.today()
-        # datetime.now() (hora local del servidor), no utcnow(): es lo que se guarda en
-        # followup_reminder_sent_at y contra lo que se comparan tanto el "ya avisado hoy" como la
-        # ventana deslizante de la última hora. Mezclar local y UTC hacía que la comparación de
-        # "día" fallara cerca de medianoche UTC y reenviara el mismo recordatorio en cada corrida.
-        now = datetime.now()
-        hour_ago = now - timedelta(hours=1)
 
         q = CloserFollowUpService._base_query(None).filter(
             Appointment.fecha_seguimiento.isnot(None),
             Appointment.fecha_seguimiento != '',
-            Appointment.fecha_seguimiento <= selected_date_str
+            Appointment.fecha_seguimiento <= selected_date_str,
+            Appointment.followup_reminder_enabled.is_(True),
+            Appointment.followup_reminder_time.isnot(None),
+            Appointment.followup_reminder_time != ''
         )
         items = q.order_by(Appointment.fecha_seguimiento.asc()).all()
 
@@ -300,41 +302,32 @@ class CloserFollowUpService:
             if a.closer_id:
                 by_closer.setdefault(a.closer_id, []).append(a)
 
-        sent, skipped_no_phone, failed, already_sent, gated_outside_hours, throttled = 0, 0, 0, 0, 0, 0
+        sent, skipped_no_phone, failed, already_sent, not_due_yet = 0, 0, 0, 0, 0
         for closer_appts in by_closer.values():
             closer = closer_appts[0].closer
             if not closer or not closer.is_active or not closer.two_chat_number:
                 skipped_no_phone += len(closer_appts)
                 continue
 
-            try:
-                tz = pytz.timezone(closer.timezone or 'America/La_Paz')
-            except Exception:
-                tz = pytz.timezone('America/La_Paz')
-            local_hour = datetime.now(tz).hour
-            if local_hour < CloserFollowUpService.REMINDER_START_HOUR or local_hour >= CloserFollowUpService.REMINDER_END_HOUR:
-                gated_outside_hours += len(closer_appts)
-                continue
+            # El reloj del closer, no el del servidor: tanto para saber si ya es la hora como
+            # para el "una vez por día" (si no, el corte de día caía a medianoche UTC).
+            ahora_local = datetime.now(zona_del_usuario(closer))
+            hoy_local = ahora_local.date()
 
-            pending = []
-            recent = 0
             for a in closer_appts:
+                hora = parse_reminder_time(a.followup_reminder_time)
+                if not hora:
+                    continue
+
                 sent_at = a.followup_reminder_sent_at
-                if sent_at and sent_at > hour_ago:
-                    recent += 1
-                if sent_at and sent_at.date() == today:
+                if sent_at and sent_at.date() == hoy_local:
                     already_sent += 1
-                else:
-                    pending.append(a)
+                    continue
 
-            budget = CloserFollowUpService.REMINDERS_PER_HOUR - recent
-            if budget <= 0:
-                throttled += len(pending)
-                continue
-            if len(pending) > budget:
-                throttled += len(pending) - budget
+                if ahora_local.strftime('%H:%M') < hora:
+                    not_due_yet += 1
+                    continue
 
-            for a in pending[:budget]:
                 tipo_key = CloserFollowUpService._effective_tipo(a) or 'no_tomada'
                 lead_name = a.client.full_name or a.client.email if a.client else 'Sin Nombre'
                 lead_phone = a.client.phone if a.client else None
@@ -347,7 +340,9 @@ class CloserFollowUpService:
                         lead_phone=lead_phone,
                         closer_phone=closer.two_chat_number
                     )
-                    a.followup_reminder_sent_at = datetime.now()
+                    # Naive y en hora local del closer, para que `.date()` de arriba compare
+                    # contra su día y no contra el del servidor.
+                    a.followup_reminder_sent_at = ahora_local.replace(tzinfo=None)
                     db.session.commit()
                     sent += 1
                 except Exception as e:
@@ -359,10 +354,9 @@ class CloserFollowUpService:
             "sent": sent,
             "already_sent_today": already_sent,
             "skipped_no_phone": skipped_no_phone,
-            "gated_outside_hours": gated_outside_hours,
-            "throttled": throttled,
+            "not_due_yet": not_due_yet,
             "failed": failed,
-            "total_pending": len(items)
+            "total_opted_in": len(items)
         }
 
     @staticmethod
@@ -727,8 +721,12 @@ class CloserFollowUpService:
         }
 
     @staticmethod
-    def schedule_followup(appointment, tipo, sub, fecha_seguimiento, notes=None, intento=None):
-        """Crea/actualiza la categorización de un seguimiento sobre una cita existente."""
+    def schedule_followup(appointment, tipo, sub, fecha_seguimiento, notes=None, intento=None,
+                          reminder_enabled=None, reminder_time=None):
+        """Crea/actualiza la categorización de un seguimiento sobre una cita existente.
+
+        `reminder_enabled`/`reminder_time` solo se tocan si vienen: así los llamadores que no
+        saben del aviso (o una edición parcial) no lo apagan sin querer."""
         appointment.seguimiento_tipo = tipo
         appointment.seguimiento_sub = sub
         appointment.seguimiento_intento = intento or 1
@@ -736,3 +734,22 @@ class CloserFollowUpService:
         appointment.seguimiento_realizado = False
         if notes:
             appointment.closer_notes = notes
+        CloserFollowUpService.apply_reminder_settings(appointment, reminder_enabled, reminder_time)
+
+    @staticmethod
+    def apply_reminder_settings(appointment, reminder_enabled=None, reminder_time=None):
+        """Guarda el aviso de WhatsApp elegido por el closer, ignorando lo que no venga.
+
+        Un aviso sin hora no se puede mandar (ver `send_due_reminders`), así que si queda
+        activado sin hora se guarda como desactivado en vez de dejar un estado que promete un
+        mensaje que nunca va a salir."""
+        if reminder_time is not None:
+            appointment.followup_reminder_time = parse_reminder_time(reminder_time)
+        if reminder_enabled is not None:
+            appointment.followup_reminder_enabled = bool(reminder_enabled)
+        if appointment.followup_reminder_enabled and not appointment.followup_reminder_time:
+            appointment.followup_reminder_enabled = False
+        # Reprogramar reabre el aviso: si no, la marca de "ya avisé hoy" del seguimiento
+        # anterior se comería el primer aviso del nuevo.
+        if reminder_enabled is not None or reminder_time is not None:
+            appointment.followup_reminder_sent_at = None

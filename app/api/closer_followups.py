@@ -85,7 +85,9 @@ def schedule_followup(appt_id):
         sub=data.get('sub') or '',
         fecha_seguimiento=data.get('fecha_seguimiento'),
         notes=data.get('notes'),
-        intento=data.get('intento')
+        intento=data.get('intento'),
+        reminder_enabled=data.get('followup_reminder_enabled'),
+        reminder_time=data.get('followup_reminder_time')
     )
     db.session.commit()
     return jsonify({"message": "Seguimiento programado", "id": appt.id}), 200
@@ -93,14 +95,13 @@ def schedule_followup(appt_id):
 
 @bp.route('/followups/cron/send-reminders', methods=['GET'])
 def cron_send_followup_reminders():
-    """Avanza la cola de recordatorios de seguimiento por WhatsApp (Whatchimp): manda como mucho
-    REMINDERS_PER_HOUR por closer por hora, dentro de su horario laboral local. Pensado para un
-    cron externo (mismo patrón/token que /api/sheets/cron-sync) como alternativa al scheduler
-    interno — llamarlo de más es seguro, el propio goteo evita reenviar.
+    """Manda los avisos de seguimiento por WhatsApp (Whatchimp) que ya llegaron a la hora que el
+    closer eligió al programarlos. Pensado para un cron externo (mismo patrón/token que
+    /api/sheets/cron-sync) como alternativa al scheduler interno — llamarlo de más es seguro, el
+    "una vez por día por cita" evita reenviar.
 
-    Con los recordatorios desactivados (estado por defecto, ver `reminders_enabled`) responde
-    200 con `disabled: true` y no envía nada — así un cron externo ya configurado no empieza a
-    fallar, simplemente no manda mensajes."""
+    Si el interruptor global está apagado (`FOLLOWUP_REMINDERS_ENABLED=false`) responde 200 con
+    `disabled: true` y no envía nada, para que un cron ya configurado no empiece a fallar."""
     token = request.args.get('token')
     expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
     if not token or token != expected_token:

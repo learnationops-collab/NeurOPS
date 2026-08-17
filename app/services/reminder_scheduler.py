@@ -6,6 +6,10 @@ logger = logging.getLogger(__name__)
 
 _scheduler = None
 
+# Cada cuánto se revisa si algún aviso llegó a su hora. Es también el atraso máximo con el que
+# puede salir un aviso respecto de la hora que eligió el closer.
+CHECK_INTERVAL_MINUTES = 5
+
 
 def _should_start():
     """Evita arrancar el scheduler donde no corresponde: comandos de Flask CLI (`flask db
@@ -14,9 +18,9 @@ def _should_start():
     lanzar el proceso real (evita que corra duplicado)."""
     if os.environ.get('DISABLE_REMINDER_SCHEDULER', '').lower() == 'true':
         return False
-    # Recordatorios apagados (estado por defecto desde el 14/08/2026): no tiene sentido tickear
-    # cada 15 minutos para que `send_due_reminders` corte en la primera línea. El corte de verdad
-    # vive en el servicio, así que el endpoint de cron externo queda cubierto igual.
+    # Freno de emergencia global (`FOLLOWUP_REMINDERS_ENABLED=false`): sin envíos no tiene
+    # sentido tickear. El corte de verdad vive en el servicio, así que el endpoint de cron
+    # externo queda cubierto igual.
     from app.services.closer_followup_service import reminders_enabled
     if not reminders_enabled():
         return False
@@ -29,14 +33,13 @@ def _should_start():
 
 
 def start_scheduler(app):
-    """Arranca (una sola vez por proceso) el job que revisa cada 15 minutos si hay seguimientos
-    pendientes para avisarle a algún closer por WhatsApp, respetando la hora local de cada uno.
-    El goteo real (cuántos y cuándo) lo decide CloserFollowUpService.send_due_reminders: como
-    mucho REMINDERS_PER_HOUR por closer por hora, dentro de su horario laboral local — así que
-    correr esto cada 15 minutos solo le da oportunidad de avanzar la cola, no manda de más.
+    """Arranca (una sola vez por proceso) el job que revisa si algún seguimiento llegó a la hora
+    que su closer eligió para el aviso por WhatsApp.
 
-    Hoy los recordatorios están desactivados (ver `reminders_enabled` en closer_followup_service):
-    el scheduler no arranca salvo que se defina `FOLLOWUP_REMINDERS_ENABLED=true`."""
+    Corre cada CHECK_INTERVAL_MINUTES. El intervalo ES la precisión del aviso: un seguimiento
+    configurado a las 09:07 sale en el primer tick posterior, así que 5 minutos es el techo de
+    atraso. Correrlo de más es inofensivo — `send_due_reminders` solo manda lo que ya venció y
+    una sola vez por día por cita."""
     global _scheduler
     if _scheduler is not None:
         return
@@ -61,8 +64,9 @@ def start_scheduler(app):
     from datetime import datetime
     _scheduler = BackgroundScheduler(daemon=True)
     # next_run_time=ahora: corre una vez apenas arranca el proceso (inofensivo — send_due_reminders
-    # igual filtra por horario laboral local de cada closer y por el límite por hora) y no deja
-    # pasar hasta 15 minutos sin revisar tras un deploy/reinicio.
-    _scheduler.add_job(_tick, 'interval', minutes=15, id='followup_reminders', next_run_time=datetime.now())
+    # solo manda lo que ya llegó a su hora y no repite en el día) para no dejar pasar un intervalo
+    # entero sin revisar tras un deploy o reinicio.
+    _scheduler.add_job(_tick, 'interval', minutes=CHECK_INTERVAL_MINUTES,
+                       id='followup_reminders', next_run_time=datetime.now())
     _scheduler.start()
-    logger.info("[ReminderScheduler] Scheduler de recordatorios de seguimiento arrancado (cada 15 min).")
+    logger.info(f"[ReminderScheduler] Scheduler de avisos de seguimiento arrancado (cada {CHECK_INTERVAL_MINUTES} min).")

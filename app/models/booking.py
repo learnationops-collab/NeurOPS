@@ -59,10 +59,20 @@ class Appointment(db.Model):
     pre_call_reminder_at = db.Column(db.DateTime, nullable=True)
 
     # Última vez que se le avisó al closer por WhatsApp (Whatchimp) sobre este seguimiento.
-    # Es lo que gobierna la cola de recordatorios (ver CloserFollowUpService.send_due_reminders):
-    # sirve a la vez para no repetir el mismo aviso en el día y para contar cuántos se mandaron
-    # en la última hora y respetar el límite por closer.
+    # Evita repetir el mismo aviso más de una vez por día (ver
+    # CloserFollowUpService.send_due_reminders).
     followup_reminder_sent_at = db.Column(db.DateTime, nullable=True)
+
+    # Aviso por WhatsApp de ESTE seguimiento, elegido por el closer al programarlo: si lo quiere
+    # y a qué hora. Sin las dos cosas no se manda nada — desde el 16/08/2026 los recordatorios
+    # son opt-in por seguimiento en vez de un goteo automático para todos.
+    #
+    # La hora es 'HH:MM' en la zona horaria del closer, no UTC, y vive en su propia columna en
+    # lugar de pegarse a `fecha_seguimiento` a propósito: esa columna es texto y se compara con
+    # `<= 'YYYY-MM-DD'` y `LIKE 'YYYY-MM-DD%'` en media docena de consultas, así que agregarle
+    # la hora dejaría los seguimientos de hoy fuera de la lista del día.
+    followup_reminder_enabled = db.Column(db.Boolean, default=False, server_default='0', nullable=True)
+    followup_reminder_time = db.Column(db.String(5), nullable=True)
 
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
