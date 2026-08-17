@@ -57,7 +57,10 @@ def receive_manychat_ad_lead():
     # ----- Datos del LEAD -----
     lead_name = data.get('lead_name', '')
     lead_ig = data.get('lead_ig', '')
-    
+    # ManyChat reparte el lead entre los setters: los 2 primeros JSON de la
+    # conversación traen esta variable vacía y de ahí en adelante llega el nombre.
+    setter_name = data.get('setter')
+
     # Parse follower boolean
     follower_raw = data.get('follower')
     follower = False
@@ -114,9 +117,11 @@ def receive_manychat_ad_lead():
                 lead.name = lead_name
             if is_valid_value(lead_ig): 
                 lead.ig = lead_ig
-            if follower_raw is not None: 
+            if follower_raw is not None:
                 lead.follower = follower
-            
+            if is_valid_value(setter_name):
+                lead.setter = str(setter_name).strip()
+
             raw_last_stage = data.get('last_stage')
             if raw_last_stage is not None and is_valid_value(raw_last_stage):
                 try:
@@ -139,7 +144,8 @@ def receive_manychat_ad_lead():
                 name=lead_name if is_valid_value(lead_name) else None,
                 ig=lead_ig if is_valid_value(lead_ig) else None,
                 follower=follower,
-                last_stage=parsed_last_stage
+                last_stage=parsed_last_stage,
+                setter=str(setter_name).strip() if is_valid_value(setter_name) else None
             )
             db.session.add(lead)
             db.session.flush()
@@ -331,6 +337,7 @@ def get_webhook_log():
     from app.models import LeadAnswer, ManychatLead, Ad
 
     limit = int(request.args.get('limit', 10))
+
     # Traemos las respuestas ordenadas por creación
     answers = LeadAnswer.query.order_by(LeadAnswer.created_at.desc()).limit(limit).all()
 
@@ -349,6 +356,7 @@ def get_webhook_log():
         'lead_ig': ans.lead.ig,
         'follower': ans.lead.follower,
         'last_stage': ans.lead.last_stage,
+        'setter': ans.lead.setter,
         'ad_id': ans.ad_id,
         'ad_name': ads_map[ans.ad_id].name if ans.ad_id and ans.ad_id in ads_map else '—',
         'keyword': ans.keyword,

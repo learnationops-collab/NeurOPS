@@ -94,6 +94,9 @@ class ManychatLead(db.Model):
     ig = db.Column(db.String(100))
     follower = db.Column(db.Boolean, default=False)
     last_stage = db.Column(db.Integer, nullable=True)  # Última etapa numérica del funnel (ManyChat)
+    # Setter al que ManyChat repartió este lead. Llega vacío en los 2 primeros
+    # JSON de la conversación y desde ahí en adelante trae el nombre asignado.
+    setter = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
