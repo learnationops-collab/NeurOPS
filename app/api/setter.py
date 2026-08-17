@@ -4,6 +4,7 @@ from app import db
 from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CommentNotification, ManychatLead, LeadAnswer
 from app.decorators import role_required
 from app.services.setter_assignment_service import condicion_leads_visibles
+from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_, desc
 
@@ -668,32 +669,28 @@ def get_setter_deck():
     date_range = request.args.get('date_range', 'today' if request.args.get('step') == 'agendas' else 'all')
     target_date_str = request.args.get('date')
     step = request.args.get('step')
-    today = date.today()
+    # "Hoy" es el del setter, no el del servidor (que corre en UTC): ver
+    # user_time_service.
+    today = hoy_del_usuario(current_user)
 
     start_dt = None
     end_dt = None
 
     if date_range == 'today':
-        start_dt = datetime.combine(today, datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_dia_utc(current_user, today)
     elif date_range == 'yesterday':
-        yesterday = today - timedelta(days=1)
-        start_dt = datetime.combine(yesterday, datetime.min.time())
-        end_dt = datetime.combine(yesterday, datetime.max.time())
+        start_dt, end_dt = limites_dia_utc(current_user, today - timedelta(days=1))
     elif date_range == 'week':
-        start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=7), today)
     elif date_range == 'month':
-        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=30), today)
     elif date_range == 'custom' and target_date_str:
         try:
             t_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-            start_dt = datetime.combine(t_date, datetime.min.time())
-            end_dt = datetime.combine(t_date, datetime.max.time())
+            start_dt, end_dt = limites_dia_utc(current_user, t_date)
         except ValueError:
             pass
-    
+
     unread_client_ids = set()
     if current_user and current_user.is_authenticated:
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
@@ -1385,12 +1382,11 @@ def get_unassigned_leads_today():
 @role_required(ROLE_SETTER)
 def get_cualificacion_stats():
     from app.models import LeadAnswer, ManychatLead
-    from datetime import date, datetime
-    
-    today_date = date.today()
-    start_dt = datetime.combine(today_date, datetime.min.time())
-    end_dt = datetime.combine(today_date, datetime.max.time())
-    
+
+    # Mismo "hoy" que el mazo, para que el contador coincida con la lista.
+    start_dt, end_dt = limites_dia_utc(current_user, hoy_del_usuario(current_user))
+
+
     from sqlalchemy import func
     # 1. Cualificados hoy (únicos por prospecto/lead)
     query_qual = LeadAnswer.query.filter(

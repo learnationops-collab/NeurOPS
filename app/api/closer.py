@@ -51,14 +51,8 @@ def _maybe_auto_archive_backlog():
 def _user_day_bounds_utc(user, day):
     """Convierte el rango [00:00, 23:59:59.999999] del día calendario `day` en la
     zona horaria del usuario a límites UTC naive reales, para filtrar Appointment.start_time."""
-    from datetime import time as time_cls
-    try:
-        tz = pytz.timezone(user.timezone or 'America/La_Paz')
-    except Exception:
-        tz = pytz.timezone('America/La_Paz')
-    start_utc = tz.localize(datetime.combine(day, time_cls.min)).astimezone(pytz.UTC).replace(tzinfo=None)
-    end_utc = tz.localize(datetime.combine(day, time_cls.max)).astimezone(pytz.UTC).replace(tzinfo=None)
-    return start_utc, end_utc
+    from app.services.user_time_service import limites_dia_utc
+    return limites_dia_utc(user, day)
 
 @bp.route('/dashboard', methods=['GET'])
 @login_required
