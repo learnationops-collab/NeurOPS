@@ -187,7 +187,8 @@ const IncomingLeadsTab = () => {
             const igMatch = (log.lead_ig || '').toLowerCase().includes(term);
             const kwMatch = (log.keyword || '').toLowerCase().includes(term);
             const adMatch = (log.ad_name || '').toLowerCase().includes(term);
-            return nameMatch || igMatch || kwMatch || adMatch;
+            const setterMatch = (log.setter || '').toLowerCase().includes(term);
+            return nameMatch || igMatch || kwMatch || adMatch || setterMatch;
         }
 
         return true;
@@ -213,7 +214,7 @@ const IncomingLeadsTab = () => {
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                         <input
                             type="text"
-                            placeholder="Buscar prospecto, IG o keyword..."
+                            placeholder="Buscar prospecto, IG, keyword o setter..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="bg-slate-950 border border-slate-800 text-xs font-bold rounded-xl pl-10 pr-4 py-2.5 text-white outline-none focus:border-violet-500 transition-all min-w-[240px]"
@@ -301,6 +302,7 @@ const IncomingLeadsTab = () => {
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Prospecto (Instagram)</th>
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Palabra Clave (Keyword)</th>
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Anuncio Relacionado</th>
+                                    <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Setter Asignado</th>
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Cualificación</th>
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Flujo (Estatus)</th>
                                     <th className="p-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Recibido</th>
@@ -393,6 +395,15 @@ const IncomingLeadsTab = () => {
                                             </span>
                                             {log.ad_id && (
                                                 <span className="block text-[8px] font-mono text-slate-500 mt-0.5">ID Anuncio: #{log.ad_id}</span>
+                                            )}
+                                        </td>
+                                        <td className="p-5">
+                                            {log.setter ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                                                    {log.setter}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-slate-600 italic uppercase tracking-wider">Sin repartir</span>
                                             )}
                                         </td>
                                         <td className="p-5">

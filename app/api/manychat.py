@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
+from flask_login import current_user
 from app import db
+from app.services.setter_assignment_service import condicion_leads_visibles
 import logging
 import traceback
 
@@ -338,8 +340,15 @@ def get_webhook_log():
 
     limit = int(request.args.get('limit', 10))
 
+    query = LeadAnswer.query
+    # Cada setter solo ve los leads que ManyChat le repartió (más los que
+    # todavía no tienen asignación).
+    condicion = condicion_leads_visibles(current_user)
+    if condicion is not None:
+        query = query.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id).filter(condicion)
+
     # Traemos las respuestas ordenadas por creación
-    answers = LeadAnswer.query.order_by(LeadAnswer.created_at.desc()).limit(limit).all()
+    answers = query.order_by(LeadAnswer.created_at.desc()).limit(limit).all()
 
     # Cargar nombres de anuncios y leads
     ad_ids = [a.ad_id for a in answers if a.ad_id]

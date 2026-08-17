@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CommentNotification, ManychatLead, LeadAnswer
 from app.decorators import role_required
+from app.services.setter_assignment_service import condicion_leads_visibles
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_, desc
 
@@ -711,20 +712,14 @@ def get_setter_deck():
         if start_dt and end_dt:
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
             
-        if current_user.role != 'admin':
-            query = query.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
-                         .outerjoin(Event, Event.id == Ad.event_id)\
-                         .filter(
-                             or_(
-                                 Event.setter_id == current_user.id,
-                                 Event.setter_id == None,
-                                 LeadAnswer.ad_id == None
-                             )
-                         )
-        else:
-            query = query.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
-                         .outerjoin(Event, Event.id == Ad.event_id)
-                         
+        # El dueño del lead lo decide ManyChat (ManychatLead.setter), no el
+        # anuncio: antes se acotaba por Event.setter_id y como la mayoría de
+        # anuncios no tiene evento con setter dueño, todos veían todo.
+        condicion_setter = condicion_leads_visibles(current_user)
+        if condicion_setter is not None:
+            query = query.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+                         .filter(condicion_setter)
+
         lead_answers = query.order_by(LeadAnswer.created_at.desc()).all()
         
         booked_instagrams_q = db.session.query(func.lower(func.replace(Client.instagram, '@', '')))\
@@ -856,6 +851,11 @@ def get_setter_deck():
                     assigned_setter = event.setter.username
                 if event.closers:
                     assigned_closer = " / ".join([c.username for c in event.closers])
+
+            # El reparto real lo hace ManyChat; el setter del evento es solo el
+            # respaldo para los leads que entraron antes de la variable.
+            if lead.setter:
+                assigned_setter = lead.setter
                     
             response_data.append({
                 "id": la.id,
@@ -1384,7 +1384,7 @@ def get_unassigned_leads_today():
 @bp.route('/deck/stats/cualificacion', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_cualificacion_stats():
-    from app.models import LeadAnswer, Ad, Event
+    from app.models import LeadAnswer, ManychatLead
     from datetime import date, datetime
     
     today_date = date.today()
@@ -1397,46 +1397,32 @@ def get_cualificacion_stats():
         LeadAnswer.qualification.in_(['yes', 'true']),
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
-    if current_user.role != 'admin':
-        query_qual = query_qual.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
-                               .outerjoin(Event, Event.id == Ad.event_id)\
-                               .filter(
-                                   or_(
-                                       Event.setter_id == current_user.id,
-                                       Event.setter_id == None,
-                                       LeadAnswer.ad_id == None
-                                   )
-                               )
+    # Mismo criterio que la bandeja: cada setter cuenta lo suyo (ver
+    # setter_assignment_service), admin y operador cuentan todo.
+    condicion_setter = condicion_leads_visibles(current_user)
+    if condicion_setter is not None:
+        query_qual = query_qual.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+                               .filter(condicion_setter)
     qualified_today = query_qual.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
-    
-    # 2. Sin asignación (de los cualificados hoy, no tienen setter ni closer asignado)
-    if current_user.role != 'admin':
-        unassigned_today = 0
-    else:
-        all_qual = query_qual.all()
-        unassigned_leads = set()
-        for la in all_qual:
-            ad = Ad.query.get(la.ad_id) if la.ad_id else None
-            event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
-            if not event or not event.setter_id or not event.closers:
-                unassigned_leads.add(la.lead_id)
-        unassigned_today = len(unassigned_leads)
-        
+
+    # 2. Sin asignación: cualificados de hoy que ManyChat todavía no repartió
+    # (los 2 primeros JSON de una conversación llegan sin setter).
+    query_unassigned = LeadAnswer.query.filter(
+        LeadAnswer.qualification.in_(['yes', 'true']),
+        LeadAnswer.created_at.between(start_dt, end_dt)
+    ).join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id).filter(
+        or_(ManychatLead.setter == None, ManychatLead.setter == '')
+    )
+    unassigned_today = query_unassigned.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
+
     # 3. Sin responder hoy (qualification == 'null' o vacía, únicos por prospecto)
     query_no_resp = LeadAnswer.query.filter(
         LeadAnswer.qualification.in_(['null', None, '', 'undefined']),
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
-    if current_user.role != 'admin':
-        query_no_resp = query_no_resp.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
-                                     .outerjoin(Event, Event.id == Ad.event_id)\
-                                     .filter(
-                                         or_(
-                                             Event.setter_id == current_user.id,
-                                             Event.setter_id == None,
-                                             LeadAnswer.ad_id == None
-                                         )
-                                     )
+    if condicion_setter is not None:
+        query_no_resp = query_no_resp.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+                                     .filter(condicion_setter)
     no_response_today = query_no_resp.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
     
     return jsonify({
