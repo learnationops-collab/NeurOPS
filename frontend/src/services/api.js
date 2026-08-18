@@ -1,8 +1,14 @@
 import axios from "axios";
 
+// Sin timeout, una petición colgada (proxy, servidor saturado, red) dejaba cualquier acción del
+// mazo (ej. "Pagó" → registrar cobro) con el spinner girando para siempre, sin error ni forma de
+// reintentar salvo recargar la página. 45s da margen de sobra a la petición más lenta del sistema
+// (sync con Google Sheets, que el backend ya cota en 30s) y aun así garantiza que todo lo demás
+// falle de forma visible en vez de quedar colgado.
 const api = axios.create({
     baseURL: "/api",
     withCredentials: true,
+    timeout: 45000,
 });
 
 let csrfToken = null;
@@ -18,7 +24,11 @@ const fetchCsrfToken = (forceRefresh = false) => {
     if (csrfToken) return Promise.resolve(csrfToken);
     if (csrfTokenPromise) return csrfTokenPromise;
 
-    csrfTokenPromise = axios.get("/api/auth/csrf-token", { withCredentials: true })
+    // Timeout corto a propósito: esta llamada bloquea TODA petición que modifica estado (se espera
+    // antes de cada POST/PUT/PATCH/DELETE), así que si se cuelga no puede arrastrar consigo los 45s
+    // completos del timeout general — mejor fallar rápido y dejar seguir la petición sin token (el
+    // backend la rechazará con 400/403, visible, en vez de sumar su propia espera a la de encima).
+    csrfTokenPromise = axios.get("/api/auth/csrf-token", { withCredentials: true, timeout: 10000 })
         .then(res => {
             csrfToken = res.data.csrf_token;
             csrfTokenPromise = null;

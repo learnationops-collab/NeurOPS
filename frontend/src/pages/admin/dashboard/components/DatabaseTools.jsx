@@ -36,7 +36,9 @@ const DatabaseTools = () => {
 
         setMigrating(true);
         try {
-            const res = await api.post('/admin/tools/migrate-leads');
+            // Sin timeout a propósito: migración de toda la tabla de usuarios, puede superar
+            // el límite general de la app (ver frontend/src/services/api.js).
+            const res = await api.post('/admin/tools/migrate-leads', null, { timeout: 0 });
             if (res.data.success) {
                 toast.success(res.data.message);
             } else {
@@ -53,7 +55,8 @@ const DatabaseTools = () => {
     const handleExportDB = async () => {
         setExporting(true);
         try {
-            const response = await api.get('/admin/db/export');
+            // Sin timeout a propósito: exporta la base de datos completa (ver migrate-leads arriba).
+            const response = await api.get('/admin/db/export', { timeout: 0 });
             const url = window.URL.createObjectURL(new Blob([JSON.stringify(response.data, null, 2)]));
             const link = document.createElement('a');
             link.href = url;
@@ -82,7 +85,8 @@ const DatabaseTools = () => {
 
         setImporting(true);
         try {
-            await api.post('/admin/db/import', formData);
+            // Sin timeout a propósito: importa la base de datos completa (ver migrate-leads arriba).
+            await api.post('/admin/db/import', formData, { timeout: 0 });
             toast.success("Base de datos importada exitosamente");
         } catch (error) {
             console.error("Error importing DB", error);
@@ -106,7 +110,8 @@ const DatabaseTools = () => {
 
         setCleaning(true);
         try {
-            const res = await api.post('/admin/db/clear-table', { table_key: selectedTable });
+            // Sin timeout a propósito: puede borrar una tabla completa (ver migrate-leads arriba).
+            const res = await api.post('/admin/db/clear-table', { table_key: selectedTable }, { timeout: 0 });
             toast.success(res.data.message);
             setSelectedTable('');
         } catch (error) {
@@ -120,7 +125,9 @@ const DatabaseTools = () => {
     const handleCheckBacklog = async () => {
         setCheckingBacklog(true);
         try {
-            const res = await api.get('/admin/tools/backlog-cleanup', { params: { days: backlogDays } });
+            // Sin timeout a propósito: recorre agendas históricas, puede tardar más que el
+            // límite general de la app (ver migrate-leads arriba).
+            const res = await api.get('/admin/tools/backlog-cleanup', { params: { days: backlogDays }, timeout: 0 });
             setBacklogPreview(res.data);
         } catch (error) {
             console.error("Error checking backlog", error);
@@ -136,7 +143,8 @@ const DatabaseTools = () => {
 
         setArchivingBacklog(true);
         try {
-            const res = await api.post('/admin/tools/backlog-cleanup', { days: backlogDays });
+            // Sin timeout a propósito: archiva agendas históricas en lote (ver migrate-leads arriba).
+            const res = await api.post('/admin/tools/backlog-cleanup', { days: backlogDays }, { timeout: 0 });
             toast.success(res.data.message);
             setBacklogPreview(null);
         } catch (error) {
