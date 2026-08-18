@@ -75,6 +75,72 @@ class CloserFollowUpService:
         return FinancialSale.query.filter(or_(*filters)).first() is not None
 
     @staticmethod
+    def _resolve_closer_for_email_vendedor(email_vendedor):
+        """Inverso de `CloserService._resolve_sale_identifiers`: dado un `email_vendedor` de
+        FinancialSale, encuentra qué closer lo vendió. Coincidencia directa por email primero
+        (más barata), y si no matchea, recorre los alias conocidos de cada closer."""
+        from app.services.closer_service import CloserService
+        if not email_vendedor:
+            return None
+        direct = User.query.filter(func.lower(User.email) == email_vendedor.strip().lower()).first()
+        if direct:
+            return direct
+        email_lower = email_vendedor.strip().lower()
+        for closer in User.query.filter_by(role='closer').all():
+            identifiers = CloserService._resolve_sale_identifiers(closer)
+            if any(email_lower == i.strip().lower() for i in identifiers if i):
+                return closer
+        return None
+
+    @staticmethod
+    def _ensure_appointment_for_client(client):
+        """Devuelve la Appointment más reciente de este cliente, creando una "ancla" mínima si no
+        tiene ninguna. Todo el módulo de seguimientos (guardar cobro, marcar Pagó, el pool de
+        "Llamadas cerradas") cuelga de un `Appointment.id` real — pero hay clientes con venta
+        completada en FinancialSale que nunca tuvieron una fila en Appointment (569 ventas
+        históricas/importadas resueltas a 549 clientes en la base local, 129 de ellos sin ninguna
+        cita). Sin esto, `get_client_lead_stage` devolvía `appointment_id: None` para esos
+        clientes, y el frontend terminaba llamando a `POST /closer/deck/null` — el cierre en falso
+        que reportó el usuario ("el botón para registrar el cobro no funciona") con Jonathan
+        Aparicio (client_id 7232 en la base local), que tiene 6 ventas y cero citas.
+
+        `seguimiento_realizado=True` y `closer_processed=True` desde el arranque: esta ancla no es
+        una llamada real, así que no debe aparecer en los pools de "no tomadas"/"tomadas" de
+        `_base_query` (que sí la tomaría como agenda vencida sin procesar) — solo existe para que
+        el resto del flujo de cobro tenga un id donde guardar."""
+        appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
+        if appt:
+            return appt
+
+        sale = FinancialSale.query.filter(
+            or_(
+                func.lower(FinancialSale.mail_cliente) == (client.email or '').strip().lower(),
+                func.lower(func.replace(FinancialSale.instagram, '@', '')) == (client.instagram or '').strip().lstrip('@').lower()
+            )
+        ).order_by(FinancialSale.date.asc()).first()
+
+        closer = CloserFollowUpService._resolve_closer_for_email_vendedor(sale.email_vendedor) if sale else None
+        if not closer:
+            closer = User.query.filter_by(role='closer', is_active=True).first()
+        if not closer:
+            return None
+
+        appt = Appointment(
+            closer_id=closer.id,
+            client_id=client.id,
+            start_time=(sale.date if sale and sale.date else datetime.utcnow()),
+            origin='Venta histórica sin agenda',
+            last_stage='Nueva',
+            closer_processed=True,
+            closer_result='Show up',
+            seguimiento_realizado=True,
+            closer_notes='[Sistema] Cita creada automáticamente: este cliente tenía venta(s) registrada(s) sin ninguna agenda asociada.'
+        )
+        db.session.add(appt)
+        db.session.commit()
+        return appt
+
+    @staticmethod
     def _effective_tipo(a):
         """Categoría del seguimiento: la explícitamente etiquetada, o derivada del resultado
         real de la llamada si el closer nunca llegó a programar un seguimiento para esta cita
@@ -525,7 +591,10 @@ class CloserFollowUpService:
             return None
 
         if CloserFollowUpService._client_has_sale(client):
-            appt = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).first()
+            # Ancla una Appointment si el cliente compró pero nunca tuvo ninguna cita (ver
+            # docstring de _ensure_appointment_for_client) — sin esto `appointment_id` salía None
+            # y el frontend terminaba pegándole a POST /closer/deck/null.
+            appt = CloserFollowUpService._ensure_appointment_for_client(client)
             enrollment_dt = CloserFollowUpService._client_enrollment_date(client_id)
             deuda_val = CloserFollowUpService._client_debt(client_id)
             next_cuota = InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
