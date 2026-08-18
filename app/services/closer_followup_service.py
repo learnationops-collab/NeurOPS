@@ -361,25 +361,28 @@ class CloserFollowUpService:
 
     @staticmethod
     def _cerrada_pool_items(closer_id):
-        """"Llamadas cerradas" del pool: TODO cliente al que este closer le haya vendido algo
-        (FinancialSale.email_vendedor resuelto por CloserService._resolve_sale_identifiers),
-        con su deuda y programa — no solo los que alguna vez se etiquetaron explícitamente como
-        `seguimiento_tipo='cerrada'` (que dependía de pasar por el flujo de cobro pendiente al
-        declarar la venta, dejando afuera a la enorme mayoría de clientes ya cerrados). Antes de
-        este fix la pestaña "Llamadas cerradas" quedaba casi siempre vacía — el usuario lo
-        reportó: "no hay ningún registro para poder agregarle seguimiento"."""
+        """"Llamadas cerradas" del pool: TODO cliente que ya compró algo (con venta completada en
+        FinancialSale), con su deuda y programa — no solo los que alguna vez se etiquetaron
+        explícitamente como `seguimiento_tipo='cerrada'` (que dependía de pasar por el flujo de
+        cobro pendiente al declarar la venta, dejando afuera a la enorme mayoría de clientes ya
+        cerrados). Antes de ese primer fix la pestaña quedaba casi siempre vacía — el usuario lo
+        reportó: "no hay ningún registro para poder agregarle seguimiento".
+
+        El dueño del item es quien hoy tiene la cita más reciente del cliente (`Appointment.closer_id`)
+        — mismo criterio de propiedad que `_base_query` usa para el resto del módulo (propias +
+        huérfanas de closers dados de baja) — NO quien hizo la venta originalmente
+        (FinancialSale.email_vendedor). Antes se scopeaba por vendedor: si un cliente vendido por
+        un closer terminaba con una cita más reciente en manos de otro (reasignación, una llamada
+        de seguimiento que tomó alguien más), su cobro aparecía en la cola de AMBOS closers a la
+        vez — reportado por el usuario como "tengo seguimientos de leads que le corresponden a
+        otro closer, eso no debe pasar". Verificado contra la base local: 450 casos así antes de
+        este fix, todos con el otro closer activo (no huérfano)."""
         from app.models import User, Client, FinancialSale
-        from app.services.closer_service import CloserService
 
         if not closer_id:
             return []
-        user = User.query.get(closer_id)
-        identifiers = CloserService._resolve_sale_identifiers(user)
-        if not identifiers:
-            return []
 
         sales = FinancialSale.query.filter(
-            FinancialSale.email_vendedor.in_(identifiers),
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
@@ -416,6 +419,10 @@ class CloserFollowUpService:
 
         from app.models import InstallmentPlan
 
+        inactive_closer_ids = {
+            row[0] for row in db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
+        }
+
         items = []
         for cid in client_ids:
             client = Client.query.get(cid)
@@ -423,6 +430,8 @@ class CloserFollowUpService:
                 continue
             appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
             if not appt:
+                continue
+            if appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
                 continue
             days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
 
@@ -474,7 +483,10 @@ class CloserFollowUpService:
                 'call_date': appt.start_time.isoformat() if appt.start_time else None,
                 'days_since_call': days_since_call,
                 'closer_notes': appt.closer_notes or '',
-                'owner_closer_name': None,
+                # Solo relevante cuando el item llegó al pool por ser huérfano de un closer dado
+                # de baja (mismo criterio que `_serialize` usa para el resto del módulo) — deja
+                # claro que no es un lead propio.
+                'owner_closer_name': appt.closer.username if (appt.closer and appt.closer.is_active is False) else None,
                 'closer_id': appt.closer_id,
                 'closer_name': appt.closer.username if appt.closer else None,
                 'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
