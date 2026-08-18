@@ -1189,17 +1189,19 @@ def post_setter_deck_comment(appt_id):
 def get_deck_stats_kpis():
     from app.models import Appointment, ManychatLead, SetterDailyStats, CloserDailyStats
     from sqlalchemy import func, or_
-    from datetime import date, datetime, timedelta
-    
+    from datetime import timedelta
+
     date_range = request.args.get('date_range', 'all')
     start_date = None
-    today = date.today()
+    # "Hoy" es el del setter, no el del servidor (que corre en UTC): ver
+    # user_time_service.
+    today = hoy_del_usuario(current_user)
     if date_range == 'today':
-        start_date = datetime.combine(today, datetime.min.time())
+        start_date, _ = limites_dia_utc(current_user, today)
     elif date_range == 'week':
-        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        start_date, _ = limites_rango_utc(current_user, today - timedelta(days=7), today)
     elif date_range == 'month':
-        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        start_date, _ = limites_rango_utc(current_user, today - timedelta(days=30), today)
 
     query_total = Appointment.query
     if start_date:
@@ -1228,9 +1230,8 @@ def get_deck_stats_kpis():
     canceladas = query_canc.count()
     pct_canceladas = (canceladas / total_agendas * 100) if total_agendas > 0 else 0
     
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end = datetime.combine(today, datetime.max.time())
-    
+    today_start, today_end = limites_dia_utc(current_user, today)
+
     agendas_hoy = Appointment.query.filter(Appointment.created_at >= today_start, Appointment.created_at <= today_end).count()
     
     confirmadas_hoy = Appointment.query.filter(
@@ -1324,20 +1325,22 @@ def get_deck_events(appt_id):
 def get_unassigned_leads_today():
     from app.models import Appointment, Client
     from sqlalchemy import or_, and_
-    from datetime import date, timedelta, datetime
-    
-    # Obtener el rango de fechas para el filtrado temporal
+    from datetime import timedelta
+
+    # Obtener el rango de fechas para el filtrado temporal. "Hoy" es el del
+    # setter, no el del servidor (que corre en UTC): ver user_time_service.
     date_range = request.args.get('date_range', 'all')
     start_date = None
-    today = date.today()
-    
+    today = hoy_del_usuario(current_user)
+
     if date_range == 'today':
-        start_date = datetime.combine(today, datetime.min.time())
+        start_date, _ = limites_dia_utc(current_user, today)
     elif date_range == 'week':
-        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        start_date, _ = limites_rango_utc(current_user, today - timedelta(days=7), today)
     elif date_range == 'month':
-        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
-        
+        start_date, _ = limites_rango_utc(current_user, today - timedelta(days=30), today)
+
+
     # Unir con Client para acceder a sus atributos en el filtro
     query = Appointment.query.join(Client)
     
@@ -1675,34 +1678,32 @@ def update_qualified_lead(answer_id):
 def get_unattributed_agendas_for_setter():
     """Retorna las agendas desatribuidas (fuente Elias y sin anuncio) para el mazo del setter filtradas por el rango de fechas seleccionado."""
     from app.models import FinancialAgenda, ManychatLead, LeadAnswer, Client
-    from datetime import date as dt_date, timedelta, datetime
+    from datetime import timedelta, datetime
     from sqlalchemy import or_
 
     date_range = request.args.get('date_range', 'today')
     target_date_str = request.args.get('date')
-    today = dt_date.today()
+    # "Hoy" es el del setter, no el del servidor (que corre en UTC): ver
+    # user_time_service. Los limites sirven para las dos columnas del OR de
+    # abajo, aunque solo `created_at` sea UTC garantizado; `date` es la fecha de
+    # la cita oficial que llega de n8n y puede venir en hora local.
+    today = hoy_del_usuario(current_user)
 
     start_dt = None
     end_dt = None
 
     if date_range == 'today':
-        start_dt = datetime.combine(today, datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_dia_utc(current_user, today)
     elif date_range == 'yesterday':
-        yesterday = today - timedelta(days=1)
-        start_dt = datetime.combine(yesterday, datetime.min.time())
-        end_dt = datetime.combine(yesterday, datetime.max.time())
+        start_dt, end_dt = limites_dia_utc(current_user, today - timedelta(days=1))
     elif date_range == 'week':
-        start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=7), today)
     elif date_range == 'month':
-        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
-        end_dt = datetime.combine(today, datetime.max.time())
+        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=30), today)
     elif date_range == 'custom' and target_date_str:
         try:
             t_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-            start_dt = datetime.combine(t_date, datetime.min.time())
-            end_dt = datetime.combine(t_date, datetime.max.time())
+            start_dt, end_dt = limites_dia_utc(current_user, t_date)
         except ValueError:
             pass
 
