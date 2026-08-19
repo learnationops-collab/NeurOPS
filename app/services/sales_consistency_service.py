@@ -144,11 +144,28 @@ class SalesConsistencyService:
             return True, None, state
 
         if tipo in ('renovacion', 'upsell'):
-            if not (state['has_full_payment'] or state['has_first_payment']):
+            # Cuota/Seña también cuentan como "venta real" — no solo Parcial/Completo. Ventas
+            # históricas/importadas suelen tener filas de Cuota sin que exista una fila de Parcial
+            # explícita (el primer pago quedó sin registrar o con otra etiqueta), y bloquear la
+            # renovación de un cliente que viene pagando en cuotas porque "no tiene venta
+            # registrada" es un falso negativo. Reportado con un caso real: Jonathan Aparicio,
+            # 4 ventas reales en el programa (3 Cuota + 1 Renovación previa) bloqueado igual.
+            if not (state['has_full_payment'] or state['has_first_payment'] or state['has_installments'] or state['has_deposit']):
                 return False, f"Este cliente no tiene ninguna venta real registrada en este programa todavía — no corresponde {tipo_pago_simple}.", state
-            if state['balance_remaining'] > 0.01:
+
+            # La deuda para decidir si se bloquea la renovación usa el mismo cálculo que el
+            # closer ya ve en pantalla (Program/Enrollment/Payment, `_client_debt` — el badge de
+            # "Deuda pendiente" del seguimiento y del historial del cliente), no el saldo estimado
+            # a partir de FinancialSale con un precio de programa genérico ($1000/1500/2000 según
+            # AL/RR/SI): el 99.7% de los clientes de la base no tiene `Client.total_amount`
+            # confirmado, así que ese saldo casi siempre está adivinando el precio real y termina
+            # bloqueando renovaciones de clientes que el propio closer ve "al día". Decisión del
+            # usuario: confiar en el número que el closer ya ve, no en el estimado.
+            from app.services.closer_followup_service import CloserFollowUpService
+            deuda_real = CloserFollowUpService._client_debt(client_id)
+            if deuda_real > 0.01:
                 return False, (
-                    f"Este cliente aún debe ${state['balance_remaining']:.2f} del programa actual. "
+                    f"Este cliente aún debe ${deuda_real:.2f} del programa actual. "
                     f"Liquida el saldo pendiente junto con esta venta, o completá el pago antes de registrar {tipo_pago_simple}."
                 ), state
             return True, None, state
