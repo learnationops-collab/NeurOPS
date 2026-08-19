@@ -2990,14 +2990,14 @@ const CloserWorkflowPage = () => {
 
             return (
                 <div className="space-y-4">
-                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-emerald-450 text-center">
+                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs font-bold uppercase tracking-wide text-emerald-400 text-center">
                         ▸ Seguimiento de Cliente. Ya cerró la venta: el foco es cobrar la deuda.
                     </div>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-950/20 border border-slate-850 p-4 rounded-2xl text-xs font-bold text-slate-350">
-                        <div><span className="text-slate-500 text-[8px] block">Programa</span><b>{selectedLead.programa_nombre || 'Sin datos'}</b></div>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-950/20 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-300">
+                        <div><span className="text-slate-400 text-[11px] font-semibold block">Programa</span><b>{selectedLead.programa_nombre || 'Sin datos'}</b></div>
                         <div>
-                            <span className="text-slate-500 text-[8px] block">Deuda pendiente</span>
-                            <b className={typeof selectedLead.deuda === 'number' && selectedLead.deuda > 0 ? 'text-rose-450' : 'text-emerald-400'}>
+                            <span className="text-slate-400 text-[11px] font-semibold block">Deuda pendiente</span>
+                            <b className={typeof selectedLead.deuda === 'number' && selectedLead.deuda > 0 ? 'text-rose-400' : 'text-emerald-400'}>
                                 {typeof selectedLead.deuda === 'number' ? `$${Math.round(selectedLead.deuda).toLocaleString('en-US')}` : 'Sin datos'}
                             </b>
                         </div>
@@ -3007,20 +3007,20 @@ const CloserWorkflowPage = () => {
                         <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-500" size={18} /></div>
                     ) : cuotasPlan.length > 0 && (
                         <div className="space-y-2">
-                            <h4 className="text-[10px] font-black uppercase text-slate-400">Plan de cuotas</h4>
+                            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">Plan de cuotas</h4>
                             <div className="rounded-xl border border-slate-800 overflow-hidden">
                                 <table className="w-full text-xs">
                                     <tbody>
                                         {cuotasPlan.map(c => (
-                                            <tr key={c.id} className="border-t border-slate-850 first:border-t-0">
+                                            <tr key={c.id} className="border-t border-slate-800 first:border-t-0">
                                                 <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
                                                 <td className="px-3 py-2 font-bold text-slate-300">${Math.round(c.monto).toLocaleString('en-US')}</td>
                                                 <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
                                                 <td className="px-3 py-2">
-                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
-                                                        c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                                        c.estado === 'vencido' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                    <span className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase border ${
+                                                        c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' :
+                                                        c.estado === 'vencido' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' :
+                                                        'bg-amber-500/10 text-amber-300 border-amber-500/20'
                                                     }`}>
                                                         {c.estado}
                                                     </span>
@@ -3029,7 +3029,7 @@ const CloserWorkflowPage = () => {
                                                     {c.estado !== 'pagado' && (
                                                         <button
                                                             onClick={() => handleMarkCuotaPaid(c.id)}
-                                                            className="px-2 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                                                            className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer"
                                                         >
                                                             Marcar pagada
                                                         </button>
@@ -3044,27 +3044,27 @@ const CloserWorkflowPage = () => {
                     )}
 
                     <div className="q req space-y-2">
-                        <h4 className="text-[10px] font-black uppercase text-slate-400">¿Qué pasó con el cobro?</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">¿Qué pasó con el cobro?</h4>
                         <div className="grid grid-cols-3 gap-2">
                             {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
                             {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
                             {option(() => setSessionForm(prev => ({ ...prev, result: 'pago' })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
                         </div>
                         {isPago && (
-                            <p className="text-[10px] text-slate-500 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
+                            <p className="text-xs text-slate-400 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
                         )}
                     </div>
 
                     {needsCobroDate && (
                         <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase block">¿Cuándo es el siguiente seguimiento de cobro? <span className="rq text-pink-500">*</span></label>
+                            <label className="text-xs text-slate-300 font-bold uppercase tracking-wide block">¿Cuándo es el siguiente seguimiento de cobro? <span className="rq text-pink-500">*</span></label>
                             <input
                                 type="date"
                                 value={sessionForm.fecha_seguimiento_cobro_next}
                                 onChange={(e) => setSessionForm(prev => ({ ...prev, fecha_seguimiento_cobro_next: e.target.value }))}
-                                className="w-full max-w-[220px] bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
+                                className="w-full max-w-[220px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
                             />
-                            <p className="text-[10px] text-slate-500 font-medium">Puede ser hoy mismo si quedaste en volver a escribirle más tarde.</p>
+                            <p className="text-xs text-slate-400 font-medium">Puede ser hoy mismo si quedaste en volver a escribirle más tarde.</p>
                             {sessionForm.fecha_seguimiento_cobro_next && (
                                 <AvisoSeguimientoWhatsApp
                                     enabled={sessionForm.followup_reminder_enabled}
@@ -3079,7 +3079,7 @@ const CloserWorkflowPage = () => {
                     )}
 
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] text-slate-500 font-bold uppercase block">Qué sucedió exactamente (Requerido)</label>
+                        <label className="text-xs text-slate-300 font-bold uppercase tracking-wide block">Qué sucedió exactamente (Requerido)</label>
                         <textarea
                             rows={3}
                             value={sessionForm.notes}
@@ -3092,7 +3092,7 @@ const CloserWorkflowPage = () => {
 
                     {faltantesCobro.length > 0 && <MissingFieldsHint items={faltantesCobro} />}
 
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-850">
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-800">
                         <div />
                         <button
                             onClick={() => {
@@ -3103,7 +3103,7 @@ const CloserWorkflowPage = () => {
                                 }
                             }}
                             disabled={!canComplete || processingId === selectedLead.id}
-                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase rounded-xl transition-all cursor-pointer"
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wide rounded-xl transition-all cursor-pointer"
                         >
                             {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
                         </button>
@@ -4215,7 +4215,7 @@ const CloserWorkflowPage = () => {
                                         ) : (
                                             <>
                                                 <div className="trail">
-                                                    <span style={{ fontSize: '9.5px', fontWeight: 800, textTransform: 'uppercase', color: '#8C99E0' }}>Camino:</span>
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#A9B3EE' }}>Camino:</span>
                                                     {decisionPath.length === 0 ? (
                                                         <span className="crumb" style={{ background: 'rgba(255,255,255,.06)', color: '#D1D8FF', borderColor: 'rgba(255,255,255,.12)' }}>
                                                             Raíz

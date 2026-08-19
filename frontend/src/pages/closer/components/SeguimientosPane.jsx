@@ -43,7 +43,7 @@ const retrasoBadge = (dias) => {
         return { cls, text: `⏰ ${dias}d de retraso` };
     }
     if (dias === 0) return { cls: 'bg-violet-500/10 text-violet-300 border-violet-500/20', text: 'Para hoy' };
-    return { cls: 'bg-slate-900 text-slate-400 border-slate-850', text: `En ${Math.abs(dias)}d` };
+    return { cls: 'bg-slate-900 text-slate-400 border-slate-800', text: `En ${Math.abs(dias)}d` };
 };
 
 const SeguimientoRow = ({ item, tipo, onClick }) => {
@@ -56,35 +56,35 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
         >
             <div className="min-w-0 flex-1">
                 <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
-                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                <div className="flex items-center gap-2 flex-wrap mt-2">
                     {retraso && (
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${retraso.cls}`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${retraso.cls}`}>
                             {retraso.text}
                         </span>
                     )}
                     {tipo !== 'cerrada' && (
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${chipCls[TIPOS[tipo].cls]}`}>
                             {item.seguimiento_sub || 'Sin subestado'}
                         </span>
                     )}
-                    {item.origin && <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">{item.origin}</span>}
+                    {item.origin && <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">{item.origin}</span>}
                     {item.owner_closer_name && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
                             De {item.owner_closer_name} (baja)
                         </span>
                     )}
                     {item.days_since_call !== null && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">
                             Call hace {item.days_since_call}d
                         </span>
                     )}
                     {tipo === 'cerrada' && item.programa_nombre && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-900 border border-slate-800 text-slate-300">
                             {item.programa_nombre}
                         </span>
                     )}
                     {tipo === 'cerrada' && typeof item.deuda === 'number' && (
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}`}>
                             {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
                         </span>
                     )}
@@ -94,21 +94,21 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
                 {tipo === 'cerrada' ? (
                     pc ? (
                         pc.sin_plan ? (
-                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">
+                            <span className="text-[11px] font-bold text-amber-300">
                                 Debe {money(pc.monto)} · sin plan de cuotas
                             </span>
                         ) : (
-                            <span className={`text-[9px] font-black uppercase tracking-wider ${pc.vencida ? 'text-rose-400' : 'text-amber-400'}`}>
+                            <span className={`text-[11px] font-bold ${pc.vencida ? 'text-rose-300' : 'text-amber-300'}`}>
                                 {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
                             </span>
                         )
                     ) : (
-                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Al día</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">Al día</span>
                     )
                 ) : item.fecha_seguimiento ? (
-                    <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">Seguimiento {item.seguimiento_intento} de 4</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-violet-300">Seguimiento {item.seguimiento_intento} de 4</span>
                 ) : (
-                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Asignar fecha</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-amber-300">Asignar fecha</span>
                 )}
             </div>
         </div>
@@ -211,7 +211,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <Loader2 className="animate-spin text-violet-500" size={32} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando seguimientos...</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Cargando seguimientos...</span>
             </div>
         );
     }
@@ -233,7 +233,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                     <span className="text-xs text-slate-400">
                         {goal.faltan > 0 ? `Te faltan ${goal.faltan} para la meta.` : 'Meta cumplida. 🏅'}
                     </span>
-                    <div className="h-2 rounded-full bg-slate-900 border border-slate-850 overflow-hidden mt-2">
+                    <div className="h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden mt-2">
                         <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-500 transition-all" style={{ width: `${goal.pct}%` }} />
                     </div>
                 </div>
@@ -244,15 +244,15 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                 <div className="flex justify-between items-center border-b border-slate-900 pb-4">
                     <div>
                         <h3 className="text-sm font-black text-white">📅 Asignados para hoy</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
+                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {atrasados.length > 0 && (
-                            <span className="text-[10px] font-black bg-rose-500/10 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-xl">
+                            <span className="text-xs font-bold bg-rose-500/10 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-xl">
                                 {atrasados.length} atrasado{atrasados.length === 1 ? '' : 's'} · hasta {maxRetraso}d
                             </span>
                         )}
-                        <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
+                        <span className="text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
                     </div>
                 </div>
                 {totalHoy === 0 ? (
@@ -261,7 +261,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                     Object.keys(TIPOS).map(tipo => grouped[tipo].length > 0 && (
                         <div key={tipo} className="space-y-2">
                             <div className="flex items-center gap-2 pt-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{TIPOS[tipo].icon} {TIPOS[tipo].label} · {grouped[tipo].length}</span>
+                                <span className="text-xs font-bold uppercase tracking-wide text-slate-300">{TIPOS[tipo].icon} {TIPOS[tipo].label} · {grouped[tipo].length}</span>
                                 <span className="flex-1 h-px bg-slate-900" />
                             </div>
                             {grouped[tipo].map(item => (
@@ -277,9 +277,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                 <div className="flex justify-between items-center border-b border-slate-900 pb-4">
                     <div>
                         <h3 className="text-sm font-black text-white">📥 Pool sin fecha asignada</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-0.5">Base para elegir a quién seguir</p>
+                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Base para elegir a quién seguir</p>
                     </div>
-                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
+                    <span className="text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800 px-3 py-1 rounded-xl">
                         {poolCounts.no_tomada + poolCounts.tomada + poolCounts.cerrada} disponibles
                     </span>
                 </div>
@@ -292,13 +292,13 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                                 onClick={() => togglePool(tipo)}
                                 aria-pressed={isActive}
                                 className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                                    isActive ? activePoolBtnCls[TIPOS[tipo].cls] : 'bg-slate-900/60 border-slate-850 hover:border-slate-700'
+                                    isActive ? activePoolBtnCls[TIPOS[tipo].cls] : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
                                 }`}
                             >
                                 <span className="text-xl">{TIPOS[tipo].icon}</span>
                                 <div className="flex-1 min-w-0">
                                     <b className={`text-xs font-black block truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>{TIPOS[tipo].label}</b>
-                                    <span className="text-[9px] text-slate-500 font-bold uppercase">{TIPOS[tipo].desc}</span>
+                                    <span className="text-[11px] text-slate-400 font-semibold">{TIPOS[tipo].desc}</span>
                                 </div>
                                 <span className={`text-sm font-black ${isActive ? 'text-white' : 'text-slate-300'}`}>{poolCounts[tipo]}</span>
                             </button>
@@ -312,7 +312,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                             <select
                                 value={poolFilters.days_since}
                                 onChange={(e) => setPoolFilters(prev => ({ ...prev, days_since: e.target.value }))}
-                                className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
                             >
                                 <option value="">Fecha de la call: cualquiera</option>
                                 <option value="14">Últimos 14 días</option>
@@ -324,7 +324,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                                     <select
                                         value={poolFilters.programa}
                                         onChange={(e) => setPoolFilters(prev => ({ ...prev, programa: e.target.value }))}
-                                        className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
                                     >
                                         <option value="">Programa: todos</option>
                                         <option value="AL">Ace Learners</option>
@@ -334,7 +334,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                                     <select
                                         value={poolFilters.deuda}
                                         onChange={(e) => setPoolFilters(prev => ({ ...prev, deuda: e.target.value }))}
-                                        className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
+                                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-300"
                                     >
                                         <option value="">Deuda: cualquiera</option>
                                         <option value="con">Con saldo pendiente</option>
