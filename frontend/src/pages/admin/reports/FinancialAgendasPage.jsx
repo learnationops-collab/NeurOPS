@@ -57,17 +57,39 @@ const DEFAULT_EXPORT_COLUMNS = ['date', 'lead', 'whatsapp', 'mail', 'instagram']
 // El valor se guarda como string separado por comas para viajar tal cual al backend.
 const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos' }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
     const containerRef = useRef(null);
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
+
+    const updateMenuPos = () => {
+        if (!buttonRef.current) return;
+        const rect = buttonRef.current.getBoundingClientRect();
+        setMenuPos({ top: rect.bottom + 8, left: rect.right - 240 });
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (containerRef.current && !containerRef.current.contains(event.target)) {
+            const clickedContainer = containerRef.current && containerRef.current.contains(event.target);
+            const clickedMenu = menuRef.current && menuRef.current.contains(event.target);
+            if (!clickedContainer && !clickedMenu) {
                 setIsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        updateMenuPos();
+        window.addEventListener('scroll', updateMenuPos, true);
+        window.addEventListener('resize', updateMenuPos);
+        return () => {
+            window.removeEventListener('scroll', updateMenuPos, true);
+            window.removeEventListener('resize', updateMenuPos);
+        };
+    }, [isOpen]);
 
     const selected = value ? value.split(',').filter(Boolean) : [];
 
@@ -85,6 +107,7 @@ const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos
     return (
         <div ref={containerRef} className="relative">
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-2 border p-2.5 rounded-2xl transition-colors cursor-pointer ${
@@ -98,8 +121,12 @@ const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos
                 <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {isOpen && (
-                <div className="absolute top-full right-0 z-[80] mt-2 w-60 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2.5 space-y-1.5">
+            {isOpen && createPortal(
+                <div
+                    ref={menuRef}
+                    className="fixed z-[1000] w-60 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2.5 space-y-1.5"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                >
                     <div className="flex items-center justify-between px-1 pb-1.5 border-b border-slate-800">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
                         {selected.length > 0 && (
@@ -139,7 +166,8 @@ const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos
                             );
                         })}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
