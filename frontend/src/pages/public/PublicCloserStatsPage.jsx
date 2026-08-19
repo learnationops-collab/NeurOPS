@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
+    Loader2, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserPerformanceTab from './CloserPerformanceTab';
@@ -30,10 +30,16 @@ const PublicCloserStatsPage = () => {
     const user = auth?.user || { role: 'admin' };
     const navigate = useNavigate();
     const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('closer_active_tab', {
-        active: 'performance'
+        active: 'dashboard'
     });
     const activeTab = tabFilters.active;
     const setActiveTab = (val) => setTabFilters({ active: val });
+
+    // La pestaña "Rendimiento" quedó oculta (a pedido del usuario, 19/ago/2026); si alguien
+    // tiene ese valor persistido de una sesión anterior, se lo redirige al Dashboard.
+    useEffect(() => {
+        if (activeTab === 'performance') setActiveTab('dashboard');
+    }, [activeTab]);
 
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -202,7 +208,8 @@ const PublicCloserStatsPage = () => {
 
                 {/* TABS */}
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
-                    <TabButton id="performance" label="Rendimiento" icon={BarChart3} />
+                    {/* Pestaña "Rendimiento" oculta a pedido del usuario (19/ago/2026); el tab
+                        "Dashboard" la reemplaza como vista principal de analítica de closers. */}
                     <TabButton id="dashboard" label="Dashboard" icon={LayoutDashboard} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
                     <TabButton id="new_clients" label="Clientes Nuevos" icon={Users} />

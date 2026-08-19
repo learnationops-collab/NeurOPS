@@ -14,7 +14,6 @@ import {
     Ghost,
     Activity,
     CalendarDays,
-    Target,
     Link2Off,
     Layers,
     DollarSign
@@ -71,11 +70,9 @@ const useDockNavigation = () => {
             const adminPages = [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
-                { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
-                { id: 'alerts', icon: Bell, label: 'Alertas', path: '/admin/alerts' },
-                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
-                { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' },
                 { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' }
+                // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
+                // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
             ];
             if (user?.can_view_finance) {
                 adminPages.push({ id: 'finance', icon: DollarSign, label: 'Finanzas', path: '/admin/finance' });
