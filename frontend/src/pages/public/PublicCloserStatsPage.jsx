@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck
+    Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserPerformanceTab from './CloserPerformanceTab';
@@ -13,6 +13,7 @@ import PublicFinancialSalesPage from './PublicFinancialSalesPage';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 import NewClientsTab from './NewClientsTab';
 import FormsManagementPage from '../shared/FormsManagementPage';
+import CloserDashboard from '../closer/dashboard/CloserDashboard';
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -202,6 +203,7 @@ const PublicCloserStatsPage = () => {
                 {/* TABS */}
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="performance" label="Rendimiento" icon={BarChart3} />
+                    <TabButton id="dashboard" label="Dashboard" icon={LayoutDashboard} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
                     <TabButton id="new_clients" label="Clientes Nuevos" icon={Users} />
                     <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
@@ -352,6 +354,15 @@ const PublicCloserStatsPage = () => {
                             />
                         )}
 
+                        {/* TAB DASHBOARD: el mismo dashboard visual que ve cada closer en su propio
+                            espacio (/closer/dashboard), reutilizado tal cual. Trae su propio selector
+                            de closer con "Todo el equipo" como opción por defecto. */}
+                        {activeTab === 'dashboard' && (
+                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 p-6 md:p-10 overflow-hidden">
+                                <CloserDashboard embedded />
+                            </div>
+                        )}
+
                         {/* TAB HISTORIAL DE REPORTES */}
                         {activeTab === 'history' && (
                             <div className="animate-in fade-in duration-500">
@@ -387,7 +398,7 @@ const PublicCloserStatsPage = () => {
                             </div>
                         )}
 
-                        {!loading && !stats && activeTab !== 'history' && (
+                        {!loading && !stats && activeTab === 'performance' && (
                             <div className="py-40 text-center text-slate-500 font-bold italic uppercase tracking-widest">Sin datos disponibles para este periodo</div>
                         )}
                     </>
