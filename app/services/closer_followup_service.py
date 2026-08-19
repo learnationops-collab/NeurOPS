@@ -121,7 +121,18 @@ class CloserFollowUpService:
 
         closer = CloserFollowUpService._resolve_closer_for_email_vendedor(sale.email_vendedor) if sale else None
         if not closer:
-            closer = User.query.filter_by(role='closer', is_active=True).first()
+            # Vendedor no identificable (closer histórico que ya ni existe como User, o un alias
+            # que no está en el mapeo de _resolve_sale_identifiers) — cae al mismo placeholder
+            # "otro" que ya usa el resto de la base para ventas de vendedor desconocido (210
+            # citas históricas con ese patrón), NO a `.first()` sobre closers activos: eso
+            # mandaba la cita a quien tuviera el id más bajo (Jean Carlo, id 4) sin importar si
+            # de verdad la vendió — reportado por el usuario como "veo seguimientos de leads que
+            # le pertenecen a otros closers". Al caer en un closer inactivo queda "huérfana":
+            # visible para cualquier closer activo, no metida en la cola personal de uno en
+            # particular (mismo criterio que _base_query/_cerrada_pool_items).
+            closer = User.query.filter_by(username='otro', role='closer').first() \
+                or User.query.filter_by(role='closer', is_active=False).first() \
+                or User.query.filter_by(role='closer', is_active=True).first()
         if not closer:
             return None
 
@@ -180,12 +191,16 @@ class CloserFollowUpService:
             )
         )
         if closer_id:
-            # Además de las propias, se incluyen las de closers dados de baja (User.is_active ==
-            # False): quedan huérfanas en la práctica —nadie las va a seguir— así que cualquier
-            # closer activo puede tomarlas. Distinto de "sin asignar": closer_id es NOT NULL en
-            # la base, un lead sin dueño no puede existir como fila.
-            inactive_closer_ids = db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
-            q = q.filter(or_(Appointment.closer_id == closer_id, Appointment.closer_id.in_(inactive_closer_ids)))
+            # Estrictamente propias — a diferencia de `_cerrada_pool_items` (que sí reparte las
+            # huérfanas de closers dados de baja a cualquier closer activo, por decisión explícita
+            # del usuario), "no tomadas"/"tomadas" NO se redistribuyen: solo "Llamadas cerradas"
+            # (cobro) debe quedar disponible para que otro closer las tome cuando su dueño se da
+            # de baja. Antes esta función también incluía las huérfanas acá, lo que hacía que un
+            # closer inactivo con seguimientos pendientes sin resolver (ej. Sebastian, 92 casos
+            # reales en producción) apareciera repartido en el "no tomadas"/"tomadas" de CUALQUIER
+            # closer activo — reportado por Jean Carlo como "veo seguimientos de leads que le
+            # pertenecen a otros closers".
+            q = q.filter(Appointment.closer_id == closer_id)
         return q
 
     @staticmethod
