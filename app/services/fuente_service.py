@@ -19,6 +19,15 @@ import unicodedata
 FUENTE_WORKSHOP_VIVO = 'workshop'
 FUENTE_WORKSHOP_LANDING = 'workshop_landing'
 
+# Setters activos: sus agendas se atribuyen a la persona, no a un embudo.
+SETTERS = ['Elias', 'Paula', 'Ivan']
+
+# Catalogo oficial de fuentes (20/08/2026). Es lo que ofrece el selector del
+# tablero y el panel de edicion masiva; en la base pueden convivir valores
+# historicos ('Sin asignar', 'workshop manychat', ...) que se siguen mostrando
+# como estan pero ya no se proponen para valores nuevos.
+FUENTES_CANONICAS = [FUENTE_WORKSHOP_VIVO, FUENTE_WORKSHOP_LANDING] + SETTERS
+
 
 def normalizar(texto):
     """Minusculas, sin acentos y con cualquier separador como espacio simple."""

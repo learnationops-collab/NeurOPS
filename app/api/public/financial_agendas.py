@@ -534,7 +534,14 @@ def get_financial_agendas():
             if any(w in known_setters_lower for w in words):
                 unique_sources.append(src)
                 
-    unique_sources = sorted(list(set(unique_sources)))
+    # El filtro de arriba descarta cualquier fuente de mas de dos palabras que no
+    # contenga un setter, y por eso 'workshop landing' nunca llegaba al selector de
+    # Fuente del tablero. Las fuentes de embudo se agregan aparte, mas el catalogo
+    # oficial, para que siempre se pueda filtrar por ellas aunque el recorte actual
+    # no tenga ninguna.
+    from app.services.fuente_service import FUENTES_CANONICAS, clasificar
+    unique_sources += [src for src in raw_sources if clasificar(src) != 'otro']
+    unique_sources = sorted(set(unique_sources) | set(FUENTES_CANONICAS))
 
     # Ordenar por no leídos
     if current_user and current_user.is_authenticated:
