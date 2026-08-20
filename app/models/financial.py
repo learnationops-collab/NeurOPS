@@ -172,6 +172,12 @@ class FinancialAgenda(db.Model):
         return {
             "id": self.id,
             "nombre": self.nombre,
+            # De donde salio la Fuente: 'formulario_calendly' cuando la puso el
+            # formulario del setter (es la que vale) o None si viene del webhook /
+            # de una edicion manual. El tablero lo muestra para que se vea de un
+            # vistazo cuales estan atribuidas automaticamente.
+            "fuente_origen": (self.raw_data or {}).get('fuente_origen'),
+            "fuente_form": (self.raw_data or {}).get('fuente_form'),
             "registro": self.registro or (self.created_at.isoformat() if self.created_at else None),
             "fecha_meet": self.fecha_meet,
             "whatsapp": self.whatsapp,

@@ -376,6 +376,16 @@ h6 {
     color: var(--text-main);
 }
 
+/* En el estilo "glass" las tarjetas son navy oscuro sobre una pagina clara, y
+   .bg-surface ya remapea el texto principal a --text-on-card (blanco). Faltaba
+   hacer lo mismo con el texto secundario: --text-muted es el gris oscuro pensado
+   para el fondo claro de la pagina, asi que dentro de la tarjeta quedaba gris
+   oscuro sobre navy — practicamente invisible (encabezados de tabla, telefonos,
+   subtitulos). Se remapea solo dentro de la tarjeta, que es donde cambia el fondo. */
+[data-theme-style="glass"] .bg-surface {
+    --text-muted: #94a3b8;
+}
+
 .border-base {
     border-color: var(--border-color);
 }
@@ -1730,4 +1740,4 @@ header.top-v6 {
   padding: 11px 14px;
   border-radius: 0 10px 10px 0;
   margin-bottom: 15px;
-}
+}

@@ -259,6 +259,18 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Agendas atribuidas a este setter. La atribución la define la fuente
+                del formulario de Calendly (ver fuente_formulario_service). */}
+            <Route
+              path="/setter/agendas"
+              element={
+                <ProtectedRoute roles={['setter']}>
+                  <MainLayout>
+                    <SetterAgendasPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/setter/deck"
               element={
