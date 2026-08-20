@@ -24,7 +24,8 @@ import {
     Download,
     Check,
     X,
-    Layers
+    Layers,
+    ClipboardCheck
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -1321,9 +1322,23 @@ const FinancialAgendasPage = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
-                                                    {agenda.nombre}
-                                                </Badge>
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
+                                                        {agenda.nombre}
+                                                    </Badge>
+                                                    {/* Todos los formularios de Calendly cuelgan del mismo evento, así que
+                                                        la fuente que trae el webhook es siempre la misma. Esta marca indica
+                                                        que la fuente la puso el formulario del setter, que es la que vale. */}
+                                                    {agenda.fuente_origen === 'formulario_calendly' && (
+                                                        <span
+                                                            className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-emerald-400"
+                                                            title="Fuente tomada del formulario de Calendly que completó el lead"
+                                                        >
+                                                            <ClipboardCheck size={9} />
+                                                            del formulario
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-4">
                                                 <select

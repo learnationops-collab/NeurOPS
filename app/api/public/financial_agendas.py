@@ -205,6 +205,28 @@ def receive_financial_agendas():
         raw_closer = item.get('closer') or item.get('vendedor')
         grupo_val = (item.get('grupo') or '').strip() or None
 
+        # Todos los formularios de Calendly apuntan al mismo evento, asi que este
+        # webhook llega siempre con la misma fuente sin importar que setter trajo
+        # al lead. Si esa persona ya completo el formulario de un setter, esa es
+        # la fuente que vale. Ver app/services/fuente_formulario_service.py.
+        from app.services.fuente_formulario_service import fuente_para_agenda_entrante
+        setter, fuente_del_form = fuente_para_agenda_entrante(
+            str(setter).strip(),
+            nombre=str(lead_val).strip(),
+            telefono=phone_val,
+            instagram=ig_val,
+            mail=mail_val
+        )
+        if fuente_del_form:
+            # Se guarda tambien la fuente original del webhook: sirve para auditar
+            # que se piso y con que, sin perder el dato que mando n8n.
+            item = dict(item)
+            item['fuente_webhook'] = item.get('fuente')
+            item['fuente_origen'] = 'formulario_calendly'
+            item['fuente'] = setter
+            current_app.logger.info(
+                f"[FUENTE FORM] Agenda de {lead_val}: fuente tomada del formulario -> {setter}")
+
         if existing:
             # Actualizar datos de agenda existente
             existing.nombre = str(setter).strip()
@@ -890,6 +912,9 @@ def receive_financial_agendas_form():
     telefono = data.get('telefono')
     fuente_form = data.get('fuente_form', 'Setting Form')
     instagram = data.get('instagram')
+    # El mail es la llave mas confiable para cruzar el formulario con la agenda
+    # (Calendly lo pide siempre); instagram y telefono los escribe el lead a mano.
+    mail = data.get('mail') or data.get('email')
     
     # Datos de calificación
     examen = data.get('examen')
@@ -912,11 +937,19 @@ def receive_financial_agendas_form():
     clean_phone = None
     if telefono and isinstance(telefono, str) and telefono.lower() not in ('n/a', ''):
         clean_phone = telefono.strip()
-        
+
+    clean_mail = None
+    if mail and isinstance(mail, str) and '@' in mail and mail.lower() not in ('n/a', ''):
+        clean_mail = mail.strip().lower()
+
     client = None
-    
+
+    # 0. Buscar por mail, que es el identificador mas estable de los tres
+    if clean_mail:
+        client = Client.query.filter(func.lower(Client.email) == clean_mail).first()
+
     # 1. Intentar buscar cliente por instagram normalizado
-    if ig_norm:
+    if not client and ig_norm:
         client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
         
     # 2. Intentar buscar por teléfono si no se encontró por instagram
@@ -958,6 +991,7 @@ def receive_financial_agendas_form():
         "telefono": telefono,
         "fuente_form": fuente_form,
         "instagram": instagram,
+        "mail": clean_mail,
         "examen": examen,
         "profesion": profesion,
         "formacion": formacion,
@@ -978,6 +1012,9 @@ def receive_financial_agendas_form():
                 client.phone = clean_phone
             if ig_norm and (not client.instagram or client.instagram.lower() in ('sin instagram', '', 'n/a')):
                 client.instagram = ig_norm
+            # Los clientes creados por el sync llevan un mail placeholder @neurops.com
+            if clean_mail and (not client.email or '@neurops.com' in client.email.lower()):
+                client.email = clean_mail
             # Actualizar form_data de manera incremental
             from sqlalchemy.orm.attributes import flag_modified
             current_form_data = dict(client.form_data or {})
@@ -992,15 +1029,40 @@ def receive_financial_agendas_form():
                 full_name=nombre or "Desconocido",
                 phone=clean_phone,
                 instagram=ig_norm,
+                email=clean_mail,
                 form_data=new_form_data
             )
             db.session.add(client)
             message = "Nuevo cliente creado con las respuestas del formulario"
             
         db.session.commit()
+
+        # El formulario manda sobre la fuente de la agenda: si `fuente_form` es un
+        # setter del equipo, se le reasignan las agendas de esta persona que hayan
+        # entrado con la fuente generica del evento de Calendly. Ver
+        # app/services/fuente_formulario_service.py.
+        fuente_aplicada, agendas_actualizadas = None, 0
+        try:
+            from app.services.fuente_formulario_service import aplicar_a_agendas_del_cliente
+            fuente_aplicada, agendas_actualizadas = aplicar_a_agendas_del_cliente(
+                fuente_form,
+                nombre=nombre,
+                telefono=clean_phone,
+                instagram=ig_norm,
+                mail=clean_mail
+            )
+            if agendas_actualizadas:
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            from flask import current_app
+            current_app.logger.error(f"[FUENTE FORM] No se pudo aplicar la fuente del formulario: {e}")
+
         return jsonify({
             "message": message,
             "status": "success",
+            "fuente_aplicada": fuente_aplicada,
+            "agendas_actualizadas": agendas_actualizadas,
             "client_id": client.id,
             "client": {
                 "id": client.id,
