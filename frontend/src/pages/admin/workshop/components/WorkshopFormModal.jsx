@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 
@@ -18,6 +18,22 @@ const WorkshopFormModal = ({
     onSubmit,
     formatCurrency
 }) => {
+    // "Siguiente" (paso 2) y "Guardar Cambios" (paso 3) caen en la misma posición del
+    // pie del modal, así que un doble clic sobre Siguiente guardaba el evento sin querer:
+    // el segundo clic aterrizaba sobre el botón de guardar recién renderizado. El botón de
+    // guardar arranca inhabilitado un instante al llegar al paso 3, lo justo para que ese
+    // segundo clic no encuentre nada que pulsar.
+    const [guardadoHabilitado, setGuardadoHabilitado] = useState(false);
+
+    useEffect(() => {
+        if (currentStep !== 3) {
+            setGuardadoHabilitado(false);
+            return;
+        }
+        const t = setTimeout(() => setGuardadoHabilitado(true), 600);
+        return () => clearTimeout(t);
+    }, [currentStep]);
+
     const liveCalculations = useMemo(() => {
         const inv = parseFloat(formData.inversion) || 0;
         const leads = parseInt(formData.leads) || 0;
@@ -406,7 +422,8 @@ const WorkshopFormModal = ({
                         ) : (
                             <button
                                 type="submit"
-                                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 border border-emerald-500/30"
+                                disabled={!guardadoHabilitado}
+                                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 border border-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isEditMode ? 'Guardar Cambios' : 'Registrar Evento'}
                             </button>
