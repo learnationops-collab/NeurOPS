@@ -50,10 +50,13 @@ const useDockNavigation = () => {
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {
+            // "Mis Agendas" muestra las citas atribuidas a este setter. La atribución
+            // sale de la fuente del formulario de Calendly (20/ago/2026), no del evento.
             return [
                 { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
-                { id: 'step-2', icon: ClipboardList, label: '2. Reporte Diario', path: '/setter/report' },
-                { id: 'step-3', icon: BarChart3, label: '3. Dashboard', path: '/setter/statistics' }
+                { id: 'step-2', icon: CalendarDays, label: '2. Mis Agendas', path: '/setter/agendas' },
+                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
+                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/setter/statistics' }
             ];
         } else if (isTriage) {
             return [
