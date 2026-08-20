@@ -85,6 +85,7 @@ def create_app(config_class=Config):
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
 
     from app.api.setter import bp as setter_api_bp
+    from app.api import setter_agendas  # noqa: F401  (cuelga rutas del mismo blueprint)
     app.register_blueprint(setter_api_bp, url_prefix='/api/setter')
 
     from app.api.google_calendar import bp as google_calendar_bp

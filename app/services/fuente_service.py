@@ -18,6 +18,9 @@ import unicodedata
 
 FUENTE_WORKSHOP_VIVO = 'workshop'
 FUENTE_WORKSHOP_LANDING = 'workshop_landing'
+FUENTE_VSL = 'vsl'
+FUENTE_SETTING = 'setting'
+FUENTE_DESCONOCIDA = 'Desconocido'
 
 # Setters activos: sus agendas se atribuyen a la persona, no a un embudo.
 SETTERS = ['Elias', 'Paula', 'Ivan']
@@ -26,7 +29,52 @@ SETTERS = ['Elias', 'Paula', 'Ivan']
 # tablero y el panel de edicion masiva; en la base pueden convivir valores
 # historicos ('Sin asignar', 'workshop manychat', ...) que se siguen mostrando
 # como estan pero ya no se proponen para valores nuevos.
-FUENTES_CANONICAS = [FUENTE_WORKSHOP_VIVO, FUENTE_WORKSHOP_LANDING] + SETTERS
+FUENTES_CANONICAS = [
+    FUENTE_WORKSHOP_VIVO, FUENTE_WORKSHOP_LANDING, FUENTE_VSL,
+    FUENTE_SETTING, FUENTE_DESCONOCIDA,
+] + SETTERS
+
+# Fuentes que significan "no sabemos que setter trajo esta agenda".
+#
+# El enrutamiento de Calendly manda 'setting' cuando el lead vino por el link de
+# un setter, pero el evento es el mismo para los tres, asi que el nombre solo
+# esta en el formulario. Si el formulario no llego, o llego con 'No identificado',
+# la agenda queda sin dueño y hay que preguntarle al equipo de setting de quien
+# es (ver `app/api/setter_agendas.py`).
+FUENTES_SIN_DUENO = {
+    'setting', 'desconocido', 'no identificado', 'sin asignar', 'sin identificar', '',
+}
+
+
+def es_sin_dueno(texto):
+    """True si la fuente no identifica a nadie y hay que preguntarle a los setters."""
+    return normalizar(texto) in FUENTES_SIN_DUENO
+
+
+def es_vsl(*textos):
+    """True si la fuente es el embudo de la VSL."""
+    return any(normalizar(t) == FUENTE_VSL for t in textos)
+
+
+# Como se escribe cada fuente del formulario de Calendly en la agenda. El
+# formulario y el webhook usan vocabularios distintos ('Workshop' vs 'workshop',
+# 'workshop landing' vs 'workshop_landing'), asi que se normaliza a uno solo.
+def fuente_canonica(texto):
+    """Valor canonico de una fuente escrita de cualquier forma, o None.
+
+    Devuelve None para lo que no identifica nada ('No identificado', vacio), que
+    es justamente lo que dispara el flujo de reclamo por parte de los setters.
+    """
+    t = normalizar(texto)
+    if not t or t in FUENTES_SIN_DUENO:
+        return None
+    if es_workshop_landing(texto):
+        return FUENTE_WORKSHOP_LANDING
+    if es_workshop_vivo(texto):
+        return FUENTE_WORKSHOP_VIVO
+    if t == FUENTE_VSL:
+        return FUENTE_VSL
+    return None
 
 
 def normalizar(texto):

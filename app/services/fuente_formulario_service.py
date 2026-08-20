@@ -29,7 +29,7 @@ from sqlalchemy import or_, func
 
 from app import db
 from app.models import Client, FinancialAgenda, Appointment, User
-from app.services.fuente_service import normalizar
+from app.services.fuente_service import normalizar, fuente_canonica
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,23 @@ def resolver_setter(texto):
         if normalizar(u.username) == objetivo:
             return u
     return None
+
+
+def valor_de_fuente(fuente_form):
+    """Que hay que escribir en la agenda para este `fuente_form`, o None.
+
+    El formulario de Calendly manda una de estas siete (20/08/2026):
+    Workshop · VSL · Paula · Ivan · Elias · workshop landing · No identificado.
+
+    Las tres del medio son personas y se escriben con el username del setter; las
+    otras tres son embudos y se normalizan al vocabulario del webhook de agendas
+    ('workshop', 'vsl', 'workshop_landing'). 'No identificado' devuelve None: es
+    justamente el caso que deja la agenda sin dueño para que la reclame un setter.
+    """
+    setter = resolver_setter(fuente_form)
+    if setter:
+        return setter.username
+    return fuente_canonica(fuente_form)
 
 
 def _limpiar(valor, invalidos=('n/a', 'none', 'null', '')):
@@ -118,7 +135,7 @@ def _condiciones_cliente(nombre=None, telefono=None, instagram=None, mail=None):
 
 
 def fuente_del_cliente(nombre=None, telefono=None, instagram=None, mail=None):
-    """Nombre del setter segun el formulario que completo esta persona, o None.
+    """Fuente segun el formulario que completo esta persona, o None.
 
     Se usa cuando la agenda llega DESPUES del formulario: los datos del
     formulario ya quedaron guardados en `Client.form_data`.
@@ -130,9 +147,9 @@ def fuente_del_cliente(nombre=None, telefono=None, instagram=None, mail=None):
     clientes = Client.query.filter(or_(*condiciones)).order_by(Client.created_at.desc()).limit(5).all()
     for c in clientes:
         fd = c.form_data or {}
-        setter = resolver_setter(fd.get('fuente_form') or fd.get('fuente'))
-        if setter:
-            return setter.username
+        valor = valor_de_fuente(fd.get('fuente_form') or fd.get('fuente'))
+        if valor:
+            return valor
     return None
 
 
@@ -154,8 +171,11 @@ def fuente_para_agenda_entrante(fuente_webhook, nombre=None, telefono=None, inst
     return fuente_webhook, False
 
 
-def _propagar_a_cita(agenda, setter):
+def _propagar_a_cita(agenda, setter=None):
     """Deja la cita asociada apuntando al setter dueño de la agenda.
+
+    `setter` es None cuando la fuente es un embudo (workshop, vsl, ...): en ese
+    caso la agenda no es de nadie del equipo de setting y la cita se desatribuye.
 
     `Appointment.setter_id` es lo que decide que agendas ve cada setter en su
     espacio de trabajo, y `origin` es de donde el sync inverso recupera la fuente.
@@ -183,7 +203,7 @@ def _propagar_a_cita(agenda, setter):
         return False
 
     appt.origin = agenda.nombre or appt.origin
-    appt.setter_id = setter.id
+    appt.setter_id = setter.id if setter else None
     db.session.add(appt)
     return True
 
@@ -198,9 +218,10 @@ def aplicar_a_agendas_del_cliente(fuente_form, nombre=None, telefono=None,
     Devuelve (nombre_del_setter, cantidad_de_agendas_actualizadas) o (None, 0) si
     la fuente del formulario no es un setter o no se encontro a la persona.
     """
-    setter = resolver_setter(fuente_form)
-    if not setter:
+    valor = valor_de_fuente(fuente_form)
+    if not valor:
         return None, 0
+    setter = resolver_setter(fuente_form)
 
     condiciones = _condiciones_agenda(nombre, telefono, instagram, mail)
     if not condiciones:
@@ -218,10 +239,11 @@ def aplicar_a_agendas_del_cliente(fuente_form, nombre=None, telefono=None,
 
     actualizadas = 0
     for agenda in agendas:
-        if normalizar(agenda.nombre) == normalizar(setter.username):
+        if normalizar(agenda.nombre) == normalizar(valor):
             continue
-        agenda.nombre = setter.username
+        agenda.nombre = valor
         raw = dict(agenda.raw_data or {})
+        raw['fuente_webhook'] = raw.get('fuente_webhook', raw.get('fuente'))
         raw['fuente_origen'] = ORIGEN_FORMULARIO
         raw['fuente_form'] = fuente_form
         agenda.raw_data = raw
@@ -232,4 +254,4 @@ def aplicar_a_agendas_del_cliente(fuente_form, nombre=None, telefono=None,
             logger.error(f"[FUENTE FORM] No se pudo propagar a la cita de la agenda {agenda.id}: {e}")
         actualizadas += 1
 
-    return setter.username, actualizadas
+    return valor, actualizadas

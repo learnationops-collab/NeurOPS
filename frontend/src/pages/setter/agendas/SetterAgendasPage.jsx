@@ -5,12 +5,15 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import BookingLinkModal from '../../../components/dashboard/BookingLinkModal';
 import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
+import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
 import api from '../../../services/api';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 const SetterAgendasPage = () => {
     const [loading, setLoading] = useState(true);
     const [agendas, setAgendas] = useState([]);
+    const [sinAsignar, setSinAsignar] = useState([]);
     const [bookingLinks, setBookingLinks] = useState([]);
     const [filter, setFilter] = useState('all'); // 'all', 'pending', 'completed'
 
@@ -31,6 +34,22 @@ const SetterAgendasPage = () => {
         }
     };
 
+    const fetchSinAsignar = async () => {
+        try {
+            const res = await api.get('/setter/agendas/sin-asignar');
+            setSinAsignar(res.data || []);
+        } catch (err) {
+            console.error("Error fetching agendas sin asignar", err);
+        }
+    };
+
+    // Al reclamar una agenda pasa a tener la fuente del setter, así que sale de la
+    // bandeja y entra en su lista; al descartarla solo sale de la bandeja.
+    const handleAgendaResuelta = (agendaId, resultado) => {
+        setSinAsignar(prev => prev.filter(a => a.id !== agendaId));
+        if (resultado?.accion === 'mia') fetchAgendas();
+    };
+
     const fetchBookingLinks = async () => {
         try {
             const res = await api.get('/setter/booking-link');
@@ -46,6 +65,7 @@ const SetterAgendasPage = () => {
 
     useEffect(() => {
         fetchBookingLinks();
+        fetchSinAsignar();
     }, []);
 
     // Handle "L" key for links globally
@@ -61,13 +81,19 @@ const SetterAgendasPage = () => {
     }, []);
 
     const handleAgendaClick = async (agendaRes) => {
+        // La lista son FinancialAgendas; el detalle trabaja sobre la cita asociada,
+        // que puede no existir si la sincronización todavía no la creó.
+        if (!agendaRes.appointment_id) {
+            toast('Esta agenda todavía no tiene una cita sincronizada para abrir.');
+            return;
+        }
         try {
-            // Need to fetch full agenda details before opening modal
-            const res = await api.get(`/closer/appointments/${agendaRes.id}`);
+            const res = await api.get(`/closer/appointments/${agendaRes.appointment_id}`);
             setSelectedAgenda(res.data);
             setIsAgendaModalOpen(true);
         } catch (err) {
             console.error("Error fetching agenda details", err);
+            toast.error('No se pudo abrir el detalle de la agenda');
         }
     };
 
@@ -92,7 +118,7 @@ const SetterAgendasPage = () => {
                             <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none flex items-center gap-4">
                                 <CalendarDays size={40} className="text-primary mb-1" /> Agendas
                             </h1>
-                            <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Gestión de citas generadas</p>
+                            <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Las agendas cuya fuente sos vos</p>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -106,6 +132,9 @@ const SetterAgendasPage = () => {
                             </Button>
                         </div>
                     </header>
+
+                    {/* Agendas de setting sin dueño: se le pregunta al equipo de quién son */}
+                    <SetterUnclaimedAgendas agendas={sinAsignar} onResuelta={handleAgendaResuelta} />
 
                     {/* Filters & Table Wrapper */}
                     <div className="space-y-6">
@@ -155,7 +184,7 @@ const SetterAgendasPage = () => {
                                         <p className="text-sm font-bold text-white">No hay agendas</p>
                                         <p className="text-[10px] text-muted font-bold uppercase tracking-widest">
                                             {filter === 'all'
-                                                ? 'Aún no has generado ninguna agenda.'
+                                                ? 'Todavía no hay agendas con tu fuente.'
                                                 : `No hay agendas en estado ${filter === 'pending' ? 'Pendiente' : 'Completada'}.`}
                                         </p>
                                     </div>
@@ -174,7 +203,7 @@ const SetterAgendasPage = () => {
                                         </thead>
                                         <tbody>
                                             {agendas.map((agenda, idx) => {
-                                                const date = new Date(agenda.start_time);
+                                                const date = agenda.start_time ? new Date(agenda.start_time) : null;
                                                 return (
                                                     <motion.tr
                                                         initial={{ opacity: 0, y: 10 }}
@@ -193,7 +222,7 @@ const SetterAgendasPage = () => {
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="w-6 h-6 rounded-full bg-[#1534ff]/20 flex items-center justify-center text-[10px] font-bold text-[#1534ff]">
-                                                                    {agenda.closer_name.charAt(0).toUpperCase()}
+                                                                    {(agenda.closer_name || '?').charAt(0).toUpperCase()}
                                                                 </div>
                                                                 <span className="text-sm font-medium text-muted/80">{agenda.closer_name}</span>
                                                             </div>
@@ -205,10 +234,10 @@ const SetterAgendasPage = () => {
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="text-sm font-bold text-white/90">
-                                                                        {date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                                        {date ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'}
                                                                     </span>
                                                                     <span className="text-[10px] text-muted font-bold tracking-wider">
-                                                                        {date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                                                        {date ? date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
                                                                     </span>
                                                                 </div>
                                                             </div>
