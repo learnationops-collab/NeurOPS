@@ -5,34 +5,11 @@ from . import bp
 from sqlalchemy import or_, func, case
 
 def resolve_closer_name(email_or_name):
-    # Convierte correos oficiales a nombres limpios de closers
-    if not email_or_name:
-        return "Sin Closer"
-    val_norm = str(email_or_name).strip().lower()
-    
-    mapping = {
-        'Jean Carlo': ['jeancarlo@thelearnation.com'],
-        'Marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
-        'Guillermo': ['guillermo@thelearnation.com'],
-        'Tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
-        'Mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
-        'Mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
-        'Iñaki': ['iñaki', 'inaki'],
-        'Rafael': ['rafael'],
-        'Mateo': ['mateo'],
-        'Belén': ['mbelenamerise@gmail.com', 'belen'],
-        'Valery': ['valeryjohana.cabrera@gmail.com', 'valery'],
-        'Gabriel': ['gabriel@thelearnation.com', 'gabriel']
-    }
-    
-    for name, list_vals in mapping.items():
-        for val in list_vals:
-            if val in val_norm:
-                return name
-                
-    if '@' in email_or_name:
-        return email_or_name.split('@')[0].replace('.', ' ').title()
-    return email_or_name.title()
+    """Nombre canonico del closer. La logica vive en `closer_name_service`,
+    que resuelve contra los usuarios y alias reales antes de caer al diccionario
+    historico — antes la misma persona se partia en varias opciones del filtro."""
+    from app.services.closer_name_service import resolver_nombre_closer
+    return resolver_nombre_closer(email_or_name)
 
 def split_tipo_pago(tp):
     # Separa el programa del tipo de pago simple
@@ -709,7 +686,11 @@ def get_financial_sales():
     unique_programs = sorted(list(all_programs_set))
     unique_payment_types = sorted(list(all_payment_types_set))
     unique_payment_methods = sorted(list(all_payment_methods_set))
-    unique_closers = sorted(list(all_closers_set))
+    # A los closers presentes en el rango se les suman los closers del sistema: sin
+    # esto el desplegable solo ofrece a quien ya tiene ventas en las fechas elegidas,
+    # que es justo lo que impide seleccionar a alguien ANTES de ver sus ventas.
+    from app.services.closer_name_service import closers_conocidos
+    unique_closers = sorted(all_closers_set | set(closers_conocidos()))
     unique_setters = sorted(list(all_setters_set))
 
     if sin_atribucion:
