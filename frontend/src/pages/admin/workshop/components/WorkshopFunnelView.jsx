@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { Loader2, Zap } from 'lucide-react';
+import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import WorkshopSourceSplit from './WorkshopSourceSplit';
 
 const WorkshopFunnelView = ({
     events,
@@ -8,7 +10,10 @@ const WorkshopFunnelView = ({
     onResync,
     resyncing,
     formatDate,
-    formatCurrency
+    formatCurrency,
+    desglose,
+    ventana,
+    cargandoDesglose
 }) => {
     const activeFunnelData = useMemo(() => {
         if (!selectedEvent) return [];
@@ -18,15 +23,24 @@ const WorkshopFunnelView = ({
         const pct = (val) => leads > 0 ? ((val / leads) * 100).toFixed(1) + '%' : '0%';
         
         return [
-            { label: 'Leads Captados', value: leads, rate: '100%', detail: 'Base del embudo — prospectos registrados' },
-            { label: 'Leads en WhatsApp', value: e.whatsapp_leads, rate: pct(e.whatsapp_leads), sub: 'Entrada WA', detail: 'Leads que ingresaron al grupo de WhatsApp' },
-            { label: 'Asistencia Webinar (Show Up)', value: e.show_up, rate: pct(e.show_up), sub: 'Show up Webinar', detail: 'Conectados en vivo al webinar' },
-            { label: 'Leads en Pitch', value: e.pitch_leads, rate: pct(e.pitch_leads), sub: 'Retención Clase', detail: 'Permanecieron hasta la presentación del pitch' },
-            { label: 'Final de Pitch', value: e.pitch_final_leads, rate: pct(e.pitch_final_leads), sub: 'Retención Pitch', detail: 'Presenciaron la oferta completa' },
-            { label: 'Aplicaciones Form (Calendly)', value: e.aplicaciones_form, rate: pct(e.aplicaciones_form), sub: 'Tasa Aplicación', detail: 'Completaron formulario de calificación' },
-            { label: 'Agendas Exitosas', value: e.agendas_exitosas, rate: pct(e.agendas_exitosas), sub: 'Aplicación a Cita', detail: 'Agendaron sesión uno a uno con closer' },
-            { label: 'Asistencia Cita (Show Up)', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show Up en Cita', detail: 'Asistieron a la llamada de ventas' },
-            { label: 'Ventas Cerradas (Compradores)', value: e.sales, rate: pct(e.sales), sub: 'Tasa de Cierre Global', detail: 'Leads compradores únicos (Seña, Split Pay o Completo).' }
+            { label: 'Leads Captados', value: leads, rate: '100%', detail: 'Base del embudo — prospectos registrados',
+              ayuda: 'Cuánta gente se anotó al workshop. Es la base contra la que se comparan todos los pasos de abajo: los porcentajes son "de cada 100 anotados, cuántos llegaron hasta acá".' },
+            { label: 'Leads en WhatsApp', value: e.whatsapp_leads, rate: pct(e.whatsapp_leads), sub: 'Entrada WA', detail: 'Leads que ingresaron al grupo de WhatsApp',
+              ayuda: 'De los anotados, cuántos entraron al grupo de WhatsApp donde se mandan los recordatorios. Si este número es bajo, mucha gente ni se entera de que la clase empieza.' },
+            { label: 'Asistencia Webinar (Show Up)', value: e.show_up, rate: pct(e.show_up), sub: 'Show up Webinar', detail: 'Conectados en vivo al webinar',
+              ayuda: 'Cuántos se conectaron a la clase en vivo. Un show up bajo casi siempre es problema de recordatorios o del horario, no del contenido.' },
+            { label: 'Leads en Pitch', value: e.pitch_leads, rate: pct(e.pitch_leads), sub: 'Retención Clase', detail: 'Permanecieron hasta la presentación del pitch',
+              ayuda: 'Cuántos seguían conectados cuando arrancó la parte de la oferta. Mide si la clase los mantuvo enganchados hasta el final.' },
+            { label: 'Final de Pitch', value: e.pitch_final_leads, rate: pct(e.pitch_final_leads), sub: 'Retención Pitch', detail: 'Presenciaron la oferta completa',
+              ayuda: 'Cuántos se quedaron hasta que terminó la oferta. Si cae fuerte respecto del paso anterior, la oferta está perdiendo gente mientras se presenta.' },
+            { label: 'Aplicaciones Form (Calendly)', value: e.aplicaciones_form, rate: pct(e.aplicaciones_form), sub: 'Tasa Aplicación', detail: 'Completaron formulario de calificación',
+              ayuda: 'Cuántos llenaron el formulario para pedir una llamada. Incluye los que lo llenaron desde la clase en vivo y los que lo llenaron viendo la grabación.' },
+            { label: 'Agendas Exitosas', value: e.agendas_exitosas, rate: pct(e.agendas_exitosas), sub: 'Aplicación a Cita', detail: 'Agendaron sesión uno a uno con closer',
+              ayuda: 'Cuántas llamadas de venta quedaron efectivamente agendadas. Suma la clase en vivo y la grabación: el detalle de cada una está más abajo.' },
+            { label: 'Asistencia Cita (Show Up)', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show Up en Cita', detail: 'Asistieron a la llamada de ventas',
+              ayuda: 'De las llamadas agendadas, a cuántas la persona realmente se presentó. La diferencia con el paso anterior son los "no show".' },
+            { label: 'Ventas Cerradas (Compradores)', value: e.sales, rate: pct(e.sales), sub: 'Tasa de Cierre Global', detail: 'Leads compradores únicos (Seña, Split Pay o Completo).',
+              ayuda: 'Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo cuentan Seña, Split Pay y pago Completo — cuotas, renovaciones y upsells quedan afuera.' }
         ];
     }, [selectedEvent]);
 
@@ -128,6 +142,7 @@ const WorkshopFunnelView = ({
                                             {idx + 1}
                                         </span>
                                         <span className="font-black text-white uppercase tracking-wider">{step.label}</span>
+                                        {step.ayuda && <InfoTooltip label={step.label} text={step.ayuda} />}
                                         {conversionFromPrev && (
                                             <span className="text-[8px] text-indigo-400/80 font-bold uppercase tracking-widest">
                                                 ({conversionFromPrev})
@@ -156,6 +171,14 @@ const WorkshopFunnelView = ({
                         );
                     })}
                 </div>
+
+                {/* Cuánto aportó la clase en vivo y cuánto la grabación */}
+                <WorkshopSourceSplit
+                    desglose={desglose}
+                    ventana={ventana}
+                    cargando={cargandoDesglose}
+                    formatCurrency={formatCurrency}
+                />
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { RefreshCw, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import InfoTooltip from '../../../../components/ui/InfoTooltip';
 
 const WorkshopFormModal = ({
     isEditMode,
@@ -8,6 +9,8 @@ const WorkshopFormModal = ({
     formData,
     setFormData,
     agendaBreakdown,
+    desglose,
+    ventana,
     loadingPrefill,
     prefilledDate,
     onPrefill,
@@ -246,7 +249,7 @@ const WorkshopFormModal = ({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Aplicaciones Form</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Aplicaciones Form <InfoTooltip label="Aplicaciones Form" text="Cuánta gente completó el formulario de calificación para pedir una llamada. Suma la clase en vivo y la grabación de la landing." /></label>
                                         <input
                                             type="number"
                                             value={formData.aplicaciones_form}
@@ -255,7 +258,7 @@ const WorkshopFormModal = ({
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Agendas Exitosas</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Agendas Exitosas <InfoTooltip label="Agendas Exitosas" text="Llamadas de venta que quedaron agendadas. Suma la clase en vivo y la grabación." /></label>
                                         <input
                                             type="number"
                                             value={formData.agendas_exitosas}
@@ -267,7 +270,7 @@ const WorkshopFormModal = ({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Show up Sales Call</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Show up Sales Call <InfoTooltip label="Show up Sales Call" text="De esas agendas, a cuántas la persona realmente se presentó." /></label>
                                         <input
                                             type="number"
                                             value={formData.show_up_sales_call}
@@ -276,7 +279,7 @@ const WorkshopFormModal = ({
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ventas por Lead (Compradores)</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Ventas por Lead (Compradores) <InfoTooltip label="Ventas por Lead (Compradores)" text="Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo Seña, Split Pay y pago Completo." /></label>
                                         <input
                                             type="number"
                                             value={formData.sales}
@@ -287,7 +290,7 @@ const WorkshopFormModal = ({
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Cash Collected (USD)</label>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Cash Collected (USD) <InfoTooltip label="Cash Collected (USD)" text="Plata efectivamente cobrada de esas ventas. No incluye cuotas posteriores, renovaciones ni upsells." /></label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-3 text-emerald-500 text-xs">$</span>
                                         <input
@@ -299,6 +302,38 @@ const WorkshopFormModal = ({
                                         />
                                     </div>
                                 </div>
+
+                                {desglose && (
+                                    <div className="mt-3 bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-2">
+                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
+                                            De dónde salieron estos números
+                                            <InfoTooltip
+                                                label="De dónde salieron"
+                                                text="Un workshop tiene dos puertas de entrada: la clase en vivo del día y la grabación que queda publicada después. Los campos de arriba ya suman las dos; acá se ve cuánto puso cada una."
+                                            />
+                                        </p>
+                                        {ventana && (
+                                            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-wider">
+                                                Grabación contada del {ventana.landing_desde} al {ventana.landing_hasta}
+                                                {ventana.landing_recortada ? ' (recortada: hay otro workshop antes)' : ''}
+                                            </p>
+                                        )}
+                                        <div className="grid grid-cols-2 gap-2 text-[8px] font-bold">
+                                            {[
+                                                { t: 'Clase en vivo', d: desglose.vivo, c: 'text-indigo-300' },
+                                                { t: 'Grabación', d: desglose.landing, c: 'text-emerald-300' }
+                                            ].map(({ t, d, c }) => (
+                                                <div key={t} className="bg-slate-900/60 p-2 rounded space-y-0.5">
+                                                    <p className={`uppercase tracking-widest ${c}`}>{t}</p>
+                                                    <p className="text-slate-400">Aplicaciones: {d?.aplicaciones_form ?? 0}</p>
+                                                    <p className="text-slate-400">Agendas: {d?.agendas ?? 0}</p>
+                                                    <p className="text-slate-400">Asistieron: {d?.show_up ?? 0}</p>
+                                                    <p className="text-slate-400">Compradores: {d?.sales ?? 0}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {agendaBreakdown && (
                                     <div className="mt-3 bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-1.5">

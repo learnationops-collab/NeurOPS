@@ -63,8 +63,12 @@ const useDockNavigation = () => {
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
             ];
         } else if (user?.role === 'operator') {
+            // Agendas y Ventas pasaron del panel de admin al de operaciones (20/ago/2026):
+            // es el rol que hace la limpieza y corrección de esos registros.
             return [
-                { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' }
+                { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' },
+                { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' },
+                { id: 'ventas', icon: DollarSign, label: 'Registro Ventas', path: '/ops/ventas' }
             ];
         } else if (user?.role === 'admin') {
             const adminPages = [

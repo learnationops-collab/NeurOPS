@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    Loader2, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
+    Loader2, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserPerformanceTab from './CloserPerformanceTab';
@@ -35,10 +35,11 @@ const PublicCloserStatsPage = () => {
     const activeTab = tabFilters.active;
     const setActiveTab = (val) => setTabFilters({ active: val });
 
-    // La pestaña "Rendimiento" quedó oculta (a pedido del usuario, 19/ago/2026); si alguien
-    // tiene ese valor persistido de una sesión anterior, se lo redirige al Dashboard.
+    // Pestañas ocultas: "Rendimiento" (19/ago/2026) y "Registro Ventas" / "Registro Agendas"
+    // (20/ago/2026, movidas al panel de operaciones). A quien tenga una de esas persistida de
+    // una sesión anterior se lo redirige al Dashboard, para no dejarlo en una vista sin botón.
     useEffect(() => {
-        if (activeTab === 'performance') setActiveTab('dashboard');
+        if (['performance', 'sales_log', 'agendas_log'].includes(activeTab)) setActiveTab('dashboard');
     }, [activeTab]);
 
     const [stats, setStats] = useState(null);
@@ -213,8 +214,10 @@ const PublicCloserStatsPage = () => {
                     <TabButton id="dashboard" label="Dashboard" icon={LayoutDashboard} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
                     <TabButton id="new_clients" label="Clientes Nuevos" icon={Users} />
-                    <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
-                    <TabButton id="agendas_log" label="Registro Agendas" icon={CalendarDays} />
+                    {/* "Registro Ventas" y "Registro Agendas" se movieron al panel de
+                        operaciones (20/ago/2026): /ops/ventas y /ops/agendas. El contenido
+                        sigue montado más abajo para no romper a quien tenga la pestaña
+                        guardada en localStorage, pero ya no se ofrece desde acá. */}
                     <TabButton id="forms" label="Forms" icon={ClipboardCheck} />
                 </div>
 

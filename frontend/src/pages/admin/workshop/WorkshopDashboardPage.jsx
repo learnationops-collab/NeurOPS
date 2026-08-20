@@ -46,9 +46,33 @@ const WorkshopDashboardPage = () => {
     const [prefilledDate, setPrefilledDate] = useState('');
     const [resyncing, setResyncing] = useState(false);
 
+    // Desglose vivo / grabación del evento abierto en la pestaña de embudo
+    const [desglose, setDesglose] = useState(null);
+    const [ventana, setVentana] = useState(null);
+    const [cargandoDesglose, setCargandoDesglose] = useState(false);
+
     useEffect(() => {
         fetchEvents();
     }, []);
+
+    // El desglose por embudo se pide solo al abrir el análisis de un evento:
+    // recorre agendas y ventas, así que no vale la pena calcularlo para la lista.
+    useEffect(() => {
+        if (activeTab !== 'funnel' || !selectedEventForFunnel?.date) return;
+        let cancelado = false;
+        setCargandoDesglose(true);
+        api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`)
+            .then(res => {
+                if (cancelado) return;
+                setDesglose(res.data.desglose || null);
+                setVentana(res.data.ventana || null);
+            })
+            .catch(err => {
+                if (!cancelado) console.error('Error cargando el desglose del workshop:', err);
+            })
+            .finally(() => { if (!cancelado) setCargandoDesglose(false); });
+        return () => { cancelado = true; };
+    }, [activeTab, selectedEventForFunnel?.date]);
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -84,6 +108,8 @@ const WorkshopDashboardPage = () => {
                 cash_collected: data.cash_collected
             }));
             setAgendaBreakdown(data.agendas_breakdown);
+            setDesglose(data.desglose || null);
+            setVentana(data.ventana || null);
             setPrefilledDate(selectedDate);
             toast.success("Métricas autocompletadas del sistema para este día");
         } catch (err) {
@@ -98,6 +124,8 @@ const WorkshopDashboardPage = () => {
         setIsEditMode(false);
         setSelectedEvent(null);
         setAgendaBreakdown(null);
+        setDesglose(null);
+        setVentana(null);
         setCurrentStep(1);
         setPrefilledDate('');
         setFormData(initialFormData);
@@ -136,6 +164,8 @@ const WorkshopDashboardPage = () => {
         try {
             const res = await api.get(`workshop/prefill?date=${date}`);
             setAgendaBreakdown(res.data.agendas_breakdown);
+            setDesglose(res.data.desglose || null);
+            setVentana(res.data.ventana || null);
         } catch (e) {
             console.error("Error loading breakdown", e);
         }
@@ -209,6 +239,8 @@ const WorkshopDashboardPage = () => {
             });
             toast.success('Datos del sistema actualizados correctamente');
             setAgendaBreakdown(data.agendas_breakdown);
+            setDesglose(data.desglose || null);
+            setVentana(data.ventana || null);
             fetchEvents();
         } catch (err) {
             console.error('Error resincronizando embudo:', err);
@@ -411,6 +443,9 @@ const WorkshopDashboardPage = () => {
                         resyncing={resyncing}
                         formatDate={formatDate}
                         formatCurrency={formatCurrency}
+                        desglose={desglose}
+                        ventana={ventana}
+                        cargandoDesglose={cargandoDesglose}
                     />
                 )}
 
@@ -423,6 +458,8 @@ const WorkshopDashboardPage = () => {
                         formData={formData}
                         setFormData={setFormData}
                         agendaBreakdown={agendaBreakdown}
+                        desglose={desglose}
+                        ventana={ventana}
                         loadingPrefill={loadingPrefill}
                         prefilledDate={prefilledDate}
                         onPrefill={handlePrefill}

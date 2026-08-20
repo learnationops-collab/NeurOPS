@@ -1,13 +1,17 @@
 import React from 'react';
 import { DollarSign, TrendingUp, Activity, Target, Award, Wallet } from 'lucide-react';
+import InfoTooltip from '../../../../components/ui/InfoTooltip';
 
 // Tarjeta KPI individual ejecutiva
-const ExecutiveStatCard = ({ label, value, icon: Icon, colorClass, subtitle, badge }) => (
+const ExecutiveStatCard = ({ label, value, icon: Icon, colorClass, subtitle, badge, ayuda }) => (
     <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl relative overflow-hidden group hover:border-slate-700/80 transition-all duration-300">
         <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 bg-indigo-500 group-hover:opacity-20 transition-opacity" />
         <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">{label}</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
+                    {label}
+                    {ayuda && <InfoTooltip label={label} text={ayuda} />}
+                </p>
                 <p className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">{value}</p>
                 {subtitle && <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{subtitle}</p>}
             </div>
@@ -49,6 +53,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <ExecutiveStatCard
                     label="Inversión Ads"
+                    ayuda="Cuánta plata se gastó en publicidad para estos workshops. Es el dinero que sale."
                     value={formatCurrency(totalStats.inversion)}
                     icon={DollarSign}
                     colorClass="text-slate-400"
@@ -56,6 +61,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
                 />
                 <ExecutiveStatCard
                     label="Cash Collected"
+                    ayuda="Cuánta plata entró de verdad a la cuenta (no lo prometido ni lo facturado: lo cobrado). Beneficio neto = cobrado menos inversión en ads."
                     value={formatCurrency(totalStats.cash)}
                     icon={Wallet}
                     colorClass="text-emerald-400"
@@ -63,6 +69,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
                 />
                 <ExecutiveStatCard
                     label="ROAS Global"
+                    ayuda="Por cada $1 gastado en publicidad, cuántos dólares volvieron. 1x es empatar; arriba de 3x va muy bien. Ticket promedio = cuánto deja en promedio cada persona que compra."
                     value={`${totalStats.roas.toFixed(2)}x`}
                     icon={TrendingUp}
                     colorClass={totalStats.roas >= 3 ? "text-emerald-400" : totalStats.roas >= 1.5 ? "text-indigo-400" : "text-amber-400"}
@@ -71,6 +78,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
                 />
                 <ExecutiveStatCard
                     label="Leads & CPL"
+                    ayuda="Personas que se registraron al workshop. CPL = cuánto costó conseguir cada una (inversión ÷ leads)."
                     value={totalStats.leads.toLocaleString()}
                     icon={Activity}
                     colorClass="text-indigo-400"
@@ -78,6 +86,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
                 />
                 <ExecutiveStatCard
                     label="Agendas & CPA"
+                    ayuda="Llamadas de venta agendadas, sumando las que salen de la clase en vivo y las de la grabación. CPA = cuánto costó conseguir cada agenda."
                     value={totalStats.agendas.toLocaleString()}
                     icon={Target}
                     colorClass="text-sky-400"
@@ -85,6 +94,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
                 />
                 <ExecutiveStatCard
                     label="Ventas & CAC"
+                    ayuda="Personas distintas que compraron (no transacciones: si alguien paga en dos partes cuenta una sola vez). CAC = cuánto costó en publicidad conseguir cada cliente."
                     value={totalStats.sales.toLocaleString()}
                     icon={Award}
                     colorClass="text-purple-400"

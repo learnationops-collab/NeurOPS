@@ -1376,7 +1376,8 @@ const FinancialAgendasPage = () => {
                                             {/* COLUMNA: Confirmación del Call Confirmer (estado) */}
                                             <td className="py-4 px-4 text-center">
                                                 {(() => {
-                                                    const canEdit = user?.role === 'triage' || user?.role === 'admin';
+                                                    // El operador es dueño de esta pestaña desde el 20/08/2026, así que edita igual que el admin
+                                                    const canEdit = ['triage', 'admin', 'operator'].includes(user?.role);
                                                     const val = agenda.estado || 'Pendiente';
                                                     const confirmOptions = ['Pendiente', 'Contactado', 'Confirmado', 'Sin respuesta', 'Reagendada', 'Cancelada'];
                                                     const colorClass = {
@@ -1418,7 +1419,7 @@ const FinancialAgendasPage = () => {
                                             {/* COLUMNA: Resultado del Closer (closer_result) */}
                                             <td className="py-4 px-4 text-center">
                                                 {(() => {
-                                                    const canEdit = user?.role === 'closer' || user?.role === 'admin';
+                                                    const canEdit = ['closer', 'admin', 'operator'].includes(user?.role);
                                                     const val = agenda.closer_result || 'Pendiente';
                                                     const resultOptions = ['Pendiente', 'Show Up', 'No Show', '2TH Call', 'Reagendada', 'Cancelada', 'Cerrada'];
                                                     const colorClass = {
