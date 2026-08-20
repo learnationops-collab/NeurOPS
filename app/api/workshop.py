@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
 from app.decorators import admin_required
-from app.services.fuente_service import es_workshop_vivo
 from datetime import datetime
 import logging
 
@@ -255,219 +254,24 @@ def delete_workshop_event(event_id):
 @bp.route('/prefill', methods=['GET'])
 @admin_required
 def prefill_workshop_metrics():
+    """Autocompleta las metricas del sistema para el workshop de una fecha.
+
+    El calculo vive en WorkshopMetricsService: incluye la clase en vivo y la
+    grabacion de la landing (que sigue disponible 2 dias) como un solo workshop,
+    y devuelve ademas el desglose de cuanto aporto cada una.
+    """
     date_str = request.args.get('date')
     if not date_str:
         return jsonify({"error": "El parámetro date es obligatorio"}), 400
-        
-    from datetime import datetime, time
-    from app.models import Client, FinancialAgenda, FinancialSale, Appointment
-    from sqlalchemy import or_, func
-    
+
     try:
-        dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+        dia = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
-        
-    import pytz
+
     from flask_login import current_user
-    try:
-        la_paz_tz = pytz.timezone(current_user.timezone or 'America/La_Paz')
-    except Exception:
-        la_paz_tz = pytz.timezone('America/La_Paz')
-    start_local = datetime.combine(dt, time.min)
-    end_local = datetime.combine(dt, time.max)
-    
-    # created_at en la base de datos está guardado en UTC, por lo que convertimos los límites locales a UTC
-    utc_start = la_paz_tz.localize(start_local).astimezone(pytz.UTC).replace(tzinfo=None)
-    utc_end = la_paz_tz.localize(end_local).astimezone(pytz.UTC).replace(tzinfo=None)
-    
-    # 1. Aplicaciones Form Calendly
-    # Ampliar a 2 dias para cubrir posibles desfases de hora local -> UTC
-    from datetime import timedelta
-    utc_end_extended = utc_end + timedelta(days=1)
-    clients = Client.query.filter(Client.created_at >= utc_start, Client.created_at <= utc_end_extended).all()
-    aplicaciones_count = 0
-    for c in clients:
-        fd = c.form_data or {}
-        fuente = fd.get('fuente_form') or fd.get('fuente') or ''
-        # es_workshop_vivo EXCLUYE 'workshop landing'. Antes era `'workshop' in
-        # fuente`, un substring, asi que las aplicaciones de la grabacion se
-        # sumaban aca y inflaban las metricas del workshop en vivo.
-        if es_workshop_vivo(fuente):
-            aplicaciones_count += 1
-            
-    # 2. Agendas Exitosas - buscar por registro (texto local), created_at (UTC) y raw_data fuente
-    # El campo 'registro' contiene la fecha local del ingreso del formulario de n8n
-    # Se busca con el dia actual y el dia anterior para cubrir posibles desfases
-    import datetime as dt_module
-    prev_date_str = (dt - dt_module.timedelta(days=1)).strftime("%Y-%m-%d")
-    utc_end_extended_agendas = utc_end + dt_module.timedelta(hours=8)
-    
-    agendas = FinancialAgenda.query.filter(
-        or_(
-            (FinancialAgenda.created_at >= utc_start) & (FinancialAgenda.created_at <= utc_end_extended_agendas),
-            FinancialAgenda.registro.like(f"{date_str}%"),
-            FinancialAgenda.registro.like(f"{prev_date_str}%")
-        )
-    ).all()
-    
-    workshop_agendas = []
-    for a in agendas:
-        # Detectar fuente workshop desde nombre O raw_data['fuente'], dejando
-        # AFUERA la grabacion ('workshop landing'), que es otro embudo y se
-        # mide en /api/workshop/landing/*.
-        raw = a.raw_data or {}
-        if es_workshop_vivo(a.nombre, raw.get('fuente'), raw.get('fuente_form')):
-            workshop_agendas.append(a)
-            
-    agendas_count = len(workshop_agendas)
-    
-    def get_agenda_closer_status(agenda):
-        display_estado = agenda.estado or "Pendiente"
-        has_closer = agenda.closer and agenda.closer.strip() and agenda.closer.strip().lower() != 'sin asignar'
-        if has_closer:
-            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-            
-            client_filters = []
-            if ig_clean:
-                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
-            if mail_clean:
-                client_filters.append(func.lower(Client.email) == mail_clean)
-                
-            client = None
-            if client_filters:
-                client = Client.query.filter(or_(*client_filters)).first()
-                
-            if client and agenda.date:
-                s_day = datetime.combine(agenda.date.date(), time.min)
-                e_day = datetime.combine(agenda.date.date(), time.max)
-                
-                appt = Appointment.query.filter(
-                    Appointment.client_id == client.id,
-                    Appointment.start_time >= s_day,
-                    Appointment.start_time <= e_day
-                ).first()
-                
-                if appt and appt.closer_result:
-                    closer_res = appt.closer_result
-                    if closer_res == 'Show up':
-                        return 'Show Up'
-                    elif closer_res == 'No Show':
-                        return 'No Show'
-                    elif closer_res == 'Cancelado':
-                        return 'Cancelada'
-                    elif closer_res == 'Reagendado':
-                        return 'Reagendada'
-                    elif closer_res == '2da call':
-                        return '2TH Call'
-                    else:
-                        return closer_res
-        return display_estado
+    from app.services.workshop_metrics_service import calcular_prefill
 
-    # 3. Show Up en Sales Call & Breakdown
-    show_up_count = 0
-    breakdown = {
-        "Show Up": 0,
-        "No Show": 0,
-        "Cancelada": 0,
-        "Reagendada": 0,
-        "Pendiente": 0,
-        "Otros": 0
-    }
-    
-    for a in workshop_agendas:
-        status = get_agenda_closer_status(a)
-        if status in ['Show Up', 'Show up', 'Asistió']:
-            show_up_count += 1
-            breakdown["Show Up"] += 1
-        elif status in ['No Show', 'no show', 'Inasistencia']:
-            breakdown["No Show"] += 1
-        elif status in ['Cancelado', 'Cancelada']:
-            breakdown["Cancelada"] += 1
-        elif status in ['Reagendado', 'Reagendada']:
-            breakdown["Reagendada"] += 1
-        elif status in ['Pendiente']:
-            breakdown["Pendiente"] += 1
-        else:
-            breakdown["Otros"] += 1
-            
-    # 4. Sales & Cash Collected (Por cliente/lead único)
-    # Solo cuentan como ventas válidas: Seña (Sena), Split Pay (Parcial/Split) y Completo (PIF/Full).
-    # Las cuotas, renovaciones y upsells NO cuentan ni en la cantidad de ventas ni en cash_collected.
-    from app.api.public.financial_sales import split_tipo_pago
-
-    def is_valid_workshop_sale(sale):
-        if not sale or not sale.tipo_pago:
-            return False
-        _, simple_tp = split_tipo_pago(sale.tipo_pago)
-        tp_norm = (simple_tp or '').lower().strip()
-
-        # Excluir cuotas, renovaciones y upsells
-        if any(ex in tp_norm for ex in ['cuota', 'renovac', 'upsell']):
-            return False
-
-        # Debe ser Seña, Split Pay / Parcial, o Completo
-        is_sena = 'seña' in tp_norm or 'sena' in tp_norm
-        is_split = 'parcial' in tp_norm or 'split' in tp_norm or 'primer pago' in tp_norm
-        is_completo = 'completo' in tp_norm or 'pif' in tp_norm or 'full' in tp_norm
-
-        return is_sena or is_split or is_completo
-
-    lead_buyers_set = set() # Clientes únicos que realizaron al menos 1 compra válida
-    all_workshop_sales = set() # Transacciones de venta válidas
-
-    INVALID_HANDLES = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
-
-    for a in workshop_agendas:
-        ig_raw = (a.instagram or '').strip().replace('@', '').lower()
-        mail_raw = (a.mail or '').strip().lower()
-        lead_raw = (a.lead or '').strip().lower()
-        
-        ig_clean = ig_raw if ig_raw and ig_raw not in INVALID_HANDLES else None
-        mail_clean = mail_raw if mail_raw and mail_raw not in INVALID_HANDLES else None
-        lead_clean = lead_raw if lead_raw and len(lead_raw) > 2 else None
-        
-        if not ig_clean and not mail_clean and not lead_clean:
-            continue
-            
-        client_key = ig_clean or mail_clean or lead_clean or f"agenda_{a.id}"
-        
-        # 1. Chequear estado de venta en FinancialAgenda
-        estado_agenda = (a.estado or '').lower().strip()
-        is_sale_agenda = any(st in estado_agenda for st in ['cierre', 'seña', 'sena', 'completo', 'ganado', 'venta', 'vendido', 'completado'])
-
-        # 2. Chequear ventas en FinancialSale
-        filters = []
-        if ig_clean:
-            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
-        if mail_clean:
-            filters.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
-        if lead_clean:
-            filters.append(func.lower(FinancialSale.nombre_cliente) == lead_clean)
-            
-        sales = []
-        if filters:
-            sales = FinancialSale.query.filter(or_(*filters)).all()
-            
-        valid_sales = [s for s in sales if is_valid_workshop_sale(s)]
-        
-        if valid_sales:
-            lead_buyers_set.add(client_key)
-            for s in valid_sales:
-                all_workshop_sales.add(s)
-        elif is_sale_agenda:
-            lead_buyers_set.add(client_key)
-                
-    sales_count = len(lead_buyers_set)
-    cash_collected = sum(s.monto or 0.0 for s in all_workshop_sales)
-    
-    return jsonify({
-        "aplicaciones_form": aplicaciones_count,
-        "agendas_exitosas": agendas_count,
-        "show_up_sales_call": show_up_count,
-        "sales": sales_count,
-        "cash_collected": cash_collected,
-        "agendas_breakdown": breakdown
-    }), 200
+    tz = getattr(current_user, 'timezone', None) or 'America/La_Paz'
+    return jsonify(calcular_prefill(dia, tz)), 200
 

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import InfoTooltip from '../../../../components/ui/InfoTooltip';
 
 /*
  * Panel de la landing de la GRABACIÓN (/replay/).
@@ -49,11 +50,14 @@ const Chip = ({ etapa }) => {
     );
 };
 
-const Kpi = ({ label, value, sub, icon: Icon, colorClass }) => (
+const Kpi = ({ label, value, sub, icon: Icon, colorClass, ayuda }) => (
     <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl relative overflow-hidden">
         <div className="flex justify-between items-start">
             <div className="space-y-1 min-w-0">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">{label}</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
+                    {label}
+                    {ayuda && <InfoTooltip label={label} text={ayuda} />}
+                </p>
                 <p className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">{value}</p>
                 {sub && <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{sub}</p>}
             </div>
@@ -66,12 +70,15 @@ const Kpi = ({ label, value, sub, icon: Icon, colorClass }) => (
 
 /* Barra del embudo. El ancho es relativo a las VISITAS, no al paso anterior:
    así se ve de un vistazo dónde se cae la gente respecto del total. */
-const PasoEmbudo = ({ label, valor, base, pctPaso }) => {
+const PasoEmbudo = ({ label, valor, base, pctPaso, ayuda }) => {
     const ancho = base > 0 ? Math.max(2, (valor / base) * 100) : 0;
     return (
         <div className="space-y-1.5">
             <div className="flex justify-between items-baseline gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    {label}
+                    {ayuda && <InfoTooltip label={label} text={ayuda} />}
+                </span>
                 <span className="text-xs font-black text-white tabular-nums">
                     {valor}
                     {pctPaso !== null && <span className="text-slate-500 font-bold ml-2">{pctPaso}%</span>}
@@ -160,15 +167,19 @@ const WorkshopLandingView = () => {
 
             {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Kpi label="Visitas" value={visitas} sub="sesiones únicas"
+                <Kpi label="Visitas"
+                     ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="sesiones únicas"
                      icon={MonitorSmartphone} colorClass="text-sky-400" />
-                <Kpi label="Registrados" value={e.completo_gate || 0}
+                <Kpi label="Registrados"
+                     ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0}
                      sub={`${c.visita_a_registro || 0}% de las visitas`}
                      icon={Users} colorClass="text-indigo-400" />
-                <Kpi label="Dieron play" value={e.dio_play || 0}
+                <Kpi label="Dieron play"
+                     ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0}
                      sub={`${c.registro_a_play || 0}% de los registrados`}
                      icon={PlayCircle} colorClass="text-violet-400" />
-                <Kpi label="Permanencia media" value={fmtDuracion(p.mediana_segundos)}
+                <Kpi label="Permanencia media"
+                     ayuda="Cuánto tiempo se queda la persona típica en la página (mediana: la mitad se queda menos y la mitad más). El promedio se distorsiona con quien deja la pestaña abierta." value={fmtDuracion(p.mediana_segundos)}
                      sub={`promedio ${fmtDuracion(p.promedio_segundos)}`}
                      icon={Timer} colorClass="text-emerald-400" />
             </div>
@@ -182,12 +193,12 @@ const WorkshopLandingView = () => {
                         <h3 className="text-xs font-black uppercase tracking-widest text-white">Embudo de la grabación</h3>
                     </div>
                     <div className="space-y-4">
-                        <PasoEmbudo label="Entraron" valor={visitas} base={visitas} pctPaso={null} />
-                        <PasoEmbudo label="Abrieron el registro" valor={e.abrio_gate || 0} base={visitas} pctPaso={c.visita_a_gate} />
-                        <PasoEmbudo label="Se registraron" valor={e.completo_gate || 0} base={visitas} pctPaso={c.gate_a_registro} />
-                        <PasoEmbudo label="Dieron play" valor={e.dio_play || 0} base={visitas} pctPaso={c.registro_a_play} />
-                        <PasoEmbudo label="Llegaron a la oferta (en pantalla)" valor={e.vio_oferta || 0} base={visitas} pctPaso={c.play_a_oferta} />
-                        <PasoEmbudo label="Clic en Calendly" valor={e.clic_agenda || 0} base={visitas} pctPaso={c.oferta_a_agenda} />
+                        <PasoEmbudo label="Entraron" ayuda="Todas las visitas a la página. Es la base contra la que se dibujan las barras." valor={visitas} base={visitas} pctPaso={null} />
+                        <PasoEmbudo label="Abrieron el registro" ayuda="Abrieron el formulario de la página (no es Calendly: es el formulario que destraba el video)." valor={e.abrio_gate || 0} base={visitas} pctPaso={c.visita_a_gate} />
+                        <PasoEmbudo label="Se registraron" ayuda="Completaron ese formulario. Ojo: el formulario no pide dato de contacto, así que sirve para medir, no para escribirle a nadie." valor={e.completo_gate || 0} base={visitas} pctPaso={c.gate_a_registro} />
+                        <PasoEmbudo label="Dieron play" ayuda="Arrancaron el video de la grabación." valor={e.dio_play || 0} base={visitas} pctPaso={c.registro_a_play} />
+                        <PasoEmbudo label="Llegaron a la oferta (en pantalla)" ayuda="Siguieron en la página hasta el momento del video donde aparece la oferta." valor={e.vio_oferta || 0} base={visitas} pctPaso={c.play_a_oferta} />
+                        <PasoEmbudo label="Clic en Calendly" ayuda="Hicieron clic en el botón para agendar la llamada. Es el paso que después se convierte en agenda." valor={e.clic_agenda || 0} base={visitas} pctPaso={c.oferta_a_agenda} />
                     </div>
                     <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
                         El porcentaje es respecto del paso anterior. La barra, respecto del total de visitas.
