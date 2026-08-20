@@ -44,8 +44,40 @@ def _sin_espacios(texto):
     return normalizar(texto).replace(' ', '')
 
 
+def _claves_de(texto):
+    """Las formas normalizadas con las que se puede reconocer un texto.
+
+    Para un correo se indexa tambien la parte local, que es lo que hace que
+    'jeancarlo@thelearnation.com', 'jeancarlo@gmail.com', 'jeancarlo' y
+    'Jean Carlo' terminen todos en la misma clave 'jeancarlo'.
+    """
+    claves = {normalizar(texto), _sin_espacios(texto)}
+    if '@' in str(texto):
+        local = str(texto).split('@')[0]
+        claves |= {normalizar(local), _sin_espacios(local)}
+    return {c for c in claves if c}
+
+
+def _indice_historico():
+    """{clave normalizada -> nombre} del diccionario de gente sin usuario.
+
+    Se indexa por clave exacta (incluida la parte local de cada correo y el
+    propio nombre sin espacios) en vez de compararlo por substring: asi las
+    variantes de una misma persona colapsan en un solo nombre aunque no tenga
+    usuario en el sistema, que es el caso de los closers que ya no estan.
+    """
+    indice = {}
+    for nombre, valores in MAPEO_HISTORICO.items():
+        for clave in _claves_de(nombre):
+            indice.setdefault(clave, nombre)
+        for valor in valores:
+            for clave in _claves_de(valor):
+                indice.setdefault(clave, nombre)
+    return indice
+
+
 def _indice():
-    """{clave normalizada -> username} de los closers reales del sistema.
+    """{clave normalizada -> nombre canonico} de todos los closers reconocibles.
 
     Se cachea en `g` porque `resolver_nombre_closer` se llama una vez por venta
     dentro de bucles de miles de filas: sin cache serian miles de consultas.
@@ -57,10 +89,9 @@ def _indice():
 
     indice = {}
 
-    def registrar(clave, username):
-        clave = (clave or '').strip()
-        if clave:
-            indice.setdefault(clave, username)
+    def registrar(claves, nombre):
+        for clave in claves:
+            indice.setdefault(clave, nombre)
 
     # Los closers primero: si un admin comparte correo con un closer, gana el closer.
     usuarios = (User.query.filter_by(role='closer').all()
@@ -68,16 +99,17 @@ def _indice():
     for u in usuarios:
         if not u.username:
             continue
-        registrar(normalizar(u.username), u.username)
-        registrar(_sin_espacios(u.username), u.username)
+        registrar(_claves_de(u.username), u.username)
         if u.email:
-            registrar(normalizar(u.email), u.username)
-            registrar(_sin_espacios(u.email.split('@')[0]), u.username)
+            registrar(_claves_de(u.email), u.username)
 
     for alias in CloserAlias.query.all():
         if alias.user and alias.alias_name:
-            registrar(normalizar(alias.alias_name), alias.user.username)
-            registrar(_sin_espacios(alias.alias_name), alias.user.username)
+            registrar(_claves_de(alias.alias_name), alias.user.username)
+
+    # El diccionario historico va ultimo: los datos reales del sistema mandan.
+    for clave, nombre in _indice_historico().items():
+        indice.setdefault(clave, nombre)
 
     if has_app_context():
         g._indice_closers = indice
@@ -92,37 +124,52 @@ def resolver_nombre_closer(email_o_nombre):
     crudo = str(email_o_nombre).strip()
     indice = _indice()
 
-    # 1. Coincidencia exacta (normalizada) contra usuario, correo o alias
-    for clave in (normalizar(crudo), _sin_espacios(crudo)):
+    # 1. Coincidencia exacta contra usuario, correo, alias o diccionario historico
+    for clave in _claves_de(crudo):
         if clave in indice:
             return indice[clave]
 
-    # 2. Si es un correo, probar tambien con la parte local ('jeancarlo@x' -> 'jeancarlo')
-    if '@' in crudo:
-        local = crudo.split('@')[0]
-        for clave in (normalizar(local), _sin_espacios(local)):
-            if clave in indice:
-                return indice[clave]
-
-    # 3. Diccionario historico (gente sin usuario en el sistema)
+    # 2. Substring del diccionario historico, para correos con nombre y apellido
+    #    ('rafael.perez@...' no coincide exacto con 'rafael' pero es la misma persona)
     minusculas = crudo.lower()
     for nombre, valores in MAPEO_HISTORICO.items():
         for valor in valores:
             if valor in minusculas:
                 return nombre
 
-    # 4. Ultimo recurso: presentar el texto crudo lo mejor posible
+    # 3. Ultimo recurso: presentar el texto crudo lo mejor posible
     if '@' in crudo:
         return crudo.split('@')[0].replace('.', ' ').title()
     return crudo.title()
 
 
 def closers_conocidos():
-    """Nombres de los closers del sistema, para ofrecerlos siempre en el filtro.
+    """Todos los closers que se pueden elegir en el filtro, sin importar el rango.
 
-    Sin esto, el desplegable solo lista a quienes tienen ventas dentro del rango
-    elegido — justo lo que impide seleccionar a alguien ANTES de ver sus ventas.
+    Son dos fuentes, y hacen falta las dos:
+
+      · Los usuarios con rol closer — incluye a los que todavia no vendieron.
+      · Los que aparecen en el historial de ventas (DISTINCT sobre
+        `email_vendedor`, resuelto a nombre canonico) — incluye a quien ya no
+        tiene usuario, o lo tiene con otro rol, pero vendio en su momento.
+
+    Sin la segunda, alguien que dejo de ser closer desaparecia del filtro y no
+    habia forma de exportar sus ventas historicas. Sin ninguna de las dos, el
+    desplegable solo listaba a quien tuviera ventas dentro del rango elegido, que
+    es justo lo que impide seleccionar a alguien ANTES de ver sus ventas.
     """
     from app.models import User
+    from app.models.financial import FinancialSale
+    from app import db
 
-    return sorted({u.username for u in User.query.filter_by(role='closer').all() if u.username})
+    nombres = {u.username for u in User.query.filter_by(role='closer').all() if u.username}
+
+    vendedores = db.session.query(FinancialSale.email_vendedor).distinct().all()
+    for (valor,) in vendedores:
+        if not valor or not str(valor).strip():
+            continue
+        nombre = resolver_nombre_closer(valor)
+        if nombre and nombre != SIN_CLOSER:
+            nombres.add(nombre)
+
+    return sorted(nombres)
