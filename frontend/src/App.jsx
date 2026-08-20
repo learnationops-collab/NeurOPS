@@ -29,6 +29,7 @@ import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
+import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
@@ -111,6 +112,36 @@ function App() {
                 <ProtectedRoute roles={['operator', 'admin']}>
                   <MainLayout>
                     <OperationsSettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Registro de Agendas y Registro de Ventas: pasaron del panel de admin al
+                de operaciones el 20/ago/2026. El admin conserva el acceso por URL. */}
+            <Route
+              path="/ops/agendas"
+              element={
+                <ProtectedRoute roles={['operator', 'admin']}>
+                  <MainLayout>
+                    {/* Estas dos vistas están diseñadas sobre fondo oscuro (venían
+                        embebidas en el hub de admin, que lo aportaba). Fuera de ahí
+                        necesitan su propia superficie o quedan con texto blanco sobre
+                        el fondo claro del tema por defecto. */}
+                    <div className="min-h-screen bg-slate-950 text-slate-200">
+                      <FinancialAgendasPage />
+                    </div>
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ops/ventas"
+              element={
+                <ProtectedRoute roles={['operator', 'admin']}>
+                  <MainLayout>
+                    <div className="min-h-screen bg-slate-950 text-slate-200">
+                      <PublicFinancialSalesPage />
+                    </div>
                   </MainLayout>
                 </ProtectedRoute>
               }
