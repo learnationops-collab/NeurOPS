@@ -552,60 +552,9 @@ def get_stages():
         "order_index": s.order
     } for s in stages]), 200
 
-@bp.route('/agendas', methods=['GET'])
-@role_required(ROLE_SETTER)
-def get_setter_agendas():
-    """Agendas atribuidas a este setter.
-
-    La atribucion es `Appointment.setter_id`, que desde el 20/08/2026 lo pone la
-    fuente del formulario de Calendly (ver `fuente_formulario_service`): todos los
-    formularios cuelgan del mismo evento, asi que el setter dueño de la agenda solo
-    se sabe por el formulario que completo el lead.
-
-    Filtra por estado con ?status=pending|completed|all
-    """
-    from app.models import Appointment
-    from sqlalchemy import or_
-    
-    status_filter = request.args.get('status', 'all')
-    
-    query = Appointment.query.filter(Appointment.setter_id == current_user.id)
-    
-    if status_filter == 'pending':
-        query = query.filter(or_(
-            Appointment.result == None,
-            Appointment.result == '',
-            Appointment.result == 'Pendiente',
-            Appointment.result == 'Contactado',
-            Appointment.result == 'Sin respuesta'
-        ))
-    elif status_filter == 'completed':
-        query = query.filter(
-            Appointment.result != None,
-            Appointment.result != '',
-            Appointment.result != 'Pendiente',
-            Appointment.result != 'Contactado',
-            Appointment.result != 'Sin respuesta'
-        )
-        
-    # Order by start_time descending (newest first)
-    appointments = query.order_by(Appointment.start_time.desc()).all()
-    
-    return jsonify([{
-        "id": a.id,
-        "lead_name": (a.client.full_name or a.client.email) if a.client else "Unknown",
-        "closer_name": a.closer.username if a.closer else "Sin asignar",
-        # start_time puede venir vacio en citas creadas a mano o importadas
-        "start_time": a.start_time.isoformat() if a.start_time else None,
-        "origin": a.origin,
-        "client_id": a.client_id,
-        "phone": a.client.phone if a.client else "",
-        "last_stage": a.last_stage,
-        "result": a.result,
-        "closer_result": a.closer_result,
-        "is_rescheduled": a.is_rescheduled,
-        "type": a.origin or 'Manual'
-    } for a in appointments]), 200
+# GET /agendas y la bandeja de agendas sin dueño viven en app/api/setter_agendas.py:
+# el criterio dejo de ser `Appointment.setter_id` (que tambien llenan las
+# cualificaciones de ManyChat) y paso a ser la FUENTE de la agenda.
 
 @bp.route('/booking-link', methods=['GET'])
 @role_required(ROLE_SETTER)
