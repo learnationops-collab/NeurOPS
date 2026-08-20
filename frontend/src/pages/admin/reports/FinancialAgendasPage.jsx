@@ -23,13 +23,15 @@ import {
     RefreshCw,
     Download,
     Check,
-    X
+    X,
+    Layers
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
+import AgendasBulkEditModal from './AgendasBulkEditModal';
 import { useAuth } from '../../../contexts/AuthContext';
 
 
@@ -492,6 +494,10 @@ const FinancialAgendasPage = () => {
         created_at: ''
     });
 
+    // Selección múltiple para modificaciones masivas
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkModal, setShowBulkModal] = useState(false);
+
     // Estados para exportación de clientes potenciales
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportLimit, setExportLimit] = useState(1000);
@@ -684,6 +690,41 @@ const FinancialAgendasPage = () => {
         encargadoTriage ? `Call Confirmer: ${encargadoTriage}` : null
     ].filter(Boolean);
 
+    // Parámetros de filtro tal cual los espera el backend. Se reutilizan en el GET del
+    // tablero y en el modo "aplicar a todo el filtro" de la edición masiva, para que
+    // ambos operen exactamente sobre el mismo recorte.
+    const filterParams = {
+        search: searchTerm,
+        start_date: startDate,
+        end_date: endDate,
+        estado: estado,
+        closer: closer,
+        fuente: fuente,
+        encargado_triage: encargadoTriage,
+        date_filter_by: dateFilterBy,
+        closer_result: closer_result
+    };
+
+    const toggleSelected = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const allVisibleSelected = agendas.length > 0 && agendas.every(a => selectedIds.includes(a.id));
+
+    const toggleSelectAllVisible = () => {
+        setSelectedIds(allVisibleSelected ? [] : agendas.map(a => a.id));
+    };
+
+    const handleBulkDone = (result) => {
+        setShowBulkModal(false);
+        setSelectedIds([]);
+        fetchAgendas(1);
+        const sincronizadas = result?.appointments_synced
+            ? ` (${result.appointments_synced} cita(s) sincronizada(s))`
+            : '';
+        alert(`${result?.updated ?? 0} agenda(s) actualizada(s) de ${result?.matched ?? 0} coincidencia(s)${sincronizadas}`);
+    };
+
     const applyDatePreset = (preset) => {
         const today = new Date();
         const todayStr = toLocalDateString(today);
@@ -758,19 +799,7 @@ const FinancialAgendasPage = () => {
         try {
             setError(null);
             const response = await api.get('/public/financial-agendas', {
-                params: {
-                    page: pageToFetch,
-                    limit: 10,
-                    search: searchTerm,
-                    start_date: startDate,
-                    end_date: endDate,
-                    estado: estado,
-                    closer: closer,
-                    fuente: fuente,
-                    encargado_triage: encargadoTriage,
-                    date_filter_by: dateFilterBy,
-                    closer_result: closer_result
-                }
+                params: { page: pageToFetch, limit: 10, ...filterParams }
             });
             const resData = response.data;
             const newAgendas = resData.data || [];
@@ -811,8 +840,11 @@ const FinancialAgendasPage = () => {
         }
     };
 
-    // Búsqueda con debounce
+    // Búsqueda con debounce. Se limpia la selección: los ids tildados pueden haber
+    // quedado fuera del recorte nuevo, y aplicarles un cambio masivo sin que estén a
+    // la vista sería una edición a ciegas.
     useEffect(() => {
+        setSelectedIds([]);
         const delayDebounceFn = setTimeout(() => {
             fetchAgendas(1);
         }, 300);
@@ -1127,6 +1159,28 @@ const FinancialAgendasPage = () => {
                         Historial de Agendas
                     </h3>
                     
+                    <div className="flex items-center gap-3 flex-wrap">
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={() => setSelectedIds([])}
+                            className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            Limpiar selección ({selectedIds.length})
+                        </button>
+                    )}
+
+                    <button
+                        onClick={() => setShowBulkModal(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer"
+                        title="Aplicar un mismo valor a varias agendas a la vez"
+                    >
+                        <Layers className="w-4 h-4" />
+                        <span>
+                            Modificación Masiva
+                            {selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                        </span>
+                    </button>
+
                     <button
                         onClick={() => setShowExportModal(true)}
                         disabled={exporting}
@@ -1135,6 +1189,7 @@ const FinancialAgendasPage = () => {
                         <Download className="w-4 h-4" />
                         <span>{exporting ? 'Exportando...' : 'Exportar Clientes Potenciales'}</span>
                     </button>
+                    </div>
                 </div>
 
                 {loading && !syncing ? (
@@ -1148,6 +1203,15 @@ const FinancialAgendasPage = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-base">
+                                        <th className="py-4 pl-4 pr-2 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={allVisibleSelected}
+                                                onChange={toggleSelectAllVisible}
+                                                className="w-4 h-4 accent-indigo-500 cursor-pointer align-middle"
+                                                title="Seleccionar todas las agendas cargadas"
+                                            />
+                                        </th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Creación</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Reunión</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
@@ -1161,7 +1225,15 @@ const FinancialAgendasPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-base/50">
                                     {agendas.map((agenda) => (
-                                        <tr key={agenda.id} className={`group hover:bg-white/5 transition-colors ${agenda.has_sale ? 'bg-emerald-500/[0.02]' : ''}`}>
+                                        <tr key={agenda.id} className={`group hover:bg-white/5 transition-colors ${selectedIds.includes(agenda.id) ? 'bg-indigo-500/[0.07]' : agenda.has_sale ? 'bg-emerald-500/[0.02]' : ''}`}>
+                                            <td className="py-4 pl-4 pr-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(agenda.id)}
+                                                    onChange={() => toggleSelected(agenda.id)}
+                                                    className="w-4 h-4 accent-indigo-500 cursor-pointer align-middle"
+                                                />
+                                            </td>
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
@@ -1407,7 +1479,7 @@ const FinancialAgendasPage = () => {
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="10" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>
@@ -1429,6 +1501,18 @@ const FinancialAgendasPage = () => {
                     </div>
                 )}
             </Card>
+
+            {/* Panel de Modificación Masiva */}
+            {showBulkModal && (
+                <AgendasBulkEditModal
+                    selectedIds={selectedIds}
+                    totalFiltradas={totalAgendados}
+                    filterParams={filterParams}
+                    filtrosActivos={activeExportFilters}
+                    onClose={() => setShowBulkModal(false)}
+                    onDone={handleBulkDone}
+                />
+            )}
 
             {/* Modal de Edición de Agenda */}
             {editingAgenda && (

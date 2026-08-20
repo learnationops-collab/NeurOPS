@@ -755,16 +755,32 @@ class BookingService:
             if c_user:
                 closer_name = c_user.username
                 
-        setter_name = 'Sin asignar'
+        setter_name = None
         if appt.setter_id:
             s_user = User.query.get(appt.setter_id)
             if s_user:
                 setter_name = s_user.username
-                
+
+        # `FinancialAgenda.nombre` es la columna "Fuente" del tablero de agendas, no un campo
+        # exclusivo del setter: para las agendas que entran por n8n vale 'workshop',
+        # 'workshop landing', etc. Antes esto se escribia siempre con el nombre del setter, y
+        # como el embudo del workshop no tiene setter quedaba en 'Sin asignar' — borrando la
+        # fuente real cada vez que el closer o el confirmer tocaban la cita (y sacando esas
+        # agendas del conteo del workshop). Ahora solo se pisa cuando hay un setter de verdad;
+        # si no, se conserva lo que ya tenia la agenda y, en ultimo caso, se usa appt.origin,
+        # que es donde sync_financial_agenda_to_appointment guarda la fuente original.
+        fuente_actual = (agenda.nombre or '').strip() if agenda else ''
+        if setter_name:
+            fuente = setter_name
+        elif fuente_actual and fuente_actual.lower() != 'sin asignar':
+            fuente = fuente_actual
+        else:
+            fuente = (appt.origin or '').strip() or fuente_actual or 'Sin asignar'
+
         if not agenda:
             # Crear nueva agenda financiera si no existe
             agenda = FinancialAgenda(
-                nombre=setter_name,
+                nombre=fuente,
                 lead=client.full_name or 'Desconocido',
                 closer=closer_name,
                 fecha_meet=appt.start_time.isoformat(),
@@ -774,12 +790,12 @@ class BookingService:
                 whatsapp=client.phone or 'N/A',
                 mail=client.email or 'N/A',
                 estado=mapped_state,
-                raw_data={"created_by_sync": True}
+                raw_data={"created_by_sync": True, "fuente": fuente}
             )
             db.session.add(agenda)
         else:
             # Actualizar datos de existente
-            agenda.nombre = setter_name
+            agenda.nombre = fuente
             agenda.closer = closer_name
             agenda.estado = mapped_state
             agenda.date = appt.start_time
