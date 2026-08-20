@@ -1,5 +1,7 @@
-from flask import request, jsonify
+from flask import request, jsonify, current_app
+from flask_login import login_required
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
+from app.decorators import admin_required
 from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func, case
@@ -876,12 +878,41 @@ def resend_financial_sale_webhook(sale_id):
         current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
         return jsonify({"error": str(e)}), 500
 
+# Tope de filas que se empujan a Google Sheets en una sola tanda. Cada llamada a
+# `update_in_sheets` puede tardar hasta 30s, asi que un lote grande colgaria la
+# request: por encima de esto se actualiza la base y se avisa que el sheet quedo
+# pendiente. La sincronizacion destructiva Sheets -> base esta deshabilitada
+# (`sync_from_sheets` con force=False), asi que el sheet no pisa lo corregido aca.
+LIMITE_SHEETS_LOTE = 50
+
+
 @bp.route('/public/financial-sales/bulk-update', methods=['POST'])
+@login_required
+@admin_required
 def bulk_update_financial_sales():
     # Realiza la actualizacion de multiples ventas en base de datos local y Google Sheets
     data = request.get_json() or {}
     sale_ids = data.get('sale_ids', [])
-    
+    aplicar_filtros = bool(data.get('apply_filters'))
+    dry_run = bool(data.get('dry_run'))
+
+    # Modo "todo el filtro": se reutiliza la misma vista que alimenta la tabla en
+    # vez de reimplementar sus filtros. Varios (closer, fuente, sin atribucion) no
+    # son SQL — se resuelven en memoria despues de correr la atribucion contra las
+    # agendas — asi que duplicarlos arriesgaria que el lote toque un recorte
+    # distinto al que el usuario esta viendo. Los filtros viajan en la query string.
+    if aplicar_filtros and not sale_ids:
+        try:
+            respuesta = get_financial_sales()
+            cuerpo = respuesta[0] if isinstance(respuesta, tuple) else respuesta
+            recorte = cuerpo.get_json()
+            if isinstance(recorte, dict):
+                recorte = recorte.get('data') or []
+            sale_ids = [v['id'] for v in recorte if v.get('id') is not None]
+        except Exception as e:
+            current_app.logger.error(f"[BULK VENTAS] No se pudo resolver el recorte filtrado: {e}")
+            return jsonify({"error": "No se pudo resolver el recorte filtrado"}), 500
+
     if not sale_ids:
         return jsonify({"error": "No se proporcionaron IDs de ventas"}), 400
         
@@ -898,7 +929,13 @@ def bulk_update_financial_sales():
     sales = FinancialSale.query.filter(FinancialSale.id.in_(sale_ids)).all()
     if not sales:
         return jsonify({"error": "No se encontraron ventas para actualizar"}), 404
-        
+
+    if dry_run:
+        return jsonify({"matched": len(sales), "updated_count": 0, "dry_run": True}), 200
+
+    # Con lotes grandes se omite el empuje al sheet para no colgar la request
+    empujar_a_sheets = len(sales) <= LIMITE_SHEETS_LOTE
+
     updated_count = 0
     from app.services.sheets_service import SheetsService
     
@@ -938,7 +975,7 @@ def bulk_update_financial_sales():
                 
             updated_count += 1
             
-            if sale.marca_temporal:
+            if sale.marca_temporal and empujar_a_sheets:
                 update_payload = {
                     "email_vendedor": sale.email_vendedor,
                     "nombre_cliente": sale.nombre_cliente,
@@ -956,7 +993,15 @@ def bulk_update_financial_sales():
                 SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
                 
         db.session.commit()
-        return jsonify({"message": f"{updated_count} ventas actualizadas con éxito", "updated_count": updated_count}), 200
+        mensaje = f"{updated_count} ventas actualizadas con éxito"
+        if not empujar_a_sheets:
+            mensaje += f" (más de {LIMITE_SHEETS_LOTE}: no se propagaron a Google Sheets)"
+        return jsonify({
+            "message": mensaje,
+            "updated_count": updated_count,
+            "matched": len(sales),
+            "sheets_synced": empujar_a_sheets
+        }), 200
         
     except Exception as e:
         db.session.rollback()

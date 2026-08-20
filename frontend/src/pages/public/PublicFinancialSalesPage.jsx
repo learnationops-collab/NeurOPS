@@ -207,9 +207,15 @@ const PublicFinancialSalesPage = () => {
     const [bulkEditValue, setBulkEditValue] = useState('');
     const [bulkEditValueCustom, setBulkEditValueCustom] = useState(false);
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    // Alcance de la edición masiva: las tildadas o todo el recorte filtrado
+    const [bulkScope, setBulkScope] = useState('seleccion');
+    const [bulkConfirm, setBulkConfirm] = useState('');
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
+    // Cantidad de ventas del recorte filtrado (la devuelve el backend). Se usa para
+    // decir cuántas tocaría la edición masiva en modo "todo el filtro".
+    const [totalSalesCount, setTotalSalesCount] = useState(0);
     const [totalSalesAmount, setTotalSalesAmount] = useState(0);
     const [totalSalesAmountBruto, setTotalSalesAmountBruto] = useState(0);
     const [sourcesBreakdown, setSourcesBreakdown] = useState([]);
@@ -374,6 +380,7 @@ const PublicFinancialSalesPage = () => {
             setPage(pageToFetch);
             
             // Atribuir valores agregados retornados del backend
+            setTotalSalesCount(res.data.total || 0);
             setTotalSalesAmount(res.data.total_monto || 0);
             setTotalSalesAmountBruto(res.data.total_monto_bruto || 0);
             setSourcesBreakdown(res.data.sources_breakdown || []);
@@ -967,8 +974,37 @@ const PublicFinancialSalesPage = () => {
         }
     };
 
+    // Filtros tal cual los espera el backend. Se reutilizan en el GET, en la
+    // exportación y en el modo "todo el filtro" de la edición masiva, para que los
+    // tres operen exactamente sobre el mismo recorte.
+    const filtrosActuales = () => ({
+        search: searchTerm,
+        start_date: startDate,
+        end_date: endDate,
+        programa: programa,
+        tipo_pago_simple: tipoPagoSimple,
+        metodo_pago: metodoPago,
+        closer: closer,
+        source: source,
+        sin_atribucion: sinAtribucion
+    });
+
+    const bulkPorFiltro = bulkScope === 'filtro';
+    const bulkConfirmOk = !bulkPorFiltro || bulkConfirm.trim().toUpperCase() === 'APLICAR';
+
+    const cerrarBulkModal = () => {
+        setShowBulkEditModal(false);
+        setBulkEditField('');
+        setBulkEditValue('');
+        setBulkEditValueCustom(false);
+        setBulkConfirm('');
+    };
+
     const handleBulkUpdate = async () => {
-        if (selectedSaleIds.length === 0) return;
+        if (!bulkPorFiltro && selectedSaleIds.length === 0) {
+            toast.error('Seleccioná ventas o cambiá el alcance a "todo el filtro"');
+            return;
+        }
         if (!bulkEditField) {
             toast.error('Selecciona un campo para actualizar');
             return;
@@ -977,25 +1013,29 @@ const PublicFinancialSalesPage = () => {
             toast.error('Especifica un valor para la modificación masiva');
             return;
         }
-        
+        if (!bulkConfirmOk) {
+            toast.error('Escribí APLICAR para confirmar el cambio sobre todo el filtro');
+            return;
+        }
+
         setBulkUpdating(true);
         const toastId = toast.loading('Actualizando ventas en lote...');
         try {
-            const payload = {
-                sale_ids: selectedSaleIds,
-                [bulkEditField]: bulkEditValue
-            };
-            const res = await api.post('/public/financial-sales/bulk-update', payload);
+            const payload = bulkPorFiltro
+                ? { apply_filters: true, [bulkEditField]: bulkEditValue }
+                : { sale_ids: selectedSaleIds, [bulkEditField]: bulkEditValue };
+            // En modo "todo el filtro" los filtros viajan en la query string, igual
+            // que en el GET que alimenta la tabla.
+            const res = await api.post('/public/financial-sales/bulk-update', payload, {
+                params: bulkPorFiltro ? filtrosActuales() : undefined
+            });
             toast.success(res.data.message || 'Actualización masiva completada', { id: toastId });
-            
+
             setSelectedSaleIds([]);
-            setShowBulkEditModal(false);
-            setBulkEditField('');
-            setBulkEditValue('');
-            setBulkEditValueCustom(false);
+            cerrarBulkModal();
             fetchSales(1);
         } catch (error) {
-            toast.error('Error al realizar la actualización masiva', { id: toastId });
+            toast.error(error.response?.data?.error || 'Error al realizar la actualización masiva', { id: toastId });
             console.error(error);
         } finally {
             setBulkUpdating(false);
@@ -1282,6 +1322,25 @@ const PublicFinancialSalesPage = () => {
                     >
                         <Users className="w-4 h-4" />
                         <span>{sinAtribucion ? 'Ver Todas' : 'Atribuir (Sin Agenda)'}</span>
+                    </button>
+
+                    {/* Antes este botón solo existía dentro de la barra que aparece al tildar
+                        filas, así que no había forma de descubrir la edición masiva sin saber
+                        de antemano que estaba ahí. Ahora vive con el resto de las acciones. */}
+                    <button
+                        onClick={() => {
+                            setBulkScope(selectedSaleIds.length > 0 ? 'seleccion' : 'filtro');
+                            setBulkConfirm('');
+                            setShowBulkEditModal(true);
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
+                        title="Aplicar un mismo valor a varias ventas a la vez"
+                    >
+                        <Edit2 className="w-4 h-4" />
+                        <span>
+                            Modificación Masiva
+                            {selectedSaleIds.length > 0 ? ` (${selectedSaleIds.length})` : ''}
+                        </span>
                     </button>
 
                     <button
@@ -2752,8 +2811,47 @@ const PublicFinancialSalesPage = () => {
                                 Modificación Masiva
                             </h2>
                             <p className="text-xs text-slate-400 mt-1">
-                                Estás modificando {selectedSaleIds.length} {selectedSaleIds.length === 1 ? 'venta seleccionada' : 'ventas seleccionadas'}.
+                                Aplicá un mismo valor a varias ventas de una sola vez.
                             </p>
+                        </div>
+
+                        {/* Alcance: las tildadas o todo el recorte filtrado */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">¿A cuáles se aplica?</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    disabled={selectedSaleIds.length === 0}
+                                    onClick={() => setBulkScope('seleccion')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                                        bulkScope === 'seleccion'
+                                            ? 'bg-indigo-600/20 border-indigo-500/40 text-white'
+                                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    <span className="block text-[9px] font-black uppercase tracking-widest">Seleccionadas</span>
+                                    <span className="block text-2xl font-black italic tracking-tighter">{selectedSaleIds.length}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBulkScope('filtro')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                        bulkScope === 'filtro'
+                                            ? 'bg-amber-600/20 border-amber-500/40 text-white'
+                                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                    }`}
+                                >
+                                    <span className="block text-[9px] font-black uppercase tracking-widest">Todo el filtro</span>
+                                    <span className="block text-2xl font-black italic tracking-tighter">{totalSalesCount}</span>
+                                </button>
+                            </div>
+                            {bulkPorFiltro && (
+                                <p className="text-[10px] text-amber-300/80 font-semibold bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                                    Se aplica a todas las ventas del recorte actual, incluidas las que todavía
+                                    no se cargaron en pantalla. Los lotes de más de 50 ventas no se propagan a
+                                    Google Sheets (quedan corregidas en NeurOPS).
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-4">
@@ -2918,7 +3016,11 @@ const PublicFinancialSalesPage = () => {
                                                 className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                             >
                                                 <option value="">Seleccionar closer...</option>
-                                                <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
+                                                {/* Antes acá solo estaba Jean Carlo escrito a mano. Se usan los
+                                                    mismos closers que ofrece el filtro, resueltos a nombre único. */}
+                                                {uniqueClosers.filter(c => c !== 'Sin Closer').map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
                                                 <option value="otro">Otro / Especificar email...</option>
                                             </select>
                                             {bulkEditValueCustom && (
@@ -2950,9 +3052,12 @@ const PublicFinancialSalesPage = () => {
                                                 className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                             >
                                                 <option value="">Seleccionar setter...</option>
-                                                <option value="workshop">workshop</option>
-                                                <option value="vsl">vsl</option>
-                                                <option value="Elias">Elias</option>
+                                                {/* Antes estaban escritas a mano workshop/vsl/Elias. Se usan las
+                                                    fuentes que existen en el recorte, que ya incluyen el catálogo
+                                                    oficial (workshop, workshop_landing, vsl, setting, y los setters). */}
+                                                {uniqueSetters.filter(x => x !== 'Sin Setter').map(x => (
+                                                    <option key={x} value={x}>{x}</option>
+                                                ))}
                                                 <option value="otro">Otro / Especificar nuevo...</option>
                                             </select>
                                             {bulkEditValueCustom && (
@@ -2970,15 +3075,27 @@ const PublicFinancialSalesPage = () => {
                             )}
                         </div>
 
+                        {/* El modo "todo el filtro" puede tocar cientos de ventas de una vez,
+                            así que pide confirmación escrita antes de habilitar el botón. */}
+                        {bulkPorFiltro && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">
+                                    Escribí APLICAR para confirmar
+                                </label>
+                                <input
+                                    type="text"
+                                    value={bulkConfirm}
+                                    onChange={e => setBulkConfirm(e.target.value)}
+                                    placeholder="APLICAR"
+                                    className="w-full bg-slate-950 border border-amber-700/40 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all font-black tracking-widest uppercase"
+                                />
+                            </div>
+                        )}
+
                         <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setShowBulkEditModal(false);
-                                    setBulkEditField('');
-                                    setBulkEditValue('');
-                                    setBulkEditValueCustom(false);
-                                }}
+                                onClick={cerrarBulkModal}
                                 disabled={bulkUpdating}
                                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
                             >
@@ -2986,10 +3103,10 @@ const PublicFinancialSalesPage = () => {
                             </button>
                             <button
                                 onClick={handleBulkUpdate}
-                                disabled={bulkUpdating || !bulkEditField || (bulkEditValue === '' && !bulkEditValueCustom)}
+                                disabled={bulkUpdating || !bulkEditField || (bulkEditValue === '' && !bulkEditValueCustom) || !bulkConfirmOk || (!bulkPorFiltro && selectedSaleIds.length === 0)}
                                 className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 disabled:bg-indigo-800 disabled:opacity-50"
                             >
-                                {bulkUpdating ? 'Actualizando...' : 'Aplicar Cambios'}
+                                {bulkUpdating ? 'Actualizando...' : `Aplicar a ${bulkPorFiltro ? totalSalesCount : selectedSaleIds.length}`}
                             </button>
                         </div>
                     </div>
