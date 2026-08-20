@@ -2848,8 +2848,8 @@ const PublicFinancialSalesPage = () => {
                             {bulkPorFiltro && (
                                 <p className="text-[10px] text-amber-300/80 font-semibold bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
                                     Se aplica a todas las ventas del recorte actual, incluidas las que todavía
-                                    no se cargaron en pantalla. Los lotes de más de 50 ventas no se propagan a
-                                    Google Sheets (quedan corregidas en NeurOPS).
+                                    no se cargaron en pantalla. La corrección queda guardada al instante en
+                                    NeurOPS y Google Sheets se pone al día unos segundos después.
                                 </p>
                             )}
                         </div>

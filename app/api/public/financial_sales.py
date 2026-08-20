@@ -878,12 +878,38 @@ def resend_financial_sale_webhook(sale_id):
         current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Tope de filas que se empujan a Google Sheets en una sola tanda. Cada llamada a
-# `update_in_sheets` puede tardar hasta 30s, asi que un lote grande colgaria la
-# request: por encima de esto se actualiza la base y se avisa que el sheet quedo
-# pendiente. La sincronizacion destructiva Sheets -> base esta deshabilitada
+# Tope de filas que se empujan a Google Sheets por lote. La propagacion corre en
+# segundo plano (ver `_propagar_lote_a_sheets`), asi que no bloquea la respuesta,
+# pero igual se acota para no dejar un hilo golpeando el Apps Script por horas.
+# La sincronizacion destructiva Sheets -> base esta deshabilitada
 # (`sync_from_sheets` con force=False), asi que el sheet no pisa lo corregido aca.
-LIMITE_SHEETS_LOTE = 50
+LIMITE_SHEETS_LOTE = 200
+
+
+def _propagar_lote_a_sheets(app, filas):
+    """Empuja las filas modificadas a Google Sheets fuera de la request.
+
+    Cada `update_in_sheets` es un POST al Apps Script que puede tardar segundos
+    (timeout de 30s). Hacerlo dentro de la request hacia que una edicion masiva de
+    30 ventas superara el timeout de 45s del cliente y el usuario viera un error
+    aunque los datos ya estuvieran guardados. Ahora la base se confirma primero y
+    el sheet se pone al dia despues.
+
+    `filas` son tuplas (marca_temporal, payload) ya materializadas: el hilo no
+    toca la sesion de SQLAlchemy ni objetos del ORM, solo hace HTTP.
+    """
+    import threading
+
+    def _correr():
+        with app.app_context():
+            from app.services.sheets_service import SheetsService
+            for marca_temporal, payload in filas:
+                try:
+                    SheetsService.update_in_sheets("Ventas_DB", marca_temporal, payload)
+                except Exception as e:
+                    app.logger.error(f"[BULK VENTAS] No se pudo propagar {marca_temporal} al sheet: {e}")
+
+    threading.Thread(target=_correr, daemon=True, name='bulk-ventas-sheets').start()
 
 
 @bp.route('/public/financial-sales/bulk-update', methods=['POST'])
@@ -933,11 +959,8 @@ def bulk_update_financial_sales():
     if dry_run:
         return jsonify({"matched": len(sales), "updated_count": 0, "dry_run": True}), 200
 
-    # Con lotes grandes se omite el empuje al sheet para no colgar la request
-    empujar_a_sheets = len(sales) <= LIMITE_SHEETS_LOTE
-
     updated_count = 0
-    from app.services.sheets_service import SheetsService
+    filas_para_sheets = []
     
     # Precalcular atribución de agendas si se va a modificar el setter
     if setter is not None:
@@ -975,8 +998,11 @@ def bulk_update_financial_sales():
                 
             updated_count += 1
             
-            if sale.marca_temporal and empujar_a_sheets:
-                update_payload = {
+            # Se juntan los payloads y se mandan al sheet DESPUES del commit, en
+            # segundo plano: hacerlo acá adentro era lo que hacía que la request
+            # superara el timeout del cliente.
+            if sale.marca_temporal and len(filas_para_sheets) < LIMITE_SHEETS_LOTE:
+                filas_para_sheets.append((sale.marca_temporal, {
                     "email_vendedor": sale.email_vendedor,
                     "nombre_cliente": sale.nombre_cliente,
                     "telefono": sale.telefono,
@@ -989,18 +1015,21 @@ def bulk_update_financial_sales():
                     "instagram": sale.instagram,
                     "setter": sale.setter,
                     "estado": sale.estado
-                }
-                SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
-                
+                }))
+
         db.session.commit()
+
+        if filas_para_sheets:
+            _propagar_lote_a_sheets(current_app._get_current_object(), filas_para_sheets)
+
         mensaje = f"{updated_count} ventas actualizadas con éxito"
-        if not empujar_a_sheets:
-            mensaje += f" (más de {LIMITE_SHEETS_LOTE}: no se propagaron a Google Sheets)"
+        if filas_para_sheets:
+            mensaje += f" · propagando {len(filas_para_sheets)} fila(s) a Google Sheets en segundo plano"
         return jsonify({
             "message": mensaje,
             "updated_count": updated_count,
             "matched": len(sales),
-            "sheets_synced": empujar_a_sheets
+            "sheets_en_segundo_plano": len(filas_para_sheets)
         }), 200
         
     except Exception as e:
