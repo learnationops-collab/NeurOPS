@@ -29,7 +29,7 @@ const UnattributedAgendasSection = ({
                         </span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
-                        Agendas de la fuente Elias que no tienen anuncio asociado. Asigna el anuncio correspondiente para completar la atribución.
+                        Tus agendas que todavía no tienen anuncio asociado. Asigna el anuncio correspondiente para completar la atribución.
                     </p>
                 </div>
                 <button
@@ -50,7 +50,7 @@ const UnattributedAgendasSection = ({
             ) : unattributedAgendas.length === 0 ? (
                 <div className="text-center py-4 text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
                     <Check size={16} />
-                    <span>No hay agendas de Elias pendientes de atribución. ¡Todas cuentan con anuncio asociado!</span>
+                    <span>No tenés agendas pendientes de atribución. ¡Todas cuentan con anuncio asociado!</span>
                 </div>
             ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">

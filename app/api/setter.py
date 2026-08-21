@@ -841,7 +841,7 @@ def get_setter_deck():
             or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
         )
     elif step == 'agendas':
-        # Para agendas, mostrar todas las citas del setter en el periodo seleccionado (incluso procesadas o confirmadas)
+        # Todas las citas de este setter en el periodo, incluso procesadas o confirmadas
         query = Appointment.query
     else:
         query = Appointment.query.filter(
@@ -858,8 +858,20 @@ def get_setter_deck():
         )
         
     if current_user.role != 'admin':
-        query = query.filter_by(setter_id=current_user.id)
-        
+        if step == 'agendas':
+            # Mismo criterio que "Mis Agendas": la FUENTE de la agenda, no
+            # `Appointment.setter_id`. Ese campo tambien lo llenan las
+            # cualificaciones de ManyChat, que crean una cita placeholder sin
+            # agenda real detras y ensuciaban esta lista con leads que no eran
+            # agendas; y al reves, se perdian las agendas cuya fuente es este
+            # setter pero cuya cita quedo sin atribuir.
+            from app.api.setter_agendas import ids_de_citas_del_setter
+            mis_citas = ids_de_citas_del_setter(current_user, start_dt, end_dt)
+            query = query.filter(Appointment.id.in_(mis_citas)) if mis_citas \
+                else query.filter(db.false())
+        else:
+            query = query.filter_by(setter_id=current_user.id)
+
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
     res_list = []
@@ -1631,7 +1643,14 @@ def update_qualified_lead(answer_id):
 @bp.route('/deck/unattributed-agendas', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_unattributed_agendas_for_setter():
-    """Retorna las agendas desatribuidas (fuente Elias y sin anuncio) para el mazo del setter filtradas por el rango de fechas seleccionado."""
+    """Agendas propias sin anuncio asociado, dentro del rango elegido.
+
+    "Propias" = las que tienen la fuente de este setter. Antes esta vista estaba
+    fija en la fuente 'Elias', que era la unica que existia cuando el equipo de
+    setting era una sola persona y todos los links de Calendly apuntaban al mismo
+    evento. Con Elias, Paula e Ivan eso hacia que los tres vieran las agendas de
+    Elias en su propio espacio de trabajo.
+    """
     from app.models import FinancialAgenda, ManychatLead, LeadAnswer, Client
     from datetime import timedelta, datetime
     from sqlalchemy import or_
@@ -1680,12 +1699,16 @@ def get_unattributed_agendas_for_setter():
             return None
         return ig_str.strip().lstrip('@').lower()
 
+    from app.services.fuente_service import normalizar
+    mi_fuente = normalizar(current_user.username)
+
     for agenda in agendas:
-        # Filtrar únicamente fuente "Elias"
-        nombre_val = str(agenda.nombre or '').strip().lower()
+        # Solo las de la fuente de quien esta mirando. Se mira unicamente la
+        # columna `nombre`, que es LA fuente: lo que quedo en `raw_data` es el
+        # valor con el que entro el webhook o el formulario, y si un admin la
+        # corrigio a mano esa correccion tiene que mandar.
         raw = agenda.raw_data or {}
-        fuente_raw = str(raw.get('fuente') or raw.get('fuente_form') or raw.get('setter') or '').strip().lower()
-        if 'elias' not in nombre_val and 'elias' not in fuente_raw:
+        if normalizar(agenda.nombre) != mi_fuente:
             continue
 
         ig_val = agenda.instagram or raw.get('instagram') or raw.get('ig')
