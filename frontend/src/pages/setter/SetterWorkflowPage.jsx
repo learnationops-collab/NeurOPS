@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import SetterCualificacionModal from '../../components/modals/SetterCualificacionModal';
+import AgendaManagerModal from '../../components/modals/AgendaManagerModal';
 import SetterHeader from './components/SetterHeader';
 import SetterCualificacionFilters from './components/SetterCualificacionFilters';
 import UnattributedAgendasSection from './components/UnattributedAgendasSection';
@@ -33,6 +34,11 @@ const SetterWorkflowPage = () => {
     
     // Lead seleccionado para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
+
+    // Detalle de la agenda abierta en el paso "Agendas". El paso de cualificación
+    // usa SetterCualificacionModal; el de agendas no tenía ninguno, así que al
+    // hacer clic se marcaba el mensaje como leído y no se abría nada.
+    const [agendaDetalle, setAgendaDetalle] = useState(null);
 
     // Filtros de fecha y descalificados para cualificacion
     const [dateRange, setDateRange] = useState('today');
@@ -206,6 +212,23 @@ const SetterWorkflowPage = () => {
         }
         setSelectedLead(lead);
         setLeads(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
+        if (activeStep === 'agendas') abrirDetalleAgenda(lead);
+    };
+
+    // El detalle se pide por la AGENDA (el permiso lo da la fuente), no por la
+    // cita: así abre también cuando la cita quedó atribuida a otro o no existe.
+    const abrirDetalleAgenda = async (lead) => {
+        if (!lead.agenda_id) {
+            toast.error('Esta cita no está vinculada a ninguna agenda tuya.');
+            return;
+        }
+        try {
+            const res = await api.get(`/setter/agendas/${lead.agenda_id}/detalle`);
+            setAgendaDetalle(res.data);
+        } catch (err) {
+            console.error('Error al abrir el detalle de la agenda:', err);
+            toast.error(err.response?.data?.error || 'No se pudo abrir el detalle de la agenda');
+        }
     };
 
     // Procesar acción individual (Cualificar / Descualificar)
@@ -531,6 +554,15 @@ const SetterWorkflowPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal del lead en el paso de agendas */}
+            <AgendaManagerModal
+                isOpen={agendaDetalle !== null}
+                appointment={agendaDetalle}
+                onClose={() => { setAgendaDetalle(null); setSelectedLead(null); }}
+                onSuccess={() => { setAgendaDetalle(null); setSelectedLead(null); fetchLeads(); }}
+                mode="setter"
+            />
 
             {/* Modal de Detalle de Lead (para cualificación) */}
             <SetterCualificacionModal 

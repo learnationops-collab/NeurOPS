@@ -71,18 +71,22 @@ def agendas_del_setter(user, desde=None, hasta=None):
     return query.order_by(FinancialAgenda.date.desc()).limit(500).all()
 
 
-def ids_de_citas_del_setter(user, desde=None, hasta=None):
-    """Ids de Appointment que corresponden a agendas cuya fuente es `user`.
+def agendas_por_cita(user, desde=None, hasta=None):
+    """{id de Appointment -> id de FinancialAgenda} para las agendas de `user`.
 
     No se usa `Appointment.setter_id` porque ese campo tambien lo llenan las
     cualificaciones de ManyChat, que crean una cita placeholder sin agenda real
     detras. Se resuelve en tres consultas (agendas, clientes, citas) y el cruce
     final se hace en Python: hacerlo agenda por agenda serian dos consultas por
     fila.
+
+    Devuelve el mapa y no solo los ids porque el mazo necesita saber **de que
+    agenda** es cada cita: es lo que le permite abrir el detalle del lead, que
+    se pide por agenda.
     """
     agendas = agendas_del_setter(user, desde, hasta)
     if not agendas:
-        return []
+        return {}
 
     condiciones = []
     for a in agendas:
@@ -93,11 +97,11 @@ def ids_de_citas_del_setter(user, desde=None, hasta=None):
         if mail and '@' in mail:
             condiciones.append(func.lower(Client.email) == mail)
     if not condiciones:
-        return []
+        return {}
 
     clientes = Client.query.filter(or_(*condiciones)).all()
     if not clientes:
-        return []
+        return {}
 
     # Indice de cliente por sus dos llaves, para cruzar sin volver a la base.
     por_llave = {}
@@ -116,8 +120,7 @@ def ids_de_citas_del_setter(user, desde=None, hasta=None):
     for ap in citas:
         por_cliente.setdefault(ap.client_id, []).append(ap)
 
-    from datetime import timedelta
-    ids = set()
+    mapa = {}
     for a in agendas:
         if not a.date:
             continue
@@ -128,8 +131,12 @@ def ids_de_citas_del_setter(user, desde=None, hasta=None):
             continue
         for ap in por_cliente.get(client_id, []):
             if ap.start_time and abs((ap.start_time - a.date).total_seconds()) <= 12 * 3600:
-                ids.add(ap.id)
-    return sorted(ids)
+                mapa.setdefault(ap.id, a.id)
+    return mapa
+
+
+def ids_de_citas_del_setter(user, desde=None, hasta=None):
+    return list(agendas_por_cita(user, desde, hasta))
 
 
 def _cliente_de(agenda):

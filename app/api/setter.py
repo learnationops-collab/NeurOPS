@@ -857,6 +857,7 @@ def get_setter_deck():
             )
         )
         
+    agenda_de_cita = {}
     if current_user.role != 'admin':
         if step == 'agendas':
             # Mismo criterio que "Mis Agendas": la FUENTE de la agenda, no
@@ -865,9 +866,9 @@ def get_setter_deck():
             # agenda real detras y ensuciaban esta lista con leads que no eran
             # agendas; y al reves, se perdian las agendas cuya fuente es este
             # setter pero cuya cita quedo sin atribuir.
-            from app.api.setter_agendas import ids_de_citas_del_setter
-            mis_citas = ids_de_citas_del_setter(current_user, start_dt, end_dt)
-            query = query.filter(Appointment.id.in_(mis_citas)) if mis_citas \
+            from app.api.setter_agendas import agendas_por_cita
+            agenda_de_cita = agendas_por_cita(current_user, start_dt, end_dt)
+            query = query.filter(Appointment.id.in_(list(agenda_de_cita))) if agenda_de_cita \
                 else query.filter(db.false())
         else:
             query = query.filter_by(setter_id=current_user.id)
@@ -941,6 +942,9 @@ def get_setter_deck():
             "ad_name": ad_obj.name if ad_obj else (a.keyword or "Desatribuido"),
             "setter_notes": a.setter_notes or "",
             "client_id": a.client_id,
+            # Con que agenda se corresponde esta cita: es lo que le permite al
+            # mazo abrir el detalle del lead, que se pide por agenda y no por cita.
+            "agenda_id": agenda_de_cita.get(a.id),
             "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
             "unread_comment": a.client_id in unread_client_ids if (a.client_id and unread_client_ids) else False
         })
