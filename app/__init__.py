@@ -86,6 +86,7 @@ def create_app(config_class=Config):
 
     from app.api.setter import bp as setter_api_bp
     from app.api import setter_agendas  # noqa: F401  (cuelga rutas del mismo blueprint)
+    from app.api import setter_mazo     # noqa: F401  (idem)
     app.register_blueprint(setter_api_bp, url_prefix='/api/setter')
 
     from app.api.google_calendar import bp as google_calendar_bp
