@@ -48,9 +48,88 @@ def _variantes_de_fuente(coincide):
     return [v[0] for v in valores if v[0] is not None and coincide(v[0])]
 
 
-def _mis_variantes():
-    objetivo = normalizar(current_user.username)
+def _mis_variantes(user=None):
+    objetivo = normalizar((user or current_user).username)
     return _variantes_de_fuente(lambda n: normalizar(n) == objetivo)
+
+
+def agendas_del_setter(user, desde=None, hasta=None):
+    """Las FinancialAgenda cuya fuente es `user`, opcionalmente acotadas por fecha.
+
+    Es el unico criterio de "mis agendas" del sistema: lo usan esta pantalla y el
+    paso de agendas del mazo, para que las dos muestren exactamente lo mismo.
+    """
+    variantes = _mis_variantes(user)
+    if not variantes:
+        return []
+    query = FinancialAgenda.query.filter(FinancialAgenda.nombre.in_(variantes))
+    if desde and hasta:
+        query = query.filter(or_(
+            FinancialAgenda.date.between(desde, hasta),
+            FinancialAgenda.created_at.between(desde, hasta),
+        ))
+    return query.order_by(FinancialAgenda.date.desc()).limit(500).all()
+
+
+def ids_de_citas_del_setter(user, desde=None, hasta=None):
+    """Ids de Appointment que corresponden a agendas cuya fuente es `user`.
+
+    No se usa `Appointment.setter_id` porque ese campo tambien lo llenan las
+    cualificaciones de ManyChat, que crean una cita placeholder sin agenda real
+    detras. Se resuelve en tres consultas (agendas, clientes, citas) y el cruce
+    final se hace en Python: hacerlo agenda por agenda serian dos consultas por
+    fila.
+    """
+    agendas = agendas_del_setter(user, desde, hasta)
+    if not agendas:
+        return []
+
+    condiciones = []
+    for a in agendas:
+        ig = (a.instagram or '').strip().lstrip('@').lower()
+        if ig and ig not in ('n/a', ''):
+            condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
+        mail = (a.mail or '').strip().lower()
+        if mail and '@' in mail:
+            condiciones.append(func.lower(Client.email) == mail)
+    if not condiciones:
+        return []
+
+    clientes = Client.query.filter(or_(*condiciones)).all()
+    if not clientes:
+        return []
+
+    # Indice de cliente por sus dos llaves, para cruzar sin volver a la base.
+    por_llave = {}
+    for c in clientes:
+        ig = (c.instagram or '').strip().lstrip('@').lower()
+        if ig:
+            por_llave.setdefault(f'ig:{ig}', c.id)
+        mail = (c.email or '').strip().lower()
+        if mail:
+            por_llave.setdefault(f'mail:{mail}', c.id)
+
+    citas = Appointment.query.filter(
+        Appointment.client_id.in_([c.id for c in clientes])
+    ).all()
+    por_cliente = {}
+    for ap in citas:
+        por_cliente.setdefault(ap.client_id, []).append(ap)
+
+    from datetime import timedelta
+    ids = set()
+    for a in agendas:
+        if not a.date:
+            continue
+        ig = (a.instagram or '').strip().lstrip('@').lower()
+        mail = (a.mail or '').strip().lower()
+        client_id = por_llave.get(f'ig:{ig}') or por_llave.get(f'mail:{mail}')
+        if not client_id:
+            continue
+        for ap in por_cliente.get(client_id, []):
+            if ap.start_time and abs((ap.start_time - a.date).total_seconds()) <= 12 * 3600:
+                ids.add(ap.id)
+    return sorted(ids)
 
 
 def _cliente_de(agenda):
@@ -118,13 +197,7 @@ def get_setter_agendas():
     """
     estado_filtro = request.args.get('status', 'all')
 
-    variantes = _mis_variantes()
-    if not variantes:
-        return jsonify([]), 200
-
-    agendas = FinancialAgenda.query.filter(
-        FinancialAgenda.nombre.in_(variantes)
-    ).order_by(FinancialAgenda.date.desc()).limit(500).all()
+    agendas = agendas_del_setter(current_user)
 
     if estado_filtro == 'pending':
         agendas = [a for a in agendas if (a.estado or '').strip().lower() in ESTADOS_PENDIENTES]
@@ -234,4 +307,76 @@ def reclamar_agenda(agenda_id):
         "fuente": agenda.nombre,
         "cita_actualizada": bool(appt),
         "formulario_vinculado": bool(client),
+    }), 200
+
+
+def _cliente_desde_agenda(agenda):
+    """Crea el Client que le falta a una agenda, con los datos que ya trajo Calendly.
+
+    El chat del lead se ancla en el cliente, que es lo que lo hace compartido con
+    el closer y el triage. Casi todas las agendas ya tienen uno (lo crea el
+    webhook del formulario), pero cuando el formulario no llego la agenda queda
+    sin cliente y el modal se quedaba sin chat. Se crea aca, con el nombre, mail,
+    instagram y telefono que la propia agenda ya tiene.
+    """
+    def _limpio(valor):
+        v = (valor or '').strip()
+        return v if v and v.lower() not in ('n/a', 'none', 'null') else None
+
+    client = Client(
+        full_name=_limpio(agenda.lead) or 'Sin nombre',
+        email=_limpio(agenda.mail),
+        instagram=(_limpio(agenda.instagram) or '').lstrip('@') or None,
+        phone=_limpio(agenda.whatsapp),
+    )
+    db.session.add(client)
+    db.session.commit()
+    logger.info(f"[SETTER AGENDAS] Cliente {client.id} creado desde la agenda {agenda.id}")
+    return client
+
+
+@bp.route('/agendas/<int:agenda_id>/detalle', methods=['GET'])
+@role_required(ROLE_SETTER)
+def detalle_agenda(agenda_id):
+    """Todo lo que el modal del lead necesita para abrirse, sea cual sea el estado.
+
+    Antes el modal se abria pidiendo `GET /closer/appointments/<id>`, y por eso no
+    abria casi nunca para un setter:
+
+      · si la agenda todavia no tenia cita sincronizada no habia id que pedir;
+      · si la tenia pero con `setter_id` de otro (o vacio), ese endpoint devolvia
+        403, porque valida por atribucion de la cita y no por la fuente.
+
+    Aca el permiso lo da la FUENTE de la agenda, que es el criterio del sistema, y
+    la respuesta trae siempre `client_id` para que el chat del lead funcione
+    aunque la cita no exista.
+    """
+    agenda = FinancialAgenda.query.get(agenda_id)
+    if not agenda:
+        return jsonify({"error": "Agenda no encontrada"}), 404
+
+    if normalizar(agenda.nombre) != normalizar(current_user.username):
+        return jsonify({"error": "Esta agenda no es de tu fuente"}), 403
+
+    client = _cliente_de(agenda) or _cliente_desde_agenda(agenda)
+    appt = _cita_de(agenda, client)
+
+    return jsonify({
+        # El modal usa `id` para procesar la cita; sin cita queda en None y la
+        # pantalla muestra el detalle en modo lectura.
+        "id": appt.id if appt else None,
+        "agenda_id": agenda.id,
+        "sin_cita": appt is None,
+        "client_id": client.id,
+        "lead_name": agenda.lead or client.full_name or "Sin nombre",
+        "start_time": (appt.start_time if appt else agenda.date).isoformat()
+                      if (appt and appt.start_time) or agenda.date else None,
+        "last_stage": appt.last_stage if appt else None,
+        "result": (appt.result if appt else None) or agenda.estado,
+        "closer_result": appt.closer_result if appt else None,
+        "with_decision_maker": appt.with_decision_maker if appt else None,
+        "is_rescheduled": appt.is_rescheduled if appt else False,
+        "phone": (agenda.whatsapp if agenda.whatsapp not in (None, 'N/A') else '') or (client.phone or ''),
+        "type": agenda.nombre or (appt.origin if appt else '') or 'Manual',
+        "closer_name": agenda.closer or "Sin asignar",
     }), 200

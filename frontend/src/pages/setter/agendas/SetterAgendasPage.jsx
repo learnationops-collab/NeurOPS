@@ -80,20 +80,16 @@ const SetterAgendasPage = () => {
         return () => window.removeEventListener('keydown', handleKeys);
     }, []);
 
+    // El detalle se pide por la AGENDA, no por la cita: el permiso lo da la fuente
+    // y así el modal abre también cuando todavía no hay cita sincronizada.
     const handleAgendaClick = async (agendaRes) => {
-        // La lista son FinancialAgendas; el detalle trabaja sobre la cita asociada,
-        // que puede no existir si la sincronización todavía no la creó.
-        if (!agendaRes.appointment_id) {
-            toast('Esta agenda todavía no tiene una cita sincronizada para abrir.');
-            return;
-        }
         try {
-            const res = await api.get(`/closer/appointments/${agendaRes.appointment_id}`);
+            const res = await api.get(`/setter/agendas/${agendaRes.id}/detalle`);
             setSelectedAgenda(res.data);
             setIsAgendaModalOpen(true);
         } catch (err) {
             console.error("Error fetching agenda details", err);
-            toast.error('No se pudo abrir el detalle de la agenda');
+            toast.error(err.response?.data?.error || 'No se pudo abrir el detalle de la agenda');
         }
     };
 

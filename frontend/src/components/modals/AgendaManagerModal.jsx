@@ -184,6 +184,11 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
 
     if (!isOpen || !appointment) return null;
 
+    // Una agenda puede no tener cita sincronizada todavía (llega del espacio del
+    // setter, donde la lista son FinancialAgendas). El detalle se muestra igual y
+    // el chat se ancla en el cliente; lo único que no se puede es protocolizar,
+    // porque no hay cita que procesar.
+    const sinCita = !appointment.id;
     const showReschedule = status === 'Reprogramada' || status === 'Primera Agenda' || status === 'Reagendado' || status === '2da call';
 
     return (
@@ -429,7 +434,9 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                     <label className="text-[9px] font-black text-muted tracking-widest ml-1">NOTAS DE LA SESIÓN</label>
                                     <div className="flex-1 min-h-[200px] border border-base rounded-3xl overflow-hidden bg-main/30">
                                         <ErrorBoundary>
-                                            <CommentsSection type="appointment" associatedId={appointment.id} />
+                                            {sinCita
+                                                ? <CommentsSection clientId={appointment.client_id} />
+                                                : <CommentsSection type="appointment" associatedId={appointment.id} />}
                                         </ErrorBoundary>
                                     </div>
                                 </div>
@@ -478,8 +485,10 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                             </div>
 
                                             <div className="space-y-3">
-                                                <label className="text-[9px] font-black text-muted tracking-widest ml-1">OBSERVACIONES HISTÓRICAS</label>
-                                                <div className="h-60 border border-base rounded-3xl overflow-hidden bg-main/30">
+                                                <label className="text-[9px] font-black text-muted tracking-widest ml-1">CHAT DEL LEAD</label>
+                                                {/* Alto suficiente para leer el hilo: con h-60 los destinatarios y el
+                                                    campo de texto no dejaban ver ningun mensaje. */}
+                                                <div className="h-[420px] border border-base rounded-3xl overflow-hidden bg-main/30">
                                                     <ErrorBoundary>
                                                         <CommentsSection clientId={clientData.id} />
                                                     </ErrorBoundary>
@@ -520,11 +529,16 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
 
                 {/* Footer (Only for Gestión) */}
                 {activeTab === 'gestion' && (
-                    <div className="shrink-0 p-8 bg-surface/80 backdrop-blur-xl border-t border-base">
+                    <div className="shrink-0 p-8 bg-surface/80 backdrop-blur-xl border-t border-base space-y-3">
+                        {sinCita && (
+                            <p className="text-[9px] font-black text-amber-500 tracking-widest text-center">
+                                Esta agenda todavía no tiene una llamada sincronizada: podés leer el lead y escribir en el chat, pero no protocolizar.
+                            </p>
+                        )}
                         <Button
                             onClick={handleProcess}
                             loading={submitting}
-                            disabled={!status || (showReschedule && !rescheduleDate)}
+                            disabled={sinCita || !status || (showReschedule && !rescheduleDate)}
                             variant="primary"
                             className="w-full py-6 h-18 text-xs font-black tracking-widest shadow-2xl shadow-primary/30"
                             icon={Check}
