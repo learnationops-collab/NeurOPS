@@ -189,6 +189,13 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
     // el chat se ancla en el cliente; lo único que no se puede es protocolizar,
     // porque no hay cita que procesar.
     const sinCita = !appointment.id;
+
+    // Hay dos hilos distintos: el de la CITA (notas de esa llamada, sin aviso a
+    // nadie) y el del LEAD, anclado en el cliente, que es el compartido con
+    // closer y triage y el único que notifica. El setter no toma notas de
+    // llamada, así que para él siempre es el del lead: si no, escribía en un
+    // hilo que nadie más ve. El closer conserva sus notas de sesión.
+    const chatDelLead = mode === 'setter' || sinCita;
     const showReschedule = status === 'Reprogramada' || status === 'Primera Agenda' || status === 'Reagendado' || status === '2da call';
 
     return (
@@ -431,10 +438,12 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                 </div>
 
                                 <div className="space-y-4 h-full flex flex-col">
-                                    <label className="text-[9px] font-black text-muted tracking-widest ml-1">NOTAS DE LA SESIÓN</label>
+                                    <label className="text-[9px] font-black text-muted tracking-widest ml-1">
+                                        {chatDelLead ? 'CHAT DEL LEAD' : 'NOTAS DE LA SESIÓN'}
+                                    </label>
                                     <div className="flex-1 min-h-[200px] border border-base rounded-3xl overflow-hidden bg-main/30">
                                         <ErrorBoundary>
-                                            {sinCita
+                                            {chatDelLead
                                                 ? <CommentsSection clientId={appointment.client_id} />
                                                 : <CommentsSection type="appointment" associatedId={appointment.id} />}
                                         </ErrorBoundary>
