@@ -364,8 +364,28 @@ h6 {
 }
 
 /* Utilities */
+
+/* --text-main y --text-muted se remapean dentro de .bg-surface para el texto
+   sobre tarjeta. Estos alias guardan el valor de PAGINA (el que corresponde al
+   fondo --bg-app) para que .bg-main pueda recuperarlo cuando vuelve a pintar ese
+   fondo dentro de una tarjeta. Se declaran en :root, que es donde el
+   ThemeContext pone el tema, asi que capturan el valor del tema activo. */
+:root {
+    --text-on-app: var(--text-main);
+    --text-muted-on-app: var(--text-muted);
+}
+
+/* .bg-main pinta el fondo de la PAGINA. Cuando aparece anidado dentro de una
+   .bg-surface (una tarjeta clara dentro del modal, por ejemplo) heredaba el
+   --text-main remapeado a --text-on-card: en el estilo "glass" eso daba texto
+   BLANCO sobre fondo CLARO, ilegible — la ficha del lead del modal de agendas
+   era el caso mas visible. Al pintar el fondo de pagina hay que restaurar
+   tambien los colores de texto de pagina. */
 .bg-main {
     background: var(--bg-app);
+    --text-main: var(--text-on-app);
+    --color-text-base: var(--text-on-app);
+    --text-muted: var(--text-muted-on-app);
     color: var(--text-main);
 }
 

@@ -144,7 +144,10 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Notas & Comentarios</h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[500px] custom-scrollbar">
+            {/* min-h chico a proposito: el hilo se adapta a la caja que le den y
+                scrollea adentro. Con min-h-[300px] no entraba en contenedores mas
+                bajos y el campo para escribir quedaba cortado abajo. */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px] max-h-[500px] custom-scrollbar">
                 {loading ? (
                     <div className="text-center text-slate-500 text-xs py-10">Cargando...</div>
                 ) : comments.length === 0 ? (
@@ -182,7 +185,7 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
                     <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
                         Notificar a:
                     </span>
-                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scrollbar">
                         {operationalUsers.map(u => {
                             const isSelected = selectedUserIds.includes(u.id);
                             let roleColor = 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700';
