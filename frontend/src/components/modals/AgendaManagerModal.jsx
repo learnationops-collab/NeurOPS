@@ -168,7 +168,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
             await api.post(`/closer/appointments/${appointment.id}/process`, {
                 status,
                 reschedule_date: rescheduleDate,
-                last_stage: selectedStage,
+                last_stage: mode === 'setter' ? undefined : selectedStage,
                 with_decision_maker: withDecisionMaker,
                 role: mode,
                 note
@@ -267,7 +267,9 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-base font-black tracking-tight">{appointment.lead_name}</p>
-                                                    <Badge variant="neutral" className="bg-accent/10 text-accent text-[8px] font-black">{selectedStage}</Badge>
+                                                    {mode !== 'setter' && (
+                                                        <Badge variant="neutral" className="bg-accent/10 text-accent text-[8px] font-black">{selectedStage}</Badge>
+                                                    )}
                                                 </div>
                                                 <p className="text-[9px] text-muted font-bold mt-0.5">{appointment.type}</p>
                                             </div>
@@ -281,7 +283,10 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
 
                                     {/* Actions */}
                                     <div className="space-y-4">
-                                        {/* Stage Progress */}
+                                        {/* Etapa: solo para el closer. El setter lleva su pipeline en
+                                            Kommo; acá confirma la agenda y le pasa contexto al closer
+                                            por el chat, así que la etapa solo sería ruido. */}
+                                        {mode !== 'setter' && (
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black text-muted tracking-widest ml-1">ETAPA ACTUAL</label>
                                             <button
@@ -298,10 +303,13 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         </div>
+                                        )}
 
                                         {/* Closure Protocol */}
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black text-muted tracking-widest ml-1">RESULTADO DE LA LLAMADA</label>
+                                            <label className="text-[9px] font-black text-muted tracking-widest ml-1">
+                                                {mode === 'setter' ? 'ESTADO DE LA AGENDA' : 'RESULTADO DE LA LLAMADA'}
+                                            </label>
                                             <div className="relative">
                                                 <button
                                                     onClick={() => setShowStatusOptions(!showStatusOptions)}
