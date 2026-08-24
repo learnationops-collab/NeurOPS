@@ -3,6 +3,7 @@ import { CalendarRange } from 'lucide-react';
 
 const PERIODS = [
     { id: 'hoy', label: 'Hoy' },
+    { id: 'ayer', label: 'Ayer' },
     { id: '7d', label: '7 días' },
     { id: '30d', label: '30 días' },
     { id: 'mes', label: 'Este mes' },

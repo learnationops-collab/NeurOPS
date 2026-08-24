@@ -124,10 +124,6 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                     />
                 </header>
 
-                <div className="mt-6">
-                    <DataSourceLegend coverage={data.reports_coverage} />
-                </div>
-
                 <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
 
@@ -165,6 +161,9 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                 <div className="space-y-4">
                     {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
                     <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
+                    {/* La leyenda de fuentes baja acá a pedido del usuario (24/ago/2026): es
+                        material de consulta, no algo que haya que leer antes de los KPIs. */}
+                    <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
             </div>
         </div>
