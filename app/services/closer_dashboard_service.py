@@ -48,6 +48,9 @@ class CloserDashboardService:
                 return (end, start) if start > end else (start, end)
         if period == 'hoy':
             return today, today
+        if period == 'ayer':
+            ayer = today - timedelta(days=1)
+            return ayer, ayer
         if period == '7d':
             return today - timedelta(days=6), today
         if period == '30d':

@@ -1761,3 +1761,19 @@ header.top-v6 {
   border-radius: 0 10px 10px 0;
   margin-bottom: 15px;
 }
+
+/* Opciones de <select> legibles en todos los temas.
+   El popup de un <select> lo dibuja el sistema operativo y NO sabe componer fondos
+   translucidos: los aplasta contra blanco. Como --bg-card es translucido en el tema oscuro
+   (rgba(15,23,42,.6)) y en el glass (rgba(255,255,255,.4)), las opciones quedaban texto claro
+   sobre fondo casi blanco — ilegibles hasta pasarles el puntero, que recien ahi pinta el
+   resaltado del sistema. Por eso van colores OPACOS explicitos y no los tokens del tema. */
+select option {
+    background-color: #ffffff;
+    color: #0f172a;
+}
+
+:root.dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+}

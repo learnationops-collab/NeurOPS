@@ -14,6 +14,7 @@ export const computeDelta = (current, previous) => {
 export const PERIOD_LABELS = {
     custom: 'el rango elegido',
     hoy: 'hoy',
+    ayer: 'ayer',
     '7d': 'últimos 7 días',
     '30d': 'últimos 30 días',
     mes: 'este mes',
