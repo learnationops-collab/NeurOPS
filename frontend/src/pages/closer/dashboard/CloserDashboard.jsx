@@ -4,6 +4,7 @@ import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
 import PerformanceKpis from './components/PerformanceKpis';
+import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel from './components/PerformanceFunnel';
 import PerformanceQuality from './components/PerformanceQuality';
 import PerformanceSenas from './components/PerformanceSenas';
@@ -122,6 +123,9 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
 
                 <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
+
+                <SectionTitle>Lo que falta completar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· a hoy, fuera del período filtrado</span></SectionTitle>
+                <PerformancePendientes pendientes={data.pendientes} onNavigate={onNavigate} />
 
                 <SectionTitle>Dónde se cae el embudo</SectionTitle>
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />

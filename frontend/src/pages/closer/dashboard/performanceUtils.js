@@ -28,9 +28,10 @@ export const COMPARE_LABELS = {
     none: ''
 };
 
-// 'YYYY-MM-DD' → 'DD/MM'. Se corta a mano en vez de usar Date para no correr un día por zona
-// horaria (el string ya viene en la fecha calendario del backend).
-export const shortDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '');
+// 'YYYY-MM-DD' → 'DD/MM' (o 'DD/MM/YYYY' con `withYear`). Se corta a mano en vez de usar Date
+// para no correr un día por zona horaria (el string ya viene en la fecha calendario del backend).
+export const shortDate = (iso, withYear = false) =>
+    (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}${withYear ? `/${iso.slice(0, 4)}` : ''}` : '');
 
 // Etiqueta del período en curso. El rango libre no tiene nombre fijo: se describe con sus fechas.
 export const periodLabel = (period, dates) => {
@@ -42,12 +43,15 @@ export const periodLabel = (period, dates) => {
     return PERIOD_LABELS[period] || '';
 };
 
-// Etiqueta del rango de comparación, con sus fechas reales cuando el backend las devuelve.
+// Etiqueta del rango de comparación, con sus fechas reales cuando el backend las devuelve. El
+// año se agrega solo cuando el rango comparado cae en otro año: sin eso, comparar contra el año
+// anterior muestra dos rangos con las mismas fechas y parece un error.
 export const compareLabel = (compare, dates) => {
     if (compare === 'none') return '';
     const base = COMPARE_LABELS[compare] || '';
     if (dates?.compare_start && dates?.compare_end) {
-        return `${base} (${shortDate(dates.compare_start)} al ${shortDate(dates.compare_end)})`;
+        const otroAnio = dates.compare_start.slice(0, 4) !== (dates.start || '').slice(0, 4);
+        return `${base} (${shortDate(dates.compare_start, otroAnio)} al ${shortDate(dates.compare_end, otroAnio)})`;
     }
     return base;
 };

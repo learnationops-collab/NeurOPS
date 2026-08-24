@@ -3,6 +3,7 @@ from sqlalchemy import func
 from app import db
 from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
+from app.services.closer_pending_service import CloserPendingService
 
 PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
 
@@ -573,6 +574,7 @@ class CloserDashboardService:
 
         active_closers = User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
         coverage = CloserDashboardService._reports_coverage(closer_id, start, end, active_closers)
+        cupos_faltantes = len(CloserService.get_missing_slots_days(closer_id, start, end)) if closer_id else 0
         coverage_by_closer = {r['closer_id']: r for r in (coverage or {}).get('detalle', [])}
 
         ranking = []
@@ -611,6 +613,10 @@ class CloserDashboardService:
             'reports_coverage': coverage,
             'cuotas_por_cobrar': {'rows': cuotas_rows, **cuotas_totals},
             'fuente': CloserDashboardService._source_performance(closer_id, start, end),
+            # Trabajo pendiente del closer, a hoy y NO acotado al período filtrado (ver
+            # CloserPendingService): esconder una agenda sin reportar de hace tres semanas
+            # porque el filtro dice "últimos 7 días" es justo lo contrario de lo que hace falta.
+            'pendientes': CloserPendingService.get_pending_work(closer_id, coverage, cupos_faltantes),
             'ranking': ranking,
             'closers': [{'id': c.id, 'username': c.username} for c in active_closers],
             'alerts': CloserDashboardService._build_alerts(current, cuotas_totals, coverage)
