@@ -68,17 +68,29 @@ class CloserDashboardService:
             return d.replace(year=d.year - years, day=28)
 
     @staticmethod
-    def _comparison_range(start, end, compare):
+    def _comparison_range(start, end, compare, compare_start=None, compare_end=None):
         """Rango contra el que se compara:
 
         - `prev`: el periodo inmediatamente anterior, del mismo largo. Si se filtra una semana
           compara contra la semana anterior; si se filtran 3 dias, contra los 3 dias previos.
         - `month`: el mismo rango corrido un mes atras (acotado al largo real de ese mes).
         - `year`: el mismo rango corrido un anio atras.
+        - `custom`: dos fechas libres, elegidas a mano. No tiene por que medir lo mismo que el
+          periodo filtrado (comparar un mes contra una semana es una lectura valida: "cuanto de
+          todo el mes se hizo en esa semana"), asi que no se recorta ni se ajusta el largo.
         - `none`: sin comparacion.
         """
         if compare == 'none':
             return None, None
+        if compare == 'custom':
+            c_start = CloserDashboardService._parse_iso(compare_start)
+            c_end = CloserDashboardService._parse_iso(compare_end)
+            if not (c_start and c_end):
+                # Sin las dos puntas no hay contra que comparar. Se devuelve "sin comparacion"
+                # en vez de caer a `prev`: mostrar el periodo anterior bajo la etiqueta "rango
+                # personalizado" seria mentirle al usuario sobre que esta viendo.
+                return None, None
+            return (c_end, c_start) if c_start > c_end else (c_start, c_end)
         span_days = (end - start).days + 1
         if compare == 'month':
             prev_month_end = start.replace(day=1) - timedelta(days=1)
@@ -554,9 +566,11 @@ class CloserDashboardService:
         return alerts
 
     @staticmethod
-    def get_performance_data(closer_id=None, period='mes', compare='prev', start_date=None, end_date=None):
+    def get_performance_data(closer_id=None, period='mes', compare='prev', start_date=None, end_date=None,
+                             compare_start=None, compare_end=None):
         start, end = CloserDashboardService._range_for_period(period, start_date, end_date)
-        prev_start, prev_end = CloserDashboardService._comparison_range(start, end, compare)
+        prev_start, prev_end = CloserDashboardService._comparison_range(
+            start, end, compare, compare_start, compare_end)
 
         current_stats = CloserService.get_comprehensive_stats(closer_id, start, end, agg_type='sum')
         current = CloserDashboardService._build_period_block(

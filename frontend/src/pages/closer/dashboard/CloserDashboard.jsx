@@ -33,13 +33,15 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     const [period, setPeriod] = useState('mes');
     const [compare, setCompare] = useState('prev');
     const [closerId, setCloserId] = useState('all');
-    // Rango libre: solo viaja al backend con period === 'custom'.
+    // Rangos libres: cada uno solo viaja al backend cuando su selector está en 'custom'.
     const [customRange, setCustomRange] = useState({ start: '', end: '' });
+    const [compareRange, setCompareRange] = useState({ start: '', end: '' });
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const rangoIncompleto = period === 'custom' && !(customRange.start && customRange.end);
+    const rangoIncompleto = (period === 'custom' && !(customRange.start && customRange.end))
+        || (compare === 'custom' && !(compareRange.start && compareRange.end));
 
     const fetchData = useCallback(async () => {
         // Con el rango libre a medio elegir no se pide nada: se espera a que estén las dos puntas.
@@ -50,7 +52,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
             const res = await api.get('/closer/performance-dashboard', {
                 params: {
                     period, compare, closer_id: closerId,
-                    ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {})
+                    ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {}),
+                    ...(compare === 'custom' ? { compare_start: compareRange.start, compare_end: compareRange.end } : {})
                 }
             });
             setData(res.data);
@@ -60,7 +63,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         } finally {
             setLoading(false);
         }
-    }, [period, compare, closerId, customRange.start, customRange.end, rangoIncompleto]);
+    }, [period, compare, closerId, customRange.start, customRange.end,
+        compareRange.start, compareRange.end, rangoIncompleto]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -69,7 +73,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     if (rangoIncompleto && !data) {
         return (
             <div className={`flex items-center justify-center ${minHeightClass}`}>
-                <p className="text-muted text-sm">Elegí las dos fechas del rango personalizado.</p>
+                <p className="text-muted text-sm">Elegí las dos fechas de cada rango personalizado.</p>
             </div>
         );
     }
@@ -91,9 +95,10 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         );
     }
 
-    const compareNote = compare === 'none'
-        ? `· ${periodLabel(period, data.dates)}`
-        : `· ${periodLabel(period, data.dates)} vs. ${compareLabel(compare, data.dates)}`;
+    const hayComparacion = Boolean(data.dates?.compare_start && data.dates?.compare_end);
+    const compareNote = hayComparacion
+        ? `· ${periodLabel(period, data.dates)} vs. ${compareLabel(compare, data.dates)}`
+        : `· ${periodLabel(period, data.dates)}`;
 
     return (
         <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
@@ -114,6 +119,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         showClosersFilter={user?.role === 'admin'}
                         customRange={customRange}
                         setCustomRange={setCustomRange}
+                        compareRange={compareRange}
+                        setCompareRange={setCompareRange}
                     />
                 </header>
 
