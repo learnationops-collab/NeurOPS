@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta
 from sqlalchemy import or_, func
+from sqlalchemy.orm import joinedload
+from app import db
 from app.models import Appointment, User
 from app.services.user_time_service import limites_dia_utc
 
@@ -113,24 +115,65 @@ class CloserPendingService:
         }
 
     @staticmethod
+    def _client_ids_con_venta(clients):
+        """Cuáles de estos clientes ya tienen una venta en FinancialSale, en UNA sola consulta.
+
+        Es el equivalente en lote de `CloserFollowUpService._client_has_sale` (mismo cruce por
+        email y por instagram sin '@', todo en minúsculas). Se hace así porque el original corre
+        una consulta por cita: clasificar la lista de seguimientos de todo el equipo disparaba
+        cientos de consultas contra FinancialSale, una por cada llamada asistida sin seguimiento
+        etiquetado."""
+        from app.models import FinancialSale
+
+        if not clients:
+            return set()
+
+        mails, igs = set(), set()
+        for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+            if mail:
+                mails.add(mail.strip().lower())
+            if ig:
+                igs.add(ig.strip().lstrip('@').lower())
+
+        con_venta = set()
+        for c in clients:
+            if not c:
+                continue
+            if c.email and c.email.strip().lower() in mails:
+                con_venta.add(c.id)
+            elif c.instagram and c.instagram.strip().lstrip('@').lower() in igs:
+                con_venta.add(c.id)
+        return con_venta
+
+    @staticmethod
     def _seguimientos(closer_id):
         """Seguimientos vencidos o que tocan hoy, agrupados por tipo. Se cuenta con el mismo
         criterio que la pestaña «③ Seguimientos» (`CloserFollowUpService`), pero sin serializar
         cada cita: acá solo hacen falta los totales, y serializar el grupo `cerrada` calcularía
-        la deuda de cada cliente una por una."""
+        la deuda de cada cliente una por una.
+
+        Los dos N+1 que quedaban se resuelven en lote: el cliente de cada cita viaja con un
+        `joinedload`, y el "¿ya compró?" que necesita la clasificación se precalcula de una y se
+        le inyecta a `_effective_tipo`. Sin esto, el dashboard corría dos consultas por cada
+        seguimiento pendiente del período — sobre datos reales, cientos."""
         from app.services.closer_followup_service import CloserFollowUpService
 
         hoy = date.today().isoformat()
-        items = CloserFollowUpService._base_query(closer_id).filter(
+        items = CloserFollowUpService._base_query(closer_id).options(
+            joinedload(Appointment.client)
+        ).filter(
             Appointment.fecha_seguimiento.isnot(None),
             Appointment.fecha_seguimiento != '',
             Appointment.fecha_seguimiento <= hoy
         ).all()
 
+        con_venta = CloserPendingService._client_ids_con_venta([a.client for a in items])
+
         grupos = {'no_tomada': 0, 'tomada': 0, 'cerrada': 0}
         vencidos = 0
         for a in items:
-            grupos[CloserFollowUpService._effective_tipo(a) or 'no_tomada'] += 1
+            tipo = CloserFollowUpService._effective_tipo(a, has_sale=a.client_id in con_venta)
+            grupos[tipo or 'no_tomada'] += 1
             if (a.fecha_seguimiento or '')[:10] < hoy:
                 vencidos += 1
 

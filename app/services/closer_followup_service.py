@@ -152,19 +152,27 @@ class CloserFollowUpService:
         return appt
 
     @staticmethod
-    def _effective_tipo(a):
+    def _effective_tipo(a, has_sale=None):
         """Categoría del seguimiento: la explícitamente etiquetada, o derivada del resultado
         real de la llamada si el closer nunca llegó a programar un seguimiento para esta cita
         (caso más común: cerró el reporte de "No Show" sin pasar por la pantalla de seguimiento).
         'cerrada' NO se deriva acá: sigue atada exclusivamente al flujo de declarar venta con
-        cobro pendiente (fecha_seguimiento_cobro), no a "cualquier cliente que alguna vez compró"."""
+        cobro pendiente (fecha_seguimiento_cobro), no a "cualquier cliente que alguna vez compró".
+
+        `has_sale` permite inyectar el "¿este cliente ya compró?" ya resuelto. Sin él, cada cita
+        de tipo 'Show up' dispara su propia consulta a FinancialSale (`_client_has_sale`), que
+        sobre una lista larga es un N+1. Quien procesa muchas citas de una vez lo precalcula en
+        lote y lo pasa acá (ver `CloserPendingService._seguimientos`), para que la regla de
+        clasificación siga viviendo en un solo lugar."""
         if a.seguimiento_tipo:
             return a.seguimiento_tipo
         cr = (a.closer_result or '').strip().lower()
         if cr in DERIVABLE_NO_TOMADA:
             return 'no_tomada'
-        if cr == 'show up' and not CloserFollowUpService._client_has_sale(a.client):
-            return 'tomada'
+        if cr == 'show up':
+            vendio = CloserFollowUpService._client_has_sale(a.client) if has_sale is None else has_sale
+            if not vendio:
+                return 'tomada'
         # Agenda vencida (la fecha de la cita ya pasó) que el closer nunca llegó a procesar
         # (mismo criterio que CloserService.archive_stale_backlog, sin esperar los 30 días de
         # ese barrido de mantenimiento): cuenta como "no tomada" — nadie la reportó, así que hay
