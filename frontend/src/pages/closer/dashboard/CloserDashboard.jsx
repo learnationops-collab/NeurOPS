@@ -13,7 +13,7 @@ import PerformanceRanking from './components/PerformanceRanking';
 import DataSourceLegend from './components/DataSourceLegend';
 import DataIssuesPanel from './components/DataIssuesPanel';
 import SlotsPrompt from './components/SlotsPrompt';
-import { PERIOD_LABELS, COMPARE_LABELS } from './performanceUtils';
+import { periodLabel, compareLabel } from './performanceUtils';
 import { detectIssues } from './dataIssues';
 
 const SectionTitle = ({ children }) => (
@@ -32,16 +32,25 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     const [period, setPeriod] = useState('mes');
     const [compare, setCompare] = useState('prev');
     const [closerId, setCloserId] = useState('all');
+    // Rango libre: solo viaja al backend con period === 'custom'.
+    const [customRange, setCustomRange] = useState({ start: '', end: '' });
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const rangoIncompleto = period === 'custom' && !(customRange.start && customRange.end);
+
     const fetchData = useCallback(async () => {
+        // Con el rango libre a medio elegir no se pide nada: se espera a que estén las dos puntas.
+        if (rangoIncompleto) return;
         setLoading(true);
         setError(null);
         try {
             const res = await api.get('/closer/performance-dashboard', {
-                params: { period, compare, closer_id: closerId }
+                params: {
+                    period, compare, closer_id: closerId,
+                    ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {})
+                }
             });
             setData(res.data);
         } catch (err) {
@@ -50,11 +59,19 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         } finally {
             setLoading(false);
         }
-    }, [period, compare, closerId]);
+    }, [period, compare, closerId, customRange.start, customRange.end, rangoIncompleto]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
+
+    if (rangoIncompleto && !data) {
+        return (
+            <div className={`flex items-center justify-center ${minHeightClass}`}>
+                <p className="text-muted text-sm">Elegí las dos fechas del rango personalizado.</p>
+            </div>
+        );
+    }
 
     if (loading && !data) {
         return (
@@ -74,8 +91,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     }
 
     const compareNote = compare === 'none'
-        ? `· ${PERIOD_LABELS[period]}`
-        : `· ${PERIOD_LABELS[period]} vs. ${COMPARE_LABELS[compare]}`;
+        ? `· ${periodLabel(period, data.dates)}`
+        : `· ${periodLabel(period, data.dates)} vs. ${compareLabel(compare, data.dates)}`;
 
     return (
         <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
@@ -94,6 +111,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         compare={compare}
                         setCompare={setCompare}
                         showClosersFilter={user?.role === 'admin'}
+                        customRange={customRange}
+                        setCustomRange={setCustomRange}
                     />
                 </header>
 
@@ -102,7 +121,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         acá, arriba de todo, en vez de depender de que el closer mande el reporte
                         diario de ese día. Al guardarlos se recarga el dashboard para que el primer
                         paso del embudo deje de estar mal. */}
-                    {user?.role === 'closer' && <SlotsPrompt period={period} onSaved={fetchData} />}
+                    {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
                     <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
                     <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
