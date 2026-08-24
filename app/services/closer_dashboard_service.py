@@ -3,6 +3,7 @@ from sqlalchemy import func
 from app import db
 from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
+from app.services.closer_pending_service import CloserPendingService
 
 PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
 
@@ -24,8 +25,27 @@ class CloserDashboardService:
     ]
 
     @staticmethod
-    def _range_for_period(period):
+    def _parse_iso(value):
+        """Fecha ISO ('YYYY-MM-DD') o None. Nunca levanta: un valor invalido se ignora y el
+        periodo cae al preset por defecto."""
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(str(value)[:10])
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _range_for_period(period, start_date=None, end_date=None):
+        """Rango del periodo. `custom` usa las fechas que mando el usuario (rango libre); si
+        alguna falta o no parsea, cae al mes en curso como cualquier otro periodo desconocido.
+        Las fechas invertidas se dan vuelta en vez de devolver un rango vacio."""
         today = date.today()
+        if period == 'custom':
+            start = CloserDashboardService._parse_iso(start_date)
+            end = CloserDashboardService._parse_iso(end_date)
+            if start and end:
+                return (end, start) if start > end else (start, end)
         if period == 'hoy':
             return today, today
         if period == '7d':
@@ -40,7 +60,23 @@ class CloserDashboardService:
         return today.replace(day=1), today
 
     @staticmethod
+    def _shift_year(d, years=1):
+        """Misma fecha del anio anterior. El 29 de febrero cae al 28 en anios no bisiestos."""
+        try:
+            return d.replace(year=d.year - years)
+        except ValueError:
+            return d.replace(year=d.year - years, day=28)
+
+    @staticmethod
     def _comparison_range(start, end, compare):
+        """Rango contra el que se compara:
+
+        - `prev`: el periodo inmediatamente anterior, del mismo largo. Si se filtra una semana
+          compara contra la semana anterior; si se filtran 3 dias, contra los 3 dias previos.
+        - `month`: el mismo rango corrido un mes atras (acotado al largo real de ese mes).
+        - `year`: el mismo rango corrido un anio atras.
+        - `none`: sin comparacion.
+        """
         if compare == 'none':
             return None, None
         span_days = (end - start).days + 1
@@ -49,6 +85,8 @@ class CloserDashboardService:
             prev_start = prev_month_end.replace(day=1)
             prev_end = min(prev_month_end, prev_start + timedelta(days=span_days - 1))
             return prev_start, prev_end
+        if compare == 'year':
+            return CloserDashboardService._shift_year(start), CloserDashboardService._shift_year(end)
         prev_end = start - timedelta(days=1)
         prev_start = prev_end - timedelta(days=span_days - 1)
         return prev_start, prev_end
@@ -516,8 +554,8 @@ class CloserDashboardService:
         return alerts
 
     @staticmethod
-    def get_performance_data(closer_id=None, period='mes', compare='prev'):
-        start, end = CloserDashboardService._range_for_period(period)
+    def get_performance_data(closer_id=None, period='mes', compare='prev', start_date=None, end_date=None):
+        start, end = CloserDashboardService._range_for_period(period, start_date, end_date)
         prev_start, prev_end = CloserDashboardService._comparison_range(start, end, compare)
 
         current_stats = CloserService.get_comprehensive_stats(closer_id, start, end, agg_type='sum')
@@ -536,6 +574,7 @@ class CloserDashboardService:
 
         active_closers = User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
         coverage = CloserDashboardService._reports_coverage(closer_id, start, end, active_closers)
+        cupos_faltantes = len(CloserService.get_missing_slots_days(closer_id, start, end)) if closer_id else 0
         coverage_by_closer = {r['closer_id']: r for r in (coverage or {}).get('detalle', [])}
 
         ranking = []
@@ -574,6 +613,10 @@ class CloserDashboardService:
             'reports_coverage': coverage,
             'cuotas_por_cobrar': {'rows': cuotas_rows, **cuotas_totals},
             'fuente': CloserDashboardService._source_performance(closer_id, start, end),
+            # Trabajo pendiente del closer, a hoy y NO acotado al período filtrado (ver
+            # CloserPendingService): esconder una agenda sin reportar de hace tres semanas
+            # porque el filtro dice "últimos 7 días" es justo lo contrario de lo que hace falta.
+            'pendientes': CloserPendingService.get_pending_work(closer_id, coverage, cupos_faltantes),
             'ranking': ranking,
             'closers': [{'id': c.id, 'username': c.username} for c in active_closers],
             'alerts': CloserDashboardService._build_alerts(current, cuotas_totals, coverage)

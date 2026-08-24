@@ -14,20 +14,28 @@ import api from '../../../../services/api';
  * sigue siendo un cupo, así que el número nunca puede ser menor que las agendas de ese día. El
  * backend revalida eso y rechaza los que no cierran.
  */
-const SlotsPrompt = ({ period, onSaved }) => {
+const SlotsPrompt = ({ period, range, onSaved }) => {
     const [dias, setDias] = useState(null);
     const [valores, setValores] = useState({});
     const [saving, setSaving] = useState(false);
     const [oculto, setOculto] = useState(false);
 
     const fetchDias = useCallback(() => {
-        api.get('/closer/performance-dashboard/slots-pendientes', { params: { period } })
+        // Mismo rango que el dashboard: con un período personalizado los cupos que faltan son
+        // los de ESAS fechas, no los del mes en curso.
+        if (period === 'custom' && !(range?.start && range?.end)) return;
+        api.get('/closer/performance-dashboard/slots-pendientes', {
+            params: {
+                period,
+                ...(period === 'custom' ? { start_date: range.start, end_date: range.end } : {})
+            }
+        })
             .then(res => {
                 setDias(res.data.dias || []);
                 setValores({});
             })
             .catch(err => console.error('Error al consultar los cupos pendientes:', err));
-    }, [period]);
+    }, [period, range?.start, range?.end]);
 
     useEffect(() => { setOculto(false); fetchDias(); }, [fetchDias]);
 

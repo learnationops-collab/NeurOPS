@@ -4038,6 +4038,9 @@ const CloserWorkflowPage = () => {
                             // El dashboard puede pedir un día concreto ("te falta el reporte del 5"),
                             // así que la pestaña se abre ya posicionada en esa fecha.
                             if (opts?.date) setReportDate(opts.date);
+                            // …o un paso concreto del mazo ("tenés 8 llamadas sin reportar"), para
+                            // caer directo en la pestaña que resuelve ese pendiente.
+                            if (opts?.step) setSearchParams({ step: opts.step, selected_date: selectedDate });
                             setActiveView(view);
                         }}
                     />

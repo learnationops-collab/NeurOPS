@@ -4,6 +4,7 @@ import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
 import PerformanceKpis from './components/PerformanceKpis';
+import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel from './components/PerformanceFunnel';
 import PerformanceQuality from './components/PerformanceQuality';
 import PerformanceSenas from './components/PerformanceSenas';
@@ -13,7 +14,7 @@ import PerformanceRanking from './components/PerformanceRanking';
 import DataSourceLegend from './components/DataSourceLegend';
 import DataIssuesPanel from './components/DataIssuesPanel';
 import SlotsPrompt from './components/SlotsPrompt';
-import { PERIOD_LABELS, COMPARE_LABELS } from './performanceUtils';
+import { periodLabel, compareLabel } from './performanceUtils';
 import { detectIssues } from './dataIssues';
 
 const SectionTitle = ({ children }) => (
@@ -32,16 +33,25 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     const [period, setPeriod] = useState('mes');
     const [compare, setCompare] = useState('prev');
     const [closerId, setCloserId] = useState('all');
+    // Rango libre: solo viaja al backend con period === 'custom'.
+    const [customRange, setCustomRange] = useState({ start: '', end: '' });
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const rangoIncompleto = period === 'custom' && !(customRange.start && customRange.end);
+
     const fetchData = useCallback(async () => {
+        // Con el rango libre a medio elegir no se pide nada: se espera a que estén las dos puntas.
+        if (rangoIncompleto) return;
         setLoading(true);
         setError(null);
         try {
             const res = await api.get('/closer/performance-dashboard', {
-                params: { period, compare, closer_id: closerId }
+                params: {
+                    period, compare, closer_id: closerId,
+                    ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {})
+                }
             });
             setData(res.data);
         } catch (err) {
@@ -50,11 +60,19 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         } finally {
             setLoading(false);
         }
-    }, [period, compare, closerId]);
+    }, [period, compare, closerId, customRange.start, customRange.end, rangoIncompleto]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
+
+    if (rangoIncompleto && !data) {
+        return (
+            <div className={`flex items-center justify-center ${minHeightClass}`}>
+                <p className="text-muted text-sm">Elegí las dos fechas del rango personalizado.</p>
+            </div>
+        );
+    }
 
     if (loading && !data) {
         return (
@@ -74,8 +92,8 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     }
 
     const compareNote = compare === 'none'
-        ? `· ${PERIOD_LABELS[period]}`
-        : `· ${PERIOD_LABELS[period]} vs. ${COMPARE_LABELS[compare]}`;
+        ? `· ${periodLabel(period, data.dates)}`
+        : `· ${periodLabel(period, data.dates)} vs. ${compareLabel(compare, data.dates)}`;
 
     return (
         <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
@@ -94,21 +112,20 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         compare={compare}
                         setCompare={setCompare}
                         showClosersFilter={user?.role === 'admin'}
+                        customRange={customRange}
+                        setCustomRange={setCustomRange}
                     />
                 </header>
 
-                <div className="mt-6 space-y-4">
-                    {/* Los cupos de agenda son el único dato que no sale de la bandeja: se piden
-                        acá, arriba de todo, en vez de depender de que el closer mande el reporte
-                        diario de ese día. Al guardarlos se recarga el dashboard para que el primer
-                        paso del embudo deje de estar mal. */}
-                    {user?.role === 'closer' && <SlotsPrompt period={period} onSaved={fetchData} />}
-                    <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
+                <div className="mt-6">
                     <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
 
                 <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
+
+                <SectionTitle>Lo que falta completar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· a hoy, fuera del período filtrado</span></SectionTitle>
+                <PerformancePendientes pendientes={data.pendientes} onNavigate={onNavigate} />
 
                 <SectionTitle>Dónde se cae el embudo</SectionTitle>
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />
@@ -132,6 +149,16 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
 
                 <SectionTitle>Equipo</SectionTitle>
                 <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
+
+                {/* Lo que hay que cargar para que los números de arriba cierren: los cupos de
+                    agenda (el único dato que no sale de la bandeja) y los reportes sin enviar.
+                    Va al final a pedido del usuario (24/ago/2026): son tareas de mantenimiento
+                    del dato, no lo que el closer viene a leer al abrir el dashboard. */}
+                <SectionTitle>Para actualizar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· lo que falta cargar</span></SectionTitle>
+                <div className="space-y-4">
+                    {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
+                    <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
+                </div>
             </div>
         </div>
     );
