@@ -116,13 +116,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                     />
                 </header>
 
-                <div className="mt-6 space-y-4">
-                    {/* Los cupos de agenda son el único dato que no sale de la bandeja: se piden
-                        acá, arriba de todo, en vez de depender de que el closer mande el reporte
-                        diario de ese día. Al guardarlos se recarga el dashboard para que el primer
-                        paso del embudo deje de estar mal. */}
-                    {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
-                    <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
+                <div className="mt-6">
                     <DataSourceLegend coverage={data.reports_coverage} />
                 </div>
 
@@ -151,6 +145,16 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
 
                 <SectionTitle>Equipo</SectionTitle>
                 <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
+
+                {/* Lo que hay que cargar para que los números de arriba cierren: los cupos de
+                    agenda (el único dato que no sale de la bandeja) y los reportes sin enviar.
+                    Va al final a pedido del usuario (24/ago/2026): son tareas de mantenimiento
+                    del dato, no lo que el closer viene a leer al abrir el dashboard. */}
+                <SectionTitle>Para actualizar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· lo que falta cargar</span></SectionTitle>
+                <div className="space-y-4">
+                    {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
+                    <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />
+                </div>
             </div>
         </div>
     );
