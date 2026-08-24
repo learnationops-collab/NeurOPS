@@ -17,6 +17,9 @@ def get_performance_dashboard():
     # Rango libre: solo se leen cuando period == 'custom' (el servicio ignora lo que no parsee).
     start_date = request.args.get('start_date', default='', type=str)
     end_date = request.args.get('end_date', default='', type=str)
+    # Idem para el rango contra el que se compara, cuando compare == 'custom'.
+    compare_start = request.args.get('compare_start', default='', type=str)
+    compare_end = request.args.get('compare_end', default='', type=str)
 
     if current_user.role == 'closer':
         closer_id = current_user.id
@@ -30,7 +33,8 @@ def get_performance_dashboard():
 
     data = CloserDashboardService.get_performance_data(
         closer_id=closer_id, period=period, compare=compare,
-        start_date=start_date, end_date=end_date)
+        start_date=start_date, end_date=end_date,
+        compare_start=compare_start, compare_end=compare_end)
     return jsonify(data), 200
 
 

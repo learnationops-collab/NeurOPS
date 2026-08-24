@@ -25,6 +25,7 @@ export const COMPARE_LABELS = {
     prev: 'el período anterior',
     month: 'el mismo rango del mes anterior',
     year: 'el mismo rango del año anterior',
+    custom: 'el rango elegido a mano',
     none: ''
 };
 
