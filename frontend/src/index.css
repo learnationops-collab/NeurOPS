@@ -619,6 +619,17 @@ header.top-v6 {
   font-size: 14px !important;
   font-weight: 500 !important;
   color: #fff !important;
+  /* Sin esto el input se quedaba en su ancho intrinseco (~205px) en vez de estirarse: dentro de
+     una pildora de 560px sobraban ~160px de hueco muerto a la derecha del selector, y el
+     placeholder se cortaba a mitad de palabra ("...nombre, @IG"). `min-width:0` es
+     imprescindible: el ancho minimo por defecto de un input le impide encogerse por debajo de su
+     tamano intrinseco y desbordaria la pildora en pantallas angostas. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sinner-v6 input::placeholder {
+  color: var(--v6-tx3);
+  opacity: 1;
 }
 .sinner-v6 select {
   background-color: rgba(255,255,255,.05) !important;
@@ -638,6 +649,12 @@ header.top-v6 {
   background-repeat: no-repeat !important;
   background-position: right 12px center !important;
   background-size: 16px !important;
+  /* El select medía 39px dentro de una pildora de 45px, asi que su borde izquierdo (el separador
+     entre buscador y alcance) quedaba flotando sin llegar a los bordes. Estirado ocupa el alto
+     completo y el separador se lee como una division real. */
+  align-self: stretch !important;
+  height: auto !important;
+  cursor: pointer !important;
 }
 .sresults-v6 {
   position: absolute;
@@ -1760,4 +1777,20 @@ header.top-v6 {
   padding: 11px 14px;
   border-radius: 0 10px 10px 0;
   margin-bottom: 15px;
+}
+
+/* Opciones de <select> legibles en todos los temas.
+   El popup de un <select> lo dibuja el sistema operativo y NO sabe componer fondos
+   translucidos: los aplasta contra blanco. Como --bg-card es translucido en el tema oscuro
+   (rgba(15,23,42,.6)) y en el glass (rgba(255,255,255,.4)), las opciones quedaban texto claro
+   sobre fondo casi blanco — ilegibles hasta pasarles el puntero, que recien ahi pinta el
+   resaltado del sistema. Por eso van colores OPACOS explicitos y no los tokens del tema. */
+select option {
+    background-color: #ffffff;
+    color: #0f172a;
+}
+
+:root.dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
 }
