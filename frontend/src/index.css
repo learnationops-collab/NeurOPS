@@ -939,6 +939,18 @@ header.top-v6 {
   content: '💬 ';
   opacity: .6;
 }
+/* Línea de estado al pie de la tarjeta de Seguimientos: "Asignar fecha", "Cobrar cuota…", "Al
+   día" — mismo look de píldora que `.nt-v6` pero sin el ícono de comentario (no es una nota). */
+.kcard-v6 .seg-foot-v6 {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--v6-tx2);
+  background: rgba(0,0,0,.26);
+  border-radius: 99px;
+  padding: 5px 11px;
+  margin-top: 10px;
+  display: inline-block;
+}
 /* Botón de acción de la tarjeta del Kanban: gradiente sólido desde el principio (no solo al
    pasar el mouse) para que invite a tocarlo en vez de leer como un link secundario — la
    referencia visual del rediseño usa el mismo tratamiento en sus CTA principales. */

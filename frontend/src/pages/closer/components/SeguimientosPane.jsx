@@ -33,84 +33,78 @@ const cuotaDateLabel = (fechaStr) => {
 
 // Días de retraso del seguimiento (backend `dias_retraso`: días transcurridos desde la fecha en
 // que estaba agendado). Distinto de "Call hace Nd", que mide desde la fecha de la llamada.
-// Se colorea por gravedad para que el closer priorice de un vistazo lo más atrasado.
-const retrasoBadge = (dias) => {
+// Reusa los mismos colores del "cuándo" que las tarjetas de Confirmar/Reportar (late-v6/now-v6/
+// soon-v6, ya definidos en index.css) en vez de badges propios, para que las 3 pestañas del mazo
+// lean como un solo sistema.
+const retrasoWhen = (dias) => {
     if (typeof dias !== 'number') return null;
-    if (dias > 0) {
-        const cls = dias >= 7
-            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-            : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-        return { cls, text: `⏰ ${dias}d de retraso` };
-    }
-    if (dias === 0) return { cls: 'bg-violet-500/10 text-violet-300 border-violet-500/20', text: 'Para hoy' };
-    return { cls: 'bg-slate-900 text-slate-400 border-slate-800', text: `En ${Math.abs(dias)}d` };
+    if (dias > 0) return { cls: 'late-v6', text: `${dias}d de retraso` };
+    if (dias === 0) return { cls: 'now-v6', text: 'Para hoy' };
+    return { cls: 'soon-v6', text: `En ${Math.abs(dias)}d` };
 };
 
-const SeguimientoRow = ({ item, tipo, onClick }) => {
+// Tarjeta de seguimiento con el mismo lenguaje visual (`kcard-v6`) que el Kanban de Confirmar y
+// Reportar: mismo tipo de letra, mismo badge de urgencia arriba, mismos chips de contexto abajo.
+// Se usa tanto en las 3 columnas de "Asignados para hoy" como en la lista del pool sin fecha.
+const SeguimientoCard = ({ item, tipo, onClick }) => {
     const pc = item.proxima_cuota;
-    const retraso = retrasoBadge(item.dias_retraso);
+    const when = retrasoWhen(item.dias_retraso);
+
+    let footer;
+    if (tipo === 'cerrada') {
+        if (pc) {
+            footer = pc.sin_plan
+                ? `Debe ${money(pc.monto)} · sin plan de cuotas`
+                : `${pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} ${cuotaDateLabel(pc.fecha_vencimiento)} · ${money(pc.monto)}`;
+        } else {
+            footer = 'Al día';
+        }
+    } else {
+        footer = item.fecha_seguimiento
+            ? `Seguimiento ${item.seguimiento_intento} de 4`
+            : 'Asignar fecha';
+    }
+
     return (
-        <div
-            onClick={onClick}
-            className="p-4 rounded-2xl border border-slate-900/60 bg-black/20 hover:bg-slate-900/50 hover:border-slate-800 transition-all cursor-pointer flex items-center justify-between gap-4"
-        >
-            <div className="min-w-0 flex-1">
-                <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
-                <div className="flex items-center gap-2 flex-wrap mt-2">
-                    {retraso && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${retraso.cls}`}>
-                            {retraso.text}
-                        </span>
-                    )}
-                    {tipo !== 'cerrada' && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${chipCls[TIPOS[tipo].cls]}`}>
-                            {item.seguimiento_sub || 'Sin subestado'}
-                        </span>
-                    )}
-                    {item.origin && <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">{item.origin}</span>}
-                    {item.owner_closer_name && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                            De {item.owner_closer_name} (baja)
-                        </span>
-                    )}
-                    {item.days_since_call !== null && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">
-                            Call hace {item.days_since_call}d
-                        </span>
-                    )}
-                    {tipo === 'cerrada' && item.programa_nombre && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-900 border border-slate-800 text-slate-300">
-                            {item.programa_nombre}
-                        </span>
-                    )}
-                    {tipo === 'cerrada' && typeof item.deuda === 'number' && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}`}>
-                            {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
-                        </span>
-                    )}
+        <div className="kcard-v6" onClick={onClick}>
+            {when && (
+                <div className={`when-v6 ${when.cls}`}>
+                    <span className="wd-v6"></span>
+                    {when.text}
                 </div>
-            </div>
-            <div className="shrink-0 text-right">
-                {tipo === 'cerrada' ? (
-                    pc ? (
-                        pc.sin_plan ? (
-                            <span className="text-[11px] font-bold text-amber-300">
-                                Debe {money(pc.monto)} · sin plan de cuotas
-                            </span>
-                        ) : (
-                            <span className={`text-[11px] font-bold ${pc.vencida ? 'text-rose-300' : 'text-amber-300'}`}>
-                                {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
-                            </span>
-                        )
-                    ) : (
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">Al día</span>
-                    )
-                ) : item.fecha_seguimiento ? (
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-violet-300">Seguimiento {item.seguimiento_intento} de 4</span>
-                ) : (
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-amber-300">Asignar fecha</span>
+            )}
+            <b>{item.lead_name}</b>
+            <div className="m-v6">{item.origin || 'Sin origen'}</div>
+
+            <div className="flex gap-1.5 flex-wrap mt-2">
+                {tipo !== 'cerrada' && item.seguimiento_sub && (
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
+                        {item.seguimiento_sub}
+                    </span>
+                )}
+                {(item.days_since_call !== null && item.days_since_call !== undefined) && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        Call hace {item.days_since_call}d
+                    </span>
+                )}
+                {tipo === 'cerrada' && item.programa_nombre && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        {item.programa_nombre}
+                    </span>
+                )}
+                {tipo === 'cerrada' && typeof item.deuda === 'number' && item.deuda > 0 && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-300">
+                        Debe {money(item.deuda)}
+                    </span>
+                )}
+                {item.owner_closer_name && (
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-300">
+                        De {item.owner_closer_name} (baja)
+                    </span>
                 )}
             </div>
+
+            <div className="seg-foot-v6">{footer}</div>
         </div>
     );
 };
@@ -258,17 +252,26 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                 {totalHoy === 0 ? (
                     <div className="text-center py-8 text-emerald-400 text-xs font-bold">✓ Todos los seguimientos de hoy están resueltos.</div>
                 ) : (
-                    Object.keys(TIPOS).map(tipo => grouped[tipo].length > 0 && (
-                        <div key={tipo} className="space-y-2">
-                            <div className="flex items-center gap-2 pt-2">
-                                <span className="text-xs font-bold uppercase tracking-wide text-slate-300">{TIPOS[tipo].icon} {TIPOS[tipo].label} · {grouped[tipo].length}</span>
-                                <span className="flex-1 h-px bg-slate-900" />
+                    <div className="kb-v6">
+                        {Object.keys(TIPOS).map((tipo, i) => (
+                            <div key={tipo} className={`kcol-v6 k${i + 1}-v6`}>
+                                <div className="kch-v6">
+                                    <span className="dt-v6"></span>
+                                    <b>{TIPOS[tipo].label}</b>
+                                    <span className="n-v6">{grouped[tipo].length}</span>
+                                </div>
+                                <div className="kbody-v6">
+                                    {grouped[tipo].length > 0 ? (
+                                        grouped[tipo].map(item => (
+                                            <SeguimientoCard key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
+                                        ))
+                                    ) : (
+                                        <div className="kempty-v6 done-v6">✓ Nada pendiente</div>
+                                    )}
+                                </div>
                             </div>
-                            {grouped[tipo].map(item => (
-                                <SeguimientoRow key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
-                            ))}
-                        </div>
-                    ))
+                        ))}
+                    </div>
                 )}
             </div>
 
@@ -351,7 +354,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                         ) : (
                             <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {poolItems.map(item => (
-                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
+                                    <SeguimientoCard key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
                                 ))}
                             </div>
                         )}
