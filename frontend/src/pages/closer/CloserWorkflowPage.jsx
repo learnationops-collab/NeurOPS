@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
-    Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
+    Calendar, Phone, Mail, Instagram, ExternalLink,
     RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil
 } from 'lucide-react';
@@ -1184,6 +1184,30 @@ const CloserWorkflowPage = () => {
 
         return { porConfirmar, conversando, confirmado };
     }, [filteredAgendas]);
+
+    // "Tu siguiente paso": el lead más urgente dentro de la pestaña activa, para no tener que
+    // escanear toda la bandeja buscando qué tocar primero. Se arma con los mismos datos que ya
+    // trajo esa pestaña (sin pegarle de nuevo a la API); por eso solo aplica a 'confirmations' y
+    // 'calls' -las dos que manejan su lista acá- y no a 'seguimientos', que vive aparte en
+    // SeguimientosPane y no expone sus datos a este nivel.
+    const heroLead = useMemo(() => {
+        if (activeView !== 'inbox') return null;
+        let pool;
+        if (activeStep === 'confirmations') {
+            pool = [...confirmationsPipeline.porConfirmar, ...confirmationsPipeline.conversando];
+        } else if (activeStep === 'calls') {
+            pool = filteredAgendas;
+        } else {
+            return null;
+        }
+        if (!pool.length) return null;
+        // El más atrasado primero (fecha agendada más vieja); si nada está atrasado, el más próximo.
+        return pool.slice().sort((a, b) => {
+            const da = parseUtcIso(a.start_time)?.getTime() ?? Infinity;
+            const db = parseUtcIso(b.start_time)?.getTime() ?? Infinity;
+            return da - db;
+        })[0];
+    }, [activeView, activeStep, confirmationsPipeline, filteredAgendas]);
 
     // Agrupación por mes para "② Llamadas" cuando hay muchas citas vencidas sin reportar (v7):
     // agrupar solo si la lista es grande, para no complicar el caso normal de pocas pendientes.
@@ -3276,89 +3300,120 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
                 
-                {/* HERO SECTION v6 */}
-                <div className="hero-v6">
-                    <div className="hcard-v6">
-                        <h2>Buen día, <em>{user?.name?.split(' ')[0] || user?.username || 'Closer'}</em> 👋</h2>
-                        <p>Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.</p>
-                        <div className="prog-v6">
-                            <div className="pbarw-v6">
-                                <i style={{ width: `${Math.min(100, Math.max(0, agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0))}%` }}></i>
-                            </div>
-                            <div className="pmeta-v6">
-                                <span>{agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length} de {agendas.length} resueltos</span>
-                                <span>{agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0}% completado</span>
+                {/* TU SIGUIENTE PASO + TU DÍA (v7) */}
+                {(() => {
+                    const doneCount = agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length;
+                    const pct = agendas.length ? Math.round((doneCount / agendas.length) * 100) : 0;
+                    const heroCountdown = heroLead ? formatApptCountdown(heroLead.start_time, nowTick) : null;
+                    const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
+                    return (
+                        <div className="tsprow-v6">
+                            {heroLead ? (
+                                <div className="tsp-v6" onClick={() => handleSelectLead(heroLead)}>
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6"></span>
+                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        <div className="flex-1"></div>
+                                        {heroCountdown && (
+                                            <span className={`tsp-badge-v6 ${heroBadgeCls}`}>{heroCountdown.label}</span>
+                                        )}
+                                    </div>
+                                    <h3 className="tsp-name-v6">{heroLead.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
+                                    <button
+                                        type="button"
+                                        className="tsp-cta-v6"
+                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(heroLead); }}
+                                    >
+                                        {activeStep === 'confirmations' ? 'Ir a confirmar' : 'Ir a reportar'} →
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="tsp-v6 tsp-done-v6">
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6 ok"></span>
+                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                    </div>
+                                    <h3 className="tsp-name-v6">🎉 Nada urgente por ahora</h3>
+                                    <p className="tsp-sub-v6">
+                                        {activeStep === 'confirmations' ? 'No hay confirmaciones pendientes.' :
+                                            activeStep === 'calls' ? 'No hay llamadas atrasadas por reportar.' :
+                                                'Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.'}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="tud-v6">
+                                <div className="tud-lbl-v6">Tu día</div>
+                                <div className="tud-pct-v6">{pct}%</div>
+                                <div className="tud-sub-v6">del día completado</div>
+                                <div className="pbarw-v6">
+                                    <i style={{ width: `${pct}%` }}></i>
+                                </div>
+                                <div className="tud-foot-v6">{doneCount} de {agendas.length} resueltos hoy</div>
+                                <div className="tud-streak-v6">🔥 Racha de 12 días sin fallar</div>
                             </div>
                         </div>
-                    </div>
-                    <div className="stats-v6">
-                        <div className="sbox-v6 a">
-                            <div className="ic-v6">📅</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.confirmations}<s>/{agendas.length}</s></div>
-                                <div className="k-v6">Confirmaciones</div>
-                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.confirmations / agendas.length) * 100) : 0}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 c">
-                            <div className="ic-v6">📞</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.calls}<s>/{agendas.length}</s></div>
-                                <div className="k-v6">Llamadas reportadas</div>
-                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.calls / agendas.length) * 100) : 0}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 b">
-                            <div className="ic-v6">💬</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.seguimientos}<s>/50</s></div>
-                                <div className="k-v6">Seguimientos</div>
-                                <div className="mb-v6"><i style={{ width: `${Math.min(100, (counts.seguimientos / 50) * 100)}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 d">
-                            <div className="ic-v6">🔥</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">12<s> días</s></div>
-                                <div className="k-v6">Racha sin fallar</div>
-                                <div className="mb-v6"><i style={{ width: '86%' }}></i></div>
-                            </div>
-                        </div>
-                    </div>
+                    );
+                })()}
+
+                {/* NAVEGACIÓN 01-05 (v7): reemplaza las 3 pestañas + el dock flotante como fuente
+                    principal de "adónde ir" — el dock sigue abajo como acceso rápido mientras se
+                    hace scroll, esto es la vista completa. */}
+                <div className="nav5-v6">
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'confirmations' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'confirmations', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">01</span>
+                        <span className="nc-lbl-v6">Confirmar</span>
+                        <span className={`nc-count-v6 ${counts.confirmations === 0 ? 'zero' : ''}`}>{counts.confirmations}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'calls' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'calls', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">02</span>
+                        <span className="nc-lbl-v6">Reportar</span>
+                        <span className={`nc-count-v6 ${counts.calls === 0 ? 'zero' : ''}`}>{counts.calls}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'seguimientos' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'seguimientos', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">03</span>
+                        <span className="nc-lbl-v6">Seguir</span>
+                        <span className={`nc-count-v6 ${counts.seguimientos === 0 ? 'zero' : ''}`}>{counts.seguimientos}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'report' ? 'on' : ''}`}
+                        onClick={() => setActiveView('report')}
+                    >
+                        <span className="nc-n-v6">04</span>
+                        <span className="nc-lbl-v6">Cerrar el día</span>
+                        {todayReportSent && <span className="nc-check-v6">✓</span>}
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
+                        onClick={() => setActiveView('dashboard')}
+                    >
+                        <span className="nc-n-v6">05</span>
+                        <span className="nc-lbl-v6">Ver mis datos</span>
+                    </button>
                 </div>
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
-                {/* Selector de Pestañas v6 */}
+                {/* Barra de utilidades del mazo (v6): la navegación entre pestañas ahora vive en
+                    la grilla 01-05 de arriba; esto son acciones/filtros que no tienen otro lugar. */}
                 <div className="tabs-v6">
-                    <button 
-                        className={`tab-v6 ${activeStep === 'confirmations' ? 'on' : ''}`}
-                        data-b="true"
-                        onClick={() => setSearchParams({ step: 'confirmations', selected_date: selectedDate })}
-                    >
-                        ① Confirmaciones 
-                        <span className={`n-v6 ml-1.5 ${counts.confirmations > 0 ? 'bg-rose-500 text-white font-bold' : ''}`}>
-                            {counts.confirmations}
-                        </span>
-                    </button>
-                    <button 
-                        className={`tab-v6 ${activeStep === 'calls' ? 'on' : ''}`}
-                        onClick={() => setSearchParams({ step: 'calls', selected_date: selectedDate })}
-                    >
-                        ② Llamadas 
-                        <span className={`n-v6 ml-1.5 ${counts.calls > 0 ? 'bg-amber-500 text-white font-bold' : ''}`}>
-                            {counts.calls}
-                        </span>
-                    </button>
-                    <button 
-                        className={`tab-v6 ${activeStep === 'seguimientos' ? 'on' : ''}`}
-                        onClick={() => setSearchParams({ step: 'seguimientos', selected_date: selectedDate })}
-                    >
-                        ③ Seguimientos 
-                        <span className="n-v6 ml-1.5">{counts.seguimientos}</span>
-                    </button>
                     <div className="flex-1"></div>
-                    
+
                     {/* Filtro de fecha para llamadas y seguimientos */}
                     {(activeStep === 'calls' || activeStep === 'seguimientos') && (
                         <input
