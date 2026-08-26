@@ -897,6 +897,22 @@ header.top-v6 {
 .kcard-v6 .when-v6.soon-v6 .wd-v6 {
   background: var(--v6-pink);
 }
+/* La cita es ahora mismo (+/- 5 min): punto pulsante en vez de fijo, para que se note sin tener
+   que leer el texto. */
+.kcard-v6 .when-v6.now-v6 {
+  color: #F3D08A;
+}
+.kcard-v6 .when-v6.now-v6 .wd-v6 {
+  background: var(--v6-warn);
+}
+/* La hora agendada ya pasó y todavía hay algo pendiente en esta tarjeta (no aplica a
+   "Confirmado", que ya no bloquea nada). */
+.kcard-v6 .when-v6.late-v6 {
+  color: #F5A99C;
+}
+.kcard-v6 .when-v6.late-v6 .wd-v6 {
+  background: var(--v6-dgr);
+}
 .kcard-v6 b {
   font-size: 15.5px;
   font-weight: 700;

@@ -85,6 +85,40 @@ const formatIdcardDate = (iso) => {
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+// Cuenta regresiva/tiempo transcurrido respecto a la hora agendada de una cita ("en 2 h 10 min",
+// "hace 3 días"), en vez de una fecha cruda que no dice nada sobre urgencia sin hacer la cuenta
+// a mano. `nowMs` se pasa desde afuera (no `Date.now()` acá adentro) para que el resultado
+// dependa del reloj vivo del componente (`nowTick`) y no quede pegado al momento del primer
+// render — así se actualiza solo con el tiempo real.
+const formatApptCountdown = (startIso, nowMs) => {
+    const start = parseUtcIso(startIso);
+    if (!start) return null;
+    const diffMs = start.getTime() - nowMs;
+    const absMs = Math.abs(diffMs);
+
+    // Media hora de margen para "ahora mismo": ni el closer ni el lead miran el reloj al segundo.
+    if (absMs <= 5 * 60 * 1000) return { label: 'Ahora mismo', kind: 'now' };
+
+    const mins = Math.floor(absMs / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    let amount;
+    if (days >= 1) {
+        const remH = hours % 24;
+        amount = `${days} día${days !== 1 ? 's' : ''}${remH > 0 ? ` ${remH} h` : ''}`;
+    } else if (hours >= 1) {
+        const remM = mins % 60;
+        amount = `${hours} h${remM > 0 ? ` ${remM} min` : ''}`;
+    } else {
+        amount = `${mins} min`;
+    }
+
+    if (diffMs > 0) {
+        return { label: `En ${amount}`, kind: hours < 2 ? 'soon' : 'future' };
+    }
+    return { label: `Hace ${amount}`, kind: 'past' };
+};
+
 // Link de WhatsApp para contactar al lead directamente desde la ficha durante el seguimiento.
 const waLinkForPhone = (phone, leadName) => {
     const clean = phone ? phone.replace(/\D/g, '') : '';
@@ -117,6 +151,15 @@ const CloserWorkflowPage = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Reloj vivo para las cuentas regresivas de las tarjetas del mazo ("en 2 h", "hace 20 min"):
+    // sin esto, "cuánto falta" quedaría congelado en el momento en que se cargó la página.
+    // 30s alcanza para que se sienta "en vivo" sin recalcular en cada render.
+    const [nowTick, setNowTick] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNowTick(Date.now()), 30000);
+        return () => clearInterval(id);
     }, []);
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
@@ -1213,20 +1256,16 @@ const CloserWorkflowPage = () => {
             } catch (e) {}
         }
 
-        // Urgencia de la cita en sí: cuántos días pasaron desde la hora agendada sin que el
-        // lead esté confirmado todavía (no aplica a "Confirmado", que ya no bloquea nada, ni al
-        // referido manual sin fecha real). Es la misma lectura de "atraso" que la referencia
-        // visual del rediseño marca con un rail de días — acá alcanza con un chip.
-        let overdueBadge = null;
-        if (!isPendingReferral && phase !== 'confirmado' && a.start_time) {
-            const startDate = parseUtcIso(a.start_time);
-            if (startDate) {
-                const diffDays = Math.floor((Date.now() - startDate.getTime()) / 86400000);
-                if (diffDays >= 1) {
-                    overdueBadge = { label: `Atrasada ${diffDays} día${diffDays !== 1 ? 's' : ''}`, cls: diffDays >= 3 ? 'chip-v6 d' : 'chip-v6 w' };
-                }
-            }
-        }
+        // Cuenta regresiva/tiempo transcurrido en vez de la fecha cruda: cuánto falta para la
+        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse. `phase !== 'confirmado'`
+        // decide si esa urgencia se pinta en rojo (todavía hay algo que hacer) o queda neutra
+        // (ya está confirmado, el atraso ya no bloquea nada — hay una tarjeta ✓ propia para eso).
+        const countdown = isPendingReferral ? null : formatApptCountdown(a.start_time, nowTick);
+        const whenCls = !countdown ? ''
+            : countdown.kind === 'now' ? 'now-v6'
+            : countdown.kind === 'soon' ? 'soon-v6'
+            : countdown.kind === 'past' && phase !== 'confirmado' ? 'late-v6'
+            : '';
 
         // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
         // hoy (ámbar) si es el día calendario local actual, oculto si es un día futuro.
@@ -1248,19 +1287,12 @@ const CloserWorkflowPage = () => {
                 className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
                 onClick={() => handleSelectLead(a)}
             >
-                <div className="when-v6 soon-v6">
-                    <span className="wd-v6"></span>
-                    {isPendingReferral ? 'Por agendar' : `${dateLabel} · ${apptTime}`}
+                <div className={`when-v6 ${whenCls}`} title={isPendingReferral ? undefined : `${dateLabel} · ${apptTime}`}>
+                    <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
+                    {isPendingReferral ? 'Por agendar' : (countdown ? countdown.label : `${dateLabel} · ${apptTime}`)}
                 </div>
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                        <b>{a.lead_name || 'Sin Nombre'}</b>
-                        <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
-                    </div>
-                    {overdueBadge && (
-                        <span className={`${overdueBadge.cls} shrink-0 whitespace-nowrap`}>{overdueBadge.label}</span>
-                    )}
-                </div>
+                <b>{a.lead_name || 'Sin Nombre'}</b>
+                <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
                     <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
