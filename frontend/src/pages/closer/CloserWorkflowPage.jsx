@@ -266,8 +266,7 @@ const CloserWorkflowPage = () => {
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
-    const [submittingBulk, setSubmittingBulk] = useState(false);
-    
+
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
 
@@ -304,8 +303,7 @@ const CloserWorkflowPage = () => {
     });
     const [savingFollowUp, setSavingFollowUp] = useState(false);
     
-    // Selección masiva y búsqueda local
-    const [selectedIds, setSelectedIds] = useState(new Set());
+    // Búsqueda local
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
     const [selectedDate, setSelectedDate] = useState(localToday);
@@ -841,7 +839,6 @@ const CloserWorkflowPage = () => {
             const res = await api.get(url);
             const dataList = res.data || [];
             setAgendas(dataList);
-            setSelectedIds(new Set());
 
             // Cargar leads sin agenda con comentarios pendientes
             try {
@@ -1209,26 +1206,22 @@ const CloserWorkflowPage = () => {
         })[0];
     }, [activeView, activeStep, confirmationsPipeline, filteredAgendas]);
 
-    // Agrupación por mes para "② Llamadas" cuando hay muchas citas vencidas sin reportar (v7):
-    // agrupar solo si la lista es grande, para no complicar el caso normal de pocas pendientes.
-    const CALLS_GROUP_THRESHOLD = 10;
-    const callsGroupedByMonth = useMemo(() => {
-        if (activeStep !== 'calls' || filteredAgendas.length <= CALLS_GROUP_THRESHOLD) return null;
-        const groups = {};
-        filteredAgendas.forEach(a => {
-            const d = parseUtcIso(a.start_time);
-            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'sin-fecha';
-            if (!groups[key]) {
-                groups[key] = {
-                    key,
-                    label: d ? d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : 'Sin fecha',
-                    items: []
-                };
-            }
-            groups[key].items.push(a);
+    // Pipeline Kanban agrupado por urgencia para Llamadas (v7): a diferencia de Confirmaciones
+    // (que tiene 3 etapas reales de proceso), acá todo está en el mismo estado —"sin
+    // reportar"—, así que se agrupa por qué tan urgente es reportarlo, igual que la referencia
+    // visual del rediseño (que separa "atrasadas sin reportar" de "hoy, por tomar").
+    const callsPipeline = useMemo(() => {
+        const atrasadas = [];
+        const hoy = [];
+        const proximas = [];
+        (filteredAgendas || []).forEach(a => {
+            const cd = formatApptCountdown(a.start_time, nowTick);
+            if (!cd || cd.kind === 'past') atrasadas.push(a);
+            else if (cd.kind === 'now' || cd.kind === 'soon') hoy.push(a);
+            else proximas.push(a);
         });
-        return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
-    }, [filteredAgendas, activeStep]);
+        return { atrasadas, hoy, proximas };
+    }, [filteredAgendas, nowTick]);
 
     // Sistema de "lote diario" (v7): en vez de enfrentar de una todo el backlog de "② Llamadas",
     // se ofrece un lote aleatorio de N leads a la vez — mismo flujo de tarjeta→modal→guardar de
@@ -1315,7 +1308,14 @@ const CloserWorkflowPage = () => {
                     <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
                     {isPendingReferral ? 'Por agendar' : (countdown ? countdown.label : `${dateLabel} · ${apptTime}`)}
                 </div>
-                <b>{a.lead_name || 'Sin Nombre'}</b>
+                <b className="flex items-center gap-1.5 flex-wrap">
+                    {a.lead_name || 'Sin Nombre'}
+                    {a.unread_comment && (
+                        <span className="px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded animate-pulse">
+                            Nuevo
+                        </span>
+                    )}
+                </b>
                 <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
@@ -1330,6 +1330,11 @@ const CloserWorkflowPage = () => {
                     {a.examen && (
                         <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                             {a.examen}
+                        </span>
+                    )}
+                    {phase === 'call' && a.closer_result && a.closer_result !== 'Pendiente' && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
+                            {a.closer_result}
                         </span>
                     )}
                     {reminderBadge && (
@@ -1362,6 +1367,14 @@ const CloserWorkflowPage = () => {
                         onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
                     >
                         Confirmar asistencia
+                    </button>
+                )}
+                {phase === 'call' && (
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
+                    >
+                        Reportar resultado
                     </button>
                 )}
                 {phase === 'confirmado' && (
@@ -1506,56 +1519,10 @@ const CloserWorkflowPage = () => {
         });
     };
 
-    // Actualización masiva (Asistió, No Show, Canceló)
-    const handleBulkUpdate = async (bulkResult) => {
-        if (selectedIds.size === 0) return;
-        setSubmittingBulk(true);
-        try {
-            const payload = {
-                appt_ids: Array.from(selectedIds),
-                result: bulkResult
-            };
-            await api.post(`/closer/deck/bulk-update`, payload);
-            toast.success("Agendas actualizadas masivamente");
-            fetchAgendas();
-        } catch (err) {
-            console.error("Error en lote:", err);
-            toast.error("Error al procesar en lote");
-        } finally {
-            setSubmittingBulk(false);
-        }
-    };
-
-    // Selección de elementos
-    const toggleSelect = (id, e) => {
-        if (e) e.stopPropagation();
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
-
-    const toggleSelectAll = () => {
-        if (selectedIds.size === filteredAgendas.length) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(filteredAgendas.map(a => a.id)));
-        }
-    };
-
     // Formatear fecha para input datetime-local (hora LOCAL del navegador, no UTC crudo)
     const formatToDatetimeLocal = (dateStr) => {
         const { date, time } = splitLocalDateTime(dateStr);
         return date && time ? `${date}T${time}` : '';
-    };
-
-    // Formatear hora de inicio (hora LOCAL del navegador, no UTC crudo)
-    const formatTimeOnly = (isoStr) => {
-        const d = parseUtcIso(isoStr);
-        if (!d) return '';
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     // Navegación de pasos del modal de venta
@@ -3405,6 +3372,19 @@ const CloserWorkflowPage = () => {
                         <span className="nc-n-v6">05</span>
                         <span className="nc-lbl-v6">Ver mis datos</span>
                     </button>
+                    {/* Pestaña temporal: solo aparece mientras Operaciones la tenga activada
+                        (ver GET /closer/leads-audit/status). No tiene número fijo en la
+                        referencia visual porque no forma parte de su flujo habitual. */}
+                    {auditEnabled && (
+                        <button
+                            type="button"
+                            className={`nc-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
+                            onClick={() => setActiveView('auditoria')}
+                        >
+                            <span className="nc-n-v6">🗂️</span>
+                            <span className="nc-lbl-v6">Auditoría</span>
+                        </button>
+                    )}
                 </div>
 
                 {activeView === 'inbox' ? (
@@ -3509,7 +3489,9 @@ const CloserWorkflowPage = () => {
                     ) : activeStep === 'seguimientos' ? (
                         <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} />
                     ) : (
-                        /* Renderizado clásico de Lista para Llamadas */
+                        /* Renderizado Kanban para Llamadas (v7): mismo lenguaje visual que
+                           Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por
+                           etapa de proceso — acá todo está en el mismo estado, "sin reportar". */
                         <>
                             {/* Notificación / progreso de Lote Diario (v7) */}
                             {activeStep === 'calls' && (
@@ -3581,7 +3563,7 @@ const CloserWorkflowPage = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {unreadNoAgenda.map((a) => {
                                             const isViewed = selectedLead?.id === a.id;
-                                            
+
                                             return (
                                                 <motion.div
                                                     key={a.id}
@@ -3591,8 +3573,8 @@ const CloserWorkflowPage = () => {
                                                     exit={{ opacity: 0, scale: 0.95 }}
                                                     onClick={() => handleSelectLead(a)}
                                                     className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                        isViewed 
-                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                                                        isViewed
+                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]'
                                                             : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
                                                     }`}
                                                 >
@@ -3622,197 +3604,72 @@ const CloserWorkflowPage = () => {
                                 </div>
                             )}
 
-                            {/* Barra de Acciones Masivas */}
-                            {selectedIds.size > 0 && (
-                                <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 px-3 py-1.5 rounded-xl border border-violet-500/20">
-                                            {selectedIds.size} Agendas Marcadas
-                                        </span>
-                                        <button 
-                                            onClick={() => setSelectedIds(new Set())}
-                                            className="text-[9px] font-black uppercase text-slate-500 hover:text-white underline cursor-pointer"
-                                        >
-                                            Limpiar
-                                        </button>
+                            {/* En modo lote: lista plana del lote actual (nunca son tantas como para
+                                necesitar columnas). Fuera de modo lote: Kanban por urgencia. */}
+                            {batchMode ? (
+                                batchItems.length > 0 && (
+                                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+                                        <AnimatePresence initial={false}>
+                                            {batchItems.map(a => renderKanbanCard(a, 'call'))}
+                                        </AnimatePresence>
+                                    </div>
+                                )
+                            ) : loading ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <Loader2 className="animate-spin text-pink-500" size={32} />
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando llamadas...</span>
+                                </div>
+                            ) : filteredAgendas.length === 0 ? (
+                                <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
+                                    👏 Ninguna llamada pendiente de reportar.
+                                </div>
+                            ) : (
+                                <div className="kb-v6">
+                                    <div className="kcol-v6 k1-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Atrasadas</b>
+                                            <span className="n-v6">{callsPipeline.atrasadas.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.atrasadas.length > 0 ? (
+                                                callsPipeline.atrasadas.map(a => renderKanbanCard(a, 'call'))
+                                            ) : (
+                                                <div className="kempty-v6 done-v6">✓ Ninguna atrasada</div>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => handleBulkUpdate('Completada')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-650/20"
-                                        >
-                                            ✓ Asistió
-                                        </button>
-                                        <button
-                                            onClick={() => handleBulkUpdate('No Show')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-rose-650 hover:bg-rose-555 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-650/20"
-                                        >
-                                            ✕ No Show
-                                        </button>
-                                        <button
-                                            onClick={() => handleBulkUpdate('Cancelada')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-650/20"
-                                        >
-                                            ✕ Canceló
-                                        </button>
+                                    <div className="kcol-v6 k2-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Hoy</b>
+                                            <span className="n-v6">{callsPipeline.hoy.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.hoy.length > 0 ? (
+                                                callsPipeline.hoy.map(a => renderKanbanCard(a, 'call'))
+                                            ) : (
+                                                <div className="kempty-v6">Sin llamadas hoy.</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="kcol-v6 k3-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Próximas</b>
+                                            <span className="n-v6">{callsPipeline.proximas.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.proximas.length > 0 ? (
+                                                callsPipeline.proximas.map(a => renderKanbanCard(a, 'call'))
+                                            ) : (
+                                                <div className="kempty-v6">Sin llamadas próximas.</div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Contenedor de la Lista */}
-                            {!(activeStep === 'calls' && batchMode && batchItems.length === 0) && (
-                            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
-                                {(() => {
-                                    const displayList = (activeStep === 'calls' && batchMode) ? batchItems : filteredAgendas;
-                                    return (
-                                <div className="flex justify-between items-center border-b border-slate-900 pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={displayList.length > 0 && selectedIds.size === displayList.length}
-                                            onChange={toggleSelectAll}
-                                            className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
-                                        />
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            Seleccionar Todos
-                                        </span>
-                                    </div>
-                                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                        {displayList.length} Citas en Lista
-                                    </span>
-                                </div>
-                                    );
-                                })()}
-
-                                {loading ? (
-                                    <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                        <Loader2 className="animate-spin text-violet-500" size={32} />
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando agendas...</span>
-                                    </div>
-                                ) : (activeStep === 'calls' && batchMode ? batchItems : filteredAgendas).length === 0 ? (
-                                    <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                        {activeStep === 'calls' ? '👏 Ninguna llamada pendiente de reportar. ¡Bandeja limpia!' : '👏 No tienes agendas programadas.'}
-                                    </div>
-                                ) : (
-                                    (() => {
-                                        const renderCard = (a) => {
-                                            const isSelected = selectedIds.has(a.id);
-                                            const isViewed = selectedLead?.id === a.id;
-
-                                            // Mismo lenguaje de urgencia que el mazo de Confirmaciones: acá casi
-                                            // todo está atrasado (son llamadas que ya pasaron sin reportar), así
-                                            // que la variante roja/ámbar es la norma, no la excepción.
-                                            const countdown = formatApptCountdown(a.start_time, nowTick);
-                                            const timeCls = !countdown ? ''
-                                                : countdown.kind === 'now' ? 'p'
-                                                : countdown.kind === 'soon' ? 'p'
-                                                : countdown.kind === 'past' ? 'd'
-                                                : 'b';
-
-                                            return (
-                                                <motion.div
-                                                    key={a.id}
-                                                    layout
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.95 }}
-                                                    onClick={() => handleSelectLead(a)}
-                                                    className={`row-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={(e) => toggleSelect(a.id, e)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                    />
-
-                                                    <div className={`time-v6 ${timeCls}`} title={formatTimeOnly(a.start_time)}>
-                                                        {countdown ? countdown.label : formatTimeOnly(a.start_time)}
-                                                    </div>
-
-                                                    <div className="rmain-v6">
-                                                        <b className="flex items-center gap-2">
-                                                            {a.lead_name || 'Sin Nombre'}
-                                                            {a.unread_comment && (
-                                                                <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
-                                                                    Mensaje nuevo
-                                                                </span>
-                                                            )}
-                                                        </b>
-                                                        <div className="chips-v6">
-                                                            <span className="chip-v6 src">{a.origin || 'Sheets'}</span>
-                                                            <span className="chip-v6 ok">Confirmó: {a.result || 'Pendiente'}</span>
-                                                            {a.fecha_seguimiento && (
-                                                                <span className="chip-v6 w">Seguimiento: {a.fecha_seguimiento}</span>
-                                                            )}
-                                                            {a.instagram && (
-                                                                <span className="chip-v6">@{a.instagram.replace('@', '')}</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        <span className={`chip-v6 ${
-                                                            a.closer_result === 'Show up' ? 'ok' :
-                                                            a.closer_result === 'No Show' ? 'd' :
-                                                            a.closer_result === 'Cancelado' ? 'w' :
-                                                            a.closer_result === 'Reagendado' ? 'seq' :
-                                                            a.closer_result === '2da call' ? 'i' : ''
-                                                        }`}>
-                                                            {a.closer_result || 'Pendiente'}
-                                                        </span>
-                                                        <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        };
-
-                                        if (activeStep === 'calls' && batchMode) {
-                                            // Modo lote: solo las cartas del lote actual, siempre lista plana (nunca son tantas como para necesitar agrupar).
-                                            return (
-                                                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                    <AnimatePresence initial={false}>
-                                                        {batchItems.map(renderCard)}
-                                                    </AnimatePresence>
-                                                </div>
-                                            );
-                                        }
-
-                                        if (callsGroupedByMonth) {
-                                            // Muchas llamadas pendientes: agrupadas por mes/año, mes más reciente primero.
-                                            return (
-                                                <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                    {callsGroupedByMonth.map(group => (
-                                                        <div key={group.key} className="space-y-3">
-                                                            <div className="flex items-center gap-3 sticky top-0 bg-[#111219] py-1 z-10">
-                                                                <span className="text-xs font-black uppercase tracking-widest text-violet-400 capitalize">{group.label}</span>
-                                                                <span className="text-[10px] font-black bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded-lg">{group.items.length}</span>
-                                                                <div className="flex-1 h-px bg-slate-900" />
-                                                            </div>
-                                                            <AnimatePresence initial={false}>
-                                                                {group.items.map(renderCard)}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        }
-
-                                        return (
-                                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                <AnimatePresence initial={false}>
-                                                    {filteredAgendas.map(renderCard)}
-                                                </AnimatePresence>
-                                            </div>
-                                        );
-                                    })()
-                                )}
-                            </div>
                             )}
                         </>
                     )}
@@ -5540,42 +5397,6 @@ const CloserWorkflowPage = () => {
                 )}
             </>
 
-            {/* DOCK FLOTANTE v6 */}
-            <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>
-                <button 
-                    className={`dk-v6 ${activeView === 'inbox' ? 'on' : ''}`}
-                    onClick={() => setActiveView('inbox')}
-                >
-                    <span>📥 Bandeja</span>
-                    {(counts.confirmations + counts.calls + counts.seguimientos) > 0 && (
-                        <span className="b-v6">{counts.confirmations + counts.calls + counts.seguimientos}</span>
-                    )}
-                </button>
-                <button
-                    className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${todayReportSent ? 'sent' : ''}`}
-                    onClick={() => setActiveView('report')}
-                >
-                    {todayReportSent ? (
-                        <span>✓ Reporte enviado</span>
-                    ) : (
-                        <span>📊 Reporte del día</span>
-                    )}
-                </button>
-                <button
-                    className={`dk-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
-                    onClick={() => setActiveView('dashboard')}
-                >
-                    <span>📈 Dashboard</span>
-                </button>
-                {auditEnabled && (
-                    <button
-                        className={`dk-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
-                        onClick={() => setActiveView('auditoria')}
-                    >
-                        <span>🗂️ Auditoría</span>
-                    </button>
-                )}
-            </div>
 
             {/* Corrección de la ficha del lead: nombre, teléfono, correo, instagram y fecha/hora
                 de la llamada. Al guardar se recarga el mazo y se cierra el modal de detalle, para

@@ -1320,7 +1320,9 @@ header.top-v6 {
   .tsprow-v6 { grid-template-columns: 1fr; }
 }
 
-/* DOCK v6 */
+/* DOCK v6 — ya no se usa como navegación (eso lo reemplazó `.nav5-v6`, arriba de la lista);
+   se deja el estilo del panel flotante fijo abajo-centro como base para notificaciones u otro
+   uso puntual futuro, a pedido del usuario. Sin JSX que lo consuma por ahora. */
 .dock-v6 {
   position: fixed;
   bottom: 20px;
