@@ -26,10 +26,8 @@ def upgrade():
             "ALTER TABLE manychat_ad_leads DROP CONSTRAINT IF EXISTS uq_manychat_ad_leads_manychat_id"
         ))
     else:
-        # Para SQLite (local), Alembic no puede hacer reflection de constraints unique anónimos
-        # y lanza ValueError al ejecutar batch_alter_table. Omitimos la caída del constraint
-        # localmente (si molesta en dev, se borra local.db).
-        pass
+        with op.batch_alter_table('manychat_ad_leads', schema=None) as batch_op:
+            batch_op.drop_constraint('uq_manychat_ad_leads_manychat_id', type_='unique')
 
 def downgrade():
     bind = op.get_bind()
