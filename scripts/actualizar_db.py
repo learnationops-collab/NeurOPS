@@ -60,6 +60,12 @@ def actualizar(target='local'):
     app = create_app()
     with app.app_context():
         print(f"--- Iniciando actualización limpia desde producción hacia [{target_name}] ---")
+        try:
+            from flask_migrate import upgrade as db_upgrade
+            print("Asegurando estructura de tablas con migraciones...")
+            db_upgrade()
+        except Exception as mig_err:
+            print(f"Advertencia al ejecutar migraciones previa a la sincronización: {mig_err}")
         
         # Motor de base de datos de producción
         prod_engine = create_engine(prod_url)
