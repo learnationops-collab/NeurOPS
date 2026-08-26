@@ -25,10 +25,13 @@ def upgrade():
         bind.execute(sa.text(
             "ALTER TABLE ads DROP CONSTRAINT IF EXISTS fk_ads_ad_set_id_ad_groups"
         ))
-        op.create_foreign_key(
-            'fk_ads_ad_set_id_ad_sets', 'ads', 'ad_sets',
-            ['ad_set_id'], ['id']
-        )
+        inspector = sa.inspect(bind)
+        fk_names = [fk.get('name') for fk in inspector.get_foreign_keys('ads')]
+        if 'fk_ads_ad_set_id_ad_sets' not in fk_names:
+            op.create_foreign_key(
+                'fk_ads_ad_set_id_ad_sets', 'ads', 'ad_sets',
+                ['ad_set_id'], ['id']
+            )
 
 
 def downgrade():

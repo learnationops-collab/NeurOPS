@@ -50,8 +50,15 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('closer_id', 'date', name='_closer_date_uc')
     )
-    with op.batch_alter_table('lead_profiles', schema=None) as batch_op:
-        batch_op.create_foreign_key('fk_lead_profiles_assigned_closer_id_users', 'users', ['assigned_closer_id'], ['id'])
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    fk_names = [fk.get('name') for fk in inspector.get_foreign_keys('lead_profiles')]
+    if 'fk_lead_profiles_assigned_closer_id_users' not in fk_names:
+        try:
+            with op.batch_alter_table('lead_profiles', schema=None) as batch_op:
+                batch_op.create_foreign_key('fk_lead_profiles_assigned_closer_id_users', 'users', ['assigned_closer_id'], ['id'])
+        except Exception:
+            pass
 
     # ### end Alembic commands ###
 
