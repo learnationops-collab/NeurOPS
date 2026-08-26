@@ -513,20 +513,38 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 :root {
   --v6-navy: #0A0E3D;
   --v6-blue: #1323C6;
+  --v6-blue2: #4E8BD8;
   --v6-pink: #FF3FA4;
   --v6-pink2: #FF6AD5;
   --v6-grad: linear-gradient(135deg,#FF3FA4,#FF6AD5);
   --v6-grade: linear-gradient(135deg,#1323C6,#FF3FA4);
+  --v6-gradb: linear-gradient(135deg,#1323C6,#4E8BD8);
   --v6-card: rgba(255,255,255,.04);
   --v6-bd: rgba(255,255,255,.09);
   --v6-bd2: rgba(255,255,255,.18);
   --v6-tx: #fff;
   --v6-tx2: rgba(255,255,255,.66);
   --v6-tx3: rgba(255,255,255,.40);
-  --v6-ok: #22C55E;
-  --v6-warn: #F59E0B;
-  --v6-dgr: #EF4444;
+  /* Paleta "premium" del rediseño del Workspace de Closers: tonos más apagados que los
+     Tailwind por defecto (verde/ámbar/rojo puros), pensados para convivir con fondo #020617
+     sin saturar. Exclusiva de las clases -v6/-v7 (solo las usa CloserWorkflowPage). */
+  --v6-ok: #2FBF8F;
+  --v6-warn: #D9A441;
+  --v6-dgr: #E85C4A;
   --v6-info: #60A5FA;
+  --v6-bg-glow:
+    radial-gradient(1100px 520px at 12% -12%, rgba(19,35,198,.30), transparent 62%),
+    radial-gradient(820px 420px at 96% -4%, rgba(255,63,164,.10), transparent 58%),
+    #020617;
+}
+
+/* FONDO */
+/* Resplandor ambiental detrás de todo el Workspace: dos manchas radiales (índigo arriba a la
+   izquierda, rosa arriba a la derecha) sobre el navy base #020617, en vez del navy plano de
+   antes. El header, sticky y con su propio blur, tapa la mancha cuando hace scroll. */
+.bg-v6 {
+  background: var(--v6-bg-glow);
+  background-attachment: fixed;
 }
 
 /* HEADER */

@@ -3116,7 +3116,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
+        <div className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
             {/* Header del Espacio de Trabajo Premium v6 */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
