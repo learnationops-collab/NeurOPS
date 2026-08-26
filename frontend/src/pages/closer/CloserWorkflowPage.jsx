@@ -1188,27 +1188,6 @@ const CloserWorkflowPage = () => {
         setBatchMode(true);
     };
 
-    // Actualización rápida del estado de confirmación desde el Kanban (v6)
-    const handleQuickConfirmStatus = async (apptId, status, e) => {
-        if (e) e.stopPropagation();
-        setProcessingId(apptId);
-        try {
-            await api.post(`/closer/deck/${apptId}`, { confirm_status: status });
-            toast.success(`Confirmación actualizada a: ${status}`);
-            
-            // Actualizar localmente en memoria para respuesta visual inmediata
-            setAgendas(prev => prev.map(a => a.id === apptId ? { ...a, result: status } : a));
-            
-            // Consultar contadores actualizados
-            fetchCounts();
-        } catch (err) {
-            console.error("Error al actualizar estado de confirmación:", err);
-            toast.error("Error al actualizar la confirmación");
-        } finally {
-            setProcessingId(null);
-        }
-    };
-
     // Renderizar una tarjeta individual del Kanban de confirmación (v6)
     const renderKanbanCard = (a, phase) => {
         const isViewed = selectedLead?.id === a.id;
@@ -1232,6 +1211,21 @@ const CloserWorkflowPage = () => {
                 const parts = apptDate.split('-');
                 if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`;
             } catch (e) {}
+        }
+
+        // Urgencia de la cita en sí: cuántos días pasaron desde la hora agendada sin que el
+        // lead esté confirmado todavía (no aplica a "Confirmado", que ya no bloquea nada, ni al
+        // referido manual sin fecha real). Es la misma lectura de "atraso" que la referencia
+        // visual del rediseño marca con un rail de días — acá alcanza con un chip.
+        let overdueBadge = null;
+        if (!isPendingReferral && phase !== 'confirmado' && a.start_time) {
+            const startDate = parseUtcIso(a.start_time);
+            if (startDate) {
+                const diffDays = Math.floor((Date.now() - startDate.getTime()) / 86400000);
+                if (diffDays >= 1) {
+                    overdueBadge = { label: `Atrasada ${diffDays} día${diffDays !== 1 ? 's' : ''}`, cls: diffDays >= 3 ? 'chip-v6 d' : 'chip-v6 w' };
+                }
+            }
         }
 
         // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
@@ -1258,8 +1252,15 @@ const CloserWorkflowPage = () => {
                     <span className="wd-v6"></span>
                     {isPendingReferral ? 'Por agendar' : `${dateLabel} · ${apptTime}`}
                 </div>
-                <b>{a.lead_name || 'Sin Nombre'}</b>
-                <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <b>{a.lead_name || 'Sin Nombre'}</b>
+                        <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
+                    </div>
+                    {overdueBadge && (
+                        <span className={`${overdueBadge.cls} shrink-0 whitespace-nowrap`}>{overdueBadge.label}</span>
+                    )}
+                </div>
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
                     <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
@@ -1288,22 +1289,23 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
                 
+                {/* El botón no cambia la etapa por sí solo: abre el mismo modal de proceso de
+                    confirmación que el resto de la tarjeta (según en qué etapa esté el lead),
+                    para no saltarse las notas obligatorias ni el resto del flujo guiado. */}
                 {phase === 'por_confirmar' && (
-                    <button 
-                        className="kadv-v6" 
-                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Conversando', e)}
-                        disabled={processingId === a.id}
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
                     >
-                        {processingId === a.id ? '...' : 'Registrar contacto'}
+                        Contactar y registrar
                     </button>
                 )}
                 {phase === 'conversando' && (
-                    <button 
-                        className="kadv-v6" 
-                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Confirmado', e)}
-                        disabled={processingId === a.id}
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
                     >
-                        {processingId === a.id ? '...' : 'Confirmar asistencia'}
+                        Confirmar asistencia
                     </button>
                 )}
                 {phase === 'confirmado' && (
