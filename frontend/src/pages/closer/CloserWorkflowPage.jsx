@@ -3648,6 +3648,16 @@ const CloserWorkflowPage = () => {
                                             const isSelected = selectedIds.has(a.id);
                                             const isViewed = selectedLead?.id === a.id;
 
+                                            // Mismo lenguaje de urgencia que el mazo de Confirmaciones: acá casi
+                                            // todo está atrasado (son llamadas que ya pasaron sin reportar), así
+                                            // que la variante roja/ámbar es la norma, no la excepción.
+                                            const countdown = formatApptCountdown(a.start_time, nowTick);
+                                            const timeCls = !countdown ? ''
+                                                : countdown.kind === 'now' ? 'p'
+                                                : countdown.kind === 'soon' ? 'p'
+                                                : countdown.kind === 'past' ? 'd'
+                                                : 'b';
+
                                             return (
                                                 <motion.div
                                                     key={a.id}
@@ -3656,83 +3666,52 @@ const CloserWorkflowPage = () => {
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, scale: 0.95 }}
                                                     onClick={() => handleSelectLead(a)}
-                                                    className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                        isViewed
-                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]'
-                                                            : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                                    }`}
+                                                    className={`row-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
                                                 >
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={(e) => toggleSelect(a.id, e)}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                            />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={(e) => toggleSelect(a.id, e)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
+                                                    />
 
-                                                            <div className="min-w-0 space-y-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                                                        <Clock size={10} />
-                                                                        {formatTimeOnly(a.start_time)}
-                                                                    </span>
-                                                                    <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
-                                                                        {a.lead_name || 'Sin Nombre'}
-                                                                        {a.unread_comment && (
-                                                                            <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
-                                                                                Mensaje nuevo
-                                                                            </span>
-                                                                        )}
-                                                                    </h4>
-                                                                </div>
+                                                    <div className={`time-v6 ${timeCls}`} title={formatTimeOnly(a.start_time)}>
+                                                        {countdown ? countdown.label : formatTimeOnly(a.start_time)}
+                                                    </div>
 
-                                                                <div className="flex items-center gap-2 flex-wrap mt-1">
-                                                                    <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
-                                                                        {a.origin || 'Sheets'}
-                                                                    </span>
-                                                                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
-                                                                        Confirmer: {a.result || 'Pendiente'}
-                                                                    </span>
-                                                                    {a.fecha_seguimiento && (
-                                                                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                                            <Calendar size={10} />
-                                                                            Seguimiento: {a.fecha_seguimiento}
-                                                                        </span>
-                                                                    )}
-                                                                    {a.instagram && (
-                                                                        <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
-                                                                            @{a.instagram}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-3 shrink-0">
-                                                            {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
-                                                                <button
-                                                                    onClick={(e) => handleMarkFollowUpDone(a, e)}
-                                                                    disabled={processingId === a.id}
-                                                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                                                                >
-                                                                    {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                                    Marcar Realizado
-                                                                </button>
+                                                    <div className="rmain-v6">
+                                                        <b className="flex items-center gap-2">
+                                                            {a.lead_name || 'Sin Nombre'}
+                                                            {a.unread_comment && (
+                                                                <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
+                                                                    Mensaje nuevo
+                                                                </span>
                                                             )}
-                                                            <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
-                                                                a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
-                                                                a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                                                a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
-                                                                a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
-                                                                a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
-                                                                'bg-slate-500/10 text-slate-450 border border-slate-500/20'
-                                                            }`}>
-                                                                {a.closer_result || 'Pendiente'}
-                                                            </span>
-                                                            <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
+                                                        </b>
+                                                        <div className="chips-v6">
+                                                            <span className="chip-v6 src">{a.origin || 'Sheets'}</span>
+                                                            <span className="chip-v6 ok">Confirmó: {a.result || 'Pendiente'}</span>
+                                                            {a.fecha_seguimiento && (
+                                                                <span className="chip-v6 w">Seguimiento: {a.fecha_seguimiento}</span>
+                                                            )}
+                                                            {a.instagram && (
+                                                                <span className="chip-v6">@{a.instagram.replace('@', '')}</span>
+                                                            )}
                                                         </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <span className={`chip-v6 ${
+                                                            a.closer_result === 'Show up' ? 'ok' :
+                                                            a.closer_result === 'No Show' ? 'd' :
+                                                            a.closer_result === 'Cancelado' ? 'w' :
+                                                            a.closer_result === 'Reagendado' ? 'seq' :
+                                                            a.closer_result === '2da call' ? 'i' : ''
+                                                        }`}>
+                                                            {a.closer_result || 'Pendiente'}
+                                                        </span>
+                                                        <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
                                                     </div>
                                                 </motion.div>
                                             );
