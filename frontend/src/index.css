@@ -1202,6 +1202,18 @@ header.top-v6 {
   text-transform: uppercase;
   color: var(--v6-tx3);
 }
+.tud-xp-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #F3D08A;
+  background: rgba(217,164,65,.14);
+  border: 1px solid rgba(217,164,65,.32);
+  border-radius: 99px;
+  padding: 3px 10px;
+  flex: none;
+  white-space: nowrap;
+}
 .tud-pct-v6 {
   font-size: 38px;
   font-weight: 900;

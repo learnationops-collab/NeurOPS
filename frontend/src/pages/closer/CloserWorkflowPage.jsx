@@ -250,22 +250,34 @@ const CloserWorkflowPage = () => {
             .finally(() => setLoadingReportStatus(false));
     }, [activeView, reportDate, reportStatusRefreshKey]);
 
-    // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
-    // entre a la pestaña de reporte — el dock decora "✓ Reporte enviado" desde el inicio.
-    useEffect(() => {
-        api.get('/closer/deck/daily-report', { params: { date: localToday() } })
-            .then(res => setTodayReportSent(!!res.data?.sent))
-            .catch(() => {});
-    }, []);
-
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
     // Señal de recarga para la pestaña de seguimientos (ver fetchAgendas): sube en cada acción
     // que modifica el mazo para que el panel vuelva a pedir sus propios datos.
     const [seguimientosRefreshKey, setSeguimientosRefreshKey] = useState(0);
+
+    // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
+    // entre a la pestaña de reporte — la tarjeta "Tu día" necesita `activity` (trabajo real de
+    // hoy, no solo lo que trajo la pestaña activa) desde el arranque, y se vuelve a pedir cada
+    // vez que `seguimientosRefreshKey` sube (esa señal ya se dispara después de cualquier acción
+    // que modifica el mazo, así que "Tu día" queda al día sin agregar otro punto de recarga).
+    useEffect(() => {
+        api.get('/closer/deck/daily-report', { params: { date: localToday() } })
+            .then(res => {
+                setTodayReportSent(!!res.data?.sent);
+                setDailyActivity(res.data?.activity || null);
+            })
+            .catch(() => {});
+    }, [seguimientosRefreshKey]);
+
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    // Llamadas de hoy YA reportadas (para la columna "Reportadas" del Kanban de ② Reportar).
+    // `step=calls` del mazo excluye por diseño lo ya procesado (closer_processed=true) — no hay
+    // forma de pedirlo por ahí. `step=agendas` sí trae todo lo del día sin filtrar por estado,
+    // así que se filtra acá del lado del cliente.
+    const [reportedTodayCalls, setReportedTodayCalls] = useState([]);
 
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
@@ -840,6 +852,20 @@ const CloserWorkflowPage = () => {
             const dataList = res.data || [];
             setAgendas(dataList);
 
+            // Llamadas del día seleccionado ya reportadas, solo relevante en la pestaña de
+            // Llamadas (columna "Reportadas" del Kanban) — ver el estado `reportedTodayCalls`
+            // para el porqué de la consulta aparte.
+            if (activeStep === 'calls') {
+                try {
+                    const allDayRes = await api.get(`/closer/deck?step=agendas&selected_date=${selectedDate}`);
+                    setReportedTodayCalls((allDayRes.data || []).filter(a => a.closer_processed));
+                } catch (err) {
+                    console.error("Error al cargar llamadas reportadas del día:", err);
+                }
+            } else {
+                setReportedTodayCalls([]);
+            }
+
             // Cargar leads sin agenda con comentarios pendientes
             try {
                 const unreadRes = await api.get('/closer/unread-no-agenda');
@@ -1206,22 +1232,22 @@ const CloserWorkflowPage = () => {
         })[0];
     }, [activeView, activeStep, confirmationsPipeline, filteredAgendas]);
 
-    // Pipeline Kanban agrupado por urgencia para Llamadas (v7): a diferencia de Confirmaciones
-    // (que tiene 3 etapas reales de proceso), acá todo está en el mismo estado —"sin
-    // reportar"—, así que se agrupa por qué tan urgente es reportarlo, igual que la referencia
-    // visual del rediseño (que separa "atrasadas sin reportar" de "hoy, por tomar").
+    // Pipeline Kanban para Llamadas (v7), calcado de la referencia visual: "Atrasadas" (sin
+    // reportar, de días anteriores al seleccionado), "Hoy" (sin reportar, del día seleccionado —
+    // "por tomar") y "Reportadas" (del día seleccionado, ya procesadas). A diferencia del
+    // countdown de la tarjeta (que mide urgencia en horas/minutos), acá el corte es por fecha
+    // calendario: una llamada de las 8am de hoy sigue siendo "de hoy", no "atrasada", aunque ya
+    // sean las 3pm — es lo que pidió el usuario explícitamente.
     const callsPipeline = useMemo(() => {
         const atrasadas = [];
         const hoy = [];
-        const proximas = [];
         (filteredAgendas || []).forEach(a => {
-            const cd = formatApptCountdown(a.start_time, nowTick);
-            if (!cd || cd.kind === 'past') atrasadas.push(a);
-            else if (cd.kind === 'now' || cd.kind === 'soon') hoy.push(a);
-            else proximas.push(a);
+            const { date: apptDate } = splitLocalDateTime(a.start_time);
+            if (apptDate === selectedDate) hoy.push(a);
+            else atrasadas.push(a);
         });
-        return { atrasadas, hoy, proximas };
-    }, [filteredAgendas, nowTick]);
+        return { atrasadas, hoy, reportadas: reportedTodayCalls };
+    }, [filteredAgendas, selectedDate, reportedTodayCalls]);
 
     // Sistema de "lote diario" (v7): en vez de enfrentar de una todo el backlog de "② Llamadas",
     // se ofrece un lote aleatorio de N leads a la vez — mismo flujo de tarjeta→modal→guardar de
@@ -1274,14 +1300,15 @@ const CloserWorkflowPage = () => {
         }
 
         // Cuenta regresiva/tiempo transcurrido en vez de la fecha cruda: cuánto falta para la
-        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse. `phase !== 'confirmado'`
-        // decide si esa urgencia se pinta en rojo (todavía hay algo que hacer) o queda neutra
-        // (ya está confirmado, el atraso ya no bloquea nada — hay una tarjeta ✓ propia para eso).
+        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse. Se amortigua a color
+        // neutro en las etapas "ya resuelto" (`confirmado`, `call_done`): ahí el atraso no
+        // bloquea nada — cada una tiene su propia tarjeta ✓ para eso.
+        const DONE_PHASES = new Set(['confirmado', 'call_done']);
         const countdown = isPendingReferral ? null : formatApptCountdown(a.start_time, nowTick);
         const whenCls = !countdown ? ''
             : countdown.kind === 'now' ? 'now-v6'
             : countdown.kind === 'soon' ? 'soon-v6'
-            : countdown.kind === 'past' && phase !== 'confirmado' ? 'late-v6'
+            : countdown.kind === 'past' && !DONE_PHASES.has(phase) ? 'late-v6'
             : '';
 
         // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
@@ -1332,7 +1359,7 @@ const CloserWorkflowPage = () => {
                             {a.examen}
                         </span>
                     )}
-                    {phase === 'call' && a.closer_result && a.closer_result !== 'Pendiente' && (
+                    {(phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente' && (
                         <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
                             {a.closer_result}
                         </span>
@@ -1376,6 +1403,13 @@ const CloserWorkflowPage = () => {
                     >
                         Reportar resultado
                     </button>
+                )}
+                {phase === 'call_done' && (
+                    <div className="flex gap-1 mt-2.5">
+                        <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
+                            ✓ Reportado
+                        </span>
+                    </div>
                 )}
                 {phase === 'confirmado' && (
                     <div className="flex gap-1 mt-2.5">
@@ -3269,8 +3303,29 @@ const CloserWorkflowPage = () => {
                 
                 {/* TU SIGUIENTE PASO + TU DÍA (v7) */}
                 {(() => {
-                    const doneCount = agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length;
-                    const pct = agendas.length ? Math.round((doneCount / agendas.length) * 100) : 0;
+                    // "Tu día" tiene que reflejar el trabajo real de HOY en las 3 pestañas, no solo lo
+                    // que trajo la pestaña activa (`agendas` es la lista de una sola pestaña, y para
+                    // "Confirmar"/"Reportar" solo incluye lo PENDIENTE por diseño del backend — nunca
+                    // iba a poder mostrar progreso real). `dailyActivity` (misma fuente que "Reporte
+                    // del día") trae lo ya hecho hoy; `counts` trae lo que todavía falta.
+                    const doneToday = dailyActivity
+                        ? (dailyActivity.confirmados_hoy || 0) + (dailyActivity.show_ups || 0) + (dailyActivity.seguimientos_hechos || 0)
+                        : 0;
+                    const pendingToday = counts.confirmations + counts.calls + counts.seguimientos;
+                    const totalToday = doneToday + pendingToday;
+                    const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
+                    // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
+                    // sale de las mismas cuentas de arriba) para darle una lectura más "de juego" al
+                    // esfuerzo del día. Los pesos son una primera pasada editorial, no una medida
+                    // científica — se pueden ajustar sin tocar de dónde sale cada componente.
+                    const xp = dailyActivity ? (
+                        (dailyActivity.confirmados_hoy || 0) * 10 +
+                        (dailyActivity.confirmados_proximos || 0) * 5 +
+                        (dailyActivity.show_ups || 0) * 20 +
+                        (dailyActivity.seguimientos_hechos || 0) * 8 +
+                        (dailyActivity.referidos_capturados || 0) * 15 +
+                        (dailyActivity.ventas_count || 0) * 100
+                    ) : 0;
                     const heroCountdown = heroLead ? formatApptCountdown(heroLead.start_time, nowTick) : null;
                     const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
@@ -3311,13 +3366,16 @@ const CloserWorkflowPage = () => {
                             )}
 
                             <div className="tud-v6">
-                                <div className="tud-lbl-v6">Tu día</div>
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="tud-lbl-v6">Tu día</div>
+                                    <div className="tud-xp-v6">⚡ {xp} XP</div>
+                                </div>
                                 <div className="tud-pct-v6">{pct}%</div>
                                 <div className="tud-sub-v6">del día completado</div>
                                 <div className="pbarw-v6">
                                     <i style={{ width: `${pct}%` }}></i>
                                 </div>
-                                <div className="tud-foot-v6">{doneCount} de {agendas.length} resueltos hoy</div>
+                                <div className="tud-foot-v6">{doneToday} de {totalToday} resueltos hoy</div>
                                 <div className="tud-streak-v6">🔥 Racha de 12 días sin fallar</div>
                             </div>
                         </div>
@@ -3658,14 +3716,14 @@ const CloserWorkflowPage = () => {
                                     <div className="kcol-v6 k3-v6">
                                         <div className="kch-v6">
                                             <span className="dt-v6"></span>
-                                            <b>Próximas</b>
-                                            <span className="n-v6">{callsPipeline.proximas.length}</span>
+                                            <b>Reportadas</b>
+                                            <span className="n-v6">{callsPipeline.reportadas.length}</span>
                                         </div>
                                         <div className="kbody-v6">
-                                            {callsPipeline.proximas.length > 0 ? (
-                                                callsPipeline.proximas.map(a => renderKanbanCard(a, 'call'))
+                                            {callsPipeline.reportadas.length > 0 ? (
+                                                callsPipeline.reportadas.map(a => renderKanbanCard(a, 'call_done'))
                                             ) : (
-                                                <div className="kempty-v6">Sin llamadas próximas.</div>
+                                                <div className="kempty-v6">Todavía ninguna reportada.</div>
                                             )}
                                         </div>
                                     </div>
