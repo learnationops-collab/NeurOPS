@@ -923,26 +923,29 @@ header.top-v6 {
   content: '💬 ';
   opacity: .6;
 }
+/* Botón de acción de la tarjeta del Kanban: gradiente sólido desde el principio (no solo al
+   pasar el mouse) para que invite a tocarlo en vez de leer como un link secundario — la
+   referencia visual del rediseño usa el mismo tratamiento en sus CTA principales. */
 .kadv-v6 {
   margin-top: 11px;
   width: 100%;
-  border: 1px solid var(--v6-bd);
+  border: 1px solid transparent;
   border-radius: 10px;
-  padding: 9px;
+  padding: 10px;
   font-size: 9.5px;
   font-weight: 800;
   letter-spacing: .11em;
   text-transform: uppercase;
-  color: var(--v6-tx2);
-  background: rgba(255,255,255,.03);
+  color: #fff;
+  background: var(--v6-gradb);
+  box-shadow: 0 6px 16px rgba(19,35,198,.30);
   transition: .15s;
   cursor: pointer;
   text-align: center;
 }
 .kadv-v6:hover {
-  background: var(--v6-grade);
-  border-color: transparent;
-  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(19,35,198,.42);
 }
 .kempty-v6 {
   text-align: center;
