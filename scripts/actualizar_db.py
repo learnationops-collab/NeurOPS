@@ -172,6 +172,22 @@ def actualizar(target='local'):
                 
             except Exception as e:
                 db.session.rollback()
+                # BUG real encontrado (27/ago/2026, causó una pérdida real de datos en testing):
+                # la lectura que falla es la de `prod_session` (línea de arriba), no la de
+                # `db.session` — pero acá solo se hacía rollback del destino. Una vez que
+                # `prod_session` queda en transacción abortada (típico: el modelo local tiene una
+                # columna nueva que producción todavía no tiene, por una migración pendiente de
+                # desplegar ahí), TODAS las consultas siguientes contra `prod_session` fallan
+                # igual — así que cada modelo restante del bucle "falla" con el mismo error,
+                # sin copiar nada. Como la limpieza (paso 1) ya había borrado esas tablas del
+                # destino, el resultado neto es que quedan completamente vacías sin avisar de
+                # forma obvia (el log sigue imprimiendo "Error: ..." por cada una, pero es fácil
+                # no leerlos todos). Sin este rollback, un solo desfasaje de esquema entre local
+                # y producción podía vaciar en cascada todos los modelos sincronizados después.
+                try:
+                    prod_session.rollback()
+                except Exception:
+                    pass
                 print(safe(f"Error: {e}"))
 
         # Sincronizar event_closers (tabla de asociación Many-to-Many)
