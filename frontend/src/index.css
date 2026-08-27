@@ -1344,6 +1344,57 @@ header.top-v6 {
   .tsprow-v6 { grid-template-columns: 1fr; }
 }
 
+/* REPORTE DEL DÍA (v7): mismo lenguaje de tarjeta oscura que el resto del mazo (border var(--v6-bd),
+   fondo var(--v6-card)) en vez de los bg-slate-900/60 sueltos que tenía antes esta pestaña —
+   para que "Cerrar el día" no se sienta una pantalla aparte. */
+.rpt-card-v6 {
+  border: 1px solid var(--v6-bd);
+  border-radius: 1.6rem;
+  background: var(--v6-card);
+  padding: 24px 26px;
+}
+.rpt-title-v6 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.rpt-title-v6 .dt-v6 { width: 8px; height: 8px; }
+.rpt-kpis-v6 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.rpt-kpi-v6 {
+  border: 1px solid var(--v6-bd);
+  border-radius: 1rem;
+  background: rgba(0,0,0,.24);
+  padding: 14px 16px;
+}
+.rpt-kpi-v6 b {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+.rpt-kpi-v6 span {
+  display: block;
+  margin-top: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+@media(max-width:768px){
+  .rpt-kpis-v6 { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* DOCK v6 — ya no se usa como navegación (eso lo reemplazó `.nav5-v6`, arriba de la lista);
    se deja el estilo del panel flotante fijo abajo-centro como base para notificaciones u otro
    uso puntual futuro, a pedido del usuario. Sin JSX que lo consuma por ahora. */
