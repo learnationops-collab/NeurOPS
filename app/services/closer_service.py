@@ -2586,6 +2586,7 @@ class CloserService:
         """
         import pytz
         from datetime import time as time_cls
+        from sqlalchemy import func
         from app.models import User, Appointment, FinancialSale
         from app.services.sheets_service import SheetsService
 
@@ -2687,6 +2688,17 @@ class CloserService:
             Appointment.last_contact_at <= end_utc
         ).count()
 
+        # Confirmaciones logradas hoy: agendas que el closer pasó a 'confirmado' en el pipeline
+        # «① Confirmaciones» (mismo estado que CloserPendingService._por_confirmar usa para
+        # "confirmadas"), detectadas por su último cambio (`updated_at`) cayendo en la ventana de
+        # hoy — no por la fecha de la llamada, que puede ser cualquier día futuro.
+        confirmations_done = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            func.lower(func.coalesce(Appointment.result, '')) == 'confirmado',
+            Appointment.updated_at >= start_utc,
+            Appointment.updated_at <= end_utc
+        ).count()
+
         # Ventas del día: misma clasificación de tipo_pago que CloserService.get_comprehensive_stats,
         # cruzando por email_vendedor (o los alias de closer conocidos).
         identifiers = CloserService._resolve_sale_identifiers(user)
@@ -2728,6 +2740,7 @@ class CloserService:
             'offers_made': offers_made,
             'decision_makers': decision_makers,
             'rescheduled_calls': rescheduled_total,
+            'confirmations_done': confirmations_done,
             'first_call_scheduled': buckets['fc']['scheduled'],
             'first_call_attended': buckets['fc']['attended'],
             'first_call_no_show': buckets['fc']['no_show'],
