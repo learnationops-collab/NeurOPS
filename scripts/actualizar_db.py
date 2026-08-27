@@ -11,6 +11,25 @@ if os.path.basename(current_dir) == 'scripts':
 else:
     sys.path.append(current_dir)
 
+# BUG real encontrado (27/ago/2026): `config.py` calcula `SQLALCHEMY_DATABASE_URI` a nivel de
+# módulo, en el momento en que se importa por primera vez — no en el momento en que Flask arma
+# la app. `from app import create_app, db`, más abajo, dispara esa primera importación de
+# `config.py` ANTES de que `actualizar()` llegue a pisar `DATABASE_URL` con el destino elegido
+# (`--target staging`). Resultado: `--target staging` siempre terminaba escribiendo sobre la
+# SQLite local, sin avisar. Se resuelve el target acá arriba, antes de cualquier import de `app`,
+# para que `DATABASE_URL` ya tenga el valor correcto cuando `config.py` lo lea por primera vez.
+load_dotenv()
+_target_arg = 'local'
+for _i, _a in enumerate(sys.argv):
+    if _a == '--target' and _i + 1 < len(sys.argv):
+        _target_arg = sys.argv[_i + 1]
+    elif _a.startswith('--target='):
+        _target_arg = _a.split('=', 1)[1]
+if _target_arg in ('staging', 'testing'):
+    _dest_url = os.getenv('DATABASE_STAGING') or os.getenv('DATABASE_TESTING')
+    if _dest_url:
+        os.environ['DATABASE_URL'] = _dest_url
+
 from app import create_app, db
 from app.models import (
     User, Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, 
