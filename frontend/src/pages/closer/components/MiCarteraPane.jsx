@@ -39,13 +39,15 @@ const VIEWS = [
     { key: 'cronologico', label: 'Cronológico' },
 ];
 
-// "Mi Cartera": todo cliente que este closer alguna vez cerró (venta completada en
-// FinancialSale), con su deuda y su próxima cuota — pedido del usuario para poder buscar a
-// cualquier cliente propio y ver de un vistazo en qué programa está y cómo va con los pagos,
-// sin tener que esperar a que ese cliente le toque como seguimiento de cobro hoy. Reusa el mismo
-// `/closer/followups/pool?tipo=cerrada` que ya alimenta la columna "Llamadas cerradas" de
-// Seguimientos (mismos datos, sin pool nuevo del lado del backend) — así que la deuda, el
-// programa y la próxima cuota que se ven acá son exactamente los mismos que en esa pestaña.
+// "Mi Cartera": todo cliente que este closer efectivamente VENDIÓ (email_vendedor en
+// FinancialSale al momento de reportar la venta), con su deuda y su próxima cuota — pedido del
+// usuario para poder buscar a cualquier cliente propio y ver de un vistazo en qué programa está
+// y cómo va con los pagos. Antes reusaba `/closer/followups/pool?tipo=cerrada` (la cola de "a
+// quién le toca cobrar hoy", que sigue al DUEÑO ACTUAL de la agenda, no a quién vendió) — eso
+// hacía que closers activos vieran en su cartera clientes de closers dados de baja, porque ese
+// endpoint no filtra a cuál closer específico asignar un huérfano (bug real reportado por el
+// usuario, 27/ago/2026: "un closer tiene ventas que no le pertenecen"). `/closer/cartera` es el
+// endpoint correcto para esto: filtra por quién reportó la venta, punto.
 const MiCarteraPane = ({ onOpenLead }) => {
     const [items, setItems] = useState([]);
     const [programas, setProgramas] = useState({});
@@ -63,7 +65,7 @@ const MiCarteraPane = ({ onOpenLead }) => {
     const fetchItems = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get('/closer/followups/pool', { params: { tipo: 'cerrada' } });
+            const res = await api.get('/closer/cartera');
             setItems(res.data?.items || []);
             setProgramas(res.data?.programas || {});
         } catch (err) {

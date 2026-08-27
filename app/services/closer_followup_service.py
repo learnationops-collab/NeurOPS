@@ -449,37 +449,22 @@ class CloserFollowUpService:
         }
 
     @staticmethod
-    def _cerrada_pool_items(closer_id):
-        """"Llamadas cerradas" del pool: TODO cliente que ya compró algo (con venta completada en
-        FinancialSale), con su deuda y programa — no solo los que alguna vez se etiquetaron
-        explícitamente como `seguimiento_tipo='cerrada'` (que dependía de pasar por el flujo de
-        cobro pendiente al declarar la venta, dejando afuera a la enorme mayoría de clientes ya
-        cerrados). Antes de ese primer fix la pestaña quedaba casi siempre vacía — el usuario lo
-        reportó: "no hay ningún registro para poder agregarle seguimiento".
+    def _resolve_sales_and_clients():
+        """Todas las FinancialSale completadas, con su cliente resuelto y agrupadas por cliente.
+        Compartido entre `_cerrada_pool_items` (cola de cobro, scopeada por dueño de la agenda) y
+        `_cartera_items` (Mi Cartera, scopeada por quién hizo la venta) — el cruce cliente↔venta
+        es el mismo en los dos casos, solo cambia después con qué criterio se filtra por closer.
 
-        El dueño del item es quien hoy tiene la cita más reciente del cliente (`Appointment.closer_id`)
-        — mismo criterio de propiedad que `_base_query` usa para el resto del módulo (propias +
-        huérfanas de closers dados de baja) — NO quien hizo la venta originalmente
-        (FinancialSale.email_vendedor). Antes se scopeaba por vendedor: si un cliente vendido por
-        un closer terminaba con una cita más reciente en manos de otro (reasignación, una llamada
-        de seguimiento que tomó alguien más), su cobro aparecía en la cola de AMBOS closers a la
-        vez — reportado por el usuario como "tengo seguimientos de leads que le corresponden a
-        otro closer, eso no debe pasar". Verificado contra la base local: 450 casos así antes de
-        este fix, todos con el otro closer activo (no huérfano)."""
-        from app.models import User, Client, FinancialSale
-
-        if not closer_id:
-            return []
+        FinancialSale.client_id debería estar poblado (backfill de una pasada anterior) pero en
+        muchas copias de la base la gran mayoría quedó en NULL — en vez de depender ciegamente de
+        esa columna, se resuelve el cliente con el mismo cruce email/instagram/teléfono que usa el
+        resto del sistema (BookingService.find_or_create_client), sin crear nada nuevo (solo lectura)."""
+        from app.models import Client, FinancialSale
 
         sales = FinancialSale.query.filter(
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
-        # FinancialSale.client_id debería estar poblado (backfill de una pasada anterior de esta
-        # sesión) pero en esta copia local de la base la gran mayoría quedó en NULL — en vez de
-        # depender ciegamente de esa columna, se resuelve el cliente con el mismo cruce
-        # email/instagram/teléfono que usa el resto del sistema (BookingService.find_or_create_client),
-        # sin crear nada nuevo (solo lectura).
         def resolve_client(sale):
             if sale.client_id:
                 return Client.query.get(sale.client_id)
@@ -500,119 +485,111 @@ class CloserFollowUpService:
                     return c
             return None
 
-        client_ids = set()
         sales_by_client = {}
         for s in sales:
             c = resolve_client(s)
             if c:
-                client_ids.add(c.id)
                 sales_by_client.setdefault(c.id, []).append(s)
+        return sales_by_client
 
+    @staticmethod
+    def _build_cartera_item(cid, client, appt, sales_by_client):
+        """Arma el dict de un cliente ya comprado — deuda, próxima cuota, historial de pagos y
+        desglose por tipo — compartido por `_cerrada_pool_items` y `_cartera_items`. `appt` es
+        solo para los campos de display (origen, examen, fecha de la última llamada); ninguno de
+        los dos casos de uso decide "es mío" a partir de ella acá adentro."""
         from app.models import InstallmentPlan
+        from app.services.sheets_service import SheetsService
 
-        inactive_closer_ids = {
-            row[0] for row in db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
+        days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
+
+        # El recordatorio de cobro vive acá: la próxima cuota pendiente de este cliente (la
+        # más próxima a vencer primero), para que el closer sepa exactamente qué y cuándo
+        # cobrar sin tener que abrir el historial completo del cliente.
+        next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
+            .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+        deuda_val = CloserFollowUpService._client_debt(cid)
+        enrollment_dt = CloserFollowUpService._client_enrollment_date(cid)
+        proxima_cuota = None
+        if next_cuota:
+            proxima_cuota = {
+                'id': next_cuota.id,
+                'numero_cuota': next_cuota.numero_cuota,
+                'monto': next_cuota.monto,
+                'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
+                'vencida': next_cuota.fecha_vencimiento < date.today(),
+                'sin_plan': False
+            }
+        elif deuda_val > 0.01:
+            # Debe dinero pero nunca se le armó un plan de cuotas (InstallmentPlan) — pasa
+            # cuando el Parcial se declaró sin pasar por el armador de cronograma, algo muy
+            # común en ventas históricas. Reportado por el usuario: "todos los que deben
+            # dinero [deberían] tener cuotas pendientes" — sin esto, esos clientes se veían
+            # como "sin cuotas pendientes" pese a deber, invisibles para el recordatorio.
+            proxima_cuota = {
+                'id': None,
+                'numero_cuota': None,
+                'monto': deuda_val,
+                'fecha_vencimiento': None,
+                'vencida': False,
+                'sin_plan': True
+            }
+
+        # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
+        # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
+        # renovacion/upsell) — para "Mi cartera", que necesita mostrar tanto la lista
+        # cronológica de ventas como el total pagado por tipo, cliente por cliente.
+        pagos = []
+        desglose = {'completo': 0.0, 'parcial': 0.0, 'seña': 0.0, 'cuota': 0.0, 'renovacion': 0.0, 'upsell': 0.0}
+        for s in sales_by_client.get(cid, []):
+            _, tipo_simple = SheetsService.parse_tipo_pago(s.tipo_pago)
+            monto = s.monto or 0.0
+            pagos.append({
+                'tipo': tipo_simple,
+                'tipo_raw': s.tipo_pago,
+                'monto': monto,
+                'metodo_pago': s.metodo_pago,
+                'date': (s.date or s.created_at).isoformat() if (s.date or s.created_at) else None
+            })
+            if tipo_simple in desglose:
+                desglose[tipo_simple] += monto
+        pagos.sort(key=lambda p: p['date'] or '')
+
+        return {
+            'id': appt.id,
+            'client_id': cid,
+            'lead_name': client.full_name or client.email or 'Sin Nombre',
+            'instagram': client.instagram or '',
+            'phone': client.phone or '',
+            'origin': appt.origin or '',
+            'examen': appt.examen or '',
+            'seguimiento_tipo': 'cerrada',
+            'seguimiento_sub': appt.seguimiento_sub or '',
+            'seguimiento_intento': appt.seguimiento_intento or 1,
+            'fecha_seguimiento': appt.fecha_seguimiento or None,
+            'dias_retraso': CloserFollowUpService._dias_retraso(appt.fecha_seguimiento),
+            'call_date': appt.start_time.isoformat() if appt.start_time else None,
+            'days_since_call': days_since_call,
+            'closer_notes': appt.closer_notes or '',
+            # Solo relevante cuando el item llegó al pool por ser huérfano de un closer dado
+            # de baja (mismo criterio que `_serialize` usa para el resto del módulo) — deja
+            # claro que no es un lead propio.
+            'owner_closer_name': appt.closer.username if (appt.closer and appt.closer.is_active is False) else None,
+            'closer_id': appt.closer_id,
+            'closer_name': appt.closer.username if appt.closer else None,
+            'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
+            'deuda': deuda_val,
+            'programa_code': CloserFollowUpService._client_program_code(cid),
+            'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
+            'proxima_cuota': proxima_cuota,
+            'pagos': pagos,
+            'desglose_pagos': desglose
         }
 
-        items = []
-        for cid in client_ids:
-            client = Client.query.get(cid)
-            if not client:
-                continue
-            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
-            if not appt:
-                continue
-            if appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
-                continue
-            days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
-
-            # El recordatorio de cobro vive acá: la próxima cuota pendiente de este cliente (la
-            # más próxima a vencer primero), para que el closer sepa exactamente qué y cuándo
-            # cobrar sin tener que abrir el historial completo del cliente.
-            next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
-                .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
-            deuda_val = CloserFollowUpService._client_debt(cid)
-            enrollment_dt = CloserFollowUpService._client_enrollment_date(cid)
-            proxima_cuota = None
-            if next_cuota:
-                proxima_cuota = {
-                    'id': next_cuota.id,
-                    'numero_cuota': next_cuota.numero_cuota,
-                    'monto': next_cuota.monto,
-                    'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
-                    'vencida': next_cuota.fecha_vencimiento < date.today(),
-                    'sin_plan': False
-                }
-            elif deuda_val > 0.01:
-                # Debe dinero pero nunca se le armó un plan de cuotas (InstallmentPlan) — pasa
-                # cuando el Parcial se declaró sin pasar por el armador de cronograma, algo muy
-                # común en ventas históricas. Reportado por el usuario: "todos los que deben
-                # dinero [deberían] tener cuotas pendientes" — sin esto, esos clientes se veían
-                # como "sin cuotas pendientes" pese a deber, invisibles para el recordatorio.
-                proxima_cuota = {
-                    'id': None,
-                    'numero_cuota': None,
-                    'monto': deuda_val,
-                    'fecha_vencimiento': None,
-                    'vencida': False,
-                    'sin_plan': True
-                }
-
-            # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
-            # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
-            # renovacion/upsell) — para "Mi cartera", que necesita mostrar tanto la lista
-            # cronológica de ventas como el total pagado por tipo, cliente por cliente.
-            from app.services.sheets_service import SheetsService
-            pagos = []
-            desglose = {'completo': 0.0, 'parcial': 0.0, 'seña': 0.0, 'cuota': 0.0, 'renovacion': 0.0, 'upsell': 0.0}
-            for s in sales_by_client.get(cid, []):
-                _, tipo_simple = SheetsService.parse_tipo_pago(s.tipo_pago)
-                monto = s.monto or 0.0
-                pagos.append({
-                    'tipo': tipo_simple,
-                    'tipo_raw': s.tipo_pago,
-                    'monto': monto,
-                    'metodo_pago': s.metodo_pago,
-                    'date': (s.date or s.created_at).isoformat() if (s.date or s.created_at) else None
-                })
-                if tipo_simple in desglose:
-                    desglose[tipo_simple] += monto
-            pagos.sort(key=lambda p: p['date'] or '')
-
-            items.append({
-                'id': appt.id,
-                'client_id': cid,
-                'lead_name': client.full_name or client.email or 'Sin Nombre',
-                'instagram': client.instagram or '',
-                'phone': client.phone or '',
-                'origin': appt.origin or '',
-                'examen': appt.examen or '',
-                'seguimiento_tipo': 'cerrada',
-                'seguimiento_sub': appt.seguimiento_sub or '',
-                'seguimiento_intento': appt.seguimiento_intento or 1,
-                'fecha_seguimiento': appt.fecha_seguimiento or None,
-                'dias_retraso': CloserFollowUpService._dias_retraso(appt.fecha_seguimiento),
-                'call_date': appt.start_time.isoformat() if appt.start_time else None,
-                'days_since_call': days_since_call,
-                'closer_notes': appt.closer_notes or '',
-                # Solo relevante cuando el item llegó al pool por ser huérfano de un closer dado
-                # de baja (mismo criterio que `_serialize` usa para el resto del módulo) — deja
-                # claro que no es un lead propio.
-                'owner_closer_name': appt.closer.username if (appt.closer and appt.closer.is_active is False) else None,
-                'closer_id': appt.closer_id,
-                'closer_name': appt.closer.username if appt.closer else None,
-                'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
-                'deuda': deuda_val,
-                'programa_code': CloserFollowUpService._client_program_code(cid),
-                'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
-                'proxima_cuota': proxima_cuota,
-                'pagos': pagos,
-                'desglose_pagos': desglose
-            })
-
-        # Ordenar por urgencia de cobro: cuotas vencidas primero (las más atrasadas primero),
-        # luego las próximas a vencer, luego deuda sin plan de cuotas armado, y al final los
-        # clientes al día (sin nada pendiente de cobrar).
+    @staticmethod
+    def _sort_by_urgency(items):
+        # Cuotas vencidas primero (las más atrasadas primero), luego las próximas a vencer,
+        # luego deuda sin plan de cuotas armado, y al final los clientes al día.
         def urgency_key(item):
             pc = item.get('proxima_cuota')
             if not pc:
@@ -621,8 +598,94 @@ class CloserFollowUpService:
                 return (2, '')
             return (0 if pc['vencida'] else 1, pc['fecha_vencimiento'])
         items.sort(key=urgency_key)
-
         return items
+
+    @staticmethod
+    def _cerrada_pool_items(closer_id):
+        """"Llamadas cerradas" del pool de Seguimientos: TODO cliente que ya compró algo, con su
+        deuda y programa — no solo los que alguna vez se etiquetaron explícitamente como
+        `seguimiento_tipo='cerrada'` (que dependía de pasar por el flujo de cobro pendiente al
+        declarar la venta, dejando afuera a la enorme mayoría de clientes ya cerrados). Antes de
+        ese primer fix la pestaña quedaba casi siempre vacía — el usuario lo reportó: "no hay
+        ningún registro para poder agregarle seguimiento".
+
+        El dueño del item es quien HOY tiene la cita más reciente del cliente (`Appointment.closer_id`)
+        — mismo criterio de propiedad que `_base_query` usa para el resto del módulo (propias +
+        huérfanas de closers dados de baja) — a propósito, NO quien hizo la venta originalmente:
+        esto es la cola de "a quién le toca cobrarle hoy", y eso puede cambiar de dueño (reasignación,
+        una llamada de seguimiento que tomó otro closer) sin que cambie quién vendió. Antes se
+        scopeaba por vendedor acá y esa mezcla producía el problema inverso (un cobro apareciendo
+        en la cola de DOS closers a la vez) — reportado como "tengo seguimientos de leads que le
+        corresponden a otro closer". Para "de quién es esta venta" (Mi Cartera), ver `_cartera_items`."""
+        from app.models import User, Client
+
+        if not closer_id:
+            return []
+
+        sales_by_client = CloserFollowUpService._resolve_sales_and_clients()
+
+        inactive_closer_ids = {
+            row[0] for row in db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
+        }
+
+        items = []
+        for cid in sales_by_client:
+            client = Client.query.get(cid)
+            if not client:
+                continue
+            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
+            if not appt:
+                continue
+            if appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
+                continue
+            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client))
+
+        return CloserFollowUpService._sort_by_urgency(items)
+
+    @staticmethod
+    def _cartera_items(closer_id):
+        """"Mi Cartera": los clientes que ESTE closer efectivamente vendió, sin importar quién
+        tenga hoy la cita más reciente. A diferencia de `_cerrada_pool_items` (la cola de cobro,
+        que sigue al dueño ACTUAL de la agenda para saber a quién le toca cobrar), acá lo que
+        importa es de quién fue la venta — se determina por `FinancialSale.email_vendedor` al
+        momento de reportarla, igual que en el resto del sistema (`CloserService.
+        _resolve_sale_identifiers`, usada en el reporte diario y en las estadísticas del closer).
+
+        Corrige un bug real reportado por el usuario (27/ago/2026): closers activos veían en su
+        cartera clientes de closers DADOS DE BAJA (huérfanos) — `_cerrada_pool_items` los deja
+        pasar a propósito para que alguien siga la cobranza, pero como no filtra a cuál closer
+        específico se los asigna, terminaban visibles en la cartera de TODOS los closers activos
+        a la vez, no solo del que realmente vendió. Acá no hay ese caso: un huérfano nunca tiene
+        ventas con el email de otro closer, así que simplemente no aparece si nadie más lo vendió."""
+        from app.models import Client
+        from app.services.closer_service import CloserService
+
+        if not closer_id:
+            return []
+
+        user = User.query.get(closer_id)
+        identifiers = {e.lower() for e in CloserService._resolve_sale_identifiers(user)}
+        if not identifiers:
+            return []
+
+        sales_by_client = CloserFollowUpService._resolve_sales_and_clients()
+
+        items = []
+        for cid, sales in sales_by_client.items():
+            propias = [s for s in sales if (s.email_vendedor or '').strip().lower() in identifiers]
+            if not propias:
+                continue
+            client = Client.query.get(cid)
+            if not client:
+                continue
+            # `appt` es solo para los campos de display (origen, examen, fecha de la última
+            # llamada) — cualquier cita del cliente sirve, sea o no de este closer.
+            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
+            if not appt:
+                appt = CloserFollowUpService._ensure_appointment_for_client(client)
+            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client))
+
+        return CloserFollowUpService._sort_by_urgency(items)
 
     @staticmethod
     def get_client_lead_stage(client_id):

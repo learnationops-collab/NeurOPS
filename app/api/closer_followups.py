@@ -42,6 +42,23 @@ def get_followups_pool():
     }), 200
 
 
+@bp.route('/cartera', methods=['GET'])
+@login_required
+def get_cartera():
+    """"Mi Cartera": los clientes que el closer autenticado efectivamente vendió (por
+    email_vendedor), a diferencia de /followups/pool?tipo=cerrada que sigue al dueño ACTUAL de la
+    agenda (la cola de "a quién le toca cobrar hoy"). Corrige el bug reportado por el usuario
+    (27/ago/2026): closers activos veían en su cartera clientes de closers dados de baja, porque
+    ese otro endpoint no filtra a cuál closer específico asignar un cliente huérfano."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    items = CloserFollowUpService._cartera_items(_resolve_closer_id())
+    return jsonify({
+        "items": items,
+        "programas": PROGRAM_CODE_NAMES
+    }), 200
+
+
 @bp.route('/followups/pool-counts', methods=['GET'])
 @login_required
 def get_followups_pool_counts():
