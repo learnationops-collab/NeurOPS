@@ -501,10 +501,12 @@ class CloserFollowUpService:
             return None
 
         client_ids = set()
+        sales_by_client = {}
         for s in sales:
             c = resolve_client(s)
             if c:
                 client_ids.add(c.id)
+                sales_by_client.setdefault(c.id, []).append(s)
 
         from app.models import InstallmentPlan
 
@@ -556,6 +558,27 @@ class CloserFollowUpService:
                     'sin_plan': True
                 }
 
+            # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
+            # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
+            # renovacion/upsell) — para "Mi cartera", que necesita mostrar tanto la lista
+            # cronológica de ventas como el total pagado por tipo, cliente por cliente.
+            from app.services.sheets_service import SheetsService
+            pagos = []
+            desglose = {'completo': 0.0, 'parcial': 0.0, 'seña': 0.0, 'cuota': 0.0, 'renovacion': 0.0, 'upsell': 0.0}
+            for s in sales_by_client.get(cid, []):
+                _, tipo_simple = SheetsService.parse_tipo_pago(s.tipo_pago)
+                monto = s.monto or 0.0
+                pagos.append({
+                    'tipo': tipo_simple,
+                    'tipo_raw': s.tipo_pago,
+                    'monto': monto,
+                    'metodo_pago': s.metodo_pago,
+                    'date': (s.date or s.created_at).isoformat() if (s.date or s.created_at) else None
+                })
+                if tipo_simple in desglose:
+                    desglose[tipo_simple] += monto
+            pagos.sort(key=lambda p: p['date'] or '')
+
             items.append({
                 'id': appt.id,
                 'client_id': cid,
@@ -582,7 +605,9 @@ class CloserFollowUpService:
                 'deuda': deuda_val,
                 'programa_code': CloserFollowUpService._client_program_code(cid),
                 'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
-                'proxima_cuota': proxima_cuota
+                'proxima_cuota': proxima_cuota,
+                'pagos': pagos,
+                'desglose_pagos': desglose
             })
 
         # Ordenar por urgencia de cobro: cuotas vencidas primero (las más atrasadas primero),

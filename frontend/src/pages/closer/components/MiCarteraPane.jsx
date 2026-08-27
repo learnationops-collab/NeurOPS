@@ -23,6 +23,22 @@ const SORTS = [
     { key: 'nombre', label: 'A-Z' },
 ];
 
+// Los 6 tipos canónicos que usa todo el sistema (SheetsService._extract_tipo_keyword) — mismo
+// orden y color en la tabla agrupada y en la lista cronológica, para que sean reconocibles.
+const TIPOS_PAGO = [
+    { key: 'seña', label: 'Seña', color: '#D9A441' },
+    { key: 'completo', label: 'Completo', color: '#2FBF8F' },
+    { key: 'parcial', label: 'Parcial', color: '#4E8BD8' },
+    { key: 'cuota', label: 'Cuota', color: '#8B5CF6' },
+    { key: 'renovacion', label: 'Renovación', color: '#22D3C4' },
+    { key: 'upsell', label: 'Upsell', color: '#FF3FA4' },
+];
+
+const VIEWS = [
+    { key: 'cliente', label: 'Por cliente' },
+    { key: 'cronologico', label: 'Cronológico' },
+];
+
 // "Mi Cartera": todo cliente que este closer alguna vez cerró (venta completada en
 // FinancialSale), con su deuda y su próxima cuota — pedido del usuario para poder buscar a
 // cualquier cliente propio y ver de un vistazo en qué programa está y cómo va con los pagos,
@@ -39,6 +55,10 @@ const MiCarteraPane = ({ onOpenLead }) => {
     const [programa, setPrograma] = useState('ALL');
     const [sort, setSort] = useState('deuda');
     const [limit, setLimit] = useState(20);
+    // "Por cliente" (una fila por cliente, con el total pagado por tipo) o "Cronológico" (una
+    // fila por pago individual, ordenado por fecha) — las dos formas de ver la cartera que pidió
+    // el usuario. Mismo dato de base (`items[].pagos`), sin pedirle nada distinto al backend.
+    const [view, setView] = useState('cliente');
 
     const fetchItems = useCallback(async () => {
         setLoading(true);
@@ -74,6 +94,23 @@ const MiCarteraPane = ({ onOpenLead }) => {
     }, [items, q, filter, programa, sort]);
 
     const shown = filtered.slice(0, limit);
+
+    // Vista cronológica: cada pago individual de cada cliente filtrado, más reciente primero —
+    // "ventas separadas de forma cronológica" (pedido del usuario), a diferencia de la vista
+    // agrupada de arriba (una fila por cliente, con el total por tipo).
+    const payments = useMemo(() => {
+        const flat = filtered.flatMap(it => (it.pagos || []).map(p => ({
+            ...p,
+            client_id: it.client_id,
+            client_name: it.lead_name,
+            instagram: it.instagram,
+            programa_code: it.programa_code,
+            item: it
+        })));
+        flat.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        return flat;
+    }, [filtered]);
+    const shownPayments = payments.slice(0, limit);
 
     // KPIs con datos que este endpoint realmente trae — sin inventar "cobrado"/"renovados" que
     // necesitarían el historial completo de pagos por cliente (no expuesto acá todavía).
@@ -132,6 +169,21 @@ const MiCarteraPane = ({ onOpenLead }) => {
 
             {/* Búsqueda + filtros */}
             <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1 p-1 rounded-full" style={{ background: 'rgba(255,255,255,.05)', border: '1px solid var(--v6-bd)' }}>
+                    {VIEWS.map(v => (
+                        <button
+                            key={v.key}
+                            type="button"
+                            onClick={() => { setView(v.key); setLimit(20); }}
+                            className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all"
+                            style={view === v.key
+                                ? { background: 'var(--v6-gradb)', color: '#fff' }
+                                : { background: 'transparent', color: 'rgba(255,255,255,.5)' }}
+                        >
+                            {v.label}
+                        </button>
+                    ))}
+                </div>
                 <div className="flex-1 min-w-[240px] flex items-center gap-2.5 px-4 h-11 rounded-full" style={{ background: 'rgba(255,255,255,.045)', border: '1px solid var(--v6-bd)' }}>
                     <Search size={15} style={{ color: 'rgba(255,255,255,.42)' }} />
                     <input
@@ -197,76 +249,152 @@ const MiCarteraPane = ({ onOpenLead }) => {
                 </div>
             </div>
 
-            {/* Tabla de clientes */}
-            <div className="rounded-2xl overflow-x-auto" style={{ background: 'rgba(255,255,255,.018)', border: '1px solid var(--v6-bd)' }}>
-                <div style={{ minWidth: '760px', display: 'grid', gridTemplateColumns: 'minmax(160px,1.5fr) 90px 110px 150px 130px', gap: '10px', alignItems: 'center', padding: '13px 20px', background: 'rgba(255,255,255,.035)', borderBottom: '1px solid var(--v6-bd)' }}>
-                    <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Cliente</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Programa</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Inscripción</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Próxima cuota</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-right" style={{ color: 'rgba(255,255,255,.38)' }}>Deuda</span>
-                </div>
-
-                {shown.length === 0 ? (
-                    <div style={{ minWidth: '760px', padding: '56px 22px', textAlign: 'center' }}>
-                        <div className="text-sm font-black" style={{ color: 'rgba(255,255,255,.55)' }}>Sin resultados</div>
-                        <div className="text-xs font-semibold mt-1.5" style={{ color: 'rgba(255,255,255,.34)' }}>Probá con otro nombre o quitá los filtros.</div>
+            {/* Tabla: "Por cliente" agrupa el total pagado por tipo (una fila por cliente);
+                "Cronológico" muestra cada pago individual, más reciente primero. Mismo dato de
+                base (`items[].pagos`, ya viene clasificado del backend). */}
+            {view === 'cliente' ? (
+                <div className="rounded-2xl overflow-x-auto" style={{ background: 'rgba(255,255,255,.018)', border: '1px solid var(--v6-bd)' }}>
+                    <div style={{ minWidth: '1180px', display: 'grid', gridTemplateColumns: `minmax(150px,1.3fr) 74px 100px ${TIPOS_PAGO.map(() => '84px').join(' ')} 100px 120px`, gap: '8px', alignItems: 'center', padding: '13px 20px', background: 'rgba(255,255,255,.035)', borderBottom: '1px solid var(--v6-bd)' }}>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Cliente</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Prog.</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Inscripción</span>
+                        {TIPOS_PAGO.map(t => (
+                            <span key={t.key} className="text-[9px] font-black uppercase tracking-widest text-right" style={{ color: t.color }}>{t.label}</span>
+                        ))}
+                        <span className="text-[9px] font-black uppercase tracking-widest text-right" style={{ color: 'rgba(255,255,255,.38)' }}>Próx. cuota</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-right" style={{ color: 'rgba(255,255,255,.38)' }}>Deuda</span>
                     </div>
-                ) : shown.map(it => {
-                    const pc = it.proxima_cuota;
-                    const rail = it.deuda === 0 ? '#2FBF8F' : (pc?.vencida ? '#E85C4A' : '#D9A441');
-                    return (
-                        <div
-                            key={it.client_id}
-                            onClick={() => openClient(it)}
-                            className="kcard-v6"
-                            style={{
-                                minWidth: '760px', display: 'grid', gridTemplateColumns: 'minmax(160px,1.5fr) 90px 110px 150px 130px',
-                                gap: '10px', alignItems: 'center', padding: '14px 20px', borderRadius: 0,
-                                borderBottom: '1px solid rgba(255,255,255,.055)', position: 'relative', animation: 'none'
-                            }}
-                        >
-                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: rail }}></div>
-                            <div className="min-w-0">
-                                <div className="text-[13px] font-extrabold truncate">{it.lead_name}</div>
-                                {it.instagram && <div className="text-[10px] font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,.34)' }}>@{it.instagram.replace('@', '')}</div>}
-                            </div>
-                            <div>
-                                <span className="px-2 py-1 rounded-lg text-[10px] font-black" style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.15)', color: '#fff' }}>
-                                    {it.programa_code || '—'}
-                                </span>
-                            </div>
-                            <div className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,.5)' }}>
-                                {it.enrollment_date ? new Date(it.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                            </div>
-                            <div className="text-[11px] font-bold">
-                                {pc ? (
-                                    <span style={{ color: pc.vencida ? '#E85C4A' : '#D9A441' }}>
-                                        {pc.sin_plan ? 'Sin plan de cuotas' : `${pc.vencida ? 'Vencida' : 'Cobrar'} ${cuotaDateLabel(pc.fecha_vencimiento)}`}
+
+                    {shown.length === 0 ? (
+                        <div style={{ minWidth: '1180px', padding: '56px 22px', textAlign: 'center' }}>
+                            <div className="text-sm font-black" style={{ color: 'rgba(255,255,255,.55)' }}>Sin resultados</div>
+                            <div className="text-xs font-semibold mt-1.5" style={{ color: 'rgba(255,255,255,.34)' }}>Probá con otro nombre o quitá los filtros.</div>
+                        </div>
+                    ) : shown.map(it => {
+                        const pc = it.proxima_cuota;
+                        const rail = it.deuda === 0 ? '#2FBF8F' : (pc?.vencida ? '#E85C4A' : '#D9A441');
+                        const desglose = it.desglose_pagos || {};
+                        return (
+                            <div
+                                key={it.client_id}
+                                onClick={() => openClient(it)}
+                                className="kcard-v6"
+                                style={{
+                                    minWidth: '1180px', display: 'grid', gridTemplateColumns: `minmax(150px,1.3fr) 74px 100px ${TIPOS_PAGO.map(() => '84px').join(' ')} 100px 120px`,
+                                    gap: '8px', alignItems: 'center', padding: '14px 20px', borderRadius: 0,
+                                    borderBottom: '1px solid rgba(255,255,255,.055)', position: 'relative', animation: 'none'
+                                }}
+                            >
+                                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: rail }}></div>
+                                <div className="min-w-0">
+                                    <div className="text-[13px] font-extrabold truncate">{it.lead_name}</div>
+                                    {it.instagram && <div className="text-[10px] font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,.34)' }}>@{it.instagram.replace('@', '')}</div>}
+                                </div>
+                                <div>
+                                    <span className="px-2 py-1 rounded-lg text-[10px] font-black" style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.15)', color: '#fff' }}>
+                                        {it.programa_code || '—'}
                                     </span>
-                                ) : (
-                                    <span style={{ color: '#2FBF8F' }}>Al día</span>
-                                )}
-                            </div>
-                            <div className="text-right">
-                                <div className="text-[15px] font-black tabular-nums" style={{ color: it.deuda ? (pc?.vencida ? '#E85C4A' : '#FF3FA4') : '#2FBF8F' }}>
-                                    {it.deuda ? money(it.deuda) : '✓'}
+                                </div>
+                                <div className="text-[10.5px] font-bold" style={{ color: 'rgba(255,255,255,.5)' }}>
+                                    {it.enrollment_date ? new Date(it.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                </div>
+                                {TIPOS_PAGO.map(t => {
+                                    const v = desglose[t.key] || 0;
+                                    return (
+                                        <div key={t.key} className="text-right text-[11.5px] font-black tabular-nums" style={{ color: v ? t.color : 'rgba(255,255,255,.2)' }}>
+                                            {v ? money(v) : '—'}
+                                        </div>
+                                    );
+                                })}
+                                <div className="text-right text-[10.5px] font-bold">
+                                    {pc ? (
+                                        <span style={{ color: pc.vencida ? '#E85C4A' : '#D9A441' }}>
+                                            {pc.sin_plan ? 'Sin plan' : `${pc.vencida ? 'Vencida' : cuotaDateLabel(pc.fecha_vencimiento)}`}
+                                        </span>
+                                    ) : (
+                                        <span style={{ color: '#2FBF8F' }}>Al día</span>
+                                    )}
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[14px] font-black tabular-nums" style={{ color: it.deuda ? (pc?.vencida ? '#E85C4A' : '#FF3FA4') : '#2FBF8F' }}>
+                                        {it.deuda ? money(it.deuda) : '✓'}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
 
-                {filtered.length > shown.length && (
-                    <div
-                        onClick={() => setLimit(l => l + 20)}
-                        style={{ minWidth: '760px', padding: '15px 22px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,.025)' }}
-                        className="text-[10px] font-black uppercase tracking-widest"
-                    >
-                        <span style={{ color: 'rgba(255,255,255,.55)' }}>Ver más · {filtered.length - shown.length} restantes</span>
+                    {filtered.length > shown.length && (
+                        <div
+                            onClick={() => setLimit(l => l + 20)}
+                            style={{ minWidth: '1180px', padding: '15px 22px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,.025)' }}
+                            className="text-[10px] font-black uppercase tracking-widest"
+                        >
+                            <span style={{ color: 'rgba(255,255,255,.55)' }}>Ver más · {filtered.length - shown.length} restantes</span>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="rounded-2xl overflow-x-auto" style={{ background: 'rgba(255,255,255,.018)', border: '1px solid var(--v6-bd)' }}>
+                    <div style={{ minWidth: '680px', display: 'grid', gridTemplateColumns: '110px minmax(150px,1.5fr) 90px 120px 110px 100px', gap: '10px', alignItems: 'center', padding: '13px 20px', background: 'rgba(255,255,255,.035)', borderBottom: '1px solid var(--v6-bd)' }}>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Fecha</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Cliente</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Programa</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Tipo</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,.38)' }}>Método</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-right" style={{ color: 'rgba(255,255,255,.38)' }}>Monto</span>
                     </div>
-                )}
-            </div>
+
+                    {shownPayments.length === 0 ? (
+                        <div style={{ minWidth: '680px', padding: '56px 22px', textAlign: 'center' }}>
+                            <div className="text-sm font-black" style={{ color: 'rgba(255,255,255,.55)' }}>Sin pagos registrados</div>
+                            <div className="text-xs font-semibold mt-1.5" style={{ color: 'rgba(255,255,255,.34)' }}>Probá con otro nombre o quitá los filtros.</div>
+                        </div>
+                    ) : shownPayments.map((p, i) => {
+                        const tipoInfo = TIPOS_PAGO.find(t => t.key === p.tipo);
+                        return (
+                            <div
+                                key={`${p.client_id}-${i}`}
+                                onClick={() => openClient(p.item)}
+                                className="kcard-v6"
+                                style={{
+                                    minWidth: '680px', display: 'grid', gridTemplateColumns: '110px minmax(150px,1.5fr) 90px 120px 110px 100px',
+                                    gap: '10px', alignItems: 'center', padding: '13px 20px', borderRadius: 0,
+                                    borderBottom: '1px solid rgba(255,255,255,.055)', animation: 'none'
+                                }}
+                            >
+                                <div className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,.5)' }}>
+                                    {p.date ? new Date(p.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[13px] font-extrabold truncate">{p.client_name}</div>
+                                    {p.instagram && <div className="text-[10px] font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,.34)' }}>@{p.instagram.replace('@', '')}</div>}
+                                </div>
+                                <div>
+                                    <span className="px-2 py-1 rounded-lg text-[10px] font-black" style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.15)', color: '#fff' }}>
+                                        {p.programa_code || '—'}
+                                    </span>
+                                </div>
+                                <div className="text-[10.5px] font-black uppercase tracking-wide" style={{ color: tipoInfo?.color || 'rgba(255,255,255,.5)' }}>
+                                    {tipoInfo?.label || p.tipo_raw || '—'}
+                                </div>
+                                <div className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,.5)' }}>{p.metodo_pago || '—'}</div>
+                                <div className="text-right text-[14px] font-black tabular-nums" style={{ color: tipoInfo?.color || '#fff' }}>{money(p.monto)}</div>
+                            </div>
+                        );
+                    })}
+
+                    {payments.length > shownPayments.length && (
+                        <div
+                            onClick={() => setLimit(l => l + 20)}
+                            style={{ minWidth: '680px', padding: '15px 22px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,.025)' }}
+                            className="text-[10px] font-black uppercase tracking-widest"
+                        >
+                            <span style={{ color: 'rgba(255,255,255,.55)' }}>Ver más · {payments.length - shownPayments.length} restantes</span>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
