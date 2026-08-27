@@ -547,6 +547,56 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   background-attachment: fixed;
 }
 
+/* DASHBOARD (v7): el dashboard de performance (CloserDashboard.jsx) está construido enteramente
+   sobre las utilidades de tema genéricas del proyecto (bg-main/bg-surface/text-base/text-muted/
+   border-base/bg-primary/bg-secondary, ver tailwind.config.cjs) en vez de las clases -v6 del
+   resto del Workspace, porque también lo usa el admin (PublicCloserStatsPage) fuera de acá. En
+   vez de reescribir sus ~8 componentes, se pisan acá las variables CSS de las que esas
+   utilidades leen (--color-*) — como son custom properties, cascadean a todo lo de adentro sin
+   tocar un solo archivo del dashboard, y valen igual para el closer (embebido en el Workspace)
+   que para el admin (standalone), que es exactamente donde se pidió el mismo look. */
+.dash-v6 {
+  /* Namespace "compatibilidad" (usado por los colores de tailwind.config.cjs: bg-primary,
+     text-primary, bg-secondary, etc). */
+  --color-bg: #020617;
+  --color-surface: rgba(2,6,23,.9);
+  --color-surface-hover: rgba(255,255,255,.06);
+  --color-primary: #FF3FA4;
+  --color-primary-hover: #FF6AD5;
+  --color-secondary: #4E8BD8;
+  --color-secondary-hover: #6DA3E0;
+  --color-text-base: #ffffff;
+  --color-text-muted: rgba(255,255,255,.5);
+  --color-border: rgba(255,255,255,.15);
+  --color-border-hover: rgba(255,255,255,.28);
+  --radius-main: 1.5rem;
+  /* Namespace "marca" (usado por .bg-main/.bg-surface/.text-main/.text-muted/.border-base,
+     clases escritas a mano en este mismo archivo que leen `--bg-*`/`--text-*` DIRECTO en vez
+     del namespace de compatibilidad de arriba — sin este bloque, esas clases seguían mostrando
+     los colores del tema claro/glass activo por encima del cash-v6 de abajo). */
+  --bg-app: #020617;
+  --bg-card: rgba(2,6,23,.9);
+  --bg-sidebar: rgba(2,6,23,.9);
+  --bg-item: rgba(255,255,255,.06);
+  --bg-item-hover: rgba(255,255,255,.1);
+  --bg-input: rgba(0,0,0,.3);
+  --text-main: #ffffff;
+  --text-muted: rgba(255,255,255,.5);
+  --text-on-card: #ffffff;
+  --text-on-app: #ffffff;
+  --text-muted-on-app: rgba(255,255,255,.5);
+  --border-color: rgba(255,255,255,.15);
+}
+.dash-v6 ::selection { background: rgba(255,63,164,.3); }
+/* `[data-theme-style="glass"] .bg-surface` (más abajo en este archivo) redeclara --text-muted
+   DIRECTO sobre cada tarjeta -no en un ancestro-, así que gana por sobre lo heredado de
+   `.dash-v6` sin importar el orden: hace falta pisarlo con la misma especificidad exacta. */
+[data-theme-style="glass"] .dash-v6 .bg-surface,
+.dash-v6 .bg-surface {
+  --text-muted: rgba(255,255,255,.5);
+  --text-main: #ffffff;
+}
+
 /* HEADER */
 header.top-v6 {
   position: sticky;

@@ -101,7 +101,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         : `· ${periodLabel(period, data.dates)}`;
 
     return (
-        <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
+        <div className={`dash-v6 ${embedded ? '' : 'min-h-screen bg-v6 p-6 md:p-10'}`}>
             <div className={embedded ? '' : 'max-w-7xl mx-auto'}>
                 <header className="flex flex-wrap justify-between items-center gap-4 border-b border-base pb-6 mb-2">
                     <div>
