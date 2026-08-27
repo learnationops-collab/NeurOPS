@@ -860,18 +860,27 @@ header.top-v6 {
   flex-direction: column;
   gap: 9px;
 }
+/* Sin borde a propósito (pedido del usuario, "que sean sin bordes"): la separación entre
+   tarjetas la da la sombra + el fondo más claro que el hueco entre ellas, no un trazo. Entra con
+   una animación breve al aparecer (`cardRiseIn`), calcada del `riseIn` de la referencia visual. */
+@keyframes cardRiseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .kcard-v6 {
   background: rgba(255,255,255,.045);
-  border: 1px solid var(--v6-bd);
+  border: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 6px 16px rgba(0,0,0,.28);
   border-radius: 14px;
   padding: 14px;
   cursor: pointer;
   transition: .18s;
   text-align: left;
+  animation: cardRiseIn .35s ease both;
 }
 .kcard-v6:hover {
-  border-color: rgba(255,63,164,.45);
-  background: rgba(255,63,164,.06);
+  background: rgba(255,63,164,.07);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 10px 22px rgba(255,63,164,.18);
   transform: translateY(-2px);
 }
 .kcard-v6 .when-v6 {
@@ -1342,6 +1351,62 @@ header.top-v6 {
 @media(max-width:1100px){
   .nav5-v6 { grid-template-columns: repeat(3, 1fr); }
   .tsprow-v6 { grid-template-columns: 1fr; }
+}
+
+/* Hero "Buen avance, Nombre — X de Y resueltos" de Cerrar el día: mismo tratamiento premium
+   (gradiente + resplandor) que la tarjeta "Tu siguiente paso" del inicio, pero fija (no es un
+   lead, no abre modal) y con la barra de progreso animada del día que se está reportando. */
+.rpt-hero-v6 {
+  border: 1px solid rgba(255,63,164,.35);
+  border-radius: 1.6rem;
+  background: linear-gradient(150deg, rgba(19,35,198,.30), rgba(255,63,164,.12));
+  padding: 26px 28px;
+  position: relative;
+  overflow: hidden;
+}
+.rpt-hero-v6::after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  top: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,63,164,.28), transparent 68%);
+  pointer-events: none;
+}
+.rpt-hero-v6 h2 {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  color: #fff;
+  position: relative;
+}
+.rpt-hero-v6 h2 em {
+  font-style: normal;
+  background: var(--v6-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rpt-hero-v6 p {
+  font-size: 13px;
+  color: var(--v6-tx2);
+  margin-top: 6px;
+  max-width: 620px;
+  position: relative;
+}
+.rpt-hero-v6 .prog-v6 {
+  margin-top: 18px;
+  position: relative;
+}
+.rpt-hero-v6 .pmeta-v6 {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--v6-tx2);
 }
 
 /* REPORTE DEL DÍA (v7): mismo lenguaje de tarjeta oscura que el resto del mazo (border var(--v6-bd),

@@ -3745,6 +3745,40 @@ const CloserWorkflowPage = () => {
                 </div>
                 ) : activeView === 'report' ? (
                 <div className="space-y-6 text-left">
+                    {/* Hero "Buen avance" — mismo pedido que la referencia visual: ver el avance del
+                        día completo (no solo la pestaña activa) con una barra animada, igual que
+                        "Tu día" de arriba pero acá con nombre y saludo, pensado para esta pantalla. */}
+                    {(() => {
+                        const isToday = reportDate === localToday();
+                        const doneToday = dailyActivity
+                            ? (dailyActivity.confirmados_hoy || 0) + (dailyActivity.show_ups || 0) + (dailyActivity.seguimientos_hechos || 0)
+                            : 0;
+                        // `counts` es siempre "lo pendiente de HOY" — solo tiene sentido sumarlo al
+                        // total cuando se está reportando el día de hoy; para un día pasado ya cerrado
+                        // no hay "pendiente" que sumar, así que el total es lo hecho ese día.
+                        const pendingToday = isToday ? (counts.confirmations + counts.calls + counts.seguimientos) : 0;
+                        const totalToday = doneToday + pendingToday;
+                        const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
+                        const firstName = user?.name?.split(' ')[0] || user?.username || 'Closer';
+                        return (
+                            <div className="rpt-hero-v6">
+                                <h2>Buen avance, <em>{firstName}</em> {pct >= 100 ? '🏆' : '👋'}</h2>
+                                <p>
+                                    {isToday
+                                        ? 'Así vas hoy con todo lo que se movió en Confirmar, Reportar y Seguir.'
+                                        : `Así quedó el ${reportDate} con lo que se movió en Confirmar, Reportar y Seguir.`}
+                                </p>
+                                <div className="prog-v6">
+                                    <div className="pbarw-v6"><i style={{ width: `${pct}%` }}></i></div>
+                                    <div className="pmeta-v6">
+                                        <span>{doneToday} de {totalToday} resueltos{isToday ? ' hoy' : ''}</span>
+                                        <span>{pct}% completado</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Selector de día a reportar — por defecto hoy, pero se puede retroceder para
                         ponerse al día con reportes atrasados. */}
                     <div className="rpt-card-v6 flex items-center gap-3" style={{ padding: '16px 20px' }}>
@@ -3922,12 +3956,19 @@ const CloserWorkflowPage = () => {
                         imposible: un cupo ocupado sigue siendo un cupo), así que la explicación
                         es explícita y hay un aviso en vivo si el número no cierra. */}
                     <div className="rpt-card-v6 space-y-3">
-                        <h3 className="rpt-title-v6">
-                            <span className="dt-v6" style={{ background: '#8B5CF6' }}></span> Slots disponibles
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                            Único dato que no se puede sacar solo de la Bandeja — todo lo demás de este reporte es automático.
-                        </p>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <h3 className="rpt-title-v6">
+                                <span className="dt-v6" style={{ background: '#8B5CF6' }}></span> Slots disponibles
+                            </h3>
+                            {/* El mínimo posible siempre visible junto al título — pedido del usuario:
+                                la cantidad de agendas del día tiene que verse, no quedar enterrada
+                                en un párrafo de explicación. */}
+                            {dailyActivity?.agendas_del_dia !== undefined && (
+                                <span className="tud-xp-v6" style={{ color: '#C4B5FD', background: 'rgba(139,92,246,.14)', borderColor: 'rgba(139,92,246,.32)' }}>
+                                    Mínimo {dailyActivity.agendas_del_dia} · {dailyActivity.agendas_del_dia} agenda(s) {reportDate === localToday() ? 'de hoy' : 'ese día'}
+                                </span>
+                            )}
+                        </div>
                         <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 space-y-2">
                             <p className="text-xs text-slate-300 font-bold">Cómo se cuenta: <span className="text-violet-300">cupos ocupados + cupos que quedaron libres</span>.</p>
                             <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
@@ -3936,11 +3977,6 @@ const CloserWorkflowPage = () => {
                                 <li>Por eso <b className="text-slate-300">nunca puede ser menor que tus agendas del día</b>.</li>
                                 <li>Ejemplo: abriste 10 cupos, se agendaron 6 y 4 quedaron vacíos → escribís <b className="text-slate-300">10</b>, no 4 ni 6.</li>
                             </ul>
-                            {dailyActivity?.agendas_del_dia !== undefined && (
-                                <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800">
-                                    Ese día tenés <b className="text-white">{dailyActivity.agendas_del_dia}</b> agenda(s) registradas: los slots tienen que ser <b className="text-white">{dailyActivity.agendas_del_dia}</b> o más.
-                                </p>
-                            )}
                         </div>
                         <input
                             type="number"
