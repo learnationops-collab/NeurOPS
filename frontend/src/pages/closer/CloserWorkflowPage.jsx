@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
-    RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
+    CalendarDays, AlertCircle, DollarSign, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil
 } from 'lucide-react';
 import api from '../../services/api';
@@ -216,6 +216,15 @@ const CloserWorkflowPage = () => {
     // marcar como hechos) — bloquea el envío del reporte hasta que se resuelva (ver
     // CloserService.get_previous_days_pending).
     const [pendingPreviousDays, setPendingPreviousDays] = useState(null);
+    // Últimos 7 días de cash cobrado (GET /closer/deck/daily-trend), para el mini gráfico de
+    // barras del hero de "Cerrar el día" — solo se pide al entrar a esa vista.
+    const [dailyTrend, setDailyTrend] = useState([]);
+    // Seguimientos "cerrada" (cobros) del día que se está reportando — para el 4° KPI
+    // ("Cobros resueltos") y el logro "Primer cobro". Mismo endpoint que ya usa SeguimientosPane.
+    const [seguimientosHoyGrouped, setSeguimientosHoyGrouped] = useState(null);
+    // Meta diaria de seguimientos (mismo dato que ya muestra la pestaña ③ Seguir) — para el
+    // logro "Meta de seguimientos".
+    const [seguimientosGoal, setSeguimientosGoal] = useState(null);
     // Si ese atraso además TRABA el envío del reporte, o solo se avisa. Lo decide el toggle
     // `bloqueo_reporte_backlog` desde Operaciones → Configuración, no el frontend.
     const [backlogBlocksReport, setBacklogBlocksReport] = useState(false);
@@ -262,6 +271,21 @@ const CloserWorkflowPage = () => {
             })
             .catch(err => console.error('Error al consultar el estado del reporte:', err))
             .finally(() => setLoadingReportStatus(false));
+    }, [activeView, reportDate, reportStatusRefreshKey]);
+
+    // Datos extra de "Cerrar el día" — gráfico de 7 días y cobros del día, calcados de la
+    // referencia visual. Solo se piden en esa vista, igual que el resto del estado del reporte.
+    useEffect(() => {
+        if (activeView !== 'report') return;
+        api.get('/closer/deck/daily-trend', { params: { date: reportDate } })
+            .then(res => setDailyTrend(res.data || []))
+            .catch(() => setDailyTrend([]));
+        api.get(`/closer/followups/today?selected_date=${reportDate}`)
+            .then(res => setSeguimientosHoyGrouped(res.data?.grouped || null))
+            .catch(() => setSeguimientosHoyGrouped(null));
+        api.get(`/closer/followups/goal?selected_date=${reportDate}`)
+            .then(res => setSeguimientosGoal(res.data || null))
+            .catch(() => setSeguimientosGoal(null));
     }, [activeView, reportDate, reportStatusRefreshKey]);
 
     // Agendas y carga
@@ -3744,10 +3768,11 @@ const CloserWorkflowPage = () => {
                 </div>
                 </div>
                 ) : activeView === 'report' ? (
-                <div className="space-y-6 text-left">
-                    {/* Hero "Buen avance" — mismo pedido que la referencia visual: ver el avance del
-                        día completo (no solo la pestaña activa) con una barra animada, igual que
-                        "Tu día" de arriba pero acá con nombre y saludo, pensado para esta pantalla. */}
+                <div className="space-y-5 text-left">
+                    {/* Hero "CIERRE DEL DÍA" — calcado del artboard de la referencia visual: saludo +
+                        pills (movido/XP/racha) a la izquierda, gráfico de "últimos 7 días" a la
+                        derecha. Reemplaza el banner de estado + selector de fecha separados de
+                        antes: acá viven juntos, como en la referencia. */}
                     {(() => {
                         const isToday = reportDate === localToday();
                         const doneToday = dailyActivity
@@ -3758,22 +3783,51 @@ const CloserWorkflowPage = () => {
                         // no hay "pendiente" que sumar, así que el total es lo hecho ese día.
                         const pendingToday = isToday ? (counts.confirmations + counts.calls + counts.seguimientos) : 0;
                         const totalToday = doneToday + pendingToday;
-                        const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
                         const firstName = user?.name?.split(' ')[0] || user?.username || 'Closer';
+                        const cashToday = dailyActivity?.ventas_cash || 0;
+                        const maxTrend = Math.max(1, ...dailyTrend.map(d => d.cash), 1);
+                        const [y, m, d] = reportDate.split('-');
+
                         return (
                             <div className="rpt-hero-v6">
-                                <h2>Buen avance, <em>{firstName}</em> {pct >= 100 ? '🏆' : '👋'}</h2>
-                                <p>
-                                    {isToday
-                                        ? 'Así vas hoy con todo lo que se movió en Confirmar, Reportar y Seguir.'
-                                        : `Así quedó el ${reportDate} con lo que se movió en Confirmar, Reportar y Seguir.`}
-                                </p>
-                                <div className="prog-v6">
-                                    <div className="pbarw-v6"><i style={{ width: `${pct}%` }}></i></div>
-                                    <div className="pmeta-v6">
-                                        <span>{doneToday} de {totalToday} resueltos{isToday ? ' hoy' : ''}</span>
-                                        <span>{pct}% completado</span>
+                                <div>
+                                    <div className="rpt-hero-lbl-v6">CIERRE DEL DÍA · {d}/{m}</div>
+                                    <h2>Buen avance, {firstName}</h2>
+                                    <p>{doneToday} de {totalToday} resueltos · ${Math.round(cashToday).toLocaleString()} movidos {isToday ? 'hoy' : 'ese día'}</p>
+                                    <div className="flex items-center gap-3 flex-wrap mt-4">
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(255,63,164,.12)', border: '1px solid rgba(255,63,164,.45)' }}>
+                                            <span style={{ color: 'rgba(255,255,255,.6)' }}>MOVISTE</span>
+                                            <span style={{ color: 'var(--v6-pink)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(cashToday).toLocaleString()}</span>
+                                        </span>
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(78,139,216,.12)', border: '1px solid rgba(78,139,216,.45)', color: '#4E8BD8' }}>
+                                            {dailyXp} XP
+                                        </span>
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.45)', color: '#D9A441' }}>
+                                            RACHA 12 DÍAS
+                                        </span>
                                     </div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '10px', fontWeight: 900, letterSpacing: '.24em', color: 'var(--v6-tx3)', marginBottom: '14px' }}>ÚLTIMOS 7 DÍAS</div>
+                                    {dailyTrend.length > 0 ? (
+                                        <div className="rpt-trend-v6">
+                                            {dailyTrend.map(dtItem => (
+                                                <div key={dtItem.date} className="rpt-trend-col-v6">
+                                                    <div
+                                                        className="rpt-trend-bar-v6"
+                                                        style={{
+                                                            height: `${Math.max(4, (dtItem.cash / maxTrend) * 74)}px`,
+                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'rgba(78,139,216,.55)'
+                                                        }}
+                                                        title={`$${Math.round(dtItem.cash).toLocaleString()}`}
+                                                    ></div>
+                                                    <span className="rpt-trend-lbl-v6">{dtItem.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[11px]" style={{ color: 'var(--v6-tx3)' }}>Sin reportes previos todavía.</p>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -3781,7 +3835,7 @@ const CloserWorkflowPage = () => {
 
                     {/* Selector de día a reportar — por defecto hoy, pero se puede retroceder para
                         ponerse al día con reportes atrasados. */}
-                    <div className="rpt-card-v6 flex items-center gap-3" style={{ padding: '16px 20px' }}>
+                    <div className="rpt-card-v6 flex items-center gap-3" style={{ padding: '14px 20px' }}>
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Reportando el día</label>
                             <input
@@ -3800,65 +3854,13 @@ const CloserWorkflowPage = () => {
                                 Volver a hoy
                             </button>
                         )}
+                        {reportSent && (
+                            <span className="tud-xp-v6" style={{ color: '#7DEAC0', background: 'rgba(47,191,143,.14)', borderColor: 'rgba(47,191,143,.32)' }}>
+                                ✓ Enviado {reportSentAt ? new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                        )}
                         {loadingReportStatus && <Loader2 size={14} className="animate-spin text-slate-500" />}
                     </div>
-
-                    {/* REPORTE DEL DÍA v6 (v-report) */}
-                    {reportSent ? (
-                        <div className="rpt-card-v6 flex items-center gap-5" style={{ background: 'linear-gradient(135deg, rgba(47,191,143,.14), rgba(19,35,198,.10))', borderColor: 'rgba(47,191,143,.4)' }}>
-                            <div className="text-4xl">✅</div>
-                            <div className="flex-1">
-                                <h4 className="text-xl font-black text-white">Reporte del {reportDate === localToday() ? 'día' : reportDate} enviado</h4>
-                                <p className="text-xs text-slate-300 mt-1">
-                                    {reportDate === localToday()
-                                        ? <>{counts.confirmations} confirmados · {counts.calls} llamadas · {counts.seguimientos} seguimientos. Deuda de burpees: <b>{Math.max(0, 50 - counts.seguimientos)}</b>. Ya no te queda nada por completar hoy.</>
-                                        : 'Podés editar los referidos o la reflexión de abajo y volver a enviarlo — se actualiza, no se duplica.'}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <b className="text-xs font-black uppercase block" style={{ color: '#7DEAC0' }}>Enviado</b>
-                                <small className="text-xs text-slate-400">
-                                    {reportSentAt ? `${new Date(reportSentAt).toLocaleDateString('es-ES')} · ${new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'}
-                                </small>
-                            </div>
-                        </div>
-                    ) : reportDate === localToday() ? (
-                        // "Al día" = nada pendiente en las 3 pestañas (counts.confirmations/calls
-                        // en cero) — antes de esta pasada la condición estaba invertida (mostraba
-                        // "Bandeja al día" 🏆 justo cuando SÍ había pendientes).
-                        (() => {
-                            const pendienteHoy = counts.confirmations + counts.calls;
-                            return (
-                                <div
-                                    className="rpt-card-v6 flex items-center justify-between gap-4"
-                                    style={pendienteHoy === 0
-                                        ? { background: 'rgba(47,191,143,.10)', borderColor: 'rgba(47,191,143,.4)' }
-                                        : { background: 'rgba(232,92,74,.10)', borderColor: 'rgba(232,92,74,.4)' }}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{pendienteHoy === 0 ? '🏆' : '🔒'}</span>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-white">
-                                                {pendienteHoy === 0 ? 'Bandeja al día' : 'Bandeja con pendientes'}
-                                            </h4>
-                                            <p className="text-xs text-slate-400">
-                                                {pendienteHoy === 0
-                                                    ? 'Nadie sin tocar y llamadas reportadas.'
-                                                    : `Quedan ${pendienteHoy} agenda(s) por tocar o llamadas por reportar.`}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-white transition-all cursor-pointer" onClick={() => setActiveView('inbox')}>
-                                        Ir a la bandeja
-                                    </button>
-                                </div>
-                            );
-                        })()
-                    ) : (
-                        <div className="rpt-card-v6 text-xs font-bold" style={{ background: 'rgba(217,164,65,.10)', borderColor: 'rgba(217,164,65,.4)', color: '#F3D08A' }}>
-                            Todavía no hay reporte para el {reportDate}. Se va a armar con las agendas y ventas reales que quedaron registradas ese día.
-                        </div>
-                    )}
 
                     {/* Trabajo atrasado de días ANTERIORES. Si el bloqueo está activo (toggle
                         `bloqueo_reporte_backlog` en Operaciones), traba el envío y el backend lo
@@ -3897,139 +3899,134 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
 
-                    {/* Resumen en vivo — lo que el sistema ya tiene registrado para ese día, sacado
-                        directo de la bandeja (nada se tipea a mano). Si algo no cuadra, se corrige
-                        desde la bandeja y se vuelve acá: el mismo useEffect que carga esto se
-                        vuelve a disparar al reentrar a la pestaña. */}
-                    <div className="rpt-card-v6 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="rpt-title-v6">
-                                <span className="dt-v6" style={{ background: '#4E8BD8' }}></span> Resumen de {reportDate === localToday() ? 'hoy' : reportDate}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <span className="tud-xp-v6">⚡ {dailyXp} XP</span>
-                                <button
-                                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5"
-                                    disabled={loadingReportStatus}
-                                    onClick={() => setReportStatusRefreshKey(k => k + 1)}
-                                >
-                                    {loadingReportStatus ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                                    Actualizar
-                                </button>
+                    {/* 4 KPI del día — mismos 4 de la referencia visual (fracción hecho/total +
+                        barra), en vez de las 9 cajas sueltas de antes. "Total" = hecho + pendiente
+                        real de cada pestaña, no un número inventado. */}
+                    {(() => {
+                        const cobrosPendientes = seguimientosHoyGrouped?.cerrada?.length || 0;
+                        const kpis = [
+                            { label: 'Confirmaciones', done: dailyActivity?.confirmados_hoy || 0, pending: counts.confirmations, color: '#4E8BD8' },
+                            { label: 'Llamadas reportadas', done: dailyActivity?.show_ups || 0, pending: counts.calls, color: '#4E8BD8' },
+                            { label: 'Seguimientos hechos', done: dailyActivity?.seguimientos_hechos || 0, pending: counts.seguimientos, color: '#2FBF8F' },
+                            { label: 'Cobros resueltos', done: dailyActivity?.ventas_count || 0, pending: cobrosPendientes, color: '#FF3FA4' },
+                        ];
+                        return (
+                            <div className="rpt-kpis-v6">
+                                {kpis.map(k => {
+                                    const total = k.done + k.pending;
+                                    const pct = total ? Math.min(100, Math.round((k.done / total) * 100)) : 0;
+                                    return (
+                                        <div key={k.label} className="rpt-kpi-v6">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <b style={{ color: k.color, fontSize: '30px' }}>{k.done}</b>
+                                                <span style={{ fontSize: '13px', color: 'var(--v6-tx3)', fontWeight: 900 }}>/{total}</span>
+                                            </div>
+                                            <div className="rpt-kpi-bar-v6"><i style={{ width: `${pct}%`, background: k.color }}></i></div>
+                                            <span>{k.label}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
+                        );
+                    })()}
+
+                    {/* LOGROS + REFLEXIÓN, lado a lado como en la referencia. Los 3 logros salen de
+                        datos ya reales en esta misma pantalla (nunca un número inventado): si
+                        hubo algún cobro hoy, si la bandeja quedó limpia, y la meta diaria de
+                        seguimientos (③ Seguir). */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rpt-card-v6">
+                            <h3 className="rpt-title-v6" style={{ marginBottom: '4px' }}>LOGROS</h3>
+                            {(() => {
+                                const pendienteHoyTotal = counts.confirmations + counts.calls + counts.seguimientos;
+                                const cobrosHechos = dailyActivity?.ventas_count || 0;
+                                const segFaltan = seguimientosGoal?.faltan;
+                                const achievements = [
+                                    {
+                                        name: 'Primer cobro',
+                                        done: cobrosHechos > 0,
+                                        status: cobrosHechos > 0 ? '✓ logrado' : 'cobrá 1 venta'
+                                    },
+                                    {
+                                        name: 'Día limpio',
+                                        done: pendienteHoyTotal === 0,
+                                        status: pendienteHoyTotal === 0 ? '✓ logrado' : `faltan ${pendienteHoyTotal}`
+                                    },
+                                    {
+                                        name: 'Meta de seguimientos',
+                                        done: segFaltan === 0,
+                                        status: segFaltan === undefined || segFaltan === null ? '—' : segFaltan === 0 ? '✓ logrado' : `faltan ${segFaltan}`
+                                    },
+                                ];
+                                return achievements.map(a => (
+                                    <div key={a.name} className={`rpt-ach-v6 ${a.done ? 'done' : ''}`}>
+                                        <div className="rpt-ach-ic-v6">{a.done ? '✓' : '◆'}</div>
+                                        <div className="flex-1">
+                                            <div className="rpt-ach-name-v6">{a.name}</div>
+                                        </div>
+                                        <div className="rpt-ach-status-v6">{a.status}</div>
+                                    </div>
+                                ));
+                            })()}
                         </div>
-                        <p className="text-xs text-slate-400">Esto es lo que se va a mandar a Discord — sale directo de lo que ya quedó registrado en las pestañas de Confirmar, Reportar y Seguir, no hay nada que completar a mano acá. Si algo no cuadra, corregilo ahí y volvé a "Actualizar".</p>
 
-                        {reportDate === localToday() && dailyActivity && (dailyActivity.pendientes_confirmar > 0 || dailyActivity.pendientes_llamar > 0) && (
-                            <div className="flex items-center gap-3 rounded-xl p-3 text-xs font-bold" style={{ background: 'rgba(217,164,65,.10)', border: '1px solid rgba(217,164,65,.3)', color: '#F3D08A' }}>
-                                <span className="text-lg">⏳</span>
-                                Todavía te quedan <b>{dailyActivity.pendientes_confirmar}</b> por confirmar y <b>{dailyActivity.pendientes_llamar}</b> por llamar hoy.
-                            </div>
-                        )}
-
-                        <div className="rpt-kpis-v6">
-                            {[
-                                { label: 'Conversando', value: dailyActivity?.conversando, color: '#BFD3FF' },
-                                // Confirmar la llamada de hoy y confirmar una agenda futura son dos
-                                // trabajos distintos — se muestran separados (pedido del usuario).
-                                { label: 'Confirmados de este día', value: dailyActivity?.confirmados_hoy, color: '#7DEAC0' },
-                                { label: 'Confirmados de próximas agendas', value: dailyActivity?.confirmados_proximos, color: '#93C5FD' },
-                                { label: 'Show ups', value: dailyActivity?.show_ups, color: '#FF3FA4' },
-                                { label: 'Reagendas', value: dailyActivity?.reagendas, color: '#F3D08A' },
-                                { label: 'Seguimientos configurados', value: dailyActivity?.seguimientos_configurados, color: '#FFB3DE' },
-                                { label: 'Seguimientos hechos', value: dailyActivity?.seguimientos_hechos, color: '#7DEAC0' },
-                                { label: 'Referidos capturados', value: dailyActivity?.referidos_capturados, color: '#93C5FD' },
-                                { label: 'Ventas', value: dailyActivity?.ventas_count, color: '#FF3FA4', suffix: dailyActivity ? ` ($${(dailyActivity.ventas_cash || 0).toLocaleString()})` : '' },
-                            ].map(stat => (
-                                <div key={stat.label} className="rpt-kpi-v6">
-                                    <b style={{ color: stat.color }}>{dailyActivity ? (stat.value ?? 0) : '—'}{stat.suffix || ''}</b>
-                                    <span>{stat.label}</span>
+                        <div className="rpt-card-v6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <h3 className="rpt-title-v6">REFLEXIÓN</h3>
+                                <div className="flex-1"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-tx3)' }}>Slots</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={reportSlots}
+                                        onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
+                                        placeholder="0"
+                                        className="rpt-slots-input-v6"
+                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'rgba(139,92,246,.6)' } : undefined}
+                                    />
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Slots Disponibles — el único número de este reporte que el sistema no puede
-                        calcular solo, porque no hay ningún lugar de la Bandeja donde se defina
-                        cuántos cupos de agenda tenía el closer disponibles ese día. Se venía
-                        escribiendo mal (reportes con menos slots que agendas del día, que es
-                        imposible: un cupo ocupado sigue siendo un cupo), así que la explicación
-                        es explícita y hay un aviso en vivo si el número no cierra. */}
-                    <div className="rpt-card-v6 space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <h3 className="rpt-title-v6">
-                                <span className="dt-v6" style={{ background: '#8B5CF6' }}></span> Slots disponibles
-                            </h3>
-                            {/* El mínimo posible siempre visible junto al título — pedido del usuario:
-                                la cantidad de agendas del día tiene que verse, no quedar enterrada
-                                en un párrafo de explicación. */}
+                            </div>
+                            {/* El mínimo posible siempre visible: la cantidad de agendas del día no
+                                puede quedar enterrada en un párrafo — es lo que pidió el usuario. Un
+                                cupo ocupado sigue siendo un cupo, así que los slots nunca pueden ser
+                                menos que esto. */}
                             {dailyActivity?.agendas_del_dia !== undefined && (
-                                <span className="tud-xp-v6" style={{ color: '#C4B5FD', background: 'rgba(139,92,246,.14)', borderColor: 'rgba(139,92,246,.32)' }}>
-                                    Mínimo {dailyActivity.agendas_del_dia} · {dailyActivity.agendas_del_dia} agenda(s) {reportDate === localToday() ? 'de hoy' : 'ese día'}
-                                </span>
+                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? '#F3D08A' : 'var(--v6-tx3)' }}>
+                                    {slotsPorDebajoDeAgendas ? '⚠️ ' : ''}Mínimo {dailyActivity.agendas_del_dia} — ese día tenés {dailyActivity.agendas_del_dia} agenda(s) registradas, y un cupo ocupado sigue contando.
+                                </p>
                             )}
-                        </div>
-                        <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 space-y-2">
-                            <p className="text-xs text-slate-300 font-bold">Cómo se cuenta: <span className="text-violet-300">cupos ocupados + cupos que quedaron libres</span>.</p>
-                            <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
-                                <li>Es la <b className="text-slate-300">capacidad total</b> de agenda que abriste ese día, no los huecos que sobraron.</li>
-                                <li>Un cupo que se agendó <b className="text-slate-300">sigue contando</b> — la agenda no lo elimina, lo ocupa.</li>
-                                <li>Por eso <b className="text-slate-300">nunca puede ser menor que tus agendas del día</b>.</li>
-                                <li>Ejemplo: abriste 10 cupos, se agendaron 6 y 4 quedaron vacíos → escribís <b className="text-slate-300">10</b>, no 4 ni 6.</li>
-                            </ul>
-                        </div>
-                        <input
-                            type="number"
-                            min="0"
-                            value={reportSlots}
-                            onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
-                            placeholder="ej. 15"
-                            className={`w-full sm:w-48 bg-slate-950/60 border rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all ${slotsPorDebajoDeAgendas ? 'border-amber-500' : reportSlotsIsDefault ? 'border-violet-600/60' : 'border-slate-800'}`}
-                        />
-                        {slotsPorDebajoDeAgendas && (
-                            <p className="text-[11px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
-                                ⚠️ Escribiste {reportSlots} slots pero ese día tenés {dailyActivity.agendas_del_dia} agenda(s). Los cupos que se agendaron también cuentan — el número tiene que ser {dailyActivity.agendas_del_dia} o más.
-                            </p>
-                        )}
-                        {reportSlotsIsDefault && !slotsPorDebajoDeAgendas && (
-                            <p className="text-[10px] text-violet-350 font-bold uppercase tracking-wide">
-                                Sugerido a partir de tu último reporte — editalo si hoy cambió.
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Reflexión Diaria */}
-                    <div className="rpt-card-v6 space-y-4">
-                        <h3 className="rpt-title-v6">
-                            <span className="dt-v6" style={{ background: 'var(--v6-pink)' }}></span> Reflexión diaria
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-300 block">🏆 Victorias del día</label>
-                                <textarea
-                                    rows={3}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-ok)' }}>Victoria del día</span>
+                                <input
                                     value={reflection.win}
                                     onChange={(e) => setReflection(prev => ({ ...prev, win: e.target.value }))}
-                                    placeholder="Qué te salió bien y por qué..."
-                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-pink-500"
+                                    placeholder="Qué te salió bien y por qué…"
+                                    className="rpt-input-v6"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-300 block">🔧 A mejorar mañana</label>
-                                <textarea
-                                    rows={3}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-warn)' }}>Una cosa a mejorar</span>
+                                <input
                                     value={reflection.fix}
                                     onChange={(e) => setReflection(prev => ({ ...prev, fix: e.target.value }))}
-                                    placeholder="Una cosa concreta, no una lista..."
-                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-indigo-500"
+                                    placeholder="Una sola, concreta…"
+                                    className="rpt-input-v6"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Enviar/actualizar reporte — reenviar el mismo día actualiza el reporte
-                        existente y lo reenvía a Discord, no lo duplica. */}
-                    <div className="flex items-center gap-4 pt-2">
+                    {/* Aviso + enviar — reenviar el mismo día actualiza el reporte existente y lo
+                        reenvía a Discord, no lo duplica. */}
+                    <div className="rpt-card-v6 flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
+                            <span className="text-xs font-bold" style={{ color: '#F3D08A' }}>
+                                {counts.confirmations + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver
+                            </span>
+                        </div>
+                        <div className="flex-1"></div>
                         <button
                             disabled={sendingReport || (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0)}
                             title={backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
@@ -4062,11 +4059,11 @@ const CloserWorkflowPage = () => {
                                     setSendingReport(false);
                                 }
                             }}
-                            className="px-6 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-xs rounded-2xl transition-all cursor-pointer flex items-center gap-2"
-                            style={{ background: 'var(--v6-grad)', boxShadow: '0 8px 20px rgba(255,63,164,.30)' }}
+                            className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
+                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px rgba(19,35,198,.35)' }}
                         >
                             {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
-                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte al sistema'}
+                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte del día'}
                         </button>
                     </div>
                 </div>

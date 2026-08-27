@@ -1772,6 +1772,48 @@ def get_closer_deck_counts():
     }), 200
 
 
+@bp.route('/deck/daily-trend', methods=['GET'])
+@login_required
+def get_daily_trend():
+    """Últimos 7 días (incluido el que se está reportando) de cash cobrado, para el mini gráfico
+    de barras de "Cerrar el día". Lee directo de `CloserDailyReport` -el reporte ya enviado ese
+    día-, sin recalcular nada: si el closer no envió reporte ese día, el valor es 0. Es una
+    simplificación honesta (no inventa actividad de un día sin reportar) más que una limitación:
+    incentiva reportar todos los días, que es justamente lo que esta pantalla empuja."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import CloserDailyReport
+    end_day = _resolve_report_date(current_user, request.args.get('date'))
+    days = [end_day - timedelta(days=i) for i in range(6, -1, -1)]
+
+    reports = {
+        r.date: r for r in CloserDailyReport.query.filter(
+            CloserDailyReport.closer_id == current_user.id,
+            CloserDailyReport.date.in_(days)
+        ).all()
+    }
+
+    dow_labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    result = []
+    for d in days:
+        r = reports.get(d)
+        cash = 0.0
+        if r:
+            cash = (
+                (r.pif_cash_collected or 0) + (r.split_cash_collected or 0) + (r.deposit_cash_collected or 0)
+                + (r.installment_cash_collected or 0) + (r.renewal_cash_collected or 0) + (r.upsell_cash_collected or 0)
+            )
+        result.append({
+            "date": d.isoformat(),
+            "label": dow_labels[d.weekday()],
+            "cash": round(cash, 2),
+            "is_target": d == end_day
+        })
+
+    return jsonify(result), 200
+
+
 def _resolve_report_date(current_user, date_str):
     """Resuelve la fecha calendario (zona horaria del closer) para la que se arma/consulta el
     reporte diario. Acepta 'YYYY-MM-DD' explícito (para reportar días anteriores); si no viene,

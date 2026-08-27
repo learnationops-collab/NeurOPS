@@ -1353,60 +1353,45 @@ header.top-v6 {
   .tsprow-v6 { grid-template-columns: 1fr; }
 }
 
-/* Hero "Buen avance, Nombre — X de Y resueltos" de Cerrar el día: mismo tratamiento premium
-   (gradiente + resplandor) que la tarjeta "Tu siguiente paso" del inicio, pero fija (no es un
-   lead, no abre modal) y con la barra de progreso animada del día que se está reportando. */
+/* Hero "Buen avance, Nombre — X de Y resueltos" de Cerrar el día: calcado del artboard
+   "CIERRE DEL DÍA" de la referencia — borde/gradiente verde (en vez del rosa de "Tu siguiente
+   paso", para no confundir los dos), grilla de 2 columnas: texto + pills a la izquierda,
+   gráfico de "últimos 7 días" a la derecha. */
 .rpt-hero-v6 {
-  border: 1px solid rgba(255,63,164,.35);
-  border-radius: 1.6rem;
-  background: linear-gradient(150deg, rgba(19,35,198,.30), rgba(255,63,164,.12));
-  padding: 26px 28px;
+  border: 1px solid rgba(47,191,143,.35);
+  border-radius: 2rem;
+  background: linear-gradient(135deg, rgba(47,191,143,.14), rgba(2,6,23,.92));
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,.4);
+  padding: 32px 34px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 28px;
+  align-items: center;
   position: relative;
   overflow: hidden;
 }
-.rpt-hero-v6::after {
-  content: '';
-  position: absolute;
-  right: -70px;
-  top: -70px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,63,164,.28), transparent 68%);
-  pointer-events: none;
+.rpt-hero-lbl-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .3em;
+  color: var(--v6-ok);
 }
 .rpt-hero-v6 h2 {
-  font-size: 24px;
+  margin-top: 12px;
+  font-size: 34px;
   font-weight: 900;
-  letter-spacing: -.02em;
+  letter-spacing: -.03em;
+  line-height: 1.05;
   color: #fff;
-  position: relative;
-}
-.rpt-hero-v6 h2 em {
-  font-style: normal;
-  background: var(--v6-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 .rpt-hero-v6 p {
+  margin-top: 10px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--v6-tx2);
-  margin-top: 6px;
-  max-width: 620px;
-  position: relative;
 }
-.rpt-hero-v6 .prog-v6 {
-  margin-top: 18px;
-  position: relative;
-}
-.rpt-hero-v6 .pmeta-v6 {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--v6-tx2);
+@media(max-width:900px){
+  .rpt-hero-v6 { grid-template-columns: 1fr; }
 }
 
 /* REPORTE DEL DÍA (v7): mismo lenguaje de tarjeta oscura que el resto del mazo (border var(--v6-bd),
@@ -1456,9 +1441,132 @@ header.top-v6 {
   text-transform: uppercase;
   color: var(--v6-tx3);
 }
+.rpt-kpi-v6 .rpt-kpi-bar-v6 {
+  margin-top: 12px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.rpt-kpi-v6 .rpt-kpi-bar-v6 i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width .6s cubic-bezier(.2,.8,.2,1);
+}
 @media(max-width:768px){
   .rpt-kpis-v6 { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Pill de estado dentro del hero "Buen avance" (MOVISTE $/XP/RACHA) */
+.rpt-pill-v6 {
+  height: 34px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+/* Mini gráfico de barras "Últimos 7 días" del hero */
+.rpt-trend-v6 {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 74px;
+}
+.rpt-trend-col-v6 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rpt-trend-bar-v6 {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 8px 8px 3px 3px;
+  transform-origin: center bottom;
+  animation: growW .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.rpt-trend-lbl-v6 {
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: var(--v6-tx3);
+}
+
+/* LOGROS: fila con ícono, nombre y estado ("faltan N" / "✓ logrado") */
+.rpt-ach-v6 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.rpt-ach-v6:last-child { border-bottom: none; }
+.rpt-ach-ic-v6 {
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  border: 1px solid var(--v6-tx3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--v6-tx3);
+  flex: none;
+}
+.rpt-ach-v6.done .rpt-ach-ic-v6 {
+  border-color: var(--v6-ok);
+  color: var(--v6-ok);
+  background: rgba(47,191,143,.12);
+}
+.rpt-ach-name-v6 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--v6-tx3);
+}
+.rpt-ach-v6.done .rpt-ach-name-v6 { color: #fff; }
+.rpt-ach-status-v6 {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--v6-tx3);
+}
+.rpt-ach-v6.done .rpt-ach-status-v6 { color: var(--v6-ok); }
+
+/* Inputs en pastilla para Reflexión diaria (victoria/mejora), reemplazan los textarea */
+.rpt-input-v6 {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 1rem;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--v6-bd);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+}
+.rpt-input-v6:focus { border-color: rgba(255,255,255,.3); }
+.rpt-slots-input-v6 {
+  width: 64px;
+  height: 36px;
+  border-radius: 99px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--v6-bd);
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  outline: none;
+}
+.rpt-slots-input-v6:focus { border-color: rgba(139,92,246,.6); }
 
 /* DOCK v6 — ya no se usa como navegación (eso lo reemplazó `.nav5-v6`, arriba de la lista);
    se deja el estilo del panel flotante fijo abajo-centro como base para notificaciones u otro
