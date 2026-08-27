@@ -18,6 +18,7 @@ import OperatorControls from '../../components/modals/OperatorControls';
 import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import MiCarteraPane from './components/MiCarteraPane';
 import LeadEditModal from './components/LeadEditModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
@@ -3463,6 +3464,14 @@ const CloserWorkflowPage = () => {
                         <span className="nc-n-v6">05</span>
                         <span className="nc-lbl-v6">Ver mis datos</span>
                     </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'cartera' ? 'on' : ''}`}
+                        onClick={() => setActiveView('cartera')}
+                    >
+                        <span className="nc-n-v6">06</span>
+                        <span className="nc-lbl-v6">Mi cartera</span>
+                    </button>
                     {/* Pestaña temporal: solo aparece mientras Operaciones la tenga activada
                         (ver GET /closer/leads-audit/status). No tiene número fijo en la
                         referencia visual porque no forma parte de su flujo habitual. */}
@@ -4069,6 +4078,8 @@ const CloserWorkflowPage = () => {
                 </div>
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
+                ) : activeView === 'cartera' ? (
+                    <MiCarteraPane onOpenLead={handleSelectLead} />
                 ) : (
                     <CloserDashboard
                         embedded

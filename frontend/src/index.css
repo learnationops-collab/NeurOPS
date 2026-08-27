@@ -1335,7 +1335,10 @@ header.top-v6 {
    número/fracción-pendiente que la referencia visual. */
 .nav5-v6 {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* auto-fit en vez de un número fijo de columnas: "Mi cartera" (06) y la pestaña temporal de
+     Auditoría (condicional) suman más destinos de los que había cuando esto se armó con
+     repeat(5,1fr) — así se acomodan solos sin importar cuántos haya. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 20px;
 }
