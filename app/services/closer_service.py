@@ -2436,9 +2436,19 @@ class CloserService:
                 # dos trabajos distintos (pedido del usuario): el primero es el embudo del día,
                 # el segundo es pipeline hacia adelante. Se cuentan por separado según la fecha
                 # de la cita, no según cuándo se la tocó.
+                #
+                # BUG real encontrado y corregido (27/ago/2026): la rama de "próximas" solo
+                # cubría citas futuras (`start_time > end_utc`) y la de "hoy" solo citas del
+                # propio día (`start_time >= start_utc`) — una agenda ATRASADA (su llamada ya
+                # pasó, `start_time < start_utc`) no entraba en ninguna de las dos. Confirmar hoy
+                # una agenda vencida (ponerse al día con el backlog) es justo el tipo de trabajo
+                # que "Cerrar el día" tiene que reflejar, y antes desaparecía sin contar en
+                # ningún lado — coherente con el reporte del usuario de que el cierre del día
+                # "no se estaba actualizando". Ahora: futura → próximas: cualquier otra cosa
+                # (hoy o atrasada) → hoy, sin condición de piso.
                 if a.start_time and a.start_time > end_utc:
                     confirmados_proximos += 1
-                elif a.start_time and a.start_time >= start_utc:
+                else:
                     confirmados_hoy += 1
             if closer_result_lower == 'show up':
                 show_ups += 1
