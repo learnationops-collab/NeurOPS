@@ -12,53 +12,62 @@ const CASH_KEYS = [
     { key: 'otros', metric: 'cash_otros', label: 'Sin clasificar', note: 'tipo de pago no reconocido', color: '#94A3B8' }
 ];
 
-const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
+/* Se separa de las otras dos tarjetas de esta misma sección porque, en el reordenamiento pedido
+   por el usuario (27/ago/2026) para calcar el sectionado del HTML de referencia, "de dónde viene
+   el cash" pasa a vivir junto al embudo en "02 · Dónde se cae" — no en "01 · Dinero" —, mientras
+   que Deuda por cobrar y Programas vendidos se quedan acá. Exportada aparte para que
+   PerformanceFunnel la importe y la renderice donde corresponde ahora. */
+export const CashMixCard = ({ cashMix }) => {
     const total = Object.values(cashMix).reduce((a, b) => a + (b?.cash || 0), 0) || 1;
+    return (
+        <Card variant="surface" padding="p-6">
+            <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
+                <span className="w-2 h-2 rounded-full bg-primary" /> Composición del cash
+                <MetricTip iconOnly {...tip('cash_collected')} />
+            </h3>
+            <div className="space-y-3.5">
+                {CASH_KEYS.map(k => {
+                    const bucket = cashMix[k.key] || { cash: 0, count: 0 };
+                    const v = bucket.cash || 0;
+                    const n = bucket.count || 0;
+                    const q = Math.round((v / total) * 100);
+                    if (!v && !n && k.key === 'otros') return null;
+                    return (
+                        <div key={k.key}>
+                            <div className="flex justify-between text-[12.5px] font-semibold gap-2">
+                                <span className="min-w-0">
+                                    <span className="inline-flex items-center gap-1.5">{k.label} <MetricTip iconOnly {...tip(k.metric)} /></span>
+                                    <span className="block text-[10px] font-normal text-muted leading-tight">{k.note}</span>
+                                </span>
+                                <span className="text-right shrink-0">
+                                    <b>{money(v)}</b> <span className="text-muted text-[11px]">{q}%</span>
+                                    <span className="block text-[10px] font-bold text-muted leading-tight">{n} pago{n === 1 ? '' : 's'}</span>
+                                </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-surface-hover mt-1.5 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${q}%`, background: k.color }} />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flex justify-between text-[13px] font-black border-t border-base mt-4 pt-3">
+                <span>Cash total</span><span>{money(total)}</span>
+            </div>
+        </Card>
+    );
+};
+
+const PerformanceMoney = ({ cuotas, programas }) => {
     const pmax = Math.max(1, ...programas.map(p => p.count));
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary" /> Composición del cash
-                </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">De dónde vino la plata que efectivamente entró, y con cuántos pagos.</p>
-                <div className="space-y-3.5">
-                    {CASH_KEYS.map(k => {
-                        const bucket = cashMix[k.key] || { cash: 0, count: 0 };
-                        const v = bucket.cash || 0;
-                        const n = bucket.count || 0;
-                        const q = Math.round((v / total) * 100);
-                        if (!v && !n && k.key === 'otros') return null;
-                        return (
-                            <div key={k.key}>
-                                <div className="flex justify-between text-[12.5px] font-semibold gap-2">
-                                    <span className="min-w-0">
-                                        <span className="inline-flex items-center gap-1.5">{k.label} <MetricTip iconOnly {...tip(k.metric)} /></span>
-                                        <span className="block text-[10px] font-normal text-muted leading-tight">{k.note}</span>
-                                    </span>
-                                    <span className="text-right shrink-0">
-                                        <b>{money(v)}</b> <span className="text-muted text-[11px]">{q}%</span>
-                                        <span className="block text-[10px] font-bold text-muted leading-tight">{n} pago{n === 1 ? '' : 's'}</span>
-                                    </span>
-                                </div>
-                                <div className="h-1.5 rounded-full bg-surface-hover mt-1.5 overflow-hidden">
-                                    <div className="h-full rounded-full" style={{ width: `${q}%`, background: k.color }} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div className="flex justify-between text-[13px] font-black border-t border-base mt-4 pt-3">
-                    <span>Cash total</span><span>{money(total)}</span>
-                </div>
-            </Card>
-
-            <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-4">
                     <span className="w-2 h-2 rounded-full bg-secondary" /> Deuda por cobrar
+                    <MetricTip iconOnly {...tip('deuda_total_pendiente')} />
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-4">Lo que tus clientes todavía deben de su inscripción (histórico, no filtrado por período).</p>
                 {/* Tres estados, no dos: además de vencido y por vencer está el saldo SIN
                     cronograma armado, que hoy es la mayor parte de la deuda y no figuraba en
                     ningún lado — no está vencido porque no tiene fecha, así que se perdía. */}
@@ -107,11 +116,10 @@ const PerformanceMoney = ({ cashMix, cuotas, programas }) => {
             </Card>
 
             <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Programas vendidos
                     <MetricTip iconOnly {...tip('programas')} />
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">Unidades y ticket promedio por programa.</p>
                 <div className="space-y-3.5">
                     {programas.length > 0 ? programas.map((p, i) => (
                         <div key={p.program}>

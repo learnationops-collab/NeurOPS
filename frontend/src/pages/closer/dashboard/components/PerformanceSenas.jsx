@@ -41,12 +41,11 @@ const PerformanceSenas = ({ senas }) => {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
                     <span className="w-2 h-2 rounded-full bg-amber-400" /> Cuántas señas se consiguen
+                    <MetricTip iconOnly title="Las señas no son ventas" source="derivado"
+                        note="Una seña es una reserva, no una venta — por eso no entra en el close rate ni en el ticket promedio." />
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">
-                    Una seña es una reserva, no una venta — por eso no entra en el close rate ni en el ticket promedio.
-                </p>
                 <div className="grid grid-cols-2 gap-3">
                     <Stat metric="senas_count" label="Señas del período" value={senas.count} note={`${money(senas.cash)} cobrados`} color="#F59E0B" />
                     <Stat metric="senas_ticket" label="Seña promedio" value={money(senas.ticket_promedio)} note="monto de reserva" />
@@ -60,12 +59,11 @@ const PerformanceSenas = ({ senas }) => {
             </Card>
 
             <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" /> En qué terminan las señas
+                    <MetricTip iconOnly title="Seguimiento de la seña" source="derivado"
+                        note={`De las ${senas.seguidas} señas del período, cuántas terminaron en un pago posterior del mismo cliente.`} />
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">
-                    De las {senas.seguidas} señas del período, cuántas terminaron en un pago posterior del mismo cliente.
-                </p>
                 {senas.seguidas > 0 ? (
                     <>
                         <div className="space-y-3.5">

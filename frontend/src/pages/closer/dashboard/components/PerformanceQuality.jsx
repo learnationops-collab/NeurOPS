@@ -17,13 +17,15 @@ const HEALTH_CHIP = {
     imposible: 'bg-rose-500/20 text-rose-300 border-rose-500/40'
 };
 
-const QualityMeter = ({ label, meaning, value, num, den, unit, metric, weakest }) => {
+const QualityMeter = ({ label, value, num, den, unit, metric, weakest }) => {
     const t = tip(metric);
     const health = rateHealth(value, t.benchmark);
     const fill = Math.max(2, Math.min(100, value));
 
     // Nota: `border-base-hover` (usado en el resto del dashboard) mapea a --color-border-hover,
     // que no está definido en el tema, así que ese hover no hace nada. Acá se usa el color de marca.
+    // El "meaning" (qué mide cada tasa) ya no vive acá como párrafo — es el `title` del propio
+    // tooltip (27/ago/2026, calco del HTML de referencia: menos texto siempre visible).
     return (
         <div className={`relative rounded-2xl border p-4 transition-all ${weakest ? 'border-rose-500/40 bg-rose-500/[0.06]' : 'border-base bg-main/60 hover:border-primary/40'}`}>
             {weakest && (
@@ -64,8 +66,6 @@ const QualityMeter = ({ label, meaning, value, num, den, unit, metric, weakest }
                     </span>
                 </div>
             )}
-
-            <p className="text-[10.5px] text-muted mt-2 leading-snug">{meaning}</p>
         </div>
     );
 };
@@ -88,33 +88,27 @@ const PerformanceQuality = ({ rings, funnel, confirmaciones }) => {
     const items = [
         {
             metric: 'q_confirmation_rate', label: 'Confirmation rate', value: rings.confirmation_rate,
-            num: confirmaciones?.del_periodo ?? confirmadas, den: confirmaciones?.agendas_periodo ?? agendas, unit: 'agendas',
-            meaning: 'Cuántas agendas lográs confirmar antes de la llamada.', group: 'llegar'
+            num: confirmaciones?.del_periodo ?? confirmadas, den: confirmaciones?.agendas_periodo ?? agendas, unit: 'agendas', group: 'llegar'
         },
         {
             metric: 'q_show_rate', label: 'Show rate', value: rings.show_rate,
-            num: asistencias, den: agendas, unit: 'agendas',
-            meaning: 'Cuántas agendas terminan en una llamada real, confirmadas o no.', group: 'llegar'
+            num: asistencias, den: agendas, unit: 'agendas', group: 'llegar'
         },
         {
             metric: 'q_show_sobre_confirmada', label: 'Show s/ confirmada', value: rings.show_sobre_confirmada,
-            num: asistencias, den: confirmadas, unit: 'confirmadas',
-            meaning: 'De las que dijeron que sí, cuántas aparecieron. Mide qué tan real es tu confirmación.', group: 'llegar'
+            num: asistencias, den: confirmadas, unit: 'confirmadas', group: 'llegar'
         },
         {
             metric: 'q_pitch_rate', label: 'Pitch rate', value: rings.pitch_rate,
-            num: presentaciones, den: asistencias, unit: 'asistencias',
-            meaning: 'En cuántas llamadas llegás a presentar la oferta.', group: 'convertir'
+            num: presentaciones, den: asistencias, unit: 'asistencias', group: 'convertir'
         },
         {
             metric: 'q_close_llamada', label: 'Close s/ llamada', value: rings.close_llamada,
-            num: ventas, den: asistencias, unit: 'asistencias',
-            meaning: 'Tu cierre sobre todas las llamadas, hayas presentado o no.', group: 'convertir'
+            num: ventas, den: asistencias, unit: 'asistencias', group: 'convertir'
         },
         {
             metric: 'q_close_presentacion', label: 'Close s/ presentación', value: rings.close_presentacion,
-            num: ventas, den: presentaciones, unit: 'presentaciones',
-            meaning: 'Tu cierre puro: solo las llamadas donde llegaste a presentar.', group: 'convertir'
+            num: ventas, den: presentaciones, unit: 'presentaciones', group: 'convertir'
         }
     ];
 
@@ -136,19 +130,17 @@ const PerformanceQuality = ({ rings, funnel, confirmaciones }) => {
 
     return (
         <Card variant="surface" padding="p-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                <p className="text-[11px] text-muted max-w-2xl leading-snug">
-                    La llamada es una cadena: primero hay que <b className="text-base">llegar</b> a ella y después
-                    hay que <b className="text-base">convertirla</b>. Cada tasa muestra la fracción real que hay detrás
-                    del porcentaje — un 100% sobre 2 llamadas no dice lo mismo que uno sobre 40.
-                </p>
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary" /> Calidad de la llamada
+                    <MetricTip iconOnly title="Cómo leer esta sección" source="derivado"
+                        note="La llamada es una cadena: primero hay que llegar a ella y después convertirla. Cada tasa muestra la fracción real detrás del porcentaje — un 100% sobre 2 llamadas no dice lo mismo que uno sobre 40. El ▲ ref. de cada barra es el umbral que ya usaban las alertas del sistema para marcar una tasa como sana." />
+                </h3>
                 {weakest && (
-                    <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
-                        <span>🩸</span>
-                        <span className="text-[11px] font-bold text-rose-300">
-                            Lo que más te frena: <b>{weakest.label}</b> en {weakest.value}%
-                        </span>
-                    </div>
+                    <span className="text-[10px] font-black px-2 py-1 rounded-lg border text-rose-400 border-rose-500/30 bg-rose-500/10 cursor-help"
+                        title={`Lo que más te frena: ${weakest.label} en ${weakest.value}%`}>
+                        🩸 lo que más te frena: {weakest.label}
+                    </span>
                 )}
             </div>
 
@@ -160,11 +152,6 @@ const PerformanceQuality = ({ rings, funnel, confirmaciones }) => {
                     {render('convertir')}
                 </Group>
             </div>
-
-            <p className="text-[10px] text-muted mt-5 pt-4 border-t border-base leading-snug">
-                El <b className="text-base">▲ ref.</b> de cada barra es el umbral que ya usaban las alertas del sistema para
-                marcar una tasa como sana — es una referencia para leer el color, no una meta asignada.
-            </p>
         </Card>
     );
 };

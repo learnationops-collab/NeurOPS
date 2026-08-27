@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, PhoneCall, CalendarCheck, MessageSquare, CheckCircle2 } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
+import MetricTip from './MetricTip';
 
 /* Trabajo que el closer todavía no completó, a hoy.
  *
@@ -87,17 +88,14 @@ const PerformancePendientes = ({ pendientes, onNavigate }) => {
 
     return (
         <Card variant="surface" padding="p-6">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base">Lo que te falta completar</h3>
                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-surface-hover text-muted">
                     {pendientes.total}
                 </span>
+                <MetricTip iconOnly title="A hoy, no del período filtrado" source="agendas"
+                    note="Trabajo pendiente a hoy, sin importar el período filtrado arriba: una agenda sin reportar de hace tres semanas se sigue debiendo aunque estés mirando los últimos 7 días. Son los mismos números que ves en las pestañas del mazo." />
             </div>
-            <p className="text-[11px] text-muted mb-5 leading-snug">
-                Trabajo pendiente <b className="text-base">a hoy</b>, sin importar el período filtrado arriba: una agenda
-                sin reportar de hace tres semanas se sigue debiendo aunque estés mirando los últimos 7 días. Son los
-                mismos números que ves en las pestañas del mazo.
-            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <PendingTile
@@ -146,7 +144,7 @@ const PerformancePendientes = ({ pendientes, onNavigate }) => {
             {paraCargar > 0 && (
                 <p className="text-[10.5px] text-muted mt-4 leading-snug">
                     Además hay <b className="text-amber-400">{paraCargar}</b> dato(s) por cargar (cupos y reportes
-                    diarios): están al final del dashboard, en «Para actualizar».
+                    diarios): están al final del dashboard, en «Para cerrar».
                 </p>
             )}
         </Card>

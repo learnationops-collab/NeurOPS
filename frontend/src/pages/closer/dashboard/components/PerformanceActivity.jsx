@@ -12,11 +12,10 @@ const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity
     return (
         <div className="space-y-4">
             <Card variant="surface" padding="p-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Performance por fuente
                     <MetricTip iconOnly {...tip('fuente_agendas')} />
                 </h3>
-                <p className="text-[11px] text-muted mt-1 mb-5">Agendas y show rate reales agrupados por origen (aproximado, sin cruce de ventas por fuente).</p>
                 <div className="overflow-x-auto">
                     <table className="w-full text-[12.5px]">
                         <thead>
@@ -79,7 +78,6 @@ const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity
 
                 <Card variant="surface" padding="p-6">
                     <h3 className="text-xs font-black uppercase tracking-widest text-base mb-4 flex items-center gap-2">Referidos <MetricTip iconOnly {...tip('referidos')} /></h3>
-                    <p className="text-[10.5px] text-muted mb-3">Solo los 2 contadores agregados que existen hoy en el reporte diario (no hay embudo detallado ni atribución por lead).</p>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="bg-main/60 border border-base rounded-xl p-3 text-center">
                             <div className="text-2xl font-black text-base">{referidos.sourced}</div>
