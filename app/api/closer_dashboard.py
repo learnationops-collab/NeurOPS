@@ -38,6 +38,28 @@ def get_performance_dashboard():
     return jsonify(data), 200
 
 
+@bp.route('/pending-summary', methods=['GET'])
+@login_required
+def get_pending_summary():
+    """Resumen de trabajo pendiente «a hoy» (mismo cálculo que la sección "Lo que falta
+    completar" del dashboard), pensado para la tira de KPIs del admin en «Historial de
+    Reportes» — sin traer todo el payload pesado de /performance-dashboard. Un closer solo ve
+    lo suyo; el admin puede pedir un closer puntual o `closer_id=all` para todo el equipo."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.closer_pending_service import CloserPendingService
+
+    if current_user.role == 'closer':
+        closer_id = current_user.id
+    else:
+        closer_id_arg = request.args.get('closer_id', default='', type=str)
+        closer_id = int(closer_id_arg) if closer_id_arg and closer_id_arg != 'all' else None
+
+    pendientes = CloserPendingService.get_pending_work(closer_id)
+    return jsonify(pendientes), 200
+
+
 @bp.route('/performance-dashboard/slots-pendientes', methods=['GET'])
 @login_required
 def get_missing_slots():
