@@ -127,9 +127,6 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                 <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
 
-                <SectionTitle>Lo que falta completar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· a hoy, fuera del período filtrado</span></SectionTitle>
-                <PerformancePendientes pendientes={data.pendientes} onNavigate={onNavigate} />
-
                 <SectionTitle>Dónde se cae el embudo</SectionTitle>
                 <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />
 
@@ -152,6 +149,12 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
 
                 <SectionTitle>Equipo</SectionTitle>
                 <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
+
+                {/* "Lo que falta completar" va al final a pedido del usuario (27/ago/2026): lo
+                    primero que el closer debe ver al abrir la pestaña es su resultado, no su
+                    lista de pendientes — esta sección queda como cierre del dashboard. */}
+                <SectionTitle>Lo que falta completar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· a hoy, fuera del período filtrado</span></SectionTitle>
+                <PerformancePendientes pendientes={data.pendientes} onNavigate={onNavigate} />
 
                 {/* Lo que hay que cargar para que los números de arriba cierren: los cupos de
                     agenda (el único dato que no sale de la bandeja) y los reportes sin enviar.
