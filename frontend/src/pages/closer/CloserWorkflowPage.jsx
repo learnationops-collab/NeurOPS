@@ -20,6 +20,7 @@ import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import MiCarteraPane from './components/MiCarteraPane';
 import LeadEditModal from './components/LeadEditModal';
+import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -320,6 +321,13 @@ const CloserWorkflowPage = () => {
 
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
+
+    // "Quiero procrastinar" (v7): calculadora de "esto vale la pena antes de irte a scrollear",
+    // a pedido del usuario (27/ago/2026). Es una simulación editable, no un reporte de datos
+    // reales — no hay una tasa "de verdad" de respuesta/cierre de seguimientos disponible acá
+    // sin pegarle a otro endpoint, así que arranca con valores por defecto razonables y el closer
+    // los ajusta con los sliders.
+    const [showProcrastinar, setShowProcrastinar] = useState(false);
 
     // Celebraciones de hitos en el pipeline de confirmaciones (v7)
     const [confirmadosHoy, setConfirmadosHoy] = useState(0);
@@ -3319,6 +3327,17 @@ const CloserWorkflowPage = () => {
                         )}
                     </div>
                     
+                    {counts.seguimientos > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setShowProcrastinar(true)}
+                            className="shrink-0 flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 transition-all px-4 py-2 cursor-pointer"
+                            title="Ver cuánto valdría hacer unos seguimientos ahora"
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Quiero procrastinar</span>
+                        </button>
+                    )}
+
                     <div className="who-v6">
                         <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
                         <div className="av-v6">
@@ -3384,20 +3403,54 @@ const CloserWorkflowPage = () => {
                                         {activeStep === 'confirmations' ? 'Ir a confirmar' : 'Ir a reportar'} →
                                     </button>
                                 </div>
-                            ) : (
-                                <div className="tsp-v6 tsp-done-v6">
-                                    <div className="tsp-top-v6">
-                                        <span className="tsp-dot-v6 ok"></span>
-                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                            ) : (() => {
+                                // Sin nada urgente en LA PESTAÑA ACTIVA, no hay por qué decir que no queda
+                                // nada — casi siempre sigue habiendo trabajo real en las otras dos (pedido
+                                // del usuario, 27/ago/2026): antes esto siempre decía "nada urgente por
+                                // ahora" apenas la pestaña activa se vaciaba, aunque quedaran 78 seguimientos
+                                // sin tocar. `counts` ya trae las 3 bandejas completas, sin pegarle de nuevo
+                                // a la API.
+                                const suggestions = [
+                                    { key: 'confirmations', label: 'Confirmar', count: counts.confirmations, step: 'confirmations' },
+                                    { key: 'calls', label: 'Reportar', count: counts.calls, step: 'calls' },
+                                    { key: 'seguimientos', label: 'Seguir', count: counts.seguimientos, step: 'seguimientos' }
+                                ].filter(s => s.count > 0 && s.step !== activeStep);
+                                const goTo = (step) => { setActiveView('inbox'); setSearchParams({ step, selected_date: selectedDate }); };
+
+                                if (suggestions.length === 0) {
+                                    return (
+                                        <div className="tsp-v6 tsp-done-v6">
+                                            <div className="tsp-top-v6">
+                                                <span className="tsp-dot-v6 ok"></span>
+                                                <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                            </div>
+                                            <h3 className="tsp-name-v6">🎉 Nada urgente por ahora</h3>
+                                            <p className="tsp-sub-v6">Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.</p>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="tsp-v6 tsp-done-v6">
+                                        <div className="tsp-top-v6">
+                                            <span className="tsp-dot-v6 ok"></span>
+                                            <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        </div>
+                                        <h3 className="tsp-name-v6">Podés seguir avanzando con</h3>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {suggestions.map(s => (
+                                                <button
+                                                    key={s.key}
+                                                    type="button"
+                                                    className="tsp-cta-v6"
+                                                    onClick={(e) => { e.stopPropagation(); goTo(s.step); }}
+                                                >
+                                                    {s.label} {s.count} →
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <h3 className="tsp-name-v6">🎉 Nada urgente por ahora</h3>
-                                    <p className="tsp-sub-v6">
-                                        {activeStep === 'confirmations' ? 'No hay confirmaciones pendientes.' :
-                                            activeStep === 'calls' ? 'No hay llamadas atrasadas por reportar.' :
-                                                'Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.'}
-                                    </p>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             <div className="tud-v6">
                                 <div className="flex items-start justify-between gap-2">
@@ -5530,6 +5583,18 @@ const CloserWorkflowPage = () => {
                     lead={editingLead}
                     onClose={() => setEditingLead(null)}
                     onSaved={() => { setSelectedLead(null); fetchAgendas(); }}
+                />
+            )}
+
+            {showProcrastinar && (
+                <ProcrastinarModal
+                    pendientes={counts.seguimientos}
+                    onClose={() => setShowProcrastinar(false)}
+                    onGo={() => {
+                        setShowProcrastinar(false);
+                        setActiveView('inbox');
+                        setSearchParams({ step: 'seguimientos', selected_date: selectedDate });
+                    }}
                 />
             )}
 
