@@ -2522,7 +2522,45 @@ class CloserService:
             'ventas_cash': round(ventas_cash, 2),
             'pendientes_confirmar': pendientes_confirmar,
             'pendientes_llamar': pendientes_llamar,
+            'streak_days': CloserService.get_report_streak(closer_id, day_local),
         }
+
+    @staticmethod
+    def get_report_streak(closer_id, day_local):
+        """Racha de días consecutivos que el closer cerró su día (ver `closer_daily_reports`),
+        terminando en `day_local`. Reemplaza el "🔥 Racha de 12 días" que estaba hardcodeado en
+        el hero del Workspace (CloserWorkflowPage.jsx) — no salía de ningún dato real.
+
+        Un día sin reporte corta la racha, salvo que sea justo `day_local` (el día de hoy: si
+        todavía no lo reportó no es un fallo, es que el día no terminó) — en ese caso se empieza
+        a contar desde el último día que sí tiene reporte. `is_non_working_day` (día marcado como
+        no laborable al reportar) no corta la racha pero tampoco suma: es un día libre, no un
+        día trabajado sin fallar."""
+        from app.models import CloserDailyReport
+
+        # Techo de 400 días (~13 meses) para no recorrer toda la tabla en una cuenta con
+        # años de historial y una racha real corta — ninguna racha real va a llegar tan lejos.
+        earliest = day_local - timedelta(days=400)
+        reports_by_date = {
+            r.date: r for r in CloserDailyReport.query.filter(
+                CloserDailyReport.closer_id == closer_id,
+                CloserDailyReport.date <= day_local,
+                CloserDailyReport.date >= earliest,
+            ).all()
+        }
+
+        cursor = day_local
+        if cursor not in reports_by_date:
+            cursor -= timedelta(days=1)
+
+        streak = 0
+        while cursor in reports_by_date:
+            report = reports_by_date[cursor]
+            if not report.is_non_working_day:
+                streak += 1
+            cursor -= timedelta(days=1)
+
+        return streak
 
     @staticmethod
     def get_previous_days_pending(closer_id, day_local):

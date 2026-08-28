@@ -1326,18 +1326,29 @@ header.top-v6 {
   transition: width .6s cubic-bezier(.3,1.2,.4,1);
   box-shadow: 0 0 16px rgba(255,63,164,.55);
 }
+/* Fila inferior de "Tu día": "N de M resueltos hoy" (izquierda, gris) + "⚡ N XP" (derecha,
+   azul) — mismo layout que la referencia visual (racha arriba en vez de XP, XP abajo en vez de
+   racha; antes estaba al revés, pedido del usuario en el video del 27/ago/2026). Reemplaza al
+   `.tud-streak-v6` suelto que quedó sin uso (la racha ahora reusa `.tud-xp-v6` arriba). */
+.tud-foot-row-v6 {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 .tud-foot-v6 {
   font-size: 11px;
   font-weight: 700;
   color: var(--v6-tx2);
-  margin-top: 10px;
 }
-.tud-streak-v6 {
-  margin-top: auto;
-  padding-top: 14px;
+.tud-foot-xp-v6 {
   font-size: 12px;
   font-weight: 800;
-  color: #F3D08A;
+  color: var(--v6-blue2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
 }
 
 /* NAVEGACIÓN 01-05 (v7): reemplaza las pestañas-píldora como selector principal, con el mismo

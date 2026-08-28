@@ -3379,6 +3379,10 @@ const CloserWorkflowPage = () => {
                     // en `dailyXp` (arriba del componente): se comparte con el Resumen del Reporte del
                     // día para que los dos lugares siempre digan el mismo número.
                     const xp = dailyXp;
+                    // Racha real de días consecutivos que cerró el día (`CloserService.get_report_streak`,
+                    // backend) — reemplaza el "Racha de 12 días" que estaba hardcodeado acá sin salir
+                    // de ningún dato (pedido del usuario, feedback en video del 27/ago/2026).
+                    const streakDays = dailyActivity?.streak_days ?? 0;
                     const heroCountdown = heroLead ? formatApptCountdown(heroLead.start_time, nowTick) : null;
                     const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
@@ -3455,15 +3459,17 @@ const CloserWorkflowPage = () => {
                             <div className="tud-v6">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="tud-lbl-v6">Tu día</div>
-                                    <div className="tud-xp-v6">⚡ {xp} XP</div>
+                                    <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
                                 </div>
                                 <div className="tud-pct-v6">{pct}%</div>
                                 <div className="tud-sub-v6">del día completado</div>
                                 <div className="pbarw-v6">
                                     <i style={{ width: `${pct}%` }}></i>
                                 </div>
-                                <div className="tud-foot-v6">{doneToday} de {totalToday} resueltos hoy</div>
-                                <div className="tud-streak-v6">🔥 Racha de 12 días sin fallar</div>
+                                <div className="tud-foot-row-v6">
+                                    <span className="tud-foot-v6">{doneToday} de {totalToday} resueltos hoy</span>
+                                    <span className="tud-foot-xp-v6">⚡ {xp} XP</span>
+                                </div>
                             </div>
                         </div>
                     );
