@@ -256,9 +256,18 @@ const CloserWorkflowPage = () => {
                 setReportSent(!!d.sent);
                 setReportSentAt(d.sent_at || null);
                 setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
+                // Prioridad del default (pedido del usuario, 28/ago/2026): los slots del día NUNCA
+                // pueden ser menos que las agendas que realmente tiene ese día (`agendas_del_dia` —
+                // un cupo ocupado sigue siendo un cupo), así que ese es el default correcto, no un
+                // valor recordado de otro día distinto (`slots_last_value`, que puede no tener nada
+                // que ver con la cantidad de agendas de HOY). El closer sigue pudiendo editarlo hacia
+                // arriba si tuvo más cupos disponibles que los que ocupó.
                 if (d.slots !== null && d.slots !== undefined) {
                     setReportSlots(String(d.slots));
                     setReportSlotsIsDefault(false);
+                } else if (d.activity?.agendas_del_dia) {
+                    setReportSlots(String(d.activity.agendas_del_dia));
+                    setReportSlotsIsDefault(true);
                 } else if (d.slots_last_value !== null && d.slots_last_value !== undefined) {
                     setReportSlots(String(d.slots_last_value));
                     setReportSlotsIsDefault(true);
@@ -3937,43 +3946,6 @@ const CloserWorkflowPage = () => {
                         {loadingReportStatus && <Loader2 size={14} className="animate-spin text-slate-500" />}
                     </div>
 
-                    {/* Trabajo atrasado de días ANTERIORES. Si el bloqueo está activo (toggle
-                        `bloqueo_reporte_backlog` en Operaciones), traba el envío y el backend lo
-                        rechaza con 409 aunque se intente igual. Si está suspendido, se sigue
-                        mostrando el mismo detalle pero como recordatorio, sin trabar nada. */}
-                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
-                        <div className={`p-5 rounded-2xl border space-y-2 ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/40' : 'bg-amber-500/10 border-amber-500/40'}`}>
-                            <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-wide ${backlogBlocksReport ? 'text-rose-300' : 'text-amber-300'}`}>
-                                <span className="text-lg">{backlogBlocksReport ? '🚫' : '⏳'}</span>
-                                {backlogBlocksReport
-                                    ? 'No podés enviar el reporte — tenés tareas atrasadas de días anteriores'
-                                    : 'Tenés tareas atrasadas de días anteriores'}
-                            </div>
-                            <ul className={`text-xs font-bold space-y-1 list-disc list-inside ${backlogBlocksReport ? 'text-rose-200' : 'text-amber-200'}`}>
-                                {pendingPreviousDays.confirmaciones_pendientes > 0 && (
-                                    <li>{pendingPreviousDays.confirmaciones_pendientes} confirmación(es) nunca gestionada(s)</li>
-                                )}
-                                {pendingPreviousDays.llamadas_sin_registrar > 0 && (
-                                    <li>{pendingPreviousDays.llamadas_sin_registrar} llamada(s) confirmada(s) sin registrar su resultado</li>
-                                )}
-                                {pendingPreviousDays.seguimientos_sin_realizar > 0 && (
-                                    <li>{pendingPreviousDays.seguimientos_sin_realizar} seguimiento(s) asignado(s) sin realizar</li>
-                                )}
-                            </ul>
-                            {!backlogBlocksReport && (
-                                <p className="text-[11px] text-amber-200/80 font-bold">
-                                    Podés enviar el reporte igual mientras te ponés al día, pero esto sigue contando como atraso.
-                                </p>
-                            )}
-                            <button
-                                className={`mt-1 px-4 py-2 rounded-xl text-xs font-black uppercase text-white transition-all cursor-pointer ${backlogBlocksReport ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'}`}
-                                onClick={() => setActiveView('inbox')}
-                            >
-                                Ir a resolver la bandeja
-                            </button>
-                        </div>
-                    )}
-
                     {/* 4 KPI del día — mismos 4 de la referencia visual (fracción hecho/total +
                         barra), en vez de las 9 cajas sueltas de antes. "Total" = hecho + pendiente
                         real de cada pestaña, no un número inventado. */}
@@ -4141,6 +4113,30 @@ const CloserWorkflowPage = () => {
                             {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte del día'}
                         </button>
                     </div>
+
+                    {/* Trabajo atrasado de días ANTERIORES — pedido del usuario (feedback en video,
+                        28/ago/2026): "ponlo al final, que se vea chiquitico, no muy grande... no me
+                        gusta cómo se ve ahí, está muy aparatoso". Antes era un bloque grande con lista
+                        de viñetas entre el selector de fecha y los KPI; ahora es una píldora chica al
+                        final de la página, sin perder la función de bloqueo (el botón de enviar sigue
+                        chequeando `backlogBlocksReport`/`pendingPreviousDays` directo, sin depender de
+                        que este aviso esté visible). */}
+                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
+                        <div className={`flex items-center gap-2.5 flex-wrap px-4 py-2.5 rounded-full border text-[10.5px] font-bold ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'}`}>
+                            <span>{backlogBlocksReport ? '🚫' : '⏳'}</span>
+                            <span>
+                                {pendingPreviousDays.total} tarea{pendingPreviousDays.total === 1 ? '' : 's'} atrasada{pendingPreviousDays.total === 1 ? '' : 's'} de días anteriores
+                                {backlogBlocksReport ? ' — traba el envío' : ''}
+                            </span>
+                            <button
+                                type="button"
+                                className="ml-auto underline font-black uppercase tracking-wide cursor-pointer"
+                                onClick={() => setActiveView('inbox')}
+                            >
+                                Ir a resolver
+                            </button>
+                        </div>
+                    )}
                 </div>
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
