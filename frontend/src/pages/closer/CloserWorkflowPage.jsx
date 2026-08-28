@@ -3524,15 +3524,24 @@ const CloserWorkflowPage = () => {
                 {(() => {
                     // Las 3 pestañas de bandeja muestran "hecho/total" en vez de solo lo pendiente
                     // (pedido del usuario, 28/ago/2026: "si hay cinco llamadas por confirmar y hay
-                    // dos confirmadas, entonces hay dos de cinco") — mismo cálculo que ya usan el
-                    // hero "Tu día" y los 4 KPI de "Cerrar el día" (dailyActivity = hecho hoy,
-                    // counts = pendiente ahora), no un dato nuevo. Cerrar el día/Ver mis
-                    // datos/Mi cartera no son bandejas con pendientes que resolver, así que se
-                    // quedan con el conteo simple (o sin número) que ya tenían.
-                    const confirmDone = dailyActivity?.confirmados_hoy || 0;
-                    const confirmTotal = confirmDone + counts.confirmations;
-                    const callsDone = dailyActivity?.show_ups || 0;
+                    // dos confirmadas, entonces hay dos de cinco"). Confirmar/Reportar usan
+                    // `confirmations_done`/`calls_done` (backend, `/deck/counts`) en vez de
+                    // `dailyActivity` — ese campo mide "hecho HOY por el closer", que no es lo
+                    // mismo que "ya aparece resuelto en el pool que se está mostrando": una cita
+                    // confirmada (o una llamada reportada) en un día anterior pero todavía visible
+                    // hoy en el Kanban seguía contando como "0 hechas" con `dailyActivity`, aunque
+                    // el propio Kanban ya la mostrara en su columna "Confirmado"/"Reportadas".
+                    // Reportado por el usuario: "dice cero de nueve, pero tiene una agenda
+                    // [ya] confirmada... debería decir uno de nueve", mismo caso en Reportar.
+                    // `counts.confirmations`/`counts.calls` ya son el total del pool (incluyen las
+                    // ya resueltas que siguen visibles), así que no hay que sumarles nada más.
+                    const confirmDone = counts.confirmations_done || 0;
+                    const confirmTotal = counts.confirmations;
+                    const callsDone = counts.calls_done || 0;
                     const callsTotal = callsDone + counts.calls;
+                    // Seguimientos no tiene este problema: una vez resuelto, el item desaparece
+                    // del pool en vez de quedar visible en un estado "hecho" — `dailyActivity`
+                    // (hecho hoy) sigue siendo la fuente correcta acá.
                     const segDone = dailyActivity?.seguimientos_hechos || 0;
                     const segTotal = segDone + counts.seguimientos;
                     return (

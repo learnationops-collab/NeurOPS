@@ -1754,6 +1754,34 @@ def get_closer_deck_counts():
         query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
         query_calls = query_calls.filter_by(closer_id=current_user.id)
 
+    # "Confirmadas" dentro del propio pool de confirmaciones: una cita puede tener
+    # `closer_result` todavía en Pendiente (el closer no la procesó formalmente) pero `result`
+    # ya en "Confirmado" (estado heredado de otro lado, ej. el confirmer) — el Kanban de
+    # "① Confirmar" ya las agrupa aparte (columna "Confirmado", ✓ listo · espera su fecha) sin
+    # sacarlas del pool. Antes el badge "hecho/total" de la navegación usaba `dailyActivity.
+    # confirmados_hoy` (confirmaciones registradas HOY por el closer) como "hecho", que no tiene
+    # nada que ver con este estado — una cita confirmada hace días pero recién visible hoy en el
+    # pool seguía contando como "0 hechas" pese a que el propio Kanban la mostraba resuelta.
+    # Reportado por el usuario (28/ago/2026): "dice cero de nueve, pero tiene una agenda
+    # inconfirmada [ya confirmada]... debería decir uno de nueve".
+    from sqlalchemy import func
+    confirmations_done = query_confirmations.filter(func.lower(Appointment.result) == 'confirmado').count()
+
+    # "Reportadas" del día seleccionado: mismo criterio que ya usa el Kanban de "② Reportar"
+    # para su columna "Reportadas" (`/deck?step=agendas` + `closer_processed`) — acotado a ESE
+    # día, a diferencia de `query_calls` (pendientes) que es un backlog sin límite inferior.
+    # Mismo bug que confirmaciones: el badge usaba `dailyActivity.show_ups` ("reportado HOY"),
+    # que no cuenta una llamada reportada en un día anterior pero todavía visible en el pool del
+    # día seleccionado.
+    query_calls_done = Appointment.query.filter(
+        Appointment.start_time >= start_utc,
+        Appointment.start_time <= end_utc_calls,
+        Appointment.closer_processed == True
+    )
+    if current_user.role != 'admin':
+        query_calls_done = query_calls_done.filter_by(closer_id=current_user.id)
+    calls_done = query_calls_done.count()
+
     # "Seguimientos a hacer hoy" tiene que ser la misma cuenta que ve el closer al abrir la
     # pestaña ③ Seguimientos (CloserFollowUpService.get_today_grouped): vencidos + de hoy, con
     # el tipo efectivo derivado cuando el closer nunca etiquetó explícitamente la cita. La
@@ -1767,7 +1795,9 @@ def get_closer_deck_counts():
 
     return jsonify({
         "confirmations": query_confirmations.count(),
+        "confirmations_done": confirmations_done,
         "calls": query_calls.count(),
+        "calls_done": calls_done,
         "seguimientos": seguimientos_count
     }), 200
 
