@@ -23,6 +23,34 @@ const SORTS = [
     { key: 'nombre', label: 'A-Z' },
 ];
 
+// Filtro de período pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca los
+// últimos 30 días, los últimos 60 días, los últimos 15 días, hoy". Se aplica sobre la fecha de
+// inscripción en la vista "Por cliente" y sobre la fecha de cada pago en "Cronológico" — cada
+// vista filtra por SU propia fecha relevante, no por una sola en común (ver `withinPeriod`).
+const PERIODS = [
+    { key: 'all', label: 'Todos' },
+    { key: 'today', label: 'Hoy' },
+    { key: '15', label: 'Últimos 15 días' },
+    { key: '30', label: 'Últimos 30 días' },
+    { key: '60', label: 'Últimos 60 días' },
+];
+
+const withinPeriod = (dateStr, period) => {
+    if (period === 'all') return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dDay = new Date(d);
+    dDay.setHours(0, 0, 0, 0);
+    if (period === 'today') return dDay.getTime() === today.getTime();
+    const days = Number(period);
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - days);
+    return dDay >= cutoff && dDay <= today;
+};
+
 // Los 6 tipos canónicos que usa todo el sistema (SheetsService._extract_tipo_keyword) — mismo
 // orden y color en la tabla agrupada y en la lista cronológica, para que sean reconocibles.
 const TIPOS_PAGO = [
@@ -56,6 +84,7 @@ const MiCarteraPane = ({ onOpenLead }) => {
     const [filter, setFilter] = useState('todos');
     const [programa, setPrograma] = useState('ALL');
     const [sort, setSort] = useState('deuda');
+    const [period, setPeriod] = useState('all');
     const [limit, setLimit] = useState(20);
     // "Por cliente" (una fila por cliente, con el total pagado por tipo) o "Cronológico" (una
     // fila por pago individual, ordenado por fecha) — las dos formas de ver la cartera que pidió
@@ -77,9 +106,12 @@ const MiCarteraPane = ({ onOpenLead }) => {
 
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
-    const filtered = useMemo(() => {
+    // Filtros que no dependen de una fecha en particular (búsqueda/programa/deuda) — comunes a
+    // las dos vistas. El filtro de período se aplica DESPUÉS, por separado en cada vista, porque
+    // cada una filtra por su propia fecha relevante (inscripción vs. fecha de pago individual).
+    const filteredBase = useMemo(() => {
         const query = q.trim().toLowerCase();
-        let list = items.filter(it => {
+        return items.filter(it => {
             if (query && !it.lead_name.toLowerCase().includes(query)) return false;
             if (programa !== 'ALL' && it.programa_code !== programa) return false;
             if (filter === 'con_deuda' && !(it.deuda > 0)) return false;
@@ -87,21 +119,26 @@ const MiCarteraPane = ({ onOpenLead }) => {
             if (filter === 'vencida' && !(it.proxima_cuota && it.proxima_cuota.vencida)) return false;
             return true;
         });
+    }, [items, q, filter, programa]);
+
+    const filtered = useMemo(() => {
+        let list = filteredBase.filter(it => withinPeriod(it.enrollment_date, period));
         list = list.slice().sort((a, b) => {
             if (sort === 'deuda') return (b.deuda || 0) - (a.deuda || 0);
             if (sort === 'reciente') return new Date(b.enrollment_date || 0) - new Date(a.enrollment_date || 0);
             return a.lead_name.localeCompare(b.lead_name, 'es');
         });
         return list;
-    }, [items, q, filter, programa, sort]);
+    }, [filteredBase, period, sort]);
 
     const shown = filtered.slice(0, limit);
 
-    // Vista cronológica: cada pago individual de cada cliente filtrado, más reciente primero —
-    // "ventas separadas de forma cronológica" (pedido del usuario), a diferencia de la vista
-    // agrupada de arriba (una fila por cliente, con el total por tipo).
+    // Vista cronológica: cada pago individual de cada cliente que pasa los filtros no-fecha
+    // (`filteredBase`, sin el filtro de período — ese se aplica acá abajo sobre la fecha del
+    // PAGO, no la de inscripción, para no ocultar un pago reciente de un cliente que se inscribió
+    // hace tiempo), más reciente primero.
     const payments = useMemo(() => {
-        const flat = filtered.flatMap(it => (it.pagos || []).map(p => ({
+        const flat = filteredBase.flatMap(it => (it.pagos || []).map(p => ({
             ...p,
             client_id: it.client_id,
             client_name: it.lead_name,
@@ -109,9 +146,10 @@ const MiCarteraPane = ({ onOpenLead }) => {
             programa_code: it.programa_code,
             item: it
         })));
-        flat.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        return flat;
-    }, [filtered]);
+        const withinPeriodList = flat.filter(p => withinPeriod(p.date, period));
+        withinPeriodList.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        return withinPeriodList;
+    }, [filteredBase, period]);
     const shownPayments = payments.slice(0, limit);
 
     // KPIs con datos que este endpoint realmente trae — sin inventar "cobrado"/"renovados" que
@@ -200,6 +238,22 @@ const MiCarteraPane = ({ onOpenLead }) => {
                         </button>
                     )}
                 </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+                {PERIODS.map(p => (
+                    <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => { setPeriod(p.key); setLimit(20); }}
+                        className="px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all"
+                        style={period === p.key
+                            ? { background: 'var(--v6-gradb)', color: '#fff' }
+                            : { background: 'transparent', border: '1px solid var(--v6-bd)', color: 'rgba(255,255,255,.5)' }}
+                    >
+                        {p.label}
+                    </button>
+                ))}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
