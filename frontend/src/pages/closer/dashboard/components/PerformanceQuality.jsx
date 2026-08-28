@@ -2,6 +2,7 @@ import React from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
 import { tip, rateHealth } from '../metricSources';
+import { qualityItems, computeWeakestQuality } from '../performanceUtils';
 
 /* Calidad de la llamada, leída como la cadena que realmente es: primero hay que LLEGAR a la
    llamada (confirmar → que asista) y después hay que CONVERTIRLA (presentar → cerrar).
@@ -82,47 +83,8 @@ const Group = ({ title, subtitle, accent, children }) => (
 );
 
 const PerformanceQuality = ({ rings, funnel, confirmaciones }) => {
-    const v = funnel?.values || [];
-    const [, agendas = 0, confirmadas = 0, asistencias = 0, presentaciones = 0, ventas = 0] = v;
-
-    const items = [
-        {
-            metric: 'q_confirmation_rate', label: 'Confirmation rate', value: rings.confirmation_rate,
-            num: confirmaciones?.del_periodo ?? confirmadas, den: confirmaciones?.agendas_periodo ?? agendas, unit: 'agendas', group: 'llegar'
-        },
-        {
-            metric: 'q_show_rate', label: 'Show rate', value: rings.show_rate,
-            num: asistencias, den: agendas, unit: 'agendas', group: 'llegar'
-        },
-        {
-            metric: 'q_show_sobre_confirmada', label: 'Show s/ confirmada', value: rings.show_sobre_confirmada,
-            num: asistencias, den: confirmadas, unit: 'confirmadas', group: 'llegar'
-        },
-        {
-            metric: 'q_pitch_rate', label: 'Pitch rate', value: rings.pitch_rate,
-            num: presentaciones, den: asistencias, unit: 'asistencias', group: 'convertir'
-        },
-        {
-            metric: 'q_close_llamada', label: 'Close s/ llamada', value: rings.close_llamada,
-            num: ventas, den: asistencias, unit: 'asistencias', group: 'convertir'
-        },
-        {
-            metric: 'q_close_presentacion', label: 'Close s/ presentación', value: rings.close_presentacion,
-            num: ventas, den: presentaciones, unit: 'presentaciones', group: 'convertir'
-        }
-    ];
-
-    // El eslabón más débil se marca sobre la salud relativa al umbral, no sobre el porcentaje
-    // crudo: un 45% de close rate es excelente y un 45% de show rate es un problema, así que
-    // compararlos entre sí en bruto marcaría siempre al close como el peor.
-    let weakest = null;
-    items.forEach(it => {
-        const b = tip(it.metric).benchmark;
-        if (!b || it.value > 100 || !it.den) return;
-        const ratio = it.value / b.good;
-        if (!weakest || ratio < weakest.ratio) weakest = { metric: it.metric, ratio, label: it.label, value: it.value };
-    });
-    if (weakest && weakest.ratio >= 1) weakest = null;
+    const items = qualityItems(rings, funnel, confirmaciones);
+    const weakest = computeWeakestQuality(items);
 
     const render = (group) => items.filter(i => i.group === group).map(it => (
         <QualityMeter key={it.metric} {...it} weakest={weakest?.metric === it.metric} />
