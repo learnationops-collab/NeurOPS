@@ -21,28 +21,37 @@
     color: inherit;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-.font-bold,
-.font-semibold,
-.font-black,
-[class*="font-bold"],
-[class*="font-semibold"],
-[class*="font-black"] {
+/* :not(.bg-v6 *) dentro de cada selector: el rediseño "v6/v7" del Workspace de Closers
+   (CloserWorkflowPage.jsx, ver .bg-v6 más abajo) define sus propios pesos explícitos por clase
+   (700/800/900, sin !important, calcados de la referencia visual) para que números y títulos se
+   vean gruesos/impactantes. Sin esta exclusión, este reset global (con !important) les ganaba
+   incondicionalmente pase lo que pase la especificidad — confirmado con getComputedStyle en el
+   navegador: .tud-pct-v6 (declarado font-weight:900) computaba 400. Resultado reportado por el
+   usuario: "las letras son un poquito más delgaditas" comparando contra el mockup, en TODO el
+   Workspace (números del hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) porque
+   casi todos esos elementos son <div>/<span>/<button>/<h3>. */
+h1:not(.bg-v6 *),
+h2:not(.bg-v6 *),
+h3:not(.bg-v6 *),
+h4:not(.bg-v6 *),
+h5:not(.bg-v6 *),
+h6:not(.bg-v6 *),
+.font-bold:not(.bg-v6 *),
+.font-semibold:not(.bg-v6 *),
+.font-black:not(.bg-v6 *),
+[class*="font-bold"]:not(.bg-v6 *),
+[class*="font-semibold"]:not(.bg-v6 *),
+[class*="font-black"]:not(.bg-v6 *) {
     font-family: var(--font-header) !important;
     font-weight: var(--weight-semibold) !important;
 }
 
-p,
-span,
-div,
-button,
-input,
-label {
+p:not(.bg-v6 *),
+span:not(.bg-v6 *),
+div:not(.bg-v6 *),
+button:not(.bg-v6 *),
+input:not(.bg-v6 *),
+label:not(.bg-v6 *) {
     font-weight: var(--weight-regular) !important;
     font-style: normal !important;
 }
@@ -56,8 +65,8 @@ em,
 }
 
 /* Override Tailwind bolds */
-b,
-strong {
+b:not(.bg-v6 *),
+strong:not(.bg-v6 *) {
     font-weight: var(--weight-medium) !important;
 }
 
