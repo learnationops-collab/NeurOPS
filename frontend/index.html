@@ -8,16 +8,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&family=Montserrat:wght@400;600;700;900&display=swap"
         rel="stylesheet">
     <title>Learnation Workers</title>
     <style>
-        /* ABSOLUTE TYPOGRAPHY FORCE */
+        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *) en cada selector: el Closer Workspace
+           (CloserWorkflowPage.jsx, raíz con class="bg-v6") usa Montserrat, no Inter (pedido del
+           usuario, 28/ago/2026, para acercarse a la referencia visual — Inter y Montserrat tienen
+           métricas de letra distintas aunque coincidan peso y tamaño). Sin esta exclusión, este
+           `!important` le hubiera ganado igual a cualquier font-family que se declare para
+           `.bg-v6` más abajo, mismo patrón que ya hizo falta para el peso de fuente. */
         html,
         body,
         #root,
-        #root *,
-        [class*="font-"] {
+        #root *:not(.bg-v6):not(.bg-v6 *),
+        [class*="font-"]:not(.bg-v6):not(.bg-v6 *) {
             font-family: 'Inter', sans-serif !important;
             font-style: normal !important;
             -webkit-font-smoothing: antialiased !important;
@@ -25,7 +30,7 @@
             text-rendering: optimizeLegibility !important;
         }
 
-        /* :not(.bg-v6 *) en cada selector de estos dos bloques: el rediseño "v6/v7" del Workspace
+        /* :not(.bg-v6):not(.bg-v6 *) en cada selector de estos dos bloques: el rediseño "v6/v7" del Workspace
            de Closers (CloserWorkflowPage.jsx, raíz con class="bg-v6") define sus propios pesos
            explícitos (700/800/900, sin !important, calcados de una referencia visual) para que
            números y títulos se vean gruesos. Este <style> del <head> (carga antes que cualquier
@@ -36,37 +41,37 @@
            la de index.css excluida. Sin esta segunda exclusión, TODO el Workspace (números del
            hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) se ve más fino que el
            mockup, porque casi todos esos elementos son <div>/<span>/<button>/<h3>. */
-        h1:not(.bg-v6 *),
-        h2:not(.bg-v6 *),
-        h3:not(.bg-v6 *),
-        h4:not(.bg-v6 *),
-        h5:not(.bg-v6 *),
-        h6:not(.bg-v6 *),
-        .font-bold:not(.bg-v6 *),
-        .font-semibold:not(.bg-v6 *),
-        .font-black:not(.bg-v6 *),
-        .font-medium:not(.bg-v6 *),
-        b:not(.bg-v6 *),
-        strong:not(.bg-v6 *),
-        th:not(.bg-v6 *),
-        [class*="font-bold"]:not(.bg-v6 *),
-        [class*="font-semibold"]:not(.bg-v6 *),
-        [class*="font-black"]:not(.bg-v6 *),
-        [class*="font-medium"]:not(.bg-v6 *) {
+        h1:not(.bg-v6):not(.bg-v6 *),
+        h2:not(.bg-v6):not(.bg-v6 *),
+        h3:not(.bg-v6):not(.bg-v6 *),
+        h4:not(.bg-v6):not(.bg-v6 *),
+        h5:not(.bg-v6):not(.bg-v6 *),
+        h6:not(.bg-v6):not(.bg-v6 *),
+        .font-bold:not(.bg-v6):not(.bg-v6 *),
+        .font-semibold:not(.bg-v6):not(.bg-v6 *),
+        .font-black:not(.bg-v6):not(.bg-v6 *),
+        .font-medium:not(.bg-v6):not(.bg-v6 *),
+        b:not(.bg-v6):not(.bg-v6 *),
+        strong:not(.bg-v6):not(.bg-v6 *),
+        th:not(.bg-v6):not(.bg-v6 *),
+        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *),
+        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *),
+        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *),
+        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *) {
             font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
             font-weight: 600 !important;
             letter-spacing: -0.02em !important;
         }
 
-        p:not(.bg-v6 *),
-        span:not(.bg-v6 *),
-        div:not(.bg-v6 *),
-        button:not(.bg-v6 *),
-        input:not(.bg-v6 *),
-        label:not(.bg-v6 *),
-        a:not(.bg-v6 *),
-        li:not(.bg-v6 *),
-        td:not(.bg-v6 *) {
+        p:not(.bg-v6):not(.bg-v6 *),
+        span:not(.bg-v6):not(.bg-v6 *),
+        div:not(.bg-v6):not(.bg-v6 *),
+        button:not(.bg-v6):not(.bg-v6 *),
+        input:not(.bg-v6):not(.bg-v6 *),
+        label:not(.bg-v6):not(.bg-v6 *),
+        a:not(.bg-v6):not(.bg-v6 *),
+        li:not(.bg-v6):not(.bg-v6 *),
+        td:not(.bg-v6):not(.bg-v6 *) {
             font-weight: 400 !important;
             letter-spacing: -0.005em !important;
         }

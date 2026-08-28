@@ -4,7 +4,6 @@
 
 /* Force Font System & Weights */
 * {
-    font-family: var(--font-body) !important;
     font-style: normal !important;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
@@ -15,13 +14,20 @@
     /* Remove mobile/webkit blue tap highlight */
 }
 
+/* :not(.bg-v6):not(.bg-v6 *): el Closer Workspace usa Montserrat, no la fuente de marca del resto de la app
+   (pedido del usuario, 28/ago/2026 — ver el mismo patrón en index.html, que carga antes que este
+   archivo y tiene la misma exclusión). */
+*:not(.bg-v6):not(.bg-v6 *) {
+    font-family: var(--font-body) !important;
+}
+
 /* Custom selection color (more subtle) */
 ::selection {
     background: rgba(19, 35, 198, 0.1);
     color: inherit;
 }
 
-/* :not(.bg-v6 *) dentro de cada selector: el rediseño "v6/v7" del Workspace de Closers
+/* :not(.bg-v6):not(.bg-v6 *) dentro de cada selector: el rediseño "v6/v7" del Workspace de Closers
    (CloserWorkflowPage.jsx, ver .bg-v6 más abajo) define sus propios pesos explícitos por clase
    (700/800/900, sin !important, calcados de la referencia visual) para que números y títulos se
    vean gruesos/impactantes. Sin esta exclusión, este reset global (con !important) les ganaba
@@ -30,28 +36,28 @@
    usuario: "las letras son un poquito más delgaditas" comparando contra el mockup, en TODO el
    Workspace (números del hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) porque
    casi todos esos elementos son <div>/<span>/<button>/<h3>. */
-h1:not(.bg-v6 *),
-h2:not(.bg-v6 *),
-h3:not(.bg-v6 *),
-h4:not(.bg-v6 *),
-h5:not(.bg-v6 *),
-h6:not(.bg-v6 *),
-.font-bold:not(.bg-v6 *),
-.font-semibold:not(.bg-v6 *),
-.font-black:not(.bg-v6 *),
-[class*="font-bold"]:not(.bg-v6 *),
-[class*="font-semibold"]:not(.bg-v6 *),
-[class*="font-black"]:not(.bg-v6 *) {
+h1:not(.bg-v6):not(.bg-v6 *),
+h2:not(.bg-v6):not(.bg-v6 *),
+h3:not(.bg-v6):not(.bg-v6 *),
+h4:not(.bg-v6):not(.bg-v6 *),
+h5:not(.bg-v6):not(.bg-v6 *),
+h6:not(.bg-v6):not(.bg-v6 *),
+.font-bold:not(.bg-v6):not(.bg-v6 *),
+.font-semibold:not(.bg-v6):not(.bg-v6 *),
+.font-black:not(.bg-v6):not(.bg-v6 *),
+[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *),
+[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *),
+[class*="font-black"]:not(.bg-v6):not(.bg-v6 *) {
     font-family: var(--font-header) !important;
     font-weight: var(--weight-semibold) !important;
 }
 
-p:not(.bg-v6 *),
-span:not(.bg-v6 *),
-div:not(.bg-v6 *),
-button:not(.bg-v6 *),
-input:not(.bg-v6 *),
-label:not(.bg-v6 *) {
+p:not(.bg-v6):not(.bg-v6 *),
+span:not(.bg-v6):not(.bg-v6 *),
+div:not(.bg-v6):not(.bg-v6 *),
+button:not(.bg-v6):not(.bg-v6 *),
+input:not(.bg-v6):not(.bg-v6 *),
+label:not(.bg-v6):not(.bg-v6 *) {
     font-weight: var(--weight-regular) !important;
     font-style: normal !important;
 }
@@ -65,8 +71,8 @@ em,
 }
 
 /* Override Tailwind bolds */
-b:not(.bg-v6 *),
-strong:not(.bg-v6 *) {
+b:not(.bg-v6):not(.bg-v6 *),
+strong:not(.bg-v6):not(.bg-v6 *) {
     font-weight: var(--weight-medium) !important;
 }
 
@@ -332,12 +338,17 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+/* :not(.bg-v6):not(.bg-v6 *): mismo motivo que el resto de las exclusiones -v6 de este archivo — sin esto,
+   cualquier <h1>-<h6> dentro del Workspace (ej. el título "Closer Workspace" del header, o
+   <h3 className="tsp-name-v6">) heredaba Montserrat de `.bg-v6` pero esta regla se lo pisaba
+   igual con la fuente de marca del resto de la app, por más baja especificidad que tenga: una
+   regla explícita sobre el propio elemento siempre le gana a un valor heredado del ancestro. */
+h1:not(.bg-v6):not(.bg-v6 *),
+h2:not(.bg-v6):not(.bg-v6 *),
+h3:not(.bg-v6):not(.bg-v6 *),
+h4:not(.bg-v6):not(.bg-v6 *),
+h5:not(.bg-v6):not(.bg-v6 *),
+h6:not(.bg-v6):not(.bg-v6 *) {
     font-family: var(--font-header);
     font-weight: var(--weight-light);
     letter-spacing: -0.03em;
@@ -554,6 +565,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .bg-v6 {
   background: var(--v6-bg-glow);
   background-attachment: fixed;
+  /* Montserrat en vez de la Inter/Plus Jakarta Sans de marca del resto de la app — pedido del
+     usuario (28/ago/2026) para acercar el Workspace a la referencia visual, que usa Montserrat en
+     todo. Los dos resets globales (`* {font-family}` en index.css y `#root *` en index.html)
+     tienen la exclusión `:not(.bg-v6):not(.bg-v6 *)` para no pisar esto. */
+  font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* DASHBOARD (v7): el dashboard de performance (CloserDashboard.jsx) está construido enteramente
