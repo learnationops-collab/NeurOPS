@@ -15,12 +15,6 @@ const TIPOS = {
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
 
-const chipCls = {
-    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-};
-
 // Estado activo del botón de pool — usa el mismo color por tipo que sus chips (rose/amber/emerald)
 // para que se note con claridad cuál está seleccionado, en vez de un violeta genérico que casi no
 // se distinguía del estado inactivo.
@@ -48,10 +42,21 @@ const retrasoWhen = (dias) => {
     return { cls: 'soon-v6', text: `En ${Math.abs(dias)}d` };
 };
 
-// Tarjeta de seguimiento con el mismo lenguaje visual (`kcard-v6`) que el Kanban de Confirmar y
-// Reportar: mismo tipo de letra, mismo badge de urgencia arriba, mismos chips de contexto abajo.
-// Se usa tanto en las 3 columnas de "Asignados para hoy" como en la lista del pool sin fecha.
-const SeguimientoCard = ({ item, tipo, onClick }) => {
+// Color del cuadro de urgencia (`.time-v6`) según `retrasoWhen(...).cls` — mismo criterio de
+// colores que ya usan when-v6/late-v6/now-v6/soon-v6 en el resto del mazo, pero acá se pinta como
+// caja llena (como la hora de una fila de Llamadas) en vez de pastilla con punto.
+const TIME_BOX_STYLE = {
+    'late-v6': { background: 'rgba(232,92,74,.14)', borderColor: 'rgba(232,92,74,.36)', color: '#F5A99C' },
+    'now-v6': { background: 'rgba(217,164,65,.14)', borderColor: 'rgba(217,164,65,.36)', color: '#F3D08A' },
+    'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
+};
+
+// Fila de seguimiento (`.row-v6`, el mismo lenguaje de lista de una sola columna que ya usa
+// Llamadas) — reemplaza la tarjeta chica de Kanban de 3 columnas: el usuario pidió explícitamente
+// que esta pestaña "en realidad debe cambiar, debe hacerse distinto" del Kanban de Confirmar/
+// Reportar (feedback en video, 28/ago/2026). Se usa tanto en la lista de "Asignados para hoy"
+// (una por categoría, apiladas) como en la del pool sin fecha.
+const SeguimientoRow = ({ item, tipo, onClick }) => {
     const pc = item.proxima_cuota;
     const when = retrasoWhen(item.dias_retraso);
 
@@ -71,45 +76,34 @@ const SeguimientoCard = ({ item, tipo, onClick }) => {
     }
 
     return (
-        <div className="kcard-v6" onClick={onClick}>
-            {when && (
-                <div className={`when-v6 ${when.cls}`}>
-                    <span className="wd-v6"></span>
-                    {when.text}
-                </div>
-            )}
-            <b>{item.lead_name}</b>
-            <div className="m-v6">{item.origin || 'Sin origen'}</div>
-
-            <div className="flex gap-1.5 flex-wrap mt-2">
-                {tipo !== 'cerrada' && item.seguimiento_sub && (
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${chipCls[TIPOS[tipo].cls]}`}>
-                        {item.seguimiento_sub}
-                    </span>
-                )}
-                {(item.days_since_call !== null && item.days_since_call !== undefined) && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                        Call hace {item.days_since_call}d
-                    </span>
-                )}
-                {tipo === 'cerrada' && item.programa_nombre && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                        {item.programa_nombre}
-                    </span>
-                )}
-                {tipo === 'cerrada' && typeof item.deuda === 'number' && item.deuda > 0 && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-300">
-                        Debe {money(item.deuda)}
-                    </span>
-                )}
-                {item.owner_closer_name && (
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-300">
-                        De {item.owner_closer_name} (baja)
-                    </span>
-                )}
+        <div className="row-v6" onClick={onClick}>
+            <div className="time-v6" style={when ? TIME_BOX_STYLE[when.cls] : undefined}>
+                {when ? when.text : '—'}
             </div>
-
-            <div className="seg-foot-v6">{footer}</div>
+            <div className="rmain-v6">
+                <b>{item.lead_name}</b>
+                <div className="chips-v6">
+                    <span className="chip-v6">{item.origin || 'Sin origen'}</span>
+                    {tipo !== 'cerrada' && item.seguimiento_sub && (
+                        <span className={`chip-v6 ${TIPOS[tipo].cls === 'emerald' ? 'ok' : TIPOS[tipo].cls === 'amber' ? 'w' : ''}`}>
+                            {item.seguimiento_sub}
+                        </span>
+                    )}
+                    {(item.days_since_call !== null && item.days_since_call !== undefined) && (
+                        <span className="chip-v6">Call hace {item.days_since_call}d</span>
+                    )}
+                    {tipo === 'cerrada' && item.programa_nombre && (
+                        <span className="chip-v6">{item.programa_nombre}</span>
+                    )}
+                    {tipo === 'cerrada' && typeof item.deuda === 'number' && item.deuda > 0 && (
+                        <span className="chip-v6 w">Debe {money(item.deuda)}</span>
+                    )}
+                    {item.owner_closer_name && (
+                        <span className="chip-v6 w">De {item.owner_closer_name} (baja)</span>
+                    )}
+                    <span className="chip-v6" style={{ color: '#fff', background: 'rgba(255,255,255,.1)' }}>{footer}</span>
+                </div>
+            </div>
         </div>
     );
 };
@@ -257,23 +251,33 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                 {totalHoy === 0 ? (
                     <div className="text-center py-8 text-emerald-400 text-xs font-bold">✓ Todos los seguimientos de hoy están resueltos.</div>
                 ) : (
-                    <div className="kb-v6">
+                    // Lista apilada por categoría (cobros -> hot -> fríos, ya priorizada por el orden
+                    // de TIPOS), NO un Kanban de 3 columnas lado a lado — pedido explícito del usuario
+                    // (feedback en video, 28/ago/2026): "sigue siendo un Kanban que en realidad debe
+                    // cambiar, debe hacerse distinto" del resto del mazo (Confirmar/Reportar SÍ siguen
+                    // siendo Kanban, esta pestaña ya no). Título de cada bloque grande y en negrita
+                    // ("números grandes, títulos grandes" — mismo pedido de diseño general).
+                    <div className="space-y-7">
                         {Object.keys(TIPOS).map((tipo, i) => (
-                            <div key={tipo} className={`kcol-v6 k${i + 1}-v6`}>
-                                <div className="kch-v6">
-                                    <span className="dt-v6"></span>
-                                    <b>{TIPOS[tipo].label}</b>
-                                    <span className="n-v6">{grouped[tipo].length}</span>
+                            <div key={tipo}>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <span style={{ fontSize: '28px', lineHeight: 1 }}>{TIPOS[tipo].icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-white truncate" style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.01em' }}>{TIPOS[tipo].label}</div>
+                                        <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[tipo].desc}</div>
+                                    </div>
+                                    <span style={{ fontSize: '28px', fontWeight: 900 }} className={grouped[tipo].length === 0 ? 'text-emerald-400' : 'text-white'}>
+                                        {grouped[tipo].length}
+                                    </span>
                                 </div>
-                                <div className="kbody-v6">
-                                    {grouped[tipo].length > 0 ? (
-                                        grouped[tipo].map(item => (
-                                            <SeguimientoCard key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
-                                        ))
-                                    ) : (
-                                        <div className="kempty-v6 done-v6">✓ Nada pendiente</div>
-                                    )}
-                                </div>
+                                {grouped[tipo].length > 0 ? (
+                                    grouped[tipo].map(item => (
+                                        <SeguimientoRow key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
+                                    ))
+                                ) : (
+                                    <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
+                                )}
+                                {i < Object.keys(TIPOS).length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
                             </div>
                         ))}
                     </div>
@@ -357,9 +361,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                         ) : poolItems.length === 0 ? (
                             <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">Sin leads en esta categoría con estos filtros.</div>
                         ) : (
-                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                            <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {poolItems.map(item => (
-                                    <SeguimientoCard key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
+                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
                                 ))}
                             </div>
                         )}
