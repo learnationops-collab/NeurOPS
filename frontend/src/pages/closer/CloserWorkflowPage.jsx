@@ -3151,10 +3151,17 @@ const CloserWorkflowPage = () => {
 
                     <div className="q req space-y-2">
                         <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">¿Qué pasó con el cobro?</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago' })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
+                        <div className="grid grid-cols-4 gap-2">
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp', sig_action: null, cierre_motivo: null })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto', sig_action: null, cierre_motivo: null })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago', sig_action: null, cierre_motivo: null })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
+                            {/* "No va a pagar": pedido del usuario (loom, 27/ago/2026) para poder sacar de
+                                la cola de cobros a un cliente que ya avisó que no va a pagar, en vez de
+                                seguir programando intentos indefinidamente. Reusa el mecanismo de "Cerrar
+                                Seguimiento" que ya existe en el paso normal de seguimientos (sig_action:
+                                'close' -> seguimiento_realizado:true, fecha_seguimiento:null, ver
+                                saveSeguimientoReport) — no hace falta un endpoint nuevo. */}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_paga', sig_action: 'close', cierre_motivo: 'No va a pagar' })), 'bad', 'No va a pagar', 'Sale de la cola', sessionForm.result === 'no_paga')}
                         </div>
                         {isPago && (
                             <p className="text-xs text-slate-400 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
