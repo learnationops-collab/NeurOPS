@@ -3871,7 +3871,7 @@ const CloserWorkflowPage = () => {
                                             {dailyXp} XP
                                         </span>
                                         <span className="rpt-pill-v6" style={{ background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.45)', color: '#D9A441' }}>
-                                            RACHA 12 DÍAS
+                                            RACHA {dailyActivity?.streak_days ?? 0} DÍAS
                                         </span>
                                     </div>
                                 </div>
