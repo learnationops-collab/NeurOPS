@@ -108,10 +108,36 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
     );
 };
 
+// Payload del modal de seguimiento — compartido entre el click de una fila (`openLead`) y el
+// aviso hacia CloserWorkflowPage de a quién seguir primero (`onTopPending`, ver más abajo) para
+// no mantener el mapeo de campos en dos lugares.
+const buildLeadPayload = (item, tipo) => ({
+    id: item.id,
+    client_id: item.client_id,
+    lead_name: item.lead_name,
+    instagram: item.instagram,
+    phone: item.phone,
+    examen: item.examen,
+    origin: item.origin,
+    fase: 'seg',
+    tipo,
+    seguimiento_intento: item.seguimiento_intento,
+    closer_notes: item.closer_notes,
+    call_date: item.call_date,
+    enrollment_date: item.enrollment_date,
+    deuda: item.deuda,
+    programa_nombre: item.programa_nombre,
+    programa_code: item.programa_code,
+    proxima_cuota: item.proxima_cuota
+});
+
 // `refreshKey` sube desde CloserWorkflowPage cada vez que una acción toca el mazo (resolver un
 // seguimiento, programar el siguiente, registrar una venta...). Sin esa señal, el panel se
 // quedaba con la lista vieja y el seguimiento recién hecho solo desaparecía al recargar la página.
-const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
+// `onTopPending` (opcional): a quién seguir primero, con la misma prioridad que ya usa esta
+// pestaña (cobros -> hot -> fríos) — lo consume "Tu siguiente paso" en CloserWorkflowPage para
+// mostrar un único botón en vez de una lista de bandejas (pedido del usuario, 28/ago/2026).
+const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPending }) => {
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
     const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
     const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
@@ -170,35 +196,46 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
 
     useEffect(() => { fetchPool(); }, [fetchPool]);
 
+    // A quién seguir primero, en el mismo orden de prioridad que ya define `TIPOS` (cobros -> hot
+    // -> fríos): primero lo asignado para hoy; si ya está todo resuelto, se busca en el pool sin
+    // fecha con una consulta liviana (un solo tipo, se usa solo el primer item). Pedido del
+    // usuario (28/ago/2026): "que sea uno [un botón] que me lleve a seguir a alguien... como
+    // prioridad va a tomar algún cobro" — antes esta pestaña no exponía ningún lead concreto hacia
+    // afuera, así que "Tu siguiente paso" no podía ofrecer una sola acción como sí hace con
+    // Confirmar/Reportar.
+    useEffect(() => {
+        if (!onTopPending || loading) return;
+        const todayTipo = Object.keys(TIPOS).find(t => grouped[t]?.length > 0);
+        if (todayTipo) {
+            const item = grouped[todayTipo][0];
+            onTopPending({ item, tipo: todayTipo, source: 'today', payload: buildLeadPayload(item, todayTipo) });
+            return;
+        }
+        const poolTipo = Object.keys(TIPOS).find(t => poolCounts[t] > 0);
+        if (!poolTipo) {
+            onTopPending(null);
+            return;
+        }
+        let cancelled = false;
+        api.get(`/closer/followups/pool?tipo=${poolTipo}`)
+            .then(res => {
+                if (cancelled) return;
+                const item = (res.data.items || [])[0];
+                onTopPending(item ? { item, tipo: poolTipo, source: 'pool', payload: buildLeadPayload(item, poolTipo) } : null);
+            })
+            .catch(() => { if (!cancelled) onTopPending(null); });
+        return () => { cancelled = true; };
+    }, [grouped, poolCounts, loading, onTopPending]);
+
     const togglePool = (tipo) => {
         setOpenPool(prev => (prev === tipo ? null : tipo));
         setPoolFilters({ sub: '', days_since: '', programa: '', deuda: '' });
     };
 
-    const openLead = (item, tipo) => {
-        // "Llamadas cerradas" abre el modal de seguimiento de cobro (segventa: deuda, plan de
-        // cuotas, "¿qué pasó con el cobro?") — mismo modal que el resto de seguimientos, no el
-        // resumen general del cliente (se quitó como destino por defecto).
-        onOpenLead({
-            id: item.id,
-            client_id: item.client_id,
-            lead_name: item.lead_name,
-            instagram: item.instagram,
-            phone: item.phone,
-            examen: item.examen,
-            origin: item.origin,
-            fase: 'seg',
-            tipo,
-            seguimiento_intento: item.seguimiento_intento,
-            closer_notes: item.closer_notes,
-            call_date: item.call_date,
-            enrollment_date: item.enrollment_date,
-            deuda: item.deuda,
-            programa_nombre: item.programa_nombre,
-            programa_code: item.programa_code,
-            proxima_cuota: item.proxima_cuota
-        });
-    };
+    // "Llamadas cerradas" abre el modal de seguimiento de cobro (segventa: deuda, plan de
+    // cuotas, "¿qué pasó con el cobro?") — mismo modal que el resto de seguimientos, no el
+    // resumen general del cliente (se quitó como destino por defecto).
+    const openLead = (item, tipo) => onOpenLead(buildLeadPayload(item, tipo));
 
     if (loading) {
         return (

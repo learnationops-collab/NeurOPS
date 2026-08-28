@@ -304,6 +304,10 @@ const CloserWorkflowPage = () => {
     // Señal de recarga para la pestaña de seguimientos (ver fetchAgendas): sube en cada acción
     // que modifica el mazo para que el panel vuelva a pedir sus propios datos.
     const [seguimientosRefreshKey, setSeguimientosRefreshKey] = useState(0);
+    // A quién seguir primero (cobros -> hot -> fríos), reportado por SeguimientosPane — ver su
+    // prop `onTopPending`. `undefined` = todavía no se sabe (recién montado/cargando), `null` =
+    // no hay nadie a quien seguir, objeto = { item, tipo, source, payload }.
+    const [seguimientoHero, setSeguimientoHero] = useState(undefined);
 
     // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
     // entre a la pestaña de reporte — la tarjeta "Tu día" necesita `activity` (trabajo real de
@@ -3423,29 +3427,57 @@ const CloserWorkflowPage = () => {
                                         {activeStep === 'confirmations' ? 'Ir a confirmar' : 'Ir a reportar'} →
                                     </button>
                                 </div>
+                            ) : activeView === 'inbox' && activeStep === 'seguimientos' && seguimientoHero ? (
+                                // Mismo mecanismo que confirmaciones/llamadas de arriba, pero para la pestaña
+                                // Seguir: antes acá nunca había un lead concreto (heroLead no la cubre, ver su
+                                // comentario), así que caía siempre en el fallback de "podés avanzar con" y
+                                // terminaba mostrando hasta 2 botones sueltos. Pedido del usuario (28/ago/2026):
+                                // "quiero que sea uno que me lleve a seguir a alguien... como prioridad va a
+                                // tomar algún cobro" — `seguimientoHero` (reportado por SeguimientosPane, ver su
+                                // prop `onTopPending`) ya viene con esa prioridad (cobros -> hot -> fríos),
+                                // primero de lo asignado hoy y si no hay nada, del pool sin fecha.
+                                <div className="tsp-v6" onClick={() => handleSelectLead(seguimientoHero.payload)}>
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6"></span>
+                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                    </div>
+                                    <h3 className="tsp-name-v6">{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6">
+                                        {seguimientoHero.item.origin || 'Meta Ads'} · @{seguimientoHero.item.instagram ? seguimientoHero.item.instagram.replace('@', '') : 'usuario'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="tsp-cta-v6"
+                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(seguimientoHero.payload); }}
+                                    >
+                                        {seguimientoHero.tipo === 'cerrada' ? 'Ir a cobrar' : 'Ir a seguir'} →
+                                    </button>
+                                </div>
                             ) : (() => {
-                                // Sin nada urgente en LA PESTAÑA ACTIVA, no hay por qué decir que no queda
-                                // nada — casi siempre sigue habiendo trabajo real en las otras dos (pedido
-                                // del usuario, 27/ago/2026): antes esto siempre decía "nada urgente por
-                                // ahora" apenas la pestaña activa se vaciaba, aunque quedaran 78 seguimientos
-                                // sin tocar. `counts` ya trae las 3 bandejas completas, sin pegarle de nuevo
-                                // a la API.
-                                const suggestions = [
-                                    { key: 'confirmations', label: 'Confirmar', count: counts.confirmations, step: 'confirmations' },
-                                    { key: 'calls', label: 'Reportar', count: counts.calls, step: 'calls' },
-                                    { key: 'seguimientos', label: 'Seguir', count: counts.seguimientos, step: 'seguimientos' }
-                                ].filter(s => s.count > 0 && s.step !== activeStep);
+                                // Una sola acción, no una lista de bandejas (pedido del usuario, 28/ago/2026:
+                                // "en ver mis datos, mi cartera y cerrar el día debería ser ese mismo mecanismo
+                                // de un solo botón y una sola acción") — se elige la de mayor prioridad (mismo
+                                // orden que la navegación 01-02-03) usando `counts`, ya cargado sin pegarle de
+                                // nuevo a la API. Cubre tanto "estoy en una pestaña del mazo que ya está vacía"
+                                // como "estoy en Ver mis datos/Mi cartera/Cerrar el día" — antes esas 3 vistas
+                                // no ofrecían ninguna acción concreta, o hasta 2 sueltas sin prioridad.
+                                const PRIORITY = [
+                                    { key: 'confirmations', label: 'Ir a confirmar', accion: 'confirmar', count: counts.confirmations, step: 'confirmations' },
+                                    { key: 'calls', label: 'Ir a reportar', accion: 'reportar', count: counts.calls, step: 'calls' },
+                                    { key: 'seguimientos', label: 'Ir a seguir', accion: 'seguir', count: counts.seguimientos, step: 'seguimientos' }
+                                ];
+                                const next = PRIORITY.find(s => s.count > 0);
                                 const goTo = (step) => { setActiveView('inbox'); setSearchParams({ step, selected_date: selectedDate }); };
 
-                                if (suggestions.length === 0) {
+                                if (!next) {
                                     return (
                                         <div className="tsp-v6 tsp-done-v6">
                                             <div className="tsp-top-v6">
                                                 <span className="tsp-dot-v6 ok"></span>
                                                 <span className="tsp-lbl-v6">Tu siguiente paso</span>
                                             </div>
-                                            <h3 className="tsp-name-v6">🎉 Nada urgente por ahora</h3>
-                                            <p className="tsp-sub-v6">Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.</p>
+                                            <h3 className="tsp-name-v6">🎉 Tenés absolutamente todo el día resuelto</h3>
+                                            <p className="tsp-sub-v6">Nada pendiente en confirmar, reportar ni seguir.</p>
                                         </div>
                                     );
                                 }
@@ -3455,19 +3487,14 @@ const CloserWorkflowPage = () => {
                                             <span className="tsp-dot-v6 ok"></span>
                                             <span className="tsp-lbl-v6">Tu siguiente paso</span>
                                         </div>
-                                        <h3 className="tsp-name-v6">Podés seguir avanzando con</h3>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {suggestions.map(s => (
-                                                <button
-                                                    key={s.key}
-                                                    type="button"
-                                                    className="tsp-cta-v6"
-                                                    onClick={(e) => { e.stopPropagation(); goTo(s.step); }}
-                                                >
-                                                    {s.label} {s.count} →
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <h3 className="tsp-name-v6">Te falta {next.count} por {next.accion}</h3>
+                                        <button
+                                            type="button"
+                                            className="tsp-cta-v6"
+                                            onClick={(e) => { e.stopPropagation(); goTo(next.step); }}
+                                        >
+                                            {next.label} →
+                                        </button>
                                     </div>
                                 );
                             })()}
@@ -3679,7 +3706,7 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} />
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
                     ) : (
                         /* Renderizado Kanban para Llamadas (v7): mismo lenguaje visual que
                            Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por
