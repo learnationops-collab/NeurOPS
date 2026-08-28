@@ -2,10 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 
+// Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
+// luego hot (llamadas tomadas) y luego fríos" — porque sabe que no le va a dar tiempo a todos,
+// y prefiere ver primero lo que más plata mueve. El orden de este objeto define tanto las 3
+// columnas de "Asignados para hoy" como los 3 botones de "Pool sin fecha" (Object.keys conserva
+// el orden de declaración).
 const TIPOS = {
-    no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' },
+    cerrada: { label: 'Cobros (llamadas cerradas)', desc: 'Clientes: cobranza, renovación y upsell', icon: '💰', cls: 'emerald' },
     tomada: { label: 'Llamadas tomadas', desc: 'Asistieron y quedó una decisión o una 2ª llamada', icon: '🎤', cls: 'amber' },
-    cerrada: { label: 'Llamadas cerradas', desc: 'Clientes: cobranza, renovación y upsell', icon: '💰', cls: 'emerald' }
+    no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' }
 };
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
