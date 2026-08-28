@@ -3494,6 +3494,21 @@ const CloserWorkflowPage = () => {
                 {/* NAVEGACIÓN 01-05 (v7): reemplaza las 3 pestañas + el dock flotante como fuente
                     principal de "adónde ir" — el dock sigue abajo como acceso rápido mientras se
                     hace scroll, esto es la vista completa. */}
+                {(() => {
+                    // Las 3 pestañas de bandeja muestran "hecho/total" en vez de solo lo pendiente
+                    // (pedido del usuario, 28/ago/2026: "si hay cinco llamadas por confirmar y hay
+                    // dos confirmadas, entonces hay dos de cinco") — mismo cálculo que ya usan el
+                    // hero "Tu día" y los 4 KPI de "Cerrar el día" (dailyActivity = hecho hoy,
+                    // counts = pendiente ahora), no un dato nuevo. Cerrar el día/Ver mis
+                    // datos/Mi cartera no son bandejas con pendientes que resolver, así que se
+                    // quedan con el conteo simple (o sin número) que ya tenían.
+                    const confirmDone = dailyActivity?.confirmados_hoy || 0;
+                    const confirmTotal = confirmDone + counts.confirmations;
+                    const callsDone = dailyActivity?.show_ups || 0;
+                    const callsTotal = callsDone + counts.calls;
+                    const segDone = dailyActivity?.seguimientos_hechos || 0;
+                    const segTotal = segDone + counts.seguimientos;
+                    return (
                 <div className="nav5-v6">
                     <button
                         type="button"
@@ -3502,7 +3517,7 @@ const CloserWorkflowPage = () => {
                     >
                         <span className="nc-n-v6">01</span>
                         <span className="nc-lbl-v6">Confirmar</span>
-                        <span className={`nc-count-v6 ${counts.confirmations === 0 ? 'zero' : ''}`}>{counts.confirmations}</span>
+                        <span className={`nc-count-v6 ${counts.confirmations === 0 ? 'zero' : ''}`}>{confirmDone}/{confirmTotal}</span>
                     </button>
                     <button
                         type="button"
@@ -3511,7 +3526,7 @@ const CloserWorkflowPage = () => {
                     >
                         <span className="nc-n-v6">02</span>
                         <span className="nc-lbl-v6">Reportar</span>
-                        <span className={`nc-count-v6 ${counts.calls === 0 ? 'zero' : ''}`}>{counts.calls}</span>
+                        <span className={`nc-count-v6 ${counts.calls === 0 ? 'zero' : ''}`}>{callsDone}/{callsTotal}</span>
                     </button>
                     <button
                         type="button"
@@ -3520,7 +3535,7 @@ const CloserWorkflowPage = () => {
                     >
                         <span className="nc-n-v6">03</span>
                         <span className="nc-lbl-v6">Seguir</span>
-                        <span className={`nc-count-v6 ${counts.seguimientos === 0 ? 'zero' : ''}`}>{counts.seguimientos}</span>
+                        <span className={`nc-count-v6 ${counts.seguimientos === 0 ? 'zero' : ''}`}>{segDone}/{segTotal}</span>
                     </button>
                     <button
                         type="button"
@@ -3561,6 +3576,8 @@ const CloserWorkflowPage = () => {
                         </button>
                     )}
                 </div>
+                    );
+                })()}
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
