@@ -12,6 +12,7 @@ ROLE_CLOSER = 'closer'
 ROLE_SETTER = 'setter'
 ROLE_OPERATOR = 'operator'
 ROLE_TRIAGE = 'triage'
+ROLE_DIRECTOR_COMERCIAL = 'director_comercial'
 
 @login.user_loader
 def load_user(id):

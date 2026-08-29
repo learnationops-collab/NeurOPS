@@ -1,13 +1,14 @@
 import React from 'react';
 import { Edit2, Trash2, ArrowRight } from 'lucide-react';
 
-const WorkshopTableView = ({ events, onSelectFunnel, onEdit, onDelete, formatDate, formatCurrency }) => {
+const WorkshopTableView = ({ events, onSelectFunnel, onEdit, onDelete, formatDate, formatCurrency, selectedIds, onToggleSelect }) => {
     return (
         <div className="bg-slate-950 border border-slate-900 rounded-3xl overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-900/50 border-b border-slate-900">
+                            {onToggleSelect && <th className="p-4 w-8" />}
                             <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
                             <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Workshop / Evento</th>
                             <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Inversión</th>
@@ -26,8 +27,20 @@ const WorkshopTableView = ({ events, onSelectFunnel, onEdit, onDelete, formatDat
                     <tbody className="divide-y divide-slate-900/50">
                         {events.map((e) => {
                             const profit = e.cash_collected - e.inversion;
+                            const isSelected = selectedIds?.includes(e.id);
                             return (
-                                <tr key={e.id} className="hover:bg-slate-900/25 transition-colors group">
+                                <tr key={e.id} className={`hover:bg-slate-900/25 transition-colors group ${isSelected ? 'bg-indigo-500/5' : ''}`}>
+                                    {onToggleSelect && (
+                                        <td className="p-4">
+                                            <button
+                                                onClick={() => onToggleSelect(e.id)}
+                                                title="Seleccionar para comparar"
+                                                className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-transparent hover:border-slate-500'}`}
+                                            >
+                                                ✓
+                                            </button>
+                                        </td>
+                                    )}
                                     <td className="p-4 text-xs font-black text-white whitespace-nowrap italic">{formatDate(e.date)}</td>
                                     <td className="p-4 text-xs font-black text-slate-300 uppercase tracking-wider">{e.name}</td>
                                     <td className="p-4 text-xs font-black text-slate-300 text-right whitespace-nowrap">{formatCurrency(e.inversion)}</td>

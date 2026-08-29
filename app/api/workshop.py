@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
+from flask_login import current_user
 from app import db
-from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
-from app.decorators import admin_required
+from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
+from app.decorators import workshop_required
 from datetime import datetime
 import logging
 
@@ -137,19 +138,19 @@ def get_workshop_stats_summary():
     return jsonify(stats), 200
 
 @bp.route('/events', methods=['GET'])
-@admin_required
+@workshop_required
 def get_workshop_events():
     events = WorkshopEvent.query.order_by(WorkshopEvent.date.desc()).all()
     return jsonify([e.to_dict() for e in events]), 200
 
 @bp.route('/events/<int:event_id>', methods=['GET'])
-@admin_required
+@workshop_required
 def get_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     return jsonify(event.to_dict()), 200
 
 @bp.route('/events', methods=['POST'])
-@admin_required
+@workshop_required
 def create_workshop_event():
     data = request.get_json() or {}
     date_str = data.get('date')
@@ -196,7 +197,7 @@ def create_workshop_event():
         return jsonify({"error": f"Error al guardar en base de datos: {str(e)}"}), 500
 
 @bp.route('/events/<int:event_id>', methods=['PUT'])
-@admin_required
+@workshop_required
 def update_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     data = request.get_json() or {}
@@ -240,7 +241,7 @@ def update_workshop_event(event_id):
         return jsonify({"error": f"Error al actualizar la base de datos: {str(e)}"}), 500
 
 @bp.route('/events/<int:event_id>', methods=['DELETE'])
-@admin_required
+@workshop_required
 def delete_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     try:
@@ -252,7 +253,7 @@ def delete_workshop_event(event_id):
         return jsonify({"error": f"Error al eliminar de la base de datos: {str(e)}"}), 500
 
 @bp.route('/prefill', methods=['GET'])
-@admin_required
+@workshop_required
 def prefill_workshop_metrics():
     """Autocompleta las metricas del sistema para el workshop de una fecha.
 
@@ -269,9 +270,146 @@ def prefill_workshop_metrics():
     except ValueError:
         return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
 
-    from flask_login import current_user
     from app.services.workshop_metrics_service import calcular_prefill
 
     tz = getattr(current_user, 'timezone', None) or 'America/La_Paz'
     return jsonify(calcular_prefill(dia, tz)), 200
+
+
+# ==========================================================================
+# METAS DEL SISTEMA (WorkshopGoals) — fila única, se crea con defaults si no
+# existe todavía. Usada por Diagnóstico/Simulador/Acciones del dashboard.
+# ==========================================================================
+
+def _get_or_create_goals():
+    goals = WorkshopGoals.query.first()
+    if not goals:
+        goals = WorkshopGoals()
+        db.session.add(goals)
+        db.session.commit()
+    return goals
+
+
+@bp.route('/goals', methods=['GET'])
+@workshop_required
+def get_workshop_goals():
+    return jsonify(_get_or_create_goals().to_dict()), 200
+
+
+@bp.route('/goals', methods=['PUT'])
+@workshop_required
+def update_workshop_goals():
+    goals = _get_or_create_goals()
+    data = request.get_json() or {}
+    campos = [
+        'meta_whatsapp', 'meta_asistencia', 'meta_retencion_clase', 'meta_retencion_pitch',
+        'meta_conversion_form', 'meta_agendamiento', 'meta_show_up_citas', 'meta_close_rate',
+        'banda_limite'
+    ]
+    try:
+        for campo in campos:
+            if campo in data:
+                setattr(goals, campo, float(data[campo]))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Las metas deben ser valores numéricos"}), 400
+
+    try:
+        db.session.commit()
+        return jsonify(goals.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar las metas: {str(e)}"}), 500
+
+
+# ==========================================================================
+# PLAN DE ACCIONES (WorkshopAction)
+# ==========================================================================
+
+@bp.route('/actions', methods=['GET'])
+@workshop_required
+def get_workshop_actions():
+    actions = WorkshopAction.query.all()
+    serialized = [a.to_dict() for a in actions]
+    serialized.sort(key=lambda a: a['score'], reverse=True)
+    return jsonify(serialized), 200
+
+
+@bp.route('/actions', methods=['POST'])
+@workshop_required
+def create_workshop_action():
+    data = request.get_json() or {}
+    title = (data.get('title') or '').strip()
+    if not title:
+        return jsonify({"error": "El título de la acción es obligatorio"}), 400
+
+    try:
+        action = WorkshopAction(
+            stage_key=data.get('stage_key') or None,
+            title=title,
+            note=data.get('note') or None,
+            value_score=int(data.get('value_score', 3)),
+            speed_score=int(data.get('speed_score', 3)),
+            simplicity_score=int(data.get('simplicity_score', 3)),
+            urgency_score=int(data.get('urgency_score', 3)),
+            target_delta_pp=float(data.get('target_delta_pp', 0.0)),
+            created_by_id=current_user.id if current_user.is_authenticated else None
+        )
+    except (TypeError, ValueError):
+        return jsonify({"error": "Datos numéricos inválidos"}), 400
+
+    try:
+        db.session.add(action)
+        db.session.commit()
+        return jsonify(action.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar la acción: {str(e)}"}), 500
+
+
+@bp.route('/actions/<int:action_id>', methods=['PUT'])
+@workshop_required
+def update_workshop_action(action_id):
+    action = WorkshopAction.query.get_or_404(action_id)
+    data = request.get_json() or {}
+
+    try:
+        if 'title' in data:
+            title = (data['title'] or '').strip()
+            if not title:
+                return jsonify({"error": "El título de la acción es obligatorio"}), 400
+            action.title = title
+        if 'stage_key' in data:
+            action.stage_key = data['stage_key'] or None
+        if 'note' in data:
+            action.note = data['note'] or None
+        for campo in ('value_score', 'speed_score', 'simplicity_score', 'urgency_score'):
+            if campo in data:
+                setattr(action, campo, int(data[campo]))
+        if 'target_delta_pp' in data:
+            action.target_delta_pp = float(data['target_delta_pp'])
+        if 'status' in data and data['status'] in ('pending', 'done'):
+            action.status = data['status']
+            action.completed_at = datetime.utcnow() if data['status'] == 'done' else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "Datos numéricos inválidos"}), 400
+
+    try:
+        db.session.commit()
+        return jsonify(action.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al actualizar la acción: {str(e)}"}), 500
+
+
+@bp.route('/actions/<int:action_id>', methods=['DELETE'])
+@workshop_required
+def delete_workshop_action(action_id):
+    action = WorkshopAction.query.get_or_404(action_id)
+    try:
+        db.session.delete(action)
+        db.session.commit()
+        return jsonify({"message": "Acción eliminada con éxito"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al eliminar la acción: {str(e)}"}), 500
 

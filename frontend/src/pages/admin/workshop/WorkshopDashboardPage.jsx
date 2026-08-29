@@ -8,6 +8,11 @@ import WorkshopTableView from './components/WorkshopTableView';
 import WorkshopFunnelView from './components/WorkshopFunnelView';
 import WorkshopFormModal from './components/WorkshopFormModal';
 import WorkshopLandingView from './components/WorkshopLandingView';
+import WorkshopDiagnostico from './components/WorkshopDiagnostico';
+import WorkshopGoalsModal from './components/WorkshopGoalsModal';
+import WorkshopSimuladorView from './components/WorkshopSimuladorView';
+import WorkshopAccionesView from './components/WorkshopAccionesView';
+import WorkshopCompareModal from './components/WorkshopCompareModal';
 
 const initialFormData = {
     date: '',
@@ -36,9 +41,17 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel' | 'landing'
+    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel' | 'simulador' | 'acciones' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
-    
+
+    // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
+    const [goals, setGoals] = useState(null);
+    const [actions, setActions] = useState([]);
+    const [goalsModalOpen, setGoalsModalOpen] = useState(false);
+    const [highlightStage, setHighlightStage] = useState(null);
+    const [compareIds, setCompareIds] = useState([]);
+    const [compareModalOpen, setCompareModalOpen] = useState(false);
+
     // Formulario & Prefill
     const [formData, setFormData] = useState(initialFormData);
     const [loadingPrefill, setLoadingPrefill] = useState(false);
@@ -53,7 +66,43 @@ const WorkshopDashboardPage = () => {
 
     useEffect(() => {
         fetchEvents();
+        fetchGoals();
+        fetchActions();
     }, []);
+
+    const fetchGoals = async () => {
+        try {
+            const res = await api.get('workshop/goals');
+            setGoals(res.data);
+        } catch (err) {
+            console.error('Error cargando metas del workshop:', err);
+        }
+    };
+
+    const fetchActions = async () => {
+        try {
+            const res = await api.get('workshop/actions');
+            setActions(res.data);
+        } catch (err) {
+            console.error('Error cargando el plan de acciones:', err);
+        }
+    };
+
+    const goToSimulador = (stageKey) => {
+        setHighlightStage(stageKey);
+        setActiveTab('simulador');
+    };
+
+    const toggleCompareId = (id) => {
+        setCompareIds((prev) => {
+            if (prev.includes(id)) return prev.filter((x) => x !== id);
+            if (prev.length >= 4) {
+                toast.error('Podés comparar hasta 4 talleres a la vez');
+                return prev;
+            }
+            return [...prev, id];
+        });
+    };
 
     // El desglose por embudo se pide solo al abrir el análisis de un evento:
     // recorre agendas y ventas, así que no vale la pena calcularlo para la lista.
@@ -361,8 +410,20 @@ const WorkshopDashboardPage = () => {
                 {/* Tarjetas KPI Ejecutivas */}
                 <WorkshopKpiCards totalStats={totalStats} eventsCount={events.length} />
 
+                {/* Diagnóstico: siempre visible, no es una pestaña más — la lectura
+                    rápida de qué etapa frena las ventas antes de bajar al detalle. */}
+                {events.length > 0 && (
+                    <WorkshopDiagnostico
+                        events={events}
+                        goals={goals}
+                        actions={actions}
+                        onEditGoals={() => setGoalsModalOpen(true)}
+                        onGoToSimulador={goToSimulador}
+                    />
+                )}
+
                 {/* Navegación por pestañas */}
-                <div className="flex border-b border-slate-900 gap-6">
+                <div className="flex border-b border-slate-900 gap-6 flex-wrap">
                     <button
                         onClick={() => setActiveTab('list')}
                         className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
@@ -378,6 +439,22 @@ const WorkshopDashboardPage = () => {
                         }`}
                     >
                         Análisis de Embudo (Funnel)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('simulador')}
+                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'simulador' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
+                        }`}
+                    >
+                        Simulador
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('acciones')}
+                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'acciones' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
+                        }`}
+                    >
+                        Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
                     </button>
                     {/* La grabación es OTRO embudo que el workshop en vivo: mismo
                         producto, fuente distinta ('workshop landing'). */}
@@ -420,6 +497,8 @@ const WorkshopDashboardPage = () => {
                             onDelete={handleDeleteEvent}
                             formatDate={formatDate}
                             formatCurrency={formatCurrency}
+                            selectedIds={compareIds}
+                            onToggleSelect={toggleCompareId}
                         />
                     ) : (
                         <WorkshopTableView
@@ -432,9 +511,11 @@ const WorkshopDashboardPage = () => {
                             onDelete={handleDeleteEvent}
                             formatDate={formatDate}
                             formatCurrency={formatCurrency}
+                            selectedIds={compareIds}
+                            onToggleSelect={toggleCompareId}
                         />
                     )
-                ) : (
+                ) : activeTab === 'funnel' ? (
                     <WorkshopFunnelView
                         events={events}
                         selectedEvent={selectedEventForFunnel}
@@ -446,6 +527,59 @@ const WorkshopDashboardPage = () => {
                         desglose={desglose}
                         ventana={ventana}
                         cargandoDesglose={cargandoDesglose}
+                    />
+                ) : activeTab === 'simulador' ? (
+                    <WorkshopSimuladorView
+                        events={events}
+                        goals={goals}
+                        highlightStage={highlightStage}
+                        onGoalsUpdated={setGoals}
+                        formatCurrency={formatCurrency}
+                    />
+                ) : (
+                    <WorkshopAccionesView
+                        events={events}
+                        goals={goals}
+                        actions={actions}
+                        onActionsChanged={fetchActions}
+                        formatCurrency={formatCurrency}
+                    />
+                )}
+
+                {/* Barra flotante de comparación (hasta 4 talleres) */}
+                {compareIds.length > 0 && activeTab === 'list' && (
+                    <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-4 px-6 py-3 bg-indigo-600 rounded-2xl shadow-2xl shadow-indigo-950/50">
+                        <span className="text-xs font-black text-white uppercase tracking-widest">{compareIds.length} seleccionados</span>
+                        <button
+                            onClick={() => setCompareModalOpen(true)}
+                            disabled={compareIds.length < 2}
+                            className="px-4 py-2 bg-white text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 cursor-pointer"
+                        >
+                            Comparar
+                        </button>
+                        <button
+                            onClick={() => setCompareIds([])}
+                            className="text-[10px] font-black uppercase text-indigo-200 hover:text-white cursor-pointer"
+                        >
+                            Limpiar
+                        </button>
+                    </div>
+                )}
+
+                {compareModalOpen && (
+                    <WorkshopCompareModal
+                        events={events.filter((e) => compareIds.includes(e.id))}
+                        onClose={() => setCompareModalOpen(false)}
+                        formatDate={formatDate}
+                        formatCurrency={formatCurrency}
+                    />
+                )}
+
+                {goalsModalOpen && goals && (
+                    <WorkshopGoalsModal
+                        goals={goals}
+                        onClose={() => setGoalsModalOpen(false)}
+                        onSaved={(updated) => { setGoals(updated); setGoalsModalOpen(false); }}
                     />
                 )}
 

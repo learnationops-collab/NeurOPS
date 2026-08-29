@@ -13,7 +13,7 @@ from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
-from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
+from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from .workshop_lead import WorkshopLead
 from .landing_session import LandingSession
 from .alert import AlertRule, Alert
@@ -33,6 +33,7 @@ __all__ = [
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction', 'WorkshopEvent',
+    'WorkshopGoals', 'WorkshopAction',
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
     'InstallmentPlan', 'ClientMergeLog'
