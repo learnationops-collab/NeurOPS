@@ -66,23 +66,28 @@ const RESULT_CHIP = {
 };
 const resultChip = (closerResult) => RESULT_CHIP[(closerResult || '').trim().toLowerCase()] || null;
 
-// Ganancia potencial de un seguimiento: en base a estadísticas REALES de este closer (ticket
-// promedio y tasa de cierre, `GET /closer/followups/earnings-stats`) — pedido del usuario
-// (29/ago/2026): "que puedan ver cuánto pueden ganar por hacer esos seguimientos".
-// - "Cobros" (cerrada): no es una probabilidad, es plata que YA se debe — comisión sobre la
-//   próxima cuota (o el total adeudado si nunca se armó un plan de cuotas).
-// - "Tomada"/"no tomada": todavía no hay venta, así que se pondera por la tasa de cierre
-//   histórica de ESE tipo de seguimiento — un "tomada" (asistió, sin decisión) convierte mucho
-//   más que un "no tomada" (no show/cancelado), de ahí que tengan tasas separadas.
+// Ganancia potencial de un seguimiento: en base a estadísticas REALES de este closer
+// (`GET /closer/followups/earnings-stats`) — pedido del usuario (29/ago/2026): "que puedan ver
+// cuánto pueden ganar por hacer esos seguimientos". Primera versión ponderaba por una tasa de
+// cierre histórica y el usuario la encontró desproporcionada ("por qué la mayoría dice 4101") —
+// el número salía inflado por un bug de escala en el backend. En vez de eso, mismo pedido del
+// usuario, un modelo más simple y concreto por tipo:
+// - "Cobros" (cerrada): NO es un promedio — es lo que el cliente YA debe (próxima cuota, o el
+//   total adeudado si nunca se armó un plan). Si no debe nada, el promedio de lo que suelen dejar
+//   renovación/upsell en un cliente ya cerrado.
+// - "Tomada" (asistió, sin decisión aún): el ticket promedio de una venta real.
+// - "No tomada" (no show/cancelado/reagendado): el promedio de lo que se cobra en señas — un
+//   valor más chico y realista para un lead frío que ni siquiera tomó la llamada.
 const estimateEarning = (item, tipo, earnings) => {
     if (!earnings) return 0;
     const rate = earnings.commission_rate || 0;
     if (tipo === 'cerrada') {
-        const base = item.proxima_cuota ? item.proxima_cuota.monto : (item.deuda || 0);
-        return rate * (base || 0);
+        const debe = item.proxima_cuota ? item.proxima_cuota.monto : (item.deuda || 0);
+        const base = debe > 0 ? debe : (earnings.avg_renewal_upsell || 0);
+        return rate * base;
     }
-    const closeRate = earnings.close_rate?.[tipo] || 0;
-    return rate * (earnings.ticket_promedio || 0) * closeRate;
+    if (tipo === 'no_tomada') return rate * (earnings.avg_seña || 0);
+    return rate * (earnings.ticket_promedio || 0);
 };
 
 // Fila de seguimiento (`.row-v6`, el mismo lenguaje de lista de una sola columna que ya usa
@@ -147,7 +152,14 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
                     <span className="chip-v6" style={{ color: '#fff', background: 'rgba(255,255,255,.1)' }}>{footer}</span>
                 </div>
             </div>
-            <div className="earn-v6" title={tipo === 'cerrada' ? 'Comisión sobre lo que se le debe cobrar' : 'Estimado: ticket promedio × tasa de cierre histórica × tu comisión'}>
+            <div
+                className="earn-v6"
+                title={
+                    tipo === 'cerrada' ? 'Tu comisión sobre lo que se le debe cobrar (o sobre el promedio de renovación/upsell si no debe nada)'
+                    : tipo === 'no_tomada' ? 'Tu comisión sobre el promedio de lo que se cobra en señas'
+                    : 'Tu comisión sobre el ticket promedio de una venta'
+                }
+            >
                 <span className="earn-lbl-v6">{tipo === 'cerrada' ? 'Podés cobrar' : 'Podrías ganar'}</span>
                 <span className="earn-val-v6">{money(potential)}</span>
             </div>
@@ -222,10 +234,10 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
 
     useEffect(() => { fetchMain(); }, [fetchMain]);
 
-    // Estadísticas para la ganancia potencial: ticket promedio y tasa de cierre históricos, no
-    // cambian de un minuto a otro como la lista de seguimientos — se piden aparte y se refrescan
-    // solo con `refreshKey` (una venta nueva puede mover el ticket promedio), no con cada cambio
-    // de `selectedDate`.
+    // Estadísticas para la ganancia potencial (ticket promedio, promedio de señas, promedio de
+    // renovación/upsell): no cambian de un minuto a otro como la lista de seguimientos — se piden
+    // aparte y se refrescan solo con `refreshKey` (una venta nueva puede moverlas), no con cada
+    // cambio de `selectedDate`.
     useEffect(() => {
         api.get('/closer/followups/earnings-stats')
             .then(res => setEarnings(res.data))
@@ -306,9 +318,8 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
 
     const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
     const totalHoy = itemsHoy.length;
-    // Ganancia potencial total de "Asignados para hoy" — suma de la de cada fila, con el mismo
-    // criterio que ya se ve fila por fila (comisión real sobre cobros + ticket×tasa de cierre en
-    // llamadas sin vender todavía). "En cada uno y en total", pedido explícito del usuario.
+    // Ganancia potencial total de "Asignados para hoy" — suma de la de cada fila (ver
+    // `estimateEarning`). "En cada uno y en total", pedido explícito del usuario.
     const totalPotencial = Object.keys(TIPOS).reduce(
         (sum, tipo) => sum + grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0),
         0

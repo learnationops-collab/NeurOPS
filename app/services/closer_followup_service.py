@@ -883,54 +883,58 @@ class CloserFollowUpService:
     @staticmethod
     def get_earnings_stats(closer_id):
         """Estadísticas para estimar la ganancia potencial de cada seguimiento (pestaña Seguir),
-        en base a estadísticas reales de ESTE closer — pedido del usuario (29/ago/2026): "en base
-        a las estadísticas promedio de cierres del closer".
+        en base a estadísticas reales de ESTE closer — pedido del usuario (29/ago/2026).
 
-        - `ticket_promedio` y `close_rate.tomada` reusan las MISMAS estadísticas que ya se
-          muestran en "Ver mis datos" (`CloserService.get_comprehensive_stats`, sin rango de
-          fecha = histórico completo): cuánto vale en promedio una venta real (PIF+Split) y qué
-          fracción de las llamadas asistidas ("Show up") terminan en una de esas ventas. Se
-          reusa a propósito en vez de inventar un cálculo aparte, para no mostrarle al closer dos
-          "tasa de cierre" distintas en dos pantallas.
-        - `close_rate.no_tomada` no tenía ningún cálculo existente en el sistema: se calcula acá
-          con el mismo criterio (distintos clientes con una cita No Show/Cancelado/Reagendado de
-          este closer en los últimos 180 días vs. cuántos de ellos terminaron comprando de todas
-          formas) — la recuperación en frío suele convertir mucho menos que una llamada tomada,
-          así que necesita su propia tasa en vez de reusar la de "tomada".
-        - `commission_rate`: mismo 10% que ya usa `CloserService.get_stats` como comisión
-          estándar del closer sobre el cash cobrado (no existía como constante compartida)."""
+        Primera versión ponderaba por una tasa de cierre histórica (tasa × ticket), pero el
+        usuario la encontró desproporcionada ("por qué la mayoría dice 4101") — el bug real era
+        que `get_comprehensive_stats.div()` devuelve un PORCENTAJE (0-100), no una fracción
+        (0-1), así que la tasa se aplicaba ~100x más grande de lo que debía. En vez de arreglar
+        el escalado, el usuario pidió un modelo más simple y concreto (mismo mensaje):
+        - "tomada" (asistió, sin decisión aún): ticket promedio de una venta real (PIF+Split).
+        - "no tomada" (no show/cancelado/reagendado): promedio de lo que se cobra en señas — un
+          valor más chico y realista para un lead frío que ni siquiera tomó la llamada.
+        - "cerrada" (cobro): NO es un promedio — es la cuota que el cliente debe (o el total
+          adeudado si nunca se armó un plan). Si no debe nada, se usa el promedio de
+          renovación/upsell (lo que suele generar un cliente ya cerrado que sigue activo).
+
+        `commission_rate`: mismo 10% que ya usa `CloserService.get_stats` como comisión estándar
+        del closer sobre el cash cobrado (no existía como constante compartida) — se aplica sobre
+        cualquiera de las bases de arriba para llegar a "cuánto ganás vos", no "cuánto entra"."""
         from app.services.closer_service import CloserService
-        from app.models import Client
+        from app.services.sheets_service import SheetsService
+        from app.models import User, FinancialSale
 
         COMMISSION_RATE = 0.10
 
         stats = CloserService.get_comprehensive_stats(closer_id=closer_id)
         ticket_promedio = stats['sales']['general_average_ticket']
-        close_rate_tomada = stats['percentages']['close_rate'] or 0.0
 
-        cutoff = datetime.utcnow() - timedelta(days=180)
-        no_tomada_appts = Appointment.query.filter(
-            Appointment.closer_id == closer_id,
-            Appointment.start_time >= cutoff,
-            func.lower(Appointment.closer_result).in_(DERIVABLE_NO_TOMADA)
-        ).all()
-        client_ids = {a.client_id for a in no_tomada_appts if a.client_id}
-        if client_ids:
-            converted = sum(
-                1 for cid in client_ids
-                if CloserFollowUpService._client_has_sale(Client.query.get(cid))
-            )
-            close_rate_no_tomada = round(converted / len(client_ids), 4)
-        else:
-            close_rate_no_tomada = 0.0
+        user = User.query.get(closer_id) if closer_id else None
+        identifiers = CloserService._resolve_sale_identifiers(user) if user else []
+        sales = []
+        if identifiers:
+            sales = FinancialSale.query.filter(
+                FinancialSale.email_vendedor.in_(identifiers),
+                or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+            ).all()
+
+        seña_amounts, ru_amounts = [], []
+        for s in sales:
+            _, tipo_simple = SheetsService.parse_tipo_pago(s.tipo_pago)
+            monto = float(s.monto or 0.0)
+            if tipo_simple == 'seña':
+                seña_amounts.append(monto)
+            elif tipo_simple in ('renovacion', 'upsell'):
+                ru_amounts.append(monto)
+
+        avg_seña = round(sum(seña_amounts) / len(seña_amounts), 2) if seña_amounts else 0.0
+        avg_renewal_upsell = round(sum(ru_amounts) / len(ru_amounts), 2) if ru_amounts else 0.0
 
         return {
             'commission_rate': COMMISSION_RATE,
-            'ticket_promedio': ticket_promedio,
-            'close_rate': {
-                'tomada': round(close_rate_tomada, 4),
-                'no_tomada': close_rate_no_tomada
-            }
+            'avg_seña': avg_seña,
+            'avg_renewal_upsell': avg_renewal_upsell,
+            'ticket_promedio': ticket_promedio
         }
 
     @staticmethod
