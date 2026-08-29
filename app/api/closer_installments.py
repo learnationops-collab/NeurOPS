@@ -83,3 +83,46 @@ def update_installment(cuota_id):
         estado=data.get('estado')
     )
     return jsonify(cuota.to_dict()), 200
+
+
+@bp.route('/installments/cuota', methods=['POST'])
+@login_required
+def create_single_installment():
+    """Agrega una cuota suelta a un plan ya existente — para corregir un plan viejo al que
+    le falta una cuota, sin recrear el plan entero (ver `create_plan`, bloqueado a propósito
+    si ya hay cuotas pagadas)."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json() or {}
+    appointment_id = data.get('appointment_id')
+    appt = Appointment.query.get_or_404(appointment_id)
+    if not _can_access(appt):
+        return jsonify({"message": "Forbidden"}), 403
+    if not appt.client_id:
+        return jsonify({"error": "Esta cita no tiene un cliente asociado"}), 400
+
+    try:
+        monto = float(data.get('monto') or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Monto inválido"}), 400
+    fecha_vencimiento = data.get('fecha_vencimiento')
+    if monto <= 0 or not fecha_vencimiento:
+        return jsonify({"error": "Monto y fecha de vencimiento son obligatorios"}), 400
+
+    programa_code = (data.get('programa_code') or '').strip().upper() or None
+    cuota = InstallmentService.add_cuota(appt.client_id, appointment_id, programa_code, monto, fecha_vencimiento)
+    return jsonify(cuota.to_dict()), 201
+
+
+@bp.route('/installments/cuota/<int:cuota_id>', methods=['DELETE'])
+@login_required
+def delete_installment(cuota_id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    cuota = InstallmentPlan.query.get_or_404(cuota_id)
+    if not _can_access(cuota.appointment):
+        return jsonify({"message": "Forbidden"}), 403
+
+    InstallmentService.delete_cuota(cuota)
+    return jsonify({"ok": True}), 200

@@ -105,3 +105,31 @@ class InstallmentService:
             cuota.fecha_pago = datetime.utcnow() if estado == 'pagado' else None
         db.session.commit()
         return cuota
+
+    @staticmethod
+    def add_cuota(client_id, appointment_id, programa_code, monto, fecha_vencimiento):
+        """Agrega una cuota suelta a un plan ya existente, sin tocar las demás — para cuando
+        el closer necesita corregir un plan viejo al que le falta una cuota (ej. datos
+        históricos incompletos), sin recrear el plan entero (eso perdería el historial de
+        cuotas ya pagadas, ver protección en `create_plan`)."""
+        existing = InstallmentPlan.query.filter_by(client_id=client_id, programa_code=programa_code).all()
+        siguiente_numero = (max((p.numero_cuota for p in existing), default=0)) + 1
+        fecha = fecha_vencimiento if isinstance(fecha_vencimiento, date) else datetime.strptime(str(fecha_vencimiento), '%Y-%m-%d').date()
+
+        plan = InstallmentPlan(
+            client_id=client_id,
+            appointment_id=appointment_id,
+            programa_code=programa_code,
+            numero_cuota=siguiente_numero,
+            monto=float(monto),
+            fecha_vencimiento=fecha,
+            estado='pendiente'
+        )
+        db.session.add(plan)
+        db.session.commit()
+        return plan
+
+    @staticmethod
+    def delete_cuota(cuota):
+        db.session.delete(cuota)
+        db.session.commit()

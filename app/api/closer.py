@@ -2163,7 +2163,7 @@ def get_team_members():
         User.role.in_(['closer', 'setter']),
         or_(User.is_active == True, User.is_active == None)
     ).order_by(User.username.asc()).all()
-    return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in members]), 200
+    return jsonify([{"id": u.id, "username": u.username, "role": u.role, "email": u.email} for u in members]), 200
 
 
 @bp.route('/deck/referrals/manual', methods=['POST'])

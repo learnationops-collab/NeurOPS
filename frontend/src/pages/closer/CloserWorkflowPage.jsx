@@ -15,6 +15,7 @@ import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
+import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
@@ -460,7 +461,6 @@ const CloserWorkflowPage = () => {
     // Flujo de registro de venta directo post-Show Up
     const [salePrompt, setSalePrompt] = useState({ apptId: null });
     const [saleModalOpen, setSaleModalOpen] = useState(false);
-    const [saleStep, setSaleStep] = useState(1);
     const [submittingSale, setSubmittingSale] = useState(false);
     const [saleForm, setSaleForm] = useState({
         lead_id: '',
@@ -479,14 +479,17 @@ const CloserWorkflowPage = () => {
         fecha_cobro: '',
         metodo_pago: 'Stripe',
         examen_lead: '',
-        notes: '',
+        notas: '',
         estado: 'Completada',
         instagram: '',
         setter: '',
         documento_identidad: '',
         enviar_mensaje: true,
         sold_in_call: true,
-        date: localToday()
+        date: localToday(),
+        referralAsked: '',
+        referralCount: 1,
+        referralWhen: 'now'
     });
 
     // Sincronizar email del closer en cuanto esté cargado en la sesión
@@ -548,8 +551,12 @@ const CloserWorkflowPage = () => {
     const [selectedCuotaId, setSelectedCuotaId] = useState(null);
     const isCuotaPayment = (saleForm.tipo_pago_simple || '').toLowerCase() === 'cuota';
 
-    useEffect(() => {
-        if (!saleModalOpen || !isCuotaPayment || !salePrompt.apptId) {
+    // Se consulta siempre que el modal está abierto (no solo cuando el tipo de pago es "Cuota")
+    // — el wizard muestra el cronograma editable en la pantalla de revisión sin importar qué
+    // tipo de pago se esté declarando, para que el closer pueda ajustar un plan viejo mal
+    // cargado "en todo momento", no solo cuando justo está cobrando una cuota.
+    const refreshExistingCuotas = useCallback(() => {
+        if (!saleModalOpen || !salePrompt.apptId) {
             setSaleExistingCuotas([]);
             setSelectedCuotaId(null);
             return;
@@ -561,12 +568,16 @@ const CloserWorkflowPage = () => {
                 setSaleExistingCuotas(cuotas);
                 const pendientes = cuotas.filter(c => c.estado !== 'pagado');
                 if (pendientes.length > 0) {
-                    setSelectedCuotaId(pendientes[0].id);
+                    setSelectedCuotaId(prev => prev || pendientes[0].id);
                     setSaleForm(prev => ({ ...prev, monto: prev.monto || String(pendientes[0].monto) }));
                 }
             })
             .catch(err => console.error('Error al cargar el plan de cuotas existente:', err))
             .finally(() => setLoadingSaleCuotas(false));
+    }, [saleModalOpen, salePrompt.apptId, saleForm.programa]);
+
+    useEffect(() => {
+        refreshExistingCuotas();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saleModalOpen, isCuotaPayment, salePrompt.apptId, saleForm.programa]);
 
@@ -1619,36 +1630,11 @@ const CloserWorkflowPage = () => {
         return date && time ? `${date}T${time}` : '';
     };
 
-    // Navegación de pasos del modal de venta
-    const handleNextStep = () => {
-        if (saleStep === 1) {
-            if (!saleForm.nombre_cliente.trim()) {
-                toast.error("El nombre del cliente es obligatorio");
-                return;
-            }
-            if (!saleForm.instagram.trim()) {
-                toast.error("El Instagram del cliente es obligatorio");
-                return;
-            }
-            if (!saleForm.mail_cliente.trim()) {
-                toast.error("El correo del cliente es obligatorio");
-                return;
-            }
-        } else if (saleStep === 2) {
-            if (!saleForm.monto) {
-                toast.error("El monto de la venta es obligatorio");
-                return;
-            }
-            if (parseFloat(saleForm.monto) <= 0) {
-                toast.error("El monto debe ser mayor que 0");
-                return;
-            }
-        }
-        setSaleStep(prev => prev + 1);
-    };
-
-    const handlePrevStep = () => {
-        setSaleStep(prev => prev - 1);
+    // Formatear hora de inicio (hora LOCAL del navegador, no UTC crudo)
+    const formatTimeOnly = (isoStr) => {
+        const d = parseUtcIso(isoStr);
+        if (!d) return '';
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     const buildSalePayload = (tipoOverride, montoOverride, commentOverride) => ({
@@ -1661,7 +1647,7 @@ const CloserWorkflowPage = () => {
         precio_total: parseFloat(saleForm.precio_total) || undefined,
         segundo_pago: commentOverride ?? (saleForm.segundo_pago || ''),
         metodo_pago: saleForm.metodo_pago,
-        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),
+        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notas}` : ''),
         instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
         estado: saleForm.estado,
         setter: saleForm.setter || '',
@@ -4638,590 +4624,40 @@ const CloserWorkflowPage = () => {
             {/* Modal de declaración de venta por pasos */}
             <>
                 {saleModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-left flex flex-col space-y-6 max-h-[90vh] custom-scrollbar"
-                        >
-                            {/* Ambient Brillo */}
-                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-violet-500" />
-                            </div>
-
-                            <div className="flex justify-between items-center pb-4 border-b border-slate-800 relative z-10">
-                                <div>
-                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tight flex items-center gap-2">
-                                        <DollarSign size={20} className="text-emerald-405" />
-                                        Declarar Venta
-                                    </h3>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Sincronización directa con Google Sheets</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const apptId = salePrompt.apptId;
-                                        setSaleModalOpen(false);
-                                        setSalePrompt({ apptId: null });
-                                        if (apptId) {
-                                            const appt = agendas.find(a => a.id === apptId);
-                                            setFollowUpModal({
-                                                show: true,
-                                                agendaId: apptId,
-                                                leadName: appt?.lead_name || 'Prospecto',
-                                                newStatus: 'Cierre de Venta',
-                                                isSaleFollowUp: false
-                                            });
-                                        } else {
-                                            fetchAgendas();
-                                        }
-                                    }}
-                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors cursor-pointer"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            {/* Indicador de pasos premium */}
-                            <div className="flex items-center justify-between px-4 py-2 bg-slate-950/40 rounded-2xl border border-slate-800 relative z-10">
-                                {[
-                                    { step: 1, label: "Cliente" },
-                                    { step: 2, label: "Transacción" },
-                                    { step: 3, label: "Confirmación" }
-                                ].map((s, idx) => (
-                                    <React.Fragment key={s.step}>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
-                                                saleStep > s.step 
-                                                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
-                                                    : saleStep === s.step
-                                                    ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/35'
-                                                    : 'bg-slate-800 border-slate-700 text-slate-500'
-                                            }`}>
-                                                {saleStep > s.step ? <Check size={10} /> : s.step}
-                                            </div>
-                                            <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${
-                                                saleStep === s.step ? 'text-white font-bold' : 'text-slate-500'
-                                            }`}>
-                                                {s.label}
-                                            </span>
-                                        </div>
-                                        {idx < 2 && (
-                                            <div className={`flex-1 h-0.5 mx-4 transition-all duration-300 ${
-                                                saleStep > s.step ? 'bg-emerald-500/50' : 'bg-slate-800'
-                                            }`} />
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </div>
-
-                            {/* Contenido del Paso */}
-                            <div className="flex-1 py-2 relative z-10 overflow-y-auto custom-scrollbar pr-1">
-                                {saleStep === 1 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 1: Información del Prospecto</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Revisa los datos obtenidos de la agenda y completa el documento de identidad.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.nombre_cliente}
-                                                        onChange={e => setSaleForm({ ...saleForm, nombre_cliente: e.target.value })}
-                                                        placeholder="ej. Juan Pérez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Instagram *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Instagram size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.instagram}
-                                                        onChange={e => setSaleForm({ ...saleForm, instagram: e.target.value })}
-                                                        placeholder="ej. @juanperez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Email del Cliente *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={13} /></span>
-                                                    <input
-                                                        type="email"
-                                                        value={saleForm.mail_cliente}
-                                                        onChange={e => setSaleForm({ ...saleForm, mail_cliente: e.target.value })}
-                                                        placeholder="ej. juan@gmail.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Phone size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.telefono}
-                                                        onChange={e => setSaleForm({ ...saleForm, telefono: e.target.value })}
-                                                        placeholder="ej. +34600000000"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Documento de identidad (DNI, NIE, Pasaporte)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.documento_identidad}
-                                                        onChange={e => setSaleForm({ ...saleForm, documento_identidad: e.target.value })}
-                                                        placeholder="Ingresa la cédula o DNI"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Vendedor (Closer Asignado) *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
-                                                    <input
-                                                        type="email"
-                                                        value={saleForm.email_vendedor}
-                                                        onChange={e => setSaleForm({ ...saleForm, email_vendedor: e.target.value })}
-                                                        placeholder="email@vendedor.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Confirma que sea el correo correcto para la atribución de comisiones.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {saleStep === 2 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 2: Detalles de la Transacción</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Define el programa académico, método y monto recaudado de la venta.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Programa Académico *</label>
-                                                <select
-                                                    value={saleForm.programa}
-                                                    onChange={e => setSaleForm({ ...saleForm, programa: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="RR">Residency Roadmap (RR)</option>
-                                                    <option value="AL">Ace Learner (AL)</option>
-                                                    <option value="SI">Specialist Initiative (SI)</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo de Pago *</label>
-                                                <select
-                                                    value={saleForm.tipo_pago_simple}
-                                                    onChange={e => setSaleForm({ ...saleForm, tipo_pago_simple: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer disabled:opacity-40"
-                                                    required
-                                                >
-                                                    {[
-                                                        { value: 'completo', label: 'Completo (PIF)' },
-                                                        { value: 'parcial', label: 'Parcial (Primer Pago)' },
-                                                        { value: 'Seña', label: 'Seña (Promesa)' },
-                                                        { value: 'Cuota', label: 'Cuotas' },
-                                                        { value: 'Renovacion', label: 'Renovación' },
-                                                        { value: 'Upsell', label: 'Upsell' },
-                                                    ].map(opt => {
-                                                        const rule = saleClientState?.allowed_types?.[opt.value.toLowerCase()];
-                                                        const disabled = rule ? !rule.ok : false;
-                                                        return (
-                                                            <option key={opt.value} value={opt.value} disabled={disabled} title={disabled ? rule.reason : undefined}>
-                                                                {opt.label}{disabled ? ' — no disponible' : ''}
-                                                            </option>
-                                                        );
-                                                    })}
-                                                </select>
-                                                {(() => {
-                                                    const rule = saleClientState?.allowed_types?.[(saleForm.tipo_pago_simple || '').toLowerCase()];
-                                                    if (rule && !rule.ok) {
-                                                        return <p className="text-[9px] text-rose-400 font-bold mt-1">{rule.reason}</p>;
-                                                    }
-                                                    return null;
-                                                })()}
-                                            </div>
-                                            {saleClientState && saleClientState.total_paid > 0 && (
-                                                <div className="md:col-span-2 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl text-[10px] font-bold text-violet-300 uppercase tracking-wide">
-                                                    Este cliente ya pagó ${saleClientState.total_paid.toFixed(2)} de ${saleClientState.program_price.toFixed(2)} en {saleForm.programa} — saldo restante ${saleClientState.balance_remaining.toFixed(2)}.
-                                                </div>
-                                            )}
-                                            {['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple) && saleClientState?.can_settle_balance_with_installment && (
-                                                <div className="md:col-span-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                                                    <label className="flex items-center gap-2 text-[10px] font-bold text-amber-300 uppercase tracking-wide cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={settleBalanceWithSale}
-                                                            onChange={e => setSettleBalanceWithSale(e.target.checked)}
-                                                            className="rounded"
-                                                        />
-                                                        Incluir el pago del saldo pendiente (${saleClientState.balance_remaining.toFixed(2)}) junto con esta venta
-                                                    </label>
-                                                </div>
-                                            )}
-                                            {saleForm.tipo_pago_simple !== 'completo' && (
-                                                <div className="space-y-1 text-left">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Total (USD) *</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={saleForm.precio_total}
-                                                            onChange={e => setSaleForm({ ...saleForm, precio_total: e.target.value })}
-                                                            placeholder="0.00"
-                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                                                    {saleForm.tipo_pago_simple === 'completo' ? 'Monto Cobrado (USD) *' : 'Cobrado Hoy (USD) *'}
-                                                </label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={saleForm.monto}
-                                                        onChange={e => setSaleForm({ ...saleForm, monto: e.target.value })}
-                                                        placeholder="0.00"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Método de Pago *</label>
-                                                <select
-                                                    value={saleForm.metodo_pago}
-                                                    onChange={e => setSaleForm({ ...saleForm, metodo_pago: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="Stripe">Stripe</option>
-                                                    <option value="PayPal">PayPal</option>
-                                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                                                    <option value="Binance / USDT">Binance / USDT</option>
-                                                    <option value="Hotmart">Hotmart</option>
-                                                    <option value="Otro">Otro Método</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest ml-1 block flex items-center gap-1">
-                                                    <CalendarDays size={12} className="text-emerald-400" />
-                                                    Fecha del Próximo Cobro (Seguimiento)
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    value={saleForm.fecha_cobro || ''}
-                                                    onChange={e => setSaleForm({ ...saleForm, fecha_cobro: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                                                />
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comentario / Detalles del Cobro</label>
-                                                <input
-                                                    type="text"
-                                                    value={saleForm.segundo_pago || ''}
-                                                    onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
-                                                    placeholder="ej. Cobro de $500 (2do pago / saldo)"
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {saleForm.tipo_pago_simple === 'completo' ? (
-                                            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                                                Pago único: se cobra todo hoy, no hay saldo ni cronograma de cuotas.
-                                            </div>
-                                        ) : isCuotaPayment && (loadingSaleCuotas || saleExistingCuotas.length > 0) ? (
-                                            <div className="space-y-3 pt-2 border-t border-slate-800">
-                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">¿Cuál cuota del plan ya existente se está pagando?</h4>
-                                                {loadingSaleCuotas ? (
-                                                    <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
-                                                ) : (
-                                                    <div className="rounded-xl border border-slate-800 overflow-hidden">
-                                                        <table className="w-full text-xs">
-                                                            <thead className="bg-slate-950/60">
-                                                                <tr>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase"></th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {saleExistingCuotas.map(c => {
-                                                                    const isPagado = c.estado === 'pagado';
-                                                                    const isVencida = c.estado === 'vencido';
-                                                                    return (
-                                                                        <tr key={c.id} className={`border-t border-slate-850 ${isPagado ? 'opacity-40' : 'cursor-pointer hover:bg-slate-900/40'} ${selectedCuotaId === c.id ? 'bg-violet-500/10' : ''}`}
-                                                                            onClick={() => { if (!isPagado) { setSelectedCuotaId(c.id); setSaleForm(prev => ({ ...prev, monto: String(c.monto) })); } }}
-                                                                        >
-                                                                            <td className="px-3 py-2">
-                                                                                {!isPagado && <input type="radio" checked={selectedCuotaId === c.id} onChange={() => {}} className="cursor-pointer" />}
-                                                                            </td>
-                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">${Number(c.monto).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
-                                                                            <td className="px-3 py-2">
-                                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
-                                                                                    isPagado ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                                                                    isVencida ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                                                                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                                                                }`}>{isPagado ? 'Pagada' : isVencida ? 'Vencida' : 'Pendiente'}</span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                )}
-                                                <p className="text-[9px] text-slate-550 font-medium">
-                                                    Elegí cualquier cuota pendiente (podés adelantar una futura o pagar una vencida) — se marca como pagada con el monto de arriba, sin tocar el resto del plan.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3 pt-2 border-t border-slate-800">
-                                                {isCuotaPayment && (
-                                                    <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wide">
-                                                        Este cliente no tiene un plan de cuotas previo registrado — se creará uno nuevo con esta cuota.
-                                                    </p>
-                                                )}
-                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">Plan de Cuotas (Próximos Pagos)</h4>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1 text-left">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Cuotas Restantes *</label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={saleForm.num_cuotas}
-                                                            onChange={e => setSaleForm({ ...saleForm, num_cuotas: e.target.value })}
-                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1 text-left">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo a Financiar</label>
-                                                        <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-violet-400">
-                                                            ${Math.max(0, (parseFloat(saleForm.precio_total) || 0) - (saleClientState?.total_paid || 0) - (parseFloat(saleForm.monto) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {(() => {
-                                                    const total = parseFloat(saleForm.precio_total) || 0;
-                                                    // Igual que en el submit: descontar lo ya pagado antes, no solo el monto de hoy.
-                                                    const now = (saleClientState?.total_paid || 0) + (parseFloat(saleForm.monto) || 0);
-                                                    const n = Math.max(1, parseInt(saleForm.num_cuotas) || 1);
-                                                    const rest = Math.max(0, total - now);
-                                                    if (rest <= 0) return null;
-                                                    const each = Math.round((rest / n) * 100) / 100;
-                                                    const overrides = saleForm.cuotaFechas || {};
-                                                    const rows = Array.from({ length: n }, (_, i) => {
-                                                        const monto = i === n - 1 ? Math.round((rest - each * (n - 1)) * 100) / 100 : each;
-                                                        const d = new Date();
-                                                        d.setMonth(d.getMonth() + i + 1);
-                                                        const numero = i + 1;
-                                                        return { n: numero, monto, fecha: overrides[numero] || toLocalDateStr(d) };
-                                                    });
-                                                    return (
-                                                        <div className="rounded-xl border border-slate-800 overflow-hidden">
-                                                            <table className="w-full text-xs">
-                                                                <thead className="bg-slate-950/60">
-                                                                    <tr>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence — cuándo la vas a cobrar</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {rows.map(r => (
-                                                                        <tr key={r.n} className="border-t border-slate-850">
-                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {r.n}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">${r.monto.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="px-3 py-2">
-                                                                                <input
-                                                                                    type="date"
-                                                                                    value={r.fecha}
-                                                                                    onChange={(e) => setSaleForm(prev => ({
-                                                                                        ...prev,
-                                                                                        cuotaFechas: { ...prev.cuotaFechas, [r.n]: e.target.value }
-                                                                                    }))}
-                                                                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
-                                                                                />
-                                                                            </td>
-                                                                            <td className="px-3 py-2"><span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Pendiente</span></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    );
-                                                })()}
-                                                <p className="text-[9px] text-slate-550 font-medium">Se guarda automáticamente al declarar la venta con las fechas que dejes arriba (por defecto, una por mes) — también se pueden ajustar después.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {saleStep === 3 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 3: Confirmación y Notas</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Agrega observaciones finales, revisa la fecha y confirma el envío de mensajes.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Examen del Lead (ej. USMLE Step 1)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.examen_lead}
-                                                        onChange={e => setSaleForm({ ...saleForm, examen_lead: e.target.value })}
-                                                        placeholder="ej. USMLE Step 1"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha de la Venta *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Calendar size={13} /></span>
-                                                    <input
-                                                        type="date"
-                                                        value={saleForm.date}
-                                                        onChange={e => setSaleForm({ ...saleForm, date: e.target.value })}
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado de la Venta *</label>
-                                                <select
-                                                    value={saleForm.estado}
-                                                    onChange={e => setSaleForm({ ...saleForm, estado: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="Completada">Completada</option>
-                                                    <option value="Pendiente">Pendiente</option>
-                                                    <option value="Cancelada">Cancelada</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas de la Venta / Observaciones</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-3 text-slate-500"><PenTool size={13} /></span>
-                                                    <textarea
-                                                        value={saleForm.notas}
-                                                        onChange={e => setSaleForm({ ...saleForm, notas: e.target.value })}
-                                                        placeholder="Detalles sobre el cierre, objeciones vencidas, etc..."
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-white placeholder-slate-650 outline-none focus:border-violet-500 transition-all min-h-[70px] resize-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="md:col-span-2 space-y-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 block text-left">¿Venta Cerrada en Llamada?</label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: true })}
-                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                                            saleForm.sold_in_call
-                                                                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/10'
-                                                                : 'bg-slate-850/40 border-slate-800 text-slate-450 hover:border-slate-700'
-                                                        }`}
-                                                    >
-                                                        <CheckCircle2 size={13} className={saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
-                                                        Sí, en Meet
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: false })}
-                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                                            !saleForm.sold_in_call
-                                                                ? 'bg-gradient-to-r from-rose-500/20 to-orange-500/20 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/10'
-                                                                : 'bg-slate-855/40 border-slate-800 text-slate-450 hover:border-slate-700'
-                                                        }`}
-                                                    >
-                                                        <X size={13} className={!saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
-                                                        No, fuera
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Pie del Modal: Controles de paso */}
-                            <div className="flex justify-between items-center pt-4 border-t border-slate-800 relative z-10">
-                                {saleStep > 1 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handlePrevStep}
-                                        className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-slate-750"
-                                    >
-                                        <ArrowLeft size={12} />
-                                        Anterior
-                                    </button>
-                                ) : (
-                                    <div />
-                                )}
-
-                                {saleStep < 3 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handleNextStep}
-                                        className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                                    >
-                                        Siguiente
-                                        <ArrowRight size={12} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleRegisterSale}
-                                        disabled={submittingSale}
-                                        className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                        {submittingSale ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                        {submittingSale ? 'Guardando...' : 'Registrar Venta'}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
+                    <DeclararVentaWizard
+                        saleForm={saleForm}
+                        setSaleForm={setSaleForm}
+                        saleClientState={saleClientState}
+                        loadingSaleState={loadingSaleState}
+                        saleExistingCuotas={saleExistingCuotas}
+                        loadingSaleCuotas={loadingSaleCuotas}
+                        selectedCuotaId={selectedCuotaId}
+                        setSelectedCuotaId={setSelectedCuotaId}
+                        refreshExistingCuotas={refreshExistingCuotas}
+                        settleBalanceWithSale={settleBalanceWithSale}
+                        setSettleBalanceWithSale={setSettleBalanceWithSale}
+                        submittingSale={submittingSale}
+                        teamMembers={teamMembers}
+                        apptId={salePrompt.apptId}
+                        onClose={() => {
+                            const apptId = salePrompt.apptId;
+                            setSaleModalOpen(false);
+                            setSalePrompt({ apptId: null });
+                            if (apptId) {
+                                const appt = agendas.find(a => a.id === apptId);
+                                setFollowUpModal({
+                                    show: true,
+                                    agendaId: apptId,
+                                    leadName: appt?.lead_name || 'Prospecto',
+                                    newStatus: 'Cierre de Venta',
+                                    isSaleFollowUp: false
+                                });
+                            } else {
+                                fetchAgendas();
+                            }
+                        }}
+                        onRegisterSale={handleRegisterSale}
+                    />
                 )}
             </>
 
