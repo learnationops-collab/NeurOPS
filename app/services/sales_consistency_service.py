@@ -137,8 +137,16 @@ class SalesConsistencyService:
             return True, None, state
 
         if tipo == 'cuota':
-            if not state['has_first_payment']:
-                return False, "Este cliente no tiene un Parcial registrado en este programa — las Cuotas solo pueden ir después de un Parcial.", state
+            # `has_installments` también cuenta como evidencia de que ya arrancó un plan de
+            # pagos, no solo `has_first_payment` (Parcial): igual que se corrigió antes para
+            # Renovación/Upsell (ver comentario más abajo, caso real Jonathan Aparicio), datos
+            # históricos/importados suelen tener Cuotas ya cobradas sin que exista una fila de
+            # Parcial explícita (el primer pago quedó etiquetado distinto o sin registrar). Caso
+            # real: Marcos Melo, Seña $50 + 2 Cuotas ($450 y $500) ya cobradas en el programa,
+            # sin ningún "RR - Parcial" en el historial — bloqueaba CUALQUIER cuota nueva pese a
+            # que el cliente ya venía pagando en cuotas exitosamente.
+            if not (state['has_first_payment'] or state['has_installments']):
+                return False, "Este cliente no tiene un Parcial ni Cuotas previas registradas en este programa — las Cuotas solo pueden ir después de un primer pago.", state
             if state['balance_remaining'] <= 0.01:
                 return False, "Este cliente ya no tiene saldo pendiente en este programa.", state
             return True, None, state
