@@ -51,14 +51,56 @@ const TIME_BOX_STYLE = {
     'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
 };
 
+// Resultado real de la llamada (`closer_result`) → chip de color, mismo idioma de colores que el
+// resto del mazo (ok=verde, w=ámbar, d=rojo, i=azul). Cubre las grafías reales que usa el sistema
+// (ver CloserWorkflowPage: 'Show up', 'No show', 'Cancelado'/'Cancelada', 'Reagendado'/
+// 'Reagendada', '2da call').
+const RESULT_CHIP = {
+    'show up': { cls: 'ok', label: 'Show up' },
+    'no show': { cls: 'd', label: 'No show' },
+    'cancelado': { cls: 'd', label: 'Cancelado' },
+    'cancelada': { cls: 'd', label: 'Cancelado' },
+    'reagendado': { cls: 'w', label: 'Reagendado' },
+    'reagendada': { cls: 'w', label: 'Reagendado' },
+    '2da call': { cls: 'i', label: '2ª llamada' },
+};
+const resultChip = (closerResult) => RESULT_CHIP[(closerResult || '').trim().toLowerCase()] || null;
+
+// Ganancia potencial de un seguimiento: en base a estadísticas REALES de este closer (ticket
+// promedio y tasa de cierre, `GET /closer/followups/earnings-stats`) — pedido del usuario
+// (29/ago/2026): "que puedan ver cuánto pueden ganar por hacer esos seguimientos".
+// - "Cobros" (cerrada): no es una probabilidad, es plata que YA se debe — comisión sobre la
+//   próxima cuota (o el total adeudado si nunca se armó un plan de cuotas).
+// - "Tomada"/"no tomada": todavía no hay venta, así que se pondera por la tasa de cierre
+//   histórica de ESE tipo de seguimiento — un "tomada" (asistió, sin decisión) convierte mucho
+//   más que un "no tomada" (no show/cancelado), de ahí que tengan tasas separadas.
+const estimateEarning = (item, tipo, earnings) => {
+    if (!earnings) return 0;
+    const rate = earnings.commission_rate || 0;
+    if (tipo === 'cerrada') {
+        const base = item.proxima_cuota ? item.proxima_cuota.monto : (item.deuda || 0);
+        return rate * (base || 0);
+    }
+    const closeRate = earnings.close_rate?.[tipo] || 0;
+    return rate * (earnings.ticket_promedio || 0) * closeRate;
+};
+
 // Fila de seguimiento (`.row-v6`, el mismo lenguaje de lista de una sola columna que ya usa
 // Llamadas) — reemplaza la tarjeta chica de Kanban de 3 columnas: el usuario pidió explícitamente
 // que esta pestaña "en realidad debe cambiar, debe hacerse distinto" del Kanban de Confirmar/
 // Reportar (feedback en video, 28/ago/2026). Se usa tanto en la lista de "Asignados para hoy"
 // (una por categoría, apiladas) como en la del pool sin fecha.
-const SeguimientoRow = ({ item, tipo, onClick }) => {
+//
+// Reorganizada (29/ago/2026, pedido del usuario) para escanear de un vistazo: urgencia (retraso)
+// a la izquierda en su caja de color de siempre, nombre + contexto (fuente, resultado de la
+// agenda, programa/examen, deuda) al centro, y la ganancia potencial de este seguimiento puntual
+// bien a la derecha — mismo orden izquierda→derecha que "cuándo → quién → cuánto vale" en vez de
+// mezclar todo en una sola fila de chips sin jerarquía.
+const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
     const pc = item.proxima_cuota;
     const when = retrasoWhen(item.dias_retraso);
+    const result = resultChip(item.closer_result);
+    const potential = estimateEarning(item, tipo, earnings);
 
     let footer;
     if (tipo === 'cerrada') {
@@ -83,7 +125,8 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
             <div className="rmain-v6">
                 <b>{item.lead_name}</b>
                 <div className="chips-v6">
-                    <span className="chip-v6">{item.origin || 'Sin origen'}</span>
+                    <span className="chip-v6 src">📍 {item.origin || 'Sin origen'}</span>
+                    {result && <span className={`chip-v6 ${result.cls}`}>{result.label}</span>}
                     {tipo !== 'cerrada' && item.seguimiento_sub && (
                         <span className={`chip-v6 ${TIPOS[tipo].cls === 'emerald' ? 'ok' : TIPOS[tipo].cls === 'amber' ? 'w' : ''}`}>
                             {item.seguimiento_sub}
@@ -103,6 +146,10 @@ const SeguimientoRow = ({ item, tipo, onClick }) => {
                     )}
                     <span className="chip-v6" style={{ color: '#fff', background: 'rgba(255,255,255,.1)' }}>{footer}</span>
                 </div>
+            </div>
+            <div className="earn-v6" title={tipo === 'cerrada' ? 'Comisión sobre lo que se le debe cobrar' : 'Estimado: ticket promedio × tasa de cierre histórica × tu comisión'}>
+                <span className="earn-lbl-v6">{tipo === 'cerrada' ? 'Podés cobrar' : 'Podrías ganar'}</span>
+                <span className="earn-val-v6">{money(potential)}</span>
             </div>
         </div>
     );
@@ -141,6 +188,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
     const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
     const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
+    const [earnings, setEarnings] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openPool, setOpenPool] = useState(null);
     const [poolItems, setPoolItems] = useState([]);
@@ -173,6 +221,16 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     }, [selectedDate, refreshKey]);
 
     useEffect(() => { fetchMain(); }, [fetchMain]);
+
+    // Estadísticas para la ganancia potencial: ticket promedio y tasa de cierre históricos, no
+    // cambian de un minuto a otro como la lista de seguimientos — se piden aparte y se refrescan
+    // solo con `refreshKey` (una venta nueva puede mover el ticket promedio), no con cada cambio
+    // de `selectedDate`.
+    useEffect(() => {
+        api.get('/closer/followups/earnings-stats')
+            .then(res => setEarnings(res.data))
+            .catch(err => console.error('Error cargando estadísticas de ganancia potencial', err));
+    }, [refreshKey]);
 
     const fetchPool = useCallback(async () => {
         if (!openPool) return;
@@ -248,13 +306,20 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
 
     const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
     const totalHoy = itemsHoy.length;
+    // Ganancia potencial total de "Asignados para hoy" — suma de la de cada fila, con el mismo
+    // criterio que ya se ve fila por fila (comisión real sobre cobros + ticket×tasa de cierre en
+    // llamadas sin vender todavía). "En cada uno y en total", pedido explícito del usuario.
+    const totalPotencial = Object.keys(TIPOS).reduce(
+        (sum, tipo) => sum + grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0),
+        0
+    );
 
     return (
         <div className="space-y-6">
-            {/* Meta diaria */}
-            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6">
+            {/* Meta diaria + ganancia potencial del día */}
+            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6 flex-wrap">
                 <div className="text-4xl font-black text-white">{goal.hechos}<span className="text-lg text-slate-500">/{goal.meta}</span></div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-[180px]">
                     <b className="text-sm font-black text-white block">Objetivo de seguimientos del día</b>
                     <span className="text-xs text-slate-400">
                         {goal.faltan > 0 ? `Te faltan ${goal.faltan} para la meta.` : 'Meta cumplida. 🏅'}
@@ -263,6 +328,12 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                         <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-500 transition-all" style={{ width: `${goal.pct}%` }} />
                     </div>
                 </div>
+                {earnings && totalHoy > 0 && (
+                    <div className="text-right pl-6 border-l border-slate-900 shrink-0">
+                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}>Ganancia potencial hoy</div>
+                        <div className="text-3xl font-black" style={{ color: '#7DEAC0' }}>{money(totalPotencial)}</div>
+                    </div>
+                )}
             </div>
 
             {/* Asignados para hoy */}
@@ -286,28 +357,34 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                     // siendo Kanban, esta pestaña ya no). Título de cada bloque grande y en negrita
                     // ("números grandes, títulos grandes" — mismo pedido de diseño general).
                     <div className="space-y-7">
-                        {Object.keys(TIPOS).map((tipo, i) => (
-                            <div key={tipo}>
-                                <div className="flex items-center gap-3 mb-3">
-                                    <span style={{ fontSize: '28px', lineHeight: 1 }}>{TIPOS[tipo].icon}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-white truncate" style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.01em' }}>{TIPOS[tipo].label}</div>
-                                        <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[tipo].desc}</div>
+                        {Object.keys(TIPOS).map((tipo, i) => {
+                            const subtotal = grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0);
+                            return (
+                                <div key={tipo}>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span style={{ fontSize: '28px', lineHeight: 1 }}>{TIPOS[tipo].icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-white truncate" style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.01em' }}>{TIPOS[tipo].label}</div>
+                                            <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[tipo].desc}</div>
+                                        </div>
+                                        {earnings && grouped[tipo].length > 0 && (
+                                            <span className="text-xs font-black" style={{ color: '#7DEAC0' }}>{money(subtotal)}</span>
+                                        )}
+                                        <span style={{ fontSize: '28px', fontWeight: 900 }} className={grouped[tipo].length === 0 ? 'text-emerald-400' : 'text-white'}>
+                                            {grouped[tipo].length}
+                                        </span>
                                     </div>
-                                    <span style={{ fontSize: '28px', fontWeight: 900 }} className={grouped[tipo].length === 0 ? 'text-emerald-400' : 'text-white'}>
-                                        {grouped[tipo].length}
-                                    </span>
+                                    {grouped[tipo].length > 0 ? (
+                                        grouped[tipo].map(item => (
+                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} onClick={() => openLead(item, tipo)} />
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
+                                    )}
+                                    {i < Object.keys(TIPOS).length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
                                 </div>
-                                {grouped[tipo].length > 0 ? (
-                                    grouped[tipo].map(item => (
-                                        <SeguimientoRow key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
-                                    ))
-                                ) : (
-                                    <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
-                                )}
-                                {i < Object.keys(TIPOS).length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -391,7 +468,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                         ) : (
                             <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {poolItems.map(item => (
-                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
+                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} onClick={() => openLead(item, openPool)} />
                                 ))}
                             </div>
                         )}

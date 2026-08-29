@@ -289,6 +289,10 @@ class CloserFollowUpService:
             'phone': a.client.phone if a.client else '',
             'origin': a.origin or '',
             'examen': a.examen or '',
+            # Resultado real de la llamada (No Show/Cancelado/Show up/...) — antes no viajaba en
+            # este endpoint; el frontend lo necesita para mostrar "qué pasó en la agenda" en cada
+            # fila de la pestaña Seguir (pedido del usuario, 29/ago/2026).
+            'closer_result': a.closer_result or '',
             'seguimiento_tipo': CloserFollowUpService._effective_tipo(a),
             'seguimiento_sub': a.seguimiento_sub or '',
             'seguimiento_intento': a.seguimiento_intento or 1,
@@ -563,6 +567,7 @@ class CloserFollowUpService:
             'phone': client.phone or '',
             'origin': appt.origin or '',
             'examen': appt.examen or '',
+            'closer_result': appt.closer_result or '',
             'seguimiento_tipo': 'cerrada',
             'seguimiento_sub': appt.seguimiento_sub or '',
             'seguimiento_intento': appt.seguimiento_intento or 1,
@@ -874,6 +879,59 @@ class CloserFollowUpService:
                 counts[key] += 1
         counts['cerrada'] = len(CloserFollowUpService._cerrada_pool_items(closer_id))
         return counts
+
+    @staticmethod
+    def get_earnings_stats(closer_id):
+        """Estadísticas para estimar la ganancia potencial de cada seguimiento (pestaña Seguir),
+        en base a estadísticas reales de ESTE closer — pedido del usuario (29/ago/2026): "en base
+        a las estadísticas promedio de cierres del closer".
+
+        - `ticket_promedio` y `close_rate.tomada` reusan las MISMAS estadísticas que ya se
+          muestran en "Ver mis datos" (`CloserService.get_comprehensive_stats`, sin rango de
+          fecha = histórico completo): cuánto vale en promedio una venta real (PIF+Split) y qué
+          fracción de las llamadas asistidas ("Show up") terminan en una de esas ventas. Se
+          reusa a propósito en vez de inventar un cálculo aparte, para no mostrarle al closer dos
+          "tasa de cierre" distintas en dos pantallas.
+        - `close_rate.no_tomada` no tenía ningún cálculo existente en el sistema: se calcula acá
+          con el mismo criterio (distintos clientes con una cita No Show/Cancelado/Reagendado de
+          este closer en los últimos 180 días vs. cuántos de ellos terminaron comprando de todas
+          formas) — la recuperación en frío suele convertir mucho menos que una llamada tomada,
+          así que necesita su propia tasa en vez de reusar la de "tomada".
+        - `commission_rate`: mismo 10% que ya usa `CloserService.get_stats` como comisión
+          estándar del closer sobre el cash cobrado (no existía como constante compartida)."""
+        from app.services.closer_service import CloserService
+        from app.models import Client
+
+        COMMISSION_RATE = 0.10
+
+        stats = CloserService.get_comprehensive_stats(closer_id=closer_id)
+        ticket_promedio = stats['sales']['general_average_ticket']
+        close_rate_tomada = stats['percentages']['close_rate'] or 0.0
+
+        cutoff = datetime.utcnow() - timedelta(days=180)
+        no_tomada_appts = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            Appointment.start_time >= cutoff,
+            func.lower(Appointment.closer_result).in_(DERIVABLE_NO_TOMADA)
+        ).all()
+        client_ids = {a.client_id for a in no_tomada_appts if a.client_id}
+        if client_ids:
+            converted = sum(
+                1 for cid in client_ids
+                if CloserFollowUpService._client_has_sale(Client.query.get(cid))
+            )
+            close_rate_no_tomada = round(converted / len(client_ids), 4)
+        else:
+            close_rate_no_tomada = 0.0
+
+        return {
+            'commission_rate': COMMISSION_RATE,
+            'ticket_promedio': ticket_promedio,
+            'close_rate': {
+                'tomada': round(close_rate_tomada, 4),
+                'no_tomada': close_rate_no_tomada
+            }
+        }
 
     @staticmethod
     def get_daily_goal_progress(closer_id, selected_date_str):

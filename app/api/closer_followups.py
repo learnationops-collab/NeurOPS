@@ -67,6 +67,14 @@ def get_followups_pool_counts():
     return jsonify(CloserFollowUpService.get_pool_counts(_resolve_closer_id())), 200
 
 
+@bp.route('/followups/earnings-stats', methods=['GET'])
+@login_required
+def get_followups_earnings_stats():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    return jsonify(CloserFollowUpService.get_earnings_stats(_resolve_closer_id())), 200
+
+
 @bp.route('/followups/goal', methods=['GET'])
 @login_required
 def get_followups_goal():

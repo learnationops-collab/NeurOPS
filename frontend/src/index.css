@@ -1759,6 +1759,32 @@ header.top-v6 {
 .chip-v6.src { background: rgba(19,35,198,.38); color: #C7D2FE; border-color: rgba(99,102,241,.4); }
 .chip-v6.seq { background: rgba(255,63,164,.14); color: #FFB3DE; border-color: rgba(255,63,164,.32); }
 
+/* Ganancia potencial de una fila de seguimiento — bien a la derecha, aparte de los chips, para
+   que el ojo la encuentre de un vistazo sin tener que leer el resto de la fila (pedido del
+   usuario, 29/ago/2026). */
+.earn-v6 {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 76px;
+  text-align: right;
+}
+.earn-lbl-v6 {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+.earn-val-v6 {
+  font-size: 17px;
+  font-weight: 900;
+  color: #7DEAC0;
+  letter-spacing: -.01em;
+}
+
 
 .opt {
   position: relative;
