@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, User, Instagram, Mail, Phone,
-    PenTool, DollarSign, Calendar, CalendarDays, Plus, Trash2, Pencil, CreditCard
+    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard
 } from 'lucide-react';
 
 // --- Helpers de fecha (mismo criterio que InstallmentService._add_months: clampea al último
@@ -46,61 +46,54 @@ const PAYMENT_TYPES = [
     { v: 'Upsell', key: 'upsell', label: 'Upsell', hint: 'suma otro programa/mejora' }
 ];
 
-const cardStyle = (active) =>
-    `w-full text-left p-4 rounded-2xl border transition-all cursor-pointer ${
-        active
-            ? 'bg-gradient-to-r from-violet-600/25 to-fuchsia-600/10 border-violet-500 shadow-lg shadow-violet-500/10'
-            : 'bg-slate-800/50 border-slate-750 hover:border-slate-600'
-    }`;
+// Mismo helper `option()` que usa el modal de Ficha Interactiva (clases .opt/.opt.sel) —
+// para que las tarjetas de opción se vean y se comporten igual en ambos modales.
+const Option = ({ onClick, type = 'info', label, sub, selected = false, disabled = false, title }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        data-t={type}
+        disabled={disabled}
+        title={title}
+        className={`opt ${selected ? 'sel' : ''}`}
+        style={disabled ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+    >
+        {selected && <Check size={13} className="absolute top-3 right-3 text-white" />}
+        {label}
+        {sub && <small>{sub}</small>}
+    </button>
+);
 
-function StepShell({ eyebrow, title, hint, children, counter, segments }) {
+const inputCls = "w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium";
+
+function FieldTag({ prefilled }) {
+    return prefilled ? (
+        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#7DEAC0' }}>✓ Traído de la agenda</span>
+    ) : (
+        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#FFB3DE' }}>● Este lo cargás vos</span>
+    );
+}
+
+function StepShell({ n, title, hint, children, counter, segments }) {
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-            <div className="flex items-center gap-1.5">
+        <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-200">
+            <div className="flex items-center gap-1">
                 {segments.map((s, k) => (
                     <div
                         key={k}
-                        className="flex-1 h-1 rounded-full"
-                        style={{ background: s === 'done' ? '#8B5CF6' : s === 'now' ? 'linear-gradient(90deg,#7C3AED,#EC4899)' : 'rgba(255,255,255,.08)' }}
+                        className="flex-1 h-[3px] rounded-full"
+                        style={{ background: s === 'done' ? '#2FBF8F' : s === 'now' ? 'linear-gradient(90deg,#1323C6,#FF3FA4)' : 'rgba(255,255,255,.10)' }}
                     />
                 ))}
             </div>
             <div className="flex items-center justify-between">
-                <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest">{eyebrow}</span>
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{counter}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}>{counter}</span>
             </div>
-            <div className="space-y-1">
-                <h4 className="text-xl font-black text-white tracking-tight">{title}</h4>
-                {hint && <p className="text-[11px] text-slate-450 font-semibold">{hint}</p>}
+            <div className="q">
+                <h4><span className="num">{n}</span>{title}</h4>
+                {hint && <p>{hint}</p>}
+                <div className="pt-1">{children}</div>
             </div>
-            <div className="pt-1">{children}</div>
-        </div>
-    );
-}
-
-function FieldTag({ prefilled }) {
-    return prefilled ? (
-        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">✓ Traído de la agenda</span>
-    ) : (
-        <span className="text-[9px] font-black text-fuchsia-400 uppercase tracking-widest">● Este lo cargás vos</span>
-    );
-}
-
-function TextField({ icon: Icon, value, onChange, placeholder, type = 'text', prefilled }) {
-    return (
-        <div className="space-y-2">
-            <div className="relative">
-                {Icon && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Icon size={15} /></span>}
-                <input
-                    type={type}
-                    value={value || ''}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    autoFocus
-                    className={`w-full bg-slate-800/80 border border-slate-700 rounded-2xl ${Icon ? 'pl-11' : 'pl-4'} pr-4 py-3.5 text-sm font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all`}
-                />
-            </div>
-            <FieldTag prefilled={prefilled} />
         </div>
     );
 }
@@ -157,20 +150,20 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
     };
 
     if (loading) {
-        return <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-400" size={18} /></div>;
+        return <div className="flex justify-center py-4"><Loader2 className="animate-spin" style={{ color: '#6D8BFF' }} size={18} /></div>;
     }
 
     return (
         <div className="space-y-2">
-            <div className="rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(0,0,0,.28)', border: '1px solid rgba(255,255,255,.12)' }}>
                 <table className="w-full text-xs">
-                    <thead className="bg-slate-950/60">
+                    <thead style={{ background: 'rgba(0,0,0,.22)' }}>
                         <tr>
                             {selectable && <th className="w-8" />}
-                            <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
-                            <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                            <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
-                            <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
+                            <th className="text-left px-3 py-2 text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Cuota</th>
+                            <th className="text-left px-3 py-2 text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Monto</th>
+                            <th className="text-left px-3 py-2 text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Vence</th>
+                            <th className="text-left px-3 py-2 text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Estado</th>
                             <th className="w-8" />
                         </tr>
                     </thead>
@@ -183,7 +176,8 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                             return (
                                 <tr
                                     key={c.id}
-                                    className={`border-t border-slate-850 ${selectable && !isPagado ? 'cursor-pointer hover:bg-slate-900/40' : ''} ${isSelected ? 'bg-violet-500/10' : ''}`}
+                                    className={selectable && !isPagado ? 'cursor-pointer' : ''}
+                                    style={{ borderTop: '1px solid rgba(255,255,255,.08)', background: isSelected ? 'rgba(19,35,198,.20)' : 'transparent' }}
                                     onClick={() => { if (selectable && !isPagado) onSelect(c); }}
                                 >
                                     {selectable && (
@@ -203,7 +197,7 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                                                 const v = parseFloat(e.target.value);
                                                 if (!isNaN(v) && v !== c.monto) patchCuota(c.id, { monto: v });
                                             }}
-                                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-1.5 py-1 text-[11px] font-bold text-slate-200 outline-none focus:border-violet-500"
+                                            className="w-20 bg-slate-950/70 border border-slate-800 rounded-lg px-1.5 py-1 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
                                         />
                                     </td>
                                     <td className="px-3 py-2">
@@ -213,7 +207,7 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                                             disabled={busy}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => e.target.value && patchCuota(c.id, { fecha_vencimiento: e.target.value })}
-                                            className="bg-slate-950 border border-slate-800 rounded-lg px-1.5 py-1 text-[10px] font-bold text-slate-200 outline-none focus:border-violet-500"
+                                            className="bg-slate-950/70 border border-slate-800 rounded-lg px-1.5 py-1 text-[10px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
                                         />
                                     </td>
                                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -221,11 +215,11 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                                             value={c.estado}
                                             disabled={busy}
                                             onChange={(e) => patchCuota(c.id, { estado: e.target.value })}
-                                            className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border bg-transparent cursor-pointer ${
-                                                isPagado ? 'text-emerald-400 border-emerald-500/30' :
-                                                isVencida ? 'text-rose-400 border-rose-500/30' :
-                                                'text-amber-400 border-amber-500/30'
-                                            }`}
+                                            className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-transparent cursor-pointer"
+                                            style={{
+                                                border: `1px solid ${isPagado ? 'rgba(47,191,143,.4)' : isVencida ? 'rgba(232,92,74,.4)' : 'rgba(217,164,65,.4)'}`,
+                                                color: isPagado ? '#7DEAC0' : isVencida ? '#F5A99C' : '#F3D08A'
+                                            }}
                                         >
                                             <option value="pendiente" className="text-black">Pendiente</option>
                                             <option value="pagado" className="text-black">Pagada</option>
@@ -236,7 +230,8 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                                             type="button"
                                             disabled={busy}
                                             onClick={(e) => { e.stopPropagation(); deleteCuota(c.id); }}
-                                            className="p-1 text-slate-500 hover:text-rose-400 transition-all"
+                                            className="p-1 transition-all"
+                                            style={{ color: '#8C99E0' }}
                                             title="Borrar cuota"
                                         >
                                             {busy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
@@ -246,7 +241,7 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                             );
                         })}
                         {cuotas.length === 0 && (
-                            <tr><td colSpan={selectable ? 5 : 4} className="px-3 py-4 text-center text-[10px] text-slate-500 font-bold uppercase">Sin cuotas cargadas</td></tr>
+                            <tr><td colSpan={selectable ? 5 : 4} className="px-3 py-4 text-center text-[10px] font-bold uppercase" style={{ color: '#8C99E0' }}>Sin cuotas cargadas</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -258,25 +253,25 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                     placeholder="Monto"
                     value={newCuota.monto}
                     onChange={(e) => setNewCuota((p) => ({ ...p, monto: e.target.value }))}
-                    className="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:border-violet-500"
+                    className="w-24 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
                 />
                 <input
                     type="date"
                     value={newCuota.fecha_vencimiento}
                     onChange={(e) => setNewCuota((p) => ({ ...p, fecha_vencimiento: e.target.value }))}
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200 outline-none focus:border-violet-500"
+                    className="bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
                 />
                 <button
                     type="button"
                     onClick={addCuota}
                     disabled={adding || !newCuota.monto}
-                    className="h-8 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1 disabled:opacity-40"
+                    className="h-8 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1 disabled:opacity-40 border border-slate-700"
                 >
                     {adding ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
                     Agregar cuota
                 </button>
             </div>
-            <p className="text-[9px] text-slate-550 font-medium">
+            <p className="text-[9px] font-medium" style={{ color: '#8C99E0' }}>
                 Podés editar monto/fecha/estado de cualquier cuota (incluso ya pagadas) o agregar/borrar una —
                 para corregir un plan viejo mal cargado, en cualquier momento.
             </p>
@@ -415,113 +410,115 @@ const DeclararVentaWizard = ({
     };
 
     const rule = saleClientState?.allowed_types?.[(saleForm.tipo_pago_simple || '').toLowerCase()];
-
     const segments = path.map((_, k) => (k < i ? 'done' : k === i ? 'now' : 'todo'));
+    const counter = `PASO ${i + 1} DE ${path.length}`;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-            <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2rem] shadow-[0_0_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex items-center justify-between px-6 pt-6">
-                    <div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Declarar Venta</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{saleForm.nombre_cliente || 'Nuevo cliente'}</p>
+        <div className="ov mid">
+            <motion.div
+                initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 18, scale: 0.97 }}
+                transition={{ duration: 0.2 }}
+                className="md sm"
+            >
+                <div className="mdh">
+                    <div style={{ flex: 1 }}>
+                        <h3>DECLARAR VENTA</h3>
+                        <p>{saleForm.nombre_cliente || 'Nuevo cliente'}</p>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all">
-                        <X size={14} />
-                    </button>
+                    <button className="x" onClick={onClose}>×</button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
+                <div className="mdb space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     {step === 'name' && (
-                        <StepShell eyebrow="Cliente" title="¿Quién compró?" hint="Vino de la agenda. Confirmá que esté bien escrito." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={User} value={saleForm.nombre_cliente} onChange={(e) => set('nombre_cliente', e.target.value)} placeholder="Nombre y apellido" prefilled={!!saleForm.nombre_cliente} />
+                        <StepShell n={1} title="¿Quién compró?" hint="Vino de la agenda. Confirmá que esté bien escrito." counter={counter} segments={segments}>
+                            <input autoFocus type="text" value={saleForm.nombre_cliente || ''} onChange={(e) => set('nombre_cliente', e.target.value)} placeholder="Nombre y apellido" className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={!!saleForm.nombre_cliente} /></div>
                         </StepShell>
                     )}
                     {step === 'instagram' && (
-                        <StepShell eyebrow="Cliente" title="¿Su Instagram?" hint="Sin arroba. Se usa para el seguimiento por DM." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={Instagram} value={saleForm.instagram} onChange={(e) => set('instagram', e.target.value.replace(/@/g, ''))} placeholder="usuario" prefilled={!!saleForm.instagram} />
+                        <StepShell n={1} title="¿Su Instagram?" hint="Sin arroba. Se usa para el seguimiento por DM." counter={counter} segments={segments}>
+                            <input autoFocus type="text" value={saleForm.instagram || ''} onChange={(e) => set('instagram', e.target.value.replace(/@/g, ''))} placeholder="usuario" className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={!!saleForm.instagram} /></div>
                         </StepShell>
                     )}
                     {step === 'email' && (
-                        <StepShell eyebrow="Cliente" title="¿Su email?" hint="Acá le llega el acceso al programa." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={Mail} type="email" value={saleForm.mail_cliente} onChange={(e) => set('mail_cliente', e.target.value)} placeholder="nombre@mail.com" prefilled={!!saleForm.mail_cliente} />
+                        <StepShell n={1} title="¿Su email?" hint="Acá le llega el acceso al programa." counter={counter} segments={segments}>
+                            <input autoFocus type="email" value={saleForm.mail_cliente || ''} onChange={(e) => set('mail_cliente', e.target.value)} placeholder="nombre@mail.com" className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={!!saleForm.mail_cliente} /></div>
                         </StepShell>
                     )}
                     {step === 'phone' && (
-                        <StepShell eyebrow="Cliente" title="¿Teléfono?" hint="Con código de país, para WhatsApp." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={Phone} value={saleForm.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="+54 9 11 ..." prefilled={!!saleForm.telefono} />
+                        <StepShell n={1} title="¿Teléfono?" hint="Con código de país, para WhatsApp." counter={counter} segments={segments}>
+                            <input autoFocus type="text" value={saleForm.telefono || ''} onChange={(e) => set('telefono', e.target.value)} placeholder="+54 9 11 ..." className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={!!saleForm.telefono} /></div>
                         </StepShell>
                     )}
                     {step === 'document' && (
-                        <StepShell eyebrow="Cliente" title="¿Documento de identidad?" hint="DNI, NIE o pasaporte. Es el único dato que tenés que tipear." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={PenTool} value={saleForm.documento_identidad} onChange={(e) => set('documento_identidad', e.target.value)} placeholder="Ingresá el documento" prefilled={false} />
+                        <StepShell n={1} title="¿Documento de identidad?" hint="DNI, NIE o pasaporte. Es el único dato que tenés que tipear." counter={counter} segments={segments}>
+                            <input autoFocus type="text" value={saleForm.documento_identidad || ''} onChange={(e) => set('documento_identidad', e.target.value)} placeholder="Ingresá el documento" className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={false} /></div>
                         </StepShell>
                     )}
                     {step === 'closer' && (
-                        <StepShell eyebrow="Cliente" title="¿A quién se le atribuye?" hint="La comisión va a este correo." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="space-y-2">
+                        <StepShell n={1} title="¿A quién se le atribuye?" hint="La comisión va a este correo." counter={counter} segments={segments}>
+                            <div className="grid grid-cols-1 gap-2.5">
                                 {(teamMembers || []).filter((m) => m.role === 'closer').map((m) => (
-                                    <button key={m.id} type="button" className={cardStyle(saleForm.email_vendedor === m.email)} onClick={() => set('email_vendedor', m.email)}>
-                                        <div className="font-black text-white text-sm">{m.username}</div>
-                                        <div className="text-[10px] text-slate-450 font-semibold">{m.email}</div>
-                                    </button>
+                                    <Option key={m.id} type="info" selected={saleForm.email_vendedor === m.email} label={m.username} sub={m.email} onClick={() => set('email_vendedor', m.email)} />
                                 ))}
                             </div>
                         </StepShell>
                     )}
                     {step === 'program' && (
-                        <StepShell eyebrow="Transacción" title="¿Qué programa compró?" counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="space-y-2">
+                        <StepShell n={2} title="¿Qué programa compró?" counter={counter} segments={segments}>
+                            <div className="grid grid-cols-1 gap-2.5">
                                 {PROGRAMS.map((p) => (
-                                    <button key={p.v} type="button" className={cardStyle(saleForm.programa === p.v)} onClick={() => { set('programa', p.v); setTimeout(goNext, 120); }}>
-                                        <div className="font-black text-white text-sm">{p.label}</div>
-                                        <div className="text-[10px] text-slate-450 font-semibold">{p.hint}</div>
-                                    </button>
+                                    <Option key={p.v} type="info" selected={saleForm.programa === p.v} label={p.label} sub={p.hint} onClick={() => { set('programa', p.v); setTimeout(goNext, 120); }} />
                                 ))}
                             </div>
                         </StepShell>
                     )}
                     {step === 'clientSummary' && (
-                        <StepShell eyebrow="Transacción" title="Así viene este cliente" hint="Ya tiene pagos registrados en este programa — el resto del flujo se ajusta solo." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={2} title="Así viene este cliente" hint="Ya tiene pagos registrados en este programa — el resto del flujo se ajusta solo." counter={counter} segments={segments}>
                             {loadingSaleState ? (
-                                <div className="flex justify-center py-6"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
+                                <div className="flex justify-center py-6"><Loader2 className="animate-spin" style={{ color: '#6D8BFF' }} size={20} /></div>
                             ) : saleClientState ? (
-                                <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl space-y-1.5">
-                                    <div className="flex justify-between text-xs"><span className="text-slate-400 font-bold uppercase">Pagó</span><b className="text-white">{money(saleClientState.total_paid)} / {money(saleClientState.program_price)}</b></div>
-                                    <div className="flex justify-between text-xs"><span className="text-slate-400 font-bold uppercase">Saldo</span><b className="text-fuchsia-400">{money(saleClientState.balance_remaining)}</b></div>
-                                    <div className="flex justify-between text-xs"><span className="text-slate-400 font-bold uppercase">Ventas registradas</span><b className="text-white">{saleClientState.sales_count}</b></div>
+                                <div className="fq info">
+                                    <div className="flex justify-between text-xs mb-1"><span style={{ color: '#8C99E0' }} className="font-bold uppercase">Pagó</span><b className="text-white">{money(saleClientState.total_paid)} / {money(saleClientState.program_price)}</b></div>
+                                    <div className="flex justify-between text-xs mb-1"><span style={{ color: '#8C99E0' }} className="font-bold uppercase">Saldo</span><b style={{ color: '#FFB3DE' }}>{money(saleClientState.balance_remaining)}</b></div>
+                                    <div className="flex justify-between text-xs"><span style={{ color: '#8C99E0' }} className="font-bold uppercase">Ventas registradas</span><b className="text-white">{saleClientState.sales_count}</b></div>
                                 </div>
                             ) : null}
                         </StepShell>
                     )}
                     {step === 'paymentType' && (
-                        <StepShell eyebrow="Transacción" title="¿Cómo paga?" counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={2} title="¿Cómo paga?" counter={counter} segments={segments}>
                             {loadingSaleState ? (
-                                <div className="flex justify-center py-6"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
+                                <div className="flex justify-center py-6"><Loader2 className="animate-spin" style={{ color: '#6D8BFF' }} size={20} /></div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2.5">
                                     {PAYMENT_TYPES.map((opt) => {
                                         const r = saleClientState?.allowed_types?.[opt.key];
                                         const disabled = r ? !r.ok : false;
                                         return (
-                                            <button
+                                            <Option
                                                 key={opt.v}
-                                                type="button"
+                                                type="info"
                                                 disabled={disabled}
                                                 title={disabled ? r.reason : undefined}
-                                                className={`${cardStyle(saleForm.tipo_pago_simple === opt.v)} ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                selected={saleForm.tipo_pago_simple === opt.v}
+                                                label={opt.label}
+                                                sub={opt.hint}
                                                 onClick={() => { if (!disabled) { set('tipo_pago_simple', opt.v); setTimeout(goNext, 120); } }}
-                                            >
-                                                <div className="font-black text-white text-xs">{opt.label}</div>
-                                                <div className="text-[9px] text-slate-450 font-semibold">{opt.hint}</div>
-                                            </button>
+                                            />
                                         );
                                     })}
                                 </div>
                             )}
-                            {rule && !rule.ok && <p className="text-[10px] text-rose-400 font-bold mt-2">{rule.reason}</p>}
+                            {rule && !rule.ok && <p className="text-[10px] font-bold mt-2" style={{ color: '#F5A99C' }}>{rule.reason}</p>}
                             {['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple) && saleClientState?.can_settle_balance_with_installment && (
-                                <label className="flex items-center gap-2 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-bold text-amber-300 uppercase cursor-pointer">
+                                <label className="flex items-center gap-2 mt-3 p-3 rounded-xl text-[10px] font-bold uppercase cursor-pointer" style={{ background: 'rgba(217,164,65,.10)', border: '1px solid rgba(217,164,65,.30)', color: '#F3D08A' }}>
                                     <input type="checkbox" checked={settleBalanceWithSale} onChange={(e) => setSettleBalanceWithSale(e.target.checked)} className="rounded" />
                                     Liquidar el saldo pendiente ({money(saleClientState.balance_remaining)}) junto con esta venta
                                 </label>
@@ -529,45 +526,36 @@ const DeclararVentaWizard = ({
                         </StepShell>
                     )}
                     {step === 'amounts' && (
-                        <StepShell eyebrow="Transacción" title="Precio total y cuánto cobrás hoy" hint="El saldo se calcula solo." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={2} title="Precio total y cuánto cobrás hoy" hint="El saldo se calcula solo." counter={counter} segments={segments}>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio total</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                        <input type="number" step="0.01" value={saleForm.precio_total} onChange={(e) => set('precio_total', e.target.value)} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500" placeholder="0.00" />
-                                    </div>
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Precio total</label>
+                                    <input type="number" step="0.01" value={saleForm.precio_total || ''} onChange={(e) => set('precio_total', e.target.value)} className={inputCls} placeholder="0.00" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Cobrado hoy</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                        <input type="number" step="0.01" value={saleForm.monto} onChange={(e) => set('monto', e.target.value)} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500" placeholder="0.00" />
-                                    </div>
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Cobrado hoy</label>
+                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} className={inputCls} placeholder="0.00" />
                                 </div>
                             </div>
-                            <div className="mt-3 p-3 bg-slate-950/50 border border-slate-800 rounded-xl flex justify-between items-center">
-                                <span className="text-[9px] font-black text-slate-500 uppercase">Saldo a financiar</span>
-                                <span className="text-lg font-black text-fuchsia-400">{money(balance)}</span>
+                            <div className="mt-3 fq info">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Saldo a financiar</span>
+                                    <span className="text-lg font-black" style={{ color: '#FFB3DE' }}>{money(balance)}</span>
+                                </div>
                             </div>
                         </StepShell>
                     )}
                     {step === 'method' && (
-                        <StepShell eyebrow="Transacción" title="¿Por dónde entró la plata?" counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={2} title="¿Por dónde entró la plata?" counter={counter} segments={segments}>
                             <div className="grid grid-cols-2 gap-2.5">
                                 {METHODS.map((m) => (
-                                    <button key={m} type="button" className={cardStyle(saleForm.metodo_pago === m)} onClick={() => set('metodo_pago', m)}>
-                                        <div className="font-black text-white text-xs">{m}</div>
-                                    </button>
+                                    <Option key={m} type="info" selected={saleForm.metodo_pago === m} label={m} onClick={() => set('metodo_pago', m)} />
                                 ))}
                             </div>
                             {saleForm.tipo_pago_simple === 'completo' && (
                                 <div className="mt-3 space-y-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto cobrado</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                        <input type="number" step="0.01" value={saleForm.monto} onChange={(e) => set('monto', e.target.value)} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500" placeholder="0.00" />
-                                    </div>
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Monto cobrado</label>
+                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} className={inputCls} placeholder="0.00" />
                                 </div>
                             )}
                             <input
@@ -575,12 +563,12 @@ const DeclararVentaWizard = ({
                                 value={saleForm.segundo_pago || ''}
                                 onChange={(e) => set('segundo_pago', e.target.value)}
                                 placeholder="Comentario del cobro (opcional)"
-                                className="w-full mt-3 bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500"
+                                className={`${inputCls} mt-3`}
                             />
                         </StepShell>
                     )}
                     {step === 'pickCuota' && (
-                        <StepShell eyebrow="Cuotas" title="¿Cuál cuota se está pagando?" hint="Elegí cualquier pendiente — podés adelantar una futura o pagar una vencida." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={3} title="¿Cuál cuota se está pagando?" hint="Elegí cualquier pendiente — podés adelantar una futura o pagar una vencida." counter={counter} segments={segments}>
                             <PlanEditor
                                 apptId={apptId}
                                 programaCode={saleForm.programa}
@@ -594,39 +582,33 @@ const DeclararVentaWizard = ({
                         </StepShell>
                     )}
                     {step === 'installmentCount' && (
-                        <StepShell eyebrow="Cuotas" title={`Te deben ${money(balance)}. ¿En cuántas cuotas?`} hint="Después definís cuándo se cobran." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={3} title={`Te deben ${money(balance)}. ¿En cuántas cuotas?`} hint="Después definís cuándo se cobran." counter={counter} segments={segments}>
                             <div className="flex items-center justify-between">
                                 <button type="button" onClick={() => set('num_cuotas', Math.max(1, (saleForm.num_cuotas || 1) - 1))} className="w-11 h-11 rounded-full border border-slate-700 text-slate-300 font-black text-lg">−</button>
                                 <span className="text-3xl font-black text-white">{saleForm.num_cuotas}</span>
                                 <button type="button" onClick={() => set('num_cuotas', Math.min(12, (saleForm.num_cuotas || 1) + 1))} className="w-11 h-11 rounded-full bg-violet-600 text-white font-black text-lg">+</button>
                                 <div className="text-right">
-                                    <div className="text-[9px] font-black text-slate-500 uppercase">Cada cuota</div>
-                                    <div className="text-emerald-400 font-black">{money(balance / Math.max(1, saleForm.num_cuotas || 1))}</div>
+                                    <div className="text-[9px] font-black uppercase" style={{ color: '#8C99E0' }}>Cada cuota</div>
+                                    <div className="font-black" style={{ color: '#7DEAC0' }}>{money(balance / Math.max(1, saleForm.num_cuotas || 1))}</div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 gap-2 mt-4">
                                 {[2, 3, 4, 6].map((k) => (
-                                    <button key={k} type="button" onClick={() => set('num_cuotas', k)} className={`h-9 rounded-full text-[11px] font-black ${saleForm.num_cuotas === k ? 'bg-violet-600 text-white' : 'bg-slate-800/60 text-slate-300 border border-slate-750'}`}>{k}</button>
+                                    <button key={k} type="button" onClick={() => set('num_cuotas', k)} className={`h-9 rounded-lg text-[11px] font-black ${saleForm.num_cuotas === k ? 'bg-violet-600 text-white' : 'bg-slate-900/60 text-slate-300 border border-slate-750'}`}>{k}</button>
                                 ))}
                             </div>
                         </StepShell>
                     )}
                     {step === 'installmentMode' && (
-                        <StepShell eyebrow="Cuotas" title="¿El pago es mensual?" hint="Si es mensual solo elegís el día y el resto se calcula solo." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="space-y-2">
-                                <button type="button" className={cardStyle(installmentMode === 'monthly')} onClick={() => { setInstallmentMode('monthly'); setTimeout(goNext, 120); }}>
-                                    <div className="font-black text-white text-sm">Sí, todos los meses el mismo día</div>
-                                    <div className="text-[10px] text-slate-450 font-semibold">elegís un día y listo</div>
-                                </button>
-                                <button type="button" className={cardStyle(installmentMode === 'custom')} onClick={() => { setInstallmentMode('custom'); setTimeout(goNext, 120); }}>
-                                    <div className="font-black text-white text-sm">No, fechas distintas</div>
-                                    <div className="text-[10px] text-slate-450 font-semibold">cargás cada fecha a mano</div>
-                                </button>
+                        <StepShell n={3} title="¿El pago es mensual?" hint="Si es mensual solo elegís el día y el resto se calcula solo." counter={counter} segments={segments}>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <Option type="info" selected={installmentMode === 'monthly'} label="Sí, todos los meses el mismo día" sub="elegís un día y listo" onClick={() => { setInstallmentMode('monthly'); setTimeout(goNext, 120); }} />
+                                <Option type="info" selected={installmentMode === 'custom'} label="No, fechas distintas" sub="cargás cada fecha a mano" onClick={() => { setInstallmentMode('custom'); setTimeout(goNext, 120); }} />
                             </div>
                         </StepShell>
                     )}
                     {step === 'installmentDay' && (
-                        <StepShell eyebrow="Cuotas" title="¿Qué día de cada mes paga?" hint="Si el mes no tiene ese día, se cobra el último." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={3} title="¿Qué día de cada mes paga?" hint="Si el mes no tiene ese día, se cobra el último." counter={counter} segments={segments}>
                             <div className="grid grid-cols-7 gap-1.5">
                                 {Array.from({ length: 31 }, (_, k) => k + 1).map((n) => (
                                     <button
@@ -639,33 +621,33 @@ const DeclararVentaWizard = ({
                                             dates.forEach((d, idx) => { map[idx + 1] = d; });
                                             set('cuotaFechas', map);
                                         }}
-                                        className={`h-9 rounded-lg text-[11px] font-black tabular-nums ${payDay === n ? 'bg-violet-600 text-white' : 'bg-slate-800/60 text-slate-300 border border-slate-750'}`}
+                                        className={`h-9 rounded-lg text-[11px] font-black tabular-nums ${payDay === n ? 'bg-violet-600 text-white' : 'bg-slate-900/60 text-slate-300 border border-slate-750'}`}
                                     >{n}</button>
                                 ))}
                             </div>
-                            <div className="mt-3 p-3 bg-slate-950/50 border border-slate-800 rounded-xl text-[10px] text-slate-400 font-semibold">
+                            <div className="mt-3 fq info text-[10px]">
                                 {monthlyDates(saleForm.num_cuotas || 1, payDay).map((d, k) => `Cuota ${k + 1} · ${money(balance / (saleForm.num_cuotas || 1))} · ${prettyDate(d)}`).join('   ·   ')}
                             </div>
                         </StepShell>
                     )}
                     {step === 'installmentDates' && (
-                        <StepShell eyebrow="Cuotas" title="¿Cuándo cobrás cada cuota?" hint="Estas fechas son las que te van a aparecer en seguimientos." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={3} title="¿Cuándo cobrás cada cuota?" hint="Estas fechas son las que te van a aparecer en seguimientos." counter={counter} segments={segments}>
                             <div className="space-y-2">
                                 {Array.from({ length: saleForm.num_cuotas || 1 }, (_, k) => k + 1).map((n) => {
                                     const each = balance / (saleForm.num_cuotas || 1);
                                     const current = saleForm.cuotaFechas?.[n] || toISO(addMonths(new Date(), n));
                                     return (
-                                        <div key={n} className="flex items-center gap-3 p-3 bg-slate-800/40 border border-slate-750 rounded-xl">
+                                        <div key={n} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
                                             <span className="text-xs font-black text-white w-16">Cuota {n}</span>
                                             <span className="text-xs font-bold text-slate-300 w-20">{money(each)}</span>
                                             <input
                                                 type="date"
                                                 value={current}
                                                 onChange={(e) => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: e.target.value })}
-                                                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:border-violet-500"
+                                                className="flex-1 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
                                             />
-                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), -7)) })} className="text-slate-500 hover:text-white px-1">-7d</button>
-                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), 7)) })} className="text-slate-500 hover:text-white px-1">+7d</button>
+                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), -7)) })} className="px-1" style={{ color: '#8C99E0' }}>-7d</button>
+                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), 7)) })} className="px-1" style={{ color: '#8C99E0' }}>+7d</button>
                                         </div>
                                     );
                                 })}
@@ -673,74 +655,59 @@ const DeclararVentaWizard = ({
                         </StepShell>
                     )}
                     {step === 'exam' && (
-                        <StepShell eyebrow="Cierre" title="¿Qué examen rinde?" hint="Define el grupo y el contenido que recibe." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <TextField icon={PenTool} value={saleForm.examen_lead} onChange={(e) => set('examen_lead', e.target.value)} placeholder="ej. USMLE Step 1" prefilled={!!saleForm.examen_lead} />
+                        <StepShell n={4} title="¿Qué examen rinde?" hint="Define el grupo y el contenido que recibe." counter={counter} segments={segments}>
+                            <input autoFocus type="text" value={saleForm.examen_lead || ''} onChange={(e) => set('examen_lead', e.target.value)} placeholder="ej. USMLE Step 1" className={inputCls} />
+                            <div className="mt-2"><FieldTag prefilled={!!saleForm.examen_lead} /></div>
                         </StepShell>
                     )}
                     {step === 'saleMeta' && (
-                        <StepShell eyebrow="Cierre" title="¿Cuándo se cerró?" hint="Y si la firma fue dentro de la llamada." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={4} title="¿Cuándo se cerró?" hint="Y si la firma fue dentro de la llamada." counter={counter} segments={segments}>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha de la venta</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Calendar size={13} /></span>
-                                        <input type="date" value={saleForm.date} onChange={(e) => set('date', e.target.value)} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500" />
-                                    </div>
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Fecha de la venta</label>
+                                    <input type="date" value={saleForm.date || ''} onChange={(e) => set('date', e.target.value)} className={inputCls} />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">¿Cerró en llamada?</label>
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>¿Cerró en llamada?</label>
                                     <div className="grid grid-cols-2 gap-1.5">
-                                        <button type="button" onClick={() => set('sold_in_call', true)} className={`h-[38px] rounded-xl text-[10px] font-black uppercase ${saleForm.sold_in_call ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400' : 'bg-slate-800/50 border border-slate-750 text-slate-400'}`}>✓ Sí, Meet</button>
-                                        <button type="button" onClick={() => set('sold_in_call', false)} className={`h-[38px] rounded-xl text-[10px] font-black uppercase ${!saleForm.sold_in_call ? 'bg-rose-500/20 border border-rose-500 text-rose-400' : 'bg-slate-800/50 border border-slate-750 text-slate-400'}`}>× No, fuera</button>
+                                        <Option type="ok" selected={!!saleForm.sold_in_call} label="Sí, Meet" onClick={() => set('sold_in_call', true)} />
+                                        <Option type="no" selected={!saleForm.sold_in_call} label="No, fuera" onClick={() => set('sold_in_call', false)} />
                                     </div>
                                 </div>
                             </div>
                         </StepShell>
                     )}
                     {step === 'estado' && (
-                        <StepShell eyebrow="Cierre" title="¿Estado de la venta?" counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="space-y-2">
-                                {[
-                                    { v: 'Completada', hint: 'todo en orden' },
-                                    { v: 'Pendiente', hint: 'falta algo para cerrarla' },
-                                    { v: 'Cancelada', hint: 'no va a concretarse' }
-                                ].map((o) => (
-                                    <button key={o.v} type="button" className={cardStyle(saleForm.estado === o.v)} onClick={() => { set('estado', o.v); setTimeout(goNext, 120); }}>
-                                        <div className="font-black text-white text-sm">{o.v}</div>
-                                        <div className="text-[10px] text-slate-450 font-semibold">{o.hint}</div>
-                                    </button>
-                                ))}
+                        <StepShell n={4} title="¿Estado de la venta?" counter={counter} segments={segments}>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <Option type="ok" selected={saleForm.estado === 'Completada'} label="Completada" sub="todo en orden" onClick={() => { set('estado', 'Completada'); setTimeout(goNext, 120); }} />
+                                <Option type="no" selected={saleForm.estado === 'Pendiente'} label="Pendiente" sub="falta algo para cerrarla" onClick={() => { set('estado', 'Pendiente'); setTimeout(goNext, 120); }} />
+                                <Option type="bad" selected={saleForm.estado === 'Cancelada'} label="Cancelada" sub="no va a concretarse" onClick={() => { set('estado', 'Cancelada'); setTimeout(goNext, 120); }} />
                             </div>
                         </StepShell>
                     )}
                     {step === 'notas' && (
-                        <StepShell eyebrow="Cierre" title="Notas u observaciones" hint="Opcional — objeciones, detalles del cierre, lo que sirva después." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={4} title="Notas u observaciones" hint="Opcional — objeciones, detalles del cierre, lo que sirva después." counter={counter} segments={segments}>
                             <textarea
+                                rows={3}
                                 value={saleForm.notas || ''}
                                 onChange={(e) => set('notas', e.target.value)}
                                 placeholder="Detalles sobre el cierre, objeciones vencidas, etc..."
-                                className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 min-h-[90px] resize-none"
+                                className={`${inputCls} resize-none custom-scrollbar`}
                             />
                         </StepShell>
                     )}
                     {step === 'referralAsked' && (
-                        <StepShell eyebrow="Cierre" title="¿Le pediste un referido?" hint="El mejor momento para pedirlo ya pasó. Contá qué salió." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="space-y-2">
-                                {[
-                                    { v: 'got', label: 'Sí le pedí y me dio', hint: 'cargamos los contactos' },
-                                    { v: 'asked', label: 'Sí le pedí, no me dio', hint: 'queda registrado igual' },
-                                    { v: 'no', label: 'No le pedí', hint: 'sin drama, la próxima' }
-                                ].map((o) => (
-                                    <button key={o.v} type="button" className={cardStyle(saleForm.referralAsked === o.v)} onClick={() => { set('referralAsked', o.v); setTimeout(goNext, 120); }}>
-                                        <div className="font-black text-white text-sm">{o.label}</div>
-                                        <div className="text-[10px] text-slate-450 font-semibold">{o.hint}</div>
-                                    </button>
-                                ))}
+                        <StepShell n={4} title="¿Le pediste un referido?" hint="El mejor momento para pedirlo ya pasó. Contá qué salió." counter={counter} segments={segments}>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <Option type="ok" selected={saleForm.referralAsked === 'got'} label="Sí le pedí y me dio" sub="cargamos los contactos" onClick={() => { set('referralAsked', 'got'); setTimeout(goNext, 120); }} />
+                                <Option type="no" selected={saleForm.referralAsked === 'asked'} label="Sí le pedí, no me dio" sub="queda registrado igual" onClick={() => { set('referralAsked', 'asked'); setTimeout(goNext, 120); }} />
+                                <Option type="info" selected={saleForm.referralAsked === 'no'} label="No le pedí" sub="sin drama, la próxima" onClick={() => { set('referralAsked', 'no'); setTimeout(goNext, 120); }} />
                             </div>
                         </StepShell>
                     )}
                     {step === 'referralCount' && (
-                        <StepShell eyebrow="Cierre" title="¿Cuántos referidos te dio?" hint="Cada uno vale una llamada nueva." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={4} title="¿Cuántos referidos te dio?" hint="Cada uno vale una llamada nueva." counter={counter} segments={segments}>
                             <div className="flex items-center justify-between">
                                 <button type="button" onClick={() => set('referralCount', Math.max(1, (saleForm.referralCount || 1) - 1))} className="w-11 h-11 rounded-full border border-slate-700 text-slate-300 font-black text-lg">−</button>
                                 <span className="text-3xl font-black text-white">{saleForm.referralCount || 1}</span>
@@ -749,48 +716,42 @@ const DeclararVentaWizard = ({
                         </StepShell>
                     )}
                     {step === 'referralWhen' && (
-                        <StepShell eyebrow="Cierre" title="¿Los cargás ahora o después?" hint="Si es después quedan como tarea en tu bandeja." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={4} title="¿Los cargás ahora o después?" hint="Si es después quedan como tarea en tu bandeja." counter={counter} segments={segments}>
                             <div className="grid grid-cols-2 gap-2.5">
-                                <button type="button" className={cardStyle(saleForm.referralWhen === 'now')} onClick={() => { set('referralWhen', 'now'); setTimeout(goNext, 120); }}>
-                                    <div className="font-black text-white text-sm">Cargar ahora</div>
-                                    <div className="text-[10px] text-slate-450 font-semibold">nombre y número de cada uno</div>
-                                </button>
-                                <button type="button" className={cardStyle(saleForm.referralWhen === 'later')} onClick={() => { set('referralWhen', 'later'); setTimeout(goNext, 120); }}>
-                                    <div className="font-black text-white text-sm">Después</div>
-                                    <div className="text-[10px] text-slate-450 font-semibold">va a pendientes</div>
-                                </button>
+                                <Option type="ok" selected={saleForm.referralWhen === 'now'} label="Cargar ahora" sub="nombre y número de cada uno" onClick={() => { set('referralWhen', 'now'); setTimeout(goNext, 120); }} />
+                                <Option type="info" selected={saleForm.referralWhen === 'later'} label="Después" sub="va a pendientes" onClick={() => { set('referralWhen', 'later'); setTimeout(goNext, 120); }} />
                             </div>
                         </StepShell>
                     )}
                     {step === 'referralContacts' && (
-                        <StepShell eyebrow="Cierre" title="Nombre y número de cada referido" hint="Con esto ya quedan agendados. Sin esto no existen." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
+                        <StepShell n={4} title="Nombre y número de cada referido" hint="Con esto ya quedan agendados. Sin esto no existen." counter={counter} segments={segments}>
                             <div className="space-y-2">
                                 {referralContacts.map((c, k) => (
                                     <div key={k} className="flex items-center gap-2">
-                                        <span className="w-6 h-6 rounded-full bg-fuchsia-500/20 text-fuchsia-300 text-[10px] font-black flex items-center justify-center shrink-0">{k + 1}</span>
+                                        <span className="num" style={{ width: 22, height: 22 }}>{k + 1}</span>
                                         <input
                                             type="text"
                                             value={c.name}
                                             onChange={(e) => setReferralContacts((prev) => prev.map((r, j) => (j === k ? { ...r, name: e.target.value } : r)))}
                                             placeholder="Nombre del referido"
-                                            className="flex-1 bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500"
+                                            className={inputCls}
                                         />
                                         <input
                                             type="text"
                                             value={c.phone}
                                             onChange={(e) => setReferralContacts((prev) => prev.map((r, j) => (j === k ? { ...r, phone: e.target.value } : r)))}
                                             placeholder="+54 9 ..."
-                                            className="w-32 bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500"
+                                            className={`${inputCls} w-32`}
                                         />
                                     </div>
                                 ))}
                             </div>
-                            <p className="text-[9px] text-slate-550 font-medium mt-2">Cada referido cargado entra a la bandeja del closer que corresponda como llamada nueva.</p>
+                            <p className="text-[9px] font-medium mt-2" style={{ color: '#8C99E0' }}>Cada referido cargado entra a la bandeja del closer que corresponda como llamada nueva.</p>
                         </StepShell>
                     )}
                     {step === 'review' && (
-                        <StepShell eyebrow="Cierre" title="Revisá y registrá" hint="Si algo está mal, tocá 'editar' y corregilo ahí mismo." counter={`Paso ${i + 1} de ${path.length}`} segments={segments}>
-                            <div className="rounded-2xl border border-slate-800 divide-y divide-slate-850 overflow-hidden">
+                        <StepShell n={4} title="Revisá y registrá" hint="Si algo está mal, tocá 'editar' y corregilo ahí mismo." counter={counter} segments={segments}>
+                            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,.12)' }}>
                                 {[
                                     { label: 'Cliente', value: `${saleForm.nombre_cliente} · ${saleForm.examen_lead || 'sin examen'}`, step: 'name' },
                                     { label: 'Programa', value: `${PROGRAMS.find((p) => p.v === saleForm.programa)?.label} · ${PAYMENT_TYPES.find((t) => t.v === saleForm.tipo_pago_simple)?.label}`, step: 'program' },
@@ -799,19 +760,27 @@ const DeclararVentaWizard = ({
                                     { label: 'Referidos', value: saleForm.referralAsked === 'got' ? `${saleForm.referralCount} referidos` : saleForm.referralAsked === 'asked' ? 'pedido, sin dar' : 'no se pidió', step: 'referralAsked' },
                                     { label: 'Fecha', value: `${saleForm.date}${saleForm.sold_in_call ? ' · en llamada' : ' · fuera de llamada'}`, step: 'saleMeta' }
                                 ].map((r) => (
-                                    <button key={r.label} type="button" onClick={() => jumpTo(r.step)} className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-850/60 transition-all text-left">
+                                    <button
+                                        key={r.label}
+                                        type="button"
+                                        onClick={() => jumpTo(r.step)}
+                                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-all"
+                                        style={{ borderTop: '1px solid rgba(255,255,255,.08)', background: 'transparent' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,.04)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
                                         <div>
-                                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{r.label}</div>
+                                            <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}>{r.label}</div>
                                             <div className="text-xs font-bold text-white">{r.value}</div>
                                         </div>
-                                        <span className="text-[9px] font-black text-violet-400 uppercase flex items-center gap-1 shrink-0"><Pencil size={10} /> Editar</span>
+                                        <span className="text-[9px] font-black uppercase flex items-center gap-1 shrink-0" style={{ color: '#93C5FD' }}><Pencil size={10} /> Editar</span>
                                     </button>
                                 ))}
                             </div>
 
                             {(hasExistingPlan || balance > 0.009) && (
                                 <div className="mt-4 space-y-2">
-                                    <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest"><CreditCard size={11} /> Cronograma de cuotas</div>
+                                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}><CreditCard size={11} /> Cronograma de cuotas</div>
                                     <PlanEditor
                                         apptId={apptId}
                                         programaCode={saleForm.programa}
@@ -826,8 +795,8 @@ const DeclararVentaWizard = ({
                     )}
                 </div>
 
-                <div className="flex items-center justify-between gap-3 px-6 py-5 border-t border-slate-800">
-                    <button type="button" onClick={goBack} className="h-10 px-4 bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 border border-slate-750">
+                <div className="flex items-center justify-between gap-3 px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,.12)' }}>
+                    <button type="button" onClick={goBack} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-slate-750">
                         <ArrowLeft size={12} /> {fromReview ? 'Volver al resumen' : 'Anterior'}
                     </button>
                     {step === 'review' ? (
@@ -835,7 +804,7 @@ const DeclararVentaWizard = ({
                             type="button"
                             onClick={handleFinalSubmit}
                             disabled={submittingSale || savingReferrals}
-                            className="h-10 px-6 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-slate-950 text-[10px] font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+                            className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
                             {(submittingSale || savingReferrals) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                             Registrar venta
@@ -845,13 +814,13 @@ const DeclararVentaWizard = ({
                             type="button"
                             onClick={goNext}
                             disabled={!canAdvance()}
-                            className="h-10 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-[10px] font-black uppercase tracking-wider rounded-full flex items-center gap-1.5 disabled:opacity-40"
+                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                         >
                             {fromReview ? 'Guardar y volver' : 'Siguiente'} <ArrowRight size={12} />
                         </button>
                     )}
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

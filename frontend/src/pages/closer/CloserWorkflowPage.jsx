@@ -1919,7 +1919,7 @@ const CloserWorkflowPage = () => {
             fecha_cobro: '',
             metodo_pago: 'Stripe',
             examen_lead: lead.examen || '',
-            notes: '',
+            notas: '',
             estado: 'Completada',
             instagram: lead.instagram || '',
             setter: lead.setter_name || '',
@@ -1928,7 +1928,6 @@ const CloserWorkflowPage = () => {
             sold_in_call: isCierreVenta,
             date: localToday()
         });
-        setSaleStep(isCierreVenta ? 1 : 2);
         setSaleModalOpen(true);
     };
 
@@ -2453,7 +2452,7 @@ const CloserWorkflowPage = () => {
                                 fecha_cobro: '',
                                 metodo_pago: 'Stripe',
                                 examen_lead: selectedLead.examen || '',
-                                notes: '',
+                                notas: '',
                                 estado: 'Completada',
                                 instagram: selectedLead.instagram || '',
                                 setter: selectedLead.setter_name || '',
@@ -2462,7 +2461,6 @@ const CloserWorkflowPage = () => {
                                 sold_in_call: true,
                                 date: localToday()
                             });
-                            setSaleStep(1);
                             setSelectedLead(null);
                             setSaleModalOpen(true);
                         }, 'ok', 'Sí, hubo venta', 'Registrar pago')}
@@ -4585,11 +4583,7 @@ const CloserWorkflowPage = () => {
                             </div>
                             <div className="flex flex-col gap-2.5 pt-2">
                                 <button
-                                    onClick={() => {
-                                        setSalePrompt({ apptId: null });
-                                        setSaleStep(1);
-                                        setSaleModalOpen(true);
-                                    }}
+                                    onClick={() => setSaleModalOpen(true)}
                                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-650/20 animate-pulse"
                                 >
                                     Sí, Declarar Venta
