@@ -959,19 +959,25 @@ header.top-v6 {
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 10px 22px rgba(255,63,164,.18);
   transform: translateY(-2px);
 }
-/* Hora/cuenta regresiva, en su propia línea arriba del nombre (pedido del usuario,
-   29/ago/2026 — la primera versión en la esquina chocaba con nombres largos que ocupan 2
-   líneas). Números grandes y en negrita, solo texto de color, sin caja/fondo (pedido
-   explícito: "que sea solo el texto de color"). */
+/* Hora/cuenta regresiva en la esquina superior derecha: números grandes y en negrita, solo
+   texto de color, sin caja/fondo (pedido explícito del usuario, 29/ago/2026). Reserva un
+   ancho fijo con `.kcard-v6 b { padding-right }` para que no choque con nombres largos —
+   si el texto no entra en una línea, envuelve alineado a la derecha en vez de superponerse. */
 .kcard-v6 .when-v6 {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   font-size: 13.5px;
   font-weight: 900;
   letter-spacing: -.01em;
   color: var(--v6-tx3);
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  margin-bottom: 5px;
+  max-width: 46%;
+  text-align: right;
+  line-height: 1.2;
 }
 
 .kcard-v6 .when-v6 .wd-v6 {
@@ -1009,6 +1015,7 @@ header.top-v6 {
   display: block;
   letter-spacing: -.01em;
   color: #fff;
+  padding-right: 96px;
 }
 .kcard-v6 .m-v6 {
   font-size: 11.5px;
