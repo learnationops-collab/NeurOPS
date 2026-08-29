@@ -248,10 +248,6 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
 
     const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
     const totalHoy = itemsHoy.length;
-    // Cuántos de los seguimientos del día vienen arrastrados de días anteriores, y cuánto es el
-    // peor retraso — el resumen que el closer necesita antes de mirar fila por fila.
-    const atrasados = itemsHoy.filter(i => typeof i.dias_retraso === 'number' && i.dias_retraso > 0);
-    const maxRetraso = atrasados.reduce((max, i) => Math.max(max, i.dias_retraso), 0);
 
     return (
         <div className="space-y-6">
@@ -277,11 +273,6 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                         <p className="text-xs text-slate-400 font-semibold mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        {atrasados.length > 0 && (
-                            <span className="text-xs font-bold bg-rose-500/10 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-xl">
-                                {atrasados.length} atrasado{atrasados.length === 1 ? '' : 's'} · hasta {maxRetraso}d
-                            </span>
-                        )}
                         <span className="text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
                     </div>
                 </div>

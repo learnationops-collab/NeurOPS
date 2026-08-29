@@ -2522,42 +2522,58 @@ class CloserService:
             'ventas_cash': round(ventas_cash, 2),
             'pendientes_confirmar': pendientes_confirmar,
             'pendientes_llamar': pendientes_llamar,
-            'streak_days': CloserService.get_report_streak(closer_id, day_local),
+            'streak_days': CloserService.get_sales_streak(closer_id, day_local),
         }
 
     @staticmethod
-    def get_report_streak(closer_id, day_local):
-        """Racha de días consecutivos que el closer cerró su día (ver `closer_daily_reports`),
-        terminando en `day_local`. Reemplaza el "🔥 Racha de 12 días" que estaba hardcodeado en
-        el hero del Workspace (CloserWorkflowPage.jsx) — no salía de ningún dato real.
+    def get_sales_streak(closer_id, day_local):
+        """Racha de días consecutivos con al menos una venta registrada (PIF/Split/Seña/Cuota/
+        Renovación/Upsell — mismos 6 tipos que suman a `ventas_count` más arriba), terminando en
+        `day_local`. Pedido del usuario (29/ago/2026): que la racha del "🔥" refleje ventas
+        reales, no si mandó el reporte del día (criterio anterior, ver bitácora) — un closer
+        puede reportar todos los días sin vender, o vender sin reportar.
 
-        Un día sin reporte corta la racha, salvo que sea justo `day_local` (el día de hoy: si
-        todavía no lo reportó no es un fallo, es que el día no terminó) — en ese caso se empieza
-        a contar desde el último día que sí tiene reporte. `is_non_working_day` (día marcado como
-        no laborable al reportar) no corta la racha pero tampoco suma: es un día libre, no un
-        día trabajado sin fallar."""
-        from app.models import CloserDailyReport
+        Un día sin venta corta la racha, salvo que sea justo `day_local` (hoy: si todavía no
+        vendió no es un fallo, el día no terminó) — ahí se empieza a contar desde el último día
+        que sí tuvo alguna venta."""
+        from app.models import User, FinancialSale
+
+        user = User.query.get(closer_id)
+        identifiers = CloserService._resolve_sale_identifiers(user)
+        if not identifiers:
+            return 0
+
+        try:
+            tz = pytz.timezone((user.timezone if user else None) or 'America/La_Paz')
+        except Exception:
+            tz = pytz.timezone('America/La_Paz')
 
         # Techo de 400 días (~13 meses) para no recorrer toda la tabla en una cuenta con
         # años de historial y una racha real corta — ninguna racha real va a llegar tan lejos.
         earliest = day_local - timedelta(days=400)
-        reports_by_date = {
-            r.date: r for r in CloserDailyReport.query.filter(
-                CloserDailyReport.closer_id == closer_id,
-                CloserDailyReport.date <= day_local,
-                CloserDailyReport.date >= earliest,
-            ).all()
-        }
+        start_utc = tz.localize(datetime.combine(earliest, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = tz.localize(datetime.combine(day_local, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        sales = FinancialSale.query.filter(
+            FinancialSale.email_vendedor.in_(identifiers),
+            FinancialSale.date >= start_utc, FinancialSale.date <= end_utc,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ).all()
+
+        days_with_sale = set()
+        for s in sales:
+            if not s.date:
+                continue
+            local_dt = pytz.UTC.localize(s.date).astimezone(tz)
+            days_with_sale.add(local_dt.date())
 
         cursor = day_local
-        if cursor not in reports_by_date:
+        if cursor not in days_with_sale:
             cursor -= timedelta(days=1)
 
         streak = 0
-        while cursor in reports_by_date:
-            report = reports_by_date[cursor]
-            if not report.is_non_working_day:
-                streak += 1
+        while cursor in days_with_sale:
+            streak += 1
             cursor -= timedelta(days=1)
 
         return streak

@@ -3,7 +3,6 @@ import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
-import PerformanceHighlights from './components/PerformanceHighlights';
 import PerformanceKpis from './components/PerformanceKpis';
 import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel, { ConfirmacionesCard } from './components/PerformanceFunnel';
@@ -124,22 +123,6 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         setCompareRange={setCompareRange}
                     />
                 </header>
-
-                {/* "Mirá esto primero", calcada de la referencia (28/ago/2026): antes de cualquier
-                    sección numerada, lo único que el closer necesita ver de entrada — su eslabón
-                    más débil con el $ que ganaría si lo arregla, la deuda sin plan y qué tan bien
-                    responden sus seguimientos. Sin número de sección: no es un bloque más, es la
-                    lectura rápida antes de bajar al detalle. */}
-                <h2 className="text-[11.5px] font-black tracking-widest uppercase text-muted mb-4">Mirá esto primero</h2>
-                <PerformanceHighlights
-                    rings={data.current.rings}
-                    funnel={data.current.funnel}
-                    confirmaciones={data.current.confirmaciones}
-                    cuotas={data.cuotas_por_cobrar}
-                    actividad={data.current.actividad}
-                    ticketPromedio={data.current.kpis.ticket_promedio}
-                    onNavigate={onNavigate}
-                />
 
                 {/* Re-secciona el dashboard calcando el agrupamiento del HTML de referencia que
                     pasó el usuario (27/ago/2026) — 5 bloques simples (Dinero / Dónde se cae /

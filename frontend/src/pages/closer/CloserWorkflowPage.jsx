@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -393,6 +393,9 @@ const CloserWorkflowPage = () => {
 
     // Modales secundarios v7: Nueva Agenda y Referido Manual
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
+    // Menú "+" del header: agrupa Referido manual y Nueva agenda en un solo botón, junto al
+    // buscador y a "Quiero procrastinar" — antes vivían en una barra aparte encima del Kanban.
+    const [newActionMenuOpen, setNewActionMenuOpen] = useState(false);
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
@@ -1319,31 +1322,6 @@ const CloserWorkflowPage = () => {
         });
         return { atrasadas, hoy, reportadas: reportedTodayCalls };
     }, [filteredAgendas, selectedDate, reportedTodayCalls]);
-
-    // Sistema de "lote diario" (v7): en vez de enfrentar de una todo el backlog de "② Llamadas",
-    // se ofrece un lote aleatorio de N leads a la vez — mismo flujo de tarjeta→modal→guardar de
-    // siempre, sin ningún cambio ahí. El progreso se deriva de cuántos ids del lote siguen en la
-    // lista (al guardar un reporte, closer_processed pasa a true y el lead sale de "Llamadas" solo).
-    const BATCH_SIZE = 10;
-    const [batchMode, setBatchMode] = useState(false);
-    const [batchIds, setBatchIds] = useState([]);
-
-    const batchItems = useMemo(() => {
-        if (!batchMode) return [];
-        const idSet = new Set(batchIds);
-        return filteredAgendas.filter(a => idSet.has(a.id));
-    }, [filteredAgendas, batchMode, batchIds]);
-
-    const startBatch = () => {
-        const pool = [...filteredAgendas];
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        const picked = pool.slice(0, BATCH_SIZE).map(a => a.id);
-        setBatchIds(picked);
-        setBatchMode(true);
-    };
 
     // Renderizar una tarjeta individual del Kanban de confirmación (v6)
     const renderKanbanCard = (a, phase) => {
@@ -3343,6 +3321,38 @@ const CloserWorkflowPage = () => {
                         )}
                     </div>
                     
+                    <div className="relative shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setNewActionMenuOpen(v => !v)}
+                            className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-800 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+                            title="Referido manual o nueva agenda"
+                        >
+                            <Plus size={16} />
+                        </button>
+                        {newActionMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setNewActionMenuOpen(false)} />
+                                <div className="absolute top-11 left-0 z-50 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden py-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewActionMenuOpen(false); setManualRefModalOpen(true); }}
+                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
+                                    >
+                                        <span>🎁</span> Referido manual
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewActionMenuOpen(false); setNewAgendaModalOpen(true); }}
+                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
+                                    >
+                                        <span>＋</span> Nueva agenda
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     {counts.seguimientos > 0 && (
                         <button
                             type="button"
@@ -3613,36 +3623,6 @@ const CloserWorkflowPage = () => {
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
-                {/* Barra de utilidades del mazo (v6): la navegación entre pestañas ahora vive en
-                    la grilla 01-05 de arriba; esto son acciones/filtros que no tienen otro lugar. */}
-                <div className="tabs-v6">
-                    <div className="flex-1"></div>
-
-                    {/* Filtro de fecha para llamadas y seguimientos */}
-                    {(activeStep === 'calls' || activeStep === 'seguimientos') && (
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-1.5 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer w-auto mr-3 text-center"
-                        />
-                    )}
-                    <button 
-                        className="tab-v6" 
-                        onClick={() => setManualRefModalOpen(true)}
-                        style={{ color: '#60A5FA' }}
-                    >
-                        🎁 Referido manual
-                    </button>
-                    <button 
-                        className="tab-v6" 
-                        onClick={() => setNewAgendaModalOpen(true)}
-                        style={{ color: '#FFB3DE' }}
-                    >
-                        ＋ Nueva agenda
-                    </button>
-                </div>
-
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
                 {/* Columna Única de Ancho Completo v7 */}
@@ -3717,66 +3697,6 @@ const CloserWorkflowPage = () => {
                            Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por
                            etapa de proceso — acá todo está en el mismo estado, "sin reportar". */
                         <>
-                            {/* Notificación / progreso de Lote Diario (v7) */}
-                            {activeStep === 'calls' && (
-                                batchMode ? (
-                                    batchItems.length === 0 ? (
-                                        <div className="bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 rounded-[2rem] p-6 flex items-center gap-5">
-                                            <div className="text-4xl">🎉</div>
-                                            <div className="flex-1">
-                                                <h4 className="text-lg font-black text-white">¡Lote completado!</h4>
-                                                <p className="text-xs text-emerald-200 mt-1">Procesaste {batchIds.length} leads atrasados. {filteredAgendas.length > 0 ? `Todavía quedan ${filteredAgendas.length} en la cola.` : 'No queda ninguno pendiente. 👏'}</p>
-                                            </div>
-                                            {filteredAgendas.length > 0 && (
-                                                <button
-                                                    onClick={startBatch}
-                                                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                                >
-                                                    Otro lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => setBatchMode(false)}
-                                                className="px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                            >
-                                                Terminar por hoy
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-violet-500/10 border border-violet-500/30 rounded-[2rem] p-5 flex items-center gap-4">
-                                            <div className="text-2xl">🎯</div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-black text-white">Lote en progreso</h4>
-                                                <p className="text-[11px] text-violet-200 mt-0.5">{batchIds.length - batchItems.length} de {batchIds.length} completados. Seguí tocando tarjetas hasta vaciar el lote.</p>
-                                            </div>
-                                            <div className="w-32 h-2 bg-slate-900 rounded-full overflow-hidden shrink-0">
-                                                <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.round(((batchIds.length - batchItems.length) / batchIds.length) * 100)}%` }} />
-                                            </div>
-                                            <button
-                                                onClick={() => setBatchMode(false)}
-                                                className="text-[10px] font-black uppercase text-slate-400 hover:text-white underline cursor-pointer shrink-0"
-                                            >
-                                                Salir del lote
-                                            </button>
-                                        </div>
-                                    )
-                                ) : filteredAgendas.length > 0 && (
-                                    <div className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-5 flex items-center gap-4">
-                                        <div className="text-2xl">📋</div>
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-black text-white">Tenés {filteredAgendas.length} lead{filteredAgendas.length !== 1 ? 's' : ''} atrasado{filteredAgendas.length !== 1 ? 's' : ''} por procesar</h4>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">No hace falta hacerlos todos hoy — con un lote de {Math.min(BATCH_SIZE, filteredAgendas.length)} al azar ya mantenés el sistema al día.</p>
-                                        </div>
-                                        <button
-                                            onClick={startBatch}
-                                            className="px-5 py-3 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                        >
-                                            Procesar lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
-                                        </button>
-                                    </div>
-                                )
-                            )}
-
                             {/* Sección Especial: Mensajes de Leads sin Agenda */}
                             {unreadNoAgenda.length > 0 && (
                                 <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
@@ -3828,17 +3748,7 @@ const CloserWorkflowPage = () => {
                                 </div>
                             )}
 
-                            {/* En modo lote: lista plana del lote actual (nunca son tantas como para
-                                necesitar columnas). Fuera de modo lote: Kanban por urgencia. */}
-                            {batchMode ? (
-                                batchItems.length > 0 && (
-                                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                        <AnimatePresence initial={false}>
-                                            {batchItems.map(a => renderKanbanCard(a, 'call'))}
-                                        </AnimatePresence>
-                                    </div>
-                                )
-                            ) : loading ? (
+                            {loading ? (
                                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                                     <Loader2 className="animate-spin text-pink-500" size={32} />
                                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando llamadas...</span>
@@ -3966,27 +3876,13 @@ const CloserWorkflowPage = () => {
                         );
                     })()}
 
-                    {/* Selector de día a reportar — por defecto hoy, pero se puede retroceder para
-                        ponerse al día con reportes atrasados. */}
+                    {/* Reportando siempre el día de hoy — ya no es editable (pedido del usuario,
+                        29/ago/2026): `reportDate` queda fijo en `localToday()`, sin selector. */}
                     <div className="rpt-card-v6 flex items-center gap-3" style={{ padding: '14px 20px' }}>
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Reportando el día</label>
-                            <input
-                                type="date"
-                                max={localToday()}
-                                value={reportDate}
-                                onChange={(e) => setReportDate(e.target.value)}
-                                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
-                            />
+                            <span className="text-xs font-bold text-white">{reportDate}</span>
                         </div>
-                        {reportDate !== localToday() && (
-                            <button
-                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer"
-                                onClick={() => setReportDate(localToday())}
-                            >
-                                Volver a hoy
-                            </button>
-                        )}
                         {reportSent && (
                             <span className="tud-xp-v6" style={{ color: '#7DEAC0', background: 'rgba(47,191,143,.14)', borderColor: 'rgba(47,191,143,.32)' }}>
                                 ✓ Enviado {reportSentAt ? new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
