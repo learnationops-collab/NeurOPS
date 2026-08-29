@@ -82,6 +82,19 @@ const Option = ({ onClick, type = 'info', label, sub, selected = false, disabled
 
 const inputCls = "w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium";
 
+// Monto de la última cuota (siempre calculado, nunca tipeado a mano) — en rojo si el closer
+// editó las cuotas anteriores por encima del saldo y esto da negativo, para que se note que
+// hay que bajar algún monto de arriba en vez de dejar una cuota sin sentido.
+const LastCuotaAmount = ({ amount, width }) => (
+    <span
+        className={`text-xs font-bold ${width}`}
+        style={{ color: amount < 0 ? '#F5A99C' : '#8C99E0' }}
+        title={amount < 0 ? 'Te pasaste del saldo — bajá el monto de alguna cuota anterior' : 'Se ajusta sola para que la suma cierre'}
+    >
+        {money(amount)}
+    </span>
+);
+
 function FieldTag({ prefilled }) {
     return prefilled ? (
         <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#7DEAC0' }}>✓ Traído de la agenda</span>
@@ -334,6 +347,10 @@ const DeclararVentaWizard = ({
     const isCuotaPayment = (saleForm.tipo_pago_simple || '').toLowerCase() === 'cuota';
     const hasExistingPlan = saleExistingCuotas.length > 0;
     const alreadyHasSales = (saleClientState?.sales_count || 0) > 0;
+    // Si la venta va a generar un plan de cuotas nuevo al registrarse (no hay uno ya creado
+    // para elegir/ajustar) — mismo criterio que decide si el wizard pasa por
+    // installmentCount/installmentMode/installmentDay|Dates en el `path`.
+    const willCreateNewPlan = saleForm.tipo_pago_simple !== 'completo' && balance > 0.009 && !(isCuotaPayment && hasExistingPlan);
 
     const path = useMemo(() => {
         const p = ['name', 'instagram', 'email', 'phone', 'document', 'closer', 'program'];
@@ -657,7 +674,7 @@ const DeclararVentaWizard = ({
                                             <div key={k} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
                                                 <span className="text-xs font-black text-white w-16">Cuota {k + 1}</span>
                                                 {isLast ? (
-                                                    <span className="text-xs font-bold w-24" style={{ color: '#8C99E0' }} title="Se ajusta sola para que la suma cierre">{money(amounts[k])}</span>
+                                                    <LastCuotaAmount amount={amounts[k]} width="w-24" />
                                                 ) : (
                                                     <input
                                                         type="number"
@@ -688,7 +705,7 @@ const DeclararVentaWizard = ({
                                             <div key={num} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
                                                 <span className="text-xs font-black text-white w-16">Cuota {num}</span>
                                                 {isLast ? (
-                                                    <span className="text-xs font-bold w-20" style={{ color: '#8C99E0' }} title="Se ajusta sola para que la suma cierre">{money(amounts[num - 1])}</span>
+                                                    <LastCuotaAmount amount={amounts[num - 1]} width="w-20" />
                                                 ) : (
                                                     <input
                                                         type="number"
@@ -840,7 +857,7 @@ const DeclararVentaWizard = ({
                                 ))}
                             </div>
 
-                            {(hasExistingPlan || balance > 0.009) && (
+                            {hasExistingPlan ? (
                                 <div className="mt-4 space-y-2">
                                     <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}><CreditCard size={11} /> Cronograma de cuotas</div>
                                     <PlanEditor
@@ -851,6 +868,48 @@ const DeclararVentaWizard = ({
                                         selectable={false}
                                         onChanged={refreshExistingCuotas}
                                     />
+                                </div>
+                            ) : willCreateNewPlan && (
+                                <div className="mt-4 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}><CreditCard size={11} /> Cronograma de cuotas (se crea al registrar)</div>
+                                    <div className="space-y-2">
+                                        {(() => {
+                                            const n = saleForm.num_cuotas || 1;
+                                            const amounts = cuotaAmounts(n, balance, saleForm.cuotaMontos);
+                                            const dates = installmentMode === 'monthly'
+                                                ? monthlyDates(n, payDay)
+                                                : Array.from({ length: n }, (_, k) => saleForm.cuotaFechas?.[k + 1] || toISO(addMonths(new Date(), k + 1)));
+                                            return dates.map((d, k) => {
+                                                const isLast = k === n - 1;
+                                                return (
+                                                    <div key={k} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
+                                                        <span className="text-xs font-black text-white w-16">Cuota {k + 1}</span>
+                                                        {isLast ? (
+                                                            <LastCuotaAmount amount={amounts[k]} width="w-20" />
+                                                        ) : (
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                value={saleForm.cuotaMontos?.[k + 1] ?? amounts[k]}
+                                                                onChange={(e) => set('cuotaMontos', { ...saleForm.cuotaMontos, [k + 1]: e.target.value })}
+                                                                className="w-20 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
+                                                            />
+                                                        )}
+                                                        {installmentMode === 'monthly' ? (
+                                                            <span className="text-xs font-bold text-slate-300 flex-1">{prettyDate(d)}</span>
+                                                        ) : (
+                                                            <input
+                                                                type="date"
+                                                                value={d}
+                                                                onChange={(e) => set('cuotaFechas', { ...saleForm.cuotaFechas, [k + 1]: e.target.value })}
+                                                                className="flex-1 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
                                 </div>
                             )}
                         </StepShell>
