@@ -1746,12 +1746,24 @@ const CloserWorkflowPage = () => {
                         try {
                             const numCuotas = parseInt(saleForm.num_cuotas) || 1;
                             const fechas = Array.from({ length: numCuotas }, (_, i) => saleForm.cuotaFechas?.[i + 1] || null);
+                            // Montos por cuota elegidos a mano por el closer (opcional) — la última
+                            // posición siempre se recalcula en el backend para que la suma cierre
+                            // exacto contra el saldo, así que acá alcanza con mandar un default
+                            // parejo para las cuotas que el closer no haya tocado.
+                            const restante = Math.max(0, total - cobradoHoy);
+                            const each = numCuotas > 0 ? Math.round((restante / numCuotas) * 100) / 100 : 0;
+                            const montos = Array.from({ length: numCuotas }, (_, i) => {
+                                const custom = saleForm.cuotaMontos?.[i + 1];
+                                const parsed = custom !== undefined && custom !== '' ? parseFloat(custom) : NaN;
+                                return isNaN(parsed) ? each : parsed;
+                            });
                             await api.post('/closer/installments', {
                                 appointment_id: savedApptId,
                                 total,
                                 cobrado_hoy: cobradoHoy,
                                 num_cuotas: numCuotas,
                                 fechas,
+                                montos,
                                 programa_code: saleForm.programa
                             });
                         } catch (e) {

@@ -28,6 +28,22 @@ const monthlyDates = (n, day) => {
     }
     return out;
 };
+// Montos por cuota: el closer puede tocar el monto de cualquier cuota salvo la última, que
+// siempre absorbe lo que falte para que la suma cierre exacto contra el saldo — mismo criterio
+// que ya aplica el backend (InstallmentService.create_plan) para las fechas custom.
+const round2 = (n) => Math.round(n * 100) / 100;
+const cuotaAmounts = (n, balanceVal, montosMap) => {
+    const each = n > 0 ? round2(balanceVal / n) : 0;
+    const arr = [];
+    for (let k = 0; k < n - 1; k++) {
+        const custom = montosMap?.[k + 1];
+        const parsed = custom !== undefined && custom !== '' ? parseFloat(custom) : NaN;
+        arr.push(isNaN(parsed) ? each : round2(parsed));
+    }
+    const sumFirst = arr.reduce((a, b) => a + b, 0);
+    arr.push(round2(balanceVal - sumFirst));
+    return arr;
+};
 
 const PROGRAMS = [
     { v: 'RR', label: 'Residency Roadmap', hint: 'RR' },
@@ -382,6 +398,16 @@ const DeclararVentaWizard = ({
         return true;
     };
 
+    // Enter avanza al siguiente paso (como tocar "Siguiente"), en vez de no hacer nada —
+    // en un wizard de una pregunta por pantalla el closer espera poder ir con el teclado.
+    // No se usa en <textarea> (ahí Enter mete un salto de línea) ni en review (para no
+    // registrar la venta sin querer con un Enter de más).
+    const enterNext = (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (step !== 'review' && canAdvance()) goNext();
+    };
+
     const submitReferrals = async () => {
         const withData = referralContacts.filter((c) => c.name.trim());
         if (withData.length === 0) return;
@@ -433,31 +459,31 @@ const DeclararVentaWizard = ({
                 <div className="mdb space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     {step === 'name' && (
                         <StepShell n={1} title="¿Quién compró?" hint="Vino de la agenda. Confirmá que esté bien escrito." counter={counter} segments={segments}>
-                            <input autoFocus type="text" value={saleForm.nombre_cliente || ''} onChange={(e) => set('nombre_cliente', e.target.value)} placeholder="Nombre y apellido" className={inputCls} />
+                            <input autoFocus type="text" value={saleForm.nombre_cliente || ''} onChange={(e) => set('nombre_cliente', e.target.value)} onKeyDown={enterNext} placeholder="Nombre y apellido" className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={!!saleForm.nombre_cliente} /></div>
                         </StepShell>
                     )}
                     {step === 'instagram' && (
                         <StepShell n={1} title="¿Su Instagram?" hint="Sin arroba. Se usa para el seguimiento por DM." counter={counter} segments={segments}>
-                            <input autoFocus type="text" value={saleForm.instagram || ''} onChange={(e) => set('instagram', e.target.value.replace(/@/g, ''))} placeholder="usuario" className={inputCls} />
+                            <input autoFocus type="text" value={saleForm.instagram || ''} onChange={(e) => set('instagram', e.target.value.replace(/@/g, ''))} onKeyDown={enterNext} placeholder="usuario" className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={!!saleForm.instagram} /></div>
                         </StepShell>
                     )}
                     {step === 'email' && (
                         <StepShell n={1} title="¿Su email?" hint="Acá le llega el acceso al programa." counter={counter} segments={segments}>
-                            <input autoFocus type="email" value={saleForm.mail_cliente || ''} onChange={(e) => set('mail_cliente', e.target.value)} placeholder="nombre@mail.com" className={inputCls} />
+                            <input autoFocus type="email" value={saleForm.mail_cliente || ''} onChange={(e) => set('mail_cliente', e.target.value)} onKeyDown={enterNext} placeholder="nombre@mail.com" className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={!!saleForm.mail_cliente} /></div>
                         </StepShell>
                     )}
                     {step === 'phone' && (
                         <StepShell n={1} title="¿Teléfono?" hint="Con código de país, para WhatsApp." counter={counter} segments={segments}>
-                            <input autoFocus type="text" value={saleForm.telefono || ''} onChange={(e) => set('telefono', e.target.value)} placeholder="+54 9 11 ..." className={inputCls} />
+                            <input autoFocus type="text" value={saleForm.telefono || ''} onChange={(e) => set('telefono', e.target.value)} onKeyDown={enterNext} placeholder="+54 9 11 ..." className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={!!saleForm.telefono} /></div>
                         </StepShell>
                     )}
                     {step === 'document' && (
                         <StepShell n={1} title="¿Documento de identidad?" hint="DNI, NIE o pasaporte. Es el único dato que tenés que tipear." counter={counter} segments={segments}>
-                            <input autoFocus type="text" value={saleForm.documento_identidad || ''} onChange={(e) => set('documento_identidad', e.target.value)} placeholder="Ingresá el documento" className={inputCls} />
+                            <input autoFocus type="text" value={saleForm.documento_identidad || ''} onChange={(e) => set('documento_identidad', e.target.value)} onKeyDown={enterNext} placeholder="Ingresá el documento" className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={false} /></div>
                         </StepShell>
                     )}
@@ -530,11 +556,11 @@ const DeclararVentaWizard = ({
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Precio total</label>
-                                    <input type="number" step="0.01" value={saleForm.precio_total || ''} onChange={(e) => set('precio_total', e.target.value)} className={inputCls} placeholder="0.00" />
+                                    <input type="number" step="0.01" value={saleForm.precio_total || ''} onChange={(e) => set('precio_total', e.target.value)} onKeyDown={enterNext} className={inputCls} placeholder="0.00" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Cobrado hoy</label>
-                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} className={inputCls} placeholder="0.00" />
+                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} onKeyDown={enterNext} className={inputCls} placeholder="0.00" />
                                 </div>
                             </div>
                             <div className="mt-3 fq info">
@@ -555,13 +581,14 @@ const DeclararVentaWizard = ({
                             {saleForm.tipo_pago_simple === 'completo' && (
                                 <div className="mt-3 space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Monto cobrado</label>
-                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} className={inputCls} placeholder="0.00" />
+                                    <input type="number" step="0.01" value={saleForm.monto || ''} onChange={(e) => set('monto', e.target.value)} onKeyDown={enterNext} className={inputCls} placeholder="0.00" />
                                 </div>
                             )}
                             <input
                                 type="text"
                                 value={saleForm.segundo_pago || ''}
                                 onChange={(e) => set('segundo_pago', e.target.value)}
+                                onKeyDown={enterNext}
                                 placeholder="Comentario del cobro (opcional)"
                                 className={`${inputCls} mt-3`}
                             />
@@ -608,55 +635,88 @@ const DeclararVentaWizard = ({
                         </StepShell>
                     )}
                     {step === 'installmentDay' && (
-                        <StepShell n={3} title="¿Qué día de cada mes paga?" hint="Si el mes no tiene ese día, se cobra el último." counter={counter} segments={segments}>
+                        <StepShell n={3} title="¿Qué día de cada mes paga?" hint="Si el mes no tiene ese día, se cobra el último. Podés ajustar el monto de cada cuota abajo." counter={counter} segments={segments}>
                             <div className="grid grid-cols-7 gap-1.5">
                                 {Array.from({ length: 31 }, (_, k) => k + 1).map((n) => (
                                     <button
                                         key={n}
                                         type="button"
-                                        onClick={() => {
-                                            setPayDay(n);
-                                            const dates = monthlyDates(saleForm.num_cuotas || 1, n);
-                                            const map = {};
-                                            dates.forEach((d, idx) => { map[idx + 1] = d; });
-                                            set('cuotaFechas', map);
-                                        }}
+                                        onClick={() => setPayDay(n)}
                                         className={`h-9 rounded-lg text-[11px] font-black tabular-nums ${payDay === n ? 'bg-violet-600 text-white' : 'bg-slate-900/60 text-slate-300 border border-slate-750'}`}
                                     >{n}</button>
                                 ))}
                             </div>
-                            <div className="mt-3 fq info text-[10px]">
-                                {monthlyDates(saleForm.num_cuotas || 1, payDay).map((d, k) => `Cuota ${k + 1} · ${money(balance / (saleForm.num_cuotas || 1))} · ${prettyDate(d)}`).join('   ·   ')}
+                            <div className="mt-3 space-y-2">
+                                {(() => {
+                                    const n = saleForm.num_cuotas || 1;
+                                    const dates = monthlyDates(n, payDay);
+                                    const amounts = cuotaAmounts(n, balance, saleForm.cuotaMontos);
+                                    return dates.map((d, k) => {
+                                        const isLast = k === n - 1;
+                                        return (
+                                            <div key={k} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
+                                                <span className="text-xs font-black text-white w-16">Cuota {k + 1}</span>
+                                                {isLast ? (
+                                                    <span className="text-xs font-bold w-24" style={{ color: '#8C99E0' }} title="Se ajusta sola para que la suma cierre">{money(amounts[k])}</span>
+                                                ) : (
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={saleForm.cuotaMontos?.[k + 1] ?? amounts[k]}
+                                                        onChange={(e) => set('cuotaMontos', { ...saleForm.cuotaMontos, [k + 1]: e.target.value })}
+                                                        className="w-24 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
+                                                    />
+                                                )}
+                                                <span className="text-xs font-bold text-slate-300 flex-1">{prettyDate(d)}</span>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </StepShell>
                     )}
                     {step === 'installmentDates' && (
-                        <StepShell n={3} title="¿Cuándo cobrás cada cuota?" hint="Estas fechas son las que te van a aparecer en seguimientos." counter={counter} segments={segments}>
+                        <StepShell n={3} title="¿Cuándo cobrás cada cuota?" hint="Estas fechas son las que te van a aparecer en seguimientos. Podés ajustar el monto de cada cuota también." counter={counter} segments={segments}>
                             <div className="space-y-2">
-                                {Array.from({ length: saleForm.num_cuotas || 1 }, (_, k) => k + 1).map((n) => {
-                                    const each = balance / (saleForm.num_cuotas || 1);
-                                    const current = saleForm.cuotaFechas?.[n] || toISO(addMonths(new Date(), n));
-                                    return (
-                                        <div key={n} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
-                                            <span className="text-xs font-black text-white w-16">Cuota {n}</span>
-                                            <span className="text-xs font-bold text-slate-300 w-20">{money(each)}</span>
-                                            <input
-                                                type="date"
-                                                value={current}
-                                                onChange={(e) => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: e.target.value })}
-                                                className="flex-1 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
-                                            />
-                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), -7)) })} className="px-1" style={{ color: '#8C99E0' }}>-7d</button>
-                                            <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [n]: toISO(addDays(parseISO(current), 7)) })} className="px-1" style={{ color: '#8C99E0' }}>+7d</button>
-                                        </div>
-                                    );
-                                })}
+                                {(() => {
+                                    const n = saleForm.num_cuotas || 1;
+                                    const amounts = cuotaAmounts(n, balance, saleForm.cuotaMontos);
+                                    return Array.from({ length: n }, (_, k) => k + 1).map((num) => {
+                                        const isLast = num === n;
+                                        const current = saleForm.cuotaFechas?.[num] || toISO(addMonths(new Date(), num));
+                                        return (
+                                            <div key={num} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
+                                                <span className="text-xs font-black text-white w-16">Cuota {num}</span>
+                                                {isLast ? (
+                                                    <span className="text-xs font-bold w-20" style={{ color: '#8C99E0' }} title="Se ajusta sola para que la suma cierre">{money(amounts[num - 1])}</span>
+                                                ) : (
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={saleForm.cuotaMontos?.[num] ?? amounts[num - 1]}
+                                                        onChange={(e) => set('cuotaMontos', { ...saleForm.cuotaMontos, [num]: e.target.value })}
+                                                        className="w-20 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
+                                                    />
+                                                )}
+                                                <input
+                                                    type="date"
+                                                    value={current}
+                                                    onChange={(e) => set('cuotaFechas', { ...saleForm.cuotaFechas, [num]: e.target.value })}
+                                                    className="flex-1 bg-slate-950/70 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-200 outline-none focus:ring-1 focus:ring-violet-500"
+                                                />
+                                                <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [num]: toISO(addDays(parseISO(current), -7)) })} className="px-1" style={{ color: '#8C99E0' }}>-7d</button>
+                                                <button type="button" onClick={() => set('cuotaFechas', { ...saleForm.cuotaFechas, [num]: toISO(addDays(parseISO(current), 7)) })} className="px-1" style={{ color: '#8C99E0' }}>+7d</button>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
+                            <p className="text-[9px] font-medium mt-2" style={{ color: '#8C99E0' }}>La última cuota se ajusta sola para que la suma cierre exacto contra el saldo.</p>
                         </StepShell>
                     )}
                     {step === 'exam' && (
                         <StepShell n={4} title="¿Qué examen rinde?" hint="Define el grupo y el contenido que recibe." counter={counter} segments={segments}>
-                            <input autoFocus type="text" value={saleForm.examen_lead || ''} onChange={(e) => set('examen_lead', e.target.value)} placeholder="ej. USMLE Step 1" className={inputCls} />
+                            <input autoFocus type="text" value={saleForm.examen_lead || ''} onChange={(e) => set('examen_lead', e.target.value)} onKeyDown={enterNext} placeholder="ej. USMLE Step 1" className={inputCls} />
                             <div className="mt-2"><FieldTag prefilled={!!saleForm.examen_lead} /></div>
                         </StepShell>
                     )}
@@ -665,7 +725,7 @@ const DeclararVentaWizard = ({
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>Fecha de la venta</label>
-                                    <input type="date" value={saleForm.date || ''} onChange={(e) => set('date', e.target.value)} className={inputCls} />
+                                    <input type="date" value={saleForm.date || ''} onChange={(e) => set('date', e.target.value)} onKeyDown={enterNext} className={inputCls} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: '#8C99E0' }}>¿Cerró en llamada?</label>
@@ -733,6 +793,7 @@ const DeclararVentaWizard = ({
                                             type="text"
                                             value={c.name}
                                             onChange={(e) => setReferralContacts((prev) => prev.map((r, j) => (j === k ? { ...r, name: e.target.value } : r)))}
+                                            onKeyDown={enterNext}
                                             placeholder="Nombre del referido"
                                             className={inputCls}
                                         />
@@ -740,6 +801,7 @@ const DeclararVentaWizard = ({
                                             type="text"
                                             value={c.phone}
                                             onChange={(e) => setReferralContacts((prev) => prev.map((r, j) => (j === k ? { ...r, phone: e.target.value } : r)))}
+                                            onKeyDown={enterNext}
                                             placeholder="+54 9 ..."
                                             className={`${inputCls} w-32`}
                                         />
