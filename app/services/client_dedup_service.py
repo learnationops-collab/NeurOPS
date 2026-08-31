@@ -1,7 +1,7 @@
 import logging
 import unicodedata
 from app import db
-from app.models import Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, ClientMergeLog
+from app.models import Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, ClientMergeLog, InstallmentPlan
 from app.services.attribution_service import UnionFind
 
 logger = logging.getLogger(__name__)
@@ -89,13 +89,19 @@ class ClientDedupService:
         for c in clients:
             uf.find(c.id)
 
-        # Email exacto es señal suficiente por sí sola. Instagram/teléfono son más débiles
-        # (reciclados, compartidos entre cuentas de prueba) y exigen nombre compatible.
+        # BUG real encontrado (31/ago/2026, antes de fusionar en producción): "email exacto es
+        # señal suficiente por sí sola" resultó falso — se verificó contra datos reales de
+        # producción y apareció 13 veces el mismo patrón: una persona tipeó el email de OTRA
+        # persona en el formulario (ej. "Isai Jimenz" con el email "macomef01@gmail.com", que es
+        # literalmente el nombre de "Facundo Macome" — el verdadero dueño de esa casilla).
+        # Fusionar por email sin chequear el nombre mezclaba el historial de dos leads distintos.
+        # Mismo resguardo que ya usan instagram/teléfono: exigir nombre compatible también acá.
         for ids in by_email.values():
             if len(ids) < 2 or len(ids) > ClientDedupService.MAX_CLIENTS_PER_KEY:
                 continue
-            for other_id in ids[1:]:
-                uf.union(ids[0], other_id)
+            a, b = clients_by_id[ids[0]], clients_by_id[ids[1]]
+            if _names_compatible(a.full_name, b.full_name):
+                uf.union(a.id, b.id)
 
         for bucket in (by_ig, by_phone):
             for ids in bucket.values():
@@ -143,7 +149,11 @@ class ClientDedupService:
         fallback_phone = next((d.phone for d in duplicates if d.phone and not survivor.phone), None)
         fallback_ig = next((d.instagram for d in duplicates if d.instagram and not survivor.instagram), None)
 
-        for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale):
+        # BUG real encontrado (31/ago/2026, antes de fusionar en producción): faltaba
+        # InstallmentPlan acá — un cliente duplicado con un plan de cuotas activo quedaba con el
+        # plan huérfano (client_id apuntando a una fila borrada) después de la fusión, invisible
+        # para el flujo de "Reportar pago" de una cuota.
+        for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan):
             model.query.filter(model.client_id.in_(duplicate_ids)).update(
                 {model.client_id: survivor_id}, synchronize_session=False
             )
