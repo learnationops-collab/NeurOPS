@@ -983,17 +983,6 @@ const CloserWorkflowPage = () => {
             .finally(() => setLoadingCuotas(false));
     }, [modalStep, selectedLead?.id]);
 
-    const handleMarkCuotaPaid = async (cuotaId) => {
-        try {
-            await api.patch(`/closer/installments/cuota/${cuotaId}`, { estado: 'pagado' });
-            setCuotasPlan(prev => prev.map(c => c.id === cuotaId ? { ...c, estado: 'pagado' } : c));
-            toast.success('Cuota marcada como pagada');
-        } catch (err) {
-            console.error('Error al marcar la cuota como pagada:', err);
-            toast.error('Error al marcar la cuota como pagada');
-        }
-    };
-
     // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
     const handleConfirmFollowUp = async (followUpData) => {
         if (!followUpModal.agendaId) return;
@@ -1893,7 +1882,12 @@ const CloserWorkflowPage = () => {
     // Abre el modal de venta/cobro con los datos del lead precargados. Se llama DESPUÉS de
     // persistir el cierre del seguimiento (antes se abría de inmediato al hacer clic en la
     // opción, sin guardar nada de lo que el closer ya había escrito).
-    const openSaleModalForLead = (lead, isCierreVenta) => {
+    // `presetCuota` (opcional): abre el wizard directo en "Cuota", con esa cuota puntual ya
+    // seleccionada — usado por "Reportar pago" en la tabla de cuotas del cobro (ver más abajo),
+    // para no aterrizar en una pantalla de tipo de pago vacía cuando ya se sabe qué se está
+    // cobrando. El monto viene precargado con lo que dice la cuota pero queda editable: el
+    // cliente puede pagar más o menos, esa decisión es del closer, no del dato guardado.
+    const openSaleModalForLead = (lead, isCierreVenta, presetCuota) => {
         setSalePrompt({ apptId: lead.id });
         setSaleForm({
             lead_id: lead.id,
@@ -1903,8 +1897,8 @@ const CloserWorkflowPage = () => {
             telefono: lead.phone || '',
             mail_cliente: lead.email || '',
             programa: isCierreVenta ? 'RR' : (lead.programa_code || 'RR'),
-            tipo_pago_simple: isCierreVenta ? 'completo' : 'parcial',
-            monto: '',
+            tipo_pago_simple: presetCuota ? 'Cuota' : (isCierreVenta ? 'completo' : 'parcial'),
+            monto: presetCuota ? String(presetCuota.monto) : '',
             segundo_pago: '',
             fecha_cobro: '',
             metodo_pago: 'Stripe',
@@ -1918,6 +1912,7 @@ const CloserWorkflowPage = () => {
             sold_in_call: isCierreVenta,
             date: localToday()
         });
+        if (presetCuota) setSelectedCuotaId(presetCuota.id);
         setSaleModalOpen(true);
     };
 
@@ -3121,10 +3116,10 @@ const CloserWorkflowPage = () => {
                                                 <td className="px-3 py-2 text-right">
                                                     {c.estado !== 'pagado' && (
                                                         <button
-                                                            onClick={() => handleMarkCuotaPaid(c.id)}
+                                                            onClick={() => { openSaleModalForLead(selectedLead, false, c); setSelectedLead(null); }}
                                                             className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer"
                                                         >
-                                                            Marcar pagada
+                                                            Reportar pago
                                                         </button>
                                                     )}
                                                 </td>

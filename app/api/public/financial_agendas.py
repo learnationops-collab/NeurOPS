@@ -282,51 +282,19 @@ def sync_financial_agendas_from_sheets():
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():
     # Retorna todas las agendas financieras con filtros
-    def _ensure_clients(agendas_list):
-        from app.models import Client, db
-        from app.services.booking_service import BookingService
-        from sqlalchemy import or_, func
-        
-        needs_commit = False
-        for a in agendas_list:
-            ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
-            mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
-            
-            client_filters = []
-            if ig_clean:
-                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
-            if mail_clean:
-                client_filters.append(func.lower(Client.email) == mail_clean)
-                
-            client = None
-            if client_filters:
-                client = Client.query.filter(or_(*client_filters)).first()
-                
-            if not client:
-                email = a.mail if (a.mail and a.mail.lower() not in ('n/a', '')) else None
-                if not email:
-                    name_slug = "".join([c for c in (a.lead or a.nombre or "cliente") if c.isalnum()]).lower()
-                    email = f"{name_slug}_{a.id}@neurops.temp"
-                    
-                client_data = {
-                    'name': a.lead or a.nombre or "Cliente Sin Nombre",
-                    'email': email,
-                    'phone': a.whatsapp,
-                    'instagram': a.instagram
-                }
-                try:
-                    BookingService.create_or_update_client(client_data)
-                    needs_commit = True
-                except Exception as e:
-                    import logging
-                    logging.error(f"Error creando cliente dinamico en GET agendas: {e}")
-                    
-        if needs_commit:
-            try:
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-
+    #
+    # BUG real encontrado (31/ago/2026): este endpoint de LECTURA tenía un efecto secundario
+    # (`_ensure_clients`, eliminado) que creaba un Client nuevo por cada agenda que no matcheara
+    # a uno existente por email/instagram exactos — sin fallback por teléfono. Resultado: cada
+    # vez que alguien simplemente ABRÍA la lista de agendas, cualquier fila con un instagram mal
+    # tipeado/distinto al ya guardado (o sin coincidencia exacta de email) generaba un cliente
+    # duplicado con un email placeholder `@neurops.temp`, en vez de reusar el cliente real —
+    # reportado por el usuario como clientes duplicados en el buscador y en la lista de agendas
+    # del admin, que además desalineaban los dashboards (dos historiales separados para la misma
+    # persona). La creación real del cliente para una agenda nueva ya ocurre, con el matcher
+    # bueno (email → instagram → teléfono), en `BookingService.sync_financial_agenda_to_appointment`
+    # justo al crearse la agenda (`POST /public/financial-agendas`) — un endpoint de solo lectura
+    # nunca debería duplicar esa responsabilidad, y mucho menos con un matcher más débil.
     page = request.args.get('page', default=None, type=int)
     limit = request.args.get('limit', default=10, type=int)
 
@@ -342,8 +310,6 @@ def get_financial_agendas():
         from app.models import CommentNotification
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
 
-    _ensure_clients(all_agendas)
-    
     # Precalcular ventas asociadas para evitar N+1
     from app.models import FinancialSale
     emails = {a.mail.strip().lower() for a in all_agendas if a.mail and a.mail.lower() not in ('n/a', '')}
