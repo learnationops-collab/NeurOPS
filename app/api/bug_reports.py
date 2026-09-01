@@ -1,11 +1,20 @@
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import BugReport, URGENCY_LEVELS
+from app.models import BugReport, URGENCY_LEVELS, STATUS_VALUES
 import logging
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('bug_reports', __name__)
+
+MANAGER_ROLES = ('admin', 'operator')
+
+
+def check_manager():
+    if current_user.role not in MANAGER_ROLES:
+        return jsonify({"message": "Forbidden: Acceso restringido a administradores y operadores"}), 403
+    return None
 
 
 @bp.route('/bug-reports', methods=['POST'])
@@ -13,22 +22,27 @@ bp = Blueprint('bug_reports', __name__)
 def create_bug_report():
     data = request.get_json() or {}
     description = (data.get('description') or '').strip()
+    problem = (data.get('problem') or '').strip()
     urgency = (data.get('urgency') or '').strip()
+    technical_context = data.get('technical_context')
 
     if not description:
         return jsonify({"message": "La descripción es obligatoria"}), 400
     if urgency not in URGENCY_LEVELS:
         return jsonify({"message": "Urgencia inválida"}), 400
+    if not technical_context and not problem:
+        return jsonify({"message": "Cuéntanos cuál es el problema"}), 400
 
     try:
         report = BugReport(
             user_id=current_user.id,
             user_role=current_user.role,
+            problem=problem or None,
             description=description,
             urgency=urgency,
             route=data.get('route'),
             user_agent=data.get('user_agent'),
-            technical_context=data.get('technical_context'),
+            technical_context=technical_context,
             screenshot=data.get('screenshot'),
         )
         db.session.add(report)
@@ -40,16 +54,38 @@ def create_bug_report():
         return jsonify({"message": f"Error al crear el reporte: {str(e)}"}), 500
 
 
+@bp.route('/bug-reports/mine', methods=['GET'])
+@login_required
+def list_my_bug_reports():
+    reports = BugReport.query.filter_by(user_id=current_user.id).order_by(BugReport.created_at.desc()).all()
+
+    # mark_read=true se manda solo cuando el usuario efectivamente abre "Mis reportes"
+    # (para el badge de no leídos en el botón flotante, un fetch pasivo no debe consumir el aviso).
+    if request.args.get('mark_read') == 'true':
+        unread_ids = [r.id for r in reports if r.admin_response and not r.is_read_by_user]
+        if unread_ids:
+            BugReport.query.filter(BugReport.id.in_(unread_ids)).update({"is_read_by_user": True}, synchronize_session=False)
+            db.session.commit()
+            for r in reports:
+                if r.id in unread_ids:
+                    r.is_read_by_user = True
+
+    return jsonify([r.to_dict() for r in reports]), 200
+
+
 @bp.route('/bug-reports', methods=['GET'])
 @login_required
 def list_bug_reports():
-    if current_user.role != 'admin':
-        return jsonify({"message": "Forbidden: Acceso restringido a administradores"}), 403
+    forbidden = check_manager()
+    if forbidden: return forbidden
 
     status_filter = request.args.get('status')
+    urgency_filter = request.args.get('urgency')
     query = BugReport.query
     if status_filter:
         query = query.filter(BugReport.status == status_filter)
+    if urgency_filter:
+        query = query.filter(BugReport.urgency == urgency_filter)
 
     reports = query.order_by(BugReport.created_at.desc()).all()
     return jsonify([r.to_dict() for r in reports]), 200
@@ -58,8 +94,8 @@ def list_bug_reports():
 @bp.route('/bug-reports/<int:report_id>', methods=['GET'])
 @login_required
 def get_bug_report(report_id):
-    if current_user.role != 'admin':
-        return jsonify({"message": "Forbidden: Acceso restringido a administradores"}), 403
+    forbidden = check_manager()
+    if forbidden: return forbidden
 
     report = BugReport.query.get_or_404(report_id)
     return jsonify(report.to_dict(include_screenshot=True)), 200
@@ -68,12 +104,12 @@ def get_bug_report(report_id):
 @bp.route('/bug-reports/<int:report_id>/status', methods=['PATCH'])
 @login_required
 def update_bug_report_status(report_id):
-    if current_user.role != 'admin':
-        return jsonify({"message": "Forbidden: Acceso restringido a administradores"}), 403
+    forbidden = check_manager()
+    if forbidden: return forbidden
 
     data = request.get_json() or {}
     status = (data.get('status') or '').strip()
-    if status not in ('open', 'reviewed', 'resolved'):
+    if status not in STATUS_VALUES:
         return jsonify({"message": "Estado inválido"}), 400
 
     report = BugReport.query.get_or_404(report_id)
@@ -85,3 +121,30 @@ def update_bug_report_status(report_id):
         db.session.rollback()
         logger.error(f"Error al actualizar estado del reporte {report_id}: {str(e)}")
         return jsonify({"message": f"Error al actualizar: {str(e)}"}), 500
+
+
+@bp.route('/bug-reports/<int:report_id>/respond', methods=['POST'])
+@login_required
+def respond_bug_report(report_id):
+    forbidden = check_manager()
+    if forbidden: return forbidden
+
+    data = request.get_json() or {}
+    response_text = (data.get('response') or '').strip()
+    if not response_text:
+        return jsonify({"message": "La respuesta no puede estar vacía"}), 400
+
+    report = BugReport.query.get_or_404(report_id)
+    try:
+        report.admin_response = response_text
+        report.responded_at = datetime.utcnow()
+        report.responded_by_id = current_user.id
+        report.is_read_by_user = False
+        if report.status == 'open':
+            report.status = 'reviewed'
+        db.session.commit()
+        return jsonify(report.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al responder reporte {report_id}: {str(e)}")
+        return jsonify({"message": f"Error al responder: {str(e)}"}), 500
