@@ -87,12 +87,12 @@ const PostulacionesInbox = () => {
                     <span className="text-3xl font-black tracking-tight text-white">{total}</span>
                 </div>
                 <div className="flex flex-col gap-2 rounded-3xl border border-white/12 bg-white/5 p-6">
-                    <span className="text-[13px] text-white/55">Preseleccionadas</span>
-                    <span className="text-3xl font-black tracking-tight text-white">{conteos.preseleccionadas ?? 0}</span>
+                    <span className="text-[13px] text-white/55">Completadas</span>
+                    <span className="text-3xl font-black tracking-tight text-white">{total}</span>
                 </div>
                 <div className="flex flex-col gap-2 rounded-3xl border border-white/12 bg-white/5 p-6">
-                    <span className="text-[13px] text-white/55">Descartadas</span>
-                    <span className="text-3xl font-black tracking-tight text-white">{conteos.descartadas ?? 0}</span>
+                    <span className="text-[13px] text-white/55">Con video y llamada</span>
+                    <span className="text-3xl font-black tracking-tight text-white">{conteos.con_material ?? 0}</span>
                 </div>
                 <div className="flex flex-col gap-2 rounded-3xl border border-pink-400/40 bg-gradient-to-br from-pink-500/20 to-blue-600/20 p-6">
                     <span className="text-[13px] text-white/70">A decidir entre los dos</span>
@@ -113,7 +113,7 @@ const PostulacionesInbox = () => {
                 <button
                     onClick={irSiguiente}
                     disabled={pendientes === 0}
-                    className="flex flex-none items-center gap-2 rounded-full bg-white px-7 py-4 text-[13px] font-black text-[#0B0F26] transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+                    className={`flex flex-none items-center gap-2 rounded-full bg-white px-7 py-4 text-[13px] font-black text-[#0B0F26] transition-transform hover:-translate-y-0.5 disabled:opacity-40 ${pendientes > 0 ? 'animate-pulse' : ''}`}
                 >
                     Revisar el siguiente <ArrowRight size={16} />
                 </button>

@@ -62,6 +62,7 @@ def listar_job_applications():
     filtradas.sort(key=lambda a: clarity.score_de(a, weights), reverse=True)
 
     conteos = {f: len([a for a in todas if _aplica_filtro(a, f)]) for f in FILTROS_VALIDOS}
+    conteos['con_material'] = sum(1 for a in todas if a.video and a.llamada)
 
     return jsonify({
         "postulaciones": [a.to_dict(weights=weights, include_respuestas=False) for a in filtradas],
