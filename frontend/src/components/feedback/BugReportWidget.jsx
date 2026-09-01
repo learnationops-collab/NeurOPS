@@ -39,13 +39,14 @@ const BugReportWidget = () => {
         return () => window.removeEventListener(BUG_REPORT_EVENT, handleTrigger);
     }, [user]);
 
-    // Fetch pasivo (sin mark_read) solo para saber si hay respuestas nuevas y mostrar el
-    // badge en el botón flotante — se consume de verdad al abrir "Mis reportes".
+    // Fetch pasivo (solo la lista, nunca abre un hilo) para saber si hay mensajes nuevos y
+    // mostrar el badge en el botón flotante — se consume de verdad al abrir "Mis reportes"
+    // y entrar a la conversación (GET /bug-reports/<id>/messages marca la lectura ahí).
     useEffect(() => {
         if (!user) return;
         api.get('/bug-reports/mine', { skipBugReport: true })
             .then(res => {
-                const unread = res.data.filter(r => r.admin_response && !r.is_read_by_user).length;
+                const unread = res.data.filter(r => r.unread_for_user).length;
                 setUnreadCount(unread);
             })
             .catch(() => { });

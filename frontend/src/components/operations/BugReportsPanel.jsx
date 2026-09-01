@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Send, Loader2, X, CheckCircle2 } from 'lucide-react';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
+import BugReportThread from '../feedback/BugReportThread';
 
 const STATUS_OPTIONS = [
     { id: 'open', label: 'Pendiente', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
@@ -42,21 +43,8 @@ const ScreenshotModal = ({ reportId, onClose }) => {
     );
 };
 
-const ReportCard = ({ report, onRespond, onStatusChange }) => {
-    const [responseText, setResponseText] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     const [showScreenshot, setShowScreenshot] = useState(false);
-
-    const handleSend = async () => {
-        if (!responseText.trim()) return;
-        setSubmitting(true);
-        try {
-            await onRespond(report.id, responseText.trim());
-            setResponseText('');
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     const statusMeta = STATUS_OPTIONS.find(s => s.id === report.status) || STATUS_OPTIONS[0];
 
@@ -68,6 +56,9 @@ const ReportCard = ({ report, onRespond, onStatusChange }) => {
                     <p className="text-[10px] text-muted uppercase tracking-widest">{report.route} · {formatDate(report.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    {report.unread_for_manager && (
+                        <span className="w-2 h-2 rounded-full bg-rose-500" title="El usuario respondió" />
+                    )}
                     <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                         {URGENCY_LABELS[report.urgency] || report.urgency}
                     </span>
@@ -109,31 +100,11 @@ const ReportCard = ({ report, onRespond, onStatusChange }) => {
             )}
             {showScreenshot && <ScreenshotModal reportId={report.id} onClose={() => setShowScreenshot(false)} />}
 
-            {report.admin_response && (
-                <div className="flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-3">
-                    <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-                    <div className="text-xs">
-                        <p className="font-bold">{report.responded_by_name} respondió ({formatDate(report.responded_at)}):</p>
-                        <p className="text-emerald-300/90 whitespace-pre-wrap">{report.admin_response}</p>
-                    </div>
-                </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                <input
-                    value={responseText}
-                    onChange={(e) => setResponseText(e.target.value)}
-                    placeholder={report.admin_response ? 'Enviar otra respuesta...' : 'Responder al usuario...'}
-                    className="flex-1 bg-black/30 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                />
-                <button
-                    disabled={!responseText.trim() || submitting}
-                    onClick={handleSend}
-                    className="p-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                </button>
+            <div className="pt-2 border-t border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 flex items-center gap-1.5">
+                    <MessageCircle size={12} /> Conversación ({report.message_count})
+                </p>
+                <BugReportThread reportId={report.id} onReportUpdate={onReportUpdate} />
             </div>
         </Card>
     );
@@ -160,15 +131,8 @@ const BugReportsPanel = () => {
 
     useEffect(() => { fetchReports(); }, [statusFilter]);
 
-    const handleRespond = async (id, response) => {
-        try {
-            const res = await api.post(`/bug-reports/${id}/respond`, { response }, { skipBugReport: true });
-            setReports(prev => prev.map(r => r.id === id ? res.data : r));
-            toast.success('Respuesta enviada');
-        } catch (err) {
-            console.error('Error al responder reporte:', err);
-            toast.error('No se pudo enviar la respuesta.');
-        }
+    const handleReportUpdate = (updatedReport) => {
+        setReports(prev => prev.map(r => r.id === updatedReport.id ? updatedReport : r));
     };
 
     const handleStatusChange = async (id, status) => {
@@ -227,7 +191,7 @@ const BugReportsPanel = () => {
             ) : (
                 <div className="space-y-4">
                     {reports.map(r => (
-                        <ReportCard key={r.id} report={r} onRespond={handleRespond} onStatusChange={handleStatusChange} />
+                        <ReportCard key={r.id} report={r} onStatusChange={handleStatusChange} onReportUpdate={handleReportUpdate} />
                     ))}
                 </div>
             )}
