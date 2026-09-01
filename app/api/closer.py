@@ -2505,6 +2505,61 @@ def update_closer_payment(payment_id):
     }), 200
 
 
+@bp.route('/clients/<int:client_id>/total-amount', methods=['PATCH'])
+@login_required
+def update_client_total_amount(client_id):
+    """Corrige el "total a pagar del programa" de un cliente (Client.total_amount), desde el
+    historial del cliente en el mazo del closer. Antes este número no se veía ni se podía tocar
+    desde ahí: la tarjeta de "Inscripciones y pagos" mostraba el precio genérico del programa
+    (Program.price, igual para todos), no lo que ESTE cliente negoció — y SalesConsistencyService
+    ya usa Client.total_amount (si existe) para calcular saldo/deuda real, así que dejarlo mal
+    cargado hacía que el saldo mostrado no coincidiera con lo que el closer sabía que el cliente
+    debía en realidad."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import Client
+    client = Client.query.get_or_404(client_id)
+    data = request.get_json() or {}
+
+    if 'total_amount' not in data:
+        return jsonify({"error": "Falta 'total_amount'"}), 400
+    try:
+        nuevo_total = float(data['total_amount'])
+    except (TypeError, ValueError):
+        return jsonify({"error": "'total_amount' tiene que ser un número"}), 400
+    if nuevo_total < 0:
+        return jsonify({"error": "'total_amount' no puede ser negativo"}), 400
+
+    anterior = client.total_amount
+    client.total_amount = nuevo_total
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar el total del programa: {str(e)}"}), 500
+
+    try:
+        from app.models import Appointment
+        from app.services.booking_service import BookingService
+        appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
+        if appt:
+            BookingService.log_lead_event(
+                appt.id, current_user.id, 'total_amount_edited',
+                f"{current_user.username} corrigió el total del programa: {anterior!r} → {nuevo_total!r}"
+            )
+    except Exception as log_err:
+        print(f"[Total Amount Edit Log Error] {log_err}")
+
+    from app.services.closer_followup_service import CloserFollowUpService
+    return jsonify({
+        "message": "Total del programa actualizado",
+        "total_amount": client.total_amount,
+        "deuda": CloserFollowUpService._client_debt(client.id)
+    }), 200
+
+
 @bp.route('/cleanup-queue', methods=['GET'])
 @login_required
 def get_cleanup_queue():

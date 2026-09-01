@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Save, Check, DollarSign } from 'lucide-react';
+import { Loader2, X, Save, Check, DollarSign, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -216,18 +216,44 @@ const VentaRow = ({ venta, onSaved }) => {
     );
 };
 
+// Payment.payment_type usa otro vocabulario que FinancialSale.tipo_pago (creado por
+// SheetsService.PAYMENT_TYPE_MAP al reflejar una venta acá) pero son los mismos 6 tipos de
+// negocio — se reusa TIPO_PAGO_OPTIONS (labels/hints) mapeando hacia/desde estos valores.
+const PAYMENT_TYPE_DB_MAP = {
+    completo: 'full',
+    parcial: 'first_payment',
+    'Seña': 'down_payment',
+    Cuota: 'installment',
+    Renovacion: 'renewal',
+    Upsell: 'upsell'
+};
+const PAYMENT_TYPE_DB_REVERSE = Object.fromEntries(Object.entries(PAYMENT_TYPE_DB_MAP).map(([k, v]) => [v, k]));
+
 // Corrección de un pago ya cargado (Enrollment/Payment). Al guardar, el backend recalcula el
-// total pagado de la inscripción, que es de donde sale la deuda del cliente.
+// total pagado de la inscripción, que es de donde sale la deuda del cliente. El tipo de pago
+// era imposible de corregir acá (pedido explícito del usuario) — mismo selector de 6 tipos que
+// ya usa VentaRow arriba, para los casos en los que el pago quedó cargado con el tipo equivocado.
 const PagoRow = ({ pago, onSaved }) => {
     const [abierto, setAbierto] = useState(false);
-    const [form, setForm] = useState({ amount: pago.amount ?? '', status: pago.status || 'completed' });
+    const [form, setForm] = useState({
+        amount: pago.amount ?? '',
+        status: pago.status || 'completed',
+        tipo: PAYMENT_TYPE_DB_REVERSE[pago.payment_type] || 'completo'
+    });
     const [saving, setSaving] = useState(false);
-    const dirty = String(form.amount) !== String(pago.amount ?? '') || form.status !== (pago.status || 'completed');
+    const dirty = String(form.amount) !== String(pago.amount ?? '')
+        || form.status !== (pago.status || 'completed')
+        || form.tipo !== (PAYMENT_TYPE_DB_REVERSE[pago.payment_type] || 'completo');
+    const tipoSeleccionado = TIPO_PAGO_OPTIONS.find(t => t.v === form.tipo);
 
     const guardar = async () => {
         setSaving(true);
         try {
-            const res = await api.patch(`/closer/payments/${pago.id}`, form);
+            const res = await api.patch(`/closer/payments/${pago.id}`, {
+                amount: form.amount,
+                status: form.status,
+                payment_type: PAYMENT_TYPE_DB_MAP[form.tipo]
+            });
             toast.success('Pago actualizado');
             setAbierto(false);
             onSaved?.(res.data.payment, res.data.enrollment_total_paid);
@@ -253,34 +279,53 @@ const PagoRow = ({ pago, onSaved }) => {
                 </div>
             </div>
             {abierto && (
-                <div className="flex items-end gap-2 pb-1">
-                    <label className="flex-1 space-y-1">
-                        <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
-                        <input
-                            type="number" min="0" value={form.amount}
-                            onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
-                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
-                        />
-                    </label>
-                    <label className="flex-1 space-y-1">
-                        <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
-                        <select
-                            value={form.status}
-                            onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                <div className="space-y-1.5 pb-1">
+                    <div className="flex items-end gap-2">
+                        <label className="flex-1 space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                            <input
+                                type="number" min="0" value={form.amount}
+                                onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
+                        <label className="flex-[1.4] space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
+                            <select
+                                value={form.tipo}
+                                onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            >
+                                {TIPO_PAGO_OPTIONS.map(t => (
+                                    <option key={t.v} value={t.v}>{t.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="flex-1 space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
+                            <select
+                                value={form.status}
+                                onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            >
+                                <option value="completed">completed</option>
+                                <option value="pending">pending</option>
+                                <option value="failed">failed</option>
+                            </select>
+                        </label>
+                        <button
+                            onClick={guardar}
+                            disabled={!dirty || saving}
+                            className="h-7 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer"
                         >
-                            <option value="completed">completed</option>
-                            <option value="pending">pending</option>
-                            <option value="failed">failed</option>
-                        </select>
-                    </label>
-                    <button
-                        onClick={guardar}
-                        disabled={!dirty || saving}
-                        className="h-7 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer"
-                    >
-                        {saving ? <Loader2 size={10} className="animate-spin" /> : 'Guardar'}
-                    </button>
+                            {saving ? <Loader2 size={10} className="animate-spin" /> : 'Guardar'}
+                        </button>
+                    </div>
+                    {tipoSeleccionado && (
+                        <p className="text-[8px] text-amber-300/90 font-medium leading-snug bg-amber-500/5 border border-amber-500/15 rounded-lg px-2 py-1">
+                            {tipoSeleccionado.hint}
+                        </p>
+                    )}
                 </div>
             )}
         </div>
@@ -510,6 +555,67 @@ const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
             </button>
             {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
         </div>
+    );
+};
+
+// Total a pagar del programa (Client.total_amount) — antes no se veía ni se podía tocar acá: la
+// tarjeta de "Inscripciones y pagos" mostraba Program.price (el precio genérico, igual para
+// todos los clientes de ese programa), no lo que ESTE cliente negoció realmente. Es un campo del
+// cliente, no de la inscripción — si el cliente tiene más de una inscripción, corregirlo acá
+// afecta el total que usa todo el sistema (saldo/deuda) para ese cliente, no solo esta tarjeta.
+const TotalProgramaEditor = ({ clientId, totalAmount, fallback, onSaved }) => {
+    const efectivo = totalAmount ?? fallback ?? 0;
+    const [editando, setEditando] = useState(false);
+    const [valor, setValor] = useState(String(efectivo));
+    const [saving, setSaving] = useState(false);
+
+    const guardar = async () => {
+        const num = parseFloat(valor);
+        if (isNaN(num) || num < 0) {
+            toast.error('Ingresá un total válido');
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await api.patch(`/closer/clients/${clientId}/total-amount`, { total_amount: num });
+            toast.success('Total del programa actualizado');
+            setEditando(false);
+            onSaved?.(res.data.total_amount);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'No se pudo actualizar el total');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!editando) {
+        return (
+            <button
+                onClick={() => { setValor(String(efectivo)); setEditando(true); }}
+                title="Corregir el total a pagar de este programa"
+                className="flex items-center gap-1 text-slate-300 hover:text-violet-300 cursor-pointer transition-colors"
+            >
+                {money(efectivo)}
+                <Pencil size={10} className="opacity-60" />
+            </button>
+        );
+    }
+
+    return (
+        <span className="flex items-center gap-1.5">
+            <input
+                type="number" min="0" autoFocus value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') setEditando(false); }}
+                className="w-20 bg-slate-950 border border-violet-500/40 rounded-lg px-1.5 py-0.5 text-[10px] font-bold text-white"
+            />
+            <button onClick={guardar} disabled={saving} title="Guardar total" className="text-violet-400 hover:text-violet-300 cursor-pointer disabled:opacity-40">
+                {saving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+            </button>
+            <button onClick={() => setEditando(false)} title="Cancelar" className="text-slate-500 hover:text-white cursor-pointer">
+                <X size={11} />
+            </button>
+        </span>
     );
 };
 
@@ -812,9 +918,20 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                             {history.enrollments.length === 0 && <p className="text-[10px] text-slate-600">Sin inscripciones registradas.</p>}
                             {history.enrollments.map(e => (
                                 <div key={e.id} className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 mb-2">
-                                    <div className="flex justify-between text-[10px] font-bold text-slate-300 mb-1.5">
+                                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-300 mb-1.5">
                                         <span>{e.program || 'Programa desconocido'}</span>
-                                        <span>{money(e.total_paid)} de {money(e.program_price)}</span>
+                                        <span className="flex items-center gap-1">
+                                            {money(e.total_paid)} de{' '}
+                                            <TotalProgramaEditor
+                                                clientId={history.client.id}
+                                                totalAmount={history.client.total_amount}
+                                                fallback={e.program_price}
+                                                onSaved={(nuevoTotal) => setHistory(prev => ({
+                                                    ...prev,
+                                                    client: { ...prev.client, total_amount: nuevoTotal }
+                                                }))}
+                                            />
+                                        </span>
                                     </div>
                                     <div className="space-y-1">
                                         {e.payments.map(p => (
