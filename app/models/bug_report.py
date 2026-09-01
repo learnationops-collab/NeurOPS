@@ -18,16 +18,32 @@ class BugReport(db.Model):
     technical_context = db.Column(db.Text, nullable=True)
     screenshot = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='open', nullable=False)
-    admin_response = db.Column(db.Text, nullable=True)
-    responded_at = db.Column(db.DateTime, nullable=True)
-    responded_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
-    is_read_by_user = db.Column(db.Boolean, default=True, nullable=False)
+    # Marcas de "ultima vez que cada lado vio la conversacion" -- reemplazan al viejo
+    # admin_response de una sola respuesta. Un mensaje cuenta como no leido para el
+    # reportante si es de otro usuario (un manager) y llego despues de user_last_read_at,
+    # y viceversa para manager_last_read_at con mensajes del propio reportante.
+    user_last_read_at = db.Column(db.DateTime, nullable=True)
+    manager_last_read_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('bug_reports', lazy='dynamic'))
-    responded_by = db.relationship('User', foreign_keys=[responded_by_id])
+    messages = db.relationship(
+        'BugReportMessage', backref='report', lazy='dynamic',
+        order_by='BugReportMessage.created_at', cascade='all, delete-orphan'
+    )
 
     def to_dict(self, include_screenshot=False):
+        last_message = BugReportMessage.query.filter_by(bug_report_id=self.id) \
+            .order_by(BugReportMessage.created_at.desc()).first()
+        unread_for_user = self.messages.filter(
+            BugReportMessage.sender_id != self.user_id,
+            BugReportMessage.created_at > (self.user_last_read_at or datetime.min)
+        ).first() is not None
+        unread_for_manager = self.messages.filter(
+            BugReportMessage.sender_id == self.user_id,
+            BugReportMessage.created_at > (self.manager_last_read_at or datetime.min)
+        ).first() is not None
+
         data = {
             "id": self.id,
             "user_id": self.user_id,
@@ -40,13 +56,36 @@ class BugReport(db.Model):
             "user_agent": self.user_agent,
             "technical_context": self.technical_context,
             "status": self.status,
-            "admin_response": self.admin_response,
-            "responded_at": self.responded_at.isoformat() if self.responded_at else None,
-            "responded_by_name": self.responded_by.username if self.responded_by else None,
-            "is_read_by_user": self.is_read_by_user,
+            "message_count": self.messages.count(),
+            "last_message": last_message.to_dict() if last_message else None,
+            "unread_for_user": unread_for_user,
+            "unread_for_manager": unread_for_manager,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "has_screenshot": bool(self.screenshot),
         }
         if include_screenshot:
             data["screenshot"] = self.screenshot
         return data
+
+
+class BugReportMessage(db.Model):
+    __tablename__ = 'bug_report_messages'
+    id = db.Column(db.Integer, primary_key=True)
+    bug_report_id = db.Column(db.Integer, db.ForeignKey('bug_reports.id', ondelete='CASCADE'), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    sender_role = db.Column(db.String(20), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "bug_report_id": self.bug_report_id,
+            "sender_id": self.sender_id,
+            "sender_name": self.sender.username if self.sender else None,
+            "sender_role": self.sender_role,
+            "message": self.message,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
