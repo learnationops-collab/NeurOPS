@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import BugReport, URGENCY_LEVELS, STATUS_VALUES
+from app.models import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,17 @@ def check_manager():
     if current_user.role not in MANAGER_ROLES:
         return jsonify({"message": "Forbidden: Acceso restringido a administradores y operadores"}), 403
     return None
+
+
+def get_report_for_participant(report_id):
+    """Devuelve (report, error_response). Solo un manager o el propio autor del
+    reporte pueden ver/participar en su hilo de mensajes."""
+    report = BugReport.query.get_or_404(report_id)
+    is_manager = current_user.role in MANAGER_ROLES
+    is_owner = report.user_id == current_user.id
+    if not is_manager and not is_owner:
+        return None, (jsonify({"message": "Forbidden"}), 403)
+    return report, None
 
 
 @bp.route('/bug-reports', methods=['POST'])
@@ -58,18 +69,6 @@ def create_bug_report():
 @login_required
 def list_my_bug_reports():
     reports = BugReport.query.filter_by(user_id=current_user.id).order_by(BugReport.created_at.desc()).all()
-
-    # mark_read=true se manda solo cuando el usuario efectivamente abre "Mis reportes"
-    # (para el badge de no leídos en el botón flotante, un fetch pasivo no debe consumir el aviso).
-    if request.args.get('mark_read') == 'true':
-        unread_ids = [r.id for r in reports if r.admin_response and not r.is_read_by_user]
-        if unread_ids:
-            BugReport.query.filter(BugReport.id.in_(unread_ids)).update({"is_read_by_user": True}, synchronize_session=False)
-            db.session.commit()
-            for r in reports:
-                if r.id in unread_ids:
-                    r.is_read_by_user = True
-
     return jsonify([r.to_dict() for r in reports]), 200
 
 
@@ -123,28 +122,61 @@ def update_bug_report_status(report_id):
         return jsonify({"message": f"Error al actualizar: {str(e)}"}), 500
 
 
-@bp.route('/bug-reports/<int:report_id>/respond', methods=['POST'])
+@bp.route('/bug-reports/<int:report_id>/messages', methods=['GET'])
 @login_required
-def respond_bug_report(report_id):
-    forbidden = check_manager()
+def list_bug_report_messages(report_id):
+    report, forbidden = get_report_for_participant(report_id)
+    if forbidden: return forbidden
+
+    messages = report.messages.all()
+
+    # Abrir el hilo cuenta como "leído" para el lado que lo abre.
+    now = datetime.utcnow()
+    if current_user.role in MANAGER_ROLES:
+        report.manager_last_read_at = now
+    if report.user_id == current_user.id:
+        report.user_last_read_at = now
+    db.session.commit()
+
+    return jsonify({
+        "report": report.to_dict(include_screenshot=True),
+        "messages": [m.to_dict() for m in messages],
+    }), 200
+
+
+@bp.route('/bug-reports/<int:report_id>/messages', methods=['POST'])
+@login_required
+def create_bug_report_message(report_id):
+    report, forbidden = get_report_for_participant(report_id)
     if forbidden: return forbidden
 
     data = request.get_json() or {}
-    response_text = (data.get('response') or '').strip()
-    if not response_text:
-        return jsonify({"message": "La respuesta no puede estar vacía"}), 400
+    text = (data.get('message') or '').strip()
+    if not text:
+        return jsonify({"message": "El mensaje no puede estar vacío"}), 400
 
-    report = BugReport.query.get_or_404(report_id)
     try:
-        report.admin_response = response_text
-        report.responded_at = datetime.utcnow()
-        report.responded_by_id = current_user.id
-        report.is_read_by_user = False
-        if report.status == 'open':
-            report.status = 'reviewed'
+        now = datetime.utcnow()
+        msg = BugReportMessage(
+            bug_report_id=report.id,
+            sender_id=current_user.id,
+            sender_role=current_user.role,
+            message=text,
+            created_at=now,
+        )
+        db.session.add(msg)
+
+        is_manager = current_user.role in MANAGER_ROLES
+        if is_manager:
+            report.manager_last_read_at = now
+            if report.status == 'open':
+                report.status = 'reviewed'
+        if report.user_id == current_user.id:
+            report.user_last_read_at = now
+
         db.session.commit()
-        return jsonify(report.to_dict()), 200
+        return jsonify(msg.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error al responder reporte {report_id}: {str(e)}")
-        return jsonify({"message": f"Error al responder: {str(e)}"}), 500
+        logger.error(f"Error al agregar mensaje al reporte {report_id}: {str(e)}")
+        return jsonify({"message": f"Error al enviar el mensaje: {str(e)}"}), 500
