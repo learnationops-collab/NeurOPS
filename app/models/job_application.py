@@ -83,6 +83,11 @@ class JobApplication(db.Model):
             "score": clarity.score_de(self, weights) if weights is not None else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            # Se muestran siempre: la tabla del inbox (Formación/Inglés/Cierre) los
+            # necesita aunque include_respuestas=False no traiga el resto del formulario.
+            "conocimiento": self.conocimiento,
+            "cierre": self.cierre,
+            "ingles": self.ingles,
         }
         if include_respuestas:
             data.update({
@@ -92,10 +97,7 @@ class JobApplication(db.Model):
                 "pais": self.pais,
                 "instagram": self.instagram,
                 "dedicacion": self.dedicacion,
-                "conocimiento": self.conocimiento,
                 "formacion": self.formacion,
-                "cierre": self.cierre,
-                "ingles": self.ingles,
                 "herramientas": self.herramientas or [],
                 "reporte": self.reporte,
                 "aportes": self.aportes or [],
