@@ -31,14 +31,21 @@ const captureScreenshot = async () => {
     }
 };
 
+// Si el reporte no viene de un error detectado automáticamente, no hay contexto técnico
+// que explique "cuál es el problema" — por eso se pregunta explícitamente antes de pedir
+// qué intentaba hacer el usuario. Si sí viene de un error, esa pregunta ya está respondida
+// por el error mismo y se salta directo a "qué intentabas hacer".
 const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
     const { user } = useAuth();
-    const [step, setStep] = useState('description');
+    const isReactive = !!technicalContext;
+    const [step, setStep] = useState(isReactive ? 'description' : 'problem');
+    const [problem, setProblem] = useState('');
     const [description, setDescription] = useState('');
     const [urgency, setUrgency] = useState(null);
 
     const reset = () => {
-        setStep('description');
+        setStep(isReactive ? 'description' : 'problem');
+        setProblem('');
         setDescription('');
         setUrgency(null);
     };
@@ -56,6 +63,7 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
 
         try {
             await api.post('/bug-reports', {
+                problem: isReactive ? null : problem,
                 description,
                 urgency: selectedUrgency,
                 route: window.location.pathname,
@@ -107,14 +115,52 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                             </div>
                         )}
 
-                        <div className="flex items-start gap-2">
-                            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                                <Bot size={14} />
+                        {!isReactive && (
+                            <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                                    <Bot size={14} />
+                                </div>
+                                <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
+                                    ¿Cuál es el problema?
+                                </div>
                             </div>
-                            <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                ¿Qué intentabas hacer cuando apareció el error o problema?
+                        )}
+
+                        {step === 'problem' && (
+                            <div className="space-y-3 pl-9">
+                                <textarea
+                                    autoFocus
+                                    value={problem}
+                                    onChange={(e) => setProblem(e.target.value)}
+                                    placeholder="Describe el problema..."
+                                    className="w-full bg-surface border border-base rounded-2xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                <button
+                                    disabled={!problem.trim()}
+                                    onClick={() => setStep('description')}
+                                    className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-2xl py-3 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
+                                >
+                                    Continuar <Send size={14} />
+                                </button>
                             </div>
-                        </div>
+                        )}
+
+                        {(step === 'description' || step === 'urgency' || step === 'submitting' || step === 'done') && !isReactive && (
+                            <div className="bg-primary/10 text-primary rounded-2xl rounded-tr-sm p-3 text-sm max-w-[85%] ml-auto whitespace-pre-wrap break-words">
+                                {problem}
+                            </div>
+                        )}
+
+                        {(step === 'description' || step === 'urgency' || step === 'submitting' || step === 'done') && (
+                            <div className="flex items-start gap-2">
+                                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                                    <Bot size={14} />
+                                </div>
+                                <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
+                                    ¿Qué intentabas hacer cuando apareció el error o problema?
+                                </div>
+                            </div>
+                        )}
 
                         {step === 'description' && (
                             <div className="space-y-3 pl-9">
