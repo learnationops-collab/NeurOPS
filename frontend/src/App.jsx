@@ -45,6 +45,7 @@ import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
+import BugReportWidget from './components/feedback/BugReportWidget';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
@@ -94,6 +95,7 @@ function App() {
         <Router>
           <PixelTracker />
           <Toaster position="top-right" />
+          <BugReportWidget />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />

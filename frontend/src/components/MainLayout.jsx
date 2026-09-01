@@ -9,7 +9,6 @@ import GlobalSettingsModal from './modals/GlobalSettingsModal';
 import Dock from './shared/Dock';
 import WidgetsPill from './shared/WidgetsPill';
 import HotkeysManager from './admin/HotkeysManager';
-import BugReportWidget from './feedback/BugReportWidget';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
@@ -142,8 +141,6 @@ const MainLayout = ({ children }) => {
                 </main>
 
                 <DebugConsole isVisible={showConsole} onClose={() => setShowConsole(false)} />
-
-                <BugReportWidget />
             </div>
 
 

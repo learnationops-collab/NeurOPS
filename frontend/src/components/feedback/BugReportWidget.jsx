@@ -5,20 +5,27 @@ import BugReportChat from './BugReportChat';
 import BugReportHistory from './BugReportHistory';
 import { BUG_REPORT_EVENT } from '../../utils/bugReportBus';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
-// Botón flotante global + orquestador del disparador reactivo. Vive en MainLayout, así
-// que solo se monta para usuarios autenticados. El interceptor de axios (api.js) dispara
-// BUG_REPORT_EVENT en cada error 5xx/red sin abrir el chat directamente (sería intrusivo
-// en llamadas de fondo); en vez de eso muestra este mini-prompt tipo toast con el botón
-// "Reportar error" secundario. ErrorBoundary dispara el mismo evento con autoOpen:true
-// porque ahí sí hay una acción explícita del usuario sobre un fallo visible en pantalla.
+// Botón flotante global + orquestador del disparador reactivo. Se monta a nivel de App
+// (no dentro de MainLayout) porque no todas las vistas autenticadas usan MainLayout —
+// CloserWorkflowPage ("/closer/deck", donde los closers pasan todo su tiempo) corre
+// standalone a propósito, y montarlo solo en MainLayout dejaba a los closers sin forma
+// de reportar bugs. Se autogatea con useAuth() en vez de depender del layout padre.
+// El interceptor de axios (api.js) dispara BUG_REPORT_EVENT en cada error 5xx/red sin
+// abrir el chat directamente (sería intrusivo en llamadas de fondo); en vez de eso
+// muestra este mini-prompt tipo toast con el botón "Reportar error" secundario.
+// ErrorBoundary dispara el mismo evento con autoOpen:true porque ahí sí hay una acción
+// explícita del usuario sobre un fallo visible en pantalla.
 const BugReportWidget = () => {
+    const { user } = useAuth();
     const [view, setView] = useState('closed'); // 'closed' | 'chat' | 'history'
     const [technicalContext, setTechnicalContext] = useState(null);
     const [pendingPrompt, setPendingPrompt] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
+        if (!user) return;
         const handleTrigger = (e) => {
             const context = e.detail || {};
             if (context.autoOpen) {
@@ -30,18 +37,19 @@ const BugReportWidget = () => {
         };
         window.addEventListener(BUG_REPORT_EVENT, handleTrigger);
         return () => window.removeEventListener(BUG_REPORT_EVENT, handleTrigger);
-    }, []);
+    }, [user]);
 
     // Fetch pasivo (sin mark_read) solo para saber si hay respuestas nuevas y mostrar el
     // badge en el botón flotante — se consume de verdad al abrir "Mis reportes".
     useEffect(() => {
+        if (!user) return;
         api.get('/bug-reports/mine', { skipBugReport: true })
             .then(res => {
                 const unread = res.data.filter(r => r.admin_response && !r.is_read_by_user).length;
                 setUnreadCount(unread);
             })
             .catch(() => { });
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (!pendingPrompt) return;
@@ -64,6 +72,8 @@ const BugReportWidget = () => {
         setUnreadCount(0);
         setView('history');
     };
+
+    if (!user) return null;
 
     return (
         <>
