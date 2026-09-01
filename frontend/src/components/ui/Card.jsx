@@ -5,13 +5,13 @@ const Card = ({ children, variant = 'surface', className = '', padding = 'p-8', 
 
     const variants = {
         surface: "bg-surface shadow-xl",
-        glass: "glass-effect",
+        glass: "glass-panel",
         outline: "bg-transparent border-white/5"
     };
 
     return (
         <div
-            className={`${baseStyles} ${variants[variant]} ${padding} ${glass ? 'glass-effect' : ''} ${className}`}
+            className={`${baseStyles} ${variants[variant]} ${padding} ${glass ? 'glass-panel' : ''} ${className}`}
             {...props}
         >
             {children}

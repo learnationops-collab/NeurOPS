@@ -17,7 +17,7 @@ const Button = ({
         secondary: "bg-secondary text-white hover:bg-secondary-hover shadow-lg shadow-secondary/20",
         outline: "bg-transparent border border-base hover:border-white text-muted hover:text-white",
         ghost: "bg-transparent hover:bg-white/5 text-muted hover:text-white",
-        glass: "glass-effect text-white hover:bg-white/10"
+        glass: "glass-panel text-white hover:bg-white/10"
     };
 
     const sizes = {
