@@ -87,7 +87,7 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                     initial={{ opacity: 0, y: 40, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 40, scale: 0.95 }}
-                    className="fixed bottom-8 right-8 z-[210] w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] glass-effect rounded-[2rem] shadow-2xl border border-white/10 flex flex-col overflow-hidden"
+                    className="fixed bottom-8 right-8 z-[210] w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] bg-surface rounded-[2rem] shadow-2xl border border-white/10 flex flex-col overflow-hidden"
                 >
                     <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/5">
                         <div className="flex items-center gap-3">
