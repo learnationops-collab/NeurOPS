@@ -1091,6 +1091,26 @@ const CloserWorkflowPage = () => {
             } finally {
                 setProcessingId(null);
             }
+        } else if (actionType === 'conversando_no_show') {
+            // Lead que nunca pasó de "Conversando": la hora de la llamada ya pasó sin
+            // confirmación. Se manda por /deck (no /appointments/.../process) y solo con
+            // `result` (closer_result) — sin tocar `confirm_status` — para que el estado de
+            // confirmación quede tal cual estaba (nunca llega a "Confirmado").
+            setProcessingId(apptId);
+            try {
+                await api.post(`/closer/deck/${apptId}`, {
+                    result: 'No Show',
+                    closer_notes: note || sessionForm.notes || 'No show: nunca confirmó antes de la hora de la llamada'
+                });
+                toast.success("Marcado como No Show");
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error(err);
+                toast.error("Error al marcar como No Show");
+            } finally {
+                setProcessingId(null);
+            }
         } else if (actionType === 'lost_no_show' || actionType === 'lost_after_pres' || actionType === 'lost_no_pres') {
             // Descarte post-llamada (no show reiterado, perdido tras presentar oferta, o sin
             // presentación) — a diferencia de 'confirm_discard'/'no_lead' (pre-llamada, prospecto
@@ -1625,8 +1645,11 @@ const CloserWorkflowPage = () => {
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
             return selectedDate.toLocaleString("es-ES");
         })(),
-        enviar_webhook: true,
-        enviar_mensaje: saleForm.enviar_mensaje,
+        // El closer decide si quiere disparar la automatización de n8n (mensajes al cliente +
+        // notificaciones del equipo) al reportar esta venta — checkbox en el paso de revisión
+        // del wizard, prendido por defecto para no perder avisos por omisión.
+        enviar_webhook: saleForm.enviar_webhook !== false,
+        enviar_mensaje: saleForm.enviar_webhook !== false,
         sold_in_call: saleForm.sold_in_call
     });
 
@@ -2220,6 +2243,12 @@ const CloserWorkflowPage = () => {
                 ? 'confirmado'
                 : (normalizedResult === 'conversando' || normalizedResult === 'contactado') ? 'conversando' : 'por_confirmar';
             const currentIdx = steps.findIndex(x => x.k === currentKey);
+            // Llegó la hora de la llamada y el lead nunca llegó a "Confirmado": no tiene sentido
+            // que esa hora pase en silencio dentro del pipeline de conversación — se puede cerrar
+            // como No Show directo, sin pasar por "Confirmado" (pedido explícito del usuario).
+            const callTimePassed = selectedLead.start_time
+                ? (parseUtcIso(selectedLead.start_time)?.getTime() ?? Infinity) <= nowTick
+                : false;
 
             return (
                 <div className="space-y-6">
@@ -2316,8 +2345,21 @@ const CloserWorkflowPage = () => {
 
                             <div className="q">
                                 <h4>Otras acciones</h4>
-                                <div className={`grid ${currentKey === 'conversando' ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                                <div className={`grid ${currentKey === 'conversando' ? (callTimePassed ? 'grid-cols-3' : 'grid-cols-2') : 'grid-cols-1'} gap-3`}>
                                     {currentKey === 'conversando' && option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Pidió otra fecha')}
+                                    {currentKey === 'conversando' && callTimePassed && option(() => {
+                                        setReasonInput('');
+                                        setReasonModal({
+                                            show: true,
+                                            title: "Marcar No Show",
+                                            description: `Ya pasó la hora de la llamada y ${selectedLead.lead_name} nunca confirmó. Se marca como No Show y NO pasa a "Confirmado". Notas adicionales (opcional):`,
+                                            placeholder: "Notas adicionales...",
+                                            confirmText: "Marcar No Show",
+                                            requireText: false,
+                                            actionType: 'conversando_no_show',
+                                            apptId: selectedLead.id
+                                        });
+                                    }, 'bad', 'No show', 'Hora ya pasó')}
                                     {option(() => {
                                         setReasonInput('');
                                         setReasonModal({
@@ -4428,7 +4470,7 @@ const CloserWorkflowPage = () => {
             {/* Ver ovLead: AnimatePresence deja estos overlays pegados al cerrarse */}
             <>
                 {decisionMakerPrompt.apptId && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4470,7 +4512,7 @@ const CloserWorkflowPage = () => {
             {/* Prompt intermedio: ¿Hubo venta? */}
             <>
                 {salePrompt.apptId && !saleModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4561,7 +4603,7 @@ const CloserWorkflowPage = () => {
             {/* Modal de Motivo / Razón de Cambio (Reemplazo de window.prompt) */}
             <>
                 {reasonModal.show && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
+                    <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4645,7 +4687,7 @@ const CloserWorkflowPage = () => {
             {/* Modal Nueva Agenda v7 (ovNew) */}
             <>
                 {newAgendaModalOpen && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4772,7 +4814,7 @@ const CloserWorkflowPage = () => {
             {/* Modal Referido Manual v7 (ovRef) */}
             <>
                 {manualRefModalOpen && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -5001,7 +5043,7 @@ const CloserWorkflowPage = () => {
             {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
             <>
                 {celebration && (
-                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+                    <div className="fixed inset-0 z-[1250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}

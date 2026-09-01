@@ -912,6 +912,22 @@ const DeclararVentaWizard = ({
                                     </div>
                                 </div>
                             )}
+
+                            <label className="flex items-start gap-2 mt-4 rounded-xl px-3 py-2.5 cursor-pointer" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={saleForm.enviar_webhook !== false}
+                                    onChange={(e) => set('enviar_webhook', e.target.checked)}
+                                    className="mt-0.5 accent-violet-500"
+                                />
+                                <span className="text-[10px] font-bold leading-snug" style={{ color: '#8C99E0' }}>
+                                    Avisar por la automatización (n8n)
+                                    <span className="block font-medium" style={{ color: '#5C6699' }}>
+                                        Prendido (recomendado), dispara los mensajes automáticos al cliente y las notificaciones
+                                        del equipo. Apagalo solo si ya avisaste vos mismo o si es una venta de prueba.
+                                    </span>
+                                </span>
+                            </label>
                         </StepShell>
                     )}
                 </div>

@@ -211,6 +211,14 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
     const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
     const [saving, setSaving] = useState(false);
     const [marking, setMarking] = useState(false);
+    const [reportando, setReportando] = useState(false);
+    // El cliente puede pagar más o menos que lo pactado en la cuota — lo decide el closer al
+    // momento de reportar, no queda fijo al monto original de la cuota (mismo criterio que ya
+    // aplica DeclararVentaWizard para el flujo de "Reportar pago").
+    const [montoPagado, setMontoPagado] = useState(String(cuota.monto ?? ''));
+    // Prendido por defecto: es un pago nuevo real, a diferencia de una corrección de datos
+    // (VentaRow arriba), así que sí debe disparar la automatización como cualquier venta.
+    const [enviarWebhook, setEnviarWebhook] = useState(true);
     const dirty = fecha !== (cuota.fecha_vencimiento || '');
 
     const patch = async (payload, setFlag) => {
@@ -238,7 +246,7 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
                 telefono: client?.phone || '',
                 mail_cliente: client?.email || '',
                 tipo_pago: `${client?.programa_code || 'RR'} - Cuota`,
-                monto: cuota.monto,
+                monto: parseFloat(montoPagado) || 0,
                 segundo_pago: `Cuota ${cuota.numero_cuota}`,
                 metodo_pago: 'Stripe',
                 examen: '',
@@ -247,8 +255,8 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
                 setter: '',
                 documento_identidad: '',
                 marca_temporal: new Date().toLocaleString('es-ES'),
-                enviar_webhook: true,
-                enviar_mensaje: true,
+                enviar_webhook: enviarWebhook,
+                enviar_mensaje: enviarWebhook,
                 sold_in_call: false
             };
             const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
@@ -262,47 +270,84 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
             setMarking(false);
             return;
         }
+        setReportando(false);
         await patch({ estado: 'pagado' }, setMarking);
     };
 
     return (
-        <div className="flex items-center justify-between gap-3 text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
-            <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${CUOTA_ESTADO_CLS[cuota.estado] || CUOTA_ESTADO_CLS.pendiente}`}>
-                    {cuota.estado}
-                </span>
-                <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
-                <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+        <div className="space-y-2 bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-[10px]">
+                <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${CUOTA_ESTADO_CLS[cuota.estado] || CUOTA_ESTADO_CLS.pendiente}`}>
+                        {cuota.estado}
+                    </span>
+                    <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
+                    <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <input
+                        type="date"
+                        value={fecha || ''}
+                        disabled={cuota.estado === 'pagado'}
+                        onChange={(e) => setFecha(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 disabled:opacity-50"
+                    />
+                    {dirty && (
+                        <button
+                            onClick={() => patch({ fecha_vencimiento: fecha }, setSaving)}
+                            disabled={saving}
+                            title="Guardar nueva fecha"
+                            className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
+                        >
+                            {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                        </button>
+                    )}
+                    {cuota.estado !== 'pagado' && (
+                        <button
+                            onClick={() => setReportando(v => !v)}
+                            title="Reportar pago de esta cuota"
+                            className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
+                        >
+                            <Check size={11} />
+                        </button>
+                    )}
+                </div>
             </div>
-            <div className="flex items-center gap-1.5">
-                <input
-                    type="date"
-                    value={fecha || ''}
-                    disabled={cuota.estado === 'pagado'}
-                    onChange={(e) => setFecha(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 disabled:opacity-50"
-                />
-                {dirty && (
-                    <button
-                        onClick={() => patch({ fecha_vencimiento: fecha }, setSaving)}
-                        disabled={saving}
-                        title="Guardar nueva fecha"
-                        className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
-                    >
-                        {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
-                    </button>
-                )}
-                {cuota.estado !== 'pagado' && (
+
+            {reportando && (
+                <div className="space-y-2 pt-2 border-t border-slate-850">
+                    <label className="space-y-1 block">
+                        <span className="text-[8px] font-black uppercase text-slate-500 block">Monto que pagó el cliente</span>
+                        <input
+                            type="number" min="0" value={montoPagado}
+                            onChange={(e) => setMontoPagado(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                        />
+                    </label>
+                    <label className="flex items-start gap-2 bg-slate-950/60 border border-slate-850 rounded-lg px-2 py-2 cursor-pointer">
+                        <input
+                            type="checkbox" checked={enviarWebhook}
+                            onChange={(e) => setEnviarWebhook(e.target.checked)}
+                            className="mt-0.5 accent-violet-500"
+                        />
+                        <span className="text-[9px] text-slate-400 font-bold leading-snug">
+                            Avisar por la automatización (n8n)
+                            <span className="block text-slate-600 font-medium">
+                                Prendido, dispara los mensajes automáticos al cliente como una venta nueva. Apagalo
+                                si ya le avisaste vos mismo o si es solo una corrección de datos.
+                            </span>
+                        </span>
+                    </label>
                     <button
                         onClick={markAsPaid}
-                        disabled={marking}
-                        title="Marcar cuota como pagada (reporta a Discord vía n8n, igual que una venta)"
-                        className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
+                        disabled={marking || !montoPagado || parseFloat(montoPagado) <= 0}
+                        className="w-full h-8 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                         {marking ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                        Confirmar pago
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };
