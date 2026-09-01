@@ -4,7 +4,6 @@
 
 /* Force Font System & Weights */
 * {
-    font-family: var(--font-body) !important;
     font-style: normal !important;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
@@ -15,34 +14,50 @@
     /* Remove mobile/webkit blue tap highlight */
 }
 
+/* :not(.bg-v6):not(.bg-v6 *): el Closer Workspace usa Montserrat, no la fuente de marca del resto de la app
+   (pedido del usuario, 28/ago/2026 — ver el mismo patrón en index.html, que carga antes que este
+   archivo y tiene la misma exclusión). */
+*:not(.bg-v6):not(.bg-v6 *) {
+    font-family: var(--font-body) !important;
+}
+
 /* Custom selection color (more subtle) */
 ::selection {
     background: rgba(19, 35, 198, 0.1);
     color: inherit;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-.font-bold,
-.font-semibold,
-.font-black,
-[class*="font-bold"],
-[class*="font-semibold"],
-[class*="font-black"] {
+/* :not(.bg-v6):not(.bg-v6 *) dentro de cada selector: el rediseño "v6/v7" del Workspace de Closers
+   (CloserWorkflowPage.jsx, ver .bg-v6 más abajo) define sus propios pesos explícitos por clase
+   (700/800/900, sin !important, calcados de la referencia visual) para que números y títulos se
+   vean gruesos/impactantes. Sin esta exclusión, este reset global (con !important) les ganaba
+   incondicionalmente pase lo que pase la especificidad — confirmado con getComputedStyle en el
+   navegador: .tud-pct-v6 (declarado font-weight:900) computaba 400. Resultado reportado por el
+   usuario: "las letras son un poquito más delgaditas" comparando contra el mockup, en TODO el
+   Workspace (números del hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) porque
+   casi todos esos elementos son <div>/<span>/<button>/<h3>. */
+h1:not(.bg-v6):not(.bg-v6 *),
+h2:not(.bg-v6):not(.bg-v6 *),
+h3:not(.bg-v6):not(.bg-v6 *),
+h4:not(.bg-v6):not(.bg-v6 *),
+h5:not(.bg-v6):not(.bg-v6 *),
+h6:not(.bg-v6):not(.bg-v6 *),
+.font-bold:not(.bg-v6):not(.bg-v6 *),
+.font-semibold:not(.bg-v6):not(.bg-v6 *),
+.font-black:not(.bg-v6):not(.bg-v6 *),
+[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *),
+[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *),
+[class*="font-black"]:not(.bg-v6):not(.bg-v6 *) {
     font-family: var(--font-header) !important;
     font-weight: var(--weight-semibold) !important;
 }
 
-p,
-span,
-div,
-button,
-input,
-label {
+p:not(.bg-v6):not(.bg-v6 *),
+span:not(.bg-v6):not(.bg-v6 *),
+div:not(.bg-v6):not(.bg-v6 *),
+button:not(.bg-v6):not(.bg-v6 *),
+input:not(.bg-v6):not(.bg-v6 *),
+label:not(.bg-v6):not(.bg-v6 *) {
     font-weight: var(--weight-regular) !important;
     font-style: normal !important;
 }
@@ -56,8 +71,8 @@ em,
 }
 
 /* Override Tailwind bolds */
-b,
-strong {
+b:not(.bg-v6):not(.bg-v6 *),
+strong:not(.bg-v6):not(.bg-v6 *) {
     font-weight: var(--weight-medium) !important;
 }
 
@@ -323,12 +338,17 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+/* :not(.bg-v6):not(.bg-v6 *): mismo motivo que el resto de las exclusiones -v6 de este archivo — sin esto,
+   cualquier <h1>-<h6> dentro del Workspace (ej. el título "Closer Workspace" del header, o
+   <h3 className="tsp-name-v6">) heredaba Montserrat de `.bg-v6` pero esta regla se lo pisaba
+   igual con la fuente de marca del resto de la app, por más baja especificidad que tenga: una
+   regla explícita sobre el propio elemento siempre le gana a un valor heredado del ancestro. */
+h1:not(.bg-v6):not(.bg-v6 *),
+h2:not(.bg-v6):not(.bg-v6 *),
+h3:not(.bg-v6):not(.bg-v6 *),
+h4:not(.bg-v6):not(.bg-v6 *),
+h5:not(.bg-v6):not(.bg-v6 *),
+h6:not(.bg-v6):not(.bg-v6 *) {
     font-family: var(--font-header);
     font-weight: var(--weight-light);
     letter-spacing: -0.03em;
@@ -513,20 +533,93 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 :root {
   --v6-navy: #0A0E3D;
   --v6-blue: #1323C6;
+  --v6-blue2: #4E8BD8;
   --v6-pink: #FF3FA4;
   --v6-pink2: #FF6AD5;
   --v6-grad: linear-gradient(135deg,#FF3FA4,#FF6AD5);
   --v6-grade: linear-gradient(135deg,#1323C6,#FF3FA4);
+  --v6-gradb: linear-gradient(135deg,#1323C6,#4E8BD8);
   --v6-card: rgba(255,255,255,.04);
   --v6-bd: rgba(255,255,255,.09);
   --v6-bd2: rgba(255,255,255,.18);
   --v6-tx: #fff;
   --v6-tx2: rgba(255,255,255,.66);
   --v6-tx3: rgba(255,255,255,.40);
-  --v6-ok: #22C55E;
-  --v6-warn: #F59E0B;
-  --v6-dgr: #EF4444;
+  /* Paleta "premium" del rediseño del Workspace de Closers: tonos más apagados que los
+     Tailwind por defecto (verde/ámbar/rojo puros), pensados para convivir con fondo #020617
+     sin saturar. Exclusiva de las clases -v6/-v7 (solo las usa CloserWorkflowPage). */
+  --v6-ok: #2FBF8F;
+  --v6-warn: #D9A441;
+  --v6-dgr: #E85C4A;
   --v6-info: #60A5FA;
+  --v6-bg-glow:
+    radial-gradient(1100px 520px at 12% -12%, rgba(19,35,198,.30), transparent 62%),
+    radial-gradient(820px 420px at 96% -4%, rgba(255,63,164,.10), transparent 58%),
+    #020617;
+}
+
+/* FONDO */
+/* Resplandor ambiental detrás de todo el Workspace: dos manchas radiales (índigo arriba a la
+   izquierda, rosa arriba a la derecha) sobre el navy base #020617, en vez del navy plano de
+   antes. El header, sticky y con su propio blur, tapa la mancha cuando hace scroll. */
+.bg-v6 {
+  background: var(--v6-bg-glow);
+  background-attachment: fixed;
+  /* Montserrat en vez de la Inter/Plus Jakarta Sans de marca del resto de la app — pedido del
+     usuario (28/ago/2026) para acercar el Workspace a la referencia visual, que usa Montserrat en
+     todo. Los dos resets globales (`* {font-family}` en index.css y `#root *` en index.html)
+     tienen la exclusión `:not(.bg-v6):not(.bg-v6 *)` para no pisar esto. */
+  font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* DASHBOARD (v7): el dashboard de performance (CloserDashboard.jsx) está construido enteramente
+   sobre las utilidades de tema genéricas del proyecto (bg-main/bg-surface/text-base/text-muted/
+   border-base/bg-primary/bg-secondary, ver tailwind.config.cjs) en vez de las clases -v6 del
+   resto del Workspace, porque también lo usa el admin (PublicCloserStatsPage) fuera de acá. En
+   vez de reescribir sus ~8 componentes, se pisan acá las variables CSS de las que esas
+   utilidades leen (--color-*) — como son custom properties, cascadean a todo lo de adentro sin
+   tocar un solo archivo del dashboard, y valen igual para el closer (embebido en el Workspace)
+   que para el admin (standalone), que es exactamente donde se pidió el mismo look. */
+.dash-v6 {
+  /* Namespace "compatibilidad" (usado por los colores de tailwind.config.cjs: bg-primary,
+     text-primary, bg-secondary, etc). */
+  --color-bg: #020617;
+  --color-surface: rgba(2,6,23,.9);
+  --color-surface-hover: rgba(255,255,255,.06);
+  --color-primary: #FF3FA4;
+  --color-primary-hover: #FF6AD5;
+  --color-secondary: #4E8BD8;
+  --color-secondary-hover: #6DA3E0;
+  --color-text-base: #ffffff;
+  --color-text-muted: rgba(255,255,255,.5);
+  --color-border: rgba(255,255,255,.15);
+  --color-border-hover: rgba(255,255,255,.28);
+  --radius-main: 1.5rem;
+  /* Namespace "marca" (usado por .bg-main/.bg-surface/.text-main/.text-muted/.border-base,
+     clases escritas a mano en este mismo archivo que leen `--bg-*`/`--text-*` DIRECTO en vez
+     del namespace de compatibilidad de arriba — sin este bloque, esas clases seguían mostrando
+     los colores del tema claro/glass activo por encima del cash-v6 de abajo). */
+  --bg-app: #020617;
+  --bg-card: rgba(2,6,23,.9);
+  --bg-sidebar: rgba(2,6,23,.9);
+  --bg-item: rgba(255,255,255,.06);
+  --bg-item-hover: rgba(255,255,255,.1);
+  --bg-input: rgba(0,0,0,.3);
+  --text-main: #ffffff;
+  --text-muted: rgba(255,255,255,.5);
+  --text-on-card: #ffffff;
+  --text-on-app: #ffffff;
+  --text-muted-on-app: rgba(255,255,255,.5);
+  --border-color: rgba(255,255,255,.15);
+}
+.dash-v6 ::selection { background: rgba(255,63,164,.3); }
+/* `[data-theme-style="glass"] .bg-surface` (más abajo en este archivo) redeclara --text-muted
+   DIRECTO sobre cada tarjeta -no en un ancestro-, así que gana por sobre lo heredado de
+   `.dash-v6` sin importar el orden: hace falta pisarlo con la misma especificidad exacta. */
+[data-theme-style="glass"] .dash-v6 .bg-surface,
+.dash-v6 .bg-surface {
+  --text-muted: rgba(255,255,255,.5);
+  --text-main: #ffffff;
 }
 
 /* HEADER */
@@ -777,8 +870,8 @@ header.top-v6 {
   color: #fff;
 }
 .tab-v6.clean .n-v6 {
-  background: rgba(34,197,94,.3);
-  color: #86EFAC;
+  background: rgba(47,191,143,.3);
+  color: #7DEAC0;
 }
 
 /* KANBAN */
@@ -826,7 +919,7 @@ header.top-v6 {
 }
 .kcol-v6.k1-v6 .dt-v6 {
   background: var(--v6-warn);
-  box-shadow: 0 0 0 3px rgba(245,158,11,.16);
+  box-shadow: 0 0 0 3px rgba(217,164,65,.16);
 }
 .kcol-v6.k2-v6 .dt-v6 {
   background: var(--v6-info);
@@ -834,7 +927,7 @@ header.top-v6 {
 }
 .kcol-v6.k3-v6 .dt-v6 {
   background: var(--v6-ok);
-  box-shadow: 0 0 0 3px rgba(34,197,94,.16);
+  box-shadow: 0 0 0 3px rgba(47,191,143,.16);
 }
 .kbody-v6 {
   padding: 0 8px;
@@ -842,36 +935,57 @@ header.top-v6 {
   flex-direction: column;
   gap: 9px;
 }
+/* Sin borde a propósito (pedido del usuario, "que sean sin bordes"): la separación entre
+   tarjetas la da la sombra + el fondo más claro que el hueco entre ellas, no un trazo. Entra con
+   una animación breve al aparecer (`cardRiseIn`), calcada del `riseIn` de la referencia visual. */
+@keyframes cardRiseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .kcard-v6 {
+  position: relative;
   background: rgba(255,255,255,.045);
-  border: 1px solid var(--v6-bd);
+  border: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 6px 16px rgba(0,0,0,.28);
   border-radius: 14px;
   padding: 14px;
   cursor: pointer;
   transition: .18s;
   text-align: left;
+  animation: cardRiseIn .35s ease both;
 }
 .kcard-v6:hover {
-  border-color: rgba(255,63,164,.45);
-  background: rgba(255,63,164,.06);
+  background: rgba(255,63,164,.07);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 10px 22px rgba(255,63,164,.18);
   transform: translateY(-2px);
 }
+/* Hora/cuenta regresiva en la esquina superior derecha: números grandes y en negrita, solo
+   texto de color, sin caja/fondo (pedido explícito del usuario, 29/ago/2026). Reserva un
+   ancho fijo con `.kcard-v6 b { padding-right }` para que no choque con nombres largos —
+   si el texto no entra en una línea, envuelve alineado a la derecha en vez de superponerse. */
 .kcard-v6 .when-v6 {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: .11em;
-  text-transform: uppercase;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: -.01em;
   color: var(--v6-tx3);
-  margin-bottom: 6px;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  max-width: 46%;
+  text-align: right;
+  line-height: 1.2;
 }
+
 .kcard-v6 .when-v6 .wd-v6 {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--v6-tx3);
+  flex: none;
 }
 .kcard-v6 .when-v6.soon-v6 {
   color: #FFB3DE;
@@ -879,12 +993,29 @@ header.top-v6 {
 .kcard-v6 .when-v6.soon-v6 .wd-v6 {
   background: var(--v6-pink);
 }
+/* La cita es ahora mismo (+/- 5 min): punto pulsante en vez de fijo, para que se note sin tener
+   que leer el texto. */
+.kcard-v6 .when-v6.now-v6 {
+  color: #F3D08A;
+}
+.kcard-v6 .when-v6.now-v6 .wd-v6 {
+  background: var(--v6-warn);
+}
+/* La hora agendada ya pasó y todavía hay algo pendiente en esta tarjeta (no aplica a
+   "Confirmado", que ya no bloquea nada). */
+.kcard-v6 .when-v6.late-v6 {
+  color: #F5A99C;
+}
+.kcard-v6 .when-v6.late-v6 .wd-v6 {
+  background: var(--v6-dgr);
+}
 .kcard-v6 b {
-  font-size: 15.5px;
+  font-size: 18px;
   font-weight: 700;
   display: block;
   letter-spacing: -.01em;
   color: #fff;
+  padding-right: 96px;
 }
 .kcard-v6 .m-v6 {
   font-size: 11.5px;
@@ -905,26 +1036,29 @@ header.top-v6 {
   content: '💬 ';
   opacity: .6;
 }
+/* Botón de acción de la tarjeta del Kanban: gradiente sólido desde el principio (no solo al
+   pasar el mouse) para que invite a tocarlo en vez de leer como un link secundario — la
+   referencia visual del rediseño usa el mismo tratamiento en sus CTA principales. */
 .kadv-v6 {
   margin-top: 11px;
   width: 100%;
-  border: 1px solid var(--v6-bd);
+  border: 1px solid transparent;
   border-radius: 10px;
-  padding: 9px;
+  padding: 10px;
   font-size: 9.5px;
   font-weight: 800;
   letter-spacing: .11em;
   text-transform: uppercase;
-  color: var(--v6-tx2);
-  background: rgba(255,255,255,.03);
+  color: #fff;
+  background: var(--v6-gradb);
+  box-shadow: 0 6px 16px rgba(19,35,198,.30);
   transition: .15s;
   cursor: pointer;
   text-align: center;
 }
 .kadv-v6:hover {
-  background: var(--v6-grade);
-  border-color: transparent;
-  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(19,35,198,.42);
 }
 .kempty-v6 {
   text-align: center;
@@ -933,7 +1067,7 @@ header.top-v6 {
   padding: 26px 8px;
 }
 .kempty-v6.done-v6 {
-  color: #86EFAC;
+  color: #7DEAC0;
   font-weight: 700;
 }
 
@@ -1026,23 +1160,32 @@ header.top-v6 {
   gap: 6px;
 }
 
-/* HERO v6 */
-.hero-v6 {
+/* TU SIGUIENTE PASO + TU DÍA (v7) — reemplaza el hero-v6/stats-v6 anterior: en vez de un saludo
+   genérico y cuatro cajas de conteo, arriba de todo se ve el lead más urgente de la pestaña
+   activa (con su propio CTA al modal) y, al lado, el avance del día. Calcado del artboard
+   "hub" de la referencia visual del rediseño. */
+.tsprow-v6 {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1.6fr 1fr;
   gap: 16px;
   margin-bottom: 20px;
+  align-items: stretch;
 }
-.hcard-v6 {
-  background: linear-gradient(150deg,rgba(19,35,198,.36),rgba(255,63,164,.14));
-  border: 1px solid var(--v6-bd2);
+.tsp-v6 {
+  background: linear-gradient(150deg,rgba(19,35,198,.30),rgba(255,63,164,.12));
+  border: 1px solid rgba(255,63,164,.35);
   border-radius: 20px;
-  padding: 22px 26px;
+  padding: 24px 26px;
   position: relative;
   overflow: hidden;
   text-align: left;
+  cursor: pointer;
+  transition: .2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.hcard-v6::after {
+.tsp-v6::after {
   content: '';
   position: absolute;
   right: -70px;
@@ -1050,32 +1193,150 @@ header.top-v6 {
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  background: radial-gradient(circle,rgba(255,63,164,.30),transparent 68%);
+  background: radial-gradient(circle,rgba(255,63,164,.28),transparent 68%);
+  pointer-events: none;
 }
-.hcard-v6 h2 {
-  font-size: 25px;
+.tsp-v6:hover {
+  border-color: rgba(255,63,164,.6);
+  transform: translateY(-2px);
+}
+.tsp-v6.tsp-done-v6 {
+  cursor: default;
+  background: var(--v6-card);
+  border-color: var(--v6-bd);
+}
+.tsp-v6.tsp-done-v6:hover {
+  transform: none;
+  border-color: var(--v6-bd);
+}
+.tsp-top-v6 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+.tsp-dot-v6 {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--v6-pink);
+  box-shadow: 0 0 0 4px rgba(255,63,164,.18);
+  flex: none;
+}
+.tsp-dot-v6.ok {
+  background: var(--v6-ok);
+  box-shadow: 0 0 0 4px rgba(47,191,143,.18);
+}
+.tsp-lbl-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+.tsp-badge-v6 {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  color: var(--v6-tx2);
+}
+.tsp-badge-v6.now { background: rgba(217,164,65,.18); color: #F3D08A; }
+.tsp-badge-v6.soon { background: rgba(255,63,164,.18); color: #FFB3DE; }
+.tsp-badge-v6.late { background: rgba(232,92,74,.18); color: #F5A99C; }
+.tsp-name-v6 {
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: -.02em;
+  color: #fff;
+  line-height: 1.1;
   position: relative;
-  color: #fff !important;
 }
-.hcard-v6 h2 em {
-  font-style: normal !important;
-  background: var(--v6-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent !important;
-}
-.hcard-v6 p {
-  font-size: 13px;
+.tsp-sub-v6 {
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--v6-tx2);
-  margin-top: 4px;
   position: relative;
-  max-width: 620px;
 }
-.prog-v6 {
-  margin-top: 16px;
+/* Botón grande a propósito (pedido del usuario, feedback en video del 28/ago/2026: "el botón
+   debería ser un botón grande, grandote... es la idea de la nueva vista, que sean botones
+   grandes, llamativos") — ancho completo y 54px de alto, calcado del CTA principal de la
+   referencia visual (antes era un botón chico alineado a la izquierda, se leía como una acción
+   secundaria en vez de LA acción de la tarjeta). */
+.tsp-cta-v6 {
+  align-self: stretch;
+  width: 100%;
+  margin-top: auto;
+  height: 54px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 99px;
+  background: var(--v6-gradb);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(19,35,198,.38);
+  transition: .18s;
   position: relative;
+}
+.tsp-cta-v6:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(19,35,198,.48);
+}
+
+.tud-v6 {
+  border: 1px solid var(--v6-bd);
+  border-radius: 20px;
+  background: var(--v6-card);
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+}
+.tud-lbl-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+.tud-xp-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #F3D08A;
+  background: rgba(217,164,65,.14);
+  border: 1px solid rgba(217,164,65,.32);
+  border-radius: 99px;
+  padding: 3px 10px;
+  flex: none;
+  white-space: nowrap;
+}
+.tud-pct-v6 {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  color: var(--v6-ok);
+  line-height: 1;
+  margin-top: 6px;
+}
+.tud-sub-v6 {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+  margin-top: 4px;
+  margin-bottom: 14px;
 }
 .pbarw-v6 {
   height: 9px;
@@ -1092,65 +1353,324 @@ header.top-v6 {
   transition: width .6s cubic-bezier(.3,1.2,.4,1);
   box-shadow: 0 0 16px rgba(255,63,164,.55);
 }
-.pmeta-v6 {
+/* Fila inferior de "Tu día": "N de M resueltos hoy" (izquierda, gris) + "⚡ N XP" (derecha,
+   azul) — mismo layout que la referencia visual (racha arriba en vez de XP, XP abajo en vez de
+   racha; antes estaba al revés, pedido del usuario en el video del 27/ago/2026). Reemplaza al
+   `.tud-streak-v6` suelto que quedó sin uso (la racha ahora reusa `.tud-xp-v6` arriba). */
+.tud-foot-row-v6 {
+  margin-top: auto;
+  padding-top: 14px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 11.5px;
+  gap: 10px;
+}
+.tud-foot-v6 {
+  font-size: 11px;
   font-weight: 700;
   color: var(--v6-tx2);
 }
-.stats-v6 {
-  display: grid;
-  grid-template-columns: repeat(2,1fr);
-  gap: 10px;
-  min-width: 352px;
+.tud-foot-xp-v6 {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--v6-blue2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
 }
-.sbox-v6 {
-  background: rgba(0,0,0,.26);
-  border: 1px solid var(--v6-bd);
-  border-radius: 16px;
-  padding: 13px 15px;
+
+/* NAVEGACIÓN 01-05 (v7): reemplaza las pestañas-píldora como selector principal, con el mismo
+   número/fracción-pendiente que la referencia visual. */
+.nav5-v6 {
+  display: grid;
+  /* auto-fit en vez de un número fijo de columnas: "Mi cartera" (06) y la pestaña temporal de
+     Auditoría (condicional) suman más destinos de los que había cuando esto se armó con
+     repeat(5,1fr) — así se acomodan solos sin importar cuántos haya. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.nc-v6 {
   display: flex;
   align-items: center;
-  gap: 12px;
-  transition: .25s;
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: 1.1rem;
+  border: 1px solid var(--v6-bd);
+  background: var(--v6-card);
+  cursor: pointer;
+  transition: .18s;
   text-align: left;
 }
-.sbox-v6:hover {
+.nc-v6:hover {
   border-color: var(--v6-bd2);
-  transform: translateY(-2px);
+  background: rgba(255,255,255,.05);
 }
-.sbox-v6 .ic-v6 {
-  width: 34px;
-  height: 34px;
-  border-radius: 11px;
+.nc-v6.on {
+  border-color: rgba(255,63,164,.5);
+  background: rgba(255,63,164,.08);
+  box-shadow: 0 6px 18px rgba(255,63,164,.16);
+}
+.nc-n-v6 {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--v6-tx2);
   flex: none;
-  transition: .25s;
 }
-.sbox-v6.a .ic-v6 { background: rgba(19,35,198,.40); border: 1px solid rgba(99,102,241,.38); }
-.sbox-v6.b .ic-v6 { background: rgba(255,63,164,.15); border: 1px solid rgba(255,63,164,.30); }
-.sbox-v6.c .ic-v6 { background: rgba(96,165,250,.14); border: 1px solid rgba(96,165,250,.32); }
-.sbox-v6.d .ic-v6 { background: rgba(245,158,11,.14); border: 1px solid rgba(245,158,11,.30); }
+.nc-v6.on .nc-n-v6 { background: var(--v6-grad); color: #fff; }
+.nc-lbl-v6 {
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--v6-tx2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nc-v6.on .nc-lbl-v6 { color: #fff; }
+.nc-count-v6 {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.1);
+  color: var(--v6-tx2);
+  flex: none;
+}
+.nc-count-v6.zero { opacity: .4; }
+.nc-check-v6 { color: #7DEAC0; font-weight: 900; flex: none; }
 
-.sbox-v6 .tt-v6 { min-width: 0; flex: 1; }
-.sbox-v6 .tt-v6 .n-v6 { font-size: 20px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; }
-.sbox-v6 .tt-v6 .n-v6 s { text-decoration: none; font-size: 13px; color: var(--v6-tx3); font-weight: 800; }
-.sbox-v6.a .tt-v6 .n-v6 { color: #BFD3FF; }
-.sbox-v6.b .tt-v6 .n-v6 { background: var(--v6-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.sbox-v6.c .tt-v6 .n-v6 { color: #93C5FD; }
-.sbox-v6.d .tt-v6 .n-v6 { color: #FCD34D; }
-.sbox-v6 .tt-v6 .k-v6 { font-size: 8.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--v6-tx3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sbox-v6 .mb-v6 { height: 4px; border-radius: 99px; background: rgba(255,255,255,.08); margin-top: 6px; overflow: hidden; }
-.sbox-v6 .mb-v6 i { display: block; height: 100%; border-radius: 99px; background: var(--v6-grade); transition: width .5s; }
-.sbox-v6.b .mb-v6 i { background: var(--v6-grad); }
-.sbox-v6.c .mb-v6 i { background: linear-gradient(90deg,#3B82F6,#93C5FD); }
-.sbox-v6.d .mb-v6 i { background: linear-gradient(90deg,#D97706,#FCD34D); }
+@media(max-width:1100px){
+  .nav5-v6 { grid-template-columns: repeat(3, 1fr); }
+  .tsprow-v6 { grid-template-columns: 1fr; }
+}
 
-/* DOCK v6 */
+/* Hero "Buen avance, Nombre — X de Y resueltos" de Cerrar el día: calcado del artboard
+   "CIERRE DEL DÍA" de la referencia — borde/gradiente verde (en vez del rosa de "Tu siguiente
+   paso", para no confundir los dos), grilla de 2 columnas: texto + pills a la izquierda,
+   gráfico de "últimos 7 días" a la derecha. */
+.rpt-hero-v6 {
+  border: 1px solid rgba(47,191,143,.35);
+  border-radius: 2rem;
+  background: linear-gradient(135deg, rgba(47,191,143,.14), rgba(2,6,23,.92));
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,.4);
+  padding: 32px 34px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 28px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.rpt-hero-lbl-v6 {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .3em;
+  color: var(--v6-ok);
+}
+.rpt-hero-v6 h2 {
+  margin-top: 12px;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  line-height: 1.05;
+  color: #fff;
+}
+.rpt-hero-v6 p {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v6-tx2);
+}
+@media(max-width:900px){
+  .rpt-hero-v6 { grid-template-columns: 1fr; }
+}
+
+/* REPORTE DEL DÍA (v7): mismo lenguaje de tarjeta oscura que el resto del mazo (border var(--v6-bd),
+   fondo var(--v6-card)) en vez de los bg-slate-900/60 sueltos que tenía antes esta pestaña —
+   para que "Cerrar el día" no se sienta una pantalla aparte. */
+.rpt-card-v6 {
+  border: 1px solid var(--v6-bd);
+  border-radius: 1.6rem;
+  background: var(--v6-card);
+  padding: 24px 26px;
+}
+.rpt-title-v6 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.rpt-title-v6 .dt-v6 { width: 8px; height: 8px; }
+.rpt-kpis-v6 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.rpt-kpi-v6 {
+  border: 1px solid var(--v6-bd);
+  border-radius: 1rem;
+  background: rgba(0,0,0,.24);
+  padding: 14px 16px;
+}
+.rpt-kpi-v6 b {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+.rpt-kpi-v6 span {
+  display: block;
+  margin-top: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+.rpt-kpi-v6 .rpt-kpi-bar-v6 {
+  margin-top: 12px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.rpt-kpi-v6 .rpt-kpi-bar-v6 i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width .6s cubic-bezier(.2,.8,.2,1);
+}
+@media(max-width:768px){
+  .rpt-kpis-v6 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Pill de estado dentro del hero "Buen avance" (MOVISTE $/XP/RACHA) */
+.rpt-pill-v6 {
+  height: 34px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+/* Mini gráfico de barras "Últimos 7 días" del hero */
+.rpt-trend-v6 {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 74px;
+}
+.rpt-trend-col-v6 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rpt-trend-bar-v6 {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 8px 8px 3px 3px;
+  transform-origin: center bottom;
+  animation: growW .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.rpt-trend-lbl-v6 {
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: var(--v6-tx3);
+}
+
+/* LOGROS: fila con ícono, nombre y estado ("faltan N" / "✓ logrado") */
+.rpt-ach-v6 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.rpt-ach-v6:last-child { border-bottom: none; }
+.rpt-ach-ic-v6 {
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  border: 1px solid var(--v6-tx3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--v6-tx3);
+  flex: none;
+}
+.rpt-ach-v6.done .rpt-ach-ic-v6 {
+  border-color: var(--v6-ok);
+  color: var(--v6-ok);
+  background: rgba(47,191,143,.12);
+}
+.rpt-ach-name-v6 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--v6-tx3);
+}
+.rpt-ach-v6.done .rpt-ach-name-v6 { color: #fff; }
+.rpt-ach-status-v6 {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--v6-tx3);
+}
+.rpt-ach-v6.done .rpt-ach-status-v6 { color: var(--v6-ok); }
+
+/* Inputs en pastilla para Reflexión diaria (victoria/mejora), reemplazan los textarea */
+.rpt-input-v6 {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 1rem;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--v6-bd);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+}
+.rpt-input-v6:focus { border-color: rgba(255,255,255,.3); }
+.rpt-slots-input-v6 {
+  width: 64px;
+  height: 36px;
+  border-radius: 99px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--v6-bd);
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  outline: none;
+}
+.rpt-slots-input-v6:focus { border-color: rgba(139,92,246,.6); }
+
+/* DOCK v6 — ya no se usa como navegación (eso lo reemplazó `.nav5-v6`, arriba de la lista);
+   se deja el estilo del panel flotante fijo abajo-centro como base para notificaciones u otro
+   uso puntual futuro, a pedido del usuario. Sin JSX que lo consuma por ahora. */
 .dock-v6 {
   position: fixed;
   bottom: 20px;
@@ -1168,8 +1688,8 @@ header.top-v6 {
   transition: .3s;
 }
 .dock-v6.done-v6 {
-  border-color: rgba(34,197,94,.5);
-  box-shadow: 0 20px 54px rgba(0,0,0,.7),0 0 40px rgba(34,197,94,.24);
+  border-color: rgba(47,191,143,.5);
+  box-shadow: 0 20px 54px rgba(0,0,0,.7),0 0 40px rgba(47,191,143,.24);
 }
 .dk-v6 {
   padding: 11px 20px;
@@ -1189,8 +1709,8 @@ header.top-v6 {
 }
 .dk-v6:hover { background: rgba(255,255,255,.08); color: #fff; }
 .dk-v6.on { background: var(--v6-grad); color: #fff; }
-.dk-v6.ready { color: #86EFAC; }
-.dk-v6.sent { background: linear-gradient(135deg,#16A34A,#22C55E); color: #fff; }
+.dk-v6.ready { color: #7DEAC0; }
+.dk-v6.sent { background: linear-gradient(135deg,#1E9974,#2FBF8F); color: #fff; }
 .dk-v6 .b-v6 { background: var(--v6-dgr); border-radius: 99px; min-width: 20px; height: 20px; display: grid; place-items: center; font-size: 10px; padding: 0 5px; color: #fff; }
 
 /* ROWS v6 */
@@ -1227,21 +1747,44 @@ header.top-v6 {
 }
 .time-v6.p { background: rgba(255,63,164,.14); border-color: rgba(255,63,164,.3); color: #FFC2E4; }
 .time-v6.b { background: rgba(19,35,198,.38); border-color: rgba(96,165,250,.36); color: #BFD3FF; }
-.time-v6.d { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.36); color: #FCA5A5; }
+.time-v6.d { background: rgba(232,92,74,.14); border-color: rgba(232,92,74,.36); color: #F5A99C; }
 .rmain-v6 { flex: 1; min-width: 0; }
 .rmain-v6 b { font-size: 16px; font-weight: 700; display: block; color: #fff; }
 .chips-v6 { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .chip-v6 { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; background: rgba(255,255,255,.06); color: var(--v6-tx2); border: 1px solid var(--v6-bd); }
-.chip-v6.ok { background: rgba(34,197,94,.14); color: #86EFAC; border-color: rgba(34,197,94,.32); }
-.chip-v6.w { background: rgba(245,158,11,.14); color: #FCD34D; border-color: rgba(245,158,11,.32); }
-.chip-v6.d { background: rgba(239,68,68,.14); color: #FCA5A5; border-color: rgba(239,68,68,.32); }
+.chip-v6.ok { background: rgba(47,191,143,.14); color: #7DEAC0; border-color: rgba(47,191,143,.32); }
+.chip-v6.w { background: rgba(217,164,65,.14); color: #F3D08A; border-color: rgba(217,164,65,.32); }
+.chip-v6.d { background: rgba(232,92,74,.14); color: #F5A99C; border-color: rgba(232,92,74,.32); }
 .chip-v6.i { background: rgba(96,165,250,.14); color: #93C5FD; border-color: rgba(96,165,250,.32); }
 .chip-v6.src { background: rgba(19,35,198,.38); color: #C7D2FE; border-color: rgba(99,102,241,.4); }
 .chip-v6.seq { background: rgba(255,63,164,.14); color: #FFB3DE; border-color: rgba(255,63,164,.32); }
 
-@media(max-width:980px){
-  .hero-v6, .stats-v6 { grid-template-columns: 1fr; }
+/* Ganancia potencial de una fila de seguimiento — bien a la derecha, aparte de los chips, para
+   que el ojo la encuentre de un vistazo sin tener que leer el resto de la fila (pedido del
+   usuario, 29/ago/2026). */
+.earn-v6 {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 76px;
+  text-align: right;
 }
+.earn-lbl-v6 {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v6-tx3);
+}
+.earn-val-v6 {
+  font-size: 17px;
+  font-weight: 900;
+  color: #7DEAC0;
+  letter-spacing: -.01em;
+}
+
 
 .opt {
   position: relative;
@@ -1270,9 +1813,9 @@ header.top-v6 {
   margin-top: 4px;
 }
 .opt.sel { color: #fff; }
-.opt.sel[data-t="ok"] { border-color: #22C55E; background: rgba(34,197,94,.14); box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
-.opt.sel[data-t="no"] { border-color: #F59E0B; background: rgba(245,158,11,.14); box-shadow: 0 0 0 3px rgba(245,158,11,.12); }
-.opt.sel[data-t="bad"] { border-color: #EF4444; background: rgba(239,68,68,.14); box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+.opt.sel[data-t="ok"] { border-color: #2FBF8F; background: rgba(47,191,143,.14); box-shadow: 0 0 0 3px rgba(47,191,143,.12); }
+.opt.sel[data-t="no"] { border-color: #D9A441; background: rgba(217,164,65,.14); box-shadow: 0 0 0 3px rgba(217,164,65,.12); }
+.opt.sel[data-t="bad"] { border-color: #E85C4A; background: rgba(232,92,74,.14); box-shadow: 0 0 0 3px rgba(232,92,74,.12); }
 .opt.sel[data-t="info"] { border-color: #6D8BFF; background: rgba(19,35,198,.46); box-shadow: 0 0 0 3px rgba(96,165,250,.16); }
 .opt.sel[data-t="pink"] { border-color: #FF3FA4; background: rgba(255,63,164,.16); box-shadow: 0 0 0 3px rgba(255,63,164,.14); }
 
@@ -1447,9 +1990,9 @@ header.top-v6 {
   cursor: pointer;
 }
 .x:hover {
-  background: rgba(239, 68, 68, .15);
-  border-color: rgba(239, 68, 68, .42);
-  color: #FCA5A5;
+  background: rgba(232, 92, 74, .15);
+  border-color: rgba(232, 92, 74, .42);
+  color: #F5A99C;
 }
 .mdb {
   padding: 22px 26px;
@@ -1582,12 +2125,12 @@ header.top-v6 {
   font-weight: 600;
   color: #fff;
 }
-.fq.good { border-left-color: #22C55E; }
-.fq.good .aa { color: #86EFAC; }
-.fq.bad { border-left-color: #EF4444; }
-.fq.bad .aa { color: #FCA5A5; }
-.fq.warn { border-left-color: #F59E0B; }
-.fq.warn .aa { color: #FCD34D; }
+.fq.good { border-left-color: #2FBF8F; }
+.fq.good .aa { color: #7DEAC0; }
+.fq.bad { border-left-color: #E85C4A; }
+.fq.bad .aa { color: #F5A99C; }
+.fq.warn { border-left-color: #D9A441; }
+.fq.warn .aa { color: #F3D08A; }
 .fq.info { border-left-color: #6366F1; }
 .snote {
   background: rgba(0, 0, 0, .24);
@@ -1656,9 +2199,9 @@ header.top-v6 {
   text-transform: uppercase;
   padding: 6px 11px;
   border-radius: 7px;
-  background: rgba(34, 197, 94, .12);
-  border: 1px solid rgba(34, 197, 94, .32);
-  color: #86EFAC;
+  background: rgba(47, 191, 143, .12);
+  border: 1px solid rgba(47, 191, 143, .32);
+  color: #7DEAC0;
 }
 
 /* ==========================================================================
@@ -1695,7 +2238,7 @@ header.top-v6 {
   font-weight: 500;
 }
 .pstep.done .pn {
-  color: #86EFAC;
+  color: #7DEAC0;
 }
 .pstep.done::before {
   content: '✓';
@@ -1703,7 +2246,7 @@ header.top-v6 {
   top: 6px;
   right: 10px;
   font-size: 11px;
-  color: #86EFAC;
+  color: #7DEAC0;
 }
 .pstep.cur {
   background: linear-gradient(135deg, #1323C6, #FF3FA4);
@@ -1756,17 +2299,17 @@ header.top-v6 {
   font-weight: 800;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: #FCD34D;
-  background: rgba(245, 158, 11, .13);
-  border: 1px solid rgba(245, 158, 11, .32);
+  color: #F3D08A;
+  background: rgba(217, 164, 65, .13);
+  border: 1px solid rgba(217, 164, 65, .32);
   padding: 3px 8px;
   border-radius: 5px;
 }
 .q.req.done > h4::after {
   content: '✓ listo';
-  color: #86EFAC;
-  background: rgba(34, 197, 94, .13);
-  border-color: rgba(34, 197, 94, .32);
+  color: #7DEAC0;
+  background: rgba(47, 191, 143, .13);
+  border-color: rgba(47, 191, 143, .32);
 }
 
 .note {

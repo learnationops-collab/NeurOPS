@@ -22,6 +22,9 @@ class CloserDailyReport(db.Model):
     decision_makers = db.Column(db.Integer, default=0)
     rescheduled_calls = db.Column(db.Integer, default=0)
 
+    # --- CONFIRMACIONES: agendas que el closer confirmó ese día (pipeline «① Confirmaciones») ---
+    confirmations_done = db.Column(db.Integer, default=0, server_default='0')
+
     # --- AGENDAS: Primera Llamada ---
     first_call_scheduled = db.Column(db.Integer, default=0)
     first_call_attended = db.Column(db.Integer, default=0)

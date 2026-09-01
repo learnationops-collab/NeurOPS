@@ -2436,9 +2436,19 @@ class CloserService:
                 # dos trabajos distintos (pedido del usuario): el primero es el embudo del día,
                 # el segundo es pipeline hacia adelante. Se cuentan por separado según la fecha
                 # de la cita, no según cuándo se la tocó.
+                #
+                # BUG real encontrado y corregido (27/ago/2026): la rama de "próximas" solo
+                # cubría citas futuras (`start_time > end_utc`) y la de "hoy" solo citas del
+                # propio día (`start_time >= start_utc`) — una agenda ATRASADA (su llamada ya
+                # pasó, `start_time < start_utc`) no entraba en ninguna de las dos. Confirmar hoy
+                # una agenda vencida (ponerse al día con el backlog) es justo el tipo de trabajo
+                # que "Cerrar el día" tiene que reflejar, y antes desaparecía sin contar en
+                # ningún lado — coherente con el reporte del usuario de que el cierre del día
+                # "no se estaba actualizando". Ahora: futura → próximas: cualquier otra cosa
+                # (hoy o atrasada) → hoy, sin condición de piso.
                 if a.start_time and a.start_time > end_utc:
                     confirmados_proximos += 1
-                elif a.start_time and a.start_time >= start_utc:
+                else:
                     confirmados_hoy += 1
             if closer_result_lower == 'show up':
                 show_ups += 1
@@ -2512,7 +2522,61 @@ class CloserService:
             'ventas_cash': round(ventas_cash, 2),
             'pendientes_confirmar': pendientes_confirmar,
             'pendientes_llamar': pendientes_llamar,
+            'streak_days': CloserService.get_sales_streak(closer_id, day_local),
         }
+
+    @staticmethod
+    def get_sales_streak(closer_id, day_local):
+        """Racha de días consecutivos con al menos una venta registrada (PIF/Split/Seña/Cuota/
+        Renovación/Upsell — mismos 6 tipos que suman a `ventas_count` más arriba), terminando en
+        `day_local`. Pedido del usuario (29/ago/2026): que la racha del "🔥" refleje ventas
+        reales, no si mandó el reporte del día (criterio anterior, ver bitácora) — un closer
+        puede reportar todos los días sin vender, o vender sin reportar.
+
+        Un día sin venta corta la racha, salvo que sea justo `day_local` (hoy: si todavía no
+        vendió no es un fallo, el día no terminó) — ahí se empieza a contar desde el último día
+        que sí tuvo alguna venta."""
+        from app.models import User, FinancialSale
+
+        user = User.query.get(closer_id)
+        identifiers = CloserService._resolve_sale_identifiers(user)
+        if not identifiers:
+            return 0
+
+        try:
+            tz = pytz.timezone((user.timezone if user else None) or 'America/La_Paz')
+        except Exception:
+            tz = pytz.timezone('America/La_Paz')
+
+        # Techo de 400 días (~13 meses) para no recorrer toda la tabla en una cuenta con
+        # años de historial y una racha real corta — ninguna racha real va a llegar tan lejos.
+        earliest = day_local - timedelta(days=400)
+        start_utc = tz.localize(datetime.combine(earliest, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = tz.localize(datetime.combine(day_local, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        sales = FinancialSale.query.filter(
+            FinancialSale.email_vendedor.in_(identifiers),
+            FinancialSale.date >= start_utc, FinancialSale.date <= end_utc,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ).all()
+
+        days_with_sale = set()
+        for s in sales:
+            if not s.date:
+                continue
+            local_dt = pytz.UTC.localize(s.date).astimezone(tz)
+            days_with_sale.add(local_dt.date())
+
+        cursor = day_local
+        if cursor not in days_with_sale:
+            cursor -= timedelta(days=1)
+
+        streak = 0
+        while cursor in days_with_sale:
+            streak += 1
+            cursor -= timedelta(days=1)
+
+        return streak
 
     @staticmethod
     def get_previous_days_pending(closer_id, day_local):
@@ -2586,6 +2650,7 @@ class CloserService:
         """
         import pytz
         from datetime import time as time_cls
+        from sqlalchemy import func
         from app.models import User, Appointment, FinancialSale
         from app.services.sheets_service import SheetsService
 
@@ -2687,6 +2752,17 @@ class CloserService:
             Appointment.last_contact_at <= end_utc
         ).count()
 
+        # Confirmaciones logradas hoy: agendas que el closer pasó a 'confirmado' en el pipeline
+        # «① Confirmaciones» (mismo estado que CloserPendingService._por_confirmar usa para
+        # "confirmadas"), detectadas por su último cambio (`updated_at`) cayendo en la ventana de
+        # hoy — no por la fecha de la llamada, que puede ser cualquier día futuro.
+        confirmations_done = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            func.lower(func.coalesce(Appointment.result, '')) == 'confirmado',
+            Appointment.updated_at >= start_utc,
+            Appointment.updated_at <= end_utc
+        ).count()
+
         # Ventas del día: misma clasificación de tipo_pago que CloserService.get_comprehensive_stats,
         # cruzando por email_vendedor (o los alias de closer conocidos).
         identifiers = CloserService._resolve_sale_identifiers(user)
@@ -2728,6 +2804,7 @@ class CloserService:
             'offers_made': offers_made,
             'decision_makers': decision_makers,
             'rescheduled_calls': rescheduled_total,
+            'confirmations_done': confirmations_done,
             'first_call_scheduled': buckets['fc']['scheduled'],
             'first_call_attended': buckets['fc']['attended'],
             'first_call_no_show': buckets['fc']['no_show'],

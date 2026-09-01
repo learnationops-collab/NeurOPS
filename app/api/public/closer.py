@@ -454,6 +454,7 @@ def get_public_closer_reports():
             "offers_made": r.offers_made,
             "decision_makers": r.decision_makers,
             "rescheduled_calls": r.rescheduled_calls,
+            "confirmations_done": r.confirmations_done,
             "reflection_victory": r.reflection_victory,
             "reflection_opportunity": r.reflection_opportunity,
             "first_call_scheduled": r.first_call_scheduled,
@@ -482,6 +483,14 @@ def get_public_closer_reports():
             "installment_cash_collected": r.installment_cash_collected,
             "installment_in_call_count": r.installment_in_call_count,
             "installment_in_call_cash": r.installment_in_call_cash,
+            "renewal_count": r.renewal_count,
+            "renewal_cash_collected": r.renewal_cash_collected,
+            "renewal_in_call_count": r.renewal_in_call_count,
+            "renewal_in_call_cash": r.renewal_in_call_cash,
+            "upsell_count": r.upsell_count,
+            "upsell_cash_collected": r.upsell_cash_collected,
+            "upsell_in_call_count": r.upsell_in_call_count,
+            "upsell_in_call_cash": r.upsell_in_call_cash,
             "follow_ups_sent": r.follow_ups_sent,
             "follow_ups_replied": r.follow_ups_replied,
             "follow_ups_closed": r.follow_ups_closed,
@@ -531,7 +540,8 @@ def update_public_closer_report(report_id):
                 
         stat.slots = get_int('slots', stat.slots)
         stat.offers_made = get_int('offers_made', stat.offers_made)
-        
+        stat.confirmations_done = get_int('confirmations_done', stat.confirmations_done)
+
         stat.first_call_scheduled = get_int('first_call_scheduled', stat.first_call_scheduled)
         stat.first_call_attended = get_int('first_call_attended', stat.first_call_attended)
         stat.first_call_no_show = get_int('first_call_no_show', stat.first_call_no_show)
@@ -563,7 +573,17 @@ def update_public_closer_report(report_id):
         stat.installment_cash_collected = get_float('installment_cash_collected', stat.installment_cash_collected)
         stat.installment_in_call_count = get_int('installment_in_call_count', stat.installment_in_call_count)
         stat.installment_in_call_cash = get_float('installment_in_call_cash', stat.installment_in_call_cash)
-        
+
+        stat.renewal_count = get_int('renewal_count', stat.renewal_count)
+        stat.renewal_cash_collected = get_float('renewal_cash_collected', stat.renewal_cash_collected)
+        stat.renewal_in_call_count = get_int('renewal_in_call_count', stat.renewal_in_call_count)
+        stat.renewal_in_call_cash = get_float('renewal_in_call_cash', stat.renewal_in_call_cash)
+
+        stat.upsell_count = get_int('upsell_count', stat.upsell_count)
+        stat.upsell_cash_collected = get_float('upsell_cash_collected', stat.upsell_cash_collected)
+        stat.upsell_in_call_count = get_int('upsell_in_call_count', stat.upsell_in_call_count)
+        stat.upsell_in_call_cash = get_float('upsell_in_call_cash', stat.upsell_in_call_cash)
+
         stat.follow_ups_sent = get_int('follow_ups_sent', stat.follow_ups_sent)
         stat.follow_ups_replied = get_int('follow_ups_replied', stat.follow_ups_replied)
         stat.follow_ups_closed = get_int('follow_ups_closed', stat.follow_ups_closed)

@@ -2,19 +2,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 
+// Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
+// luego hot (llamadas tomadas) y luego fríos" — porque sabe que no le va a dar tiempo a todos,
+// y prefiere ver primero lo que más plata mueve. El orden de este objeto define tanto las 3
+// columnas de "Asignados para hoy" como los 3 botones de "Pool sin fecha" (Object.keys conserva
+// el orden de declaración).
 const TIPOS = {
-    no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' },
+    cerrada: { label: 'Cobros (llamadas cerradas)', desc: 'Clientes: cobranza, renovación y upsell', icon: '💰', cls: 'emerald' },
     tomada: { label: 'Llamadas tomadas', desc: 'Asistieron y quedó una decisión o una 2ª llamada', icon: '🎤', cls: 'amber' },
-    cerrada: { label: 'Llamadas cerradas', desc: 'Clientes: cobranza, renovación y upsell', icon: '💰', cls: 'emerald' }
+    no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' }
 };
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
-
-const chipCls = {
-    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-};
 
 // Estado activo del botón de pool — usa el mismo color por tipo que sus chips (rose/amber/emerald)
 // para que se note con claridad cuál está seleccionado, en vez de un violeta genérico que casi no
@@ -33,95 +32,175 @@ const cuotaDateLabel = (fechaStr) => {
 
 // Días de retraso del seguimiento (backend `dias_retraso`: días transcurridos desde la fecha en
 // que estaba agendado). Distinto de "Call hace Nd", que mide desde la fecha de la llamada.
-// Se colorea por gravedad para que el closer priorice de un vistazo lo más atrasado.
-const retrasoBadge = (dias) => {
+// Reusa los mismos colores del "cuándo" que las tarjetas de Confirmar/Reportar (late-v6/now-v6/
+// soon-v6, ya definidos en index.css) en vez de badges propios, para que las 3 pestañas del mazo
+// lean como un solo sistema.
+const retrasoWhen = (dias) => {
     if (typeof dias !== 'number') return null;
-    if (dias > 0) {
-        const cls = dias >= 7
-            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-            : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-        return { cls, text: `⏰ ${dias}d de retraso` };
-    }
-    if (dias === 0) return { cls: 'bg-violet-500/10 text-violet-300 border-violet-500/20', text: 'Para hoy' };
-    return { cls: 'bg-slate-900 text-slate-400 border-slate-800', text: `En ${Math.abs(dias)}d` };
+    if (dias > 0) return { cls: 'late-v6', text: `${dias}d de retraso` };
+    if (dias === 0) return { cls: 'now-v6', text: 'Para hoy' };
+    return { cls: 'soon-v6', text: `En ${Math.abs(dias)}d` };
 };
 
-const SeguimientoRow = ({ item, tipo, onClick }) => {
+// Color del cuadro de urgencia (`.time-v6`) según `retrasoWhen(...).cls` — mismo criterio de
+// colores que ya usan when-v6/late-v6/now-v6/soon-v6 en el resto del mazo, pero acá se pinta como
+// caja llena (como la hora de una fila de Llamadas) en vez de pastilla con punto.
+const TIME_BOX_STYLE = {
+    'late-v6': { background: 'rgba(232,92,74,.14)', borderColor: 'rgba(232,92,74,.36)', color: '#F5A99C' },
+    'now-v6': { background: 'rgba(217,164,65,.14)', borderColor: 'rgba(217,164,65,.36)', color: '#F3D08A' },
+    'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
+};
+
+// Resultado real de la llamada (`closer_result`) → chip de color, mismo idioma de colores que el
+// resto del mazo (ok=verde, w=ámbar, d=rojo, i=azul). Cubre las grafías reales que usa el sistema
+// (ver CloserWorkflowPage: 'Show up', 'No show', 'Cancelado'/'Cancelada', 'Reagendado'/
+// 'Reagendada', '2da call').
+const RESULT_CHIP = {
+    'show up': { cls: 'ok', label: 'Show up' },
+    'no show': { cls: 'd', label: 'No show' },
+    'cancelado': { cls: 'd', label: 'Cancelado' },
+    'cancelada': { cls: 'd', label: 'Cancelado' },
+    'reagendado': { cls: 'w', label: 'Reagendado' },
+    'reagendada': { cls: 'w', label: 'Reagendado' },
+    '2da call': { cls: 'i', label: '2ª llamada' },
+};
+const resultChip = (closerResult) => RESULT_CHIP[(closerResult || '').trim().toLowerCase()] || null;
+
+// Ganancia potencial de un seguimiento: en base a estadísticas REALES de este closer
+// (`GET /closer/followups/earnings-stats`) — pedido del usuario (29/ago/2026): "que puedan ver
+// cuánto pueden ganar por hacer esos seguimientos". Primera versión ponderaba por una tasa de
+// cierre histórica y el usuario la encontró desproporcionada ("por qué la mayoría dice 4101") —
+// el número salía inflado por un bug de escala en el backend. En vez de eso, mismo pedido del
+// usuario, un modelo más simple y concreto por tipo:
+// - "Cobros" (cerrada): NO es un promedio — es lo que el cliente YA debe (próxima cuota, o el
+//   total adeudado si nunca se armó un plan). Si no debe nada, el promedio de lo que suelen dejar
+//   renovación/upsell en un cliente ya cerrado.
+// - "Tomada" (asistió, sin decisión aún): el ticket promedio de una venta real.
+// - "No tomada" (no show/cancelado/reagendado): el promedio de lo que se cobra en señas — un
+//   valor más chico y realista para un lead frío que ni siquiera tomó la llamada.
+const estimateEarning = (item, tipo, earnings) => {
+    if (!earnings) return 0;
+    const rate = earnings.commission_rate || 0;
+    if (tipo === 'cerrada') {
+        const debe = item.proxima_cuota ? item.proxima_cuota.monto : (item.deuda || 0);
+        const base = debe > 0 ? debe : (earnings.avg_renewal_upsell || 0);
+        return rate * base;
+    }
+    if (tipo === 'no_tomada') return rate * (earnings.avg_seña || 0);
+    return rate * (earnings.ticket_promedio || 0);
+};
+
+// Fila de seguimiento (`.row-v6`, el mismo lenguaje de lista de una sola columna que ya usa
+// Llamadas) — reemplaza la tarjeta chica de Kanban de 3 columnas: el usuario pidió explícitamente
+// que esta pestaña "en realidad debe cambiar, debe hacerse distinto" del Kanban de Confirmar/
+// Reportar (feedback en video, 28/ago/2026). Se usa tanto en la lista de "Asignados para hoy"
+// (una por categoría, apiladas) como en la del pool sin fecha.
+//
+// Reorganizada (29/ago/2026, pedido del usuario) para escanear de un vistazo: urgencia (retraso)
+// a la izquierda en su caja de color de siempre, nombre + contexto (fuente, resultado de la
+// agenda, programa/examen, deuda) al centro, y la ganancia potencial de este seguimiento puntual
+// bien a la derecha — mismo orden izquierda→derecha que "cuándo → quién → cuánto vale" en vez de
+// mezclar todo en una sola fila de chips sin jerarquía.
+const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
     const pc = item.proxima_cuota;
-    const retraso = retrasoBadge(item.dias_retraso);
+    const when = retrasoWhen(item.dias_retraso);
+    const result = resultChip(item.closer_result);
+    const potential = estimateEarning(item, tipo, earnings);
+
+    let footer;
+    if (tipo === 'cerrada') {
+        if (pc) {
+            footer = pc.sin_plan
+                ? `Debe ${money(pc.monto)} · sin plan de cuotas`
+                : `${pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} ${cuotaDateLabel(pc.fecha_vencimiento)} · ${money(pc.monto)}`;
+        } else {
+            footer = 'Al día';
+        }
+    } else {
+        footer = item.fecha_seguimiento
+            ? `Seguimiento ${item.seguimiento_intento} de 4`
+            : 'Asignar fecha';
+    }
+
     return (
-        <div
-            onClick={onClick}
-            className="p-4 rounded-2xl border border-slate-900/60 bg-black/20 hover:bg-slate-900/50 hover:border-slate-800 transition-all cursor-pointer flex items-center justify-between gap-4"
-        >
-            <div className="min-w-0 flex-1">
-                <b className="text-sm font-black text-white truncate block">{item.lead_name}</b>
-                <div className="flex items-center gap-2 flex-wrap mt-2">
-                    {retraso && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${retraso.cls}`}>
-                            {retraso.text}
+        <div className="row-v6" onClick={onClick}>
+            <div className="time-v6" style={when ? TIME_BOX_STYLE[when.cls] : undefined}>
+                {when ? when.text : '—'}
+            </div>
+            <div className="rmain-v6">
+                <b>{item.lead_name}</b>
+                <div className="chips-v6">
+                    <span className="chip-v6 src">📍 {item.origin || 'Sin origen'}</span>
+                    {result && <span className={`chip-v6 ${result.cls}`}>{result.label}</span>}
+                    {tipo !== 'cerrada' && item.seguimiento_sub && (
+                        <span className={`chip-v6 ${TIPOS[tipo].cls === 'emerald' ? 'ok' : TIPOS[tipo].cls === 'amber' ? 'w' : ''}`}>
+                            {item.seguimiento_sub}
                         </span>
                     )}
-                    {tipo !== 'cerrada' && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${chipCls[TIPOS[tipo].cls]}`}>
-                            {item.seguimiento_sub || 'Sin subestado'}
-                        </span>
-                    )}
-                    {item.origin && <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">{item.origin}</span>}
-                    {item.owner_closer_name && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                            De {item.owner_closer_name} (baja)
-                        </span>
-                    )}
-                    {item.days_since_call !== null && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide bg-slate-900 border border-slate-800 text-slate-300">
-                            Call hace {item.days_since_call}d
-                        </span>
+                    {(item.days_since_call !== null && item.days_since_call !== undefined) && (
+                        <span className="chip-v6">Call hace {item.days_since_call}d</span>
                     )}
                     {tipo === 'cerrada' && item.programa_nombre && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-900 border border-slate-800 text-slate-300">
-                            {item.programa_nombre}
-                        </span>
+                        <span className="chip-v6">{item.programa_nombre}</span>
                     )}
-                    {tipo === 'cerrada' && typeof item.deuda === 'number' && (
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border ${item.deuda > 0 ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}`}>
-                            {item.deuda > 0 ? `Debe ${money(item.deuda)}` : 'Al día'}
-                        </span>
+                    {tipo === 'cerrada' && typeof item.deuda === 'number' && item.deuda > 0 && (
+                        <span className="chip-v6 w">Debe {money(item.deuda)}</span>
                     )}
+                    {item.owner_closer_name && (
+                        <span className="chip-v6 w">De {item.owner_closer_name} (baja)</span>
+                    )}
+                    <span className="chip-v6" style={{ color: '#fff', background: 'rgba(255,255,255,.1)' }}>{footer}</span>
                 </div>
             </div>
-            <div className="shrink-0 text-right">
-                {tipo === 'cerrada' ? (
-                    pc ? (
-                        pc.sin_plan ? (
-                            <span className="text-[11px] font-bold text-amber-300">
-                                Debe {money(pc.monto)} · sin plan de cuotas
-                            </span>
-                        ) : (
-                            <span className={`text-[11px] font-bold ${pc.vencida ? 'text-rose-300' : 'text-amber-300'}`}>
-                                {pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} {cuotaDateLabel(pc.fecha_vencimiento)} · {money(pc.monto)}
-                            </span>
-                        )
-                    ) : (
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">Al día</span>
-                    )
-                ) : item.fecha_seguimiento ? (
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-violet-300">Seguimiento {item.seguimiento_intento} de 4</span>
-                ) : (
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-amber-300">Asignar fecha</span>
-                )}
+            <div
+                className="earn-v6"
+                title={
+                    tipo === 'cerrada' ? 'Tu comisión sobre lo que se le debe cobrar (o sobre el promedio de renovación/upsell si no debe nada)'
+                    : tipo === 'no_tomada' ? 'Tu comisión sobre el promedio de lo que se cobra en señas'
+                    : 'Tu comisión sobre el ticket promedio de una venta'
+                }
+            >
+                <span className="earn-lbl-v6">{tipo === 'cerrada' ? 'Podés cobrar' : 'Podrías ganar'}</span>
+                <span className="earn-val-v6">{money(potential)}</span>
             </div>
         </div>
     );
 };
 
+// Payload del modal de seguimiento — compartido entre el click de una fila (`openLead`) y el
+// aviso hacia CloserWorkflowPage de a quién seguir primero (`onTopPending`, ver más abajo) para
+// no mantener el mapeo de campos en dos lugares.
+const buildLeadPayload = (item, tipo) => ({
+    id: item.id,
+    client_id: item.client_id,
+    lead_name: item.lead_name,
+    instagram: item.instagram,
+    phone: item.phone,
+    examen: item.examen,
+    origin: item.origin,
+    fase: 'seg',
+    tipo,
+    seguimiento_intento: item.seguimiento_intento,
+    closer_notes: item.closer_notes,
+    call_date: item.call_date,
+    enrollment_date: item.enrollment_date,
+    deuda: item.deuda,
+    programa_nombre: item.programa_nombre,
+    programa_code: item.programa_code,
+    proxima_cuota: item.proxima_cuota
+});
+
 // `refreshKey` sube desde CloserWorkflowPage cada vez que una acción toca el mazo (resolver un
 // seguimiento, programar el siguiente, registrar una venta...). Sin esa señal, el panel se
 // quedaba con la lista vieja y el seguimiento recién hecho solo desaparecía al recargar la página.
-const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
+// `onTopPending` (opcional): a quién seguir primero, con la misma prioridad que ya usa esta
+// pestaña (cobros -> hot -> fríos) — lo consume "Tu siguiente paso" en CloserWorkflowPage para
+// mostrar un único botón en vez de una lista de bandejas (pedido del usuario, 28/ago/2026).
+const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPending }) => {
     const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
     const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
     const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
+    const [earnings, setEarnings] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openPool, setOpenPool] = useState(null);
     const [poolItems, setPoolItems] = useState([]);
@@ -155,6 +234,16 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
 
     useEffect(() => { fetchMain(); }, [fetchMain]);
 
+    // Estadísticas para la ganancia potencial (ticket promedio, promedio de señas, promedio de
+    // renovación/upsell): no cambian de un minuto a otro como la lista de seguimientos — se piden
+    // aparte y se refrescan solo con `refreshKey` (una venta nueva puede moverlas), no con cada
+    // cambio de `selectedDate`.
+    useEffect(() => {
+        api.get('/closer/followups/earnings-stats')
+            .then(res => setEarnings(res.data))
+            .catch(err => console.error('Error cargando estadísticas de ganancia potencial', err));
+    }, [refreshKey]);
+
     const fetchPool = useCallback(async () => {
         if (!openPool) return;
         const poolSignature = JSON.stringify([openPool, poolFilters]);
@@ -177,35 +266,46 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
 
     useEffect(() => { fetchPool(); }, [fetchPool]);
 
+    // A quién seguir primero, en el mismo orden de prioridad que ya define `TIPOS` (cobros -> hot
+    // -> fríos): primero lo asignado para hoy; si ya está todo resuelto, se busca en el pool sin
+    // fecha con una consulta liviana (un solo tipo, se usa solo el primer item). Pedido del
+    // usuario (28/ago/2026): "que sea uno [un botón] que me lleve a seguir a alguien... como
+    // prioridad va a tomar algún cobro" — antes esta pestaña no exponía ningún lead concreto hacia
+    // afuera, así que "Tu siguiente paso" no podía ofrecer una sola acción como sí hace con
+    // Confirmar/Reportar.
+    useEffect(() => {
+        if (!onTopPending || loading) return;
+        const todayTipo = Object.keys(TIPOS).find(t => grouped[t]?.length > 0);
+        if (todayTipo) {
+            const item = grouped[todayTipo][0];
+            onTopPending({ item, tipo: todayTipo, source: 'today', payload: buildLeadPayload(item, todayTipo) });
+            return;
+        }
+        const poolTipo = Object.keys(TIPOS).find(t => poolCounts[t] > 0);
+        if (!poolTipo) {
+            onTopPending(null);
+            return;
+        }
+        let cancelled = false;
+        api.get(`/closer/followups/pool?tipo=${poolTipo}`)
+            .then(res => {
+                if (cancelled) return;
+                const item = (res.data.items || [])[0];
+                onTopPending(item ? { item, tipo: poolTipo, source: 'pool', payload: buildLeadPayload(item, poolTipo) } : null);
+            })
+            .catch(() => { if (!cancelled) onTopPending(null); });
+        return () => { cancelled = true; };
+    }, [grouped, poolCounts, loading, onTopPending]);
+
     const togglePool = (tipo) => {
         setOpenPool(prev => (prev === tipo ? null : tipo));
         setPoolFilters({ sub: '', days_since: '', programa: '', deuda: '' });
     };
 
-    const openLead = (item, tipo) => {
-        // "Llamadas cerradas" abre el modal de seguimiento de cobro (segventa: deuda, plan de
-        // cuotas, "¿qué pasó con el cobro?") — mismo modal que el resto de seguimientos, no el
-        // resumen general del cliente (se quitó como destino por defecto).
-        onOpenLead({
-            id: item.id,
-            client_id: item.client_id,
-            lead_name: item.lead_name,
-            instagram: item.instagram,
-            phone: item.phone,
-            examen: item.examen,
-            origin: item.origin,
-            fase: 'seg',
-            tipo,
-            seguimiento_intento: item.seguimiento_intento,
-            closer_notes: item.closer_notes,
-            call_date: item.call_date,
-            enrollment_date: item.enrollment_date,
-            deuda: item.deuda,
-            programa_nombre: item.programa_nombre,
-            programa_code: item.programa_code,
-            proxima_cuota: item.proxima_cuota
-        });
-    };
+    // "Llamadas cerradas" abre el modal de seguimiento de cobro (segventa: deuda, plan de
+    // cuotas, "¿qué pasó con el cobro?") — mismo modal que el resto de seguimientos, no el
+    // resumen general del cliente (se quitó como destino por defecto).
+    const openLead = (item, tipo) => onOpenLead(buildLeadPayload(item, tipo));
 
     if (loading) {
         return (
@@ -218,17 +318,19 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
 
     const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
     const totalHoy = itemsHoy.length;
-    // Cuántos de los seguimientos del día vienen arrastrados de días anteriores, y cuánto es el
-    // peor retraso — el resumen que el closer necesita antes de mirar fila por fila.
-    const atrasados = itemsHoy.filter(i => typeof i.dias_retraso === 'number' && i.dias_retraso > 0);
-    const maxRetraso = atrasados.reduce((max, i) => Math.max(max, i.dias_retraso), 0);
+    // Ganancia potencial total de "Asignados para hoy" — suma de la de cada fila (ver
+    // `estimateEarning`). "En cada uno y en total", pedido explícito del usuario.
+    const totalPotencial = Object.keys(TIPOS).reduce(
+        (sum, tipo) => sum + grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0),
+        0
+    );
 
     return (
         <div className="space-y-6">
-            {/* Meta diaria */}
-            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6">
+            {/* Meta diaria + ganancia potencial del día */}
+            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6 flex-wrap">
                 <div className="text-4xl font-black text-white">{goal.hechos}<span className="text-lg text-slate-500">/{goal.meta}</span></div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-[180px]">
                     <b className="text-sm font-black text-white block">Objetivo de seguimientos del día</b>
                     <span className="text-xs text-slate-400">
                         {goal.faltan > 0 ? `Te faltan ${goal.faltan} para la meta.` : 'Meta cumplida. 🏅'}
@@ -237,6 +339,12 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                         <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-500 transition-all" style={{ width: `${goal.pct}%` }} />
                     </div>
                 </div>
+                {earnings && totalHoy > 0 && (
+                    <div className="text-right pl-6 border-l border-slate-900 shrink-0">
+                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}>Ganancia potencial hoy</div>
+                        <div className="text-3xl font-black" style={{ color: '#7DEAC0' }}>{money(totalPotencial)}</div>
+                    </div>
+                )}
             </div>
 
             {/* Asignados para hoy */}
@@ -247,28 +355,48 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                         <p className="text-xs text-slate-400 font-semibold mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        {atrasados.length > 0 && (
-                            <span className="text-xs font-bold bg-rose-500/10 text-rose-300 border border-rose-500/25 px-3 py-1 rounded-xl">
-                                {atrasados.length} atrasado{atrasados.length === 1 ? '' : 's'} · hasta {maxRetraso}d
-                            </span>
-                        )}
                         <span className="text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800 px-3 py-1 rounded-xl">{totalHoy}</span>
                     </div>
                 </div>
                 {totalHoy === 0 ? (
                     <div className="text-center py-8 text-emerald-400 text-xs font-bold">✓ Todos los seguimientos de hoy están resueltos.</div>
                 ) : (
-                    Object.keys(TIPOS).map(tipo => grouped[tipo].length > 0 && (
-                        <div key={tipo} className="space-y-2">
-                            <div className="flex items-center gap-2 pt-2">
-                                <span className="text-xs font-bold uppercase tracking-wide text-slate-300">{TIPOS[tipo].icon} {TIPOS[tipo].label} · {grouped[tipo].length}</span>
-                                <span className="flex-1 h-px bg-slate-900" />
-                            </div>
-                            {grouped[tipo].map(item => (
-                                <SeguimientoRow key={item.id} item={item} tipo={tipo} onClick={() => openLead(item, tipo)} />
-                            ))}
-                        </div>
-                    ))
+                    // Lista apilada por categoría (cobros -> hot -> fríos, ya priorizada por el orden
+                    // de TIPOS), NO un Kanban de 3 columnas lado a lado — pedido explícito del usuario
+                    // (feedback en video, 28/ago/2026): "sigue siendo un Kanban que en realidad debe
+                    // cambiar, debe hacerse distinto" del resto del mazo (Confirmar/Reportar SÍ siguen
+                    // siendo Kanban, esta pestaña ya no). Título de cada bloque grande y en negrita
+                    // ("números grandes, títulos grandes" — mismo pedido de diseño general).
+                    <div className="space-y-7">
+                        {Object.keys(TIPOS).map((tipo, i) => {
+                            const subtotal = grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0);
+                            return (
+                                <div key={tipo}>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span style={{ fontSize: '28px', lineHeight: 1 }}>{TIPOS[tipo].icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-white truncate" style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.01em' }}>{TIPOS[tipo].label}</div>
+                                            <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[tipo].desc}</div>
+                                        </div>
+                                        {earnings && grouped[tipo].length > 0 && (
+                                            <span className="text-xs font-black" style={{ color: '#7DEAC0' }}>{money(subtotal)}</span>
+                                        )}
+                                        <span style={{ fontSize: '28px', fontWeight: 900 }} className={grouped[tipo].length === 0 ? 'text-emerald-400' : 'text-white'}>
+                                            {grouped[tipo].length}
+                                        </span>
+                                    </div>
+                                    {grouped[tipo].length > 0 ? (
+                                        grouped[tipo].map(item => (
+                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} onClick={() => openLead(item, tipo)} />
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
+                                    )}
+                                    {i < Object.keys(TIPOS).length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
 
@@ -349,9 +477,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0 }) => {
                         ) : poolItems.length === 0 ? (
                             <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">Sin leads en esta categoría con estos filtros.</div>
                         ) : (
-                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                            <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {poolItems.map(item => (
-                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} onClick={() => openLead(item, openPool)} />
+                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} onClick={() => openLead(item, openPool)} />
                                 ))}
                             </div>
                         )}

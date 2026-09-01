@@ -31,6 +31,8 @@ const LoginPage = () => {
         navigate('/closer/deck?step=confirmations');
       } else if (user.role === 'operator') {
         navigate('/ops/dashboard');
+      } else if (user.role === 'director_comercial') {
+        navigate('/admin/workshops');
       } else {
         navigate('/login');
       }

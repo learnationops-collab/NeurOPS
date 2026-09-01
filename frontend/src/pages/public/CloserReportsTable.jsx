@@ -4,8 +4,63 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye, Send
+    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye, Send,
+    CalendarCheck, MessageSquare, ClipboardList
 } from 'lucide-react';
+
+// Tira de KPIs "lo que falta por hacer" — a pedido del usuario (27/ago/2026): en la vista de
+// admin de «Historial de Reportes» debe verse arriba de la tabla, como pendientes reales del
+// closer seleccionado (o de todo el equipo con "Todos"), no enterrado en el dashboard.
+const PendingKpiStrip = ({ closerId }) => {
+    const [pendientes, setPendientes] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        api.get('/closer/pending-summary', { params: { closer_id: closerId || 'all' } })
+            .then(res => { if (!cancelled) setPendientes(res.data); })
+            .catch(err => console.error('Error fetching pending summary:', err))
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [closerId]);
+
+    if (loading && !pendientes) {
+        return (
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex items-center justify-center gap-2 text-slate-500">
+                <Loader2 className="animate-spin" size={16} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Calculando pendientes...</span>
+            </div>
+        );
+    }
+    if (!pendientes) return null;
+
+    const sr = pendientes.agendas_sin_reportar || {};
+    const pc = pendientes.por_confirmar || {};
+    const sg = pendientes.seguimientos || {};
+
+    const tiles = [
+        { icon: ClipboardList, label: 'Total pendiente (a hoy)', value: pendientes.total || 0, tone: 'text-indigo-400 border-indigo-600/30 bg-indigo-600/10' },
+        { icon: PhoneCall, label: 'Agendas sin reportar', value: sr.count || 0, detail: `${sr.atrasadas || 0} atrasada(s) · ${sr.de_hoy || 0} de hoy`, tone: 'text-rose-400 border-rose-600/30 bg-rose-600/10' },
+        { icon: CalendarCheck, label: 'Por contactar / confirmar', value: pc.count || 0, detail: `${pc.confirmadas || 0} ya confirmada(s) · ${pc.proximas_48h || 0} en 48h`, tone: 'text-amber-400 border-amber-600/30 bg-amber-600/10' },
+        { icon: MessageSquare, label: 'Seguimientos sin hacer', value: sg.count || 0, detail: `${sg.vencidos || 0} vencido(s)`, tone: 'text-sky-400 border-sky-600/30 bg-sky-600/10' }
+    ];
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {tiles.map(t => (
+                <div key={t.label} className={`p-5 rounded-[1.75rem] border ${t.tone} flex flex-col gap-2`}>
+                    <div className="flex items-center gap-2">
+                        <t.icon size={16} />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t.label}</span>
+                    </div>
+                    <span className="text-3xl font-black tabular-nums leading-none">{t.value}</span>
+                    {t.detail && <span className="text-[10px] font-bold text-slate-500">{t.detail}</span>}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 // Componente Principal de la Tabla
 const CloserReportsTable = ({ closers }) => {
@@ -101,6 +156,9 @@ const CloserReportsTable = ({ closers }) => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 relative">
 
+            {/* KPIs de pendientes — solo para admin, arriba de todo (27/ago/2026) */}
+            {user.role === 'admin' && <PendingKpiStrip closerId={filters.closer_id} />}
+
             {/* FILTERS */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6">
                 <div className="flex flex-col gap-2">
@@ -176,14 +234,15 @@ const CloserReportsTable = ({ closers }) => {
             {/* TABLE */}
             <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[1200px]">
+                    <table className="w-full text-left border-collapse min-w-[1900px]">
                         <thead>
                             <tr className="bg-slate-800/50">
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Closer</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Slots</th>
-                                <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">1ra Llamada</th>
-                                <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">2da Llamada</th>
+                                <th className="p-4 text-[9px] font-black text-violet-500 uppercase tracking-widest text-center">Confirm.</th>
+                                <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="5">1ra Llamada</th>
+                                <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="5">2da Llamada</th>
                                 <th className="p-4 text-[9px] font-black text-rose-500 uppercase tracking-widest text-center" colSpan="3">Seguimientos y Referidos</th>
                                 <th className="p-4 text-[9px] font-black text-amber-500 uppercase tracking-widest text-center" colSpan="2">Ventas / Cash</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
@@ -192,10 +251,17 @@ const CloserReportsTable = ({ closers }) => {
                                 <th></th>
                                 <th></th>
                                 <th></th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agendas</th>
+                                <th></th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agend.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Asist.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agendas</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Asist.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">No Show</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Reag.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Canc.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agend.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Asist.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">No Show</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Reag.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Canc.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Seguimientos (C/R/Ci)</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Recuperaciones (C/R/A)</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Referidos (P/Co)</th>
@@ -207,30 +273,41 @@ const CloserReportsTable = ({ closers }) => {
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="13" className="py-20 text-center">
+                                    <td colSpan="21" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="13" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="21" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => {
-                                const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0) + (r.installment_count || 0);
-                                const totalCash = (r.pif_cash_collected || 0) + (r.split_cash_collected || 0) + (r.deposit_cash_collected || 0) + (r.installment_cash_collected || 0);
+                                // Incluye TODOS los tipos de venta reales (antes se quedaba afuera renovación
+                                // y upsell, que sí viajan en el modelo — la tabla subcontaba cash real).
+                                const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0)
+                                    + (r.installment_count || 0) + (r.renewal_count || 0) + (r.upsell_count || 0);
+                                const totalCash = (r.pif_cash_collected || 0) + (r.split_cash_collected || 0) + (r.deposit_cash_collected || 0)
+                                    + (r.installment_cash_collected || 0) + (r.renewal_cash_collected || 0) + (r.upsell_cash_collected || 0);
 
                                 return (
                                     <tr key={r.id} className="hover:bg-slate-800/20 transition-colors group">
                                         <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">{r.date}</td>
                                         <td className="p-4 text-xs font-bold text-white uppercase italic">{r.closer_name}</td>
                                         <td className="p-4 text-xs font-black text-white tabular-nums text-center">{r.slots || 0}</td>
+                                        <td className="p-4 text-xs font-black text-violet-400 tabular-nums text-center">{r.confirmations_done || 0}</td>
 
                                         <td className="p-4 border-l border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.first_call_scheduled || 0}</td>
                                         <td className="p-4 text-xs font-black text-slate-300 tabular-nums text-center">{r.first_call_attended || 0}</td>
+                                        <td className="p-4 text-xs font-black text-rose-400 tabular-nums text-center">{r.first_call_no_show || 0}</td>
+                                        <td className="p-4 text-xs font-black text-amber-400 tabular-nums text-center">{r.first_call_rescheduled || 0}</td>
+                                        <td className="p-4 text-xs font-black text-slate-500 tabular-nums text-center">{r.first_call_canceled || 0}</td>
 
                                         <td className="p-4 border-l border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.second_call_scheduled || 0}</td>
-                                        <td className="p-4 border-r border-slate-800 text-xs font-black text-slate-300 tabular-nums text-center">{r.second_call_attended || 0}</td>
+                                        <td className="p-4 text-xs font-black text-slate-300 tabular-nums text-center">{r.second_call_attended || 0}</td>
+                                        <td className="p-4 text-xs font-black text-rose-400 tabular-nums text-center">{r.second_call_no_show || 0}</td>
+                                        <td className="p-4 text-xs font-black text-amber-400 tabular-nums text-center">{r.second_call_rescheduled || 0}</td>
+                                        <td className="p-4 border-r border-slate-800 text-xs font-black text-slate-500 tabular-nums text-center">{r.second_call_canceled || 0}</td>
 
                                         <td className="p-4 text-[11px] font-black text-blue-400 tabular-nums text-center">
                                             {r.follow_ups_sent || 0}/{r.follow_ups_replied || 0}/{r.follow_ups_closed || 0}

@@ -1754,6 +1754,34 @@ def get_closer_deck_counts():
         query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
         query_calls = query_calls.filter_by(closer_id=current_user.id)
 
+    # "Confirmadas" dentro del propio pool de confirmaciones: una cita puede tener
+    # `closer_result` todavía en Pendiente (el closer no la procesó formalmente) pero `result`
+    # ya en "Confirmado" (estado heredado de otro lado, ej. el confirmer) — el Kanban de
+    # "① Confirmar" ya las agrupa aparte (columna "Confirmado", ✓ listo · espera su fecha) sin
+    # sacarlas del pool. Antes el badge "hecho/total" de la navegación usaba `dailyActivity.
+    # confirmados_hoy` (confirmaciones registradas HOY por el closer) como "hecho", que no tiene
+    # nada que ver con este estado — una cita confirmada hace días pero recién visible hoy en el
+    # pool seguía contando como "0 hechas" pese a que el propio Kanban la mostraba resuelta.
+    # Reportado por el usuario (28/ago/2026): "dice cero de nueve, pero tiene una agenda
+    # inconfirmada [ya confirmada]... debería decir uno de nueve".
+    from sqlalchemy import func
+    confirmations_done = query_confirmations.filter(func.lower(Appointment.result) == 'confirmado').count()
+
+    # "Reportadas" del día seleccionado: mismo criterio que ya usa el Kanban de "② Reportar"
+    # para su columna "Reportadas" (`/deck?step=agendas` + `closer_processed`) — acotado a ESE
+    # día, a diferencia de `query_calls` (pendientes) que es un backlog sin límite inferior.
+    # Mismo bug que confirmaciones: el badge usaba `dailyActivity.show_ups` ("reportado HOY"),
+    # que no cuenta una llamada reportada en un día anterior pero todavía visible en el pool del
+    # día seleccionado.
+    query_calls_done = Appointment.query.filter(
+        Appointment.start_time >= start_utc,
+        Appointment.start_time <= end_utc_calls,
+        Appointment.closer_processed == True
+    )
+    if current_user.role != 'admin':
+        query_calls_done = query_calls_done.filter_by(closer_id=current_user.id)
+    calls_done = query_calls_done.count()
+
     # "Seguimientos a hacer hoy" tiene que ser la misma cuenta que ve el closer al abrir la
     # pestaña ③ Seguimientos (CloserFollowUpService.get_today_grouped): vencidos + de hoy, con
     # el tipo efectivo derivado cuando el closer nunca etiquetó explícitamente la cita. La
@@ -1767,9 +1795,53 @@ def get_closer_deck_counts():
 
     return jsonify({
         "confirmations": query_confirmations.count(),
+        "confirmations_done": confirmations_done,
         "calls": query_calls.count(),
+        "calls_done": calls_done,
         "seguimientos": seguimientos_count
     }), 200
+
+
+@bp.route('/deck/daily-trend', methods=['GET'])
+@login_required
+def get_daily_trend():
+    """Últimos 7 días (incluido el que se está reportando) de cash cobrado, para el mini gráfico
+    de barras de "Cerrar el día". Lee directo de `CloserDailyReport` -el reporte ya enviado ese
+    día-, sin recalcular nada: si el closer no envió reporte ese día, el valor es 0. Es una
+    simplificación honesta (no inventa actividad de un día sin reportar) más que una limitación:
+    incentiva reportar todos los días, que es justamente lo que esta pantalla empuja."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import CloserDailyReport
+    end_day = _resolve_report_date(current_user, request.args.get('date'))
+    days = [end_day - timedelta(days=i) for i in range(6, -1, -1)]
+
+    reports = {
+        r.date: r for r in CloserDailyReport.query.filter(
+            CloserDailyReport.closer_id == current_user.id,
+            CloserDailyReport.date.in_(days)
+        ).all()
+    }
+
+    dow_labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    result = []
+    for d in days:
+        r = reports.get(d)
+        cash = 0.0
+        if r:
+            cash = (
+                (r.pif_cash_collected or 0) + (r.split_cash_collected or 0) + (r.deposit_cash_collected or 0)
+                + (r.installment_cash_collected or 0) + (r.renewal_cash_collected or 0) + (r.upsell_cash_collected or 0)
+            )
+        result.append({
+            "date": d.isoformat(),
+            "label": dow_labels[d.weekday()],
+            "cash": round(cash, 2),
+            "is_target": d == end_day
+        })
+
+    return jsonify(result), 200
 
 
 def _resolve_report_date(current_user, date_str):
@@ -2091,7 +2163,7 @@ def get_team_members():
         User.role.in_(['closer', 'setter']),
         or_(User.is_active == True, User.is_active == None)
     ).order_by(User.username.asc()).all()
-    return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in members]), 200
+    return jsonify([{"id": u.id, "username": u.username, "role": u.role, "email": u.email} for u in members]), 200
 
 
 @bp.route('/deck/referrals/manual', methods=['POST'])
@@ -2430,6 +2502,61 @@ def update_closer_payment(payment_id):
             'status': payment.status, 'date': payment.date.isoformat() if payment.date else None
         },
         "enrollment_total_paid": enrollment.total_paid if enrollment else None
+    }), 200
+
+
+@bp.route('/clients/<int:client_id>/total-amount', methods=['PATCH'])
+@login_required
+def update_client_total_amount(client_id):
+    """Corrige el "total a pagar del programa" de un cliente (Client.total_amount), desde el
+    historial del cliente en el mazo del closer. Antes este número no se veía ni se podía tocar
+    desde ahí: la tarjeta de "Inscripciones y pagos" mostraba el precio genérico del programa
+    (Program.price, igual para todos), no lo que ESTE cliente negoció — y SalesConsistencyService
+    ya usa Client.total_amount (si existe) para calcular saldo/deuda real, así que dejarlo mal
+    cargado hacía que el saldo mostrado no coincidiera con lo que el closer sabía que el cliente
+    debía en realidad."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.models import Client
+    client = Client.query.get_or_404(client_id)
+    data = request.get_json() or {}
+
+    if 'total_amount' not in data:
+        return jsonify({"error": "Falta 'total_amount'"}), 400
+    try:
+        nuevo_total = float(data['total_amount'])
+    except (TypeError, ValueError):
+        return jsonify({"error": "'total_amount' tiene que ser un número"}), 400
+    if nuevo_total < 0:
+        return jsonify({"error": "'total_amount' no puede ser negativo"}), 400
+
+    anterior = client.total_amount
+    client.total_amount = nuevo_total
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al guardar el total del programa: {str(e)}"}), 500
+
+    try:
+        from app.models import Appointment
+        from app.services.booking_service import BookingService
+        appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
+        if appt:
+            BookingService.log_lead_event(
+                appt.id, current_user.id, 'total_amount_edited',
+                f"{current_user.username} corrigió el total del programa: {anterior!r} → {nuevo_total!r}"
+            )
+    except Exception as log_err:
+        print(f"[Total Amount Edit Log Error] {log_err}")
+
+    from app.services.closer_followup_service import CloserFollowUpService
+    return jsonify({
+        "message": "Total del programa actualizado",
+        "total_amount": client.total_amount,
+        "deuda": CloserFollowUpService._client_debt(client.id)
     }), 200
 
 

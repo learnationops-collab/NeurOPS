@@ -5,7 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
 import PerformanceKpis from './components/PerformanceKpis';
 import PerformancePendientes from './components/PerformancePendientes';
-import PerformanceFunnel from './components/PerformanceFunnel';
+import PerformanceFunnel, { ConfirmacionesCard } from './components/PerformanceFunnel';
 import PerformanceQuality from './components/PerformanceQuality';
 import PerformanceSenas from './components/PerformanceSenas';
 import PerformanceMoney from './components/PerformanceMoney';
@@ -101,7 +101,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         : `· ${periodLabel(period, data.dates)}`;
 
     return (
-        <div className={embedded ? '' : 'min-h-screen bg-main p-6 md:p-10'}>
+        <div className={`dash-v6 ${embedded ? '' : 'min-h-screen bg-v6 p-6 md:p-10'}`}>
             <div className={embedded ? '' : 'max-w-7xl mx-auto'}>
                 <header className="flex flex-wrap justify-between items-center gap-4 border-b border-base pb-6 mb-2">
                     <div>
@@ -124,40 +124,47 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                     />
                 </header>
 
-                <SectionTitle>Resultado <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
-                <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} coverage={data.reports_coverage} />
+                {/* Re-secciona el dashboard calcando el agrupamiento del HTML de referencia que
+                    pasó el usuario (27/ago/2026) — 5 bloques simples (Dinero / Dónde se cae /
+                    Calidad de la llamada / Equipo / Para cerrar) en vez de 9 secciones sueltas.
+                    Se mantiene todo lo que ya funcionaba: filtros, comparación, el detalle de
+                    señas y el resumen de seguimientos — solo cambia dónde vive cada tarjeta. */}
+                <SectionTitle>01 · Dinero <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
+                <div className="space-y-4">
+                    <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} />
+                    <PerformanceMoney cuotas={data.cuotas_por_cobrar} programas={data.current.programas} />
+                    <PerformanceSenas senas={data.current.senas} />
+                </div>
 
+                <SectionTitle>02 · Dónde se cae</SectionTitle>
+                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} cashMix={data.current.cash_mix} />
+
+                <SectionTitle>03 · Calidad de la llamada</SectionTitle>
+                <div className="space-y-4">
+                    <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel} confirmaciones={data.current.confirmaciones} />
+                    {data.current.confirmaciones && <ConfirmacionesCard confirmaciones={data.current.confirmaciones} />}
+                    <PerformanceActivity
+                        fuente={data.fuente}
+                        actividad={data.current.actividad}
+                        referidos={data.current.referidos}
+                        reportsProductivity={data.reports_productivity}
+                    />
+                </div>
+
+                <SectionTitle>04 · Equipo</SectionTitle>
+                <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
+
+                {/* "Lo que falta completar" va al final a pedido del usuario (27/ago/2026): lo
+                    primero que el closer debe ver al abrir la pestaña es su resultado, no su
+                    lista de pendientes — esta sección queda como cierre del dashboard. */}
                 <SectionTitle>Lo que falta completar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· a hoy, fuera del período filtrado</span></SectionTitle>
                 <PerformancePendientes pendientes={data.pendientes} onNavigate={onNavigate} />
-
-                <SectionTitle>Dónde se cae el embudo</SectionTitle>
-                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} confirmaciones={data.current.confirmaciones} />
-
-                <SectionTitle>Calidad de la llamada</SectionTitle>
-                <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel} confirmaciones={data.current.confirmaciones} />
-
-                <SectionTitle>Señas <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· reservas, no ventas</span></SectionTitle>
-                <PerformanceSenas senas={data.current.senas} />
-
-                <SectionTitle>Dinero</SectionTitle>
-                <PerformanceMoney cashMix={data.current.cash_mix} cuotas={data.cuotas_por_cobrar} programas={data.current.programas} />
-
-                <SectionTitle>Fuente, actividad y referidos</SectionTitle>
-                <PerformanceActivity
-                    fuente={data.fuente}
-                    actividad={data.current.actividad}
-                    referidos={data.current.referidos}
-                    reportsProductivity={data.reports_productivity}
-                />
-
-                <SectionTitle>Equipo</SectionTitle>
-                <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
 
                 {/* Lo que hay que cargar para que los números de arriba cierren: los cupos de
                     agenda (el único dato que no sale de la bandeja) y los reportes sin enviar.
                     Va al final a pedido del usuario (24/ago/2026): son tareas de mantenimiento
                     del dato, no lo que el closer viene a leer al abrir el dashboard. */}
-                <SectionTitle>Para actualizar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· lo que falta cargar</span></SectionTitle>
+                <SectionTitle>05 · Para cerrar <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">· lo que falta cargar</span></SectionTitle>
                 <div className="space-y-4">
                     {user?.role === 'closer' && <SlotsPrompt period={period} range={customRange} onSaved={fetchData} />}
                     <DataIssuesPanel issues={detectIssues(data)} onNavigate={onNavigate} />

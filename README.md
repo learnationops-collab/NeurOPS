@@ -73,7 +73,20 @@ flask db migrate -m "Initial migration"
 flask db upgrade
 ```
 
-### 7. Crear Usuario Administrador
+### 7. Sincronización de Datos (Producción -> Local / Staging)
+
+Para importar los datos actualizados desde Producción hacia tu base de datos local o de pruebas (asegúrate de tener el entorno virtual activo):
+
+```bash
+# 1. Sincronizar a base de datos local (SQLite):
+python scripts/actualizar_db.py
+
+# 2. Sincronizar a base de datos de Testing/Staging en Railway:
+# Requiere configurar DATABASE_STAGING en tu archivo .env
+python scripts/actualizar_db.py --target staging
+```
+
+### 8. Crear Usuario Administrador
 
 Hemos incluido un script para facilitar esto. Ejecuta en la raíz:
 
@@ -82,7 +95,7 @@ python scripts/create_admin.py
 ```
 Sigue las instrucciones en pantalla.
 
-### 8. Ejecutar el Entorno de Desarrollo
+### 9. Ejecutar el Entorno de Desarrollo
 
 Para trabajar en local, debes levantar ambos servicios:
 

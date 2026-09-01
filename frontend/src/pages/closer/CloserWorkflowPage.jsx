@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
-    Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
-    RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil
+    Calendar, Phone, Mail, Instagram, ExternalLink,
+    CalendarDays, AlertCircle, DollarSign, CreditCard,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,10 +15,13 @@ import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
+import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import MiCarteraPane from './components/MiCarteraPane';
 import LeadEditModal from './components/LeadEditModal';
+import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow } from '../../utils/datetime';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -85,6 +88,40 @@ const formatIdcardDate = (iso) => {
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+// Cuenta regresiva/tiempo transcurrido respecto a la hora agendada de una cita ("en 2 h 10 min",
+// "hace 3 días"), en vez de una fecha cruda que no dice nada sobre urgencia sin hacer la cuenta
+// a mano. `nowMs` se pasa desde afuera (no `Date.now()` acá adentro) para que el resultado
+// dependa del reloj vivo del componente (`nowTick`) y no quede pegado al momento del primer
+// render — así se actualiza solo con el tiempo real.
+const formatApptCountdown = (startIso, nowMs) => {
+    const start = parseUtcIso(startIso);
+    if (!start) return null;
+    const diffMs = start.getTime() - nowMs;
+    const absMs = Math.abs(diffMs);
+
+    // Media hora de margen para "ahora mismo": ni el closer ni el lead miran el reloj al segundo.
+    if (absMs <= 5 * 60 * 1000) return { label: 'Ahora mismo', kind: 'now' };
+
+    const mins = Math.floor(absMs / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    let amount;
+    if (days >= 1) {
+        const remH = hours % 24;
+        amount = `${days} día${days !== 1 ? 's' : ''}${remH > 0 ? ` ${remH} h` : ''}`;
+    } else if (hours >= 1) {
+        const remM = mins % 60;
+        amount = `${hours} h${remM > 0 ? ` ${remM} min` : ''}`;
+    } else {
+        amount = `${mins} min`;
+    }
+
+    if (diffMs > 0) {
+        return { label: `En ${amount}`, kind: hours < 2 ? 'soon' : 'future' };
+    }
+    return { label: `Hace ${amount}`, kind: 'past' };
+};
+
 // Link de WhatsApp para contactar al lead directamente desde la ficha durante el seguimiento.
 const waLinkForPhone = (phone, leadName) => {
     const clean = phone ? phone.replace(/\D/g, '') : '';
@@ -117,6 +154,15 @@ const CloserWorkflowPage = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Reloj vivo para las cuentas regresivas de las tarjetas del mazo ("en 2 h", "hace 20 min"):
+    // sin esto, "cuánto falta" quedaría congelado en el momento en que se cargó la página.
+    // 30s alcanza para que se sienta "en vivo" sin recalcular en cada render.
+    const [nowTick, setNowTick] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNowTick(Date.now()), 30000);
+        return () => clearInterval(id);
     }, []);
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
@@ -153,12 +199,35 @@ const CloserWorkflowPage = () => {
     // Reagendas/Seguimientos/Referidos) — reemplaza los inputs manuales de referidos: todo sale
     // de CloserService.get_daily_activity_summary.
     const [dailyActivity, setDailyActivity] = useState(null);
+    // Puntos de experiencia del día: se usa tanto en "Tu día" (arriba de todo) como en el
+    // Resumen del Reporte del día — un solo lugar para no repetir la fórmula ni que se
+    // desincronicen. Pesos documentados en detalle donde se usa por primera vez, más abajo.
+    const dailyXp = useMemo(() => {
+        if (!dailyActivity) return 0;
+        return (
+            (dailyActivity.confirmados_hoy || 0) * 10 +
+            (dailyActivity.confirmados_proximos || 0) * 5 +
+            (dailyActivity.show_ups || 0) * 20 +
+            (dailyActivity.seguimientos_hechos || 0) * 8 +
+            (dailyActivity.referidos_capturados || 0) * 15 +
+            (dailyActivity.ventas_count || 0) * 100
+        );
+    }, [dailyActivity]);
     const [reportStatusRefreshKey, setReportStatusRefreshKey] = useState(0);
     // Trabajo atrasado de días ANTERIORES al que se está reportando (confirmaciones nunca
     // gestionadas, llamadas confirmadas sin registrar su resultado, seguimientos vencidos sin
     // marcar como hechos) — bloquea el envío del reporte hasta que se resuelva (ver
     // CloserService.get_previous_days_pending).
     const [pendingPreviousDays, setPendingPreviousDays] = useState(null);
+    // Últimos 7 días de cash cobrado (GET /closer/deck/daily-trend), para el mini gráfico de
+    // barras del hero de "Cerrar el día" — solo se pide al entrar a esa vista.
+    const [dailyTrend, setDailyTrend] = useState([]);
+    // Seguimientos "cerrada" (cobros) del día que se está reportando — para el 4° KPI
+    // ("Cobros resueltos") y el logro "Primer cobro". Mismo endpoint que ya usa SeguimientosPane.
+    const [seguimientosHoyGrouped, setSeguimientosHoyGrouped] = useState(null);
+    // Meta diaria de seguimientos (mismo dato que ya muestra la pestaña ③ Seguir) — para el
+    // logro "Meta de seguimientos".
+    const [seguimientosGoal, setSeguimientosGoal] = useState(null);
     // Si ese atraso además TRABA el envío del reporte, o solo se avisa. Lo decide el toggle
     // `bloqueo_reporte_backlog` desde Operaciones → Configuración, no el frontend.
     const [backlogBlocksReport, setBacklogBlocksReport] = useState(false);
@@ -188,9 +257,18 @@ const CloserWorkflowPage = () => {
                 setReportSent(!!d.sent);
                 setReportSentAt(d.sent_at || null);
                 setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
+                // Prioridad del default (pedido del usuario, 28/ago/2026): los slots del día NUNCA
+                // pueden ser menos que las agendas que realmente tiene ese día (`agendas_del_dia` —
+                // un cupo ocupado sigue siendo un cupo), así que ese es el default correcto, no un
+                // valor recordado de otro día distinto (`slots_last_value`, que puede no tener nada
+                // que ver con la cantidad de agendas de HOY). El closer sigue pudiendo editarlo hacia
+                // arriba si tuvo más cupos disponibles que los que ocupó.
                 if (d.slots !== null && d.slots !== undefined) {
                     setReportSlots(String(d.slots));
                     setReportSlotsIsDefault(false);
+                } else if (d.activity?.agendas_del_dia) {
+                    setReportSlots(String(d.activity.agendas_del_dia));
+                    setReportSlotsIsDefault(true);
                 } else if (d.slots_last_value !== null && d.slots_last_value !== undefined) {
                     setReportSlots(String(d.slots_last_value));
                     setReportSlotsIsDefault(true);
@@ -207,26 +285,63 @@ const CloserWorkflowPage = () => {
             .finally(() => setLoadingReportStatus(false));
     }, [activeView, reportDate, reportStatusRefreshKey]);
 
-    // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
-    // entre a la pestaña de reporte — el dock decora "✓ Reporte enviado" desde el inicio.
+    // Datos extra de "Cerrar el día" — gráfico de 7 días y cobros del día, calcados de la
+    // referencia visual. Solo se piden en esa vista, igual que el resto del estado del reporte.
     useEffect(() => {
-        api.get('/closer/deck/daily-report', { params: { date: localToday() } })
-            .then(res => setTodayReportSent(!!res.data?.sent))
-            .catch(() => {});
-    }, []);
+        if (activeView !== 'report') return;
+        api.get('/closer/deck/daily-trend', { params: { date: reportDate } })
+            .then(res => setDailyTrend(res.data || []))
+            .catch(() => setDailyTrend([]));
+        api.get(`/closer/followups/today?selected_date=${reportDate}`)
+            .then(res => setSeguimientosHoyGrouped(res.data?.grouped || null))
+            .catch(() => setSeguimientosHoyGrouped(null));
+        api.get(`/closer/followups/goal?selected_date=${reportDate}`)
+            .then(res => setSeguimientosGoal(res.data || null))
+            .catch(() => setSeguimientosGoal(null));
+    }, [activeView, reportDate, reportStatusRefreshKey]);
 
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
     // Señal de recarga para la pestaña de seguimientos (ver fetchAgendas): sube en cada acción
     // que modifica el mazo para que el panel vuelva a pedir sus propios datos.
     const [seguimientosRefreshKey, setSeguimientosRefreshKey] = useState(0);
+    // A quién seguir primero (cobros -> hot -> fríos), reportado por SeguimientosPane — ver su
+    // prop `onTopPending`. `undefined` = todavía no se sabe (recién montado/cargando), `null` =
+    // no hay nadie a quien seguir, objeto = { item, tipo, source, payload }.
+    const [seguimientoHero, setSeguimientoHero] = useState(undefined);
+
+    // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
+    // entre a la pestaña de reporte — la tarjeta "Tu día" necesita `activity` (trabajo real de
+    // hoy, no solo lo que trajo la pestaña activa) desde el arranque, y se vuelve a pedir cada
+    // vez que `seguimientosRefreshKey` sube (esa señal ya se dispara después de cualquier acción
+    // que modifica el mazo, así que "Tu día" queda al día sin agregar otro punto de recarga).
+    useEffect(() => {
+        api.get('/closer/deck/daily-report', { params: { date: localToday() } })
+            .then(res => {
+                setTodayReportSent(!!res.data?.sent);
+                setDailyActivity(res.data?.activity || null);
+            })
+            .catch(() => {});
+    }, [seguimientosRefreshKey]);
+
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
-    const [submittingBulk, setSubmittingBulk] = useState(false);
-    
+    // Llamadas de hoy YA reportadas (para la columna "Reportadas" del Kanban de ② Reportar).
+    // `step=calls` del mazo excluye por diseño lo ya procesado (closer_processed=true) — no hay
+    // forma de pedirlo por ahí. `step=agendas` sí trae todo lo del día sin filtrar por estado,
+    // así que se filtra acá del lado del cliente.
+    const [reportedTodayCalls, setReportedTodayCalls] = useState([]);
+
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
+
+    // "Quiero procrastinar" (v7): calculadora de "esto vale la pena antes de irte a scrollear",
+    // a pedido del usuario (27/ago/2026). Es una simulación editable, no un reporte de datos
+    // reales — no hay una tasa "de verdad" de respuesta/cierre de seguimientos disponible acá
+    // sin pegarle a otro endpoint, así que arranca con valores por defecto razonables y el closer
+    // los ajusta con los sliders.
+    const [showProcrastinar, setShowProcrastinar] = useState(false);
 
     // Celebraciones de hitos en el pipeline de confirmaciones (v7)
     const [confirmadosHoy, setConfirmadosHoy] = useState(0);
@@ -261,8 +376,7 @@ const CloserWorkflowPage = () => {
     });
     const [savingFollowUp, setSavingFollowUp] = useState(false);
     
-    // Selección masiva y búsqueda local
-    const [selectedIds, setSelectedIds] = useState(new Set());
+    // Búsqueda local
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
     const [selectedDate, setSelectedDate] = useState(localToday);
@@ -279,6 +393,9 @@ const CloserWorkflowPage = () => {
 
     // Modales secundarios v7: Nueva Agenda y Referido Manual
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
+    // Menú "+" del header: agrupa Referido manual y Nueva agenda en un solo botón, junto al
+    // buscador y a "Quiero procrastinar" — antes vivían en una barra aparte encima del Kanban.
+    const [newActionMenuOpen, setNewActionMenuOpen] = useState(false);
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
@@ -347,7 +464,6 @@ const CloserWorkflowPage = () => {
     // Flujo de registro de venta directo post-Show Up
     const [salePrompt, setSalePrompt] = useState({ apptId: null });
     const [saleModalOpen, setSaleModalOpen] = useState(false);
-    const [saleStep, setSaleStep] = useState(1);
     const [submittingSale, setSubmittingSale] = useState(false);
     const [saleForm, setSaleForm] = useState({
         lead_id: '',
@@ -366,14 +482,17 @@ const CloserWorkflowPage = () => {
         fecha_cobro: '',
         metodo_pago: 'Stripe',
         examen_lead: '',
-        notes: '',
+        notas: '',
         estado: 'Completada',
         instagram: '',
         setter: '',
         documento_identidad: '',
         enviar_mensaje: true,
         sold_in_call: true,
-        date: localToday()
+        date: localToday(),
+        referralAsked: '',
+        referralCount: 1,
+        referralWhen: 'now'
     });
 
     // Sincronizar email del closer en cuanto esté cargado en la sesión
@@ -435,8 +554,12 @@ const CloserWorkflowPage = () => {
     const [selectedCuotaId, setSelectedCuotaId] = useState(null);
     const isCuotaPayment = (saleForm.tipo_pago_simple || '').toLowerCase() === 'cuota';
 
-    useEffect(() => {
-        if (!saleModalOpen || !isCuotaPayment || !salePrompt.apptId) {
+    // Se consulta siempre que el modal está abierto (no solo cuando el tipo de pago es "Cuota")
+    // — el wizard muestra el cronograma editable en la pantalla de revisión sin importar qué
+    // tipo de pago se esté declarando, para que el closer pueda ajustar un plan viejo mal
+    // cargado "en todo momento", no solo cuando justo está cobrando una cuota.
+    const refreshExistingCuotas = useCallback(() => {
+        if (!saleModalOpen || !salePrompt.apptId) {
             setSaleExistingCuotas([]);
             setSelectedCuotaId(null);
             return;
@@ -448,12 +571,16 @@ const CloserWorkflowPage = () => {
                 setSaleExistingCuotas(cuotas);
                 const pendientes = cuotas.filter(c => c.estado !== 'pagado');
                 if (pendientes.length > 0) {
-                    setSelectedCuotaId(pendientes[0].id);
+                    setSelectedCuotaId(prev => prev || pendientes[0].id);
                     setSaleForm(prev => ({ ...prev, monto: prev.monto || String(pendientes[0].monto) }));
                 }
             })
             .catch(err => console.error('Error al cargar el plan de cuotas existente:', err))
             .finally(() => setLoadingSaleCuotas(false));
+    }, [saleModalOpen, salePrompt.apptId, saleForm.programa]);
+
+    useEffect(() => {
+        refreshExistingCuotas();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saleModalOpen, isCuotaPayment, salePrompt.apptId, saleForm.programa]);
 
@@ -798,7 +925,20 @@ const CloserWorkflowPage = () => {
             const res = await api.get(url);
             const dataList = res.data || [];
             setAgendas(dataList);
-            setSelectedIds(new Set());
+
+            // Llamadas del día seleccionado ya reportadas, solo relevante en la pestaña de
+            // Llamadas (columna "Reportadas" del Kanban) — ver el estado `reportedTodayCalls`
+            // para el porqué de la consulta aparte.
+            if (activeStep === 'calls') {
+                try {
+                    const allDayRes = await api.get(`/closer/deck?step=agendas&selected_date=${selectedDate}`);
+                    setReportedTodayCalls((allDayRes.data || []).filter(a => a.closer_processed));
+                } catch (err) {
+                    console.error("Error al cargar llamadas reportadas del día:", err);
+                }
+            } else {
+                setReportedTodayCalls([]);
+            }
 
             // Cargar leads sin agenda con comentarios pendientes
             try {
@@ -842,17 +982,6 @@ const CloserWorkflowPage = () => {
             .catch(err => console.error('Error al cargar el plan de cuotas:', err))
             .finally(() => setLoadingCuotas(false));
     }, [modalStep, selectedLead?.id]);
-
-    const handleMarkCuotaPaid = async (cuotaId) => {
-        try {
-            await api.patch(`/closer/installments/cuota/${cuotaId}`, { estado: 'pagado' });
-            setCuotasPlan(prev => prev.map(c => c.id === cuotaId ? { ...c, estado: 'pagado' } : c));
-            toast.success('Cuota marcada como pagada');
-        } catch (err) {
-            console.error('Error al marcar la cuota como pagada:', err);
-            toast.error('Error al marcar la cuota como pagada');
-        }
-    };
 
     // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
     const handleConfirmFollowUp = async (followUpData) => {
@@ -959,6 +1088,26 @@ const CloserWorkflowPage = () => {
             } catch (err) {
                 console.error(err);
                 toast.error("Error al descartar el lead");
+            } finally {
+                setProcessingId(null);
+            }
+        } else if (actionType === 'conversando_no_show') {
+            // Lead que nunca pasó de "Conversando": la hora de la llamada ya pasó sin
+            // confirmación. Se manda por /deck (no /appointments/.../process) y solo con
+            // `result` (closer_result) — sin tocar `confirm_status` — para que el estado de
+            // confirmación quede tal cual estaba (nunca llega a "Confirmado").
+            setProcessingId(apptId);
+            try {
+                await api.post(`/closer/deck/${apptId}`, {
+                    result: 'No Show',
+                    closer_notes: note || sessionForm.notes || 'No show: nunca confirmó antes de la hora de la llamada'
+                });
+                toast.success("Marcado como No Show");
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error(err);
+                toast.error("Error al marcar como No Show");
             } finally {
                 setProcessingId(null);
             }
@@ -1142,72 +1291,46 @@ const CloserWorkflowPage = () => {
         return { porConfirmar, conversando, confirmado };
     }, [filteredAgendas]);
 
-    // Agrupación por mes para "② Llamadas" cuando hay muchas citas vencidas sin reportar (v7):
-    // agrupar solo si la lista es grande, para no complicar el caso normal de pocas pendientes.
-    const CALLS_GROUP_THRESHOLD = 10;
-    const callsGroupedByMonth = useMemo(() => {
-        if (activeStep !== 'calls' || filteredAgendas.length <= CALLS_GROUP_THRESHOLD) return null;
-        const groups = {};
-        filteredAgendas.forEach(a => {
-            const d = parseUtcIso(a.start_time);
-            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'sin-fecha';
-            if (!groups[key]) {
-                groups[key] = {
-                    key,
-                    label: d ? d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : 'Sin fecha',
-                    items: []
-                };
-            }
-            groups[key].items.push(a);
+    // "Tu siguiente paso": el lead más urgente dentro de la pestaña activa, para no tener que
+    // escanear toda la bandeja buscando qué tocar primero. Se arma con los mismos datos que ya
+    // trajo esa pestaña (sin pegarle de nuevo a la API); por eso solo aplica a 'confirmations' y
+    // 'calls' -las dos que manejan su lista acá- y no a 'seguimientos', que vive aparte en
+    // SeguimientosPane y no expone sus datos a este nivel.
+    const heroLead = useMemo(() => {
+        if (activeView !== 'inbox') return null;
+        let pool;
+        if (activeStep === 'confirmations') {
+            pool = [...confirmationsPipeline.porConfirmar, ...confirmationsPipeline.conversando];
+        } else if (activeStep === 'calls') {
+            pool = filteredAgendas;
+        } else {
+            return null;
+        }
+        if (!pool.length) return null;
+        // El más atrasado primero (fecha agendada más vieja); si nada está atrasado, el más próximo.
+        return pool.slice().sort((a, b) => {
+            const da = parseUtcIso(a.start_time)?.getTime() ?? Infinity;
+            const db = parseUtcIso(b.start_time)?.getTime() ?? Infinity;
+            return da - db;
+        })[0];
+    }, [activeView, activeStep, confirmationsPipeline, filteredAgendas]);
+
+    // Pipeline Kanban para Llamadas (v7), calcado de la referencia visual: "Atrasadas" (sin
+    // reportar, de días anteriores al seleccionado), "Hoy" (sin reportar, del día seleccionado —
+    // "por tomar") y "Reportadas" (del día seleccionado, ya procesadas). A diferencia del
+    // countdown de la tarjeta (que mide urgencia en horas/minutos), acá el corte es por fecha
+    // calendario: una llamada de las 8am de hoy sigue siendo "de hoy", no "atrasada", aunque ya
+    // sean las 3pm — es lo que pidió el usuario explícitamente.
+    const callsPipeline = useMemo(() => {
+        const atrasadas = [];
+        const hoy = [];
+        (filteredAgendas || []).forEach(a => {
+            const { date: apptDate } = splitLocalDateTime(a.start_time);
+            if (apptDate === selectedDate) hoy.push(a);
+            else atrasadas.push(a);
         });
-        return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
-    }, [filteredAgendas, activeStep]);
-
-    // Sistema de "lote diario" (v7): en vez de enfrentar de una todo el backlog de "② Llamadas",
-    // se ofrece un lote aleatorio de N leads a la vez — mismo flujo de tarjeta→modal→guardar de
-    // siempre, sin ningún cambio ahí. El progreso se deriva de cuántos ids del lote siguen en la
-    // lista (al guardar un reporte, closer_processed pasa a true y el lead sale de "Llamadas" solo).
-    const BATCH_SIZE = 10;
-    const [batchMode, setBatchMode] = useState(false);
-    const [batchIds, setBatchIds] = useState([]);
-
-    const batchItems = useMemo(() => {
-        if (!batchMode) return [];
-        const idSet = new Set(batchIds);
-        return filteredAgendas.filter(a => idSet.has(a.id));
-    }, [filteredAgendas, batchMode, batchIds]);
-
-    const startBatch = () => {
-        const pool = [...filteredAgendas];
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        const picked = pool.slice(0, BATCH_SIZE).map(a => a.id);
-        setBatchIds(picked);
-        setBatchMode(true);
-    };
-
-    // Actualización rápida del estado de confirmación desde el Kanban (v6)
-    const handleQuickConfirmStatus = async (apptId, status, e) => {
-        if (e) e.stopPropagation();
-        setProcessingId(apptId);
-        try {
-            await api.post(`/closer/deck/${apptId}`, { confirm_status: status });
-            toast.success(`Confirmación actualizada a: ${status}`);
-            
-            // Actualizar localmente en memoria para respuesta visual inmediata
-            setAgendas(prev => prev.map(a => a.id === apptId ? { ...a, result: status } : a));
-            
-            // Consultar contadores actualizados
-            fetchCounts();
-        } catch (err) {
-            console.error("Error al actualizar estado de confirmación:", err);
-            toast.error("Error al actualizar la confirmación");
-        } finally {
-            setProcessingId(null);
-        }
-    };
+        return { atrasadas, hoy, reportadas: reportedTodayCalls };
+    }, [filteredAgendas, selectedDate, reportedTodayCalls]);
 
     // Renderizar una tarjeta individual del Kanban de confirmación (v6)
     const renderKanbanCard = (a, phase) => {
@@ -1234,6 +1357,18 @@ const CloserWorkflowPage = () => {
             } catch (e) {}
         }
 
+        // Cuenta regresiva/tiempo transcurrido en vez de la fecha cruda: cuánto falta para la
+        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse. Se amortigua a color
+        // neutro en las etapas "ya resuelto" (`confirmado`, `call_done`): ahí el atraso no
+        // bloquea nada — cada una tiene su propia tarjeta ✓ para eso.
+        const DONE_PHASES = new Set(['confirmado', 'call_done']);
+        const countdown = isPendingReferral ? null : formatApptCountdown(a.start_time, nowTick);
+        const whenCls = !countdown ? ''
+            : countdown.kind === 'now' ? 'now-v6'
+            : countdown.kind === 'soon' ? 'soon-v6'
+            : countdown.kind === 'past' && !DONE_PHASES.has(phase) ? 'late-v6'
+            : '';
+
         // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
         // hoy (ámbar) si es el día calendario local actual, oculto si es un día futuro.
         let reminderBadge = null;
@@ -1254,11 +1389,18 @@ const CloserWorkflowPage = () => {
                 className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
                 onClick={() => handleSelectLead(a)}
             >
-                <div className="when-v6 soon-v6">
-                    <span className="wd-v6"></span>
-                    {isPendingReferral ? 'Por agendar' : `${dateLabel} · ${apptTime}`}
+                <div className={`when-v6 ${whenCls}`} title={isPendingReferral ? undefined : `${dateLabel} · ${apptTime}`}>
+                    <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
+                    {isPendingReferral ? 'Por agendar' : (countdown ? countdown.label : `${dateLabel} · ${apptTime}`)}
                 </div>
-                <b>{a.lead_name || 'Sin Nombre'}</b>
+                <b className="flex items-center gap-1.5 flex-wrap">
+                    {a.lead_name || 'Sin Nombre'}
+                    {a.unread_comment && (
+                        <span className="px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded animate-pulse">
+                            Nuevo
+                        </span>
+                    )}
+                </b>
                 <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
@@ -1275,6 +1417,11 @@ const CloserWorkflowPage = () => {
                             {a.examen}
                         </span>
                     )}
+                    {(phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente' && (
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
+                            {a.closer_result}
+                        </span>
+                    )}
                     {reminderBadge && (
                         <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${reminderBadge.cls}`}>
                             {reminderBadge.label}
@@ -1288,23 +1435,39 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
                 
+                {/* El botón no cambia la etapa por sí solo: abre el mismo modal de proceso de
+                    confirmación que el resto de la tarjeta (según en qué etapa esté el lead),
+                    para no saltarse las notas obligatorias ni el resto del flujo guiado. */}
                 {phase === 'por_confirmar' && (
-                    <button 
-                        className="kadv-v6" 
-                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Conversando', e)}
-                        disabled={processingId === a.id}
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
                     >
-                        {processingId === a.id ? '...' : 'Registrar contacto'}
+                        Contactar y registrar
                     </button>
                 )}
                 {phase === 'conversando' && (
-                    <button 
-                        className="kadv-v6" 
-                        onClick={(e) => handleQuickConfirmStatus(a.id, 'Confirmado', e)}
-                        disabled={processingId === a.id}
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
                     >
-                        {processingId === a.id ? '...' : 'Confirmar asistencia'}
+                        Confirmar asistencia
                     </button>
+                )}
+                {phase === 'call' && (
+                    <button
+                        className="kadv-v6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLead(a); }}
+                    >
+                        Reportar resultado
+                    </button>
+                )}
+                {phase === 'call_done' && (
+                    <div className="flex gap-1 mt-2.5">
+                        <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
+                            ✓ Reportado
+                        </span>
+                    </div>
                 )}
                 {phase === 'confirmado' && (
                     <div className="flex gap-1 mt-2.5">
@@ -1448,45 +1611,6 @@ const CloserWorkflowPage = () => {
         });
     };
 
-    // Actualización masiva (Asistió, No Show, Canceló)
-    const handleBulkUpdate = async (bulkResult) => {
-        if (selectedIds.size === 0) return;
-        setSubmittingBulk(true);
-        try {
-            const payload = {
-                appt_ids: Array.from(selectedIds),
-                result: bulkResult
-            };
-            await api.post(`/closer/deck/bulk-update`, payload);
-            toast.success("Agendas actualizadas masivamente");
-            fetchAgendas();
-        } catch (err) {
-            console.error("Error en lote:", err);
-            toast.error("Error al procesar en lote");
-        } finally {
-            setSubmittingBulk(false);
-        }
-    };
-
-    // Selección de elementos
-    const toggleSelect = (id, e) => {
-        if (e) e.stopPropagation();
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
-
-    const toggleSelectAll = () => {
-        if (selectedIds.size === filteredAgendas.length) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(filteredAgendas.map(a => a.id)));
-        }
-    };
-
     // Formatear fecha para input datetime-local (hora LOCAL del navegador, no UTC crudo)
     const formatToDatetimeLocal = (dateStr) => {
         const { date, time } = splitLocalDateTime(dateStr);
@@ -1500,38 +1624,6 @@ const CloserWorkflowPage = () => {
         return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    // Navegación de pasos del modal de venta
-    const handleNextStep = () => {
-        if (saleStep === 1) {
-            if (!saleForm.nombre_cliente.trim()) {
-                toast.error("El nombre del cliente es obligatorio");
-                return;
-            }
-            if (!saleForm.instagram.trim()) {
-                toast.error("El Instagram del cliente es obligatorio");
-                return;
-            }
-            if (!saleForm.mail_cliente.trim()) {
-                toast.error("El correo del cliente es obligatorio");
-                return;
-            }
-        } else if (saleStep === 2) {
-            if (!saleForm.monto) {
-                toast.error("El monto de la venta es obligatorio");
-                return;
-            }
-            if (parseFloat(saleForm.monto) <= 0) {
-                toast.error("El monto debe ser mayor que 0");
-                return;
-            }
-        }
-        setSaleStep(prev => prev + 1);
-    };
-
-    const handlePrevStep = () => {
-        setSaleStep(prev => prev - 1);
-    };
-
     const buildSalePayload = (tipoOverride, montoOverride, commentOverride) => ({
         email_vendedor: saleForm.email_vendedor,
         nombre_cliente: saleForm.nombre_cliente,
@@ -1542,7 +1634,7 @@ const CloserWorkflowPage = () => {
         precio_total: parseFloat(saleForm.precio_total) || undefined,
         segundo_pago: commentOverride ?? (saleForm.segundo_pago || ''),
         metodo_pago: saleForm.metodo_pago,
-        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),
+        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notas}` : ''),
         instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
         estado: saleForm.estado,
         setter: saleForm.setter || '',
@@ -1553,8 +1645,11 @@ const CloserWorkflowPage = () => {
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
             return selectedDate.toLocaleString("es-ES");
         })(),
-        enviar_webhook: true,
-        enviar_mensaje: saleForm.enviar_mensaje,
+        // El closer decide si quiere disparar la automatización de n8n (mensajes al cliente +
+        // notificaciones del equipo) al reportar esta venta — checkbox en el paso de revisión
+        // del wizard, prendido por defecto para no perder avisos por omisión.
+        enviar_webhook: saleForm.enviar_webhook !== false,
+        enviar_mensaje: saleForm.enviar_webhook !== false,
         sold_in_call: saleForm.sold_in_call
     });
 
@@ -1641,12 +1736,24 @@ const CloserWorkflowPage = () => {
                         try {
                             const numCuotas = parseInt(saleForm.num_cuotas) || 1;
                             const fechas = Array.from({ length: numCuotas }, (_, i) => saleForm.cuotaFechas?.[i + 1] || null);
+                            // Montos por cuota elegidos a mano por el closer (opcional) — la última
+                            // posición siempre se recalcula en el backend para que la suma cierre
+                            // exacto contra el saldo, así que acá alcanza con mandar un default
+                            // parejo para las cuotas que el closer no haya tocado.
+                            const restante = Math.max(0, total - cobradoHoy);
+                            const each = numCuotas > 0 ? Math.round((restante / numCuotas) * 100) / 100 : 0;
+                            const montos = Array.from({ length: numCuotas }, (_, i) => {
+                                const custom = saleForm.cuotaMontos?.[i + 1];
+                                const parsed = custom !== undefined && custom !== '' ? parseFloat(custom) : NaN;
+                                return isNaN(parsed) ? each : parsed;
+                            });
                             await api.post('/closer/installments', {
                                 appointment_id: savedApptId,
                                 total,
                                 cobrado_hoy: cobradoHoy,
                                 num_cuotas: numCuotas,
                                 fechas,
+                                montos,
                                 programa_code: saleForm.programa
                             });
                         } catch (e) {
@@ -1798,7 +1905,12 @@ const CloserWorkflowPage = () => {
     // Abre el modal de venta/cobro con los datos del lead precargados. Se llama DESPUÉS de
     // persistir el cierre del seguimiento (antes se abría de inmediato al hacer clic en la
     // opción, sin guardar nada de lo que el closer ya había escrito).
-    const openSaleModalForLead = (lead, isCierreVenta) => {
+    // `presetCuota` (opcional): abre el wizard directo en "Cuota", con esa cuota puntual ya
+    // seleccionada — usado por "Reportar pago" en la tabla de cuotas del cobro (ver más abajo),
+    // para no aterrizar en una pantalla de tipo de pago vacía cuando ya se sabe qué se está
+    // cobrando. El monto viene precargado con lo que dice la cuota pero queda editable: el
+    // cliente puede pagar más o menos, esa decisión es del closer, no del dato guardado.
+    const openSaleModalForLead = (lead, isCierreVenta, presetCuota) => {
         setSalePrompt({ apptId: lead.id });
         setSaleForm({
             lead_id: lead.id,
@@ -1808,13 +1920,13 @@ const CloserWorkflowPage = () => {
             telefono: lead.phone || '',
             mail_cliente: lead.email || '',
             programa: isCierreVenta ? 'RR' : (lead.programa_code || 'RR'),
-            tipo_pago_simple: isCierreVenta ? 'completo' : 'parcial',
-            monto: '',
+            tipo_pago_simple: presetCuota ? 'Cuota' : (isCierreVenta ? 'completo' : 'parcial'),
+            monto: presetCuota ? String(presetCuota.monto) : '',
             segundo_pago: '',
             fecha_cobro: '',
             metodo_pago: 'Stripe',
             examen_lead: lead.examen || '',
-            notes: '',
+            notas: '',
             estado: 'Completada',
             instagram: lead.instagram || '',
             setter: lead.setter_name || '',
@@ -1823,7 +1935,7 @@ const CloserWorkflowPage = () => {
             sold_in_call: isCierreVenta,
             date: localToday()
         });
-        setSaleStep(isCierreVenta ? 1 : 2);
+        if (presetCuota) setSelectedCuotaId(presetCuota.id);
         setSaleModalOpen(true);
     };
 
@@ -2131,6 +2243,12 @@ const CloserWorkflowPage = () => {
                 ? 'confirmado'
                 : (normalizedResult === 'conversando' || normalizedResult === 'contactado') ? 'conversando' : 'por_confirmar';
             const currentIdx = steps.findIndex(x => x.k === currentKey);
+            // Llegó la hora de la llamada y el lead nunca llegó a "Confirmado": no tiene sentido
+            // que esa hora pase en silencio dentro del pipeline de conversación — se puede cerrar
+            // como No Show directo, sin pasar por "Confirmado" (pedido explícito del usuario).
+            const callTimePassed = selectedLead.start_time
+                ? (parseUtcIso(selectedLead.start_time)?.getTime() ?? Infinity) <= nowTick
+                : false;
 
             return (
                 <div className="space-y-6">
@@ -2227,8 +2345,21 @@ const CloserWorkflowPage = () => {
 
                             <div className="q">
                                 <h4>Otras acciones</h4>
-                                <div className={`grid ${currentKey === 'conversando' ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                                <div className={`grid ${currentKey === 'conversando' ? (callTimePassed ? 'grid-cols-3' : 'grid-cols-2') : 'grid-cols-1'} gap-3`}>
                                     {currentKey === 'conversando' && option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Pidió otra fecha')}
+                                    {currentKey === 'conversando' && callTimePassed && option(() => {
+                                        setReasonInput('');
+                                        setReasonModal({
+                                            show: true,
+                                            title: "Marcar No Show",
+                                            description: `Ya pasó la hora de la llamada y ${selectedLead.lead_name} nunca confirmó. Se marca como No Show y NO pasa a "Confirmado". Notas adicionales (opcional):`,
+                                            placeholder: "Notas adicionales...",
+                                            confirmText: "Marcar No Show",
+                                            requireText: false,
+                                            actionType: 'conversando_no_show',
+                                            apptId: selectedLead.id
+                                        });
+                                    }, 'bad', 'No show', 'Hora ya pasó')}
                                     {option(() => {
                                         setReasonInput('');
                                         setReasonModal({
@@ -2348,7 +2479,7 @@ const CloserWorkflowPage = () => {
                                 fecha_cobro: '',
                                 metodo_pago: 'Stripe',
                                 examen_lead: selectedLead.examen || '',
-                                notes: '',
+                                notas: '',
                                 estado: 'Completada',
                                 instagram: selectedLead.instagram || '',
                                 setter: selectedLead.setter_name || '',
@@ -2357,7 +2488,6 @@ const CloserWorkflowPage = () => {
                                 sold_in_call: true,
                                 date: localToday()
                             });
-                            setSaleStep(1);
                             setSelectedLead(null);
                             setSaleModalOpen(true);
                         }, 'ok', 'Sí, hubo venta', 'Registrar pago')}
@@ -3028,10 +3158,10 @@ const CloserWorkflowPage = () => {
                                                 <td className="px-3 py-2 text-right">
                                                     {c.estado !== 'pagado' && (
                                                         <button
-                                                            onClick={() => handleMarkCuotaPaid(c.id)}
+                                                            onClick={() => { openSaleModalForLead(selectedLead, false, c); setSelectedLead(null); }}
                                                             className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer"
                                                         >
-                                                            Marcar pagada
+                                                            Reportar pago
                                                         </button>
                                                     )}
                                                 </td>
@@ -3045,10 +3175,17 @@ const CloserWorkflowPage = () => {
 
                     <div className="q req space-y-2">
                         <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">¿Qué pasó con el cobro?</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp' })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto' })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago' })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
+                        <div className="grid grid-cols-4 gap-2">
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp', sig_action: null, cierre_motivo: null })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto', sig_action: null, cierre_motivo: null })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago', sig_action: null, cierre_motivo: null })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
+                            {/* "No va a pagar": pedido del usuario (loom, 27/ago/2026) para poder sacar de
+                                la cola de cobros a un cliente que ya avisó que no va a pagar, en vez de
+                                seguir programando intentos indefinidamente. Reusa el mecanismo de "Cerrar
+                                Seguimiento" que ya existe en el paso normal de seguimientos (sig_action:
+                                'close' -> seguimiento_realizado:true, fecha_seguimiento:null, ver
+                                saveSeguimientoReport) — no hace falta un endpoint nuevo. */}
+                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_paga', sig_action: 'close', cierre_motivo: 'No va a pagar' })), 'bad', 'No va a pagar', 'Sale de la cola', sessionForm.result === 'no_paga')}
                         </div>
                         {isPago && (
                             <p className="text-xs text-slate-400 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
@@ -3116,7 +3253,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
+        <div className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
             {/* Header del Espacio de Trabajo Premium v6 */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
@@ -3221,6 +3358,49 @@ const CloserWorkflowPage = () => {
                         )}
                     </div>
                     
+                    <div className="relative shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setNewActionMenuOpen(v => !v)}
+                            className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-800 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+                            title="Referido manual o nueva agenda"
+                        >
+                            <Plus size={16} />
+                        </button>
+                        {newActionMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setNewActionMenuOpen(false)} />
+                                <div className="absolute top-11 left-0 z-50 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden py-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewActionMenuOpen(false); setManualRefModalOpen(true); }}
+                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
+                                    >
+                                        <span>🎁</span> Referido manual
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewActionMenuOpen(false); setNewAgendaModalOpen(true); }}
+                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
+                                    >
+                                        <span>＋</span> Nueva agenda
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {counts.seguimientos > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setShowProcrastinar(true)}
+                            className="shrink-0 flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 transition-all px-4 py-2 cursor-pointer"
+                            title="Ver cuánto valdría hacer unos seguimientos ahora"
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Quiero procrastinar</span>
+                        </button>
+                    )}
+
                     <div className="who-v6">
                         <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
                         <div className="av-v6">
@@ -3242,114 +3422,244 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
                 
-                {/* HERO SECTION v6 */}
-                <div className="hero-v6">
-                    <div className="hcard-v6">
-                        <h2>Buen día, <em>{user?.name?.split(' ')[0] || user?.username || 'Closer'}</em> 👋</h2>
-                        <p>Cada lead que resolvés es un dato que ya no tenés que inventar a las 11 de la noche.</p>
-                        <div className="prog-v6">
-                            <div className="pbarw-v6">
-                                <i style={{ width: `${Math.min(100, Math.max(0, agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0))}%` }}></i>
-                            </div>
-                            <div className="pmeta-v6">
-                                <span>{agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length} de {agendas.length} resueltos</span>
-                                <span>{agendas.length ? Math.round((agendas.filter(a => a.closer_result && a.closer_result !== 'Pendiente').length / agendas.length) * 100) : 0}% completado</span>
+                {/* TU SIGUIENTE PASO + TU DÍA (v7) */}
+                {(() => {
+                    // "Tu día" tiene que reflejar el trabajo real de HOY en las 3 pestañas, no solo lo
+                    // que trajo la pestaña activa (`agendas` es la lista de una sola pestaña, y para
+                    // "Confirmar"/"Reportar" solo incluye lo PENDIENTE por diseño del backend — nunca
+                    // iba a poder mostrar progreso real). `dailyActivity` (misma fuente que "Reporte
+                    // del día") trae lo ya hecho hoy; `counts` trae lo que todavía falta.
+                    const doneToday = dailyActivity
+                        ? (dailyActivity.confirmados_hoy || 0) + (dailyActivity.show_ups || 0) + (dailyActivity.seguimientos_hechos || 0)
+                        : 0;
+                    const pendingToday = counts.confirmations + counts.calls + counts.seguimientos;
+                    const totalToday = doneToday + pendingToday;
+                    const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
+                    // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
+                    // sale de las mismas cuentas de arriba) para darle una lectura más "de juego" al
+                    // esfuerzo del día. Los pesos son una primera pasada editorial, no una medida
+                    // científica — se pueden ajustar sin tocar de dónde sale cada componente. Fórmula
+                    // en `dailyXp` (arriba del componente): se comparte con el Resumen del Reporte del
+                    // día para que los dos lugares siempre digan el mismo número.
+                    const xp = dailyXp;
+                    // Racha real de días consecutivos que cerró el día (`CloserService.get_report_streak`,
+                    // backend) — reemplaza el "Racha de 12 días" que estaba hardcodeado acá sin salir
+                    // de ningún dato (pedido del usuario, feedback en video del 27/ago/2026).
+                    const streakDays = dailyActivity?.streak_days ?? 0;
+                    const heroCountdown = heroLead ? formatApptCountdown(heroLead.start_time, nowTick) : null;
+                    const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
+                    return (
+                        <div className="tsprow-v6">
+                            {heroLead ? (
+                                <div className="tsp-v6" onClick={() => handleSelectLead(heroLead)}>
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6"></span>
+                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        <div className="flex-1"></div>
+                                        {heroCountdown && (
+                                            <span className={`tsp-badge-v6 ${heroBadgeCls}`}>{heroCountdown.label}</span>
+                                        )}
+                                    </div>
+                                    <h3 className="tsp-name-v6">{heroLead.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
+                                    <button
+                                        type="button"
+                                        className="tsp-cta-v6"
+                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(heroLead); }}
+                                    >
+                                        {activeStep === 'confirmations' ? 'Ir a confirmar' : 'Ir a reportar'} →
+                                    </button>
+                                </div>
+                            ) : activeView === 'inbox' && activeStep === 'seguimientos' && seguimientoHero ? (
+                                // Mismo mecanismo que confirmaciones/llamadas de arriba, pero para la pestaña
+                                // Seguir: antes acá nunca había un lead concreto (heroLead no la cubre, ver su
+                                // comentario), así que caía siempre en el fallback de "podés avanzar con" y
+                                // terminaba mostrando hasta 2 botones sueltos. Pedido del usuario (28/ago/2026):
+                                // "quiero que sea uno que me lleve a seguir a alguien... como prioridad va a
+                                // tomar algún cobro" — `seguimientoHero` (reportado por SeguimientosPane, ver su
+                                // prop `onTopPending`) ya viene con esa prioridad (cobros -> hot -> fríos),
+                                // primero de lo asignado hoy y si no hay nada, del pool sin fecha.
+                                <div className="tsp-v6" onClick={() => handleSelectLead(seguimientoHero.payload)}>
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6"></span>
+                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                    </div>
+                                    <h3 className="tsp-name-v6">{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6">
+                                        {seguimientoHero.item.origin || 'Meta Ads'} · @{seguimientoHero.item.instagram ? seguimientoHero.item.instagram.replace('@', '') : 'usuario'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="tsp-cta-v6"
+                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(seguimientoHero.payload); }}
+                                    >
+                                        {seguimientoHero.tipo === 'cerrada' ? 'Ir a cobrar' : 'Ir a seguir'} →
+                                    </button>
+                                </div>
+                            ) : (() => {
+                                // Una sola acción, no una lista de bandejas (pedido del usuario, 28/ago/2026:
+                                // "en ver mis datos, mi cartera y cerrar el día debería ser ese mismo mecanismo
+                                // de un solo botón y una sola acción") — se elige la de mayor prioridad (mismo
+                                // orden que la navegación 01-02-03) usando `counts`, ya cargado sin pegarle de
+                                // nuevo a la API. Cubre tanto "estoy en una pestaña del mazo que ya está vacía"
+                                // como "estoy en Ver mis datos/Mi cartera/Cerrar el día" — antes esas 3 vistas
+                                // no ofrecían ninguna acción concreta, o hasta 2 sueltas sin prioridad.
+                                const PRIORITY = [
+                                    { key: 'confirmations', label: 'Ir a confirmar', accion: 'confirmar', count: counts.confirmations, step: 'confirmations' },
+                                    { key: 'calls', label: 'Ir a reportar', accion: 'reportar', count: counts.calls, step: 'calls' },
+                                    { key: 'seguimientos', label: 'Ir a seguir', accion: 'seguir', count: counts.seguimientos, step: 'seguimientos' }
+                                ];
+                                const next = PRIORITY.find(s => s.count > 0);
+                                const goTo = (step) => { setActiveView('inbox'); setSearchParams({ step, selected_date: selectedDate }); };
+
+                                if (!next) {
+                                    return (
+                                        <div className="tsp-v6 tsp-done-v6">
+                                            <div className="tsp-top-v6">
+                                                <span className="tsp-dot-v6 ok"></span>
+                                                <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                            </div>
+                                            <h3 className="tsp-name-v6">🎉 Tenés absolutamente todo el día resuelto</h3>
+                                            <p className="tsp-sub-v6">Nada pendiente en confirmar, reportar ni seguir.</p>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="tsp-v6 tsp-done-v6">
+                                        <div className="tsp-top-v6">
+                                            <span className="tsp-dot-v6 ok"></span>
+                                            <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        </div>
+                                        <h3 className="tsp-name-v6">Te falta {next.count} por {next.accion}</h3>
+                                        <button
+                                            type="button"
+                                            className="tsp-cta-v6"
+                                            onClick={(e) => { e.stopPropagation(); goTo(next.step); }}
+                                        >
+                                            {next.label} →
+                                        </button>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="tud-v6">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="tud-lbl-v6">Tu día</div>
+                                    <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
+                                </div>
+                                <div className="tud-pct-v6">{pct}%</div>
+                                <div className="tud-sub-v6">del día completado</div>
+                                <div className="pbarw-v6">
+                                    <i style={{ width: `${pct}%` }}></i>
+                                </div>
+                                <div className="tud-foot-row-v6">
+                                    <span className="tud-foot-v6">{doneToday} de {totalToday} resueltos hoy</span>
+                                    <span className="tud-foot-xp-v6">⚡ {xp} XP</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="stats-v6">
-                        <div className="sbox-v6 a">
-                            <div className="ic-v6">📅</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.confirmations}<s>/{agendas.length}</s></div>
-                                <div className="k-v6">Confirmaciones</div>
-                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.confirmations / agendas.length) * 100) : 0}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 c">
-                            <div className="ic-v6">📞</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.calls}<s>/{agendas.length}</s></div>
-                                <div className="k-v6">Llamadas reportadas</div>
-                                <div className="mb-v6"><i style={{ width: `${agendas.length ? Math.min(100, (counts.calls / agendas.length) * 100) : 0}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 b">
-                            <div className="ic-v6">💬</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">{counts.seguimientos}<s>/50</s></div>
-                                <div className="k-v6">Seguimientos</div>
-                                <div className="mb-v6"><i style={{ width: `${Math.min(100, (counts.seguimientos / 50) * 100)}%` }}></i></div>
-                            </div>
-                        </div>
-                        <div className="sbox-v6 d">
-                            <div className="ic-v6">🔥</div>
-                            <div className="tt-v6">
-                                <div className="n-v6">12<s> días</s></div>
-                                <div className="k-v6">Racha sin fallar</div>
-                                <div className="mb-v6"><i style={{ width: '86%' }}></i></div>
-                            </div>
-                        </div>
-                    </div>
+                    );
+                })()}
+
+                {/* NAVEGACIÓN 01-05 (v7): reemplaza las 3 pestañas + el dock flotante como fuente
+                    principal de "adónde ir" — el dock sigue abajo como acceso rápido mientras se
+                    hace scroll, esto es la vista completa. */}
+                {(() => {
+                    // Las 3 pestañas de bandeja muestran "hecho/total" en vez de solo lo pendiente
+                    // (pedido del usuario, 28/ago/2026: "si hay cinco llamadas por confirmar y hay
+                    // dos confirmadas, entonces hay dos de cinco"). Confirmar/Reportar usan
+                    // `confirmations_done`/`calls_done` (backend, `/deck/counts`) en vez de
+                    // `dailyActivity` — ese campo mide "hecho HOY por el closer", que no es lo
+                    // mismo que "ya aparece resuelto en el pool que se está mostrando": una cita
+                    // confirmada (o una llamada reportada) en un día anterior pero todavía visible
+                    // hoy en el Kanban seguía contando como "0 hechas" con `dailyActivity`, aunque
+                    // el propio Kanban ya la mostrara en su columna "Confirmado"/"Reportadas".
+                    // Reportado por el usuario: "dice cero de nueve, pero tiene una agenda
+                    // [ya] confirmada... debería decir uno de nueve", mismo caso en Reportar.
+                    // `counts.confirmations`/`counts.calls` ya son el total del pool (incluyen las
+                    // ya resueltas que siguen visibles), así que no hay que sumarles nada más.
+                    const confirmDone = counts.confirmations_done || 0;
+                    const confirmTotal = counts.confirmations;
+                    const callsDone = counts.calls_done || 0;
+                    const callsTotal = callsDone + counts.calls;
+                    // Seguimientos no tiene este problema: una vez resuelto, el item desaparece
+                    // del pool en vez de quedar visible en un estado "hecho" — `dailyActivity`
+                    // (hecho hoy) sigue siendo la fuente correcta acá.
+                    const segDone = dailyActivity?.seguimientos_hechos || 0;
+                    const segTotal = segDone + counts.seguimientos;
+                    return (
+                <div className="nav5-v6">
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'confirmations' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'confirmations', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">01</span>
+                        <span className="nc-lbl-v6">Confirmar</span>
+                        <span className={`nc-count-v6 ${counts.confirmations === 0 ? 'zero' : ''}`}>{confirmDone}/{confirmTotal}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'calls' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'calls', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">02</span>
+                        <span className="nc-lbl-v6">Reportar</span>
+                        <span className={`nc-count-v6 ${counts.calls === 0 ? 'zero' : ''}`}>{callsDone}/{callsTotal}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'seguimientos' ? 'on' : ''}`}
+                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'seguimientos', selected_date: selectedDate }); }}
+                    >
+                        <span className="nc-n-v6">03</span>
+                        <span className="nc-lbl-v6">Seguir</span>
+                        <span className={`nc-count-v6 ${counts.seguimientos === 0 ? 'zero' : ''}`}>{segDone}/{segTotal}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'report' ? 'on' : ''}`}
+                        onClick={() => setActiveView('report')}
+                    >
+                        <span className="nc-n-v6">04</span>
+                        <span className="nc-lbl-v6">Cerrar el día</span>
+                        {todayReportSent && <span className="nc-check-v6">✓</span>}
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
+                        onClick={() => setActiveView('dashboard')}
+                    >
+                        <span className="nc-n-v6">05</span>
+                        <span className="nc-lbl-v6">Ver mis datos</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`nc-v6 ${activeView === 'cartera' ? 'on' : ''}`}
+                        onClick={() => setActiveView('cartera')}
+                    >
+                        <span className="nc-n-v6">06</span>
+                        <span className="nc-lbl-v6">Mi cartera</span>
+                    </button>
+                    {/* Pestaña temporal: solo aparece mientras Operaciones la tenga activada
+                        (ver GET /closer/leads-audit/status). No tiene número fijo en la
+                        referencia visual porque no forma parte de su flujo habitual. */}
+                    {auditEnabled && (
+                        <button
+                            type="button"
+                            className={`nc-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
+                            onClick={() => setActiveView('auditoria')}
+                        >
+                            <span className="nc-n-v6">🗂️</span>
+                            <span className="nc-lbl-v6">Auditoría</span>
+                        </button>
+                    )}
                 </div>
+                    );
+                })()}
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
-                {/* Selector de Pestañas v6 */}
-                <div className="tabs-v6">
-                    <button 
-                        className={`tab-v6 ${activeStep === 'confirmations' ? 'on' : ''}`}
-                        data-b="true"
-                        onClick={() => setSearchParams({ step: 'confirmations', selected_date: selectedDate })}
-                    >
-                        ① Confirmaciones 
-                        <span className={`n-v6 ml-1.5 ${counts.confirmations > 0 ? 'bg-rose-500 text-white font-bold' : ''}`}>
-                            {counts.confirmations}
-                        </span>
-                    </button>
-                    <button 
-                        className={`tab-v6 ${activeStep === 'calls' ? 'on' : ''}`}
-                        onClick={() => setSearchParams({ step: 'calls', selected_date: selectedDate })}
-                    >
-                        ② Llamadas 
-                        <span className={`n-v6 ml-1.5 ${counts.calls > 0 ? 'bg-amber-500 text-white font-bold' : ''}`}>
-                            {counts.calls}
-                        </span>
-                    </button>
-                    <button 
-                        className={`tab-v6 ${activeStep === 'seguimientos' ? 'on' : ''}`}
-                        onClick={() => setSearchParams({ step: 'seguimientos', selected_date: selectedDate })}
-                    >
-                        ③ Seguimientos 
-                        <span className="n-v6 ml-1.5">{counts.seguimientos}</span>
-                    </button>
-                    <div className="flex-1"></div>
-                    
-                    {/* Filtro de fecha para llamadas y seguimientos */}
-                    {(activeStep === 'calls' || activeStep === 'seguimientos') && (
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-1.5 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer w-auto mr-3 text-center"
-                        />
-                    )}
-                    <button 
-                        className="tab-v6" 
-                        onClick={() => setManualRefModalOpen(true)}
-                        style={{ color: '#60A5FA' }}
-                    >
-                        🎁 Referido manual
-                    </button>
-                    <button 
-                        className="tab-v6" 
-                        onClick={() => setNewAgendaModalOpen(true)}
-                        style={{ color: '#FFB3DE' }}
-                    >
-                        ＋ Nueva agenda
-                    </button>
-                </div>
-
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
                 {/* Columna Única de Ancho Completo v7 */}
@@ -3418,70 +3728,12 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} />
+                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
                     ) : (
-                        /* Renderizado clásico de Lista para Llamadas */
+                        /* Renderizado Kanban para Llamadas (v7): mismo lenguaje visual que
+                           Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por
+                           etapa de proceso — acá todo está en el mismo estado, "sin reportar". */
                         <>
-                            {/* Notificación / progreso de Lote Diario (v7) */}
-                            {activeStep === 'calls' && (
-                                batchMode ? (
-                                    batchItems.length === 0 ? (
-                                        <div className="bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 rounded-[2rem] p-6 flex items-center gap-5">
-                                            <div className="text-4xl">🎉</div>
-                                            <div className="flex-1">
-                                                <h4 className="text-lg font-black text-white">¡Lote completado!</h4>
-                                                <p className="text-xs text-emerald-200 mt-1">Procesaste {batchIds.length} leads atrasados. {filteredAgendas.length > 0 ? `Todavía quedan ${filteredAgendas.length} en la cola.` : 'No queda ninguno pendiente. 👏'}</p>
-                                            </div>
-                                            {filteredAgendas.length > 0 && (
-                                                <button
-                                                    onClick={startBatch}
-                                                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                                >
-                                                    Otro lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => setBatchMode(false)}
-                                                className="px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                            >
-                                                Terminar por hoy
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-violet-500/10 border border-violet-500/30 rounded-[2rem] p-5 flex items-center gap-4">
-                                            <div className="text-2xl">🎯</div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-black text-white">Lote en progreso</h4>
-                                                <p className="text-[11px] text-violet-200 mt-0.5">{batchIds.length - batchItems.length} de {batchIds.length} completados. Seguí tocando tarjetas hasta vaciar el lote.</p>
-                                            </div>
-                                            <div className="w-32 h-2 bg-slate-900 rounded-full overflow-hidden shrink-0">
-                                                <div className="h-full bg-violet-500 transition-all" style={{ width: `${Math.round(((batchIds.length - batchItems.length) / batchIds.length) * 100)}%` }} />
-                                            </div>
-                                            <button
-                                                onClick={() => setBatchMode(false)}
-                                                className="text-[10px] font-black uppercase text-slate-400 hover:text-white underline cursor-pointer shrink-0"
-                                            >
-                                                Salir del lote
-                                            </button>
-                                        </div>
-                                    )
-                                ) : filteredAgendas.length > 0 && (
-                                    <div className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-5 flex items-center gap-4">
-                                        <div className="text-2xl">📋</div>
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-black text-white">Tenés {filteredAgendas.length} lead{filteredAgendas.length !== 1 ? 's' : ''} atrasado{filteredAgendas.length !== 1 ? 's' : ''} por procesar</h4>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">No hace falta hacerlos todos hoy — con un lote de {Math.min(BATCH_SIZE, filteredAgendas.length)} al azar ya mantenés el sistema al día.</p>
-                                        </div>
-                                        <button
-                                            onClick={startBatch}
-                                            className="px-5 py-3 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0"
-                                        >
-                                            Procesar lote de {Math.min(BATCH_SIZE, filteredAgendas.length)}
-                                        </button>
-                                    </div>
-                                )
-                            )}
-
                             {/* Sección Especial: Mensajes de Leads sin Agenda */}
                             {unreadNoAgenda.length > 0 && (
                                 <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
@@ -3492,7 +3744,7 @@ const CloserWorkflowPage = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {unreadNoAgenda.map((a) => {
                                             const isViewed = selectedLead?.id === a.id;
-                                            
+
                                             return (
                                                 <motion.div
                                                     key={a.id}
@@ -3502,8 +3754,8 @@ const CloserWorkflowPage = () => {
                                                     exit={{ opacity: 0, scale: 0.95 }}
                                                     onClick={() => handleSelectLead(a)}
                                                     className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                        isViewed 
-                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                                                        isViewed
+                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]'
                                                             : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
                                                     }`}
                                                 >
@@ -3533,218 +3785,62 @@ const CloserWorkflowPage = () => {
                                 </div>
                             )}
 
-                            {/* Barra de Acciones Masivas */}
-                            {selectedIds.size > 0 && (
-                                <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 px-3 py-1.5 rounded-xl border border-violet-500/20">
-                                            {selectedIds.size} Agendas Marcadas
-                                        </span>
-                                        <button 
-                                            onClick={() => setSelectedIds(new Set())}
-                                            className="text-[9px] font-black uppercase text-slate-500 hover:text-white underline cursor-pointer"
-                                        >
-                                            Limpiar
-                                        </button>
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <Loader2 className="animate-spin text-pink-500" size={32} />
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando llamadas...</span>
+                                </div>
+                            ) : filteredAgendas.length === 0 ? (
+                                <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
+                                    👏 Ninguna llamada pendiente de reportar.
+                                </div>
+                            ) : (
+                                <div className="kb-v6">
+                                    <div className="kcol-v6 k1-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Atrasadas</b>
+                                            <span className="n-v6">{callsPipeline.atrasadas.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.atrasadas.length > 0 ? (
+                                                callsPipeline.atrasadas.map(a => renderKanbanCard(a, 'call'))
+                                            ) : (
+                                                <div className="kempty-v6 done-v6">✓ Ninguna atrasada</div>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => handleBulkUpdate('Completada')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-650/20"
-                                        >
-                                            ✓ Asistió
-                                        </button>
-                                        <button
-                                            onClick={() => handleBulkUpdate('No Show')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-rose-650 hover:bg-rose-555 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-650/20"
-                                        >
-                                            ✕ No Show
-                                        </button>
-                                        <button
-                                            onClick={() => handleBulkUpdate('Cancelada')}
-                                            disabled={submittingBulk}
-                                            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-650/20"
-                                        >
-                                            ✕ Canceló
-                                        </button>
+                                    <div className="kcol-v6 k2-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Hoy</b>
+                                            <span className="n-v6">{callsPipeline.hoy.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.hoy.length > 0 ? (
+                                                callsPipeline.hoy.map(a => renderKanbanCard(a, 'call'))
+                                            ) : (
+                                                <div className="kempty-v6">Sin llamadas hoy.</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="kcol-v6 k3-v6">
+                                        <div className="kch-v6">
+                                            <span className="dt-v6"></span>
+                                            <b>Reportadas</b>
+                                            <span className="n-v6">{callsPipeline.reportadas.length}</span>
+                                        </div>
+                                        <div className="kbody-v6">
+                                            {callsPipeline.reportadas.length > 0 ? (
+                                                callsPipeline.reportadas.map(a => renderKanbanCard(a, 'call_done'))
+                                            ) : (
+                                                <div className="kempty-v6">Todavía ninguna reportada.</div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Contenedor de la Lista */}
-                            {!(activeStep === 'calls' && batchMode && batchItems.length === 0) && (
-                            <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
-                                {(() => {
-                                    const displayList = (activeStep === 'calls' && batchMode) ? batchItems : filteredAgendas;
-                                    return (
-                                <div className="flex justify-between items-center border-b border-slate-900 pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={displayList.length > 0 && selectedIds.size === displayList.length}
-                                            onChange={toggleSelectAll}
-                                            className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
-                                        />
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            Seleccionar Todos
-                                        </span>
-                                    </div>
-                                    <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                        {displayList.length} Citas en Lista
-                                    </span>
-                                </div>
-                                    );
-                                })()}
-
-                                {loading ? (
-                                    <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                        <Loader2 className="animate-spin text-violet-500" size={32} />
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando agendas...</span>
-                                    </div>
-                                ) : (activeStep === 'calls' && batchMode ? batchItems : filteredAgendas).length === 0 ? (
-                                    <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                        {activeStep === 'calls' ? '👏 Ninguna llamada pendiente de reportar. ¡Bandeja limpia!' : '👏 No tienes agendas programadas.'}
-                                    </div>
-                                ) : (
-                                    (() => {
-                                        const renderCard = (a) => {
-                                            const isSelected = selectedIds.has(a.id);
-                                            const isViewed = selectedLead?.id === a.id;
-
-                                            return (
-                                                <motion.div
-                                                    key={a.id}
-                                                    layout
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.95 }}
-                                                    onClick={() => handleSelectLead(a)}
-                                                    className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
-                                                        isViewed
-                                                            ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]'
-                                                            : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={(e) => toggleSelect(a.id, e)}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                            />
-
-                                                            <div className="min-w-0 space-y-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                                                        <Clock size={10} />
-                                                                        {formatTimeOnly(a.start_time)}
-                                                                    </span>
-                                                                    <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
-                                                                        {a.lead_name || 'Sin Nombre'}
-                                                                        {a.unread_comment && (
-                                                                            <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-md animate-pulse">
-                                                                                Mensaje nuevo
-                                                                            </span>
-                                                                        )}
-                                                                    </h4>
-                                                                </div>
-
-                                                                <div className="flex items-center gap-2 flex-wrap mt-1">
-                                                                    <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
-                                                                        {a.origin || 'Sheets'}
-                                                                    </span>
-                                                                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
-                                                                        Confirmer: {a.result || 'Pendiente'}
-                                                                    </span>
-                                                                    {a.fecha_seguimiento && (
-                                                                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                                            <Calendar size={10} />
-                                                                            Seguimiento: {a.fecha_seguimiento}
-                                                                        </span>
-                                                                    )}
-                                                                    {a.instagram && (
-                                                                        <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
-                                                                            @{a.instagram}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-3 shrink-0">
-                                                            {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
-                                                                <button
-                                                                    onClick={(e) => handleMarkFollowUpDone(a, e)}
-                                                                    disabled={processingId === a.id}
-                                                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                                                                >
-                                                                    {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                                    Marcar Realizado
-                                                                </button>
-                                                            )}
-                                                            <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
-                                                                a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
-                                                                a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                                                a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
-                                                                a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
-                                                                a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
-                                                                'bg-slate-500/10 text-slate-450 border border-slate-500/20'
-                                                            }`}>
-                                                                {a.closer_result || 'Pendiente'}
-                                                            </span>
-                                                            <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        };
-
-                                        if (activeStep === 'calls' && batchMode) {
-                                            // Modo lote: solo las cartas del lote actual, siempre lista plana (nunca son tantas como para necesitar agrupar).
-                                            return (
-                                                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                    <AnimatePresence initial={false}>
-                                                        {batchItems.map(renderCard)}
-                                                    </AnimatePresence>
-                                                </div>
-                                            );
-                                        }
-
-                                        if (callsGroupedByMonth) {
-                                            // Muchas llamadas pendientes: agrupadas por mes/año, mes más reciente primero.
-                                            return (
-                                                <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                    {callsGroupedByMonth.map(group => (
-                                                        <div key={group.key} className="space-y-3">
-                                                            <div className="flex items-center gap-3 sticky top-0 bg-[#111219] py-1 z-10">
-                                                                <span className="text-xs font-black uppercase tracking-widest text-violet-400 capitalize">{group.label}</span>
-                                                                <span className="text-[10px] font-black bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded-lg">{group.items.length}</span>
-                                                                <div className="flex-1 h-px bg-slate-900" />
-                                                            </div>
-                                                            <AnimatePresence initial={false}>
-                                                                {group.items.map(renderCard)}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        }
-
-                                        return (
-                                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                <AnimatePresence initial={false}>
-                                                    {filteredAgendas.map(renderCard)}
-                                                </AnimatePresence>
-                                            </div>
-                                        );
-                                    })()
-                                )}
-                            </div>
                             )}
                         </>
                     )}
@@ -3752,244 +3848,214 @@ const CloserWorkflowPage = () => {
                 </div>
                 </div>
                 ) : activeView === 'report' ? (
-                <div className="space-y-6 text-left">
-                    {/* Selector de día a reportar — por defecto hoy, pero se puede retroceder para
-                        ponerse al día con reportes atrasados. */}
-                    <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+                <div className="space-y-5 text-left">
+                    {/* Hero "CIERRE DEL DÍA" — calcado del artboard de la referencia visual: saludo +
+                        pills (movido/XP/racha) a la izquierda, gráfico de "últimos 7 días" a la
+                        derecha. Reemplaza el banner de estado + selector de fecha separados de
+                        antes: acá viven juntos, como en la referencia. */}
+                    {(() => {
+                        const isToday = reportDate === localToday();
+                        const doneToday = dailyActivity
+                            ? (dailyActivity.confirmados_hoy || 0) + (dailyActivity.show_ups || 0) + (dailyActivity.seguimientos_hechos || 0)
+                            : 0;
+                        // `counts` es siempre "lo pendiente de HOY" — solo tiene sentido sumarlo al
+                        // total cuando se está reportando el día de hoy; para un día pasado ya cerrado
+                        // no hay "pendiente" que sumar, así que el total es lo hecho ese día.
+                        const pendingToday = isToday ? (counts.confirmations + counts.calls + counts.seguimientos) : 0;
+                        const totalToday = doneToday + pendingToday;
+                        const firstName = user?.name?.split(' ')[0] || user?.username || 'Closer';
+                        const cashToday = dailyActivity?.ventas_cash || 0;
+                        const maxTrend = Math.max(1, ...dailyTrend.map(d => d.cash), 1);
+                        const [y, m, d] = reportDate.split('-');
+
+                        return (
+                            <div className="rpt-hero-v6">
+                                <div>
+                                    <div className="rpt-hero-lbl-v6">CIERRE DEL DÍA · {d}/{m}</div>
+                                    <h2>Buen avance, {firstName}</h2>
+                                    <p>{doneToday} de {totalToday} resueltos · ${Math.round(cashToday).toLocaleString()} movidos {isToday ? 'hoy' : 'ese día'}</p>
+                                    <div className="flex items-center gap-3 flex-wrap mt-4">
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(255,63,164,.12)', border: '1px solid rgba(255,63,164,.45)' }}>
+                                            <span style={{ color: 'rgba(255,255,255,.6)' }}>MOVISTE</span>
+                                            <span style={{ color: 'var(--v6-pink)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(cashToday).toLocaleString()}</span>
+                                        </span>
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(78,139,216,.12)', border: '1px solid rgba(78,139,216,.45)', color: '#4E8BD8' }}>
+                                            {dailyXp} XP
+                                        </span>
+                                        <span className="rpt-pill-v6" style={{ background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.45)', color: '#D9A441' }}>
+                                            RACHA {dailyActivity?.streak_days ?? 0} DÍAS
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '10px', fontWeight: 900, letterSpacing: '.24em', color: 'var(--v6-tx3)', marginBottom: '14px' }}>ÚLTIMOS 7 DÍAS</div>
+                                    {dailyTrend.length > 0 ? (
+                                        <div className="rpt-trend-v6">
+                                            {dailyTrend.map(dtItem => (
+                                                <div key={dtItem.date} className="rpt-trend-col-v6">
+                                                    <div
+                                                        className="rpt-trend-bar-v6"
+                                                        style={{
+                                                            height: `${Math.max(4, (dtItem.cash / maxTrend) * 74)}px`,
+                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'rgba(78,139,216,.55)'
+                                                        }}
+                                                        title={`$${Math.round(dtItem.cash).toLocaleString()}`}
+                                                    ></div>
+                                                    <span className="rpt-trend-lbl-v6">{dtItem.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[11px]" style={{ color: 'var(--v6-tx3)' }}>Sin reportes previos todavía.</p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Reportando siempre el día de hoy — ya no es editable (pedido del usuario,
+                        29/ago/2026): `reportDate` queda fijo en `localToday()`, sin selector. */}
+                    <div className="rpt-card-v6 flex items-center gap-3" style={{ padding: '14px 20px' }}>
                         <div className="flex-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Reportando el día</label>
-                            <input
-                                type="date"
-                                max={localToday()}
-                                value={reportDate}
-                                onChange={(e) => setReportDate(e.target.value)}
-                                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white"
-                            />
+                            <span className="text-xs font-bold text-white">{reportDate}</span>
                         </div>
-                        {reportDate !== localToday() && (
-                            <button
-                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer"
-                                onClick={() => setReportDate(localToday())}
-                            >
-                                Volver a hoy
-                            </button>
+                        {reportSent && (
+                            <span className="tud-xp-v6" style={{ color: '#7DEAC0', background: 'rgba(47,191,143,.14)', borderColor: 'rgba(47,191,143,.32)' }}>
+                                ✓ Enviado {reportSentAt ? new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
                         )}
                         {loadingReportStatus && <Loader2 size={14} className="animate-spin text-slate-500" />}
                     </div>
 
-                    {/* REPORTE DEL DÍA v6 (v-report) */}
-                    {reportSent ? (
-                        <div className="bg-gradient-to-r from-emerald-500/20 to-blue-600/20 border border-emerald-500/50 rounded-3xl p-6 flex items-center gap-5">
-                            <div className="text-4xl">✅</div>
-                            <div className="flex-1">
-                                <h4 className="text-xl font-black text-white">Reporte del {reportDate === localToday() ? 'día' : reportDate} enviado</h4>
-                                <p className="text-xs text-slate-300 mt-1">
-                                    {reportDate === localToday()
-                                        ? <>{counts.confirmations} confirmados · {counts.calls} llamadas · {counts.seguimientos} seguimientos. Deuda de burpees: <b>{Math.max(0, 50 - counts.seguimientos)}</b>. Ya no te queda nada por completar hoy.</>
-                                        : 'Podés editar los referidos o la reflexión de abajo y volver a enviarlo — se actualiza, no se duplica.'}
-                                </p>
+                    {/* 4 KPI del día — mismos 4 de la referencia visual (fracción hecho/total +
+                        barra), en vez de las 9 cajas sueltas de antes. "Total" = hecho + pendiente
+                        real de cada pestaña, no un número inventado. */}
+                    {(() => {
+                        const cobrosPendientes = seguimientosHoyGrouped?.cerrada?.length || 0;
+                        const kpis = [
+                            { label: 'Confirmaciones', done: dailyActivity?.confirmados_hoy || 0, pending: counts.confirmations, color: '#4E8BD8' },
+                            { label: 'Llamadas reportadas', done: dailyActivity?.show_ups || 0, pending: counts.calls, color: '#4E8BD8' },
+                            { label: 'Seguimientos hechos', done: dailyActivity?.seguimientos_hechos || 0, pending: counts.seguimientos, color: '#2FBF8F' },
+                            { label: 'Cobros resueltos', done: dailyActivity?.ventas_count || 0, pending: cobrosPendientes, color: '#FF3FA4' },
+                        ];
+                        return (
+                            <div className="rpt-kpis-v6">
+                                {kpis.map(k => {
+                                    const total = k.done + k.pending;
+                                    const pct = total ? Math.min(100, Math.round((k.done / total) * 100)) : 0;
+                                    return (
+                                        <div key={k.label} className="rpt-kpi-v6">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <b style={{ color: k.color, fontSize: '30px' }}>{k.done}</b>
+                                                <span style={{ fontSize: '13px', color: 'var(--v6-tx3)', fontWeight: 900 }}>/{total}</span>
+                                            </div>
+                                            <div className="rpt-kpi-bar-v6"><i style={{ width: `${pct}%`, background: k.color }}></i></div>
+                                            <span>{k.label}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="text-right">
-                                <b className="text-xs font-black uppercase text-emerald-400 block">Enviado</b>
-                                <small className="text-xs text-slate-400">
-                                    {reportSentAt ? `${new Date(reportSentAt).toLocaleDateString('es-ES')} · ${new Date(reportSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'}
-                                </small>
-                            </div>
+                        );
+                    })()}
+
+                    {/* LOGROS + REFLEXIÓN, lado a lado como en la referencia. Los 3 logros salen de
+                        datos ya reales en esta misma pantalla (nunca un número inventado): si
+                        hubo algún cobro hoy, si la bandeja quedó limpia, y la meta diaria de
+                        seguimientos (③ Seguir). */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rpt-card-v6">
+                            <h3 className="rpt-title-v6" style={{ marginBottom: '4px' }}>LOGROS</h3>
+                            {(() => {
+                                const pendienteHoyTotal = counts.confirmations + counts.calls + counts.seguimientos;
+                                const cobrosHechos = dailyActivity?.ventas_count || 0;
+                                const segFaltan = seguimientosGoal?.faltan;
+                                const achievements = [
+                                    {
+                                        name: 'Primer cobro',
+                                        done: cobrosHechos > 0,
+                                        status: cobrosHechos > 0 ? '✓ logrado' : 'cobrá 1 venta'
+                                    },
+                                    {
+                                        name: 'Día limpio',
+                                        done: pendienteHoyTotal === 0,
+                                        status: pendienteHoyTotal === 0 ? '✓ logrado' : `faltan ${pendienteHoyTotal}`
+                                    },
+                                    {
+                                        name: 'Meta de seguimientos',
+                                        done: segFaltan === 0,
+                                        status: segFaltan === undefined || segFaltan === null ? '—' : segFaltan === 0 ? '✓ logrado' : `faltan ${segFaltan}`
+                                    },
+                                ];
+                                return achievements.map(a => (
+                                    <div key={a.name} className={`rpt-ach-v6 ${a.done ? 'done' : ''}`}>
+                                        <div className="rpt-ach-ic-v6">{a.done ? '✓' : '◆'}</div>
+                                        <div className="flex-1">
+                                            <div className="rpt-ach-name-v6">{a.name}</div>
+                                        </div>
+                                        <div className="rpt-ach-status-v6">{a.status}</div>
+                                    </div>
+                                ));
+                            })()}
                         </div>
-                    ) : reportDate === localToday() ? (
-                        <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
-                            (counts.confirmations + counts.calls) > 0
-                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
-                                : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
-                        }`}>
+
+                        <div className="rpt-card-v6 space-y-4">
                             <div className="flex items-center gap-3">
-                                <span className="text-2xl">{(counts.confirmations + counts.calls) > 0 ? '🏆' : '🔒'}</span>
-                                <div>
-                                    <h4 className="font-bold text-sm">
-                                        {(counts.confirmations + counts.calls) > 0 ? 'Bandeja al día' : 'Bandeja con pendientes'}
-                                    </h4>
-                                    <p className="text-xs text-slate-400">
-                                        {(counts.confirmations + counts.calls) > 0
-                                            ? 'Nadie sin tocar y llamadas reportadas.'
-                                            : `Quedan agendas por tocar o llamadas por reportar.`}
-                                    </p>
+                                <h3 className="rpt-title-v6">REFLEXIÓN</h3>
+                                <div className="flex-1"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-tx3)' }}>Slots</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={reportSlots}
+                                        onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
+                                        placeholder="0"
+                                        className="rpt-slots-input-v6"
+                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'rgba(139,92,246,.6)' } : undefined}
+                                    />
                                 </div>
                             </div>
-                            <button className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-white transition-all cursor-pointer" onClick={() => setActiveView('inbox')}>
-                                Ir a la bandeja
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="p-5 rounded-2xl border bg-amber-500/10 border-amber-500/40 text-amber-300 text-xs font-bold">
-                            Todavía no hay reporte para el {reportDate}. Se va a armar con las agendas y ventas reales que quedaron registradas ese día.
-                        </div>
-                    )}
-
-                    {/* Trabajo atrasado de días ANTERIORES. Si el bloqueo está activo (toggle
-                        `bloqueo_reporte_backlog` en Operaciones), traba el envío y el backend lo
-                        rechaza con 409 aunque se intente igual. Si está suspendido, se sigue
-                        mostrando el mismo detalle pero como recordatorio, sin trabar nada. */}
-                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
-                        <div className={`p-5 rounded-2xl border space-y-2 ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/40' : 'bg-amber-500/10 border-amber-500/40'}`}>
-                            <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-wide ${backlogBlocksReport ? 'text-rose-300' : 'text-amber-300'}`}>
-                                <span className="text-lg">{backlogBlocksReport ? '🚫' : '⏳'}</span>
-                                {backlogBlocksReport
-                                    ? 'No podés enviar el reporte — tenés tareas atrasadas de días anteriores'
-                                    : 'Tenés tareas atrasadas de días anteriores'}
-                            </div>
-                            <ul className={`text-xs font-bold space-y-1 list-disc list-inside ${backlogBlocksReport ? 'text-rose-200' : 'text-amber-200'}`}>
-                                {pendingPreviousDays.confirmaciones_pendientes > 0 && (
-                                    <li>{pendingPreviousDays.confirmaciones_pendientes} confirmación(es) nunca gestionada(s)</li>
-                                )}
-                                {pendingPreviousDays.llamadas_sin_registrar > 0 && (
-                                    <li>{pendingPreviousDays.llamadas_sin_registrar} llamada(s) confirmada(s) sin registrar su resultado</li>
-                                )}
-                                {pendingPreviousDays.seguimientos_sin_realizar > 0 && (
-                                    <li>{pendingPreviousDays.seguimientos_sin_realizar} seguimiento(s) asignado(s) sin realizar</li>
-                                )}
-                            </ul>
-                            {!backlogBlocksReport && (
-                                <p className="text-[11px] text-amber-200/80 font-bold">
-                                    Podés enviar el reporte igual mientras te ponés al día, pero esto sigue contando como atraso.
-                                </p>
-                            )}
-                            <button
-                                className={`mt-1 px-4 py-2 rounded-xl text-xs font-black uppercase text-white transition-all cursor-pointer ${backlogBlocksReport ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'}`}
-                                onClick={() => setActiveView('inbox')}
-                            >
-                                Ir a resolver la bandeja
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Resumen en vivo — lo que el sistema ya tiene registrado para ese día, sacado
-                        directo de la bandeja (nada se tipea a mano). Si algo no cuadra, se corrige
-                        desde la bandeja y se vuelve acá: el mismo useEffect que carga esto se
-                        vuelve a disparar al reentrar a la pestaña. */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Resumen de {reportDate === localToday() ? 'hoy' : reportDate}
-                            </h3>
-                            <button
-                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5"
-                                disabled={loadingReportStatus}
-                                onClick={() => setReportStatusRefreshKey(k => k + 1)}
-                            >
-                                {loadingReportStatus ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                                Actualizar
-                            </button>
-                        </div>
-                        <p className="text-xs text-slate-400">Esto es lo que se va a mandar a Discord — sale directo de lo que ya quedó registrado en la bandeja, no hay nada que completar a mano acá. Si algo no cuadra, corregilo en la bandeja y volvé a "Actualizar".</p>
-
-                        {reportDate === localToday() && dailyActivity && (dailyActivity.pendientes_confirmar > 0 || dailyActivity.pendientes_llamar > 0) && (
-                            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-amber-300 text-xs font-bold">
-                                <span className="text-lg">⏳</span>
-                                Todavía te quedan <b>{dailyActivity.pendientes_confirmar}</b> por confirmar y <b>{dailyActivity.pendientes_llamar}</b> por llamar hoy.
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {[
-                                { label: 'Conversando', value: dailyActivity?.conversando, color: 'text-sky-400' },
-                                // Confirmar la llamada de hoy y confirmar una agenda futura son dos
-                                // trabajos distintos — se muestran separados (pedido del usuario).
-                                { label: 'Confirmados de este día', value: dailyActivity?.confirmados_hoy, color: 'text-emerald-400' },
-                                { label: 'Confirmados de próximas agendas', value: dailyActivity?.confirmados_proximos, color: 'text-teal-400' },
-                                { label: 'Show ups', value: dailyActivity?.show_ups, color: 'text-pink-400' },
-                                { label: 'Reagendas', value: dailyActivity?.reagendas, color: 'text-amber-400' },
-                                { label: 'Seguimientos configurados', value: dailyActivity?.seguimientos_configurados, color: 'text-violet-400' },
-                                { label: 'Seguimientos hechos', value: dailyActivity?.seguimientos_hechos, color: 'text-indigo-400' },
-                                { label: 'Referidos capturados', value: dailyActivity?.referidos_capturados, color: 'text-blue-400' },
-                                { label: 'Ventas', value: dailyActivity?.ventas_count, color: 'text-lime-400', suffix: dailyActivity ? ` ($${(dailyActivity.ventas_cash || 0).toLocaleString()})` : '' },
-                            ].map(stat => (
-                                <div key={stat.label} className="bg-slate-950/40 border border-slate-850 rounded-2xl p-3.5">
-                                    <b className={`text-2xl font-black block ${stat.color}`}>{dailyActivity ? (stat.value ?? 0) : '—'}{stat.suffix || ''}</b>
-                                    <small className="text-[10px] text-slate-500 font-bold uppercase">{stat.label}</small>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Slots Disponibles — el único número de este reporte que el sistema no puede
-                        calcular solo, porque no hay ningún lugar de la Bandeja donde se defina
-                        cuántos cupos de agenda tenía el closer disponibles ese día. Se venía
-                        escribiendo mal (reportes con menos slots que agendas del día, que es
-                        imposible: un cupo ocupado sigue siendo un cupo), así que la explicación
-                        es explícita y hay un aviso en vivo si el número no cierra. */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-3">
-                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span> Slots disponibles
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                            Único dato que no se puede sacar solo de la Bandeja — todo lo demás de este reporte es automático.
-                        </p>
-                        <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 space-y-2">
-                            <p className="text-xs text-slate-300 font-bold">Cómo se cuenta: <span className="text-violet-300">cupos ocupados + cupos que quedaron libres</span>.</p>
-                            <ul className="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
-                                <li>Es la <b className="text-slate-300">capacidad total</b> de agenda que abriste ese día, no los huecos que sobraron.</li>
-                                <li>Un cupo que se agendó <b className="text-slate-300">sigue contando</b> — la agenda no lo elimina, lo ocupa.</li>
-                                <li>Por eso <b className="text-slate-300">nunca puede ser menor que tus agendas del día</b>.</li>
-                                <li>Ejemplo: abriste 10 cupos, se agendaron 6 y 4 quedaron vacíos → escribís <b className="text-slate-300">10</b>, no 4 ni 6.</li>
-                            </ul>
+                            {/* El mínimo posible siempre visible: la cantidad de agendas del día no
+                                puede quedar enterrada en un párrafo — es lo que pidió el usuario. Un
+                                cupo ocupado sigue siendo un cupo, así que los slots nunca pueden ser
+                                menos que esto. */}
                             {dailyActivity?.agendas_del_dia !== undefined && (
-                                <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800">
-                                    Ese día tenés <b className="text-white">{dailyActivity.agendas_del_dia}</b> agenda(s) registradas: los slots tienen que ser <b className="text-white">{dailyActivity.agendas_del_dia}</b> o más.
+                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? '#F3D08A' : 'var(--v6-tx3)' }}>
+                                    {slotsPorDebajoDeAgendas ? '⚠️ ' : ''}Mínimo {dailyActivity.agendas_del_dia} — ese día tenés {dailyActivity.agendas_del_dia} agenda(s) registradas, y un cupo ocupado sigue contando.
                                 </p>
                             )}
-                        </div>
-                        <input
-                            type="number"
-                            min="0"
-                            value={reportSlots}
-                            onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
-                            placeholder="ej. 15"
-                            className={`w-full sm:w-48 bg-slate-950/60 border rounded-2xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-violet-500 transition-all ${slotsPorDebajoDeAgendas ? 'border-amber-500' : reportSlotsIsDefault ? 'border-violet-600/60' : 'border-slate-800'}`}
-                        />
-                        {slotsPorDebajoDeAgendas && (
-                            <p className="text-[11px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
-                                ⚠️ Escribiste {reportSlots} slots pero ese día tenés {dailyActivity.agendas_del_dia} agenda(s). Los cupos que se agendaron también cuentan — el número tiene que ser {dailyActivity.agendas_del_dia} o más.
-                            </p>
-                        )}
-                        {reportSlotsIsDefault && !slotsPorDebajoDeAgendas && (
-                            <p className="text-[10px] text-violet-350 font-bold uppercase tracking-wide">
-                                Sugerido a partir de tu último reporte — editalo si hoy cambió.
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Reflexión Diaria */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500"></span> Reflexión diaria
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-300 block">🏆 Victorias del día</label>
-                                <textarea
-                                    rows={3}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-ok)' }}>Victoria del día</span>
+                                <input
                                     value={reflection.win}
                                     onChange={(e) => setReflection(prev => ({ ...prev, win: e.target.value }))}
-                                    placeholder="Qué te salió bien y por qué..."
-                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-pink-500"
+                                    placeholder="Qué te salió bien y por qué…"
+                                    className="rpt-input-v6"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-300 block">🔧 A mejorar mañana</label>
-                                <textarea
-                                    rows={3}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-warn)' }}>Una cosa a mejorar</span>
+                                <input
                                     value={reflection.fix}
                                     onChange={(e) => setReflection(prev => ({ ...prev, fix: e.target.value }))}
-                                    placeholder="Una cosa concreta, no una lista..."
-                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white custom-scrollbar focus:ring-1 focus:ring-indigo-500"
+                                    placeholder="Una sola, concreta…"
+                                    className="rpt-input-v6"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Enviar/actualizar reporte — reenviar el mismo día actualiza el reporte
-                        existente y lo reenvía a Discord, no lo duplica. */}
-                    <div className="flex items-center gap-4 pt-2">
+                    {/* Aviso + enviar — reenviar el mismo día actualiza el reporte existente y lo
+                        reenvía a Discord, no lo duplica. */}
+                    <div className="rpt-card-v6 flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
+                            <span className="text-xs font-bold" style={{ color: '#F3D08A' }}>
+                                {counts.confirmations + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver
+                            </span>
+                        </div>
+                        <div className="flex-1"></div>
                         <button
                             disabled={sendingReport || (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0)}
                             title={backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
@@ -4022,15 +4088,42 @@ const CloserWorkflowPage = () => {
                                     setSendingReport(false);
                                 }
                             }}
-                            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-pink-500/20 transition-all cursor-pointer flex items-center gap-2"
+                            className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
+                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px rgba(19,35,198,.35)' }}
                         >
                             {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
-                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte al sistema'}
+                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : 'Enviar reporte del día'}
                         </button>
                     </div>
+
+                    {/* Trabajo atrasado de días ANTERIORES — pedido del usuario (feedback en video,
+                        28/ago/2026): "ponlo al final, que se vea chiquitico, no muy grande... no me
+                        gusta cómo se ve ahí, está muy aparatoso". Antes era un bloque grande con lista
+                        de viñetas entre el selector de fecha y los KPI; ahora es una píldora chica al
+                        final de la página, sin perder la función de bloqueo (el botón de enviar sigue
+                        chequeando `backlogBlocksReport`/`pendingPreviousDays` directo, sin depender de
+                        que este aviso esté visible). */}
+                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
+                        <div className={`flex items-center gap-2.5 flex-wrap px-4 py-2.5 rounded-full border text-[10.5px] font-bold ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'}`}>
+                            <span>{backlogBlocksReport ? '🚫' : '⏳'}</span>
+                            <span>
+                                {pendingPreviousDays.total} tarea{pendingPreviousDays.total === 1 ? '' : 's'} atrasada{pendingPreviousDays.total === 1 ? '' : 's'} de días anteriores
+                                {backlogBlocksReport ? ' — traba el envío' : ''}
+                            </span>
+                            <button
+                                type="button"
+                                className="ml-auto underline font-black uppercase tracking-wide cursor-pointer"
+                                onClick={() => setActiveView('inbox')}
+                            >
+                                Ir a resolver
+                            </button>
+                        </div>
+                    )}
                 </div>
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
+                ) : activeView === 'cartera' ? (
+                    <MiCarteraPane onOpenLead={handleSelectLead} />
                 ) : (
                     <CloserDashboard
                         embedded
@@ -4377,7 +4470,7 @@ const CloserWorkflowPage = () => {
             {/* Ver ovLead: AnimatePresence deja estos overlays pegados al cerrarse */}
             <>
                 {decisionMakerPrompt.apptId && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4419,7 +4512,7 @@ const CloserWorkflowPage = () => {
             {/* Prompt intermedio: ¿Hubo venta? */}
             <>
                 {salePrompt.apptId && !saleModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -4435,11 +4528,7 @@ const CloserWorkflowPage = () => {
                             </div>
                             <div className="flex flex-col gap-2.5 pt-2">
                                 <button
-                                    onClick={() => {
-                                        setSalePrompt({ apptId: null });
-                                        setSaleStep(1);
-                                        setSaleModalOpen(true);
-                                    }}
+                                    onClick={() => setSaleModalOpen(true)}
                                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-650/20 animate-pulse"
                                 >
                                     Sí, Declarar Venta
@@ -4474,597 +4563,47 @@ const CloserWorkflowPage = () => {
             {/* Modal de declaración de venta por pasos */}
             <>
                 {saleModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-left flex flex-col space-y-6 max-h-[90vh] custom-scrollbar"
-                        >
-                            {/* Ambient Brillo */}
-                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-violet-500" />
-                            </div>
-
-                            <div className="flex justify-between items-center pb-4 border-b border-slate-800 relative z-10">
-                                <div>
-                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tight flex items-center gap-2">
-                                        <DollarSign size={20} className="text-emerald-405" />
-                                        Declarar Venta
-                                    </h3>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Sincronización directa con Google Sheets</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const apptId = salePrompt.apptId;
-                                        setSaleModalOpen(false);
-                                        setSalePrompt({ apptId: null });
-                                        if (apptId) {
-                                            const appt = agendas.find(a => a.id === apptId);
-                                            setFollowUpModal({
-                                                show: true,
-                                                agendaId: apptId,
-                                                leadName: appt?.lead_name || 'Prospecto',
-                                                newStatus: 'Cierre de Venta',
-                                                isSaleFollowUp: false
-                                            });
-                                        } else {
-                                            fetchAgendas();
-                                        }
-                                    }}
-                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors cursor-pointer"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            {/* Indicador de pasos premium */}
-                            <div className="flex items-center justify-between px-4 py-2 bg-slate-950/40 rounded-2xl border border-slate-800 relative z-10">
-                                {[
-                                    { step: 1, label: "Cliente" },
-                                    { step: 2, label: "Transacción" },
-                                    { step: 3, label: "Confirmación" }
-                                ].map((s, idx) => (
-                                    <React.Fragment key={s.step}>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
-                                                saleStep > s.step 
-                                                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
-                                                    : saleStep === s.step
-                                                    ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-600/35'
-                                                    : 'bg-slate-800 border-slate-700 text-slate-500'
-                                            }`}>
-                                                {saleStep > s.step ? <Check size={10} /> : s.step}
-                                            </div>
-                                            <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${
-                                                saleStep === s.step ? 'text-white font-bold' : 'text-slate-500'
-                                            }`}>
-                                                {s.label}
-                                            </span>
-                                        </div>
-                                        {idx < 2 && (
-                                            <div className={`flex-1 h-0.5 mx-4 transition-all duration-300 ${
-                                                saleStep > s.step ? 'bg-emerald-500/50' : 'bg-slate-800'
-                                            }`} />
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </div>
-
-                            {/* Contenido del Paso */}
-                            <div className="flex-1 py-2 relative z-10 overflow-y-auto custom-scrollbar pr-1">
-                                {saleStep === 1 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 1: Información del Prospecto</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Revisa los datos obtenidos de la agenda y completa el documento de identidad.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.nombre_cliente}
-                                                        onChange={e => setSaleForm({ ...saleForm, nombre_cliente: e.target.value })}
-                                                        placeholder="ej. Juan Pérez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Instagram *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Instagram size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.instagram}
-                                                        onChange={e => setSaleForm({ ...saleForm, instagram: e.target.value })}
-                                                        placeholder="ej. @juanperez"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Email del Cliente *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={13} /></span>
-                                                    <input
-                                                        type="email"
-                                                        value={saleForm.mail_cliente}
-                                                        onChange={e => setSaleForm({ ...saleForm, mail_cliente: e.target.value })}
-                                                        placeholder="ej. juan@gmail.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Phone size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.telefono}
-                                                        onChange={e => setSaleForm({ ...saleForm, telefono: e.target.value })}
-                                                        placeholder="ej. +34600000000"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Documento de identidad (DNI, NIE, Pasaporte)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.documento_identidad}
-                                                        onChange={e => setSaleForm({ ...saleForm, documento_identidad: e.target.value })}
-                                                        placeholder="Ingresa la cédula o DNI"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Vendedor (Closer Asignado) *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
-                                                    <input
-                                                        type="email"
-                                                        value={saleForm.email_vendedor}
-                                                        onChange={e => setSaleForm({ ...saleForm, email_vendedor: e.target.value })}
-                                                        placeholder="email@vendedor.com"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Confirma que sea el correo correcto para la atribución de comisiones.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {saleStep === 2 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 2: Detalles de la Transacción</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Define el programa académico, método y monto recaudado de la venta.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Programa Académico *</label>
-                                                <select
-                                                    value={saleForm.programa}
-                                                    onChange={e => setSaleForm({ ...saleForm, programa: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="RR">Residency Roadmap (RR)</option>
-                                                    <option value="AL">Ace Learner (AL)</option>
-                                                    <option value="SI">Specialist Initiative (SI)</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo de Pago *</label>
-                                                <select
-                                                    value={saleForm.tipo_pago_simple}
-                                                    onChange={e => setSaleForm({ ...saleForm, tipo_pago_simple: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer disabled:opacity-40"
-                                                    required
-                                                >
-                                                    {[
-                                                        { value: 'completo', label: 'Completo (PIF)' },
-                                                        { value: 'parcial', label: 'Parcial (Primer Pago)' },
-                                                        { value: 'Seña', label: 'Seña (Promesa)' },
-                                                        { value: 'Cuota', label: 'Cuotas' },
-                                                        { value: 'Renovacion', label: 'Renovación' },
-                                                        { value: 'Upsell', label: 'Upsell' },
-                                                    ].map(opt => {
-                                                        const rule = saleClientState?.allowed_types?.[opt.value.toLowerCase()];
-                                                        const disabled = rule ? !rule.ok : false;
-                                                        return (
-                                                            <option key={opt.value} value={opt.value} disabled={disabled} title={disabled ? rule.reason : undefined}>
-                                                                {opt.label}{disabled ? ' — no disponible' : ''}
-                                                            </option>
-                                                        );
-                                                    })}
-                                                </select>
-                                                {(() => {
-                                                    const rule = saleClientState?.allowed_types?.[(saleForm.tipo_pago_simple || '').toLowerCase()];
-                                                    if (rule && !rule.ok) {
-                                                        return <p className="text-[9px] text-rose-400 font-bold mt-1">{rule.reason}</p>;
-                                                    }
-                                                    return null;
-                                                })()}
-                                            </div>
-                                            {saleClientState && saleClientState.total_paid > 0 && (
-                                                <div className="md:col-span-2 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl text-[10px] font-bold text-violet-300 uppercase tracking-wide">
-                                                    Este cliente ya pagó ${saleClientState.total_paid.toFixed(2)} de ${saleClientState.program_price.toFixed(2)} en {saleForm.programa} — saldo restante ${saleClientState.balance_remaining.toFixed(2)}.
-                                                </div>
-                                            )}
-                                            {['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple) && saleClientState?.can_settle_balance_with_installment && (
-                                                <div className="md:col-span-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                                                    <label className="flex items-center gap-2 text-[10px] font-bold text-amber-300 uppercase tracking-wide cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={settleBalanceWithSale}
-                                                            onChange={e => setSettleBalanceWithSale(e.target.checked)}
-                                                            className="rounded"
-                                                        />
-                                                        Incluir el pago del saldo pendiente (${saleClientState.balance_remaining.toFixed(2)}) junto con esta venta
-                                                    </label>
-                                                </div>
-                                            )}
-                                            {saleForm.tipo_pago_simple !== 'completo' && (
-                                                <div className="space-y-1 text-left">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Total (USD) *</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={saleForm.precio_total}
-                                                            onChange={e => setSaleForm({ ...saleForm, precio_total: e.target.value })}
-                                                            placeholder="0.00"
-                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                            required
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                                                    {saleForm.tipo_pago_simple === 'completo' ? 'Monto Cobrado (USD) *' : 'Cobrado Hoy (USD) *'}
-                                                </label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={saleForm.monto}
-                                                        onChange={e => setSaleForm({ ...saleForm, monto: e.target.value })}
-                                                        placeholder="0.00"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Método de Pago *</label>
-                                                <select
-                                                    value={saleForm.metodo_pago}
-                                                    onChange={e => setSaleForm({ ...saleForm, metodo_pago: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="Stripe">Stripe</option>
-                                                    <option value="PayPal">PayPal</option>
-                                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                                                    <option value="Binance / USDT">Binance / USDT</option>
-                                                    <option value="Hotmart">Hotmart</option>
-                                                    <option value="Otro">Otro Método</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest ml-1 block flex items-center gap-1">
-                                                    <CalendarDays size={12} className="text-emerald-400" />
-                                                    Fecha del Próximo Cobro (Seguimiento)
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    value={saleForm.fecha_cobro || ''}
-                                                    onChange={e => setSaleForm({ ...saleForm, fecha_cobro: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                                                />
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comentario / Detalles del Cobro</label>
-                                                <input
-                                                    type="text"
-                                                    value={saleForm.segundo_pago || ''}
-                                                    onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
-                                                    placeholder="ej. Cobro de $500 (2do pago / saldo)"
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {saleForm.tipo_pago_simple === 'completo' ? (
-                                            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                                                Pago único: se cobra todo hoy, no hay saldo ni cronograma de cuotas.
-                                            </div>
-                                        ) : isCuotaPayment && (loadingSaleCuotas || saleExistingCuotas.length > 0) ? (
-                                            <div className="space-y-3 pt-2 border-t border-slate-800">
-                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">¿Cuál cuota del plan ya existente se está pagando?</h4>
-                                                {loadingSaleCuotas ? (
-                                                    <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
-                                                ) : (
-                                                    <div className="rounded-xl border border-slate-800 overflow-hidden">
-                                                        <table className="w-full text-xs">
-                                                            <thead className="bg-slate-950/60">
-                                                                <tr>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase"></th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence</th>
-                                                                    <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {saleExistingCuotas.map(c => {
-                                                                    const isPagado = c.estado === 'pagado';
-                                                                    const isVencida = c.estado === 'vencido';
-                                                                    return (
-                                                                        <tr key={c.id} className={`border-t border-slate-850 ${isPagado ? 'opacity-40' : 'cursor-pointer hover:bg-slate-900/40'} ${selectedCuotaId === c.id ? 'bg-violet-500/10' : ''}`}
-                                                                            onClick={() => { if (!isPagado) { setSelectedCuotaId(c.id); setSaleForm(prev => ({ ...prev, monto: String(c.monto) })); } }}
-                                                                        >
-                                                                            <td className="px-3 py-2">
-                                                                                {!isPagado && <input type="radio" checked={selectedCuotaId === c.id} onChange={() => {}} className="cursor-pointer" />}
-                                                                            </td>
-                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">${Number(c.monto).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
-                                                                            <td className="px-3 py-2">
-                                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
-                                                                                    isPagado ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                                                                    isVencida ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                                                                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                                                                }`}>{isPagado ? 'Pagada' : isVencida ? 'Vencida' : 'Pendiente'}</span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                )}
-                                                <p className="text-[9px] text-slate-550 font-medium">
-                                                    Elegí cualquier cuota pendiente (podés adelantar una futura o pagar una vencida) — se marca como pagada con el monto de arriba, sin tocar el resto del plan.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3 pt-2 border-t border-slate-800">
-                                                {isCuotaPayment && (
-                                                    <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wide">
-                                                        Este cliente no tiene un plan de cuotas previo registrado — se creará uno nuevo con esta cuota.
-                                                    </p>
-                                                )}
-                                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left pt-2">Plan de Cuotas (Próximos Pagos)</h4>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1 text-left">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Cuotas Restantes *</label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={saleForm.num_cuotas}
-                                                            onChange={e => setSaleForm({ ...saleForm, num_cuotas: e.target.value })}
-                                                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1 text-left">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo a Financiar</label>
-                                                        <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-violet-400">
-                                                            ${Math.max(0, (parseFloat(saleForm.precio_total) || 0) - (saleClientState?.total_paid || 0) - (parseFloat(saleForm.monto) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {(() => {
-                                                    const total = parseFloat(saleForm.precio_total) || 0;
-                                                    // Igual que en el submit: descontar lo ya pagado antes, no solo el monto de hoy.
-                                                    const now = (saleClientState?.total_paid || 0) + (parseFloat(saleForm.monto) || 0);
-                                                    const n = Math.max(1, parseInt(saleForm.num_cuotas) || 1);
-                                                    const rest = Math.max(0, total - now);
-                                                    if (rest <= 0) return null;
-                                                    const each = Math.round((rest / n) * 100) / 100;
-                                                    const overrides = saleForm.cuotaFechas || {};
-                                                    const rows = Array.from({ length: n }, (_, i) => {
-                                                        const monto = i === n - 1 ? Math.round((rest - each * (n - 1)) * 100) / 100 : each;
-                                                        const d = new Date();
-                                                        d.setMonth(d.getMonth() + i + 1);
-                                                        const numero = i + 1;
-                                                        return { n: numero, monto, fecha: overrides[numero] || toLocalDateStr(d) };
-                                                    });
-                                                    return (
-                                                        <div className="rounded-xl border border-slate-800 overflow-hidden">
-                                                            <table className="w-full text-xs">
-                                                                <thead className="bg-slate-950/60">
-                                                                    <tr>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Cuota</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Monto</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Vence — cuándo la vas a cobrar</th>
-                                                                        <th className="text-left px-3 py-2 text-[9px] font-black text-slate-500 uppercase">Estado</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {rows.map(r => (
-                                                                        <tr key={r.n} className="border-t border-slate-850">
-                                                                            <td className="px-3 py-2 font-bold text-white">Cuota {r.n}</td>
-                                                                            <td className="px-3 py-2 font-bold text-slate-300">${r.monto.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                                            <td className="px-3 py-2">
-                                                                                <input
-                                                                                    type="date"
-                                                                                    value={r.fecha}
-                                                                                    onChange={(e) => setSaleForm(prev => ({
-                                                                                        ...prev,
-                                                                                        cuotaFechas: { ...prev.cuotaFechas, [r.n]: e.target.value }
-                                                                                    }))}
-                                                                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
-                                                                                />
-                                                                            </td>
-                                                                            <td className="px-3 py-2"><span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Pendiente</span></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    );
-                                                })()}
-                                                <p className="text-[9px] text-slate-550 font-medium">Se guarda automáticamente al declarar la venta con las fechas que dejes arriba (por defecto, una por mes) — también se pueden ajustar después.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {saleStep === 3 && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 3: Confirmación y Notas</h4>
-                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Agrega observaciones finales, revisa la fecha y confirma el envío de mensajes.</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Examen del Lead (ej. USMLE Step 1)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.examen_lead}
-                                                        onChange={e => setSaleForm({ ...saleForm, examen_lead: e.target.value })}
-                                                        placeholder="ej. USMLE Step 1"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha de la Venta *</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Calendar size={13} /></span>
-                                                    <input
-                                                        type="date"
-                                                        value={saleForm.date}
-                                                        onChange={e => setSaleForm({ ...saleForm, date: e.target.value })}
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-left">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado de la Venta *</label>
-                                                <select
-                                                    value={saleForm.estado}
-                                                    onChange={e => setSaleForm({ ...saleForm, estado: e.target.value })}
-                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
-                                                    required
-                                                >
-                                                    <option value="Completada">Completada</option>
-                                                    <option value="Pendiente">Pendiente</option>
-                                                    <option value="Cancelada">Cancelada</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas de la Venta / Observaciones</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-3 text-slate-500"><PenTool size={13} /></span>
-                                                    <textarea
-                                                        value={saleForm.notas}
-                                                        onChange={e => setSaleForm({ ...saleForm, notas: e.target.value })}
-                                                        placeholder="Detalles sobre el cierre, objeciones vencidas, etc..."
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-white placeholder-slate-650 outline-none focus:border-violet-500 transition-all min-h-[70px] resize-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="md:col-span-2 space-y-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 block text-left">¿Venta Cerrada en Llamada?</label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: true })}
-                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                                            saleForm.sold_in_call
-                                                                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/10'
-                                                                : 'bg-slate-850/40 border-slate-800 text-slate-450 hover:border-slate-700'
-                                                        }`}
-                                                    >
-                                                        <CheckCircle2 size={13} className={saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
-                                                        Sí, en Meet
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: false })}
-                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                                            !saleForm.sold_in_call
-                                                                ? 'bg-gradient-to-r from-rose-500/20 to-orange-500/20 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/10'
-                                                                : 'bg-slate-855/40 border-slate-800 text-slate-450 hover:border-slate-700'
-                                                        }`}
-                                                    >
-                                                        <X size={13} className={!saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
-                                                        No, fuera
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Pie del Modal: Controles de paso */}
-                            <div className="flex justify-between items-center pt-4 border-t border-slate-800 relative z-10">
-                                {saleStep > 1 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handlePrevStep}
-                                        className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-slate-750"
-                                    >
-                                        <ArrowLeft size={12} />
-                                        Anterior
-                                    </button>
-                                ) : (
-                                    <div />
-                                )}
-
-                                {saleStep < 3 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handleNextStep}
-                                        className="h-9 px-5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                                    >
-                                        Siguiente
-                                        <ArrowRight size={12} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleRegisterSale}
-                                        disabled={submittingSale}
-                                        className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                        {submittingSale ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                        {submittingSale ? 'Guardando...' : 'Registrar Venta'}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
+                    <DeclararVentaWizard
+                        saleForm={saleForm}
+                        setSaleForm={setSaleForm}
+                        saleClientState={saleClientState}
+                        loadingSaleState={loadingSaleState}
+                        saleExistingCuotas={saleExistingCuotas}
+                        loadingSaleCuotas={loadingSaleCuotas}
+                        selectedCuotaId={selectedCuotaId}
+                        setSelectedCuotaId={setSelectedCuotaId}
+                        refreshExistingCuotas={refreshExistingCuotas}
+                        settleBalanceWithSale={settleBalanceWithSale}
+                        setSettleBalanceWithSale={setSettleBalanceWithSale}
+                        submittingSale={submittingSale}
+                        teamMembers={teamMembers}
+                        apptId={salePrompt.apptId}
+                        onClose={() => {
+                            const apptId = salePrompt.apptId;
+                            setSaleModalOpen(false);
+                            setSalePrompt({ apptId: null });
+                            if (apptId) {
+                                const appt = agendas.find(a => a.id === apptId);
+                                setFollowUpModal({
+                                    show: true,
+                                    agendaId: apptId,
+                                    leadName: appt?.lead_name || 'Prospecto',
+                                    newStatus: 'Cierre de Venta',
+                                    isSaleFollowUp: false
+                                });
+                            } else {
+                                fetchAgendas();
+                            }
+                        }}
+                        onRegisterSale={handleRegisterSale}
+                    />
                 )}
             </>
 
             {/* Modal de Motivo / Razón de Cambio (Reemplazo de window.prompt) */}
             <>
                 {reasonModal.show && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
+                    <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -5148,7 +4687,7 @@ const CloserWorkflowPage = () => {
             {/* Modal Nueva Agenda v7 (ovNew) */}
             <>
                 {newAgendaModalOpen && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -5275,7 +4814,7 @@ const CloserWorkflowPage = () => {
             {/* Modal Referido Manual v7 (ovRef) */}
             <>
                 {manualRefModalOpen && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
+                    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md text-left">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -5472,42 +5011,6 @@ const CloserWorkflowPage = () => {
                 )}
             </>
 
-            {/* DOCK FLOTANTE v6 */}
-            <div className={`dock-v6 ${todayReportSent ? 'done-v6' : ''}`}>
-                <button 
-                    className={`dk-v6 ${activeView === 'inbox' ? 'on' : ''}`}
-                    onClick={() => setActiveView('inbox')}
-                >
-                    <span>📥 Bandeja</span>
-                    {(counts.confirmations + counts.calls + counts.seguimientos) > 0 && (
-                        <span className="b-v6">{counts.confirmations + counts.calls + counts.seguimientos}</span>
-                    )}
-                </button>
-                <button
-                    className={`dk-v6 ${activeView === 'report' ? 'on' : ''} ${todayReportSent ? 'sent' : ''}`}
-                    onClick={() => setActiveView('report')}
-                >
-                    {todayReportSent ? (
-                        <span>✓ Reporte enviado</span>
-                    ) : (
-                        <span>📊 Reporte del día</span>
-                    )}
-                </button>
-                <button
-                    className={`dk-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
-                    onClick={() => setActiveView('dashboard')}
-                >
-                    <span>📈 Dashboard</span>
-                </button>
-                {auditEnabled && (
-                    <button
-                        className={`dk-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
-                        onClick={() => setActiveView('auditoria')}
-                    >
-                        <span>🗂️ Auditoría</span>
-                    </button>
-                )}
-            </div>
 
             {/* Corrección de la ficha del lead: nombre, teléfono, correo, instagram y fecha/hora
                 de la llamada. Al guardar se recarga el mazo y se cierra el modal de detalle, para
@@ -5520,6 +5023,18 @@ const CloserWorkflowPage = () => {
                 />
             )}
 
+            {showProcrastinar && (
+                <ProcrastinarModal
+                    pendientes={counts.seguimientos}
+                    onClose={() => setShowProcrastinar(false)}
+                    onGo={() => {
+                        setShowProcrastinar(false);
+                        setActiveView('inbox');
+                        setSearchParams({ step: 'seguimientos', selected_date: selectedDate });
+                    }}
+                />
+            )}
+
             <OperatorControls
                 isOpen={showOperatorControls}
                 onClose={() => setShowOperatorControls(false)}
@@ -5528,7 +5043,7 @@ const CloserWorkflowPage = () => {
             {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
             <>
                 {celebration && (
-                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+                    <div className="fixed inset-0 z-[1250] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}

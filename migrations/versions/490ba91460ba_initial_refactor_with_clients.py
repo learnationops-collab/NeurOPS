@@ -37,10 +37,12 @@ def upgrade():
     
     # Note: simplify unique constraint creation
     def add_uq(table, name, cols):
-        try:
-            op.create_unique_constraint(op.f(name), table, cols)
-        except Exception:
-            pass
+        uqs = [u.get('name') for u in inspector.get_unique_constraints(table)]
+        if name not in uqs and op.f(name) not in uqs:
+            try:
+                op.create_unique_constraint(op.f(name), table, cols)
+            except Exception:
+                pass
 
     add_uq('event_groups', 'uq_event_groups_name', ['name'])
     add_uq('events', 'uq_events_name', ['name'])

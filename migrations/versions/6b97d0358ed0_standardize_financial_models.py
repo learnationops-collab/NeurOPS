@@ -17,15 +17,16 @@ depends_on = None
 
 
 def upgrade():
-    # Agregar columna 'date' a ambas tablas (si no existe ya)
-    try:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    
+    agendas_cols = [c['name'] for c in inspector.get_columns('financial_agendas')]
+    if 'date' not in agendas_cols:
         op.add_column('financial_agendas', sa.Column('date', sa.DateTime(), nullable=True))
-    except Exception:
-        pass
-    try:
+        
+    sales_cols = [c['name'] for c in inspector.get_columns('financial_sales')]
+    if 'date' not in sales_cols:
         op.add_column('financial_sales', sa.Column('date', sa.DateTime(), nullable=True))
-    except Exception:
-        pass
 
 
 def downgrade():

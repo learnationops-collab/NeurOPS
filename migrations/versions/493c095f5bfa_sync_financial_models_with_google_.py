@@ -28,12 +28,14 @@ def upgrade():
     op.add_column('financial_agendas', sa.Column('mail', sa.String(length=150), nullable=True))
     op.add_column('financial_agendas', sa.Column('created_at', sa.DateTime(), nullable=True))
 
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
     # financial_agendas: eliminar columnas viejas (solo si existen)
+    fa_cols = [c['name'] for c in inspector.get_columns('financial_agendas')]
     for col in ['status', 'setter_name', 'error_notes', 'client_name', 'closer_name']:
-        try:
+        if col in fa_cols:
             op.drop_column('financial_agendas', col)
-        except Exception:
-            pass
     # Nota: NO eliminamos 'date' aquí, la siguiente migración la re-agrega
 
     # financial_sales: agregar nuevas columnas
@@ -50,11 +52,10 @@ def upgrade():
     op.add_column('financial_sales', sa.Column('created_at', sa.DateTime(), nullable=True))
 
     # financial_sales: eliminar columnas viejas (solo si existen)
+    fs_cols = [c['name'] for c in inspector.get_columns('financial_sales')]
     for col in ['product', 'status', 'setter_name', 'payment_type', 'error_notes', 'amount']:
-        try:
+        if col in fs_cols:
             op.drop_column('financial_sales', col)
-        except Exception:
-            pass
 
 
 

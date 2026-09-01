@@ -61,11 +61,37 @@ class DashboardService(BaseService):
                 bucket['pending'] += 1
         
         def get_mapped_status(appt):
-            res = appt.result
-            if res == 'Terminada': return 'completed'
-            if res == 'No Show': return 'no_show'
-            if res == 'Cancelada': return 'canceled'
-            if res in ['Reprogramada', 'Reprogramar']: return 'rescheduled'
+            """BUG real encontrado (31/ago/2026): esto leía `Appointment.result` — el estado de
+            CONFIRMACIÓN (Pendiente/Confirmado/Cancelado/...) — buscando además valores viejos
+            que ya no se escriben ('Terminada', 'No Show', 'Cancelada', 'Reprogramada') en vez de
+            los actuales. El resultado REAL de la llamada de ventas vive en `closer_result`
+            (Show up/No show/Cancelado/Reagendado), un campo aparte a propósito — confirmación y
+            agenda son dos pasos distintos del embudo y no deben mezclarse (reportado por el
+            usuario: "el show up no es muy real"). Con el campo viejo, `result == 'Terminada'`
+            (la confirmación terminó, no dice nada de si asistió) marcaba como "completed" el
+            72% de las citas reales, contra el ~16% real que sí tiene `closer_result == 'Show up'`
+            — un show up rate inflado sin relación con la asistencia real.
+
+            Ahora se lee primero el resultado real de la llamada; si la cita nunca llegó a
+            evaluarse (sigue 'Pendiente' o fue archivada como 'Lead Perdido' sin haberse
+            confirmado nunca), se cae al estado de confirmación para no perder esas filas."""
+            cr = (appt.closer_result or '').strip().lower()
+            if cr == 'show up':
+                return 'completed'
+            if cr == 'no show':
+                return 'no_show'
+            if cr in ('cancelado', 'cancelada'):
+                return 'canceled'
+            if cr in ('reagendado', 'reagendada'):
+                return 'rescheduled'
+
+            res = (appt.result or '').strip().lower()
+            if res == 'cancelado' or res == 'cancelada':
+                return 'canceled'
+            if res in ('reagendado', 'reagendada', 'reprogramada', 'reprogramar'):
+                return 'rescheduled'
+            if res == 'confirmado':
+                return 'confirmed'
             return 'scheduled'
 
         for appt in total_appts:

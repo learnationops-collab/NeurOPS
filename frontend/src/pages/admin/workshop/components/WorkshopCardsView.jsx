@@ -1,7 +1,7 @@
 import React from 'react';
 import { Edit2, Trash2, ArrowRight, ShieldCheck, AlertTriangle, Zap } from 'lucide-react';
 
-const WorkshopCardsView = ({ events, onSelectFunnel, onEdit, onDelete, formatDate, formatCurrency }) => {
+const WorkshopCardsView = ({ events, onSelectFunnel, onEdit, onDelete, formatDate, formatCurrency, selectedIds, onToggleSelect }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((e) => {
@@ -16,30 +16,43 @@ const WorkshopCardsView = ({ events, onSelectFunnel, onEdit, onDelete, formatDat
                     ? "text-amber-400 bg-amber-500/10 border-amber-500/20" 
                     : "text-rose-400 bg-rose-500/10 border-rose-500/20";
 
-                const roasGlow = e.roas >= 3 
-                    ? "group-hover:border-emerald-500/30" 
-                    : e.roas >= 1.5 
-                    ? "group-hover:border-indigo-500/30" 
+                const roasGlow = e.roas >= 3
+                    ? "group-hover:border-emerald-500/30"
+                    : e.roas >= 1.5
+                    ? "group-hover:border-indigo-500/30"
                     : "group-hover:border-rose-500/30";
 
+                const isSelected = selectedIds?.includes(e.id);
+
                 return (
-                    <div 
-                        key={e.id} 
-                        className={`bg-slate-900/40 border border-slate-800 rounded-[2rem] p-6 space-y-5 relative overflow-hidden group hover:bg-slate-900/80 transition-all duration-300 ${roasGlow}`}
+                    <div
+                        key={e.id}
+                        className={`bg-slate-900/40 border rounded-[2rem] p-6 space-y-5 relative overflow-hidden group hover:bg-slate-900/80 transition-all duration-300 ${isSelected ? 'border-indigo-500/60 ring-1 ring-indigo-500/30' : 'border-slate-800'} ${roasGlow}`}
                     >
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-10 bg-indigo-500 pointer-events-none" />
-                        
+
                         {/* Header */}
                         <div className="flex justify-between items-start">
-                            <div>
-                                <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase tracking-widest italic">
-                                    {formatDate(e.date)}
-                                </span>
-                                <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mt-2 group-hover:text-indigo-400 transition-colors">
-                                    {e.name}
-                                </h3>
+                            <div className="flex items-start gap-3">
+                                {onToggleSelect && (
+                                    <button
+                                        onClick={() => onToggleSelect(e.id)}
+                                        title="Seleccionar para comparar"
+                                        className={`shrink-0 w-5 h-5 mt-1 rounded-md border flex items-center justify-center transition-all cursor-pointer ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-700 text-transparent hover:border-slate-500'}`}
+                                    >
+                                        ✓
+                                    </button>
+                                )}
+                                <div>
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase tracking-widest italic">
+                                        {formatDate(e.date)}
+                                    </span>
+                                    <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mt-2 group-hover:text-indigo-400 transition-colors">
+                                        {e.name}
+                                    </h3>
+                                </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-xl text-[10px] font-black border tracking-widest ${roasColor}`}>
+                            <span className={`px-3 py-1 rounded-xl text-[10px] font-black border tracking-widest shrink-0 ${roasColor}`}>
                                 {e.roas.toFixed(2)}x ROAS
                             </span>
                         </div>

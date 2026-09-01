@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Save, Check, DollarSign } from 'lucide-react';
+import { Loader2, X, Save, Check, DollarSign, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,14 +12,58 @@ const CUOTA_ESTADO_CLS = {
     pagado: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 };
 
+const PROGRAM_CODES = [
+    { v: 'RR', label: 'Residency Roadmap' },
+    { v: 'AL', label: 'Ace Learner' },
+    { v: 'SI', label: 'Specialist Initiative' }
+];
+
+// Mismos 6 tipos y mismas grafías (`v`) que arma DeclararVentaWizard al declarar una venta
+// nueva — para que "corregir" reconstruya un `tipo_pago` con el formato que el resto del
+// sistema ya sabe leer (SheetsService.parse_tipo_pago), en vez del campo de texto libre que
+// tenía antes. El hint resume la regla de secuencia real del negocio (confirmada por el
+// usuario): Seña → siempre sigue un Completo o un Parcial; Cuota → solo existe si ya hubo un
+// Parcial antes (motivo típico del error "no encuentra el Parcial" que reportan los closers).
+const TIPO_PAGO_OPTIONS = [
+    { v: 'completo', label: 'Completo (PIF)', hint: 'Pago del programa completo.' },
+    { v: 'parcial', label: 'Parcial (Split Pay)', hint: 'Primer pago; el resto queda repartido en Cuotas.' },
+    { v: 'Seña', label: 'Seña', hint: 'Promesa de pago. Después de esto va un Completo o un Parcial — nunca una Cuota directo.' },
+    { v: 'Cuota', label: 'Cuota', hint: 'Solo válido si el cliente ya tiene un Parcial (Split Pay) declarado antes.' },
+    { v: 'Renovacion', label: 'Renovación', hint: 'El cliente vuelve a entrar después de vencer (normalmente 4 meses).' },
+    { v: 'Upsell', label: 'Upsell', hint: 'El cliente compra un programa mejor.' }
+];
+
+// Separa "RR - Parcial" (o variantes históricas sin acento/mayúsculas) en programa + tipo
+// canónico, igual que SheetsService.parse_tipo_pago en el backend — para poder mostrar
+// selectores en vez de un input de texto libre.
+const parseTipoPago = (raw) => {
+    const str = String(raw || '');
+    const m = /^\s*([A-Za-z]{2,3})\s*-\s*(.+)$/.exec(str);
+    const programCandidate = m ? m[1].toUpperCase() : null;
+    const programa = PROGRAM_CODES.some(p => p.v === programCandidate) ? programCandidate : 'RR';
+    const resto = m ? m[2] : str;
+    const norm = resto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    let tipo = 'completo';
+    if (norm.includes('parcial')) tipo = 'parcial';
+    else if (norm.includes('sena') || norm.includes('deposit')) tipo = 'Seña';
+    else if (norm.includes('cuota') || norm.includes('installment')) tipo = 'Cuota';
+    else if (norm.includes('renovaci') || norm.includes('renewal')) tipo = 'Renovacion';
+    else if (norm.includes('upsell')) tipo = 'Upsell';
+    return { programa, tipo };
+};
+
 // Corrección de una venta ya declarada, desde el historial del cliente. El closer podía
 // declarar ventas pero no arreglar un monto o un tipo de pago mal cargado: tenía que pedírselo
-// a Operaciones. Se edita, no se borra (dar de baja una venta sigue siendo solo de admin).
+// a Operaciones. Se edita, no se borra (dar de baja una venta sigue siendo solo de admin). El
+// tipo de pago y el monto son los campos que de verdad importan acá (pedido explícito del
+// usuario) — el estado queda como campo secundario, más chico, debajo.
 const VentaRow = ({ venta, onSaved }) => {
     const [abierto, setAbierto] = useState(false);
+    const parsed = parseTipoPago(venta.tipo_pago);
     const [form, setForm] = useState({
         monto: venta.monto ?? '',
-        tipo_pago: venta.tipo_pago || '',
+        programa: parsed.programa,
+        tipo: parsed.tipo,
         metodo_pago: venta.metodo_pago || '',
         estado: venta.estado || 'Completada'
     });
@@ -28,15 +72,24 @@ const VentaRow = ({ venta, onSaved }) => {
     const [enviarWebhook, setEnviarWebhook] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    const tipoPagoReconstruido = `${form.programa} - ${form.tipo}`;
     const dirty = String(form.monto) !== String(venta.monto ?? '')
-        || form.tipo_pago !== (venta.tipo_pago || '')
+        || tipoPagoReconstruido !== (venta.tipo_pago || '')
         || form.metodo_pago !== (venta.metodo_pago || '')
         || form.estado !== (venta.estado || 'Completada');
+
+    const tipoSeleccionado = TIPO_PAGO_OPTIONS.find(t => t.v === form.tipo);
 
     const guardar = async () => {
         setSaving(true);
         try {
-            const res = await api.put(`/closer/sales/${venta.id}`, { ...form, enviar_webhook: enviarWebhook });
+            const res = await api.put(`/closer/sales/${venta.id}`, {
+                monto: form.monto,
+                tipo_pago: tipoPagoReconstruido,
+                metodo_pago: form.metodo_pago,
+                estado: form.estado,
+                enviar_webhook: enviarWebhook
+            });
             toast.success(res.data?.message || 'Venta actualizada');
             setAbierto(false);
             onSaved?.(res.data.sale);
@@ -66,24 +119,51 @@ const VentaRow = ({ venta, onSaved }) => {
 
             {abierto && (
                 <div className="space-y-2 pt-2 border-t border-slate-850">
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Monto y Tipo de pago son los campos que de verdad importan al corregir —
+                        más grandes y arriba. El tipo ya no es texto libre: selector estructurado
+                        de los 6 tipos reales + programa, para no depender de que el closer
+                        tipee "RR - Completo" a mano. */}
+                    <div className="grid grid-cols-[1fr_1.4fr] gap-2">
                         <label className="space-y-1">
-                            <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                            <span className="text-[9px] font-black uppercase text-slate-400 block">Monto pagado</span>
                             <input
                                 type="number" min="0" value={form.monto}
                                 onChange={(e) => setForm(f => ({ ...f, monto: e.target.value }))}
-                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                                className="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-2 text-xs font-black text-emerald-400"
                             />
                         </label>
                         <label className="space-y-1">
-                            <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
-                            <input
-                                value={form.tipo_pago}
-                                onChange={(e) => setForm(f => ({ ...f, tipo_pago: e.target.value }))}
-                                placeholder="RR - Completo"
-                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
-                            />
+                            <span className="text-[9px] font-black uppercase text-slate-400 block">Tipo de pago</span>
+                            <div className="flex gap-1.5">
+                                <select
+                                    value={form.programa}
+                                    onChange={(e) => setForm(f => ({ ...f, programa: e.target.value }))}
+                                    title="Programa"
+                                    className="bg-slate-950 border border-slate-750 rounded-lg px-1.5 py-2 text-[10px] font-bold text-slate-300"
+                                >
+                                    {PROGRAM_CODES.map(p => (
+                                        <option key={p.v} value={p.v}>{p.v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={form.tipo}
+                                    onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}
+                                    className="flex-1 bg-slate-950 border border-slate-750 rounded-lg px-2 py-2 text-xs font-black text-white"
+                                >
+                                    {TIPO_PAGO_OPTIONS.map(t => (
+                                        <option key={t.v} value={t.v}>{t.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </label>
+                    </div>
+                    {tipoSeleccionado && (
+                        <p className="text-[9px] text-amber-300/90 font-medium leading-snug bg-amber-500/5 border border-amber-500/15 rounded-lg px-2 py-1.5">
+                            {tipoSeleccionado.hint}
+                        </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1">
                             <span className="text-[8px] font-black uppercase text-slate-500 block">Método</span>
                             <input
@@ -136,18 +216,44 @@ const VentaRow = ({ venta, onSaved }) => {
     );
 };
 
+// Payment.payment_type usa otro vocabulario que FinancialSale.tipo_pago (creado por
+// SheetsService.PAYMENT_TYPE_MAP al reflejar una venta acá) pero son los mismos 6 tipos de
+// negocio — se reusa TIPO_PAGO_OPTIONS (labels/hints) mapeando hacia/desde estos valores.
+const PAYMENT_TYPE_DB_MAP = {
+    completo: 'full',
+    parcial: 'first_payment',
+    'Seña': 'down_payment',
+    Cuota: 'installment',
+    Renovacion: 'renewal',
+    Upsell: 'upsell'
+};
+const PAYMENT_TYPE_DB_REVERSE = Object.fromEntries(Object.entries(PAYMENT_TYPE_DB_MAP).map(([k, v]) => [v, k]));
+
 // Corrección de un pago ya cargado (Enrollment/Payment). Al guardar, el backend recalcula el
-// total pagado de la inscripción, que es de donde sale la deuda del cliente.
+// total pagado de la inscripción, que es de donde sale la deuda del cliente. El tipo de pago
+// era imposible de corregir acá (pedido explícito del usuario) — mismo selector de 6 tipos que
+// ya usa VentaRow arriba, para los casos en los que el pago quedó cargado con el tipo equivocado.
 const PagoRow = ({ pago, onSaved }) => {
     const [abierto, setAbierto] = useState(false);
-    const [form, setForm] = useState({ amount: pago.amount ?? '', status: pago.status || 'completed' });
+    const [form, setForm] = useState({
+        amount: pago.amount ?? '',
+        status: pago.status || 'completed',
+        tipo: PAYMENT_TYPE_DB_REVERSE[pago.payment_type] || 'completo'
+    });
     const [saving, setSaving] = useState(false);
-    const dirty = String(form.amount) !== String(pago.amount ?? '') || form.status !== (pago.status || 'completed');
+    const dirty = String(form.amount) !== String(pago.amount ?? '')
+        || form.status !== (pago.status || 'completed')
+        || form.tipo !== (PAYMENT_TYPE_DB_REVERSE[pago.payment_type] || 'completo');
+    const tipoSeleccionado = TIPO_PAGO_OPTIONS.find(t => t.v === form.tipo);
 
     const guardar = async () => {
         setSaving(true);
         try {
-            const res = await api.patch(`/closer/payments/${pago.id}`, form);
+            const res = await api.patch(`/closer/payments/${pago.id}`, {
+                amount: form.amount,
+                status: form.status,
+                payment_type: PAYMENT_TYPE_DB_MAP[form.tipo]
+            });
             toast.success('Pago actualizado');
             setAbierto(false);
             onSaved?.(res.data.payment, res.data.enrollment_total_paid);
@@ -173,34 +279,53 @@ const PagoRow = ({ pago, onSaved }) => {
                 </div>
             </div>
             {abierto && (
-                <div className="flex items-end gap-2 pb-1">
-                    <label className="flex-1 space-y-1">
-                        <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
-                        <input
-                            type="number" min="0" value={form.amount}
-                            onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
-                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
-                        />
-                    </label>
-                    <label className="flex-1 space-y-1">
-                        <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
-                        <select
-                            value={form.status}
-                            onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                <div className="space-y-1.5 pb-1">
+                    <div className="flex items-end gap-2">
+                        <label className="flex-1 space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                            <input
+                                type="number" min="0" value={form.amount}
+                                onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
+                        <label className="flex-[1.4] space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
+                            <select
+                                value={form.tipo}
+                                onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            >
+                                {TIPO_PAGO_OPTIONS.map(t => (
+                                    <option key={t.v} value={t.v}>{t.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="flex-1 space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Estado</span>
+                            <select
+                                value={form.status}
+                                onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            >
+                                <option value="completed">completed</option>
+                                <option value="pending">pending</option>
+                                <option value="failed">failed</option>
+                            </select>
+                        </label>
+                        <button
+                            onClick={guardar}
+                            disabled={!dirty || saving}
+                            className="h-7 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer"
                         >
-                            <option value="completed">completed</option>
-                            <option value="pending">pending</option>
-                            <option value="failed">failed</option>
-                        </select>
-                    </label>
-                    <button
-                        onClick={guardar}
-                        disabled={!dirty || saving}
-                        className="h-7 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer"
-                    >
-                        {saving ? <Loader2 size={10} className="animate-spin" /> : 'Guardar'}
-                    </button>
+                            {saving ? <Loader2 size={10} className="animate-spin" /> : 'Guardar'}
+                        </button>
+                    </div>
+                    {tipoSeleccionado && (
+                        <p className="text-[8px] text-amber-300/90 font-medium leading-snug bg-amber-500/5 border border-amber-500/15 rounded-lg px-2 py-1">
+                            {tipoSeleccionado.hint}
+                        </p>
+                    )}
                 </div>
             )}
         </div>
@@ -211,6 +336,14 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
     const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
     const [saving, setSaving] = useState(false);
     const [marking, setMarking] = useState(false);
+    const [reportando, setReportando] = useState(false);
+    // El cliente puede pagar más o menos que lo pactado en la cuota — lo decide el closer al
+    // momento de reportar, no queda fijo al monto original de la cuota (mismo criterio que ya
+    // aplica DeclararVentaWizard para el flujo de "Reportar pago").
+    const [montoPagado, setMontoPagado] = useState(String(cuota.monto ?? ''));
+    // Prendido por defecto: es un pago nuevo real, a diferencia de una corrección de datos
+    // (VentaRow arriba), así que sí debe disparar la automatización como cualquier venta.
+    const [enviarWebhook, setEnviarWebhook] = useState(true);
     const dirty = fecha !== (cuota.fecha_vencimiento || '');
 
     const patch = async (payload, setFlag) => {
@@ -238,7 +371,7 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
                 telefono: client?.phone || '',
                 mail_cliente: client?.email || '',
                 tipo_pago: `${client?.programa_code || 'RR'} - Cuota`,
-                monto: cuota.monto,
+                monto: parseFloat(montoPagado) || 0,
                 segundo_pago: `Cuota ${cuota.numero_cuota}`,
                 metodo_pago: 'Stripe',
                 examen: '',
@@ -247,8 +380,8 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
                 setter: '',
                 documento_identidad: '',
                 marca_temporal: new Date().toLocaleString('es-ES'),
-                enviar_webhook: true,
-                enviar_mensaje: true,
+                enviar_webhook: enviarWebhook,
+                enviar_mensaje: enviarWebhook,
                 sold_in_call: false
             };
             const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
@@ -262,47 +395,84 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
             setMarking(false);
             return;
         }
+        setReportando(false);
         await patch({ estado: 'pagado' }, setMarking);
     };
 
     return (
-        <div className="flex items-center justify-between gap-3 text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
-            <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${CUOTA_ESTADO_CLS[cuota.estado] || CUOTA_ESTADO_CLS.pendiente}`}>
-                    {cuota.estado}
-                </span>
-                <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
-                <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+        <div className="space-y-2 bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-[10px]">
+                <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${CUOTA_ESTADO_CLS[cuota.estado] || CUOTA_ESTADO_CLS.pendiente}`}>
+                        {cuota.estado}
+                    </span>
+                    <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
+                    <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <input
+                        type="date"
+                        value={fecha || ''}
+                        disabled={cuota.estado === 'pagado'}
+                        onChange={(e) => setFecha(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 disabled:opacity-50"
+                    />
+                    {dirty && (
+                        <button
+                            onClick={() => patch({ fecha_vencimiento: fecha }, setSaving)}
+                            disabled={saving}
+                            title="Guardar nueva fecha"
+                            className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
+                        >
+                            {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                        </button>
+                    )}
+                    {cuota.estado !== 'pagado' && (
+                        <button
+                            onClick={() => setReportando(v => !v)}
+                            title="Reportar pago de esta cuota"
+                            className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
+                        >
+                            <Check size={11} />
+                        </button>
+                    )}
+                </div>
             </div>
-            <div className="flex items-center gap-1.5">
-                <input
-                    type="date"
-                    value={fecha || ''}
-                    disabled={cuota.estado === 'pagado'}
-                    onChange={(e) => setFecha(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200 disabled:opacity-50"
-                />
-                {dirty && (
-                    <button
-                        onClick={() => patch({ fecha_vencimiento: fecha }, setSaving)}
-                        disabled={saving}
-                        title="Guardar nueva fecha"
-                        className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
-                    >
-                        {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
-                    </button>
-                )}
-                {cuota.estado !== 'pagado' && (
+
+            {reportando && (
+                <div className="space-y-2 pt-2 border-t border-slate-850">
+                    <label className="space-y-1 block">
+                        <span className="text-[8px] font-black uppercase text-slate-500 block">Monto que pagó el cliente</span>
+                        <input
+                            type="number" min="0" value={montoPagado}
+                            onChange={(e) => setMontoPagado(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                        />
+                    </label>
+                    <label className="flex items-start gap-2 bg-slate-950/60 border border-slate-850 rounded-lg px-2 py-2 cursor-pointer">
+                        <input
+                            type="checkbox" checked={enviarWebhook}
+                            onChange={(e) => setEnviarWebhook(e.target.checked)}
+                            className="mt-0.5 accent-violet-500"
+                        />
+                        <span className="text-[9px] text-slate-400 font-bold leading-snug">
+                            Avisar por la automatización (n8n)
+                            <span className="block text-slate-600 font-medium">
+                                Prendido, dispara los mensajes automáticos al cliente como una venta nueva. Apagalo
+                                si ya le avisaste vos mismo o si es solo una corrección de datos.
+                            </span>
+                        </span>
+                    </label>
                     <button
                         onClick={markAsPaid}
-                        disabled={marking}
-                        title="Marcar cuota como pagada (reporta a Discord vía n8n, igual que una venta)"
-                        className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 cursor-pointer"
+                        disabled={marking || !montoPagado || parseFloat(montoPagado) <= 0}
+                        className="w-full h-8 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                         {marking ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                        Confirmar pago
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -385,6 +555,67 @@ const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
             </button>
             {error && <p className="text-[9px] text-rose-400 font-bold">{error}</p>}
         </div>
+    );
+};
+
+// Total a pagar del programa (Client.total_amount) — antes no se veía ni se podía tocar acá: la
+// tarjeta de "Inscripciones y pagos" mostraba Program.price (el precio genérico, igual para
+// todos los clientes de ese programa), no lo que ESTE cliente negoció realmente. Es un campo del
+// cliente, no de la inscripción — si el cliente tiene más de una inscripción, corregirlo acá
+// afecta el total que usa todo el sistema (saldo/deuda) para ese cliente, no solo esta tarjeta.
+const TotalProgramaEditor = ({ clientId, totalAmount, fallback, onSaved }) => {
+    const efectivo = totalAmount ?? fallback ?? 0;
+    const [editando, setEditando] = useState(false);
+    const [valor, setValor] = useState(String(efectivo));
+    const [saving, setSaving] = useState(false);
+
+    const guardar = async () => {
+        const num = parseFloat(valor);
+        if (isNaN(num) || num < 0) {
+            toast.error('Ingresá un total válido');
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await api.patch(`/closer/clients/${clientId}/total-amount`, { total_amount: num });
+            toast.success('Total del programa actualizado');
+            setEditando(false);
+            onSaved?.(res.data.total_amount);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'No se pudo actualizar el total');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!editando) {
+        return (
+            <button
+                onClick={() => { setValor(String(efectivo)); setEditando(true); }}
+                title="Corregir el total a pagar de este programa"
+                className="flex items-center gap-1 text-slate-300 hover:text-violet-300 cursor-pointer transition-colors"
+            >
+                {money(efectivo)}
+                <Pencil size={10} className="opacity-60" />
+            </button>
+        );
+    }
+
+    return (
+        <span className="flex items-center gap-1.5">
+            <input
+                type="number" min="0" autoFocus value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') setEditando(false); }}
+                className="w-20 bg-slate-950 border border-violet-500/40 rounded-lg px-1.5 py-0.5 text-[10px] font-bold text-white"
+            />
+            <button onClick={guardar} disabled={saving} title="Guardar total" className="text-violet-400 hover:text-violet-300 cursor-pointer disabled:opacity-40">
+                {saving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+            </button>
+            <button onClick={() => setEditando(false)} title="Cancelar" className="text-slate-500 hover:text-white cursor-pointer">
+                <X size={11} />
+            </button>
+        </span>
     );
 };
 
@@ -687,9 +918,20 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                             {history.enrollments.length === 0 && <p className="text-[10px] text-slate-600">Sin inscripciones registradas.</p>}
                             {history.enrollments.map(e => (
                                 <div key={e.id} className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 mb-2">
-                                    <div className="flex justify-between text-[10px] font-bold text-slate-300 mb-1.5">
+                                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-300 mb-1.5">
                                         <span>{e.program || 'Programa desconocido'}</span>
-                                        <span>{money(e.total_paid)} de {money(e.program_price)}</span>
+                                        <span className="flex items-center gap-1">
+                                            {money(e.total_paid)} de{' '}
+                                            <TotalProgramaEditor
+                                                clientId={history.client.id}
+                                                totalAmount={history.client.total_amount}
+                                                fallback={e.program_price}
+                                                onSaved={(nuevoTotal) => setHistory(prev => ({
+                                                    ...prev,
+                                                    client: { ...prev.client, total_amount: nuevoTotal }
+                                                }))}
+                                            />
+                                        </span>
                                     </div>
                                     <div className="space-y-1">
                                         {e.payments.map(p => (

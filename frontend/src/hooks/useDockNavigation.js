@@ -85,6 +85,12 @@ const useDockNavigation = () => {
                 adminPages.push({ id: 'finance', icon: DollarSign, label: 'Finanzas', path: '/admin/finance' });
             }
             return adminPages;
+        } else if (user?.role === 'director_comercial') {
+            // Rol de solo este módulo: analiza el embudo de talleres a fondo, sin
+            // acceso al resto del panel de admin — un único destino en el Dock.
+            return [
+                { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' }
+            ];
         }
 
         return [];
