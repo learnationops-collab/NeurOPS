@@ -14,7 +14,10 @@ const PostulacionesDashboardPage = () => {
     const [activeTab, setActiveTab] = useState('postulaciones');
 
     return (
-        <div className="relative bg-background min-h-screen space-y-6">
+        // dash-v6: pisa las variables --color-* con la paleta de marca Learnation
+        // (magenta #FF3FA4 sobre navy), igual que el Dashboard de Closers, para que
+        // el panel no cambie de look con el tema admin elegido (Elegant Blue, Glass...).
+        <div className="dash-v6 relative bg-main min-h-screen space-y-6">
             <div className="p-8 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex gap-2 p-1 bg-surface border border-base rounded-2xl w-fit">
                     {TABS.map(tab => (
