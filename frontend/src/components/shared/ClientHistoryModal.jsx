@@ -12,14 +12,58 @@ const CUOTA_ESTADO_CLS = {
     pagado: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 };
 
+const PROGRAM_CODES = [
+    { v: 'RR', label: 'Residency Roadmap' },
+    { v: 'AL', label: 'Ace Learner' },
+    { v: 'SI', label: 'Specialist Initiative' }
+];
+
+// Mismos 6 tipos y mismas grafías (`v`) que arma DeclararVentaWizard al declarar una venta
+// nueva — para que "corregir" reconstruya un `tipo_pago` con el formato que el resto del
+// sistema ya sabe leer (SheetsService.parse_tipo_pago), en vez del campo de texto libre que
+// tenía antes. El hint resume la regla de secuencia real del negocio (confirmada por el
+// usuario): Seña → siempre sigue un Completo o un Parcial; Cuota → solo existe si ya hubo un
+// Parcial antes (motivo típico del error "no encuentra el Parcial" que reportan los closers).
+const TIPO_PAGO_OPTIONS = [
+    { v: 'completo', label: 'Completo (PIF)', hint: 'Pago del programa completo.' },
+    { v: 'parcial', label: 'Parcial (Split Pay)', hint: 'Primer pago; el resto queda repartido en Cuotas.' },
+    { v: 'Seña', label: 'Seña', hint: 'Promesa de pago. Después de esto va un Completo o un Parcial — nunca una Cuota directo.' },
+    { v: 'Cuota', label: 'Cuota', hint: 'Solo válido si el cliente ya tiene un Parcial (Split Pay) declarado antes.' },
+    { v: 'Renovacion', label: 'Renovación', hint: 'El cliente vuelve a entrar después de vencer (normalmente 4 meses).' },
+    { v: 'Upsell', label: 'Upsell', hint: 'El cliente compra un programa mejor.' }
+];
+
+// Separa "RR - Parcial" (o variantes históricas sin acento/mayúsculas) en programa + tipo
+// canónico, igual que SheetsService.parse_tipo_pago en el backend — para poder mostrar
+// selectores en vez de un input de texto libre.
+const parseTipoPago = (raw) => {
+    const str = String(raw || '');
+    const m = /^\s*([A-Za-z]{2,3})\s*-\s*(.+)$/.exec(str);
+    const programCandidate = m ? m[1].toUpperCase() : null;
+    const programa = PROGRAM_CODES.some(p => p.v === programCandidate) ? programCandidate : 'RR';
+    const resto = m ? m[2] : str;
+    const norm = resto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    let tipo = 'completo';
+    if (norm.includes('parcial')) tipo = 'parcial';
+    else if (norm.includes('sena') || norm.includes('deposit')) tipo = 'Seña';
+    else if (norm.includes('cuota') || norm.includes('installment')) tipo = 'Cuota';
+    else if (norm.includes('renovaci') || norm.includes('renewal')) tipo = 'Renovacion';
+    else if (norm.includes('upsell')) tipo = 'Upsell';
+    return { programa, tipo };
+};
+
 // Corrección de una venta ya declarada, desde el historial del cliente. El closer podía
 // declarar ventas pero no arreglar un monto o un tipo de pago mal cargado: tenía que pedírselo
-// a Operaciones. Se edita, no se borra (dar de baja una venta sigue siendo solo de admin).
+// a Operaciones. Se edita, no se borra (dar de baja una venta sigue siendo solo de admin). El
+// tipo de pago y el monto son los campos que de verdad importan acá (pedido explícito del
+// usuario) — el estado queda como campo secundario, más chico, debajo.
 const VentaRow = ({ venta, onSaved }) => {
     const [abierto, setAbierto] = useState(false);
+    const parsed = parseTipoPago(venta.tipo_pago);
     const [form, setForm] = useState({
         monto: venta.monto ?? '',
-        tipo_pago: venta.tipo_pago || '',
+        programa: parsed.programa,
+        tipo: parsed.tipo,
         metodo_pago: venta.metodo_pago || '',
         estado: venta.estado || 'Completada'
     });
@@ -28,15 +72,24 @@ const VentaRow = ({ venta, onSaved }) => {
     const [enviarWebhook, setEnviarWebhook] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    const tipoPagoReconstruido = `${form.programa} - ${form.tipo}`;
     const dirty = String(form.monto) !== String(venta.monto ?? '')
-        || form.tipo_pago !== (venta.tipo_pago || '')
+        || tipoPagoReconstruido !== (venta.tipo_pago || '')
         || form.metodo_pago !== (venta.metodo_pago || '')
         || form.estado !== (venta.estado || 'Completada');
+
+    const tipoSeleccionado = TIPO_PAGO_OPTIONS.find(t => t.v === form.tipo);
 
     const guardar = async () => {
         setSaving(true);
         try {
-            const res = await api.put(`/closer/sales/${venta.id}`, { ...form, enviar_webhook: enviarWebhook });
+            const res = await api.put(`/closer/sales/${venta.id}`, {
+                monto: form.monto,
+                tipo_pago: tipoPagoReconstruido,
+                metodo_pago: form.metodo_pago,
+                estado: form.estado,
+                enviar_webhook: enviarWebhook
+            });
             toast.success(res.data?.message || 'Venta actualizada');
             setAbierto(false);
             onSaved?.(res.data.sale);
@@ -66,24 +119,51 @@ const VentaRow = ({ venta, onSaved }) => {
 
             {abierto && (
                 <div className="space-y-2 pt-2 border-t border-slate-850">
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Monto y Tipo de pago son los campos que de verdad importan al corregir —
+                        más grandes y arriba. El tipo ya no es texto libre: selector estructurado
+                        de los 6 tipos reales + programa, para no depender de que el closer
+                        tipee "RR - Completo" a mano. */}
+                    <div className="grid grid-cols-[1fr_1.4fr] gap-2">
                         <label className="space-y-1">
-                            <span className="text-[8px] font-black uppercase text-slate-500 block">Monto</span>
+                            <span className="text-[9px] font-black uppercase text-slate-400 block">Monto pagado</span>
                             <input
                                 type="number" min="0" value={form.monto}
                                 onChange={(e) => setForm(f => ({ ...f, monto: e.target.value }))}
-                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                                className="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-2 text-xs font-black text-emerald-400"
                             />
                         </label>
                         <label className="space-y-1">
-                            <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
-                            <input
-                                value={form.tipo_pago}
-                                onChange={(e) => setForm(f => ({ ...f, tipo_pago: e.target.value }))}
-                                placeholder="RR - Completo"
-                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
-                            />
+                            <span className="text-[9px] font-black uppercase text-slate-400 block">Tipo de pago</span>
+                            <div className="flex gap-1.5">
+                                <select
+                                    value={form.programa}
+                                    onChange={(e) => setForm(f => ({ ...f, programa: e.target.value }))}
+                                    title="Programa"
+                                    className="bg-slate-950 border border-slate-750 rounded-lg px-1.5 py-2 text-[10px] font-bold text-slate-300"
+                                >
+                                    {PROGRAM_CODES.map(p => (
+                                        <option key={p.v} value={p.v}>{p.v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={form.tipo}
+                                    onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}
+                                    className="flex-1 bg-slate-950 border border-slate-750 rounded-lg px-2 py-2 text-xs font-black text-white"
+                                >
+                                    {TIPO_PAGO_OPTIONS.map(t => (
+                                        <option key={t.v} value={t.v}>{t.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </label>
+                    </div>
+                    {tipoSeleccionado && (
+                        <p className="text-[9px] text-amber-300/90 font-medium leading-snug bg-amber-500/5 border border-amber-500/15 rounded-lg px-2 py-1.5">
+                            {tipoSeleccionado.hint}
+                        </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1">
                             <span className="text-[8px] font-black uppercase text-slate-500 block">Método</span>
                             <input
