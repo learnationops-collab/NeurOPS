@@ -19,6 +19,7 @@ from .landing_session import LandingSession
 from .alert import AlertRule, Alert
 from .installment import InstallmentPlan
 from .client_merge_log import ClientMergeLog
+from .bug_report import BugReport, URGENCY_LEVELS
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     'WorkshopGoals', 'WorkshopAction',
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
-    'InstallmentPlan', 'ClientMergeLog'
+    'InstallmentPlan', 'ClientMergeLog',
+    'BugReport', 'URGENCY_LEVELS'
 ]
 
