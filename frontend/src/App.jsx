@@ -57,6 +57,7 @@ import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
+import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
@@ -225,6 +226,16 @@ function App() {
                 <ProtectedRoute roles={['admin', 'director_comercial']}>
                   <MainLayout>
                     <WorkshopDashboardPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/postulaciones"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <PostulacionesDashboardPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

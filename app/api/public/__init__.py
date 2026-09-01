@@ -353,6 +353,7 @@ from . import finance
 from . import new_clients
 from . import workshop_lead
 from . import landing_session
+from . import job_applications
 
 
 @bp.route('/public/clients/search', methods=['GET'])

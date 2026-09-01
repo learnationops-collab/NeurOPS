@@ -16,7 +16,8 @@ import {
     CalendarDays,
     Link2Off,
     Layers,
-    DollarSign
+    DollarSign,
+    UserCheck
 } from 'lucide-react';
 
 /**
@@ -77,7 +78,8 @@ const useDockNavigation = () => {
             const adminPages = [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
-                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' }
+                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' },
+                { id: 'postulaciones', icon: UserCheck, label: 'Postulaciones', path: '/admin/postulaciones' }
                 // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
                 // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
             ];
