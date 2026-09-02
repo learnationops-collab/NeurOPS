@@ -11,6 +11,7 @@ const FILTROS = [
     { id: 'preseleccionadas', label: 'Preseleccionadas' },
     { id: 'decidir', label: 'Decidir' },
     { id: 'descartadas', label: 'Descartadas' },
+    { id: 'incompletas', label: 'Incompletas' },
 ];
 
 const VEREDICTO_BADGE = {
@@ -18,6 +19,7 @@ const VEREDICTO_BADGE = {
     decidir: { label: 'Decidir', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     descartado: { label: 'Descartado', cls: 'bg-slate-800 text-slate-400 border-slate-700' },
     sin_calificar: { label: 'Sin calificar', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    incompleta: { label: 'Incompleta', cls: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
 };
 
 const PostulacionesInbox = () => {
@@ -145,13 +147,16 @@ const PostulacionesInbox = () => {
                             <th className="px-6 py-4 text-center">Formación</th>
                             <th className="px-6 py-4 text-center">Inglés</th>
                             <th className="px-6 py-4 text-center">Cierre</th>
+                            <th className="px-6 py-4 text-center">Progreso</th>
                             <th className="px-6 py-4 text-center">Score</th>
                             <th className="px-6 py-4 text-center">Estado</th>
                         </tr>
                     </thead>
                     <tbody>
                         {!loading && postulaciones.map(p => {
-                            const badge = VEREDICTO_BADGE[p.veredicto] || VEREDICTO_BADGE.sin_calificar;
+                            const badge = p.completo
+                                ? (VEREDICTO_BADGE[p.veredicto] || VEREDICTO_BADGE.sin_calificar)
+                                : VEREDICTO_BADGE.incompleta;
                             return (
                                 <tr
                                     key={p.id}
@@ -164,7 +169,10 @@ const PostulacionesInbox = () => {
                                     <td className="px-6 py-4 text-center font-variant-tabular text-white/70">
                                         {p.cierre ? (p.cierre === 'nada' ? '—' : `${p.cierre} %`) : '—'}
                                     </td>
-                                    <td className="px-6 py-4 text-center text-lg font-black text-pink-400">{p.score}</td>
+                                    <td className="px-6 py-4 text-center font-variant-tabular text-white/70">
+                                        {p.respondidas}/{p.total_preguntas}
+                                    </td>
+                                    <td className="px-6 py-4 text-center text-lg font-black text-pink-400">{p.score ?? '—'}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${badge.cls}`}>
                                             {badge.label}
@@ -174,7 +182,7 @@ const PostulacionesInbox = () => {
                             );
                         })}
                         {!loading && postulaciones.length === 0 && (
-                            <tr><td colSpan={6} className="px-6 py-10 text-center text-white/40">No hay postulaciones en este filtro.</td></tr>
+                            <tr><td colSpan={7} className="px-6 py-10 text-center text-white/40">No hay postulaciones en este filtro.</td></tr>
                         )}
                     </tbody>
                 </table>

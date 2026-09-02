@@ -46,16 +46,36 @@ def _cierre(valor):
         return None
 
 
+def _set_si_presente(app_row, campo, valor):
+    """Asigna solo si el valor viene con algo. El guardado progresivo manda el
+    formulario acumulado en CADA pregunta, y esas peticiones pueden llegarle
+    al servidor desordenadas (red móvil, reintentos); si una más vieja (con
+    menos campos contestados todavía) llega después de una más nueva, no debe
+    borrar lo que esa más nueva ya había guardado. Por eso nunca se pisa un
+    campo con "vacío" — solo se actualiza cuando hay un valor real."""
+    if valor is None:
+        return
+    if isinstance(valor, list) and len(valor) == 0:
+        return
+    setattr(app_row, campo, valor)
+
+
 @bp.route('/public/job-applications', methods=['POST'])
 def crear_job_application():
+    """Alta/actualización de una postulación.
+
+    Guardado progresivo: la landing llama esto en CADA pregunta respondida
+    (no solo al final), así que la mayoría de los POST llegan con el
+    formulario a medio completar. Solo el nombre es obligatorio — es la
+    primera pregunta, así que ya está contestado en el primer autosave.
+    `completo` (bool) lo manda la landing cuando el candidato llegó a la
+    pantalla final; antes de eso la fila queda con completo=False.
+    """
     data = request.get_json(silent=True) or {}
 
     nombre = _texto(data.get('nombre'), 120)
-    email = _texto(data.get('email'), 160)
     if not nombre:
         return jsonify({"status": "error", "message": "El nombre es obligatorio"}), 400
-    if not email:
-        return jsonify({"status": "error", "message": "El correo es obligatorio"}), 400
 
     clave = _texto(data.get('dedupe_key'), 64)
 
@@ -65,32 +85,35 @@ def crear_job_application():
             app_row = JobApplication.query.filter(JobApplication.dedupe_key == clave).first()
 
         if app_row is None:
-            app_row = JobApplication(dedupe_key=clave)
+            app_row = JobApplication(dedupe_key=clave, email='')
             db.session.add(app_row)
 
         app_row.nombre = nombre
-        app_row.email = email
-        app_row.disclaimer = _texto(data.get('disclaimer'), 10)
-        app_row.whatsapp = _texto(data.get('whatsapp'), 40)
-        app_row.edad = _texto(data.get('edad'), 40)
-        app_row.pais = _texto(data.get('pais'), 60)
-        app_row.instagram = _texto(data.get('instagram'), 80)
-        app_row.dedicacion = _texto(data.get('dedicacion'), MAX_LARGO)
-        app_row.conocimiento = _texto(data.get('conocimiento'), 60)
-        app_row.formacion = _texto(data.get('formacion'), MAX_LARGO)
-        app_row.cierre = _cierre(data.get('cierre'))
-        app_row.ingles = _texto(data.get('ingles'), 20)
-        app_row.herramientas = _lista(data.get('herramientas'))
-        app_row.reporte = _texto(data.get('reporte'), 160)
-        app_row.aportes = _lista(data.get('aportes'))
-        app_row.habilidades = _texto(data.get('habilidades'), MAX_LARGO)
-        app_row.obstaculo = _texto(data.get('obstaculo'), MAX_LARGO)
-        app_row.objetivos = _texto(data.get('objetivos'), MAX_LARGO)
-        app_row.porque = _lista(data.get('porque'))
-        app_row.fuente = _texto(data.get('fuente'), 60)
-        app_row.bolsa = _texto(data.get('bolsa'), 120)
-        app_row.video = _texto(data.get('video'), 500)
-        app_row.llamada = _texto(data.get('llamada'), 500)
+        _set_si_presente(app_row, 'email', _texto(data.get('email'), 160))
+        _set_si_presente(app_row, 'disclaimer', _texto(data.get('disclaimer'), 10))
+        _set_si_presente(app_row, 'whatsapp', _texto(data.get('whatsapp'), 40))
+        _set_si_presente(app_row, 'edad', _texto(data.get('edad'), 40))
+        _set_si_presente(app_row, 'pais', _texto(data.get('pais'), 60))
+        _set_si_presente(app_row, 'instagram', _texto(data.get('instagram'), 80))
+        _set_si_presente(app_row, 'dedicacion', _texto(data.get('dedicacion'), MAX_LARGO))
+        _set_si_presente(app_row, 'conocimiento', _texto(data.get('conocimiento'), 60))
+        _set_si_presente(app_row, 'formacion', _texto(data.get('formacion'), MAX_LARGO))
+        _set_si_presente(app_row, 'cierre', _cierre(data.get('cierre')))
+        _set_si_presente(app_row, 'ingles', _texto(data.get('ingles'), 20))
+        _set_si_presente(app_row, 'herramientas', _lista(data.get('herramientas')))
+        _set_si_presente(app_row, 'reporte', _texto(data.get('reporte'), 160))
+        _set_si_presente(app_row, 'aportes', _lista(data.get('aportes')))
+        _set_si_presente(app_row, 'habilidades', _texto(data.get('habilidades'), MAX_LARGO))
+        _set_si_presente(app_row, 'obstaculo', _texto(data.get('obstaculo'), MAX_LARGO))
+        _set_si_presente(app_row, 'objetivos', _texto(data.get('objetivos'), MAX_LARGO))
+        _set_si_presente(app_row, 'porque', _lista(data.get('porque')))
+        _set_si_presente(app_row, 'fuente', _texto(data.get('fuente'), 60))
+        _set_si_presente(app_row, 'bolsa', _texto(data.get('bolsa'), 120))
+        _set_si_presente(app_row, 'video', _texto(data.get('video'), 500))
+        _set_si_presente(app_row, 'llamada', _texto(data.get('llamada'), 500))
+        # Solo se prende: mismo motivo que arriba, un request viejo (completo=False)
+        # no debe apagar una postulación que otro más nuevo ya marcó terminada.
+        app_row.completo = app_row.completo or bool(data.get('completo'))
 
         db.session.commit()
 
