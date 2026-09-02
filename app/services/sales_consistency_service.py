@@ -1,3 +1,7 @@
+import re
+import unicodedata
+from difflib import SequenceMatcher
+
 from sqlalchemy import or_, func
 
 
@@ -25,6 +29,48 @@ class SalesConsistencyService:
     def _normalize_tipo(tipo_pago_simple):
         from app.services.sheets_service import SheetsService
         return SheetsService._extract_tipo_keyword(tipo_pago_simple)
+
+    @staticmethod
+    def _normalize_name(name):
+        if not name:
+            return ''
+        name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+        return re.sub(r'\s+', ' ', name).strip().lower()
+
+    @staticmethod
+    def _names_corroborate(name_a, name_b):
+        """True si dos nombres son lo bastante parecidos como para ser la misma persona.
+        Usada para aceptar un cruce de un solo campo (email/instagram/telefono) entre dos
+        client_id distintos — ver caso real Kervin Calderón/Emilia Collantes/Juan Camilo
+        Sanchez Ramirez (docs/bitacora, 2 de Septiembre de 2026): un email compartido entre
+        tres personas sin ningún parecido de nombre no debería fusionar su historial."""
+        a = SalesConsistencyService._normalize_name(name_a)
+        b = SalesConsistencyService._normalize_name(name_b)
+        if not a or not b:
+            return False
+        tokens_a = {t for t in a.split(' ') if len(t) >= 3}
+        tokens_b = {t for t in b.split(' ') if len(t) >= 3}
+        if tokens_a & tokens_b:
+            return True
+        return SequenceMatcher(None, a, b).ratio() >= 0.72
+
+    @staticmethod
+    def _signal_match_count(client, sale):
+        """Cuenta cuántas de las 3 señales (email/instagram/teléfono) coinciden entre el
+        Client y una FinancialSale, normalizadas igual que el filtro SQL que las trajo."""
+        count = 0
+        if client.email and '@' in client.email and sale.mail_cliente:
+            if sale.mail_cliente.strip().lower() == client.email.strip().lower():
+                count += 1
+        if client.instagram and client.instagram.lower() not in ('n/a', '') and sale.instagram:
+            ig_clean = client.instagram.strip().replace('@', '').lower()
+            sale_ig = sale.instagram.strip().replace('@', '').lower()
+            if sale_ig == ig_clean:
+                count += 1
+        if client.phone and len(client.phone.strip()) >= 8 and sale.telefono:
+            if client.phone.strip()[-8:] in sale.telefono:
+                count += 1
+        return count
 
     @staticmethod
     def get_client_payment_state(client_id, program_code):
@@ -58,12 +104,37 @@ class SalesConsistencyService:
             if client.phone and len(client.phone.strip()) >= 8:
                 sale_filters.append(FinancialSale.telefono.like(f"%{client.phone.strip()[-8:]}%"))
 
+        # El filtro SQL de arriba es deliberadamente amplio (basta UNA señal para traer la fila
+        # como candidata); la decisión de si de verdad pertenece a este cliente se hace acá en
+        # Python con un criterio más estricto — requerir al menos 2 de las 3 señales (email/
+        # instagram/teléfono), o si solo coincide una, corroborarla contra el nombre. Se detectó
+        # en producción (Kervin Calderón, client_id=8523, 2 de Septiembre de 2026) que un solo
+        # email compartido por una venta huérfana de OTRO cliente (Emilia Collantes, cuyos
+        # propios campos denormalizados eran de un tercero, Juan Camilo Sanchez Ramirez) bastaba
+        # para que el sistema creyera que Kervin ya había pagado el programa completo y le
+        # bloqueara un Parcial real. Un match directo por client_id sigue siendo suficiente por
+        # sí solo (es la señal más confiable, viene de un FK, no de texto libre importado) —
+        # esto no debilita la detección de duplicados reales sin client_id que motivó el cruce
+        # original (casos documentados: Jonathan Aparicio, Marcos Melo), que en general comparten
+        # más de una señal o un nombre reconocible entre sí.
         all_sales = []
         if sale_filters:
-            all_sales = FinancialSale.query.filter(
+            candidates = FinancialSale.query.filter(
                 or_(*sale_filters),
                 or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
             ).order_by(FinancialSale.date.asc()).all()
+
+            for s in candidates:
+                if client_id and s.client_id == client_id:
+                    all_sales.append(s)
+                    continue
+                if not client:
+                    continue
+                matches = SalesConsistencyService._signal_match_count(client, s)
+                if matches >= 2:
+                    all_sales.append(s)
+                elif matches == 1 and SalesConsistencyService._names_corroborate(client.full_name, s.nombre_cliente):
+                    all_sales.append(s)
 
         # Datos históricos tienen formatos inconsistentes (acentos, "Con Seña", sin prefijo de
         # programa). parse_tipo_pago normaliza eso; una venta sin prefijo de programa (legado)
