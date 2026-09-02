@@ -139,7 +139,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed bottom-24 right-8 z-[70] w-[28rem] glass-effect p-8 rounded-[2.5rem] shadow-2xl border-white/10"
+                        className="fixed bottom-24 right-8 z-[70] w-[28rem] glass-panel p-8 rounded-[2.5rem] shadow-2xl border-white/10"
                     >
                         <div className="flex justify-between items-start mb-8">
                             <div>

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { triggerBugReport } from "../utils/bugReportBus";
 
 // Sin timeout, una petición colgada (proxy, servidor saturado, red) dejaba cualquier acción del
 // mazo (ej. "Pagó" → registrar cobro) con el spinner girando para siempre, sin error ni forma de
@@ -89,6 +90,19 @@ api.interceptors.response.use(
                 error.config.headers['X-CSRFToken'] = freshToken;
                 return api.request(error.config);
             }
+        }
+
+        // Fallo de servidor o de red en una petición que modifica estado: ofrece el
+        // botón "Reportar error" reactivo (widget de feedback) con el contexto técnico
+        // ya armado, sin tocar los cientos de toast.error(...) existentes por página.
+        const isServerOrNetworkError = !error.response || error.response.status >= 500;
+        if (isServerOrNetworkError && !error.config?.skipBugReport) {
+            triggerBugReport({
+                message: error.response?.data?.message || error.message,
+                status: error.response?.status || null,
+                url: error.config?.url,
+                method: error.config?.method,
+            });
         }
 
         return Promise.reject(error);

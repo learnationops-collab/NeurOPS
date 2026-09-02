@@ -11,7 +11,8 @@ import {
     UserCheck,
     History,
     ClipboardList,
-    ShieldAlert
+    ShieldAlert,
+    Bug
 } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
@@ -21,6 +22,7 @@ import CloserAliasesPanel from '../../../components/operations/CloserAliasesPane
 import BitacoraPanel from '../../../components/operations/BitacoraPanel';
 import LeadsAuditTogglePanel from '../../../components/operations/LeadsAuditTogglePanel';
 import ReportBacklogTogglePanel from '../../../components/operations/ReportBacklogTogglePanel';
+import BugReportsPanel from '../../../components/operations/BugReportsPanel';
 import Card from '../../../components/ui/Card';
 
 const OperationsSettingsPage = () => {
@@ -31,6 +33,7 @@ const OperationsSettingsPage = () => {
         { id: 'closer_aliases', label: 'Alias de Closers', icon: UserCheck },
         { id: 'leads_audit', label: 'Auditoría de Leads', icon: ClipboardList },
         { id: 'report_backlog', label: 'Bloqueo del Reporte', icon: ShieldAlert },
+        { id: 'bug_reports', label: 'Reportes de Bugs', icon: Bug },
         { id: 'bitacora', label: 'Bitácora de Cambios', icon: History },
         { id: 'marketing', label: 'Marketing UTMs', icon: Share2 },
         { id: 'database', label: 'Base de Datos', icon: Database },
@@ -87,6 +90,12 @@ const OperationsSettingsPage = () => {
                     {activeSection === 'report_backlog' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <ReportBacklogTogglePanel />
+                        </div>
+                    )}
+
+                    {activeSection === 'bug_reports' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <BugReportsPanel />
                         </div>
                     )}
 

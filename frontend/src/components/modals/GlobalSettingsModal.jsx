@@ -31,7 +31,7 @@ const GlobalSettingsModal = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.9, y: 40 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                        className="fixed inset-4 md:inset-10 z-[101] glass-effect rounded-[3rem] shadow-2xl border border-white/10 flex flex-col overflow-hidden"
+                        className="fixed inset-4 md:inset-10 z-[101] glass-panel rounded-[3rem] shadow-2xl border border-white/10 flex flex-col overflow-hidden"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/5 backdrop-blur-xl">

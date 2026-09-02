@@ -243,7 +243,7 @@ const TeamManagementPage = () => {
 
                 <div className="lg:col-span-3">
                     {loading ? (
-                        <div className="h-96 flex flex-col items-center justify-center gap-4 glass-effect rounded-[2.5rem] border border-base">
+                        <div className="h-96 flex flex-col items-center justify-center gap-4 glass-panel rounded-[2.5rem] border border-base">
                             <Loader2 size={40} className="text-primary animate-spin" />
                             <p className="text-xs font-black text-muted uppercase tracking-widest">Sincronizando equipo...</p>
                         </div>

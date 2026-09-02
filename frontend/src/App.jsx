@@ -45,6 +45,7 @@ import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
+import BugReportWidget from './components/feedback/BugReportWidget';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
@@ -56,6 +57,7 @@ import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
+import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
@@ -94,6 +96,7 @@ function App() {
         <Router>
           <PixelTracker />
           <Toaster position="top-right" />
+          <BugReportWidget />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
@@ -223,6 +226,16 @@ function App() {
                 <ProtectedRoute roles={['admin', 'director_comercial']}>
                   <MainLayout>
                     <WorkshopDashboardPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/postulaciones"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <PostulacionesDashboardPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
