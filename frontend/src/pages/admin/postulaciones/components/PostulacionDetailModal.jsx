@@ -69,7 +69,12 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                             Formulario completo · todas las respuestas
                         </p>
                         <p className="truncate text-2xl font-bold tracking-tight text-white">{data?.nombre || '...'}</p>
-                        <p className="text-[13px] text-white/55">{data?.email}</p>
+                        <p className="text-[13px] text-white/55">{data?.email || 'Sin correo todavía'}</p>
+                        {data && !data.completo && (
+                            <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-bold text-orange-400">
+                                Quedó a mitad de camino · respondió {data.respondidas} de {data.total_preguntas}
+                            </p>
+                        )}
                     </div>
                     <div className="flex flex-none items-center gap-5">
                         <div className="flex flex-col items-end gap-0.5">

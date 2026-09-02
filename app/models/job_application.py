@@ -17,6 +17,17 @@ CLARITY_CRITERIA = [
 
 VOTE_VALUES = ('pre', 'des')
 
+# Las 23 columnas que representan una respuesta del formulario (en el mismo
+# orden que las preguntas). Sirve para calcular cuántas contestó alguien que
+# no terminó, sin depender de qué preguntas le tocaron ver (ej. "bolsa" es
+# condicional) — es una cuenta aproximada, no exacta pregunta por pregunta.
+CAMPOS_FORMULARIO = [
+    'nombre', 'email', 'disclaimer', 'whatsapp', 'edad', 'pais', 'instagram',
+    'dedicacion', 'conocimiento', 'formacion', 'cierre', 'ingles', 'herramientas',
+    'reporte', 'aportes', 'habilidades', 'obstaculo', 'objetivos', 'porque',
+    'fuente', 'bolsa', 'video', 'llamada',
+]
+
 
 class JobApplication(db.Model):
     """Postulación al puesto de Closer de ventas, recibida desde el formulario
@@ -54,8 +65,18 @@ class JobApplication(db.Model):
     video = db.Column(db.String(500), nullable=True)
     llamada = db.Column(db.String(500), nullable=True)
 
+    # False mientras el candidato sigue respondiendo (guardado progresivo, una
+    # fila por dedupe_key que se actualiza en cada pregunta) — así se ve en
+    # qué paso quedó alguien que no terminó, en vez de perder el intento.
+    completo = db.Column(db.Boolean, nullable=False, default=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def respondidas(self):
+        def vacio(v):
+            return v is None or v == '' or v == []
+        return sum(1 for campo in CAMPOS_FORMULARIO if not vacio(getattr(self, campo)))
 
     def veredicto(self):
         votos = {v.reviewer_id: v.vote for v in self.votes}
@@ -83,6 +104,9 @@ class JobApplication(db.Model):
             "score": clarity.score_de(self, weights) if weights is not None else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "completo": self.completo,
+            "respondidas": self.respondidas(),
+            "total_preguntas": len(CAMPOS_FORMULARIO),
             # Se muestran siempre: la tabla del inbox (Formación/Inglés/Cierre) los
             # necesita aunque include_respuestas=False no traiga el resto del formulario.
             "conocimiento": self.conocimiento,

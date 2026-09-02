@@ -17,6 +17,9 @@ from app.services import clarity
 bp = Blueprint('job_applications', __name__)
 
 FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'decidir', 'descartadas')
+# 'incompletas' no entra en FILTROS_VALIDOS: no es un veredicto de revisión
+# (no tiene sentido votar algo a medio completar), es una vista aparte para
+# ver dónde quedó alguien que no terminó.
 
 
 def check_admin():
@@ -57,15 +60,23 @@ def listar_job_applications():
     filtro = request.args.get('filtro', 'mis_pendientes')
     weights = _weights_map()
 
-    todas = JobApplication.query.order_by(JobApplication.created_at.desc()).all()
-    filtradas = [a for a in todas if _aplica_filtro(a, filtro)]
-    filtradas.sort(key=lambda a: clarity.score_de(a, weights), reverse=True)
+    todas = JobApplication.query.filter_by(completo=True).order_by(JobApplication.created_at.desc()).all()
+    incompletas = JobApplication.query.filter_by(completo=False).order_by(JobApplication.updated_at.desc()).all()
+
+    if filtro == 'incompletas':
+        filtradas = incompletas
+        peso_para_score = None
+    else:
+        filtradas = [a for a in todas if _aplica_filtro(a, filtro)]
+        filtradas.sort(key=lambda a: clarity.score_de(a, weights), reverse=True)
+        peso_para_score = weights
 
     conteos = {f: len([a for a in todas if _aplica_filtro(a, f)]) for f in FILTROS_VALIDOS}
     conteos['con_material'] = sum(1 for a in todas if a.video and a.llamada)
+    conteos['incompletas'] = len(incompletas)
 
     return jsonify({
-        "postulaciones": [a.to_dict(weights=weights, include_respuestas=False) for a in filtradas],
+        "postulaciones": [a.to_dict(weights=peso_para_score, include_respuestas=False) for a in filtradas],
         "conteos": conteos,
         "total": len(todas),
     }), 200
@@ -183,7 +194,8 @@ def stats_job_applications():
         return forbidden
 
     weights = _weights_map()
-    todas = JobApplication.query.all()
+    todas_las_filas = JobApplication.query.all()
+    todas = [a for a in todas_las_filas if a.completo]
     scores = [clarity.score_de(a, weights) for a in todas]
 
     tramos = [(0, 40), (40, 60), (60, 75), (75, 85), (85, 101)]
@@ -199,7 +211,10 @@ def stats_job_applications():
 
     con_material = sum(1 for a in todas if a.video and a.llamada)
     score_85 = sum(1 for s in scores if s >= 85)
+    pasaron_disclaimer = sum(1 for a in todas_las_filas if a.disclaimer)
     embudo = [
+        {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
+        {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
         {"etapa": "Completaron", "cantidad": len(todas)},
         {"etapa": "Con video y llamada", "cantidad": con_material},
         {"etapa": "Score 85+", "cantidad": score_85},
