@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bot, Send, Loader2, CheckCircle2, AlertOctagon } from 'lucide-react';
+import { X, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-const URGENCY_OPTIONS = [
-    { value: 'muy_urgente', label: 'Muy urgente' },
-    { value: 'urgente', label: 'Urgente' },
-    { value: 'neutro', label: 'Neutro' },
-    { value: 'sin_urgencia', label: 'Sin urgencia' },
-];
+// Lado máximo (px) al que se reduce cualquier captura pegada a mano antes de mandarla: el
+// portapapeles puede traer una imagen a resolución nativa (una captura de Windows en 4K pesa
+// varios MB), y eso viaja como texto base64 en el JSON del reporte.
+const MAX_PASTED_DIM = 1400;
 
 // Captura una screenshot liviana del viewport actual (excluyendo el propio drawer del
 // chat, que ya está oculto en el momento de la captura porque se llama justo antes de
@@ -31,6 +29,28 @@ const captureScreenshot = async () => {
     }
 };
 
+// Redimensiona y recomprime un blob de imagen arbitrario (lo que venga en el portapapeles) a
+// un data URL liviano, con el mismo criterio de peso que captureScreenshot de arriba.
+const blobToCompressedDataUrl = (blob) => new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+        const scale = Math.min(1, MAX_PASTED_DIM / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(objectUrl);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = (e) => {
+        URL.revokeObjectURL(objectUrl);
+        reject(e);
+    };
+    img.src = objectUrl;
+});
+
 // Si el reporte no viene de un error detectado automáticamente, no hay contexto técnico
 // que explique "cuál es el problema" — por eso se pregunta explícitamente antes de pedir
 // qué intentaba hacer el usuario. Si sí viene de un error, esa pregunta ya está respondida
@@ -41,13 +61,16 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
     const [step, setStep] = useState(isReactive ? 'description' : 'problem');
     const [problem, setProblem] = useState('');
     const [description, setDescription] = useState('');
-    const [urgency, setUrgency] = useState(null);
+    const [extraScreenshots, setExtraScreenshots] = useState([]);
+    const [loomLink, setLoomLink] = useState('');
+    const [pasting, setPasting] = useState(false);
 
     const reset = () => {
         setStep(isReactive ? 'description' : 'problem');
         setProblem('');
         setDescription('');
-        setUrgency(null);
+        setExtraScreenshots([]);
+        setLoomLink('');
     };
 
     const handleClose = () => {
@@ -55,8 +78,78 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
         setTimeout(reset, 300);
     };
 
-    const handleSubmit = async (selectedUrgency) => {
-        setUrgency(selectedUrgency);
+    const addPastedImage = async (blob) => {
+        setPasting(true);
+        try {
+            const dataUrl = await blobToCompressedDataUrl(blob);
+            setExtraScreenshots((prev) => [...prev, dataUrl]);
+            toast.success('Captura agregada');
+        } catch (e) {
+            console.error('No se pudo procesar la imagen pegada:', e);
+            toast.error('No se pudo agregar la captura.');
+        } finally {
+            setPasting(false);
+        }
+    };
+
+    // Ctrl+V pega la imagen que esté en el portapapeles (además de la captura automática que
+    // ya se toma sola al enviar) — pedido del usuario para poder adjuntar algo que no sea la
+    // pantalla actual, por ejemplo un error que pasó en otra ventana. Usa el evento nativo
+    // "paste" en vez de navigator.clipboard.read(): es el mismo atajo que ya usa el sistema
+    // operativo para pegar, así que no hace falta pedir permiso de portapapeles al navegador.
+    // Si lo que se pegó es texto (p.ej. dentro del textarea de descripción o el input de
+    // Loom), no hay item de imagen y se deja que el pegado normal siga su curso.
+    useEffect(() => {
+        if (!isOpen || step === 'submitting' || step === 'done') return;
+        const handlePaste = (e) => {
+            const items = Array.from(e.clipboardData?.items || []);
+            const imageItem = items.find((it) => it.type.startsWith('image/'));
+            if (!imageItem) return;
+            e.preventDefault();
+            const blob = imageItem.getAsFile();
+            if (blob) addPastedImage(blob);
+        };
+        window.addEventListener('paste', handlePaste);
+        return () => window.removeEventListener('paste', handlePaste);
+    }, [isOpen, step]);
+
+    // Respaldo para el botón "Pegar captura": no todos los navegadores permiten leer el
+    // portapapeles a demanda (fuera de un evento paste real) sin este permiso explícito.
+    const pasteFromClipboardButton = async () => {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+            toast.error('Tu navegador no permite leer el portapapeles con este botón. Probá Ctrl+V.');
+            return;
+        }
+        setPasting(true);
+        try {
+            const items = await navigator.clipboard.read();
+            let added = 0;
+            for (const item of items) {
+                const imageType = item.types.find((t) => t.startsWith('image/'));
+                if (!imageType) continue;
+                const blob = await item.getType(imageType);
+                const dataUrl = await blobToCompressedDataUrl(blob);
+                setExtraScreenshots((prev) => [...prev, dataUrl]);
+                added += 1;
+            }
+            if (added > 0) {
+                toast.success(added === 1 ? 'Captura agregada' : `${added} capturas agregadas`);
+            } else {
+                toast.error('No encontré una imagen en el portapapeles');
+            }
+        } catch (e) {
+            console.error('No se pudo leer el portapapeles:', e);
+            toast.error('No se pudo leer el portapapeles. Probá Ctrl+V.');
+        } finally {
+            setPasting(false);
+        }
+    };
+
+    const removeExtraScreenshot = (index) => {
+        setExtraScreenshots((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = async () => {
         setStep('submitting');
 
         const screenshot = await captureScreenshot();
@@ -65,17 +158,18 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
             await api.post('/bug-reports', {
                 problem: isReactive ? null : problem,
                 description,
-                urgency: selectedUrgency,
                 route: window.location.pathname,
                 user_agent: navigator.userAgent,
                 technical_context: technicalContext ? JSON.stringify(technicalContext) : null,
                 screenshot,
+                extra_screenshots: extraScreenshots,
+                loom_link: loomLink.trim() || null,
             }, { skipBugReport: true });
             setStep('done');
         } catch (err) {
             console.error('Error al enviar el reporte de bug:', err);
             toast.error('No se pudo enviar el reporte. Intenta de nuevo.');
-            setStep('urgency');
+            setStep('attachments');
         }
     };
 
@@ -145,13 +239,13 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                             </div>
                         )}
 
-                        {(step === 'description' || step === 'urgency' || step === 'submitting' || step === 'done') && !isReactive && (
+                        {(step === 'description' || step === 'attachments' || step === 'submitting' || step === 'done') && !isReactive && (
                             <div className="bg-primary/10 text-primary rounded-2xl rounded-tr-sm p-3 text-sm max-w-[85%] ml-auto whitespace-pre-wrap break-words">
                                 {problem}
                             </div>
                         )}
 
-                        {(step === 'description' || step === 'urgency' || step === 'submitting' || step === 'done') && (
+                        {(step === 'description' || step === 'attachments' || step === 'submitting' || step === 'done') && (
                             <div className="flex items-start gap-2">
                                 <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
                                     <Bot size={14} />
@@ -173,7 +267,7 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                                 />
                                 <button
                                     disabled={!description.trim()}
-                                    onClick={() => setStep('urgency')}
+                                    onClick={() => setStep('attachments')}
                                     className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-2xl py-3 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
                                 >
                                     Continuar <Send size={14} />
@@ -181,7 +275,7 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                             </div>
                         )}
 
-                        {(step === 'urgency' || step === 'submitting' || step === 'done') && (
+                        {(step === 'attachments' || step === 'submitting' || step === 'done') && (
                             <>
                                 <div className="bg-primary/10 text-primary rounded-2xl rounded-tr-sm p-3 text-sm max-w-[85%] ml-auto whitespace-pre-wrap break-words">
                                     {description}
@@ -192,23 +286,59 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                                         <Bot size={14} />
                                     </div>
                                     <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                        ¿Qué tan urgente es lo que necesitas hacer?
+                                        Ya tomé una captura de esta pantalla automáticamente. ¿Querés agregar algo más? Todo esto es opcional.
                                     </div>
                                 </div>
                             </>
                         )}
 
-                        {step === 'urgency' && (
-                            <div className="grid grid-cols-2 gap-2 pl-9">
-                                {URGENCY_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.value}
-                                        onClick={() => handleSubmit(opt.value)}
-                                        className="bg-surface border border-base hover:border-primary hover:text-primary rounded-2xl py-3 text-xs font-bold uppercase tracking-wide transition-all active:scale-95"
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
+                        {step === 'attachments' && (
+                            <div className="space-y-3 pl-9">
+                                <button
+                                    type="button"
+                                    disabled={pasting}
+                                    onClick={pasteFromClipboardButton}
+                                    className="w-full flex items-center justify-center gap-2 bg-surface border border-dashed border-base hover:border-primary hover:text-primary rounded-2xl py-3 text-xs font-bold uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {pasting ? <Loader2 size={14} className="animate-spin" /> : <Clipboard size={14} />}
+                                    Pegar captura (Ctrl+V)
+                                </button>
+
+                                {extraScreenshots.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {extraScreenshots.map((src, i) => (
+                                            <div key={i} className="relative group">
+                                                <img src={src} alt={`Captura ${i + 1}`} className="w-full h-16 object-cover rounded-xl border border-base" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeExtraScreenshot(i)}
+                                                    className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    title="Quitar captura"
+                                                >
+                                                    <XCircle size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="relative">
+                                    <Video size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                                    <input
+                                        type="url"
+                                        value={loomLink}
+                                        onChange={(e) => setLoomLink(e.target.value)}
+                                        placeholder="Link de Loom (opcional)"
+                                        className="w-full bg-surface border border-base rounded-2xl pl-9 pr-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleSubmit}
+                                    className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-2xl py-3 active:scale-95 transition-all"
+                                >
+                                    Enviar reporte <Send size={14} />
+                                </button>
                             </div>
                         )}
 

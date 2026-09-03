@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES
+from app.models import BugReport, BugReportMessage, STATUS_VALUES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,13 +34,14 @@ def create_bug_report():
     data = request.get_json() or {}
     description = (data.get('description') or '').strip()
     problem = (data.get('problem') or '').strip()
-    urgency = (data.get('urgency') or '').strip()
     technical_context = data.get('technical_context')
+    loom_link = (data.get('loom_link') or '').strip() or None
+    # Capturas extra pegadas a mano (Ctrl+B): opcionales, puede venir vacía o ausente. Se filtran
+    # strings vacíos/no-string por si el frontend manda basura.
+    extra_screenshots = [s for s in (data.get('extra_screenshots') or []) if isinstance(s, str) and s]
 
     if not description:
         return jsonify({"message": "La descripción es obligatoria"}), 400
-    if urgency not in URGENCY_LEVELS:
-        return jsonify({"message": "Urgencia inválida"}), 400
     if not technical_context and not problem:
         return jsonify({"message": "Cuéntanos cuál es el problema"}), 400
 
@@ -50,11 +51,12 @@ def create_bug_report():
             user_role=current_user.role,
             problem=problem or None,
             description=description,
-            urgency=urgency,
             route=data.get('route'),
             user_agent=data.get('user_agent'),
             technical_context=technical_context,
             screenshot=data.get('screenshot'),
+            extra_screenshots=extra_screenshots or None,
+            loom_link=loom_link,
         )
         db.session.add(report)
         db.session.commit()

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle } from 'lucide-react';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
@@ -20,25 +20,37 @@ const URGENCY_LABELS = {
 
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
+// Muestra la captura automática (si hay) seguida de las capturas extra que el usuario haya
+// pegado a mano (Ctrl+B) — todas en una sola galería vertical, sin distinguir cuál es cuál,
+// porque para quien revisa el reporte todas cumplen la misma función.
 const ScreenshotModal = ({ reportId, onClose }) => {
-    const [src, setSrc] = useState(null);
+    const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         api.get(`/bug-reports/${reportId}`, { skipBugReport: true })
-            .then(res => setSrc(res.data.screenshot))
+            .then(res => {
+                const all = [res.data.screenshot, ...(res.data.extra_screenshots || [])].filter(Boolean);
+                setImages(all);
+            })
             .catch(() => toast.error('No se pudo cargar la captura'))
             .finally(() => setLoading(false));
     }, [reportId]);
 
     return (
-        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={onClose}>
-            <button className="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 overflow-y-auto" onClick={onClose}>
+            <button className="fixed top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
                 <X size={20} />
             </button>
             {loading && <Loader2 className="animate-spin text-white" size={32} />}
-            {!loading && src && <img src={src} alt="Captura del reporte" className="max-w-full max-h-full rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />}
-            {!loading && !src && <p className="text-white text-sm">Sin captura disponible.</p>}
+            {!loading && images.length > 0 && (
+                <div className="flex flex-col gap-4 max-w-full" onClick={(e) => e.stopPropagation()}>
+                    {images.map((src, i) => (
+                        <img key={i} src={src} alt={`Captura ${i + 1} del reporte`} className="max-w-full rounded-2xl shadow-2xl" />
+                    ))}
+                </div>
+            )}
+            {!loading && images.length === 0 && <p className="text-white text-sm">Sin capturas disponibles.</p>}
         </div>
     );
 };
@@ -59,9 +71,11 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                     {report.unread_for_manager && (
                         <span className="w-2 h-2 rounded-full bg-rose-500" title="El usuario respondió" />
                     )}
-                    <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                        {URGENCY_LABELS[report.urgency] || report.urgency}
-                    </span>
+                    {report.urgency && (
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            {URGENCY_LABELS[report.urgency] || report.urgency}
+                        </span>
+                    )}
                     <select
                         value={report.status}
                         onChange={(e) => onStatusChange(report.id, e.target.value)}
@@ -90,14 +104,27 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                 </div>
             )}
 
-            {report.has_screenshot && (
-                <button
-                    onClick={() => setShowScreenshot(true)}
-                    className="flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300"
-                >
-                    <ImageIcon size={14} /> Ver captura de pantalla
-                </button>
-            )}
+            <div className="flex flex-wrap items-center gap-4">
+                {(report.has_screenshot || report.extra_screenshots_count > 0) && (
+                    <button
+                        onClick={() => setShowScreenshot(true)}
+                        className="flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300"
+                    >
+                        <ImageIcon size={14} />
+                        Ver captura{(report.extra_screenshots_count > 0) ? `s (${(report.has_screenshot ? 1 : 0) + report.extra_screenshots_count})` : ' de pantalla'}
+                    </button>
+                )}
+                {report.loom_link && (
+                    <a
+                        href={report.loom_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs font-bold text-violet-400 hover:text-violet-300"
+                    >
+                        <Video size={14} /> Ver Loom
+                    </a>
+                )}
+            </div>
             {showScreenshot && <ScreenshotModal reportId={report.id} onClose={() => setShowScreenshot(false)} />}
 
             <div className="pt-2 border-t border-white/5">

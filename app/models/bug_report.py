@@ -12,11 +12,18 @@ class BugReport(db.Model):
     user_role = db.Column(db.String(20), nullable=True)
     problem = db.Column(db.Text, nullable=True)
     description = db.Column(db.Text, nullable=False)
-    urgency = db.Column(db.String(20), nullable=False)
+    # Ya no se pide en el flujo del chat (se sacaron los botones de urgencia); queda nullable
+    # para no romper reportes históricos que sí la tienen.
+    urgency = db.Column(db.String(20), nullable=True)
     route = db.Column(db.String(255), nullable=True)
     user_agent = db.Column(db.String(500), nullable=True)
     technical_context = db.Column(db.Text, nullable=True)
     screenshot = db.Column(db.Text, nullable=True)
+    # Capturas adicionales pegadas a mano (Ctrl+B) además de la automática de arriba. Lista de
+    # data URLs, opcional y puede tener varias.
+    extra_screenshots = db.Column(db.JSON, nullable=True)
+    # Link de Loom opcional para quien prefiere grabar el problema en vez de describirlo.
+    loom_link = db.Column(db.String(500), nullable=True)
     status = db.Column(db.String(20), default='open', nullable=False)
     # Marcas de "ultima vez que cada lado vio la conversacion" -- reemplazan al viejo
     # admin_response de una sola respuesta. Un mensaje cuenta como no leido para el
@@ -62,9 +69,12 @@ class BugReport(db.Model):
             "unread_for_manager": unread_for_manager,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "has_screenshot": bool(self.screenshot),
+            "extra_screenshots_count": len(self.extra_screenshots or []),
+            "loom_link": self.loom_link,
         }
         if include_screenshot:
             data["screenshot"] = self.screenshot
+            data["extra_screenshots"] = self.extra_screenshots or []
         return data
 
 
