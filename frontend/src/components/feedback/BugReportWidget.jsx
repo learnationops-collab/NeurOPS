@@ -109,10 +109,17 @@ const BugReportWidget = () => {
             </AnimatePresence>
 
             {view === 'closed' && (
-                <div data-bug-report-ignore="true" className="fixed bottom-8 right-24 z-[190] flex flex-col items-center gap-2">
+                // "group" cubre el bug y el historial (incluido el espacio entre ambos): el
+                // historial aparece al entrar el puntero a esta zona, que en la práctica significa
+                // pasar por encima del ícono del bug (es el único visible antes del hover, y el
+                // historial ocupa el lugar justo arriba de él). Evita el parpadeo que daría usar
+                // "peer" con hover exclusivo del botón del bug: al mover el cursor hacia el
+                // historial recién revelado, cruzar el espacio entre ambos apagaría el hover antes
+                // de llegar a poder hacer clic.
+                <div data-bug-report-ignore="true" className="group fixed bottom-8 right-24 z-[190] flex flex-col items-center gap-2">
                     <button
                         onClick={openHistory}
-                        className="relative w-9 h-9 rounded-full bg-surface border border-base shadow-lg flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-all active:scale-95"
+                        className="relative w-9 h-9 rounded-full bg-surface border border-base shadow-lg flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-all active:scale-95 opacity-0 -translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto"
                         title="Mis reportes"
                     >
                         <History size={16} />
@@ -124,7 +131,11 @@ const BugReportWidget = () => {
                     </button>
                     <button
                         onClick={openManually}
-                        className="w-12 h-12 rounded-full bg-surface border border-base shadow-2xl flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-all active:scale-95"
+                        // Rosado fijo de marca (#FF3FA4, ver --brand-secondary/--v6-pink en index.css) en vez
+                        // de bg-primary/bg-secondary: esos tokens cambian de color según el tema elegido
+                        // (azul, índigo, custom...), y este botón necesita quedar siempre rosado y llamativo
+                        // sin importar el tema activo — a diferencia del resto de la UI, que sí debe seguirlo.
+                        className="w-12 h-12 rounded-full bg-[#FF3FA4] shadow-2xl shadow-[#FF3FA4]/50 flex items-center justify-center text-white hover:bg-[#FF6AD5] hover:shadow-[#FF3FA4]/70 hover:scale-105 transition-all active:scale-95"
                         title="Reportar un problema o feedback"
                     >
                         <Bug size={20} />
