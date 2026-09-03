@@ -195,17 +195,30 @@ def stats_job_applications():
     if forbidden:
         return forbidden
 
+    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'descartados', 'incompletos')
     segmento = request.args.get('segmento', 'todos')
-    if segmento not in ('todos', 'seleccionados'):
+    if segmento not in SEGMENTOS_VALIDOS:
         segmento = 'todos'
 
     weights = _weights_map()
     todas_las_filas = JobApplication.query.all()
     completas = [a for a in todas_las_filas if a.completo]
-    # 'seleccionados' recorta el pool a quienes ya preseleccionamos, para ver
-    # cómo viene ESE grupo puntualmente (score, país, herramientas...) en vez
-    # de mezclarlo con el resto del pool que todavía no decidimos o descartamos.
-    todas = [a for a in completas if a.veredicto() == 'preseleccionada'] if segmento == 'seleccionados' else completas
+    # Cada segmento recorta el pool al mismo veredicto que se usa en la pestaña
+    # de Postulaciones, para ver cómo viene ESE grupo puntualmente (score,
+    # país, herramientas...) en vez de mezclarlo con el resto. 'incompletos' es
+    # el único que sale de `todas_las_filas` en vez de `completas` (por
+    # definición nunca están marcadas completo=True).
+    VEREDICTO_DE_SEGMENTO = {
+        'preseleccionados': 'preseleccionada',
+        'en_reserva': 'en_reserva',
+        'descartados': 'descartado',
+    }
+    if segmento == 'incompletos':
+        todas = [a for a in todas_las_filas if not a.completo]
+    elif segmento in VEREDICTO_DE_SEGMENTO:
+        todas = [a for a in completas if a.veredicto() == VEREDICTO_DE_SEGMENTO[segmento]]
+    else:
+        todas = completas
     scores = [clarity.score_de(a, weights) for a in todas]
 
     tramos = [(0, 40), (40, 60), (60, 75), (75, 85), (85, 101)]
@@ -223,8 +236,8 @@ def stats_job_applications():
     score_85 = sum(1 for s in scores if s >= 85)
     pasaron_disclaimer = sum(1 for a in todas_las_filas if a.disclaimer)
     # El embudo de captación (abrieron -> disclaimer -> completaron...) describe
-    # el pool entero, no tiene sentido recortado a 'seleccionados' (sería un
-    # único escalón) — se omite en ese segmento, el frontend oculta el panel.
+    # el pool entero, no tiene sentido recortado a un solo veredicto (sería un
+    # único escalón) — se omite fuera de 'todos', el frontend oculta el panel.
     embudo = None
     if segmento == 'todos':
         embudo = [

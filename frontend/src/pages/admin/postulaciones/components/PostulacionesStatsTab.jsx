@@ -3,9 +3,38 @@ import { Download } from 'lucide-react';
 import api from '../../../../services/api';
 
 const SEGMENTOS = [
-    { id: 'todos', label: 'Todos los postulantes' },
-    { id: 'seleccionados', label: 'Seleccionados' },
+    { id: 'todos', label: 'Todos' },
+    { id: 'preseleccionados', label: 'Preseleccionados' },
+    { id: 'en_reserva', label: 'En reserva' },
+    { id: 'descartados', label: 'Descartados' },
+    { id: 'incompletos', label: 'Incompletos' },
 ];
+
+// Filtro del listado (/job-applications?filtro=...) que trae la misma gente
+// que cada segmento de estadísticas, para el export CSV.
+const FILTRO_DE_SEGMENTO = {
+    todos: 'todas',
+    preseleccionados: 'preseleccionadas',
+    en_reserva: 'en_reserva',
+    descartados: 'descartadas',
+    incompletos: 'incompletas',
+};
+
+// KPI principal (primera tarjeta): label y de qué total se saca la fracción,
+// varía según el segmento — no tiene sentido decir "Completaron X de Y que
+// abrieron" cuando X ya son los preseleccionados, por ejemplo.
+const KPI_PRINCIPAL = {
+    todos: (s) => ({ label: 'Completaron', valor: s.total, unidad: `de ${s.abrieron_formulario} que abrieron` }),
+    preseleccionados: (s) => ({ label: 'Preseleccionados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    en_reserva: (s) => ({ label: 'En reserva', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    descartados: (s) => ({ label: 'Descartados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    incompletos: (s) => ({ label: 'Incompletos', valor: s.total, unidad: `de ${s.abrieron_formulario} que abrieron` }),
+};
+
+// Grosor de la barra según cuántos items hay: con pocos elementos una barra
+// gruesa se lee mucho mejor (y entra el número adentro); con muchos, una más
+// fina evita que el panel crezca demasiado.
+const grosorBarra = (n) => (n <= 3 ? 'h-9' : n <= 6 ? 'h-7' : 'h-5');
 
 const Panel = ({ title, subtitle, children, delay = 0 }) => (
     <div
@@ -33,23 +62,31 @@ const KpiTile = ({ label, valor, unidad, color, delay }) => (
     </div>
 );
 
-const BarraDistribucion = ({ items, max }) => (
-    <div className="flex flex-col gap-3">
-        {items.map(it => (
-            <div key={it.opcion} className="grid grid-cols-[1fr_auto] items-center gap-3">
-                <span className="truncate text-[13px] text-white/80">{it.opcion}</span>
-                <span className="text-[12px] font-black text-pink-400">{it.cantidad}</span>
-                <div className="col-span-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-700"
-                        style={{ width: `${max ? (it.cantidad / max) * 100 : 0}%` }}
-                    />
+const BarraDistribucion = ({ items, max }) => {
+    const grosor = grosorBarra(items.length);
+    return (
+        <div className="flex flex-col gap-3">
+            {items.map(it => (
+                <div key={it.opcion} className="flex flex-col gap-1.5">
+                    <span className="truncate text-[13px] text-white/80">{it.opcion}</span>
+                    {/* Barra gruesa con el número anclado a la derecha de la PISTA (no del
+                        relleno) — así siempre queda legible, incluso cuando el valor es
+                        chico y el relleno apenas se nota. */}
+                    <div className={`relative w-full overflow-hidden rounded-lg bg-white/10 ${grosor}`}>
+                        <div
+                            className="h-full rounded-lg bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-700"
+                            style={{ width: `${max ? (it.cantidad / max) * 100 : 0}%` }}
+                        />
+                        <span className="absolute inset-y-0 right-3 flex items-center text-[12px] font-black text-white">
+                            {it.cantidad}
+                        </span>
+                    </div>
                 </div>
-            </div>
-        ))}
-        {items.length === 0 && <span className="text-[13px] text-white/40">Sin datos todavía.</span>}
-    </div>
-);
+            ))}
+            {items.length === 0 && <span className="text-[13px] text-white/40">Sin datos todavía.</span>}
+        </div>
+    );
+};
 
 const csvCell = (valor) => {
     const texto = valor === null || valor === undefined ? '' : String(valor);
@@ -71,7 +108,7 @@ const PostulacionesStatsTab = () => {
     const exportarCsv = useCallback(async () => {
         setExportando(true);
         try {
-            const filtro = segmento === 'seleccionados' ? 'preseleccionadas' : 'todas';
+            const filtro = FILTRO_DE_SEGMENTO[segmento] || 'todas';
             const res = await api.get(`/job-applications?filtro=${filtro}`);
             const columnas = ['nombre', 'email', 'veredicto', 'score', 'conocimiento', 'ingles', 'cierre', 'respondidas', 'total_preguntas', 'created_at'];
             const filas = [columnas.join(',')].concat(
@@ -134,19 +171,12 @@ const StatsBody = ({ stats, segmento }) => {
     const maxTramo = Math.max(1, ...stats.distribucion_tramos.map(t => t.cantidad));
     const maxEmbudo = stats.embudo ? Math.max(1, ...stats.embudo.map(e => e.cantidad)) : 1;
 
-    const kpis = segmento === 'seleccionados'
-        ? [
-            { label: 'Seleccionados', valor: stats.total, unidad: `de ${stats.total_completas} completas`, color: '#34d399' },
-            { label: 'Score medio', valor: stats.score_medio, unidad: '/ 100', color: '#FF6AD5' },
-            { label: 'Score 85 o más', valor: stats.score_85, unidad: `de ${stats.total}`, color: '#34d399' },
-            { label: 'Con video y llamada', valor: stats.con_material, unidad: `de ${stats.total}`, color: '#60a5fa' },
-        ]
-        : [
-            { label: 'Completaron', valor: stats.total, unidad: `de ${stats.abrieron_formulario} que abrieron`, color: '#FF6AD5' },
-            { label: 'Score medio', valor: stats.score_medio, unidad: '/ 100', color: '#FF6AD5' },
-            { label: 'Score 85 o más', valor: stats.score_85, unidad: `de ${stats.total}`, color: '#34d399' },
-            { label: 'Con video y llamada', valor: stats.con_material, unidad: `de ${stats.total}`, color: '#60a5fa' },
-        ];
+    const kpis = [
+        { ...(KPI_PRINCIPAL[segmento] || KPI_PRINCIPAL.todos)(stats), color: '#FF6AD5' },
+        { label: 'Score medio', valor: stats.score_medio, unidad: '/ 100', color: '#FF6AD5' },
+        { label: 'Score 85 o más', valor: stats.score_85, unidad: `de ${stats.total}`, color: '#34d399' },
+        { label: 'Con video y llamada', valor: stats.con_material, unidad: `de ${stats.total}`, color: '#60a5fa' },
+    ];
 
     return (
         <div className="flex flex-col gap-6">
