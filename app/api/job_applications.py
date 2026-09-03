@@ -235,12 +235,19 @@ def stats_job_applications():
             {"etapa": "Score 85+", "cantidad": score_85},
         ]
 
-    desde = datetime.utcnow() - timedelta(days=14)
+    # Se devuelven los 14 días completos (con 0 en los que no hubo postulaciones),
+    # no solo los días con datos: el gráfico de barras necesita una serie continua
+    # y espaciada de forma pareja, no un puñado de barras sueltas y desconectadas.
+    hoy = datetime.utcnow().date()
+    desde_fecha = hoy - timedelta(days=13)
     por_dia = Counter()
     for a in todas:
-        if a.created_at and a.created_at >= desde:
+        if a.created_at and a.created_at.date() >= desde_fecha:
             por_dia[a.created_at.date().isoformat()] += 1
-    linea_por_dia = [{"fecha": f, "cantidad": c} for f, c in sorted(por_dia.items())]
+    linea_por_dia = [
+        {"fecha": (fecha := (desde_fecha + timedelta(days=i)).isoformat()), "cantidad": por_dia.get(fecha, 0)}
+        for i in range(14)
+    ]
 
     def distribucion(campo):
         conteo = Counter(getattr(a, campo) for a in todas if getattr(a, campo))

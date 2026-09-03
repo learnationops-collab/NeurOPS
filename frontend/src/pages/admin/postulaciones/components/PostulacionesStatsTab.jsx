@@ -180,15 +180,19 @@ const StatsBody = ({ stats, segmento }) => {
                 </Panel>
 
                 <Panel title="Histograma de scores" subtitle="Cantidad de candidatos por decena" delay={40}>
-                    <div className="flex h-40 items-end gap-2">
+                    <div className="flex gap-2">
                         {stats.histograma.map(h => (
                             <div key={h.decena} className="flex flex-1 flex-col items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-white/60">{h.cantidad || ''}</span>
-                                <div
-                                    className="w-full origin-bottom rounded-t-md bg-gradient-to-t from-blue-600 to-pink-500 transition-all duration-500"
-                                    style={{ height: `${(h.cantidad / maxHist) * 100}%`, minHeight: h.cantidad ? 4 : 0 }}
-                                />
-                                <span className="text-[9px] text-white/40">{h.decena}</span>
+                                <span className="h-4 text-[11px] font-bold text-white/60">{h.cantidad || ''}</span>
+                                {/* Pista de altura fija: un % de altura solo funciona si el padre
+                                    tiene una altura definida — sin esto la barra no crecía. */}
+                                <div className="flex h-28 w-full items-end">
+                                    <div
+                                        className="w-full origin-bottom rounded-t-md bg-gradient-to-t from-blue-600 to-pink-500 transition-all duration-500"
+                                        style={{ height: `${(h.cantidad / maxHist) * 100}%`, minHeight: h.cantidad ? 4 : 0 }}
+                                    />
+                                </div>
+                                <span className="text-[9px] text-white/40">{h.decena}s</span>
                             </div>
                         ))}
                     </div>
@@ -225,15 +229,21 @@ const StatsBody = ({ stats, segmento }) => {
                 )}
 
                 <Panel title="Postulaciones por día" subtitle="Últimas 2 semanas" delay={120}>
-                    {stats.por_dia.length === 0 ? (
+                    {stats.por_dia.every(d => d.cantidad === 0) ? (
                         <span className="text-[13px] text-white/40">Sin postulaciones recientes.</span>
                     ) : (
-                        <div className="flex h-32 items-end gap-2">
+                        <div className="flex gap-1.5">
                             {stats.por_dia.map(d => {
                                 const max = Math.max(1, ...stats.por_dia.map(x => x.cantidad));
                                 return (
-                                    <div key={d.fecha} className="flex flex-1 flex-col items-center gap-2">
-                                        <div className="w-full rounded-t-md bg-pink-500/80 transition-all duration-500" style={{ height: `${(d.cantidad / max) * 100}%`, minHeight: 4 }} />
+                                    <div key={d.fecha} className="flex flex-1 flex-col items-center gap-1.5">
+                                        <span className="h-4 text-[10px] font-bold text-white/60">{d.cantidad || ''}</span>
+                                        <div className="flex h-24 w-full items-end">
+                                            <div
+                                                className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-pink-500 transition-all duration-500"
+                                                style={{ height: `${(d.cantidad / max) * 100}%`, minHeight: d.cantidad ? 4 : 0 }}
+                                            />
+                                        </div>
                                         <span className="text-[9px] text-white/40">{d.fecha.slice(5)}</span>
                                     </div>
                                 );
