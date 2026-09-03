@@ -116,18 +116,21 @@ class JobApplication(db.Model):
             "completo": self.completo,
             "respondidas": self.respondidas(),
             "total_preguntas": len(CAMPOS_FORMULARIO),
-            # Se muestran siempre: la tabla del inbox (Formación/Inglés/Cierre) los
-            # necesita aunque include_respuestas=False no traiga el resto del formulario.
+            # Se muestran siempre: la tabla del inbox (Formación/Inglés/Cierre) y la
+            # pestaña de Incompletas (contacto/avance) los necesitan aunque
+            # include_respuestas=False no traiga el resto del formulario.
             "conocimiento": self.conocimiento,
             "cierre": self.cierre,
             "ingles": self.ingles,
+            "whatsapp": self.whatsapp,
+            "pais": self.pais,
+            "edad": self.edad,
+            "video": self.video,
+            "llamada": self.llamada,
         }
         if include_respuestas:
             data.update({
                 "disclaimer": self.disclaimer,
-                "whatsapp": self.whatsapp,
-                "edad": self.edad,
-                "pais": self.pais,
                 "instagram": self.instagram,
                 "dedicacion": self.dedicacion,
                 "formacion": self.formacion,
@@ -140,8 +143,6 @@ class JobApplication(db.Model):
                 "porque": self.porque or [],
                 "fuente": self.fuente,
                 "bolsa": self.bolsa,
-                "video": self.video,
-                "llamada": self.llamada,
             })
         return data
 
