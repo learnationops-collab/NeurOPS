@@ -195,9 +195,17 @@ def stats_job_applications():
     if forbidden:
         return forbidden
 
+    segmento = request.args.get('segmento', 'todos')
+    if segmento not in ('todos', 'seleccionados'):
+        segmento = 'todos'
+
     weights = _weights_map()
     todas_las_filas = JobApplication.query.all()
-    todas = [a for a in todas_las_filas if a.completo]
+    completas = [a for a in todas_las_filas if a.completo]
+    # 'seleccionados' recorta el pool a quienes ya preseleccionamos, para ver
+    # cómo viene ESE grupo puntualmente (score, país, herramientas...) en vez
+    # de mezclarlo con el resto del pool que todavía no decidimos o descartamos.
+    todas = [a for a in completas if a.veredicto() == 'preseleccionada'] if segmento == 'seleccionados' else completas
     scores = [clarity.score_de(a, weights) for a in todas]
 
     tramos = [(0, 40), (40, 60), (60, 75), (75, 85), (85, 101)]
@@ -214,13 +222,18 @@ def stats_job_applications():
     con_material = sum(1 for a in todas if a.video and a.llamada)
     score_85 = sum(1 for s in scores if s >= 85)
     pasaron_disclaimer = sum(1 for a in todas_las_filas if a.disclaimer)
-    embudo = [
-        {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
-        {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
-        {"etapa": "Completaron", "cantidad": len(todas)},
-        {"etapa": "Con video y llamada", "cantidad": con_material},
-        {"etapa": "Score 85+", "cantidad": score_85},
-    ]
+    # El embudo de captación (abrieron -> disclaimer -> completaron...) describe
+    # el pool entero, no tiene sentido recortado a 'seleccionados' (sería un
+    # único escalón) — se omite en ese segmento, el frontend oculta el panel.
+    embudo = None
+    if segmento == 'todos':
+        embudo = [
+            {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
+            {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
+            {"etapa": "Completaron", "cantidad": len(completas)},
+            {"etapa": "Con video y llamada", "cantidad": con_material},
+            {"etapa": "Score 85+", "cantidad": score_85},
+        ]
 
     desde = datetime.utcnow() - timedelta(days=14)
     por_dia = Counter()
@@ -241,7 +254,12 @@ def stats_job_applications():
         return [{"opcion": k, "cantidad": v} for k, v in conteo.most_common()]
 
     return jsonify({
+        "segmento": segmento,
         "total": len(todas),
+        "total_completas": len(completas),
+        "abrieron_formulario": len(todas_las_filas),
+        "con_material": con_material,
+        "score_85": score_85,
         "score_medio": round(sum(scores) / len(scores)) if scores else 0,
         "distribucion_tramos": distribucion_tramos,
         "histograma": histograma,
