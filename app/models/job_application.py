@@ -8,7 +8,7 @@ CLARITY_CRITERIA = [
     {"criterion": "formacion", "label": "Formación como closer (pregunta 10)", "default_weight": 22},
     {"criterion": "experiencia", "label": "Experiencia y a qué se dedica (8 y 9)", "default_weight": 18},
     {"criterion": "cierre", "label": "Porcentaje de cierre medido (11)", "default_weight": 16},
-    {"criterion": "video", "label": "Video y llamada (22 y 23)", "default_weight": 12},
+    {"criterion": "video", "label": "Video y llamada (23 y 24)", "default_weight": 12},
     {"criterion": "obstaculo", "label": "Cómo resuelve un obstáculo (17)", "default_weight": 10},
     {"criterion": "ingles", "label": "Nivel de inglés (12)", "default_weight": 8},
     {"criterion": "herramientas", "label": "Herramientas y CRM (13)", "default_weight": 8},
@@ -17,15 +17,15 @@ CLARITY_CRITERIA = [
 
 VOTE_VALUES = ('pre', 'res', 'des')
 
-# Las 23 columnas que representan una respuesta del formulario (en el mismo
+# Las 24 columnas que representan una respuesta del formulario (en el mismo
 # orden que las preguntas). Sirve para calcular cuántas contestó alguien que
 # no terminó, sin depender de qué preguntas le tocaron ver (ej. "bolsa" es
 # condicional) — es una cuenta aproximada, no exacta pregunta por pregunta.
 CAMPOS_FORMULARIO = [
     'nombre', 'email', 'disclaimer', 'whatsapp', 'edad', 'pais', 'instagram',
     'dedicacion', 'conocimiento', 'formacion', 'cierre', 'ingles', 'herramientas',
-    'reporte', 'aportes', 'habilidades', 'obstaculo', 'objetivos', 'porque',
-    'fuente', 'bolsa', 'video', 'llamada',
+    'reporte', 'aportes', 'habilidades', 'obstaculo', 'objetivos', 'porque_mejor_opcion',
+    'porque', 'fuente', 'bolsa', 'video', 'llamada',
 ]
 
 
@@ -59,6 +59,7 @@ class JobApplication(db.Model):
     habilidades = db.Column(db.Text, nullable=True)
     obstaculo = db.Column(db.Text, nullable=True)
     objetivos = db.Column(db.Text, nullable=True)
+    porque_mejor_opcion = db.Column(db.Text, nullable=True)
     porque = db.Column(db.JSON, nullable=True)
     fuente = db.Column(db.String(60), nullable=True)
     bolsa = db.Column(db.String(120), nullable=True)
@@ -140,6 +141,7 @@ class JobApplication(db.Model):
                 "habilidades": self.habilidades,
                 "obstaculo": self.obstaculo,
                 "objetivos": self.objetivos,
+                "porque_mejor_opcion": self.porque_mejor_opcion,
                 "porque": self.porque or [],
                 "fuente": self.fuente,
                 "bolsa": self.bolsa,

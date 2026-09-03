@@ -11,7 +11,7 @@ const CAMPOS_CORTOS = [
 const CAMPOS_ABIERTOS = [
     ['¿A qué te dedicás?', 'dedicacion'], ['Formación como closer', 'formacion'],
     ['Habilidades y experiencias relevantes', 'habilidades'], ['Ante un obstáculo', 'obstaculo'],
-    ['Objetivos a largo plazo', 'objetivos'],
+    ['Objetivos a largo plazo', 'objetivos'], ['¿Por qué es la mejor opción?', 'porque_mejor_opcion'],
 ];
 
 const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar' };
