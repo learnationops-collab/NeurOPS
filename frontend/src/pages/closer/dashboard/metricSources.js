@@ -179,10 +179,10 @@ export const METRICS = {
         benchmark: B.confirmation
     },
     q_show_rate: {
-        title: 'De todas las agendas, cuántas asistieron',
+        title: 'De las llamadas que ya se sabe si asistieron o no, cuántas asistieron',
         source: 'reporte',
-        formula: 'asistencias ÷ agendas',
-        note: 'Mide el embudo completo: incluye las que nunca se confirmaron.',
+        formula: 'Show up ÷ (Show up + No show)',
+        note: 'Corregido el 02/sep/2026: antes dividía por TODAS las agendas del período (incluyendo Pendiente, Confirmado y No Lead, que todavía no tienen resultado o nunca lo van a tener), lo que diluía la tasa con llamadas que ni siquiera pasaron. Un closer lo detectó: el dashboard daba 27,9% cuando el show rate real, contando solo llamadas concluidas, era 57,1%.',
         benchmark: B.show
     },
     q_show_sobre_confirmada: {
