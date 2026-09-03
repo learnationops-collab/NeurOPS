@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, Clock, X } from 'lucide-react';
+
+const VOTO_TOAST = {
+    pre: { label: 'Preseleccionado', color: '#34d399', bg: 'rgba(52,211,153,.15)', Icon: Check },
+    res: { label: 'En reserva', color: '#fbbf24', bg: 'rgba(251,191,36,.15)', Icon: Clock },
+    des: { label: 'Descartado', color: '#f87171', bg: 'rgba(248,113,113,.15)', Icon: X },
+};
 
 const PostulacionVoteToast = ({ toast, onDone }) => {
     const [visible, setVisible] = useState(false);
@@ -17,10 +23,7 @@ const PostulacionVoteToast = ({ toast, onDone }) => {
 
     if (!toast) return null;
 
-    const esPre = toast.valor === 'pre';
-    const color = esPre ? '#34d399' : '#f87171';
-    const bg = esPre ? 'rgba(52,211,153,.15)' : 'rgba(248,113,113,.15)';
-    const Icon = esPre ? Check : X;
+    const { label, color, bg, Icon } = VOTO_TOAST[toast.valor] || VOTO_TOAST.des;
 
     return (
         <div
@@ -36,7 +39,7 @@ const PostulacionVoteToast = ({ toast, onDone }) => {
                 </span>
                 <div className="min-w-0 flex flex-col gap-1.5">
                     <span className="text-[11px] font-black uppercase tracking-widest" style={{ color }}>
-                        {esPre ? 'Preseleccionado' : 'Descartado'}
+                        {label}
                     </span>
                     <span className="truncate text-lg font-bold tracking-tight text-white">{toast.nombre}</span>
                     <span className="text-[13px] text-white/60">{toast.mensajeFin}</span>

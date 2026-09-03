@@ -9,6 +9,7 @@ const FILTROS = [
     { id: 'mis_pendientes', label: 'Mis pendientes' },
     { id: 'todas', label: 'Todas' },
     { id: 'preseleccionadas', label: 'Preseleccionadas' },
+    { id: 'en_reserva', label: 'En reserva' },
     { id: 'decidir', label: 'Decidir' },
     { id: 'descartadas', label: 'Descartadas' },
     { id: 'incompletas', label: 'Incompletas' },
@@ -16,6 +17,7 @@ const FILTROS = [
 
 const VEREDICTO_BADGE = {
     preseleccionada: { label: 'Preseleccionada', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    en_reserva: { label: 'En reserva', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     decidir: { label: 'Decidir', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     descartado: { label: 'Descartado', cls: 'bg-slate-800 text-slate-400 border-slate-700' },
     sin_calificar: { label: 'Sin calificar', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },

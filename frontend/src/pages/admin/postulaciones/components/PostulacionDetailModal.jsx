@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, ExternalLink } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink } from 'lucide-react';
 import api from '../../../../services/api';
 
 const CAMPOS_CORTOS = [
@@ -14,8 +14,9 @@ const CAMPOS_ABIERTOS = [
     ['Objetivos a largo plazo', 'objetivos'],
 ];
 
-const VOTO_LABEL = { preseleccionada: 'Preseleccionada', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar' };
-const VOTO_COLOR = { preseleccionada: '#34d399', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa' };
+const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar' };
+const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa' };
+const OTRO_VOTO_LABEL = { pre: 'Preseleccionar', res: 'Reservar', des: 'Descartar' };
 
 const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, onVoted, onNavigate }) => {
     const [data, setData] = useState(null);
@@ -142,7 +143,7 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                                     </span>
                                     {otroVoto && (
                                         <span className="text-[12px] text-white/50">
-                                            {otroVoto.reviewer_name || 'El otro revisor'} votó: {otroVoto.vote === 'pre' ? 'Preseleccionar' : 'Descartar'}
+                                            {otroVoto.reviewer_name || 'El otro revisor'} votó: {OTRO_VOTO_LABEL[otroVoto.vote] || otroVoto.vote}
                                         </span>
                                     )}
                                 </div>
@@ -171,18 +172,26 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
 
                 {/* Footer */}
                 <div className="flex flex-none items-center justify-end gap-3 border-t border-white/10 bg-white/5 px-8 py-5">
-                    <button
-                        onClick={() => votar('des')}
-                        className={`rounded-full border px-6 py-3 text-[13px] font-bold transition-all ${miVoto === 'des' ? 'border-rose-400 bg-rose-500/20 text-rose-300' : 'border-white/20 text-white hover:bg-white/10'}`}
-                    >
-                        Descartar
-                    </button>
-                    <button
-                        onClick={() => votar('pre')}
-                        className={`flex items-center gap-2 rounded-full px-6 py-3 text-[13px] font-bold transition-all ${miVoto === 'pre' ? 'bg-emerald-500 text-white' : 'bg-white text-[#0B0F26] hover:bg-white/90'}`}
-                    >
-                        <Check size={16} /> Preseleccionar
-                    </button>
+                    <div className="grid w-full max-w-[560px] grid-cols-3 gap-3">
+                        <button
+                            onClick={() => votar('pre')}
+                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'pre' ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}
+                        >
+                            <Check size={16} /> Preseleccionar
+                        </button>
+                        <button
+                            onClick={() => votar('res')}
+                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'res' ? 'border-amber-400 bg-amber-500 text-[#1a1204]' : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'}`}
+                        >
+                            <Clock size={16} /> Reserva
+                        </button>
+                        <button
+                            onClick={() => votar('des')}
+                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'des' ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'}`}
+                        >
+                            <X size={16} /> Descartar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
