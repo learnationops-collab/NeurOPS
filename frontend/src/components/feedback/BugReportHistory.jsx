@@ -107,7 +107,9 @@ const BugReportHistory = ({ isOpen, onClose }) => {
                                         <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-500" />
                                     )}
                                     <div className="flex items-center justify-between gap-2 pr-4">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">{URGENCY_LABELS[r.urgency] || r.urgency}</span>
+                                        {r.urgency ? (
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">{URGENCY_LABELS[r.urgency] || r.urgency}</span>
+                                        ) : <span />}
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted flex items-center gap-1">
                                             <Clock size={10} /> {formatDate(r.created_at)}
                                         </span>
