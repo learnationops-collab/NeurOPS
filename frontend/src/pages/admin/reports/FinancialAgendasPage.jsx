@@ -56,6 +56,60 @@ const POTENTIAL_EXPORT_COLUMNS = [
 // Selección por defecto: las columnas de contacto que traía la exportación original
 const DEFAULT_EXPORT_COLUMNS = ['date', 'lead', 'whatsapp', 'mail', 'instagram'];
 
+// Columnas para la exportación de "Revisión de Agendas": una fila por cada agenda (no solo
+// potenciales, TODAS las del recorte), con el show up que hoy calcula el sistema al lado y
+// columnas vacías para que el closer, agenda por agenda, diga si el dato es correcto. Pedido del
+// usuario: armar una hoja que el closer pueda revisar a mano contra su propio registro para
+// encontrar dónde el show up del dashboard se desvía del real.
+const AGENDA_REVIEW_COLUMNS = [
+    { id: 'date', label: 'Fecha Meet', getValue: (a) => (a.date ? String(a.date).split('T')[0] : (a.fecha_meet || '')) },
+    { id: 'hora', label: 'Hora Meet', getValue: (a) => (a.date ? (String(a.date).split('T')[1] || '').slice(0, 5) : '') },
+    { id: 'lead', label: 'Cliente', getValue: (a) => a.lead || '' },
+    { id: 'whatsapp', label: 'Telefono', getValue: (a) => a.whatsapp || '' },
+    { id: 'mail', label: 'Email', getValue: (a) => a.mail || '' },
+    { id: 'instagram', label: 'Instagram', getValue: (a) => a.instagram || '' },
+    { id: 'nombre', label: 'Fuente', getValue: (a) => a.nombre || '' },
+    { id: 'closer', label: 'Closer', getValue: (a) => a.closer || '' },
+    { id: 'estado', label: 'Estado Pre Call', getValue: (a) => a.estado || '' },
+    { id: 'closer_result', label: 'Show Up (según sistema)', getValue: (a) => a.closer_result || 'Pendiente' },
+    { id: 'has_sale', label: 'Venta asociada', getValue: (a) => (a.has_sale ? 'Sí' : 'No') },
+    { id: 'sales_count', label: 'Cierres', getValue: (a) => a.sales_count ?? 0 },
+    // Columnas vacías: las llena el closer al revisar la hoja, no el sistema.
+    { id: 'es_correcto', label: '¿Dato correcto? (Sí/No)', getValue: () => '' },
+    { id: 'show_up_real', label: 'Show up real (Sí/No)', getValue: () => '' },
+    { id: 'comentario', label: 'Comentario / irregularidad', getValue: () => '' }
+];
+
+const DEFAULT_AGENDA_REVIEW_COLUMNS = [
+    'date', 'lead', 'whatsapp', 'instagram', 'closer', 'estado', 'closer_result',
+    'has_sale', 'es_correcto', 'show_up_real', 'comentario'
+];
+
+// Compartida entre las dos exportaciones (potenciales y revisión de agendas).
+const escapeCSVValue = (val) => {
+    if (val === null || val === undefined) return '';
+    let valStr = String(val).replace(/"/g, '""');
+    if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
+        return `"${valStr}"`;
+    }
+    return valStr;
+};
+
+const downloadCSV = (headers, rows, filename) => {
+    const csvContent = [
+        headers.map(escapeCSVValue).join(','),
+        ...rows.map(row => row.map(escapeCSVValue).join(','))
+    ].join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 // Filtro de selección múltiple con el mismo estilo de píldora del resto de la barra.
 // El valor se guarda como string separado por comas para viajar tal cual al backend.
 const MultiSelectPill = ({ label, options, value, onChange, placeholder = 'Todos' }) => {
@@ -501,9 +555,20 @@ const FinancialAgendasPage = () => {
 
     // Estados para exportación de clientes potenciales
     const [showExportModal, setShowExportModal] = useState(false);
+    // 'potential': solo leads sin venta (exportación original). 'agendas': TODAS las agendas
+    // del recorte, para que el closer las revise una por una contra su propio registro.
+    const [exportMode, setExportMode] = useState('potential');
     const [exportLimit, setExportLimit] = useState(1000);
     const [exportColumns, setExportColumns] = useState(DEFAULT_EXPORT_COLUMNS);
     const [exportApplyFilters, setExportApplyFilters] = useState(true);
+
+    const openExportModal = (mode) => {
+        setExportMode(mode);
+        setExportColumns(mode === 'agendas' ? DEFAULT_AGENDA_REVIEW_COLUMNS : DEFAULT_EXPORT_COLUMNS);
+        setShowExportModal(true);
+    };
+
+    const exportColumnsCatalog = exportMode === 'agendas' ? AGENDA_REVIEW_COLUMNS : POTENTIAL_EXPORT_COLUMNS;
 
     const handleStatusActionSubmit = async (e) => {
         if (e) e.preventDefault();
@@ -592,35 +657,53 @@ const FinancialAgendasPage = () => {
                 return;
             }
 
-            const escapeCSVValue = (val) => {
-                if (val === null || val === undefined) return '';
-                let valStr = String(val).replace(/"/g, '""');
-                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-                    return `"${valStr}"`;
-                }
-                return valStr;
-            };
-
             const headers = selectedCols.map(c => c.label);
             const rows = potentials.map(a => selectedCols.map(c => c.getValue(a)));
-
-            const csvContent = [
-                headers.map(escapeCSVValue).join(','),
-                ...rows.map(row => row.map(escapeCSVValue).join(','))
-            ].join('\n');
-
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `clientes_potenciales_${getTodayDate()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            downloadCSV(headers, rows, `clientes_potenciales_${getTodayDate()}.csv`);
             setShowExportModal(false);
         } catch (err) {
             console.error("Error al exportar clientes potenciales:", err);
             alert("Error al exportar clientes potenciales a CSV");
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    // Exportación para "Revisión de Agendas": a diferencia de la de arriba, trae TODAS las
+    // agendas del recorte (no solo las que no tienen venta), pensada para que un closer revise
+    // en Sheets, fila por fila, si el show up que calculó el sistema coincide con lo que él
+    // recuerda haber hecho. Reusa exactamente los mismos filtros del tablero (closer, período,
+    // estado post call, etc.) que ya están arriba, así que basta con dejarlos puestos antes de
+    // exportar para acotar a un closer y un rango de fechas.
+    const handleExportAgendaReviewCSV = async () => {
+        const selectedCols = AGENDA_REVIEW_COLUMNS.filter(c => exportColumns.includes(c.id));
+        if (selectedCols.length === 0) {
+            alert("Debes seleccionar al menos una columna para exportar.");
+            return;
+        }
+
+        setExporting(true);
+        try {
+            // El endpoint sin `page` devuelve el recorte completo (no paginado) ya filtrado.
+            const params = exportApplyFilters ? { ...filterParams } : {};
+            const response = await api.get('/public/financial-agendas', { params });
+            let rows = Array.isArray(response.data) ? response.data : [];
+            rows.sort((a, b) => new Date(b.date || b.fecha_meet || 0) - new Date(a.date || a.fecha_meet || 0));
+            if (exportLimit) rows = rows.slice(0, exportLimit);
+
+            if (rows.length === 0) {
+                alert("No se encontraron agendas con los filtros aplicados.");
+                return;
+            }
+
+            const headers = selectedCols.map(c => c.label);
+            const dataRows = rows.map(a => selectedCols.map(c => c.getValue(a)));
+            const closerLabel = (closer || 'todos').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+            downloadCSV(headers, dataRows, `revision_agendas_${closerLabel}_${getTodayDate()}.csv`);
+            setShowExportModal(false);
+        } catch (err) {
+            console.error("Error al exportar agendas para revisión:", err);
+            alert("Error al exportar las agendas");
         } finally {
             setExporting(false);
         }
@@ -1183,12 +1266,22 @@ const FinancialAgendasPage = () => {
                     </button>
 
                     <button
-                        onClick={() => setShowExportModal(true)}
+                        onClick={() => openExportModal('potential')}
                         disabled={exporting}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-teal-500/20"
                     >
                         <Download className="w-4 h-4" />
                         <span>{exporting ? 'Exportando...' : 'Exportar Clientes Potenciales'}</span>
+                    </button>
+
+                    <button
+                        onClick={() => openExportModal('agendas')}
+                        disabled={exporting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-amber-500/20"
+                        title="Exporta TODAS las agendas del recorte (con closer y show up del sistema) para que el closer las revise agenda por agenda en una hoja de cálculo"
+                    >
+                        <ClipboardCheck className="w-4 h-4" />
+                        <span>{exporting ? 'Exportando...' : 'Exportar Agendas (Revisión Show Up)'}</span>
                     </button>
                     </div>
                 </div>
@@ -1675,18 +1768,24 @@ const FinancialAgendasPage = () => {
                         {/* Cabecera Fija */}
                         <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
                             <h3 className="text-lg font-black text-white italic uppercase flex items-center gap-2">
-                                <Download className="text-teal-500 w-5 h-5" />
-                                Exportar Clientes Potenciales
+                                {exportMode === 'agendas' ? (
+                                    <ClipboardCheck className="text-amber-500 w-5 h-5" />
+                                ) : (
+                                    <Download className="text-teal-500 w-5 h-5" />
+                                )}
+                                {exportMode === 'agendas' ? 'Exportar Agendas para Revisión' : 'Exportar Clientes Potenciales'}
                             </h3>
                             <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
-                                Leads sin ventas registradas
+                                {exportMode === 'agendas'
+                                    ? 'Todas las agendas del recorte, con el show up que calcula el sistema'
+                                    : 'Leads sin ventas registradas'}
                             </p>
                         </div>
 
                         <div className="p-5 md:p-6 space-y-5 text-left overflow-y-auto custom-scrollbar">
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    Cantidad de Leads a Exportar (últimos agendados)
+                                    {exportMode === 'agendas' ? 'Cantidad de Agendas a Exportar (más recientes)' : 'Cantidad de Leads a Exportar (últimos agendados)'}
                                 </label>
                                 <input
                                     type="number"
@@ -1698,7 +1797,9 @@ const FinancialAgendasPage = () => {
                                     required
                                 />
                                 <p className="text-[10px] text-slate-500">
-                                    Se ordenarán las agendas de forma descendente y se exportarán los leads únicos que no tengan ventas asociadas.
+                                    {exportMode === 'agendas'
+                                        ? 'Se ordenan las agendas de más reciente a más antigua. Usá el closer y el rango de fechas del tablero para acotar a una sola persona y un solo período antes de exportar.'
+                                        : 'Se ordenarán las agendas de forma descendente y se exportarán los leads únicos que no tengan ventas asociadas.'}
                                 </p>
                             </div>
 
@@ -1719,8 +1820,8 @@ const FinancialAgendasPage = () => {
                                         </p>
                                         <p className="text-[10px] text-slate-500 mt-0.5">
                                             {exportApplyFilters
-                                                ? 'Sólo se exportan los leads del recorte visible (fechas, estados, closers, fuentes)'
-                                                : 'Se exportan todas las agendas históricas sin filtrar'}
+                                                ? `Sólo se exportan ${exportMode === 'agendas' ? 'las agendas' : 'los leads'} del recorte visible (fechas, estados, closers, fuentes)`
+                                                : (exportMode === 'agendas' ? 'Se exportan todas las agendas históricas sin filtrar' : 'Se exportan todos los leads históricos sin filtrar')}
                                         </p>
                                     </div>
                                     <div className={`w-10 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${exportApplyFilters ? 'bg-teal-600' : 'bg-slate-700'}`}>
@@ -1746,7 +1847,7 @@ const FinancialAgendasPage = () => {
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
-                                            onClick={() => setExportColumns(POTENTIAL_EXPORT_COLUMNS.map(c => c.id))}
+                                            onClick={() => setExportColumns(exportColumnsCatalog.map(c => c.id))}
                                             className="text-[9px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-wider transition-colors cursor-pointer"
                                         >
                                             Todas
@@ -1762,7 +1863,7 @@ const FinancialAgendasPage = () => {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {POTENTIAL_EXPORT_COLUMNS.map(col => {
+                                    {exportColumnsCatalog.map(col => {
                                         const isSelected = exportColumns.includes(col.id);
                                         return (
                                             <button
@@ -1804,11 +1905,15 @@ const FinancialAgendasPage = () => {
                             >
                                 Cancelar
                             </button>
-                            <button 
+                            <button
                                 type="button"
-                                onClick={handleExportPotentialClientsCSV}
+                                onClick={exportMode === 'agendas' ? handleExportAgendaReviewCSV : handleExportPotentialClientsCSV}
                                 disabled={exporting || !exportLimit || exportColumns.length === 0}
-                                className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 text-xs font-black uppercase tracking-widest text-white rounded-xl disabled:bg-teal-800 disabled:opacity-50 transition-colors shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2"
+                                className={`flex-1 py-3 text-xs font-black uppercase tracking-widest text-white rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2 ${
+                                    exportMode === 'agendas'
+                                        ? 'bg-amber-600 hover:bg-amber-500 disabled:bg-amber-800 disabled:opacity-50 shadow-amber-600/30'
+                                        : 'bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:opacity-50 shadow-teal-600/30'
+                                }`}
                             >
                                 {exporting ? (
                                     <>

@@ -159,7 +159,12 @@ def _prepare_report_data(report):
     rescheduled_calls = report.rescheduled_calls or 0
 
     # Cálculos de porcentajes y tasas
-    show_rate = safe_percent(total_attended, total_scheduled)
+    total_no_show = (report.first_call_no_show or 0) + (report.second_call_no_show or 0)
+    # show_rate / no_show_rate: sobre llamadas CONCLUIDAS (asistió o no asistió), no sobre el
+    # total agendado del día (que incluye Pendiente/Confirmado, llamadas que todavía no pasaron).
+    # Mismo criterio que CloserService.get_comprehensive_stats — ver el comentario ahí.
+    concluded_calls = total_attended + total_no_show
+    show_rate = safe_percent(total_attended, concluded_calls)
     pitch_rate = safe_percent(offers_made, total_attended)
     # Close rate promesa: incluye señas (compromiso de compra)
     close_rate_promesa = safe_percent(total_sales, total_attended)
@@ -167,8 +172,7 @@ def _prepare_report_data(report):
     sales_operativo = (report.pif_count or 0) + (report.split_count or 0)
     close_rate_operativo = safe_percent(sales_operativo, total_attended)
     offer_to_sale = safe_percent(total_sales, offers_made)
-    total_no_show = (report.first_call_no_show or 0) + (report.second_call_no_show or 0)
-    no_show_rate = safe_percent(total_no_show, total_scheduled)
+    no_show_rate = safe_percent(total_no_show, concluded_calls)
     total_canc_rep = (
         (report.first_call_canceled or 0) + (report.second_call_canceled or 0) +
         (report.first_call_rescheduled or 0) + (report.second_call_rescheduled or 0)

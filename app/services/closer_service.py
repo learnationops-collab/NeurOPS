@@ -2286,8 +2286,17 @@ class CloserService:
                 "referrals_scheduled": val(stats.ref_scheduled)
             },
             "percentages": {
-                "show_rate": div(total_attended, total_scheduled),
-                "no_show_rate": div(total_no_show, total_scheduled),
+                # show_rate / no_show_rate: sobre llamadas CONCLUIDAS (Show up + No show), no
+                # sobre el total de agendamientos. `total_scheduled` incluye Pendiente, Confirmado
+                # (llamadas que todavía no pasaron) y No Lead/Cancelado/Reagendado (que nunca van a
+                # tener un resultado de asistencia), así que usarlo como denominador diluye la tasa
+                # con agendas que ni siquiera se sabe si van a mostrar algo todavía. Reportado por
+                # un closer: el dashboard daba 27,9% (12 show up / 43 agendas) contra el 57,1% real
+                # (12 show up / 21 llamadas con resultado, 12 show up + 9 no show) que sale de
+                # contar solo las llamadas que ya se sabe si asistieron o no.
+                "concluded_calls": total_attended + total_no_show,
+                "show_rate": div(total_attended, total_attended + total_no_show),
+                "no_show_rate": div(total_no_show, total_attended + total_no_show),
                 "cancel_rate": div(total_canceled, total_scheduled),
                 # close_rate / offer_to_sale: solo ventas reales (PIF + Split Pay). Ni la seña
                 # (promesa de compra), ni la cuota, ni upsell/renovación cuentan como cierre.

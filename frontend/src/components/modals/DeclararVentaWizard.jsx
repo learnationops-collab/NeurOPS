@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard
+    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard, AlertTriangle, History
 } from 'lucide-react';
 
 // --- Helpers de fecha (mismo criterio que InstallmentService._add_months: clampea al último
@@ -64,17 +64,21 @@ const PAYMENT_TYPES = [
 
 // Mismo helper `option()` que usa el modal de Ficha Interactiva (clases .opt/.opt.sel) —
 // para que las tarjetas de opción se vean y se comporten igual en ambos modales.
-const Option = ({ onClick, type = 'info', label, sub, selected = false, disabled = false, title }) => (
+// `warn` (antes `disabled`) ya no bloquea el click: el closer tiene que poder declarar
+// cualquier tipo de pago aunque el historial previo del cliente esté mal cargado (pedido
+// explícito del usuario, caso real Emilia Collantes) — solo se marca visualmente para que
+// sepa que hay algo para revisar, sin impedirle avanzar.
+const Option = ({ onClick, type = 'info', label, sub, selected = false, warn = false, title }) => (
     <button
         type="button"
         onClick={onClick}
         data-t={type}
-        disabled={disabled}
         title={title}
         className={`opt ${selected ? 'sel' : ''}`}
-        style={disabled ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+        style={warn ? { borderColor: 'rgba(245,169,156,.55)', background: 'rgba(245,169,156,.06)' } : undefined}
     >
         {selected && <Check size={13} className="absolute top-3 right-3 text-white" />}
+        {warn && <AlertTriangle size={12} className="absolute top-3 right-3" style={{ color: '#F5A99C' }} />}
         {label}
         {sub && <small>{sub}</small>}
     </button>
@@ -324,7 +328,8 @@ const DeclararVentaWizard = ({
     teamMembers,
     apptId,
     onClose,
-    onRegisterSale
+    onRegisterSale,
+    onOpenHistory
 }) => {
     const [i, setI] = useState(0);
     const [dir, setDir] = useState(1);
@@ -543,23 +548,39 @@ const DeclararVentaWizard = ({
                                 <div className="grid grid-cols-2 gap-2.5">
                                     {PAYMENT_TYPES.map((opt) => {
                                         const r = saleClientState?.allowed_types?.[opt.key];
-                                        const disabled = r ? !r.ok : false;
+                                        const warn = r ? !r.ok : false;
                                         return (
                                             <Option
                                                 key={opt.v}
                                                 type="info"
-                                                disabled={disabled}
-                                                title={disabled ? r.reason : undefined}
+                                                warn={warn}
+                                                title={warn ? r.reason : undefined}
                                                 selected={saleForm.tipo_pago_simple === opt.v}
                                                 label={opt.label}
                                                 sub={opt.hint}
-                                                onClick={() => { if (!disabled) { set('tipo_pago_simple', opt.v); setTimeout(goNext, 120); } }}
+                                                onClick={() => { set('tipo_pago_simple', opt.v); setTimeout(goNext, 120); }}
                                             />
                                         );
                                     })}
                                 </div>
                             )}
-                            {rule && !rule.ok && <p className="text-[10px] font-bold mt-2" style={{ color: '#F5A99C' }}>{rule.reason}</p>}
+                            {rule && !rule.ok && (
+                                <div className="mt-2 p-2.5 rounded-xl" style={{ background: 'rgba(245,169,156,.08)', border: '1px solid rgba(245,169,156,.25)' }}>
+                                    <p className="text-[10px] font-bold flex items-start gap-1.5" style={{ color: '#F5A99C' }}>
+                                        <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                                        {rule.reason} Podés declararla igual; si es un dato viejo mal cargado, corregilo en el historial.
+                                    </p>
+                                    {onOpenHistory && (
+                                        <button
+                                            type="button"
+                                            onClick={onOpenHistory}
+                                            className="mt-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-violet-300 hover:text-violet-200 cursor-pointer"
+                                        >
+                                            <History size={11} /> Ver / corregir historial del cliente
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                             {['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple) && saleClientState?.can_settle_balance_with_installment && (
                                 <label className="flex items-center gap-2 mt-3 p-3 rounded-xl text-[10px] font-bold uppercase cursor-pointer" style={{ background: 'rgba(217,164,65,.10)', border: '1px solid rgba(217,164,65,.30)', color: '#F3D08A' }}>
                                     <input type="checkbox" checked={settleBalanceWithSale} onChange={(e) => setSettleBalanceWithSale(e.target.checked)} className="rounded" />
