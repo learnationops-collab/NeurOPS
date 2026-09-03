@@ -27,7 +27,7 @@ const PostulacionVoteToast = ({ toast, onDone }) => {
 
     return (
         <div
-            className="fixed left-1/2 top-1/2 z-30 w-[420px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/15 bg-[#141a3a] shadow-2xl transition-all duration-200"
+            className="fixed left-1/2 top-1/2 z-[110] w-[420px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/15 bg-[#141a3a] shadow-2xl transition-all duration-200"
             style={{ opacity: visible ? 1 : 0, transform: `translate(-50%, -50%) scale(${visible ? 1 : 0.92})` }}
         >
             <div className="flex items-center gap-5 px-8 py-6">

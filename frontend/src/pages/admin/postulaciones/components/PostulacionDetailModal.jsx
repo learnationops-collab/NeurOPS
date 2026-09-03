@@ -58,7 +58,7 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
     const otroVoto = data?.votos_detalle?.find(v => v.reviewer_id !== currentUserId);
 
     return (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#04061480] p-8 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#04061480] p-8 backdrop-blur-sm" onClick={onClose}>
             <div
                 className="flex h-[88vh] w-full max-w-[1240px] flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#111634] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
