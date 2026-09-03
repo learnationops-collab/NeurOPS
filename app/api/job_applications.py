@@ -16,7 +16,7 @@ from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
 
-FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'decidir', 'descartadas')
+FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'decidir', 'descartadas')
 # 'incompletas' no entra en FILTROS_VALIDOS: no es un veredicto de revisión
 # (no tiene sentido votar algo a medio completar), es una vista aparte para
 # ver dónde quedó alguien que no terminó.
@@ -43,6 +43,8 @@ def _aplica_filtro(app_row, filtro):
         return current_user.id not in {v.reviewer_id for v in app_row.votes}
     if filtro == 'preseleccionadas':
         return veredicto == 'preseleccionada'
+    if filtro == 'en_reserva':
+        return veredicto == 'en_reserva'
     if filtro == 'decidir':
         return veredicto == 'decidir'
     if filtro == 'descartadas':
@@ -106,7 +108,7 @@ def votar_job_application(app_id):
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor not in VOTE_VALUES:
-        return jsonify({"message": "valor debe ser 'pre' o 'des'"}), 400
+        return jsonify({"message": "valor debe ser 'pre', 'res' o 'des'"}), 400
 
     app_row = JobApplication.query.get_or_404(app_id)
 

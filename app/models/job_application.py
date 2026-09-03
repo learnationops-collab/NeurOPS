@@ -15,7 +15,7 @@ CLARITY_CRITERIA = [
     {"criterion": "objetivos", "label": "Objetivos a largo plazo (18)", "default_weight": 6},
 ]
 
-VOTE_VALUES = ('pre', 'des')
+VOTE_VALUES = ('pre', 'res', 'des')
 
 # Las 23 columnas que representan una respuesta del formulario (en el mismo
 # orden que las preguntas). Sirve para calcular cuántas contestó alguien que
@@ -83,10 +83,19 @@ class JobApplication(db.Model):
         valores = votos.values()
         hay_pre = 'pre' in valores
         hay_des = 'des' in valores
+        hay_res = 'res' in valores
+        # Preseleccionar pesa más que reservar: si un revisor preselecciona y
+        # otro deja en reserva, no hace falta decidir — gana la preselección.
+        # En cambio reserva vs. descarte sí son señales opuestas y quedan en
+        # "decidir", igual que preseleccionar vs. descartar.
         if hay_pre and hay_des:
             return 'decidir'
         if hay_pre:
             return 'preseleccionada'
+        if hay_res and hay_des:
+            return 'decidir'
+        if hay_res:
+            return 'en_reserva'
         if hay_des:
             return 'descartado'
         return 'sin_calificar'
