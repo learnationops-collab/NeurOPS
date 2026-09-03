@@ -47,7 +47,8 @@ from app.models import (
     LeadEventLog, ExcludedSale, ClientComment, event_closers,
     TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving,
     AlertRule, Alert, ClientMergeLog, CloserAlias, CommentNotification,
-    FeatureToggle, InstallmentPlan, LandingSession, WorkshopEvent, WorkshopLead
+    FeatureToggle, InstallmentPlan, LandingSession, WorkshopEvent, WorkshopLead,
+    JobApplication, JobApplicationVote, ClarityWeight
 )
 
 def safe(text):
@@ -99,13 +100,14 @@ def actualizar(target='local'):
             LandingTracking, ConversationalMessage, ExcludedSale,
             PaymentMethod, ManychatAdLead,
             TeamMember, MonthlyPaymentMethodBalance, MonthlySaving, AlertRule,
-            WorkshopEvent,
-            
+            WorkshopEvent, JobApplication, ClarityWeight,
+
             # Dependencia Nivel 1
-            Event, WorkshopButton, PipelineStage, Client, AdSet, 
+            Event, WorkshopButton, PipelineStage, Client, AdSet,
             MarketingBudget, PublicRegistration, GoogleCalendarToken, UTMLog,
             Availability, WeeklyAvailability, Alert, CloserAlias, FeatureToggle,
-            
+            JobApplicationVote,
+
             # Dependencia Nivel 2
             Lead, Ad, WorkshopTemplateSent, UserViewSetting,
             SurveyQuestion, ClientComment, MonthlyPayroll,
