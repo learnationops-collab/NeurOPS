@@ -510,12 +510,11 @@ const CloserWorkflowPage = () => {
     const [loadingSaleState, setLoadingSaleState] = useState(false);
     const [settleBalanceWithSale, setSettleBalanceWithSale] = useState(false);
 
-    useEffect(() => {
-        if (!saleModalOpen) {
-            setSaleClientState(null);
-            setSettleBalanceWithSale(false);
-            return;
-        }
+    // Extraída del useEffect para poder volver a llamarla a demanda (ej. al cerrar
+    // "Ver / corregir historial" abierto desde el wizard, para que el aviso de inconsistencia
+    // desaparezca solo si el closer de verdad corrigió el dato en el historial).
+    const fetchSaleClientState = useCallback(() => {
+        if (!saleModalOpen) return;
         setLoadingSaleState(true);
         const params = saleForm.client_id
             ? { client_id: saleForm.client_id, programa: saleForm.programa }
@@ -530,20 +529,25 @@ const CloserWorkflowPage = () => {
                     precio_total: prev.precio_total || String(res.data.program_price || ''),
                     monto: (res.data?.total_paid > 0 && !prev.monto && res.data.balance_remaining > 0) ? String(res.data.balance_remaining) : prev.monto
                 }));
-                // Si el tipo de pago actualmente elegido ya no corresponde para este cliente,
-                // saltar al primer tipo permitido en vez de dejar seleccionada una opción
-                // deshabilitada (el backend igual bloquea, esto es solo para no confundir).
-                const allowed = res.data?.allowed_types || {};
-                setSaleForm(prev => {
-                    const current = (prev.tipo_pago_simple || '').toLowerCase();
-                    if (allowed[current]?.ok !== false) return prev;
-                    const TIPO_OPTION_VALUES = { completo: 'completo', parcial: 'parcial', 'seña': 'Seña', cuota: 'Cuota', renovacion: 'Renovacion', upsell: 'Upsell' };
-                    const firstAllowed = Object.keys(allowed).find(k => allowed[k].ok);
-                    return firstAllowed ? { ...prev, tipo_pago_simple: TIPO_OPTION_VALUES[firstAllowed] || prev.tipo_pago_simple } : prev;
-                });
+                // `allowed_types` ya no oculta ni cambia la selección del closer: solo se usa
+                // para avisar (ver DeclararVentaWizard, paso "paymentType"). Si el historial del
+                // cliente está mal cargado, el closer tiene que poder declarar la venta real
+                // igual — forzarlo a otro tipo de pago acá era la misma trampa que bloquearlo
+                // del todo (caso real: Emilia Collantes, solo se le dejaba elegir
+                // Renovación/Upsell aunque esa no era la venta que estaba cerrando).
             })
             .catch(err => { console.error('Error al obtener el estado de pago del cliente:', err); setSaleClientState(null); })
             .finally(() => setLoadingSaleState(false));
+    }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
+
+    useEffect(() => {
+        if (!saleModalOpen) {
+            setSaleClientState(null);
+            setSettleBalanceWithSale(false);
+            return;
+        }
+        fetchSaleClientState();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
 
     // Plan de cuotas YA existente de este cliente (de un Parcial declarado antes). Al registrar
@@ -1678,6 +1682,13 @@ const CloserWorkflowPage = () => {
 
             if (res.data.status === 'success') {
                 toast.success("Venta declarada y sincronizada correctamente");
+                // La venta se guarda igual aunque el historial previo del cliente tenga una
+                // inconsistencia (ver SheetsService.post_to_sheets) — se avisa acá para que el
+                // closer sepa que hay algo para revisar y pueda abrir "Ver / corregir
+                // historial" y arreglar el dato real, en vez de quedar bloqueado sin saber por qué.
+                if (res.data.warning) {
+                    toast(res.data.warning, { icon: '⚠️', duration: 7000 });
+                }
                 const savedApptId = salePrompt.apptId;
 
                 // Si se definió una fecha de cobro en la venta, auto-guardarla para la agenda
@@ -4596,6 +4607,7 @@ const CloserWorkflowPage = () => {
                             }
                         }}
                         onRegisterSale={handleRegisterSale}
+                        onOpenHistory={saleClientState?.client_id ? () => setHistoryClientId(saleClientState.client_id) : undefined}
                     />
                 )}
             </>
@@ -4962,7 +4974,13 @@ const CloserWorkflowPage = () => {
             {historyClientId && (
                 <ClientHistoryModal
                     clientId={historyClientId}
-                    onClose={() => setHistoryClientId(null)}
+                    onClose={() => {
+                        setHistoryClientId(null);
+                        // Si se abrió desde "Declarar Venta" para corregir una inconsistencia,
+                        // refrescar el estado de pago al volver — así el aviso desaparece solo
+                        // si el closer de verdad corrigió el dato en el historial.
+                        if (saleModalOpen) fetchSaleClientState();
+                    }}
                     onOpenAppointment={handleOpenAppointmentFromHistory}
                     onRegisterSale={handleRegisterSaleFromHistory}
                 />

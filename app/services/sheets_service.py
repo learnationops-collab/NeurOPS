@@ -52,6 +52,7 @@ class SheetsService:
         Escritura (POST): Envía datos con acción 'insert', los guarda localmente y los propaga a Google Sheets.
         """
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
+        inconsistency_warning = None
         if tabla == "Ventas_DB":
             try:
                 from app.models.financial import FinancialSale
@@ -74,16 +75,24 @@ class SheetsService:
                     'phone': payload.get('telefono'),
                 })
 
-                # Validar secuencia de pago (Seña->Parcial/Completo->Cuota->Renovación/Upsell)
-                # ANTES de guardar la venta. Bloqueo duro con motivo explicable, para que el
-                # closer pueda corregir el tipo de pago en vez de un error genérico.
+                # Validar secuencia de pago (Seña->Parcial/Completo->Cuota->Renovación/Upsell):
+                # se avisa, no se bloquea. Bloquear duro le impedía al closer reportar una venta
+                # real cuando el historial previo del cliente tenía un dato mal cargado (caso
+                # real: Emilia Collantes, el closer solo podía declarar Renovación/Upsell aunque
+                # la venta real era otra cosa, por una inconsistencia en ventas anteriores que él
+                # no tenía forma de arreglar desde ahí). El closer puede ver y corregir el
+                # historial completo del cliente (ClientHistoryModal, `VentaRow`/`PagoRow`) — la
+                # inconsistencia se resuelve editando el dato real, no negándole el registro de
+                # la venta nueva. `inconsistency_warning` viaja en la respuesta para que el
+                # frontend lo muestre y el closer sepa que hay algo que revisar.
                 program_code, tipo_simple = SheetsService.parse_tipo_pago(payload.get('tipo_pago'))
+                inconsistency_warning = None
                 if program_code and client:
                     from app.services.sales_consistency_service import SalesConsistencyService
                     ok, reason, _ = SalesConsistencyService.validate_next_payment_type(client.id, program_code, tipo_simple)
                     if not ok:
-                        logger.warning(f"[SHEETS POST] Venta rechazada por secuencia de pago inválida (client_id={client.id}, tipo={tipo_simple}): {reason}")
-                        return {"status": "error", "message": reason}
+                        logger.warning(f"[SHEETS POST] Venta con secuencia de pago inconsistente, se registra igual (client_id={client.id}, tipo={tipo_simple}): {reason}")
+                        inconsistency_warning = reason
 
                 # Total del cliente (no por programa/Enrollment): el closer lo declara en el
                 # "Precio Total" del formulario de venta (o el monto mismo si es pago Completo).
@@ -187,14 +196,14 @@ class SheetsService:
             response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
-                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets"}
-            
+                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets", "warning": inconsistency_warning}
+
             logger.error(f"[SHEETS POST] Error en respuesta: {response.status_code} - {response.text}")
-            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets."}
+            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets.", "warning": inconsistency_warning}
 
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
-            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible."}
+            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning}
 
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
 
