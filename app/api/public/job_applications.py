@@ -106,6 +106,7 @@ def crear_job_application():
         _set_si_presente(app_row, 'habilidades', _texto(data.get('habilidades'), MAX_LARGO))
         _set_si_presente(app_row, 'obstaculo', _texto(data.get('obstaculo'), MAX_LARGO))
         _set_si_presente(app_row, 'objetivos', _texto(data.get('objetivos'), MAX_LARGO))
+        _set_si_presente(app_row, 'porque_mejor_opcion', _texto(data.get('porque_mejor_opcion'), MAX_LARGO))
         _set_si_presente(app_row, 'porque', _lista(data.get('porque')))
         _set_si_presente(app_row, 'fuente', _texto(data.get('fuente'), 60))
         _set_si_presente(app_row, 'bolsa', _texto(data.get('bolsa'), 120))

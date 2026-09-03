@@ -16,7 +16,7 @@ from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
 
-FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'decidir', 'descartadas')
+FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'decidir', 'descartadas')
 # 'incompletas' no entra en FILTROS_VALIDOS: no es un veredicto de revisión
 # (no tiene sentido votar algo a medio completar), es una vista aparte para
 # ver dónde quedó alguien que no terminó.
@@ -43,6 +43,8 @@ def _aplica_filtro(app_row, filtro):
         return current_user.id not in {v.reviewer_id for v in app_row.votes}
     if filtro == 'preseleccionadas':
         return veredicto == 'preseleccionada'
+    if filtro == 'en_reserva':
+        return veredicto == 'en_reserva'
     if filtro == 'decidir':
         return veredicto == 'decidir'
     if filtro == 'descartadas':
@@ -106,7 +108,7 @@ def votar_job_application(app_id):
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor not in VOTE_VALUES:
-        return jsonify({"message": "valor debe ser 'pre' o 'des'"}), 400
+        return jsonify({"message": "valor debe ser 'pre', 'res' o 'des'"}), 400
 
     app_row = JobApplication.query.get_or_404(app_id)
 
@@ -193,9 +195,30 @@ def stats_job_applications():
     if forbidden:
         return forbidden
 
+    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'descartados', 'incompletos')
+    segmento = request.args.get('segmento', 'todos')
+    if segmento not in SEGMENTOS_VALIDOS:
+        segmento = 'todos'
+
     weights = _weights_map()
     todas_las_filas = JobApplication.query.all()
-    todas = [a for a in todas_las_filas if a.completo]
+    completas = [a for a in todas_las_filas if a.completo]
+    # Cada segmento recorta el pool al mismo veredicto que se usa en la pestaña
+    # de Postulaciones, para ver cómo viene ESE grupo puntualmente (score,
+    # país, herramientas...) en vez de mezclarlo con el resto. 'incompletos' es
+    # el único que sale de `todas_las_filas` en vez de `completas` (por
+    # definición nunca están marcadas completo=True).
+    VEREDICTO_DE_SEGMENTO = {
+        'preseleccionados': 'preseleccionada',
+        'en_reserva': 'en_reserva',
+        'descartados': 'descartado',
+    }
+    if segmento == 'incompletos':
+        todas = [a for a in todas_las_filas if not a.completo]
+    elif segmento in VEREDICTO_DE_SEGMENTO:
+        todas = [a for a in completas if a.veredicto() == VEREDICTO_DE_SEGMENTO[segmento]]
+    else:
+        todas = completas
     scores = [clarity.score_de(a, weights) for a in todas]
 
     tramos = [(0, 40), (40, 60), (60, 75), (75, 85), (85, 101)]
@@ -212,20 +235,32 @@ def stats_job_applications():
     con_material = sum(1 for a in todas if a.video and a.llamada)
     score_85 = sum(1 for s in scores if s >= 85)
     pasaron_disclaimer = sum(1 for a in todas_las_filas if a.disclaimer)
-    embudo = [
-        {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
-        {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
-        {"etapa": "Completaron", "cantidad": len(todas)},
-        {"etapa": "Con video y llamada", "cantidad": con_material},
-        {"etapa": "Score 85+", "cantidad": score_85},
-    ]
+    # El embudo de captación (abrieron -> disclaimer -> completaron...) describe
+    # el pool entero, no tiene sentido recortado a un solo veredicto (sería un
+    # único escalón) — se omite fuera de 'todos', el frontend oculta el panel.
+    embudo = None
+    if segmento == 'todos':
+        embudo = [
+            {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
+            {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
+            {"etapa": "Completaron", "cantidad": len(completas)},
+            {"etapa": "Con video y llamada", "cantidad": con_material},
+            {"etapa": "Score 85+", "cantidad": score_85},
+        ]
 
-    desde = datetime.utcnow() - timedelta(days=14)
+    # Se devuelven los 14 días completos (con 0 en los que no hubo postulaciones),
+    # no solo los días con datos: el gráfico de barras necesita una serie continua
+    # y espaciada de forma pareja, no un puñado de barras sueltas y desconectadas.
+    hoy = datetime.utcnow().date()
+    desde_fecha = hoy - timedelta(days=13)
     por_dia = Counter()
     for a in todas:
-        if a.created_at and a.created_at >= desde:
+        if a.created_at and a.created_at.date() >= desde_fecha:
             por_dia[a.created_at.date().isoformat()] += 1
-    linea_por_dia = [{"fecha": f, "cantidad": c} for f, c in sorted(por_dia.items())]
+    linea_por_dia = [
+        {"fecha": (fecha := (desde_fecha + timedelta(days=i)).isoformat()), "cantidad": por_dia.get(fecha, 0)}
+        for i in range(14)
+    ]
 
     def distribucion(campo):
         conteo = Counter(getattr(a, campo) for a in todas if getattr(a, campo))
@@ -239,7 +274,12 @@ def stats_job_applications():
         return [{"opcion": k, "cantidad": v} for k, v in conteo.most_common()]
 
     return jsonify({
+        "segmento": segmento,
         "total": len(todas),
+        "total_completas": len(completas),
+        "abrieron_formulario": len(todas_las_filas),
+        "con_material": con_material,
+        "score_85": score_85,
         "score_medio": round(sum(scores) / len(scores)) if scores else 0,
         "distribucion_tramos": distribucion_tramos,
         "histograma": histograma,
@@ -251,4 +291,64 @@ def stats_job_applications():
         "distribucion_edad": distribucion('edad'),
         "distribucion_herramientas": distribucion_lista('herramientas'),
         "distribucion_disclaimer": distribucion('disclaimer'),
+    }), 200
+
+
+@bp.route('/job-applications/revisores', methods=['GET'])
+@login_required
+def revisores_job_applications():
+    """Estado de la revisión por revisor: a cuántos les falta calificar a cada
+    admin, dónde votaron distinto (necesita decidir) y qué le falta ver al
+    usuario actual. 'Revisor' es cualquier admin, no una lista fija — mismo
+    criterio de autorización que votar (`check_admin`)."""
+    forbidden = check_admin()
+    if forbidden:
+        return forbidden
+
+    weights = _weights_map()
+    completas = JobApplication.query.filter_by(completo=True).all()
+    total = len(completas)
+
+    admins = User.query.filter_by(role='admin').order_by(User.username).all()
+    revisores = []
+    for u in admins:
+        hechas = sum(1 for a in completas if any(v.reviewer_id == u.id for v in a.votes))
+        revisores.append({
+            "id": u.id,
+            "nombre": u.username,
+            "hechas": hechas,
+            "faltan": total - hechas,
+            "pct": round((hechas / total) * 100) if total else 0,
+        })
+
+    desacuerdos = []
+    mis_pendientes = []
+    for a in completas:
+        votantes = {v.reviewer_id for v in a.votes}
+        if a.veredicto() == 'decidir':
+            desacuerdos.append({
+                "id": a.id,
+                "nombre": a.nombre,
+                "score": clarity.score_de(a, weights),
+                "votos": [
+                    {"reviewer_name": v.reviewer.username if v.reviewer else '?', "vote": v.vote}
+                    for v in a.votes
+                ],
+            })
+        if current_user.id not in votantes:
+            mis_pendientes.append({
+                "id": a.id,
+                "nombre": a.nombre,
+                "score": clarity.score_de(a, weights),
+            })
+
+    # Los más urgentes primero: score más alto arriba en ambas listas.
+    desacuerdos.sort(key=lambda d: d['score'], reverse=True)
+    mis_pendientes.sort(key=lambda p: p['score'], reverse=True)
+
+    return jsonify({
+        "total_completas": total,
+        "revisores": revisores,
+        "desacuerdos": desacuerdos,
+        "mis_pendientes": mis_pendientes,
     }), 200
