@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Inbox, BarChart3, Sliders } from 'lucide-react';
+import { Inbox, Users, BarChart3, Sliders } from 'lucide-react';
 import PostulacionesInbox from './components/PostulacionesInbox';
+import PostulacionesRevisoresTab from './components/PostulacionesRevisoresTab';
 import PostulacionesStatsTab from './components/PostulacionesStatsTab';
 import PostulacionesClarityTab from './components/PostulacionesClarityTab';
 
 const TABS = [
     { id: 'postulaciones', label: 'Postulaciones', icon: Inbox },
+    { id: 'revisores', label: 'Revisores', icon: Users },
     { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
     { id: 'clarity', label: 'Clarity', icon: Sliders },
 ];
@@ -46,6 +48,7 @@ const PostulacionesDashboardPage = () => {
 
             <div className="w-full px-8 pb-8">
                 {activeTab === 'postulaciones' && <PostulacionesInbox />}
+                {activeTab === 'revisores' && <PostulacionesRevisoresTab />}
                 {activeTab === 'estadisticas' && <PostulacionesStatsTab />}
                 {activeTab === 'clarity' && <PostulacionesClarityTab />}
             </div>

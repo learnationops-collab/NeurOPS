@@ -292,3 +292,63 @@ def stats_job_applications():
         "distribucion_herramientas": distribucion_lista('herramientas'),
         "distribucion_disclaimer": distribucion('disclaimer'),
     }), 200
+
+
+@bp.route('/job-applications/revisores', methods=['GET'])
+@login_required
+def revisores_job_applications():
+    """Estado de la revisión por revisor: a cuántos les falta calificar a cada
+    admin, dónde votaron distinto (necesita decidir) y qué le falta ver al
+    usuario actual. 'Revisor' es cualquier admin, no una lista fija — mismo
+    criterio de autorización que votar (`check_admin`)."""
+    forbidden = check_admin()
+    if forbidden:
+        return forbidden
+
+    weights = _weights_map()
+    completas = JobApplication.query.filter_by(completo=True).all()
+    total = len(completas)
+
+    admins = User.query.filter_by(role='admin').order_by(User.username).all()
+    revisores = []
+    for u in admins:
+        hechas = sum(1 for a in completas if any(v.reviewer_id == u.id for v in a.votes))
+        revisores.append({
+            "id": u.id,
+            "nombre": u.username,
+            "hechas": hechas,
+            "faltan": total - hechas,
+            "pct": round((hechas / total) * 100) if total else 0,
+        })
+
+    desacuerdos = []
+    mis_pendientes = []
+    for a in completas:
+        votantes = {v.reviewer_id for v in a.votes}
+        if a.veredicto() == 'decidir':
+            desacuerdos.append({
+                "id": a.id,
+                "nombre": a.nombre,
+                "score": clarity.score_de(a, weights),
+                "votos": [
+                    {"reviewer_name": v.reviewer.username if v.reviewer else '?', "vote": v.vote}
+                    for v in a.votes
+                ],
+            })
+        if current_user.id not in votantes:
+            mis_pendientes.append({
+                "id": a.id,
+                "nombre": a.nombre,
+                "score": clarity.score_de(a, weights),
+            })
+
+    # Los más urgentes primero: score más alto arriba en ambas listas.
+    desacuerdos.sort(key=lambda d: d['score'], reverse=True)
+    mis_pendientes.sort(key=lambda p: p['score'], reverse=True)
+
+    return jsonify({
+        "total_completas": total,
+        "revisores": revisores,
+        "desacuerdos": desacuerdos,
+        "mis_pendientes": mis_pendientes,
+    }), 200
