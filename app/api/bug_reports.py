@@ -80,11 +80,13 @@ def list_bug_reports():
     forbidden = check_manager()
     if forbidden: return forbidden
 
-    status_filter = request.args.get('status')
+    status_filter = request.args.get('status')  # comma separated
     urgency_filter = request.args.get('urgency')
     query = BugReport.query
     if status_filter:
-        query = query.filter(BugReport.status == status_filter)
+        statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
+        if statuses:
+            query = query.filter(BugReport.status.in_(statuses))
     if urgency_filter:
         query = query.filter(BugReport.urgency == urgency_filter)
 

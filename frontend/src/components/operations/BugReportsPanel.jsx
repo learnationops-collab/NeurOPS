@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
 import BugReportThread from '../feedback/BugReportThread';
+import MultiSelectFilter from '../shared/MultiSelectFilter';
 
 const STATUS_OPTIONS = [
     { id: 'open', label: 'Pendiente', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
@@ -140,12 +141,15 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
 const BugReportsPanel = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState('');
+    // Array de status ids seleccionados; vacío = sin filtrar (todos). Antes era un <select> de
+    // un solo valor — el operador pedía poder ver, por ejemplo, "pendientes" + "en revisión"
+    // juntos sin los resueltos, así que pasa a multi-selección.
+    const [statusFilter, setStatusFilter] = useState([]);
 
     const fetchReports = async () => {
         setLoading(true);
         try {
-            const params = statusFilter ? { status: statusFilter } : {};
+            const params = statusFilter.length ? { status: statusFilter.join(',') } : {};
             const res = await api.get('/bug-reports', { params, skipBugReport: true });
             setReports(res.data);
         } catch (err) {
@@ -184,14 +188,12 @@ const BugReportsPanel = () => {
                     <p className="text-xs text-muted uppercase tracking-widest font-medium">{openCount} pendiente(s) de revisar</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <select
+                    <MultiSelectFilter
+                        label="Estado"
+                        options={STATUS_OPTIONS.map(s => ({ value: s.id, label: s.label }))}
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="bg-black/30 border border-white/10 rounded-2xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                        <option value="" className="bg-slate-900">Todos los estados</option>
-                        {STATUS_OPTIONS.map(s => <option key={s.id} value={s.id} className="bg-slate-900">{s.label}</option>)}
-                    </select>
+                        onChange={setStatusFilter}
+                    />
                     <button
                         onClick={fetchReports}
                         disabled={loading}
