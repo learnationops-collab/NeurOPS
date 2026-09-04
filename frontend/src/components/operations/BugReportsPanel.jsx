@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
@@ -21,6 +22,62 @@ const URGENCY_LABELS = {
 
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
+// Convierte un link de Loom (share o embed) en su URL embebible. Si el link no matchea el
+// formato de Loom (p.ej. el usuario pegó otra cosa por error), devuelve null y se cae al link
+// externo en vez de romper el modal con un iframe vacío.
+const getLoomEmbedUrl = (url) => {
+    if (!url) return null;
+    const match = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/i);
+    return match ? `https://www.loom.com/embed/${match[1]}` : null;
+};
+
+// Reproduce el Loom incrustado sin sacar al operador de la sesión — antes esto abría una
+// pestaña nueva. Se deja igual el link externo como respaldo por si el embed falla (o por si
+// el operador prefiere verlo a pantalla completa en loom.com).
+const LoomModal = ({ url, onClose }) => {
+    const embedUrl = getLoomEmbedUrl(url);
+    // Portal a document.body (mismo patrón que FixIssueModal/LeadEditModal): esta página envuelve
+    // sus rutas en un contenedor con transform para las animaciones de transición, y eso convierte
+    // a ese contenedor en el "containing block" de cualquier descendiente `fixed` — sin el portal,
+    // el modal queda anclado a ese contenedor en vez del viewport real y se desplaza con el scroll
+    // de la lista de reportes en vez de quedar fijo en pantalla.
+    return createPortal(
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={onClose}>
+            {/* z-10: el iframe de abajo es otro hijo "fixed"/"absolute" sin z-index propio dentro
+                del mismo contexto de apilamiento — sin esto, al pintarse después en el DOM queda
+                por encima del botón y lo vuelve inclickeable. */}
+            <button className="fixed top-8 right-8 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
+                <X size={20} />
+            </button>
+            <div className="w-full max-w-3xl space-y-3" onClick={(e) => e.stopPropagation()}>
+                {embedUrl ? (
+                    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ paddingTop: '62.5%' }}>
+                        <iframe
+                            src={embedUrl}
+                            title="Grabación de Loom"
+                            frameBorder="0"
+                            allow="fullscreen"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                        />
+                    </div>
+                ) : (
+                    <p className="text-white text-sm text-center">No se pudo generar la vista previa de este link.</p>
+                )}
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 text-xs font-bold text-violet-300 hover:text-violet-200"
+                >
+                    <ExternalLink size={14} /> Abrir en Loom
+                </a>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 // Muestra la captura automática (si hay) seguida de las capturas extra que el usuario haya
 // pegado a mano (Ctrl+V) — todas en una sola galería vertical, sin distinguir cuál es cuál,
 // porque para quien revisa el reporte todas cumplen la misma función.
@@ -38,9 +95,9 @@ const ScreenshotModal = ({ reportId, onClose }) => {
             .finally(() => setLoading(false));
     }, [reportId]);
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 overflow-y-auto" onClick={onClose}>
-            <button className="fixed top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
+            <button className="fixed top-8 right-8 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
                 <X size={20} />
             </button>
             {loading && <Loader2 className="animate-spin text-white" size={32} />}
@@ -52,12 +109,14 @@ const ScreenshotModal = ({ reportId, onClose }) => {
                 </div>
             )}
             {!loading && images.length === 0 && <p className="text-white text-sm">Sin capturas disponibles.</p>}
-        </div>
+        </div>,
+        document.body
     );
 };
 
 const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     const [showScreenshot, setShowScreenshot] = useState(false);
+    const [showLoom, setShowLoom] = useState(false);
 
     const statusMeta = STATUS_OPTIONS.find(s => s.id === report.status) || STATUS_OPTIONS[0];
 
@@ -116,17 +175,17 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                     </button>
                 )}
                 {report.loom_link && (
-                    <a
-                        href={report.loom_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        type="button"
+                        onClick={() => setShowLoom(true)}
                         className="flex items-center gap-2 text-xs font-bold text-violet-400 hover:text-violet-300"
                     >
                         <Video size={14} /> Ver Loom
-                    </a>
+                    </button>
                 )}
             </div>
             {showScreenshot && <ScreenshotModal reportId={report.id} onClose={() => setShowScreenshot(false)} />}
+            {showLoom && <LoomModal url={report.loom_link} onClose={() => setShowLoom(false)} />}
 
             <div className="pt-2 border-t border-white/5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 flex items-center gap-1.5">
