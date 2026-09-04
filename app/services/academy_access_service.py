@@ -59,12 +59,34 @@ class AcademyAccessService:
         return _add_months(base, 4)
 
     @staticmethod
-    def grant_access(client, programa_code, tipo_venta, expires_at_override=None):
+    def grant_access(client, programa_code, tipo_venta, expires_at_override=None, email_override=None):
         """Da (o renueva) el acceso de `client` en la Academia: upsert del usuario por email +
         asignación del producto vinculado a `programa_code`, con el vencimiento que decide esta
-        función (o el que mande el closer a mano). Persiste el resultado en el propio `client`."""
+        función (o el que mande el closer a mano). Persiste el resultado en el propio `client`.
+
+        `email_override`: el closer confirma/corrige acá el email real del cliente justo antes
+        de darle acceso — es el email que va a usar para entrar a la Academia, así que este es
+        el último punto de control antes de mandarlo. Si viene y es distinto al que ya tiene el
+        cliente, se guarda en `client.email` (reemplaza sin condición: es una corrección
+        explícita del closer, no un merge automático de datos)."""
+        if email_override:
+            email_clean = str(email_override).strip().lower()
+            if '@' not in email_clean:
+                raise AcademyAccessError('El email ingresado no es válido.', status_code=422)
+            if email_clean != (client.email or '').strip().lower():
+                client.email = email_clean
+                # Se guarda ya (no se espera al commit final): si la llamada a la Academia
+                # falla despues, el closer no debería tener que volver a tipear la corrección.
+                db.session.commit()
+
         if not client.email:
             raise AcademyAccessError('El cliente no tiene email registrado — no se puede vincular con la Academia.')
+        if 'no-email-' in client.email or 'no_email_' in client.email:
+            raise AcademyAccessError(
+                'El cliente todavía tiene un email temporal generado por el sistema (no uno real) — '
+                'confirmá el email real del cliente antes de darle acceso a la Academia.',
+                status_code=422
+            )
 
         mapping = AcademyAccessService.get_product_mapping()
         product_slug = mapping.get((programa_code or '').strip().upper())
@@ -107,5 +129,6 @@ class AcademyAccessService:
             'was_created': was_created,
             'product_slug': product_slug,
             'expires_at': expires_at.isoformat(),
-            'assignment': assign_result.get('assignment')
+            'assignment': assign_result.get('assignment'),
+            'email': client.email
         }

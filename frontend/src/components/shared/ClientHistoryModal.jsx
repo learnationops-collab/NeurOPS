@@ -650,19 +650,26 @@ const ACADEMY_TIPO_VENTA_OPTIONS = [
 // email + asignación del producto vinculado al programa (AL/RR/SI, configurado en
 // Configuración de Ventas → Integraciones) con el vencimiento que calcula el backend, o el que
 // el closer especifique a mano acá. Ver docs/integracion_learnation_api.md §5.
+// Email autogenerado por el sistema (booking_service.py) cuando nunca llegó uno real —
+// nunca es el email con el que un cliente real puede entrar a la Academia.
+const isPlaceholderEmail = (email) => !email || /no[-_]email[-_]/i.test(email);
+
 const AcademyAccessPanel = ({ client, onGranted }) => {
     const [abierto, setAbierto] = useState(false);
     const [tipoVenta, setTipoVenta] = useState('completo');
     const [expiresAt, setExpiresAt] = useState('');
+    const [email, setEmail] = useState(client.email || '');
     const [saving, setSaving] = useState(false);
 
     const yaVinculado = !!client.learnation_user_id;
     const tipoSeleccionado = ACADEMY_TIPO_VENTA_OPTIONS.find(t => t.v === tipoVenta);
+    const emailValido = /\S+@\S+\.\S+/.test(email);
+    const emailEsPlaceholder = isPlaceholderEmail(client.email);
 
     const darAcceso = async () => {
         setSaving(true);
         try {
-            const payload = { programa_code: client.programa_code || 'RR', tipo_venta: tipoVenta };
+            const payload = { programa_code: client.programa_code || 'RR', tipo_venta: tipoVenta, email };
             if (expiresAt) payload.expires_at = expiresAt;
             const res = await api.post(`/closer/clients/${client.id}/academy-access`, payload);
             toast.success(
@@ -704,15 +711,32 @@ const AcademyAccessPanel = ({ client, onGranted }) => {
                     <p className="text-[10px] text-slate-500">Este cliente todavía no tiene acceso vinculado en la Academia.</p>
                 )}
 
+                {emailEsPlaceholder && (
+                    <p className="text-[9px] text-rose-400 font-bold leading-snug bg-rose-500/10 border border-rose-500/20 rounded-lg px-2 py-1.5">
+                        Este cliente no tiene un email real cargado todavía (quedó uno generado por el sistema) — confirmalo abajo antes de dar acceso.
+                    </p>
+                )}
+
                 {!abierto ? (
                     <button
-                        onClick={() => setAbierto(true)}
+                        onClick={() => { setEmail(client.email && !isPlaceholderEmail(client.email) ? client.email : ''); setAbierto(true); }}
                         className="text-[9px] font-black uppercase text-violet-400 hover:text-violet-300 cursor-pointer"
                     >
                         {yaVinculado ? 'Renovar / cambiar vencimiento' : 'Dar acceso a la Academia'}
                     </button>
                 ) : (
                     <div className="space-y-2 pt-1 border-t border-slate-850">
+                        <label className="space-y-1 block">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">
+                                Email con el que va a entrar a la Academia — confirmalo
+                            </span>
+                            <input
+                                type="email" value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="cliente@ejemplo.com"
+                                className={`w-full bg-slate-950 border rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200 ${email && !emailValido ? 'border-rose-500/50' : 'border-slate-850'}`}
+                            />
+                        </label>
                         <div className="grid grid-cols-2 gap-2">
                             <label className="space-y-1">
                                 <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
@@ -742,8 +766,9 @@ const AcademyAccessPanel = ({ client, onGranted }) => {
                         )}
                         <button
                             onClick={darAcceso}
-                            disabled={saving}
-                            className="w-full h-8 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            disabled={saving || !emailValido}
+                            title={!emailValido ? 'Ingresá un email válido primero' : undefined}
+                            className="w-full h-8 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                             {saving ? <Loader2 size={11} className="animate-spin" /> : <GraduationCap size={11} />}
                             {yaVinculado ? 'Actualizar acceso' : 'Dar acceso'}
@@ -928,7 +953,9 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                 ) : (
                     <div className="space-y-5 text-left">
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wide space-x-3">
-                            <span>{history.client.email || 'sin email'}</span>
+                            <span className={isPlaceholderEmail(history.client.email) ? 'text-rose-400' : ''}>
+                                {isPlaceholderEmail(history.client.email) ? 'sin email real' : history.client.email}
+                            </span>
                             <span>@{history.client.instagram || 'sin ig'}</span>
                             <span>{history.client.phone || 'sin teléfono'}</span>
                         </div>
@@ -939,6 +966,7 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                 ...prev,
                                 client: {
                                     ...prev.client,
+                                    email: result.email || prev.client.email,
                                     learnation_user_id: result.learnation_user_id,
                                     academy_product_slug: result.product_slug,
                                     academy_expires_at: result.expires_at
