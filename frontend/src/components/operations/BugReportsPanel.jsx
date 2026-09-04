@@ -21,7 +21,7 @@ const URGENCY_LABELS = {
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
 // Muestra la captura automática (si hay) seguida de las capturas extra que el usuario haya
-// pegado a mano (Ctrl+B) — todas en una sola galería vertical, sin distinguir cuál es cuál,
+// pegado a mano (Ctrl+V) — todas en una sola galería vertical, sin distinguir cuál es cuál,
 // porque para quien revisa el reporte todas cumplen la misma función.
 const ScreenshotModal = ({ reportId, onClose }) => {
     const [images, setImages] = useState([]);

@@ -36,7 +36,7 @@ def create_bug_report():
     problem = (data.get('problem') or '').strip()
     technical_context = data.get('technical_context')
     loom_link = (data.get('loom_link') or '').strip() or None
-    # Capturas extra pegadas a mano (Ctrl+B): opcionales, puede venir vacía o ausente. Se filtran
+    # Capturas extra pegadas a mano (Ctrl+V): opcionales, puede venir vacía o ausente. Se filtran
     # strings vacíos/no-string por si el frontend manda basura.
     extra_screenshots = [s for s in (data.get('extra_screenshots') or []) if isinstance(s, str) and s]
 

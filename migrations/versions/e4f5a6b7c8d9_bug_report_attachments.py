@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade():
     with op.batch_alter_table('bug_reports', schema=None) as batch_op:
-        # Capturas adicionales que el usuario pega con Ctrl+B (además de la automática que ya
+        # Capturas adicionales que el usuario pega con Ctrl+V (además de la automática que ya
         # vive en `screenshot`). Lista de data URLs, puede quedar vacía.
         batch_op.add_column(sa.Column('extra_screenshots', sa.JSON(), nullable=True))
         # Link de Loom opcional para quien prefiere grabar el problema en vez de (o además de)
