@@ -19,7 +19,7 @@ class BugReport(db.Model):
     user_agent = db.Column(db.String(500), nullable=True)
     technical_context = db.Column(db.Text, nullable=True)
     screenshot = db.Column(db.Text, nullable=True)
-    # Capturas adicionales pegadas a mano (Ctrl+B) además de la automática de arriba. Lista de
+    # Capturas adicionales pegadas a mano (Ctrl+V) además de la automática de arriba. Lista de
     # data URLs, opcional y puede tener varias.
     extra_screenshots = db.Column(db.JSON, nullable=True)
     # Link de Loom opcional para quien prefiere grabar el problema en vez de describirlo.

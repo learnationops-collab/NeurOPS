@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
 import BugReportThread from '../feedback/BugReportThread';
+import MultiSelectFilter from '../shared/MultiSelectFilter';
 
 const STATUS_OPTIONS = [
     { id: 'open', label: 'Pendiente', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
@@ -20,8 +22,64 @@ const URGENCY_LABELS = {
 
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
+// Convierte un link de Loom (share o embed) en su URL embebible. Si el link no matchea el
+// formato de Loom (p.ej. el usuario pegó otra cosa por error), devuelve null y se cae al link
+// externo en vez de romper el modal con un iframe vacío.
+const getLoomEmbedUrl = (url) => {
+    if (!url) return null;
+    const match = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/i);
+    return match ? `https://www.loom.com/embed/${match[1]}` : null;
+};
+
+// Reproduce el Loom incrustado sin sacar al operador de la sesión — antes esto abría una
+// pestaña nueva. Se deja igual el link externo como respaldo por si el embed falla (o por si
+// el operador prefiere verlo a pantalla completa en loom.com).
+const LoomModal = ({ url, onClose }) => {
+    const embedUrl = getLoomEmbedUrl(url);
+    // Portal a document.body (mismo patrón que FixIssueModal/LeadEditModal): esta página envuelve
+    // sus rutas en un contenedor con transform para las animaciones de transición, y eso convierte
+    // a ese contenedor en el "containing block" de cualquier descendiente `fixed` — sin el portal,
+    // el modal queda anclado a ese contenedor en vez del viewport real y se desplaza con el scroll
+    // de la lista de reportes en vez de quedar fijo en pantalla.
+    return createPortal(
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={onClose}>
+            {/* z-10: el iframe de abajo es otro hijo "fixed"/"absolute" sin z-index propio dentro
+                del mismo contexto de apilamiento — sin esto, al pintarse después en el DOM queda
+                por encima del botón y lo vuelve inclickeable. */}
+            <button className="fixed top-8 right-8 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
+                <X size={20} />
+            </button>
+            <div className="w-full max-w-3xl space-y-3" onClick={(e) => e.stopPropagation()}>
+                {embedUrl ? (
+                    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ paddingTop: '62.5%' }}>
+                        <iframe
+                            src={embedUrl}
+                            title="Grabación de Loom"
+                            frameBorder="0"
+                            allow="fullscreen"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                        />
+                    </div>
+                ) : (
+                    <p className="text-white text-sm text-center">No se pudo generar la vista previa de este link.</p>
+                )}
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 text-xs font-bold text-violet-300 hover:text-violet-200"
+                >
+                    <ExternalLink size={14} /> Abrir en Loom
+                </a>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 // Muestra la captura automática (si hay) seguida de las capturas extra que el usuario haya
-// pegado a mano (Ctrl+B) — todas en una sola galería vertical, sin distinguir cuál es cuál,
+// pegado a mano (Ctrl+V) — todas en una sola galería vertical, sin distinguir cuál es cuál,
 // porque para quien revisa el reporte todas cumplen la misma función.
 const ScreenshotModal = ({ reportId, onClose }) => {
     const [images, setImages] = useState([]);
@@ -37,9 +95,9 @@ const ScreenshotModal = ({ reportId, onClose }) => {
             .finally(() => setLoading(false));
     }, [reportId]);
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 overflow-y-auto" onClick={onClose}>
-            <button className="fixed top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
+            <button className="fixed top-8 right-8 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white" onClick={onClose}>
                 <X size={20} />
             </button>
             {loading && <Loader2 className="animate-spin text-white" size={32} />}
@@ -51,12 +109,14 @@ const ScreenshotModal = ({ reportId, onClose }) => {
                 </div>
             )}
             {!loading && images.length === 0 && <p className="text-white text-sm">Sin capturas disponibles.</p>}
-        </div>
+        </div>,
+        document.body
     );
 };
 
 const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     const [showScreenshot, setShowScreenshot] = useState(false);
+    const [showLoom, setShowLoom] = useState(false);
 
     const statusMeta = STATUS_OPTIONS.find(s => s.id === report.status) || STATUS_OPTIONS[0];
 
@@ -115,17 +175,17 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                     </button>
                 )}
                 {report.loom_link && (
-                    <a
-                        href={report.loom_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        type="button"
+                        onClick={() => setShowLoom(true)}
                         className="flex items-center gap-2 text-xs font-bold text-violet-400 hover:text-violet-300"
                     >
                         <Video size={14} /> Ver Loom
-                    </a>
+                    </button>
                 )}
             </div>
             {showScreenshot && <ScreenshotModal reportId={report.id} onClose={() => setShowScreenshot(false)} />}
+            {showLoom && <LoomModal url={report.loom_link} onClose={() => setShowLoom(false)} />}
 
             <div className="pt-2 border-t border-white/5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2 flex items-center gap-1.5">
@@ -140,12 +200,15 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
 const BugReportsPanel = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState('');
+    // Array de status ids seleccionados; vacío = sin filtrar (todos). Antes era un <select> de
+    // un solo valor — el operador pedía poder ver, por ejemplo, "pendientes" + "en revisión"
+    // juntos sin los resueltos, así que pasa a multi-selección.
+    const [statusFilter, setStatusFilter] = useState([]);
 
     const fetchReports = async () => {
         setLoading(true);
         try {
-            const params = statusFilter ? { status: statusFilter } : {};
+            const params = statusFilter.length ? { status: statusFilter.join(',') } : {};
             const res = await api.get('/bug-reports', { params, skipBugReport: true });
             setReports(res.data);
         } catch (err) {
@@ -184,14 +247,12 @@ const BugReportsPanel = () => {
                     <p className="text-xs text-muted uppercase tracking-widest font-medium">{openCount} pendiente(s) de revisar</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <select
+                    <MultiSelectFilter
+                        label="Estado"
+                        options={STATUS_OPTIONS.map(s => ({ value: s.id, label: s.label }))}
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="bg-black/30 border border-white/10 rounded-2xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                        <option value="" className="bg-slate-900">Todos los estados</option>
-                        {STATUS_OPTIONS.map(s => <option key={s.id} value={s.id} className="bg-slate-900">{s.label}</option>)}
-                    </select>
+                        onChange={setStatusFilter}
+                    />
                     <button
                         onClick={fetchReports}
                         disabled={loading}

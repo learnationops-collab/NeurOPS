@@ -2605,13 +2605,16 @@ def grant_academy_access(client_id):
     programa_code = (data.get('programa_code') or '').strip().upper()
     tipo_venta = data.get('tipo_venta') or 'completo'
     expires_at_override = data.get('expires_at') or None
+    # El closer confirma/corrige acá el email real del cliente (el que va a usar para entrar a
+    # la Academia) justo antes de darle el acceso — ver AcademyAccessService.grant_access.
+    email_override = data.get('email') or None
 
     if not programa_code:
         return jsonify({"error": "Falta el programa (programa_code)"}), 400
 
     from app.services.academy_access_service import AcademyAccessService, AcademyAccessError
     try:
-        result = AcademyAccessService.grant_access(client, programa_code, tipo_venta, expires_at_override)
+        result = AcademyAccessService.grant_access(client, programa_code, tipo_venta, expires_at_override, email_override)
     except AcademyAccessError as e:
         return jsonify({"error": str(e)}), e.status_code
 

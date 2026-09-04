@@ -239,9 +239,29 @@ def receive_financial_agendas():
             existing.estado = item.get('estado') or existing.estado
             existing.grupo = grupo_val or existing.grupo
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
+            # Mail/whatsapp/instagram no se actualizaban acá: si el primer webhook del día
+            # llegaba sin email (o con 'N/A') y uno posterior del mismo lead (ej. Calendly
+            # reprogramado) sí lo traía, la agenda existente se quedaba con el dato viejo para
+            # siempre — y ese es el valor que sync_financial_agenda_to_appointment usa después
+            # para el Client. Solo se pisa cuando el valor nuevo es mejor que 'N/A'/vacío.
+            if mail_val and mail_val != 'n/a' and '@' in mail_val:
+                existing.mail = item.get('mail') or item.get('email')
+            if phone_val and phone_val != 'n/a':
+                existing.whatsapp = item.get('whatsapp') or item.get('phone') or item.get('telefono')
+            if ig_norm and ig_norm != 'n/a':
+                existing.instagram = item.get('instagram') or item.get('ig')
             existing.raw_data = item
             agendas_created.append(existing)
         else:
+            if not (item.get('mail') or item.get('email')):
+                # Sin esto, una agenda sin email de n8n queda con el string literal 'N/A' en
+                # silencio (ver mail=... más abajo) y nadie se entera hasta que un closer, meses
+                # después, encuentra un cliente sin correo. Deja rastro explícito en los logs de
+                # Railway para poder confirmar del lado de n8n/Calendly si el mail nunca llegó.
+                current_app.logger.warning(
+                    f"[AGENDA SIN EMAIL] n8n mandó la agenda de '{lead_val}' sin 'mail' ni 'email' en el payload. "
+                    f"Keys recibidas: {list(item.keys())}"
+                )
             # Crear nueva agenda si no existe duplicado
             agenda = FinancialAgenda(
                 nombre=str(setter).strip(),

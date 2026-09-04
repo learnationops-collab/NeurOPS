@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle } from 'lucide-react';
+import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -55,7 +55,7 @@ const blobToCompressedDataUrl = (blob) => new Promise((resolve, reject) => {
 // que explique "cuál es el problema" — por eso se pregunta explícitamente antes de pedir
 // qué intentaba hacer el usuario. Si sí viene de un error, esa pregunta ya está respondida
 // por el error mismo y se salta directo a "qué intentabas hacer".
-const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
+const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
     const { user } = useAuth();
     const isReactive = !!technicalContext;
     const [step, setStep] = useState(isReactive ? 'description' : 'problem');
@@ -76,6 +76,15 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
     const handleClose = () => {
         onClose();
         setTimeout(reset, 300);
+    };
+
+    // A diferencia de handleClose, no resetea nada: el usuario pidió poder minimizar el
+    // reporte a medio llenar (p.ej. para ir a tomar una captura fuera de la app) y encontrarlo
+    // tal cual lo dejó al reabrirlo. Como este componente sigue montado mientras está
+    // minimizado (BugReportWidget solo deja de renderizar el drawer, no el componente), el
+    // estado (problem/description/extraScreenshots/loomLink/step) sobrevive solo.
+    const handleMinimize = () => {
+        onMinimize();
     };
 
     const addPastedImage = async (blob) => {
@@ -193,9 +202,20 @@ const BugReportChat = ({ isOpen, onClose, technicalContext }) => {
                                 <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{user?.username || 'Usuario'} · {user?.role}</p>
                             </div>
                         </div>
-                        <button onClick={handleClose} className="p-2 hover:bg-white/10 rounded-xl text-muted hover:text-base transition-all active:scale-95">
-                            <X size={18} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            {step !== 'done' && (
+                                <button
+                                    onClick={handleMinimize}
+                                    title="Minimizar (seguir después sin perder lo escrito)"
+                                    className="p-2 hover:bg-white/10 rounded-xl text-muted hover:text-base transition-all active:scale-95"
+                                >
+                                    <Minus size={18} />
+                                </button>
+                            )}
+                            <button onClick={handleClose} title="Cerrar y descartar" className="p-2 hover:bg-white/10 rounded-xl text-muted hover:text-base transition-all active:scale-95">
+                                <X size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">

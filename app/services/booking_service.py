@@ -523,7 +523,12 @@ class BookingService:
             # Actualizar datos vacíos
             if nombre and not client.full_name:
                 client.full_name = nombre
-            if email_clean and not client.email:
+            # 'no-email-' en el email actual = placeholder sintético (ver create_or_update_client
+            # más arriba en este mismo archivo, línea ~145) — sin este chequeo, un cliente ya
+            # creado sin email real (o matcheado por instagram/teléfono antes de que llegara su
+            # agendamiento de Calendly) se queda con el placeholder para siempre: el email real
+            # que sí llega después nunca lo pisa porque "ya tiene un email" (aunque sea falso).
+            if email_clean and (not client.email or 'no-email-' in client.email):
                 client.email = email_clean
             if phone_clean and not client.phone:
                 client.phone = phone_clean
