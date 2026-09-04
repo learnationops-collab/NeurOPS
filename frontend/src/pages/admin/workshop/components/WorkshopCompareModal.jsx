@@ -40,47 +40,50 @@ const WorkshopCompareModal = ({ events, onClose, formatDate, formatCurrency }) =
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="bg-slate-950 border border-slate-800 w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl border-indigo-500/20">
-                <div className="px-8 py-6 bg-slate-900/40 border-b border-slate-900 flex items-center justify-between">
+        <div className="modal-overlay">
+            <button type="button" className="modal-backdrop" aria-label="Cerrar ventana de comparación" onClick={onClose} />
+            <div className="action-modal wide" role="dialog" aria-modal="true" aria-label="Comparar talleres">
+                <header>
                     <div>
-                        <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">Comparar talleres</h3>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{events.length} seleccionados</p>
+                        <p className="eyebrow">Lectura lado a lado</p>
+                        <h2>Comparar talleres</h2>
+                        <p>{events.length} seleccionados</p>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-900 text-slate-500 hover:text-white transition-all cursor-pointer">
-                        <X size={18} />
-                    </button>
-                </div>
-
-                <div className="overflow-x-auto max-h-[65vh]">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-900/50 border-b border-slate-900 sticky top-0">
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Métrica</th>
-                                {events.map((e) => (
-                                    <th key={e.id} className="p-4 text-[9px] font-black text-white uppercase tracking-widest text-right whitespace-nowrap">
-                                        {formatDate(e.date)}
-                                        <div className="text-slate-500 font-bold normal-case text-[10px] mt-0.5">{e.name}</div>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-900/50">
-                            {ROWS.map((row) => {
-                                const winnerId = bestId(row);
-                                return (
-                                    <tr key={row.key}>
-                                        <td className="p-4 text-xs font-bold text-slate-400">{row.label}</td>
-                                        {events.map((e) => (
-                                            <td key={e.id} className={`p-4 text-xs font-black text-right whitespace-nowrap ${e.id === winnerId ? 'text-emerald-400' : 'text-slate-200'}`}>
-                                                {fmtVal(e[row.key], row.fmt)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                    <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+                </header>
+                <div className="modal-body">
+                    <div className="comparison-panel" style={{ padding: 0, border: 0, background: 'transparent', boxShadow: 'none' }}>
+                    <div className="comparison-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Métrica</th>
+                                    {events.map((e) => (
+                                        <th key={e.id} scope="col">
+                                            <span>{formatDate(e.date)}</span>
+                                            {e.name}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ROWS.map((row) => {
+                                    const winnerId = bestId(row);
+                                    return (
+                                        <tr key={row.key}>
+                                            <th scope="row" style={{ textAlign: 'left' }}>{row.label}</th>
+                                            {events.map((e) => (
+                                                <td key={e.id} className={e.id === winnerId ? 'positive' : ''} data-workshop={`${formatDate(e.date)} · ${e.name}`}>
+                                                    {fmtVal(e[row.key], row.fmt)}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -14,10 +14,11 @@
     /* Remove mobile/webkit blue tap highlight */
 }
 
-/* :not(.bg-v6):not(.bg-v6 *): el Closer Workspace usa Montserrat, no la fuente de marca del resto de la app
-   (pedido del usuario, 28/ago/2026 — ver el mismo patrón en index.html, que carga antes que este
-   archivo y tiene la misma exclusión). */
-*:not(.bg-v6):not(.bg-v6 *) {
+/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *): el Closer Workspace y Workshop
+   Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell") usan Montserrat, no la fuente
+   de marca del resto de la app — mismo patrón, ver index.html, que carga antes que este archivo y
+   tiene la misma exclusión. */
+*:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
     font-family: var(--font-body) !important;
 }
 
@@ -27,37 +28,37 @@
     color: inherit;
 }
 
-/* :not(.bg-v6):not(.bg-v6 *) dentro de cada selector: el rediseño "v6/v7" del Workspace de Closers
-   (CloserWorkflowPage.jsx, ver .bg-v6 más abajo) define sus propios pesos explícitos por clase
-   (700/800/900, sin !important, calcados de la referencia visual) para que números y títulos se
-   vean gruesos/impactantes. Sin esta exclusión, este reset global (con !important) les ganaba
-   incondicionalmente pase lo que pase la especificidad — confirmado con getComputedStyle en el
-   navegador: .tud-pct-v6 (declarado font-weight:900) computaba 400. Resultado reportado por el
-   usuario: "las letras son un poquito más delgaditas" comparando contra el mockup, en TODO el
-   Workspace (números del hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) porque
-   casi todos esos elementos son <div>/<span>/<button>/<h3>. */
-h1:not(.bg-v6):not(.bg-v6 *),
-h2:not(.bg-v6):not(.bg-v6 *),
-h3:not(.bg-v6):not(.bg-v6 *),
-h4:not(.bg-v6):not(.bg-v6 *),
-h5:not(.bg-v6):not(.bg-v6 *),
-h6:not(.bg-v6):not(.bg-v6 *),
-.font-bold:not(.bg-v6):not(.bg-v6 *),
-.font-semibold:not(.bg-v6):not(.bg-v6 *),
-.font-black:not(.bg-v6):not(.bg-v6 *),
-[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *),
-[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *),
-[class*="font-black"]:not(.bg-v6):not(.bg-v6 *) {
+/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) dentro de cada selector: el rediseño
+   "v6/v7" del Workspace de Closers y el reskin de Workshop Intelligence (ver .bg-v6/.ws-shell) definen
+   sus propios pesos explícitos por clase (700/800/900, sin !important, calcados de una referencia
+   visual externa) para que números y títulos se vean gruesos/impactantes. Sin esta exclusión, este
+   reset global (con !important) les ganaba incondicionalmente pase lo que pase la especificidad —
+   confirmado con getComputedStyle en el navegador: .tud-pct-v6 (declarado font-weight:900) computaba
+   400. Resultado reportado por el usuario: "las letras son un poquito más delgaditas" comparando
+   contra el mockup, en TODO el Workspace (números del hero, nombres de tarjetas del Kanban,
+   navegación 01-06, etc.) porque casi todos esos elementos son <div>/<span>/<button>/<h3>. */
+h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+.font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+.font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+.font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+[class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
     font-family: var(--font-header) !important;
     font-weight: var(--weight-semibold) !important;
 }
 
-p:not(.bg-v6):not(.bg-v6 *),
-span:not(.bg-v6):not(.bg-v6 *),
-div:not(.bg-v6):not(.bg-v6 *),
-button:not(.bg-v6):not(.bg-v6 *),
-input:not(.bg-v6):not(.bg-v6 *),
-label:not(.bg-v6):not(.bg-v6 *) {
+p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
     font-weight: var(--weight-regular) !important;
     font-style: normal !important;
 }
@@ -71,8 +72,8 @@ em,
 }
 
 /* Override Tailwind bolds */
-b:not(.bg-v6):not(.bg-v6 *),
-strong:not(.bg-v6):not(.bg-v6 *) {
+b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
     font-weight: var(--weight-medium) !important;
 }
 

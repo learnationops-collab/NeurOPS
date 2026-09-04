@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { STAGE_ORDER, aggregateTotals, projectSales, computeFuga, money } from '../funnelMath';
 
+const clamp = (v) => Math.min(100, Math.max(0, v || 0));
+
 // Simulador de escenarios — 100% cálculo en el cliente, no lee/escribe datos
 // reales (salvo "Fijar como meta", que sí persiste en WorkshopGoals a
 // pedido explícito del closer/director). El baseline es el promedio de los
@@ -75,130 +77,122 @@ const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, 
 
     const fmt = formatCurrency || money;
 
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-                {/* Economía del escenario */}
-                <div className="bg-slate-900/30 border border-slate-900 rounded-[2.5rem] p-8 space-y-5">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Economía del escenario</h3>
-                        <button onClick={reset} className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 hover:text-white transition-all cursor-pointer">
-                            <RotateCcw size={12} /> Restablecer
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Inversión ads</label>
-                            <input type="number" value={Math.round(inversion)} onChange={(e) => setInversion(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm font-black text-white outline-none focus:ring-2 focus:ring-indigo-500/30" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Costo por lead</label>
-                            <input type="number" step="0.01" value={cpl.toFixed(2)} onChange={(e) => setCpl(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm font-black text-white outline-none focus:ring-2 focus:ring-indigo-500/30" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ticket promedio</label>
-                            <input type="number" value={Math.round(ticket)} onChange={(e) => setTicket(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm font-black text-white outline-none focus:ring-2 focus:ring-indigo-500/30" />
-                        </div>
-                    </div>
-                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Leads proyectados: <span className="text-slate-300">{Math.round(leadsProyectados)}</span> (inversión ÷ CPL)</p>
-                </div>
+    const projectionMetrics = [
+        { label: 'Ventas', value: ventasProyectadas.toFixed(1), base: baseline.sales },
+        { label: 'Cash', value: fmt(cashProyectado), base: baseline.cash, raw: cashProyectado },
+        { label: 'ROAS', value: `${roasProyectado.toFixed(1)}x`, base: baseline.roas, raw: roasProyectado },
+        { label: 'CAC', value: fmt(cacProyectado), base: baseline.cac, raw: cacProyectado, invert: true },
+    ];
 
-                {/* Palancas de conversión */}
-                <div className="bg-slate-900/30 border border-slate-900 rounded-[2.5rem] p-8 space-y-5">
-                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Palancas de conversión</h3>
-                    <div className="space-y-5">
+    const workItems = fugas.filter((f) => f.estado !== 'ok').slice(0, 5);
+
+    return (
+        <section className="sim-grid">
+            <div className="sim-controls">
+                <article className="panel money-controls">
+                    <div className="section-heading">
+                        <div><p className="eyebrow">Variables comerciales</p><h2>Economía del escenario</h2></div>
+                        <button type="button" className="icon-text-button" onClick={reset}><RotateCcw size={15} /> Restablecer</button>
+                    </div>
+                    <div className="input-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                        <label className="money-field">
+                            <span>Inversión ads</span>
+                            <span><b>$</b><input type="number" value={Math.round(inversion)} onChange={(e) => setInversion(parseFloat(e.target.value) || 0)} /></span>
+                        </label>
+                        <label className="money-field">
+                            <span>Costo por lead</span>
+                            <span><b>$</b><input type="number" step="0.01" value={cpl.toFixed(2)} onChange={(e) => setCpl(parseFloat(e.target.value) || 0)} /></span>
+                        </label>
+                        <label className="money-field">
+                            <span>Ticket promedio</span>
+                            <span><b>$</b><input type="number" value={Math.round(ticket)} onChange={(e) => setTicket(parseFloat(e.target.value) || 0)} /></span>
+                        </label>
+                        <div className="derived-field">
+                            <span>Leads proyectados</span>
+                            <strong>{Math.round(leadsProyectados)}</strong>
+                            <small>inversión ÷ CPL</small>
+                        </div>
+                    </div>
+                </article>
+
+                <article className="panel lever-controls">
+                    <div className="section-heading">
+                        <div><p className="eyebrow">Palancas de conversión</p><h2>Ajustá las 8 tasas</h2></div>
+                        <span className="legend"><i /> Promedio <i className="goal" /> Meta</span>
+                    </div>
+                    <div className="slider-list">
                         {STAGE_ORDER.map((s) => {
                             const pct = Math.round(rates[s.key] * 1000) / 10;
                             const metaPct = goals?.[s.goalKey] ?? 0;
                             const enMeta = pct >= metaPct;
                             const active = highlightStage === s.key;
                             return (
-                                <div key={s.key} className={`space-y-2 p-3 -mx-3 rounded-2xl transition-all ${active ? 'bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}>
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="font-bold text-slate-300">{s.label}</span>
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-black text-white">{pct.toFixed(1)}%</span>
-                                            <button
-                                                onClick={() => fijarMeta(s)}
-                                                title={`Fijar ${pct.toFixed(1)}% como meta`}
-                                                className="text-[9px] font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <Flag size={10} /> {enMeta ? 'Ya está en meta' : 'Fijar como meta'}
-                                            </button>
-                                        </div>
+                                <div className="slider-row" key={s.key} style={active ? { background: 'rgba(19,35,198,.14)', borderRadius: 16 } : undefined}>
+                                    <div><span>{s.label}</span><strong>{pct.toFixed(1)}%</strong></div>
+                                    <div className="range-wrap">
+                                        <input
+                                            aria-label={`${s.label}: ${pct.toFixed(1)}%`}
+                                            type="range" min="0" max="100" step="0.5" value={pct}
+                                            onChange={(e) => setRates((prev) => ({ ...prev, [s.key]: parseFloat(e.target.value) / 100 }))}
+                                        />
+                                        <i className="average-marker" style={{ left: `${clamp(baseline.rates[s.key] * 100)}%` }} />
+                                        <i className="target-marker" style={{ left: `${clamp(metaPct)}%` }} />
                                     </div>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="0.5"
-                                        value={pct}
-                                        onChange={(e) => setRates((prev) => ({ ...prev, [s.key]: parseFloat(e.target.value) / 100 }))}
-                                        className="w-full accent-indigo-500"
-                                    />
+                                    <div className="slider-actions">
+                                        <button type="button" onClick={() => fijarMeta(s)} title={`Fijar ${pct.toFixed(1)}% como meta`}>
+                                            <Flag size={12} style={{ marginRight: 4 }} />
+                                            {enMeta ? 'Ya está en meta' : 'Fijar como meta'}
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
-                </div>
+                </article>
             </div>
 
-            <div className="space-y-6">
-                {/* Proyección */}
-                <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/40 border border-indigo-500/20 rounded-[2.5rem] p-6 space-y-4">
-                    <h3 className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Con este escenario</h3>
-                    {[
-                        { label: 'Ventas', value: ventasProyectadas.toFixed(1), base: baseline.sales },
-                        { label: 'Cash', value: fmt(cashProyectado), base: baseline.cash, isCurrency: true, raw: cashProyectado },
-                        { label: 'ROAS', value: `${roasProyectado.toFixed(1)}x`, base: baseline.roas, raw: roasProyectado },
-                        { label: 'CAC', value: fmt(cacProyectado), base: baseline.cac, raw: cacProyectado, invert: true },
-                    ].map((k) => {
-                        const rawVal = k.raw !== undefined ? k.raw : parseFloat(k.value);
-                        const d = deltaPct(rawVal, k.base);
-                        const good = k.invert ? d <= 0 : d >= 0;
-                        return (
-                            <div key={k.label} className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-400">{k.label}</span>
-                                <div className="text-right">
-                                    <div className="text-lg font-black text-white italic">{k.value}</div>
-                                    <div className={`text-[10px] font-black ${good ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {d >= 0 ? '+' : ''}{d.toFixed(1)}% vs prom.
-                                    </div>
+            <aside className="sim-results" aria-live="polite">
+                <article className="projection-card">
+                    <p className="eyebrow">Proyección</p>
+                    <h2>Con este escenario</h2>
+                    <div className="projection-kpis">
+                        {projectionMetrics.map((k) => {
+                            const rawVal = k.raw !== undefined ? k.raw : parseFloat(k.value);
+                            const d = deltaPct(rawVal, k.base);
+                            const good = k.invert ? d <= 0 : d >= 0;
+                            return (
+                                <div key={k.label}>
+                                    <span>{k.label}</span>
+                                    <strong>{k.value}</strong>
+                                    <small className={good ? 'positive' : 'negative'}>{d >= 0 ? '+' : ''}{d.toFixed(1)}% vs prom.</small>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Orden de trabajo */}
-                <div className="bg-slate-900/30 border border-slate-900 rounded-[2.5rem] p-6 space-y-3">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orden de trabajo</h3>
-                    <p className="text-[10px] text-slate-600 font-semibold">Mayor impacto primero</p>
-                    <div className="space-y-2">
-                        {fugas.filter((f) => f.estado !== 'ok').slice(0, 5).map((f, i) => (
-                            <div key={f.key} className="flex items-center gap-3 py-2 border-t border-slate-900 first:border-t-0">
-                                <span className="w-5 h-5 shrink-0 rounded-lg bg-slate-800 text-[10px] font-black text-slate-300 flex items-center justify-center">{i + 1}</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-white truncate">{f.label}</p>
-                                    <p className="text-[10px] text-slate-500 font-semibold">{f.real}% → {f.meta}%</p>
-                                </div>
-                                <span className="text-xs font-black text-emerald-400 shrink-0">+{f.impactoVentas.toFixed(1)}</span>
-                            </div>
-                        ))}
-                        {fugas.every((f) => f.estado === 'ok') && (
-                            <p className="text-xs font-bold text-emerald-400 py-4 text-center">Ya en meta — sostener 🎯</p>
-                        )}
+                            );
+                        })}
                     </div>
-                </div>
+                </article>
 
-                <p className="text-[9px] text-slate-600 font-semibold leading-relaxed px-1">
+                <article className="panel work-order">
+                    <p className="eyebrow">Orden de trabajo</p>
+                    <h2>Mayor impacto primero</h2>
+                    <div>
+                        {workItems.map((f, i) => (
+                            <article key={f.key}>
+                                <span className="rank">{i + 1}</span>
+                                <div><strong>{f.label}</strong><p>{f.real}% → {f.meta}%</p></div>
+                                <b>+{f.impactoVentas.toFixed(1)} ventas</b>
+                            </article>
+                        ))}
+                    </div>
+                    {fugas.every((f) => f.estado === 'ok') && (
+                        <p className="all-target">Todo está en meta. Sostené el resultado.</p>
+                    )}
+                </article>
+
+                <p className="secondary-copy" style={{ fontSize: 10 }}>
                     Modelo lineal: los puntos porcentuales se suman por palanca con techo de 95%. Sirve para priorizar; no es una predicción.
                 </p>
-            </div>
-        </div>
+            </aside>
+        </section>
     );
 };
 

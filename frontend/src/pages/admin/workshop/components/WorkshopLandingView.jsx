@@ -33,62 +33,61 @@ const fmtFecha = (iso) => {
 };
 
 const ETAPAS = {
-    entro: { texto: 'Entró', color: 'bg-slate-800 text-slate-400 border-slate-700' },
-    abrio_gate: { texto: 'Abrió el registro', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    completo_gate: { texto: 'Se registró', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    dio_play: { texto: 'Dio play', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
-    vio_oferta: { texto: 'Llegó a la oferta', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-    clic_agenda: { texto: 'Clic en Calendly', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    entro: { texto: 'Entró', tone: '' },
+    abrio_gate: { texto: 'Abrió el registro', tone: 'warning' },
+    completo_gate: { texto: 'Se registró', tone: 'success' },
+    dio_play: { texto: 'Dio play', tone: 'success' },
+    vio_oferta: { texto: 'Llegó a la oferta', tone: 'success' },
+    clic_agenda: { texto: 'Clic en Calendly', tone: 'success' },
 };
 
 const Chip = ({ etapa }) => {
     const e = ETAPAS[etapa] || ETAPAS.entro;
-    return (
-        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border whitespace-nowrap ${e.color}`}>
-            {e.texto}
-        </span>
-    );
+    return <span className={`status ${e.tone}`}>{e.texto}</span>;
 };
 
-const Kpi = ({ label, value, sub, icon: Icon, colorClass, ayuda }) => (
-    <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl relative overflow-hidden">
-        <div className="flex justify-between items-start">
-            <div className="space-y-1 min-w-0">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
-                    {label}
-                    {ayuda && <InfoTooltip label={label} text={ayuda} />}
-                </p>
-                <p className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">{value}</p>
-                {sub && <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{sub}</p>}
-            </div>
-            <div className={`p-3 rounded-2xl bg-slate-950 border border-slate-800 shrink-0 ${colorClass}`}>
-                <Icon size={20} />
-            </div>
+const Kpi = ({ label, value, sub, icon: Icon, ayuda }) => (
+    <article className="kpi-card">
+        <div className="kpi-head">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {label}
+                {ayuda && <InfoTooltip label={label} text={ayuda} />}
+            </span>
+            <Icon size={18} aria-hidden="true" />
         </div>
-    </div>
+        <strong>{value}</strong>
+        <div className="kpi-foot"><span>{sub}</span></div>
+    </article>
 );
 
 /* Barra del embudo. El ancho es relativo a las VISITAS, no al paso anterior:
    así se ve de un vistazo dónde se cae la gente respecto del total. */
-const PasoEmbudo = ({ label, valor, base, pctPaso, ayuda }) => {
-    const ancho = base > 0 ? Math.max(2, (valor / base) * 100) : 0;
+const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
+    const share = base > 0 ? (valor / base) * 100 : 0;
+    const width = base > 0 ? 14 + 86 * Math.sqrt(Math.max(0, valor) / base) : 14;
     return (
-        <div className="space-y-1.5">
-            <div className="flex justify-between items-baseline gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                    {label}
-                    {ayuda && <InfoTooltip label={label} text={ayuda} />}
-                </span>
-                <span className="text-xs font-black text-white tabular-nums">
-                    {valor}
-                    {pctPaso !== null && <span className="text-slate-500 font-bold ml-2">{pctPaso}%</span>}
-                </span>
+        <React.Fragment>
+            {idx > 0 && pctPaso !== null && (
+                <div className="rate-pill green">
+                    <strong>{pctPaso}%</strong>
+                    <span>{label}</span>
+                    <small>retención del paso anterior</small>
+                </div>
+            )}
+            <div className="funnel-stage">
+                <span className="stage-index">{idx + 1}</span>
+                <div>
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {label}
+                        {ayuda && <InfoTooltip label={label} text={ayuda} />}
+                    </strong>
+                </div>
+                <div className="stage-bar" role="img" aria-label={`${label}: ${valor}, ${share.toFixed(1)}% del total`}>
+                    <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
+                </div>
+                <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
             </div>
-            <div className="h-2 bg-slate-900 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all"
-                     style={{ width: `${ancho}%` }} />
-            </div>
-        </div>
+        </React.Fragment>
     );
 };
 
@@ -128,10 +127,11 @@ const WorkshopLandingView = () => {
 
     if (loading && !stats) {
         return (
-            <div className="flex flex-col items-center justify-center py-40 space-y-4">
-                <Loader2 size={48} className="animate-spin text-indigo-500" />
-                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs">Cargando métricas de la grabación...</p>
-            </div>
+            <section className="empty-state loading-state" role="status">
+                <div><span /></div>
+                <p className="eyebrow">Sincronizando</p>
+                <h2>Cargando métricas de la grabación…</h2>
+            </section>
         );
     }
 
@@ -140,75 +140,59 @@ const WorkshopLandingView = () => {
     const p = stats?.permanencia || {};
     const visitas = e.visitas || 0;
 
-    return (
-        <div className="space-y-8">
+    const pasos = [
+        { label: 'Entraron', ayuda: 'Todas las visitas a la página. Es la base contra la que se dibujan las barras.', valor: visitas, pctPaso: null },
+        { label: 'Abrieron el registro', ayuda: 'Abrieron el formulario de la página (no es Calendly: es el formulario que destraba el video).', valor: e.abrio_gate || 0, pctPaso: c.visita_a_gate },
+        { label: 'Se registraron', ayuda: 'Completaron ese formulario. Ojo: el formulario no pide dato de contacto, así que sirve para medir, no para escribirle a nadie.', valor: e.completo_gate || 0, pctPaso: c.gate_a_registro },
+        { label: 'Dieron play', ayuda: 'Arrancaron el video de la grabación.', valor: e.dio_play || 0, pctPaso: c.registro_a_play },
+        { label: 'Llegaron a la oferta (en pantalla)', ayuda: 'Siguieron en la página hasta el momento del video donde aparece la oferta.', valor: e.vio_oferta || 0, pctPaso: c.play_a_oferta },
+        { label: 'Clic en Calendly', ayuda: 'Hicieron clic en el botón para agendar la llamada. Es el paso que después se convierte en agenda.', valor: e.clic_agenda || 0, pctPaso: c.oferta_a_agenda },
+    ];
 
+    return (
+        <>
             {/* Controles */}
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="flex gap-1 bg-slate-900/60 border border-slate-800 rounded-2xl p-1">
-                    {[7, 30, 90].map(d => (
-                        <button key={d} onClick={() => setDias(d)}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                                dias === d ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>
-                            {d} días
-                        </button>
+            <div className="hero-actions" style={{ marginBottom: 22 }}>
+                <div className="pill-toggle">
+                    {[7, 30, 90].map((d) => (
+                        <button type="button" key={d} className={dias === d ? 'active' : ''} onClick={() => setDias(d)}>{d} días</button>
                     ))}
                 </div>
-                <button onClick={cargar}
-                    className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                <button type="button" className="secondary-action" onClick={cargar}>
                     <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar
                 </button>
-                {stats?.rango && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                        {stats.rango.desde} → {stats.rango.hasta}
-                    </span>
-                )}
+                {stats?.rango && <span className="secondary-copy">{stats.rango.desde} → {stats.rango.hasta}</span>}
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Kpi label="Visitas"
-                     ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="sesiones únicas"
-                     icon={MonitorSmartphone} colorClass="text-sky-400" />
-                <Kpi label="Registrados"
-                     ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0}
-                     sub={`${c.visita_a_registro || 0}% de las visitas`}
-                     icon={Users} colorClass="text-indigo-400" />
-                <Kpi label="Dieron play"
-                     ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0}
-                     sub={`${c.registro_a_play || 0}% de los registrados`}
-                     icon={PlayCircle} colorClass="text-violet-400" />
-                <Kpi label="Permanencia media"
-                     ayuda="Cuánto tiempo se queda la persona típica en la página (mediana: la mitad se queda menos y la mitad más). El promedio se distorsiona con quien deja la pestaña abierta." value={fmtDuracion(p.mediana_segundos)}
-                     sub={`promedio ${fmtDuracion(p.promedio_segundos)}`}
-                     icon={Timer} colorClass="text-emerald-400" />
-            </div>
+            <section className="kpi-grid" aria-label="Indicadores de la landing">
+                <Kpi label="Visitas" ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="Sesiones únicas" icon={MonitorSmartphone} />
+                <Kpi label="Registrados" ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0} sub={`${c.visita_a_registro || 0}% de las visitas`} icon={Users} />
+                <Kpi label="Dieron play" ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0} sub={`${c.registro_a_play || 0}% de los registrados`} icon={PlayCircle} />
+                <Kpi label="Permanencia media" ayuda="Cuánto tiempo se queda la persona típica en la página (mediana: la mitad se queda menos y la mitad más). El promedio se distorsiona con quien deja la pestaña abierta." value={fmtDuracion(p.mediana_segundos)} sub={`Promedio ${fmtDuracion(p.promedio_segundos)}`} icon={Timer} />
+            </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+            <section className="detail-grid">
                 {/* Embudo */}
-                <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 space-y-5">
-                    <div className="flex items-center gap-2">
-                        <Target size={16} className="text-indigo-400" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-white">Embudo de la grabación</h3>
+                <article className="panel funnel-panel">
+                    <div className="section-heading">
+                        <div>
+                            <p className="eyebrow">Landing de la grabación</p>
+                            <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Target size={18} /> Embudo de la grabación</h2>
+                        </div>
                     </div>
-                    <div className="space-y-4">
-                        <PasoEmbudo label="Entraron" ayuda="Todas las visitas a la página. Es la base contra la que se dibujan las barras." valor={visitas} base={visitas} pctPaso={null} />
-                        <PasoEmbudo label="Abrieron el registro" ayuda="Abrieron el formulario de la página (no es Calendly: es el formulario que destraba el video)." valor={e.abrio_gate || 0} base={visitas} pctPaso={c.visita_a_gate} />
-                        <PasoEmbudo label="Se registraron" ayuda="Completaron ese formulario. Ojo: el formulario no pide dato de contacto, así que sirve para medir, no para escribirle a nadie." valor={e.completo_gate || 0} base={visitas} pctPaso={c.gate_a_registro} />
-                        <PasoEmbudo label="Dieron play" ayuda="Arrancaron el video de la grabación." valor={e.dio_play || 0} base={visitas} pctPaso={c.registro_a_play} />
-                        <PasoEmbudo label="Llegaron a la oferta (en pantalla)" ayuda="Siguieron en la página hasta el momento del video donde aparece la oferta." valor={e.vio_oferta || 0} base={visitas} pctPaso={c.play_a_oferta} />
-                        <PasoEmbudo label="Clic en Calendly" ayuda="Hicieron clic en el botón para agendar la llamada. Es el paso que después se convierte en agenda." valor={e.clic_agenda || 0} base={visitas} pctPaso={c.oferta_a_agenda} />
+                    <div className="funnel-list">
+                        {pasos.map((paso, idx) => <PasoEmbudo key={paso.label} idx={idx} base={visitas} {...paso} />)}
                     </div>
-                    <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
+                    <p className="secondary-copy" style={{ marginTop: 12, fontSize: 10 }}>
                         El porcentaje es respecto del paso anterior. La barra, respecto del total de visitas.
                     </p>
 
                     {/* Qué mide cada paso. Sin esto "abrió el registro" y "llegó a
                         la oferta" se prestan a confundirse con Calendly. */}
-                    <div className="pt-4 border-t border-slate-800 space-y-2">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">De dónde sale cada dato</p>
-                        <dl className="space-y-1.5 text-[10px] leading-relaxed">
+                    <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+                        <p className="eyebrow">De dónde sale cada dato</p>
+                        <dl style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                             {[
                                 ['Entraron', 'Cargaron /replay/. Una fila por visita.'],
                                 ['Abrieron el registro', 'Tocaron un botón de "Ver la clase" y se les abrió el formulario de 4 pasos (nombre, profesión, etapa, examen). NO es Calendly.'],
@@ -217,140 +201,116 @@ const WorkshopLandingView = () => {
                                 ['Llegaron a la oferta', 'El bloque de la Sesión de Aceleración entró de verdad en su pantalla, al menos un cuarto. No alcanza con que se haya desbloqueado.'],
                                 ['Clic en Calendly', 'Tocaron el botón de agendar. Recién acá aparece el formulario de Calendly, que es otro y vive fuera de la landing.'],
                             ].map(([t, d]) => (
-                                <div key={t} className="flex gap-2">
-                                    <dt className="font-black text-slate-300 shrink-0">{t}:</dt>
-                                    <dd className="text-slate-500 font-medium">{d}</dd>
+                                <div key={t} style={{ display: 'flex', gap: 8, fontSize: 10, lineHeight: 1.5 }}>
+                                    <dt style={{ fontWeight: 900, color: '#fff', flex: '0 0 auto' }}>{t}:</dt>
+                                    <dd style={{ margin: 0, color: 'var(--text-muted)' }}>{d}</dd>
                                 </div>
                             ))}
                         </dl>
-                        <p className="text-[9px] text-slate-600 font-medium leading-relaxed pt-1">
-                            El embudo mide <span className="text-slate-400 font-bold">cada visita por separado</span>. Quien ya se
+                        <p className="secondary-copy" style={{ marginTop: 10, fontSize: 10 }}>
+                            El embudo mide <strong style={{ color: '#fff' }}>cada visita por separado</strong>. Quien ya se
                             registró antes y vuelve entra directo a la clase: va a figurar como "entró → dio play" sin los pasos
                             de registro, porque en esa visita no los hizo.
                         </p>
                     </div>
-                </div>
+                </article>
 
-                <div className="space-y-6">
+                <aside className="detail-sidebar">
                     {/* Fuente: vivo vs grabación */}
-                    <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Radio size={16} className="text-emerald-400" />
-                            <h3 className="text-xs font-black uppercase tracking-widest text-white">Agendas por fuente</h3>
+                    <article className="panel" style={{ padding: 22 }}>
+                        <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Radio size={14} /> Agendas por fuente</p>
+                        <div className="source-grid" style={{ marginTop: 14 }}>
+                            <article>
+                                <div className="source-title"><span>Workshop en vivo</span></div>
+                                <strong style={{ display: 'block', fontSize: 26, fontVariantNumeric: 'tabular-nums' }}>{agendas?.workshop_vivo?.total ?? 0}</strong>
+                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>{agendas?.workshop_vivo?.con_closer ?? 0} con closer</span>
+                            </article>
+                            <article>
+                                <div className="source-title"><span>Workshop landing</span></div>
+                                <strong style={{ display: 'block', fontSize: 26, fontVariantNumeric: 'tabular-nums', color: 'var(--pink)' }}>{agendas?.workshop_landing?.total ?? 0}</strong>
+                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>{agendas?.workshop_landing?.con_closer ?? 0} con closer</span>
+                            </article>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Workshop en vivo</p>
-                                <p className="text-3xl font-black text-white italic tracking-tighter">{agendas?.workshop_vivo?.total ?? 0}</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase">{agendas?.workshop_vivo?.con_closer ?? 0} con closer</p>
-                            </div>
-                            <div className="bg-slate-950/60 border border-indigo-500/20 rounded-2xl p-4">
-                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Workshop landing</p>
-                                <p className="text-3xl font-black text-white italic tracking-tighter">{agendas?.workshop_landing?.total ?? 0}</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase">{agendas?.workshop_landing?.con_closer ?? 0} con closer</p>
-                            </div>
-                        </div>
-                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
+                        <p className="secondary-copy" style={{ marginTop: 14, fontSize: 10 }}>
                             Antes las dos caían juntas: la fuente se detectaba buscando "workshop" dentro del texto,
                             así que "workshop landing" también entraba en el vivo.
                         </p>
-                    </div>
+                    </article>
 
-                    {/* Video + reparto */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Kpi label="Video visto" value={fmtDuracion(p.promedio_video_segundos)}
-                             sub="promedio de quienes dieron play" icon={Video} colorClass="text-rose-400" />
-                        <Kpi label="Clic en Calendly" value={e.clic_agenda || 0}
-                             sub={`${c.oferta_a_agenda || 0}% de los que vieron la oferta`}
-                             icon={MousePointerClick} colorClass="text-emerald-400" />
+                    <div className="kpi-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                        <Kpi label="Video visto" value={fmtDuracion(p.promedio_video_segundos)} sub="Prom. de quienes dieron play" icon={Video} />
+                        <Kpi label="Clic Calendly" value={e.clic_agenda || 0} sub={`${c.oferta_a_agenda || 0}% vieron oferta`} icon={MousePointerClick} />
                     </div>
 
                     {(stats?.por_examen?.length > 0) && (
-                        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 space-y-3">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-white">Registrados por examen</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {stats.por_examen.map(x => (
-                                    <span key={x.examen} className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-300">
-                                        {x.examen} <span className="text-indigo-400 ml-1">{x.total}</span>
-                                    </span>
+                        <article className="panel" style={{ padding: 22 }}>
+                            <p className="eyebrow">Registrados por examen</p>
+                            <div className="rating-chips" style={{ marginTop: 10 }}>
+                                {stats.por_examen.map((x) => (
+                                    <span key={x.examen}>{x.examen} · {x.total}</span>
                                 ))}
                             </div>
-                        </div>
+                        </article>
                     )}
-                </div>
-            </div>
+                </aside>
+            </section>
 
             {/* Listado */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-slate-800">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-white">
-                        Personas que entraron ({sesiones.length})
-                    </h3>
-                    <div className="flex gap-1 bg-slate-950 border border-slate-800 rounded-2xl p-1">
+            <section className="panel comparison-panel" style={{ marginTop: 22 }}>
+                <div className="section-heading">
+                    <div><p className="eyebrow">Sesiones</p><h2>Personas que entraron ({sesiones.length})</h2></div>
+                    <div className="pill-toggle">
                         {[
                             { k: 'todas', t: 'Todas' },
                             { k: 'dio_play', t: 'Dieron play' },
                             { k: 'sin_registro', t: 'Sin registrarse' },
-                        ].map(o => (
-                            <button key={o.k} onClick={() => setFiltro(o.k)}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                                    filtro === o.k ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>
-                                {o.t}
-                            </button>
+                        ].map((o) => (
+                            <button type="button" key={o.k} className={filtro === o.k ? 'active' : ''} onClick={() => setFiltro(o.k)}>{o.t}</button>
                         ))}
                     </div>
                 </div>
 
                 {sesiones.length === 0 ? (
-                    <div className="py-20 text-center space-y-3">
-                        <Users size={40} className="mx-auto text-slate-700" />
-                        <p className="text-slate-400 font-black uppercase text-xs">Todavía no hay visitas en este rango</p>
-                    </div>
+                    <p className="all-target" style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <Users size={32} style={{ display: 'block', margin: '0 auto 12px', opacity: .5 }} />
+                        Todavía no hay visitas en este rango.
+                    </p>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                    <div className="comparison-scroll">
+                        <table>
                             <thead>
-                                <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-800">
-                                    <th className="px-5 py-3">Persona</th>
-                                    <th className="px-5 py-3">Examen</th>
-                                    <th className="px-5 py-3">Etapa</th>
-                                    <th className="px-5 py-3 text-right">Permanencia</th>
-                                    <th className="px-5 py-3 text-right">Video</th>
-                                    <th className="px-5 py-3">Origen</th>
-                                    <th className="px-5 py-3">Entró</th>
+                                <tr>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Persona</th>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Examen</th>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Etapa</th>
+                                    <th scope="col">Permanencia</th>
+                                    <th scope="col">Video</th>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Origen</th>
+                                    <th scope="col" style={{ textAlign: 'left' }}>Entró</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-900">
-                                {sesiones.map(s => (
-                                    <tr key={s.id} className="hover:bg-slate-900/40 transition-colors">
-                                        <td className="px-5 py-3">
-                                            {s.lead ? (
-                                                <span className="text-sm font-bold text-white">{s.lead.full_name}</span>
-                                            ) : (
-                                                <span className="text-xs font-bold text-slate-600 italic">Sin registrarse</span>
-                                            )}
+                            <tbody>
+                                {sesiones.map((s) => (
+                                    <tr key={s.id}>
+                                        <td style={{ textAlign: 'left' }}>
+                                            {s.lead ? <strong style={{ color: '#fff' }}>{s.lead.full_name}</strong> : <em style={{ color: 'var(--text-muted)' }}>Sin registrarse</em>}
                                         </td>
-                                        <td className="px-5 py-3 text-xs font-bold text-slate-400">{s.lead?.examen || '—'}</td>
-                                        <td className="px-5 py-3"><Chip etapa={s.etapa} /></td>
-                                        <td className="px-5 py-3 text-right text-xs font-black text-white tabular-nums">{fmtDuracion(s.segundos_visible)}</td>
-                                        <td className="px-5 py-3 text-right text-xs font-bold text-slate-400 tabular-nums">
-                                            {s.dio_play ? fmtDuracion(s.segundos_video) : '—'}
+                                        <td style={{ textAlign: 'left' }}>{s.lead?.examen || '—'}</td>
+                                        <td style={{ textAlign: 'left' }}><Chip etapa={s.etapa} /></td>
+                                        <td>{fmtDuracion(s.segundos_visible)}</td>
+                                        <td>{s.dio_play ? fmtDuracion(s.segundos_video) : '—'}</td>
+                                        <td style={{ textAlign: 'left' }}>
+                                            {s.utm_source || 'directo'}{s.dispositivo === 'movil' && ' · móvil'}
                                         </td>
-                                        <td className="px-5 py-3">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                                {s.utm_source || 'directo'}
-                                                {s.dispositivo === 'movil' && <span className="ml-1 text-slate-700">· móvil</span>}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3 text-[10px] font-bold text-slate-500 tabular-nums">{fmtFecha(s.created_at)}</td>
+                                        <td style={{ textAlign: 'left' }}>{fmtFecha(s.created_at)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 )}
-            </div>
-        </div>
+            </section>
+        </>
     );
 };
 

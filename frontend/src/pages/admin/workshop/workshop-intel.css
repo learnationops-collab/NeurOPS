@@ -1,0 +1,507 @@
+/*
+ * Workshop Intelligence — reskin visual calcado de una referencia externa
+ * (Learnation · Workshop Analytics, ver docs/bitacora). Todo vive scopeado
+ * bajo `.ws-shell` (la raíz de WorkshopDashboardPage.jsx) para no filtrar
+ * nombres de clase genéricos (`.panel`, `.status`, `.track`...) al resto del
+ * admin. Los valores (colores/radios/spacing/breakpoints) son los mismos que
+ * la referencia — es un reskin, no una reinterpretación.
+ *
+ * Fuente: Montserrat (ya cargada en index.html). Los resets globales
+ * `!important` de font-family/font-weight en index.html e index.css tienen
+ * una exclusión explícita `:not(.ws-shell):not(.ws-shell *)` — sin eso, este
+ * archivo entero quedaría sin efecto (mismo problema ya documentado con el
+ * Closer Workspace, `.bg-v6`).
+ */
+
+.ws-shell {
+    --ink: #020617;
+    --navy: #0a0e3d;
+    --blue: #1323c6;
+    --pink: #ff3fa4;
+    --pink-light: #ff6ad5;
+    --success: #2fbf8f;
+    --warning: #d9a441;
+    --error: #e85c4a;
+    --text-muted: rgba(255, 255, 255, .64);
+    --border: rgba(255, 255, 255, .15);
+    --surface: rgba(255, 255, 255, .075);
+    --input: rgba(0, 0, 0, .34);
+    --radius: 2rem;
+    --shadow-main: 0 18px 52px rgba(0, 0, 0, .34);
+
+    min-height: 100vh;
+    background: linear-gradient(135deg, #020617 0%, #0a0e3d 52%, #05082d 100%);
+    background-attachment: fixed;
+    color: #fff;
+    font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+}
+
+.ws-shell a { color: inherit; text-decoration: none; }
+.ws-shell button, .ws-shell input, .ws-shell select { font: inherit; }
+.ws-shell button, .ws-shell a { -webkit-tap-highlight-color: transparent; }
+.ws-shell :focus-visible { box-shadow: 0 0 0 3px rgba(19, 35, 198, .72); }
+.ws-shell button, .ws-shell select, .ws-shell input { color: inherit; }
+.ws-shell button { min-height: 44px; }
+.ws-shell select, .ws-shell input { border: 0; outline: 0; }
+.ws-shell small { color: var(--text-muted); }
+
+.ws-shell .dashboard { width: min(1400px, calc(100% - 48px)); margin: 0 auto; padding: 0 0 48px; min-height: calc(100vh - 120px); }
+
+/* Hero */
+.ws-shell .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; margin-bottom: 35px; flex-wrap: wrap; }
+.ws-shell .eyebrow { margin: 0 0 11px; color: rgba(255, 255, 255, .64); font-size: 10px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+.ws-shell .live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 5px rgba(47, 191, 143, .1); }
+.ws-shell h1, .ws-shell h2, .ws-shell p { text-wrap: pretty; }
+.ws-shell .hero h1 { margin: 0; max-width: 760px; font-size: clamp(30px, 4.4vw, 56px); line-height: .98; letter-spacing: -.05em; font-weight: 900; text-wrap: balance; }
+.ws-shell .hero-copy { max-width: 690px; margin: 16px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.65; }
+.ws-shell .hero-period { flex: 0 0 auto; padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255, 255, 255, .055); text-align: right; }
+.ws-shell .hero-period span { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .hero-period strong { font-size: 12px; font-variant-numeric: tabular-nums; }
+.ws-shell .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* Primary / secondary actions */
+.ws-shell .primary-action { justify-self: end; display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--pink); color: var(--ink); font-size: 11px; font-weight: 900; box-shadow: 0 10px 26px rgba(255, 63, 164, .2); cursor: pointer; transition: transform 180ms ease, background-color 180ms ease; }
+.ws-shell .primary-action:hover { transform: translateY(-2px); background: var(--pink-light); }
+.ws-shell .primary-action:disabled { opacity: .6; cursor: wait; transform: none; }
+.ws-shell .secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, .055); color: #fff; cursor: pointer; font-size: 11px; font-weight: 800; transition: background-color 180ms ease; }
+.ws-shell .secondary-action:hover { background: rgba(255, 255, 255, .1); }
+.ws-shell .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, .05); color: var(--text-muted); cursor: pointer; transition: background-color 180ms ease, color 180ms ease; }
+.ws-shell .icon-button:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+
+/* Section tab nav — variante de .main-nav de la referencia (ahí es routing,
+   acá son tabs dentro de una sola página) */
+.ws-shell .section-tabs { display: flex; align-items: center; gap: 4px; padding: 5px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 999px; background: rgba(0, 0, 0, .2); overflow-x: auto; }
+.ws-shell .section-tabs button { display: flex; align-items: center; gap: 7px; padding: 10px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 800; white-space: nowrap; cursor: pointer; transition: color 180ms ease, background-color 180ms ease; }
+.ws-shell .section-tabs button:hover { color: #fff; background: rgba(255, 255, 255, .07); }
+.ws-shell .section-tabs button.active { color: #fff; background: var(--blue); box-shadow: 0 8px 20px rgba(19, 35, 198, .3); }
+
+/* KPI grid */
+.ws-shell .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; margin-bottom: 22px; padding: 1px; border-radius: var(--radius); background: var(--border); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
+.ws-shell .kpi-card { min-width: 0; padding: 24px; background: rgba(10, 14, 61, .9); transition: background-color 180ms ease; }
+.ws-shell .kpi-card:hover { background: #101550; }
+.ws-shell .kpi-head, .ws-shell .kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ws-shell .kpi-head { color: var(--text-muted); font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .kpi-head svg { color: rgba(255, 255, 255, .45); }
+.ws-shell .kpi-card > strong { display: block; margin: 20px 0 15px; font-size: clamp(24px, 2.6vw, 34px); line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.ws-shell .kpi-foot { color: var(--text-muted); font-size: 10px; }
+.ws-shell .delta { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 999px; font-size: 9px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ws-shell .delta.good { color: var(--success); background: #071a24; border: 1px solid #10413d; }
+.ws-shell .delta.bad { color: var(--error); background: #1b0f1d; border: 1px solid #4c2227; }
+
+/* Panels / content grid */
+.ws-shell .content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); gap: 22px; }
+.ws-shell .panel, .ws-shell .clarity-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: 0 12px 38px rgba(0, 0, 0, .22); }
+.ws-shell .health-panel { padding: 28px; }
+.ws-shell .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; flex-wrap: wrap; }
+.ws-shell .section-heading h2, .ws-shell .priority-card h2, .ws-shell .clarity-card h2 { margin: 0; font-size: 21px; line-height: 1.15; letter-spacing: -.03em; font-weight: 900; }
+.ws-shell .quiet-button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; color: #fff; cursor: pointer; font-size: 10px; font-weight: 800; }
+.ws-shell .legend, .ws-shell .phase-key { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 11px; flex-wrap: wrap; }
+.ws-shell .legend i, .ws-shell .phase-key i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; background: #fff; }
+.ws-shell .legend i.goal, .ws-shell .phase-key i.pink { background: var(--pink); }
+.ws-shell .phase-key i.blue { background: var(--blue); }
+
+.ws-shell .lever-list { display: grid; gap: 2px; }
+.ws-shell .lever-row { width: 100%; display: grid; grid-template-columns: minmax(160px, 1fr) minmax(180px, 1.8fr) 68px 96px; align-items: center; gap: 18px; padding: 15px 14px; border: 0; border-radius: 14px; background: transparent; color: #fff; text-align: left; }
+.ws-shell .lever-name { font-size: 11px; font-weight: 800; }
+.ws-shell .lever-name small, .ws-shell .metric-pair small { display: block; margin-top: 5px; color: var(--text-muted); font-size: 10px; font-weight: 600; }
+.ws-shell .track { position: relative; height: 8px; border-radius: 999px; background: var(--input); }
+.ws-shell .track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #1323c6, #4354ff); }
+.ws-shell .track em { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; border-radius: 3px; opacity: .9; }
+.ws-shell .metric-pair { text-align: right; }
+.ws-shell .metric-pair strong { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ws-shell .status { justify-self: end; padding: 6px 8px; border-radius: 999px; font-size: 8px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.ws-shell .status.success, .ws-shell .status.green { color: var(--success); background: #071a24; border: 1px solid #10413d; }
+.ws-shell .status.warning, .ws-shell .status.amber { color: var(--warning); background: #1a171c; border: 1px solid #473924; }
+.ws-shell .status.error, .ws-shell .status.red { color: var(--error); background: #1b0f1d; border: 1px solid #4c2227; }
+
+/* Priority / Clarity */
+.ws-shell .insight-stack { display: grid; gap: 22px; align-content: start; }
+.ws-shell .priority-card { position: relative; overflow: hidden; padding: 26px; border-radius: var(--radius); background: var(--pink); color: var(--ink); box-shadow: 0 18px 50px rgba(255, 63, 164, .16); }
+.ws-shell .priority-card::after { content: ""; position: absolute; width: 170px; height: 170px; right: -75px; top: -75px; border-radius: 50%; background: rgba(255, 255, 255, .2); }
+.ws-shell .priority-card .eyebrow { color: rgba(2, 6, 23, .66); }
+.ws-shell .priority-icon { width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: 22px; border-radius: 14px; background: rgba(2, 6, 23, .12); position: relative; }
+.ws-shell .priority-card p:not(.eyebrow) { margin: 13px 0 20px; font-size: 12px; line-height: 1.6; position: relative; }
+.ws-shell .priority-card button, .ws-shell .priority-card a { position: relative; display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; font-size: 11px; font-weight: 900; color: var(--ink); cursor: pointer; }
+.ws-shell .clarity-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 26px; }
+.ws-shell .clarity-card > div:first-child { flex: 1; }
+.ws-shell .clarity-card p:not(.eyebrow) { max-width: 220px; margin: 8px 0 0; color: var(--text-muted); font-size: 10px; line-height: 1.5; }
+.ws-shell .clarity-parts { display: grid; gap: 6px; margin-top: 16px; }
+.ws-shell .clarity-parts span { color: var(--text-muted); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ws-shell .score-ring { width: 80px; height: 80px; flex: 0 0 auto; display: grid; place-content: center; border-radius: 50%; text-align: center; position: relative; background: conic-gradient(var(--pink) var(--score, 0deg), rgba(255, 255, 255, .1) 0); }
+.ws-shell .score-ring::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: #0b103f; }
+.ws-shell .score-ring strong, .ws-shell .score-ring span { position: relative; z-index: 1; }
+.ws-shell .score-ring strong { font-size: 23px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ws-shell .score-ring span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 8px; }
+.ws-shell .mini-panel { padding: 22px 25px; border: 1px solid var(--border); border-radius: var(--radius); background: rgba(255, 255, 255, .055); }
+.ws-shell .mini-panel h3 { margin: 0 0 18px; font-size: 15px; line-height: 1.35; }
+.ws-shell .mini-panel > div { display: flex; gap: 24px; margin-bottom: 17px; }
+.ws-shell .mini-panel > div span { color: var(--text-muted); font-size: 11px; }
+.ws-shell .mini-panel > div strong { display: block; margin-top: 5px; color: #fff; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ws-shell .mini-panel button, .ws-shell .mini-panel a { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; padding: 0; font-size: 11px; font-weight: 800; color: #fff; cursor: pointer; }
+.ws-shell .secondary-copy { max-width: 420px; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
+.ws-shell .text-action, .ws-shell .icon-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; padding: 0 12px; min-height: 38px; border: 1px solid var(--border); border-radius: 999px; background: rgba(255, 255, 255, .05); color: #fff; cursor: pointer; font-size: 11px; font-weight: 800; }
+.ws-shell .text-action:hover, .ws-shell .icon-text-button:hover { background: rgba(255, 255, 255, .1); }
+
+/* Events */
+.ws-shell .event-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.ws-shell .event-card { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: 24px; background: rgba(255, 255, 255, .065); box-shadow: 0 10px 34px rgba(0, 0, 0, .2); transition: border-color 180ms ease, transform 180ms ease, background-color 180ms ease; }
+.ws-shell .event-card:hover { transform: translateY(-3px); background: rgba(255, 255, 255, .085); }
+.ws-shell .event-card.selected { border-color: rgba(255, 63, 164, .7); box-shadow: 0 0 0 2px rgba(255, 63, 164, .12), 0 14px 42px rgba(0, 0, 0, .28); }
+.ws-shell .event-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ws-shell .event-ordinal, .ws-shell .edge-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: 9px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.ws-shell .event-ordinal { background: rgba(19, 35, 198, .28); color: #aeb5ff; }
+.ws-shell .edge-chip { margin-left: 6px; border: 1px solid var(--border); color: var(--text-muted); }
+.ws-shell .compare-control { cursor: pointer; }
+.ws-shell .compare-control input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ws-shell .compare-control span { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.ws-shell .compare-control input:checked + span { border-color: rgba(255, 63, 164, .55); background: rgba(255, 63, 164, .12); color: #fff; }
+.ws-shell .event-date { margin: 22px 0 8px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: capitalize; }
+.ws-shell .event-card h2 { min-height: 44px; margin: 0 0 20px; font-size: 17px; line-height: 1.28; letter-spacing: -.02em; font-weight: 900; }
+.ws-shell .event-economy { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px; border-radius: 16px; background: var(--input); }
+.ws-shell .event-economy div span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .event-economy div strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.ws-shell .event-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; margin: 16px 0; border: 1px solid rgba(255, 255, 255, .09); border-radius: 15px; background: rgba(255, 255, 255, .08); }
+.ws-shell .event-stats div { padding: 11px 9px; background: rgba(2, 6, 23, .42); }
+.ws-shell .event-stats dt { margin: 0; color: var(--text-muted); font-size: 9px; font-weight: 700; }
+.ws-shell .event-stats dd { margin: 6px 0 0; font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ws-shell .card-action { min-height: 44px; display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: 0 15px; border: 0; border-radius: 14px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; transition: background-color 180ms ease, transform 180ms ease; }
+.ws-shell .card-action:hover { background: #2235df; transform: translateX(2px); }
+.ws-shell .card-icon-actions { position: absolute; top: 18px; right: 18px; display: flex; gap: 6px; }
+.ws-shell .card-icon-actions button { width: 32px; height: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: rgba(2, 6, 23, .55); color: var(--text-muted); cursor: pointer; }
+.ws-shell .card-icon-actions button:hover { color: #fff; background: rgba(2, 6, 23, .85); }
+
+.ws-shell .comparison-panel { margin-top: 24px; padding: 26px; }
+.ws-shell .comparison-scroll { width: 100%; overflow: auto; border: 1px solid rgba(255, 255, 255, .09); border-radius: 18px; }
+.ws-shell .comparison-panel table { width: 100%; min-width: 560px; table-layout: fixed; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ws-shell .comparison-panel th, .ws-shell .comparison-panel td { min-width: 0; padding: 14px 16px; overflow-wrap: anywhere; border-right: 1px solid rgba(255, 255, 255, .07); border-bottom: 1px solid rgba(255, 255, 255, .07); text-align: right; }
+.ws-shell .comparison-panel th:first-child, .ws-shell .comparison-panel td:first-child { width: 23%; text-align: left; }
+.ws-shell .comparison-panel th:first-child { background: #0b103e; }
+.ws-shell .comparison-panel thead th { color: #fff; background: rgba(255, 255, 255, .055); font-size: 10px; }
+.ws-shell .comparison-panel thead th span { display: block; margin-bottom: 4px; color: var(--text-muted); font-weight: 600; }
+.ws-shell .comparison-panel tbody th { color: var(--text-muted); font-weight: 700; text-align: left; }
+.ws-shell .table-rate { display: inline-flex; justify-content: center; min-width: 60px; padding: 5px 8px; border: 1px solid; border-radius: 999px; font-weight: 900; }
+.ws-shell .table-rate.green, .ws-shell .table-rate.success { color: var(--success) !important; background: #071a24; border-color: #10413d; }
+.ws-shell .table-rate.amber, .ws-shell .table-rate.warning { color: var(--warning) !important; background: #1a171c; border-color: #473924; }
+.ws-shell .table-rate.red, .ws-shell .table-rate.error { color: var(--error) !important; background: #1b0f1d; border-color: #4c2227; }
+
+/* Event detail / funnel */
+.ws-shell .economy-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; overflow: hidden; margin-bottom: 22px; padding: 1px; border-radius: 24px; background: var(--border); }
+.ws-shell .economy-strip > div { padding: 18px 20px; background: #0a0e3d; }
+.ws-shell .economy-strip span { display: block; margin-bottom: 9px; color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.ws-shell .economy-strip strong { font-size: 19px; font-variant-numeric: tabular-nums; }
+.ws-shell .detail-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, .66fr); gap: 22px; align-items: start; }
+.ws-shell .funnel-panel { padding: 26px; }
+.ws-shell .funnel-list { display: grid; }
+.ws-shell .phase-label { display: flex; align-items: center; gap: 14px; margin: 8px 0 11px; color: rgba(255, 255, 255, .72); font-size: 10px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+.ws-shell .phase-label::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, .08); }
+.ws-shell .funnel-stage { display: grid; grid-template-columns: 30px minmax(140px, .8fr) minmax(180px, 1.8fr) 68px; align-items: center; gap: 14px; min-height: 62px; padding: 8px 0; }
+.ws-shell .stage-index { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 9px; color: var(--text-muted); font-size: 10px; font-weight: 900; }
+.ws-shell .funnel-stage > div:nth-child(2) strong { display: block; font-size: 12px; }
+.ws-shell .funnel-stage > div:nth-child(2) small { display: block; margin-top: 4px; font-size: 10px; }
+.ws-shell .stage-bar { position: relative; height: 40px; overflow: hidden; border-radius: 13px; background: var(--input); }
+.ws-shell .stage-bar i { position: absolute; inset: 0 auto 0 0; min-width: 44px; display: flex; align-items: center; justify-content: flex-end; padding: 0 11px; border-radius: inherit; background: linear-gradient(90deg, #1323c6, #384af4); transition: width 580ms cubic-bezier(.4, 0, .2, 1); font-style: normal; }
+.ws-shell .funnel-stage.leak .stage-bar i { background: linear-gradient(90deg, #ff3fa4, #ff6ad5); color: var(--ink); }
+.ws-shell .stage-bar b { font-size: 12px; font-style: normal; font-variant-numeric: tabular-nums; }
+.ws-shell .stage-share { text-align: right; font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ws-shell .stage-share small { display: block; margin-top: 4px; font-size: 9px; font-weight: 600; }
+.ws-shell .rate-pill { justify-self: start; display: inline-grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; min-height: 40px; margin: 2px 0 2px 44px; padding: 5px 11px; border: 1px solid; border-radius: 999px; background: #071a24; cursor: pointer; text-align: left; transition: transform 180ms ease, filter 180ms ease; }
+.ws-shell .rate-pill:hover { transform: translateY(-1px); filter: brightness(1.14); }
+.ws-shell .rate-pill strong { font-size: 12px; font-variant-numeric: tabular-nums; }
+.ws-shell .rate-pill span { color: #fff; font-size: 10px; font-weight: 800; }
+.ws-shell .rate-pill small { font-size: 9px; }
+.ws-shell .rate-pill.green, .ws-shell .rate-pill.success { color: var(--success); background: #071a24; border-color: #10413d; }
+.ws-shell .rate-pill.amber, .ws-shell .rate-pill.warning { color: var(--warning); background: #1a171c; border-color: #473924; }
+.ws-shell .rate-pill.red, .ws-shell .rate-pill.error { color: var(--error); background: #1b0f1d; border-color: #4c2227; }
+.ws-shell .detail-sidebar { display: grid; gap: 18px; }
+.ws-shell .leak-card { padding: 24px; border: 1px solid rgba(255, 63, 164, .35); border-radius: 26px; background: linear-gradient(145deg, rgba(255, 63, 164, .17), rgba(255, 255, 255, .06)); box-shadow: 0 16px 42px rgba(0, 0, 0, .24); }
+.ws-shell .leak-card h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+.ws-shell .leak-values { display: flex; align-items: center; gap: 10px; margin: 17px 0 12px; }
+.ws-shell .leak-values strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+.ws-shell .leak-values strong:last-child { color: var(--pink); }
+.ws-shell .leak-card > p:not(.eyebrow) { margin: 0 0 18px; color: var(--text-muted); font-size: 11px; line-height: 1.55; }
+.ws-shell .leak-card button { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border: 0; border-radius: 14px; background: var(--pink); color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 900; }
+.ws-shell .key-rates { padding: 20px; }
+.ws-shell .key-rates > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.ws-shell .key-rates > div > div { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; padding: 10px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 12px; background: rgba(0, 0, 0, .18); }
+.ws-shell .key-rates span { color: var(--text-muted); font-size: 9px; font-weight: 800; }
+.ws-shell .key-rates strong { font-size: 11px; font-variant-numeric: tabular-nums; }
+.ws-shell .key-rates strong.green, .ws-shell .key-rates strong.success { color: var(--success); }
+.ws-shell .key-rates strong.amber, .ws-shell .key-rates strong.warning { color: var(--warning); }
+.ws-shell .key-rates strong.red, .ws-shell .key-rates strong.error { color: var(--error); }
+.ws-shell .key-rates small { grid-column: 1 / -1; font-size: 8px; }
+.ws-shell .event-selector { padding: 22px; }
+.ws-shell .event-selector-list { display: grid; gap: 6px; max-height: 480px; overflow-y: auto; }
+.ws-shell .event-selector-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 13px; background: var(--input); color: var(--text-muted); cursor: pointer; font-size: 11px; text-align: left; transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+.ws-shell .event-selector-list button:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.ws-shell .event-selector-list button.active { border-color: rgba(19, 35, 198, .55); background: rgba(19, 35, 198, .18); color: #fff; }
+
+.ws-shell .source-panel { margin-top: 22px; padding: 26px; }
+.ws-shell .source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ws-shell .source-grid article { padding: 18px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 18px; background: rgba(0, 0, 0, .18); }
+.ws-shell .source-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; font-size: 12px; font-weight: 900; }
+.ws-shell .source-title b { color: var(--warning); font-size: 9px; text-transform: uppercase; }
+.ws-shell .source-grid dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 0; overflow: hidden; border-radius: 12px; background: rgba(255, 255, 255, .08); }
+.ws-shell .source-grid dl div { padding: 11px 8px; background: #080d38; }
+.ws-shell .source-grid dt { margin: 0; color: var(--text-muted); font-size: 9px; }
+.ws-shell .source-grid dd { margin: 7px 0 0; font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* Simulator */
+.ws-shell .sim-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .75fr); gap: 22px; align-items: start; }
+.ws-shell .sim-controls, .ws-shell .sim-results { display: grid; gap: 22px; }
+.ws-shell .money-controls, .ws-shell .lever-controls, .ws-shell .work-order { padding: 26px; }
+.ws-shell .input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ws-shell .money-field, .ws-shell .derived-field { min-width: 0; padding: 15px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 16px; background: rgba(0, 0, 0, .2); }
+.ws-shell .money-field > span:first-child, .ws-shell .derived-field > span { display: block; margin-bottom: 9px; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.ws-shell .money-field > span:last-child { min-height: 42px; display: flex; align-items: center; border-radius: 11px; background: var(--input); }
+.ws-shell .money-field b { padding-left: 11px; color: var(--text-muted); font-style: normal; }
+.ws-shell .money-field input { width: 100%; min-width: 0; padding: 0 10px 0 5px; background: transparent; font-size: 15px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ws-shell .derived-field { background: rgba(19, 35, 198, .16); }
+.ws-shell .derived-field strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.ws-shell .derived-field small { display: block; margin-top: 4px; font-size: 9px; }
+.ws-shell .slider-list { display: grid; }
+.ws-shell .slider-row { display: grid; grid-template-columns: minmax(170px, .8fr) minmax(200px, 1.5fr) minmax(190px, .9fr); align-items: center; gap: 18px; min-height: 74px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.ws-shell .slider-row:first-child { border-top: 0; }
+.ws-shell .slider-row > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ws-shell .slider-row > div:first-child span { font-size: 11px; font-weight: 800; }
+.ws-shell .slider-row > div:first-child strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+.ws-shell .range-wrap { position: relative; height: 30px; display: flex; align-items: center; }
+.ws-shell .range-wrap input { position: relative; z-index: 2; width: 100%; accent-color: var(--pink); cursor: pointer; }
+.ws-shell .average-marker, .ws-shell .target-marker { position: absolute; z-index: 1; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: #fff; pointer-events: none; }
+.ws-shell .target-marker { background: var(--pink); box-shadow: 0 0 0 2px rgba(255, 63, 164, .12); }
+.ws-shell .slider-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.ws-shell .slider-actions button { min-height: 36px; padding: 0 9px; border: 1px solid rgba(255, 255, 255, .11); border-radius: 10px; background: rgba(255, 255, 255, .04); color: var(--text-muted); cursor: pointer; font-size: 9px; font-weight: 800; }
+.ws-shell .slider-actions button:hover { color: #fff; background: rgba(255, 255, 255, .09); }
+.ws-shell .slider-actions button:disabled { opacity: .45; cursor: default; }
+.ws-shell .projection-card { padding: 25px; border: 1px solid rgba(255, 63, 164, .28); border-radius: 26px; background: linear-gradient(150deg, rgba(255, 63, 164, .13), rgba(19, 35, 198, .13)); box-shadow: 0 16px 45px rgba(0, 0, 0, .24); }
+.ws-shell .projection-card h2 { margin: 0 0 18px; font-size: 20px; letter-spacing: -.03em; }
+.ws-shell .projection-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .1); border-radius: 17px; background: rgba(255, 255, 255, .09); }
+.ws-shell .projection-kpis > div { padding: 14px; background: rgba(2, 6, 23, .62); }
+.ws-shell .projection-kpis span { display: block; color: var(--text-muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.ws-shell .projection-kpis strong { display: block; margin: 6px 0 5px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.ws-shell .projection-kpis small { font-size: 9px; font-weight: 800; }
+.ws-shell .positive { color: var(--success) !important; }
+.ws-shell .negative { color: var(--error) !important; }
+.ws-shell .work-order h2 { margin: 0 0 16px; font-size: 18px; }
+.ws-shell .work-order > div > article { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid rgba(255, 255, 255, .07); }
+.ws-shell .work-order > div > article:first-child { border-top: 0; }
+.ws-shell .rank { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 9px; background: rgba(19, 35, 198, .3); color: #c3c8ff; font-size: 10px; font-weight: 900; }
+.ws-shell .work-order article strong { font-size: 11px; }
+.ws-shell .work-order article p { margin: 4px 0 0; color: var(--text-muted); font-size: 9px; }
+.ws-shell .work-order article > b { color: var(--pink); font-size: 11px; font-variant-numeric: tabular-nums; font-style: normal; }
+.ws-shell .work-order details { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.ws-shell .work-order summary { cursor: pointer; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.ws-shell .work-order details > span { display: block; margin-top: 8px; font-size: 10px; }
+.ws-shell .all-target { color: var(--text-muted); font-size: 11px; line-height: 1.55; }
+
+/* Plan de acción */
+.ws-shell .actions-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .68fr); gap: 22px; align-items: start; }
+.ws-shell .action-groups, .ws-shell .action-summary { display: grid; gap: 20px; }
+.ws-shell .action-group { padding: 25px; }
+.ws-shell .action-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ws-shell .action-group-head h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+.ws-shell .action-group-head p:not(.eyebrow) { margin: 6px 0 0; color: var(--text-muted); font-size: 11px; }
+.ws-shell .action-group-head > div:last-child { text-align: right; }
+.ws-shell .action-group-head > div:last-child strong { display: block; color: var(--pink); font-size: 20px; font-variant-numeric: tabular-nums; }
+.ws-shell .action-group-head > div:last-child span { color: var(--text-muted); font-size: 9px; }
+.ws-shell .impact-track { position: relative; height: 9px; margin: 20px 0; border-radius: 999px; background: var(--input); }
+.ws-shell .impact-track i, .ws-shell .impact-track b { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--blue); font-style: normal; }
+.ws-shell .impact-track b { background: var(--pink); }
+.ws-shell .impact-track em { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; }
+.ws-shell .plan-list { display: grid; gap: 8px; }
+.ws-shell .plan-item { display: grid; grid-template-columns: 32px 1fr 44px; align-items: start; gap: 12px; padding: 14px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 16px; background: rgba(0, 0, 0, .18); }
+.ws-shell .done-toggle, .ws-shell .remove-action { display: grid; place-items: center; min-height: 40px; height: 40px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.ws-shell .done-toggle > span { width: 18px; height: 18px; border: 1px solid rgba(255, 255, 255, .3); border-radius: 50%; }
+.ws-shell .done-toggle svg { color: var(--success); }
+.ws-shell .remove-action:hover { color: var(--error); }
+.ws-shell .plan-item h3 { margin: 2px 0 5px; font-size: 12px; line-height: 1.45; }
+.ws-shell .plan-item > div > p { margin: 0 0 9px; color: var(--text-muted); font-size: 10px; }
+.ws-shell .rating-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.ws-shell .rating-chips span { padding: 4px 7px; border-radius: 999px; background: rgba(255, 255, 255, .055); color: var(--text-muted); font-size: 8px; font-weight: 700; }
+.ws-shell .plan-item.done h3 { color: var(--text-muted); text-decoration: line-through; }
+.ws-shell .plan-item.done { opacity: .72; }
+.ws-shell .model-note { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .09); color: var(--text-muted); font-size: 10px; line-height: 1.55; }
+
+/* Formulario de acción nueva (creación inline en Acciones) */
+.ws-shell .inline-form { padding: 20px; margin-bottom: 18px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 19px; background: rgba(255, 255, 255, .04); }
+.ws-shell .inline-form label > span, .ws-shell .custom-ratings label > span { display: block; margin-bottom: 7px; color: var(--text-muted); font-size: 10px; font-weight: 800; text-transform: capitalize; }
+.ws-shell .inline-form input[type="text"], .ws-shell .inline-form select { width: 100%; min-height: 44px; padding: 0 13px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 13px; background: var(--input); font-size: 11px; }
+.ws-shell .custom-ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.ws-shell .custom-ratings select { width: 100%; min-height: 40px; padding: 0 9px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 11px; background: var(--input); font-size: 11px; }
+.ws-shell .number-input { min-height: 40px; display: inline-flex; align-items: center; overflow: hidden; border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; background: var(--input); }
+.ws-shell .number-input input { width: 52px; padding: 0 7px 0 11px; background: transparent; text-align: right; font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ws-shell .number-input b { padding-right: 9px; color: var(--text-muted); font-size: 9px; font-style: normal; }
+
+/* Metas / editor de goles */
+.ws-shell .goal-editor { padding: 24px; }
+.ws-shell .goal-editor .section-heading { margin-bottom: 16px; }
+.ws-shell .goal-editor h2 { font-size: 17px; }
+.ws-shell .goal-list { display: grid; gap: 8px; }
+.ws-shell .goal-list > label, .ws-shell .band-input { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; color: var(--text-muted); font-size: 10px; font-weight: 700; }
+.ws-shell .goal-list > label > span:first-child { display: grid; gap: 4px; }
+.ws-shell .goal-current { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.ws-shell .goal-current.green, .ws-shell .goal-current.success { color: var(--success); }
+.ws-shell .goal-current.amber, .ws-shell .goal-current.warning { color: var(--warning); }
+.ws-shell .goal-current.red, .ws-shell .goal-current.error { color: var(--error); }
+.ws-shell .band-input { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.ws-shell .goal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px; }
+.ws-shell .goal-actions .secondary-action { width: 100%; padding-inline: 10px; }
+
+/* Wizard (modal de creación/edición de taller) */
+.ws-shell .modal-overlay { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(2, 6, 23, .84); backdrop-filter: blur(8px); animation: ws-modal-fade 180ms ease both; }
+.ws-shell .modal-backdrop { position: absolute; inset: 0; width: 100%; min-height: 100%; padding: 0; border: 0; background: transparent; cursor: default; }
+.ws-shell .action-modal { position: relative; z-index: 1; width: min(920px, 100%); max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border: 1px solid rgba(255, 63, 164, .35); border-radius: 28px; background: #0a0e3d; box-shadow: 0 28px 90px rgba(0, 0, 0, .58); animation: ws-modal-pop 220ms cubic-bezier(.2, .8, .2, 1) both; }
+.ws-shell .action-modal.narrow { width: min(560px, 100%); }
+.ws-shell .action-modal.wide { width: min(1040px, 100%); }
+@keyframes ws-modal-fade { from { opacity: 0; } }
+@keyframes ws-modal-pop { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.ws-shell .action-modal > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px 25px 18px; border-bottom: 1px solid rgba(255, 255, 255, .09); }
+.ws-shell .action-modal h2 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+.ws-shell .action-modal header p:last-child { margin: 8px 0 0; color: var(--text-muted); font-size: 11px; }
+.ws-shell .action-modal header p:last-child strong { font-size: 14px; }
+.ws-shell .action-modal header > button { width: 40px; height: 40px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, .05); color: #fff; cursor: pointer; }
+.ws-shell .modal-body { overflow-y: auto; padding: 22px 25px 26px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) rgba(0, 0, 0, .35); }
+.ws-shell .modal-body > section + section { margin-top: 24px; }
+
+.ws-shell .wizard-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; }
+.ws-shell .wizard-sidebar { padding: 20px; }
+.ws-shell .progress-circle { width: 76px; height: 76px; display: grid; place-content: center; margin: 0 auto 18px; border-radius: 50%; background: conic-gradient(var(--pink) calc(var(--progress, 0) * 1deg), rgba(255, 255, 255, .08) 0); border: 1px solid rgba(255, 255, 255, .12); text-align: center; }
+.ws-shell .progress-circle strong { font-size: 22px; line-height: 1; }
+.ws-shell .progress-circle span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 9px; }
+.ws-shell .wizard-steps { display: grid; gap: 6px; }
+.ws-shell .wizard-steps button { width: 100%; display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 9px; padding: 8px; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--text-muted); cursor: pointer; text-align: left; }
+.ws-shell .wizard-steps button > span { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(255, 255, 255, .15); border-radius: 10px; font-size: 10px; font-weight: 900; }
+.ws-shell .wizard-steps button strong, .ws-shell .wizard-steps button small { display: block; }
+.ws-shell .wizard-steps button strong { color: inherit; font-size: 10px; }
+.ws-shell .wizard-steps button small { margin-top: 2px; font-size: 8px; }
+.ws-shell .wizard-steps button.active { border-color: rgba(19, 35, 198, .55); background: rgba(19, 35, 198, .18); color: #fff; }
+.ws-shell .wizard-steps button.active > span { border-color: var(--blue); background: var(--blue); color: #fff; }
+.ws-shell .wizard-steps button.complete > span { color: var(--success); border-color: #10413d; background: #071a24; }
+.ws-shell .wizard-form { padding: 26px; }
+.ws-shell .wizard-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 24px; flex-wrap: wrap; }
+.ws-shell .wizard-form-head > div > span, .ws-shell .step-kicker { color: var(--text-muted); font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .wizard-form-head h2 { margin: 6px 0 0; font-size: 21px; letter-spacing: -.03em; }
+.ws-shell .step-kicker { padding: 7px 10px; border-radius: 999px; background: rgba(19, 35, 198, .2); color: #bdc4ff; }
+.ws-shell .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ws-shell .form-field { display: block; min-width: 0; }
+.ws-shell .form-field.wide { grid-column: span 2; }
+.ws-shell .form-field > span:first-child { display: block; margin-bottom: 7px; color: rgba(255, 255, 255, .82); font-size: 11px; font-weight: 800; }
+.ws-shell .field-control { min-height: 46px; display: flex; align-items: center; overflow: hidden; border: 1px solid rgba(255, 255, 255, .13); border-radius: 14px; background: var(--input); transition: border-color 180ms ease, box-shadow 180ms ease; }
+.ws-shell .field-control:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(19, 35, 198, .4); }
+.ws-shell .field-control.money > b { padding-left: 14px; color: var(--text-muted); font-style: normal; }
+.ws-shell .field-control input { width: 100%; min-width: 0; min-height: 44px; padding: 0 14px; background: transparent; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ws-shell .field-control.money input { padding-left: 7px; }
+.ws-shell .form-field > small { display: block; min-height: 30px; padding: 6px 3px 0; font-size: 10px; line-height: 1.35; }
+.ws-shell .form-field.invalid .field-control { border-color: var(--error); box-shadow: 0 0 0 2px rgba(232, 92, 74, .08); }
+.ws-shell .error-text { color: var(--error) !important; }
+.ws-shell .conversion-chip { flex: 0 0 auto; min-width: 58px; margin-right: 8px; padding: 6px 8px; border: 1px solid; border-radius: 999px; text-align: center; font-size: 10px; font-weight: 900; }
+.ws-shell .conversion-chip.idle { color: var(--text-muted); border-color: var(--border); }
+.ws-shell .wizard-preview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; margin-top: 22px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 17px; background: rgba(255, 255, 255, .09); }
+.ws-shell .wizard-preview > div { padding: 14px; background: rgba(19, 35, 198, .12); }
+.ws-shell .wizard-preview span { display: block; color: var(--text-muted); font-size: 9px; }
+.ws-shell .wizard-preview strong { display: block; margin-top: 6px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ws-shell .wizard-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .09); flex-wrap: wrap; }
+.ws-shell .wizard-footer > div:last-child { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+.ws-shell .form-alert { min-height: 14px; color: var(--success); font-size: 10px; font-weight: 700; }
+.ws-shell .form-alert.visible { color: var(--error); }
+.ws-shell .form-submit { position: static; justify-self: auto; border: 0; cursor: pointer; }
+.ws-shell .form-submit:disabled { opacity: .6; cursor: wait; }
+
+.ws-shell .empty-state { min-height: 320px; display: grid; place-items: center; align-content: center; padding: 44px 22px; border: 1px dashed rgba(255, 255, 255, .2); border-radius: 28px; background: rgba(255, 255, 255, .045); text-align: center; }
+.ws-shell .empty-state > div { width: 54px; height: 54px; display: grid; place-items: center; margin-bottom: 16px; border-radius: 18px; background: rgba(19, 35, 198, .22); color: #b7bdff; }
+.ws-shell .empty-state h2 { margin: 0; font-size: 22px; }
+.ws-shell .empty-state > p:not(.eyebrow) { max-width: 480px; margin: 12px auto 20px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.ws-shell .empty-state .primary-action { position: static; justify-self: center; }
+.ws-shell .loading-state > div > span { width: 22px; height: 22px; display: block; border: 3px solid rgba(255, 255, 255, .18); border-top-color: var(--pink); border-radius: 50%; animation: ws-loading-spin .8s linear infinite; }
+@keyframes ws-loading-spin { to { transform: rotate(360deg); } }
+
+/* Toggle segmentado (día-rango / filtros de la Landing) */
+.ws-shell .pill-toggle { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: rgba(0, 0, 0, .2); flex-wrap: wrap; }
+.ws-shell .pill-toggle button { padding: 8px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 10px; font-weight: 800; cursor: pointer; transition: color 180ms ease, background-color 180ms ease; }
+.ws-shell .pill-toggle button:hover { color: #fff; }
+.ws-shell .pill-toggle button.active { color: #fff; background: var(--blue); }
+
+/* Barra flotante de comparación */
+.ws-shell .compare-bar { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-radius: 999px; background: var(--navy); border: 1px solid rgba(255, 255, 255, .12); box-shadow: var(--shadow-main); }
+.ws-shell .compare-bar span { font-size: 11px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: .08em; }
+.ws-shell .compare-bar button.confirm { padding: 8px 16px; border: 0; border-radius: 999px; background: #fff; color: var(--blue); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+.ws-shell .compare-bar button.confirm:disabled { opacity: .5; cursor: default; }
+.ws-shell .compare-bar button.clear { border: 0; background: none; color: rgba(255, 255, 255, .7); font-size: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+.ws-shell .compare-bar button.clear:hover { color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-shell *, .ws-shell *::before, .ws-shell *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+@media (max-width: 1200px) {
+  .ws-shell .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-shell .detail-grid, .ws-shell .sim-grid, .ws-shell .actions-grid { grid-template-columns: 1fr; }
+  .ws-shell .detail-sidebar { grid-template-columns: 1fr 1fr; }
+  .ws-shell .detail-sidebar .event-selector { grid-column: span 2; }
+  .ws-shell .sim-results, .ws-shell .action-summary { grid-template-columns: 1fr 1fr; }
+  .ws-shell .slider-row { grid-template-columns: minmax(160px, .75fr) minmax(200px, 1.4fr) minmax(180px, .9fr); }
+}
+
+@media (max-width: 1100px) {
+  .ws-shell .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .ws-shell .content-grid { grid-template-columns: 1fr; }
+  .ws-shell .insight-stack { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .ws-shell .economy-strip { grid-template-columns: repeat(2, 1fr); }
+  .ws-shell .economy-strip > div:last-child { grid-column: span 2; }
+  .ws-shell .funnel-stage { grid-template-columns: 28px 1fr 62px; }
+  .ws-shell .stage-bar { grid-column: 2 / -1; }
+  .ws-shell .rate-pill { margin-left: 40px; }
+  .ws-shell .source-grid, .ws-shell .detail-sidebar, .ws-shell .sim-results, .ws-shell .action-summary { grid-template-columns: 1fr; }
+  .ws-shell .detail-sidebar .event-selector { grid-column: auto; }
+  .ws-shell .source-grid dl { grid-template-columns: repeat(3, 1fr); }
+  .ws-shell .input-grid { grid-template-columns: repeat(2, 1fr); }
+  .ws-shell .slider-row { grid-template-columns: 1fr; gap: 8px; padding: 14px 0; }
+  .ws-shell .slider-actions { justify-content: flex-start; }
+  .ws-shell .wizard-layout { grid-template-columns: 1fr; }
+  .ws-shell .wizard-sidebar { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+  .ws-shell .progress-circle { width: 68px; height: 68px; margin: 0; }
+  .ws-shell .wizard-steps { grid-template-columns: repeat(3, 1fr); }
+  .ws-shell .wizard-steps button { grid-template-columns: 26px 1fr; }
+}
+
+@media (max-width: 720px) {
+  .ws-shell .event-grid { grid-template-columns: 1fr; }
+  .ws-shell .kpi-grid { grid-template-columns: 1fr; }
+  .ws-shell .section-heading { align-items: flex-start; flex-direction: column; }
+  .ws-shell .lever-row { grid-template-columns: 1fr 56px; gap: 8px 14px; }
+  .ws-shell .lever-row .track { grid-column: 1 / -1; }
+  .ws-shell .lever-row .status { display: none; }
+  .ws-shell .phase-key, .ws-shell .legend { flex-wrap: wrap; }
+  .ws-shell .funnel-panel, .ws-shell .source-panel, .ws-shell .comparison-panel, .ws-shell .money-controls, .ws-shell .lever-controls, .ws-shell .work-order, .ws-shell .action-group, .ws-shell .wizard-form { padding: 18px; }
+  .ws-shell .funnel-stage { grid-template-columns: 26px 1fr 56px; gap: 8px; }
+  .ws-shell .rate-pill { grid-template-columns: auto 1fr auto; margin-left: 32px; }
+  .ws-shell .rate-pill small { grid-column: 1 / -1; }
+  .ws-shell .goal-actions { grid-template-columns: 1fr; }
+  .ws-shell .source-grid dl { grid-template-columns: repeat(2, 1fr); }
+  .ws-shell .input-grid, .ws-shell .projection-kpis { grid-template-columns: 1fr 1fr; }
+  .ws-shell .actions-grid { display: block; }
+  .ws-shell .action-summary { margin-top: 18px; }
+  .ws-shell .action-group-head { align-items: flex-start; flex-direction: column; }
+  .ws-shell .action-group-head > div:last-child { text-align: left; }
+  .ws-shell .wizard-sidebar { grid-template-columns: 1fr; }
+  .ws-shell .progress-circle { display: none; }
+  .ws-shell .wizard-steps { grid-template-columns: 1fr; }
+  .ws-shell .form-grid { grid-template-columns: 1fr; }
+  .ws-shell .form-field.wide { grid-column: auto; }
+  .ws-shell .wizard-preview { grid-template-columns: 1fr 1fr; }
+  .ws-shell .wizard-footer { align-items: stretch; flex-direction: column; }
+  .ws-shell .wizard-footer > div:last-child { align-items: stretch; }
+  .ws-shell .wizard-footer .secondary-action, .ws-shell .wizard-footer .form-submit { width: 100%; }
+  .ws-shell .modal-overlay { align-items: end; padding: 0; }
+  .ws-shell .action-modal { max-height: 92vh; border-radius: 24px 24px 0 0; }
+  .ws-shell .action-modal > header, .ws-shell .modal-body { padding-left: 18px; padding-right: 18px; }
+  .ws-shell .custom-ratings { grid-template-columns: 1fr 1fr; }
+  .ws-shell .comparison-panel table, .ws-shell .comparison-panel tbody, .ws-shell .comparison-panel tr, .ws-shell .comparison-panel th, .ws-shell .comparison-panel td { display: block; width: 100%; }
+  .ws-shell .comparison-panel thead { display: none; }
+  .ws-shell .comparison-panel tbody tr { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+  .ws-shell .comparison-panel tbody th { width: 100%; padding: 5px 2px 10px; border: 0; background: transparent; color: #fff; font-size: 11px; }
+  .ws-shell .comparison-panel tbody td { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 2px; border: 0; }
+  .ws-shell .comparison-panel tbody td::before { content: attr(data-workshop); max-width: 62%; color: var(--text-muted); font-size: 9px; line-height: 1.35; text-align: left; }
+}
