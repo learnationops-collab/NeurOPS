@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Save, Check, DollarSign, Pencil } from 'lucide-react';
+import { Loader2, X, Save, Check, DollarSign, Pencil, GraduationCap, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -619,6 +619,121 @@ const TotalProgramaEditor = ({ clientId, totalAmount, fallback, onSaved }) => {
     );
 };
 
+const ACADEMY_TIPO_VENTA_OPTIONS = [
+    { v: 'seña', label: 'Seña', hint: 'Vence en 7 días.' },
+    { v: 'completo', label: 'Completo (PIF)', hint: 'Vence en 4 meses.' },
+    { v: 'parcial', label: 'Parcial (Split Pay)', hint: 'Vence en 4 meses, mientras las cuotas estén al día.' }
+];
+
+// Alta/renovación del acceso del cliente en la Academia (Learnation) — upsert del usuario por
+// email + asignación del producto vinculado al programa (AL/RR/SI, configurado en
+// Configuración de Ventas → Integraciones) con el vencimiento que calcula el backend, o el que
+// el closer especifique a mano acá. Ver docs/integracion_learnation_api.md §5.
+const AcademyAccessPanel = ({ client, onGranted }) => {
+    const [abierto, setAbierto] = useState(false);
+    const [tipoVenta, setTipoVenta] = useState('completo');
+    const [expiresAt, setExpiresAt] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const yaVinculado = !!client.learnation_user_id;
+    const tipoSeleccionado = ACADEMY_TIPO_VENTA_OPTIONS.find(t => t.v === tipoVenta);
+
+    const darAcceso = async () => {
+        setSaving(true);
+        try {
+            const payload = { programa_code: client.programa_code || 'RR', tipo_venta: tipoVenta };
+            if (expiresAt) payload.expires_at = expiresAt;
+            const res = await api.post(`/closer/clients/${client.id}/academy-access`, payload);
+            toast.success(
+                res.data.was_created
+                    ? 'Cuenta creada en la Academia — se le envió un email para activar su contraseña.'
+                    : 'Acceso actualizado en la Academia.'
+            );
+            setAbierto(false);
+            onGranted?.(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'No se pudo dar el acceso en la Academia');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div>
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <GraduationCap size={14} /> Acceso a la Academia
+            </h4>
+            <div className="bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2.5 space-y-2">
+                {yaVinculado ? (
+                    <div className="flex items-center justify-between text-[10px] gap-2">
+                        <span className="text-slate-300">
+                            Producto <span className="font-bold text-emerald-400">{client.academy_product_slug}</span>
+                            {client.academy_expires_at && (
+                                <> · vence {new Date(client.academy_expires_at).toLocaleDateString('es-ES')}</>
+                            )}
+                        </span>
+                        <a
+                            href="https://academy.thelearnation.com" target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1 text-violet-400 hover:text-violet-300 text-[9px] font-black uppercase"
+                        >
+                            Academia <ExternalLink size={10} />
+                        </a>
+                    </div>
+                ) : (
+                    <p className="text-[10px] text-slate-500">Este cliente todavía no tiene acceso vinculado en la Academia.</p>
+                )}
+
+                {!abierto ? (
+                    <button
+                        onClick={() => setAbierto(true)}
+                        className="text-[9px] font-black uppercase text-violet-400 hover:text-violet-300 cursor-pointer"
+                    >
+                        {yaVinculado ? 'Renovar / cambiar vencimiento' : 'Dar acceso a la Academia'}
+                    </button>
+                ) : (
+                    <div className="space-y-2 pt-1 border-t border-slate-850">
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="space-y-1">
+                                <span className="text-[8px] font-black uppercase text-slate-500 block">Tipo de pago</span>
+                                <select
+                                    value={tipoVenta}
+                                    onChange={(e) => setTipoVenta(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                                >
+                                    {ACADEMY_TIPO_VENTA_OPTIONS.map(t => (
+                                        <option key={t.v} value={t.v}>{t.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="space-y-1">
+                                <span className="text-[8px] font-black uppercase text-slate-500 block">Vencimiento manual (opcional)</span>
+                                <input
+                                    type="date" value={expiresAt}
+                                    onChange={(e) => setExpiresAt(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                                />
+                            </label>
+                        </div>
+                        {tipoSeleccionado && !expiresAt && (
+                            <p className="text-[9px] text-amber-300/90 font-medium leading-snug bg-amber-500/5 border border-amber-500/15 rounded-lg px-2 py-1.5">
+                                {tipoSeleccionado.hint} Dejá el vencimiento manual vacío para usar este cálculo automático.
+                            </p>
+                        )}
+                        <button
+                            onClick={darAcceso}
+                            disabled={saving}
+                            className="w-full h-8 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                            {saving ? <Loader2 size={11} className="animate-spin" /> : <GraduationCap size={11} />}
+                            {yaVinculado ? 'Actualizar acceso' : 'Dar acceso'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const CONTACT_OUTCOME_LABELS = {
     no_resp: 'No respondió',
     contesto: 'Contestó',
@@ -796,6 +911,19 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                             <span>@{history.client.instagram || 'sin ig'}</span>
                             <span>{history.client.phone || 'sin teléfono'}</span>
                         </div>
+
+                        <AcademyAccessPanel
+                            client={history.client}
+                            onGranted={(result) => setHistory(prev => ({
+                                ...prev,
+                                client: {
+                                    ...prev.client,
+                                    learnation_user_id: result.learnation_user_id,
+                                    academy_product_slug: result.product_slug,
+                                    academy_expires_at: result.expires_at
+                                }
+                            }))}
+                        />
 
                         <div>
                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Agendas ({history.appointments.length})</h4>

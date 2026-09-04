@@ -15,6 +15,7 @@ import {
 import ReportQuestionsManager from '../../../components/admin/ReportQuestionsManager';
 import ProgramsManager from '../../../components/sales/ProgramsManager';
 import IntegrationsManager from '../../../components/admin/IntegrationsManager';
+import AcademyProductMapping from '../../../components/admin/AcademyProductMapping';
 import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
 import PaymentMethodsManager from '../../../components/sales/PaymentMethodsManager';
 import PipelineStagesManager from '../../../components/sales/PipelineStagesManager';
@@ -93,6 +94,8 @@ const SalesSettingsPage = () => {
                     {activeSection === 'integrations' && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                             <IntegrationsManager />
+                            <div className="border-t border-base opacity-20 my-4" />
+                            <AcademyProductMapping />
                             <div className="border-t border-base opacity-20 my-4" />
                             <GoogleCalendarSettings />
                         </div>

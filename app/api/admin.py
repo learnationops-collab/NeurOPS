@@ -1031,6 +1031,34 @@ def test_2chat_integration():
     except Exception as e:
         return jsonify({"message": f"Failed to send message: {str(e)}"}), 500
 
+# --- Academia (Learnation) ---
+# Ver docs/integracion_learnation_api.md — vinculación de productos NeurOPS (AL/RR/SI) con
+# el catálogo de producto/programa de la Academia, usado por AcademyAccessService al dar de
+# alta a un cliente. El token de la Academia nunca pasa por acá (vive en ACADEMY_API_TOKEN,
+# leído server-side por LearnationService); estas rutas solo devuelven catálogo y mapeo.
+
+@bp.route('/admin/academy/products', methods=['GET'])
+@login_required
+@admin_required
+def get_academy_products():
+    from app.services.learnation_service import LearnationService, LearnationAPIError
+    try:
+        result = LearnationService.get_products()
+        return jsonify(result), 200
+    except LearnationAPIError as e:
+        return jsonify({"error": str(e)}), e.status_code or 502
+
+@bp.route('/admin/academy/product-mapping', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_academy_product_mapping():
+    from app.services.academy_access_service import AcademyAccessService
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        mapping = AcademyAccessService.set_product_mapping(data.get('product_mapping') or {})
+        return jsonify({"product_mapping": mapping, "message": "Mapeo de productos guardado"}), 200
+    return jsonify({"product_mapping": AcademyAccessService.get_product_mapping()}), 200
+
 # --- Admin Funnel Management ---
 
 @bp.route('/admin/funnels/groups', methods=['GET', 'POST'])
