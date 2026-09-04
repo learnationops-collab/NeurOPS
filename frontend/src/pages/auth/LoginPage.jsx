@@ -32,6 +32,8 @@ const LoginPage = () => {
       } else if (user.role === 'operator') {
         navigate('/ops/dashboard');
       } else if (user.role === 'director_comercial') {
+        navigate('/admin/ventas');
+      } else if (user.role === 'director_marketing') {
         navigate('/admin/workshops');
       } else {
         navigate('/login');

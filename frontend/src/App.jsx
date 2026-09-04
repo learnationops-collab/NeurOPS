@@ -82,7 +82,8 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'setter') return <Navigate to="/setter/deck?step=cualificacion" />;
     if (user.role === 'closer') return <Navigate to="/closer/deck?step=confirmations" />;
     if (user.role === 'triage') return <Navigate to="/triage/deck?step=confirmar" />;
-    if (user.role === 'director_comercial') return <Navigate to="/admin/workshops" />;
+    if (user.role === 'director_comercial') return <Navigate to="/admin/ventas" />;
+    if (user.role === 'director_marketing') return <Navigate to="/admin/workshops" />;
     return <Navigate to="/" />;
   }
 
@@ -153,7 +154,7 @@ function App() {
             <Route
               path="/admin/ventas"
               element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['admin', 'director_comercial']}>
                   <MainLayout>
                     <AdminSalesHubPage />
                   </MainLayout>
@@ -183,7 +184,7 @@ function App() {
             <Route
               path="/admin/marketing"
               element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['admin', 'director_marketing']}>
                   <MainLayout>
                     <AdminMarketingHubPage />
                   </MainLayout>
@@ -223,7 +224,7 @@ function App() {
             <Route
               path="/admin/workshops"
               element={
-                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                <ProtectedRoute roles={['admin', 'director_marketing']}>
                   <MainLayout>
                     <WorkshopDashboardPage />
                   </MainLayout>

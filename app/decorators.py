@@ -55,20 +55,20 @@ def admin_required(f):
 
 def workshop_required(f):
     """Acceso al módulo de Workshop Intelligence (`/admin/workshops` y su API):
-    admin, operator y el rol director_comercial (analiza el embudo de talleres
+    admin, operator y el rol director_marketing (analiza el embudo de talleres
     a fondo, pero no debe heredar el resto de `admin_required` — finanzas,
     equipo, base de datos — que no se le pidió)."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            from app.models.user import ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL
+            from app.models.user import ROLE_OPERATOR, ROLE_DIRECTOR_MARKETING
 
             if not current_user.is_authenticated:
                 if request.path.startswith('/api/'):
                     return jsonify({"error": "Authentication required"}), 401
                 return redirect(url_for('auth.login'))
 
-            if current_user.role not in ['admin', ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL]:
+            if current_user.role not in ['admin', ROLE_OPERATOR, ROLE_DIRECTOR_MARKETING]:
                 if request.path.startswith('/api/'):
                     return jsonify({"error": "Workshop access required"}), 403
                 flash('No tienes permiso para acceder a esta página.')
