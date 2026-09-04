@@ -130,7 +130,8 @@ const TeamManagementPage = () => {
             else if (impersonatedUser.role === 'setter') path = '/setter/deck?step=cualificacion';
             else if (impersonatedUser.role === 'triage') path = '/triage/deck?step=confirmar';
             else if (impersonatedUser.role === 'closer') path = '/closer/deck?step=confirmations';
-            else if (impersonatedUser.role === 'director_comercial') path = '/admin/workshops';
+            else if (impersonatedUser.role === 'director_comercial') path = '/admin/ventas';
+            else if (impersonatedUser.role === 'director_marketing') path = '/admin/workshops';
 
             window.location.href = path;
         } catch (err) {
@@ -157,6 +158,7 @@ const TeamManagementPage = () => {
         { id: 'triage', label: 'Call Confirmer', icon: Shield },
         { id: 'operator', label: 'Operadores', icon: Zap },
         { id: 'director_comercial', label: 'Director Comercial', icon: Shield },
+        { id: 'director_marketing', label: 'Director de Marketing', icon: Shield },
         { id: 'admin', label: 'Admins', icon: Shield },
     ];
 
@@ -421,6 +423,7 @@ const TeamManagementPage = () => {
                                                 <option value="operator">Operador Técnico</option>
                                                 <option value="triage">Call Confirmer</option>
                                                 <option value="director_comercial">Director Comercial</option>
+                                                <option value="director_marketing">Director de Marketing</option>
                                             </select>
                                         </div>
 

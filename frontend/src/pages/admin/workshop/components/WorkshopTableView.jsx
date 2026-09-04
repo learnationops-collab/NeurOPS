@@ -1,94 +1,67 @@
 import React from 'react';
-import { Edit2, Trash2, ArrowRight } from 'lucide-react';
+import { Edit2, Trash2, ArrowRight, Check } from 'lucide-react';
+
+const roasTone = (roas) => (roas >= 3 ? 'success' : roas >= 1.5 ? 'success' : roas >= 1 ? 'warning' : 'error');
 
 const WorkshopTableView = ({ events, onSelectFunnel, onEdit, onDelete, formatDate, formatCurrency, selectedIds, onToggleSelect }) => {
     return (
-        <div className="bg-slate-950 border border-slate-900 rounded-3xl overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+        <section className="panel comparison-panel" aria-label="Tabla comparativa de talleres">
+            <div className="comparison-scroll">
+                <table>
                     <thead>
-                        <tr className="bg-slate-900/50 border-b border-slate-900">
-                            {onToggleSelect && <th className="p-4 w-8" />}
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Workshop / Evento</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Inversión</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Recaudado</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Profit Neto</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Leads</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">CPL</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Show Up %</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Agendas</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">CPA</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Ventas</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">ROAS</th>
-                            <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
+                        <tr>
+                            {onToggleSelect && <th scope="col" style={{ textAlign: 'left', width: 40 }} />}
+                            <th scope="col" style={{ textAlign: 'left' }}>Fecha</th>
+                            <th scope="col" style={{ textAlign: 'left' }}>Workshop</th>
+                            <th scope="col">Inversión</th>
+                            <th scope="col">Recaudado</th>
+                            <th scope="col">Profit neto</th>
+                            <th scope="col">Leads</th>
+                            <th scope="col">CPL</th>
+                            <th scope="col">Show up %</th>
+                            <th scope="col">Agendas</th>
+                            <th scope="col">CPA</th>
+                            <th scope="col">Ventas</th>
+                            <th scope="col">ROAS</th>
+                            <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-900/50">
+                    <tbody>
                         {events.map((e) => {
                             const profit = e.cash_collected - e.inversion;
                             const isSelected = selectedIds?.includes(e.id);
                             return (
-                                <tr key={e.id} className={`hover:bg-slate-900/25 transition-colors group ${isSelected ? 'bg-indigo-500/5' : ''}`}>
+                                <tr key={e.id}>
                                     {onToggleSelect && (
-                                        <td className="p-4">
-                                            <button
-                                                onClick={() => onToggleSelect(e.id)}
-                                                title="Seleccionar para comparar"
-                                                className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-transparent hover:border-slate-500'}`}
-                                            >
-                                                ✓
-                                            </button>
+                                        <td style={{ textAlign: 'left' }}>
+                                            <label className="compare-control">
+                                                <input type="checkbox" checked={!!isSelected} onChange={() => onToggleSelect(e.id)} />
+                                                <span><Check size={12} /></span>
+                                            </label>
                                         </td>
                                     )}
-                                    <td className="p-4 text-xs font-black text-white whitespace-nowrap italic">{formatDate(e.date)}</td>
-                                    <td className="p-4 text-xs font-black text-slate-300 uppercase tracking-wider">{e.name}</td>
-                                    <td className="p-4 text-xs font-black text-slate-300 text-right whitespace-nowrap">{formatCurrency(e.inversion)}</td>
-                                    <td className="p-4 text-xs font-black text-emerald-400 text-right whitespace-nowrap">{formatCurrency(e.cash_collected)}</td>
-                                    <td className={`p-4 text-xs font-black text-right whitespace-nowrap ${profit >= 0 ? 'text-indigo-400' : 'text-rose-400'}`}>
-                                        {formatCurrency(profit)}
-                                    </td>
-                                    <td className="p-4 text-xs font-black text-indigo-300 text-right">{e.leads.toLocaleString()}</td>
-                                    <td className="p-4 text-xs font-black text-slate-400 text-right whitespace-nowrap">{formatCurrency(e.cpl)}</td>
-                                    <td className="p-4 text-xs font-bold text-slate-400 text-right">{e.show_up_rate}%</td>
-                                    <td className="p-4 text-xs font-black text-white text-right">{e.agendas_exitosas}</td>
-                                    <td className="p-4 text-xs font-black text-slate-400 text-right whitespace-nowrap">{formatCurrency(e.costo_por_agenda)}</td>
-                                    <td className="p-4 text-xs font-black text-white text-right">{e.sales}</td>
-                                    <td className="p-4 text-xs text-right">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest ${
-                                            e.roas >= 3 
-                                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                                : e.roas >= 1.5 
-                                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' 
-                                                : e.roas >= 1.0 
-                                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                        }`}>
-                                            {e.roas.toFixed(2)}x
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <button
-                                                onClick={() => onSelectFunnel(e)}
-                                                className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-indigo-600 hover:text-white text-indigo-400 transition-colors"
-                                                title="Ver embudo"
-                                            >
-                                                <ArrowRight size={12} />
+                                    <th scope="row" style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{formatDate(e.date)}</th>
+                                    <td style={{ textAlign: 'left', color: '#fff', fontWeight: 800 }}>{e.name}</td>
+                                    <td>{formatCurrency(e.inversion)}</td>
+                                    <td className="positive">{formatCurrency(e.cash_collected)}</td>
+                                    <td className={profit < 0 ? 'negative' : ''}>{formatCurrency(profit)}</td>
+                                    <td>{e.leads.toLocaleString()}</td>
+                                    <td>{formatCurrency(e.cpl)}</td>
+                                    <td>{e.show_up_rate}%</td>
+                                    <td>{e.agendas_exitosas}</td>
+                                    <td>{formatCurrency(e.costo_por_agenda)}</td>
+                                    <td>{e.sales}</td>
+                                    <td><span className={`table-rate ${roasTone(e.roas)}`}>{e.roas.toFixed(2)}x</span></td>
+                                    <td>
+                                        <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                                            <button type="button" className="icon-button" onClick={() => onSelectFunnel(e)} title="Ver embudo" aria-label="Ver embudo">
+                                                <ArrowRight size={14} />
                                             </button>
-                                            <button
-                                                onClick={() => onEdit(e)}
-                                                className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-white text-slate-400 transition-colors"
-                                                title="Editar datos"
-                                            >
-                                                <Edit2 size={12} />
+                                            <button type="button" className="icon-button" onClick={() => onEdit(e)} title="Editar datos" aria-label="Editar datos">
+                                                <Edit2 size={14} />
                                             </button>
-                                            <button
-                                                onClick={() => onDelete(e.id)}
-                                                className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 transition-colors"
-                                                title="Eliminar evento"
-                                            >
-                                                <Trash2 size={12} />
+                                            <button type="button" className="icon-button" onClick={() => onDelete(e.id)} title="Eliminar evento" aria-label="Eliminar evento">
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </td>
@@ -98,7 +71,7 @@ const WorkshopTableView = ({ events, onSelectFunnel, onEdit, onDelete, formatDat
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     );
 };
 

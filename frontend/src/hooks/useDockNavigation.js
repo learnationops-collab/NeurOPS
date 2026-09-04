@@ -88,10 +88,17 @@ const useDockNavigation = () => {
             }
             return adminPages;
         } else if (user?.role === 'director_comercial') {
-            // Rol de solo este módulo: analiza el embudo de talleres a fondo, sin
-            // acceso al resto del panel de admin — un único destino en el Dock.
+            // Rol enfocado en ventas: closing (Closers) y setting (Setters), sin
+            // acceso al resto del panel de admin.
             return [
-                { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' }
+                { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' }
+            ];
+        } else if (user?.role === 'director_marketing') {
+            // Rol enfocado en marketing: talleres/workshops y anuncios (Instagram,
+            // UTMs, tráfico de landings), sin acceso al resto del panel de admin.
+            return [
+                { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' },
+                { id: 'marketing', icon: Activity, label: 'Marketing', path: '/admin/marketing' }
             ];
         }
 

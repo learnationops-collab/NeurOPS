@@ -8,21 +8,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&family=Montserrat:wght@400;600;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&family=Montserrat:wght@400;600;700;800;900&display=swap"
         rel="stylesheet">
     <title>Learnation Workers</title>
     <style>
-        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *) en cada selector: el Closer Workspace
-           (CloserWorkflowPage.jsx, raíz con class="bg-v6") usa Montserrat, no Inter (pedido del
-           usuario, 28/ago/2026, para acercarse a la referencia visual — Inter y Montserrat tienen
-           métricas de letra distintas aunque coincidan peso y tamaño). Sin esta exclusión, este
+        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) en cada
+           selector: el Closer Workspace (CloserWorkflowPage.jsx, raíz con class="bg-v6") y ahora
+           Workshop Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell") usan Montserrat,
+           no Inter (mismo patrón: reskin calcado de una referencia visual externa, y Inter/Montserrat
+           tienen métricas de letra distintas aunque coincidan peso y tamaño). Sin esta exclusión, este
            `!important` le hubiera ganado igual a cualquier font-family que se declare para
-           `.bg-v6` más abajo, mismo patrón que ya hizo falta para el peso de fuente. */
+           `.bg-v6`/`.ws-shell` más abajo / en workshop-intel.css. */
         html,
         body,
         #root,
-        #root *:not(.bg-v6):not(.bg-v6 *),
-        [class*="font-"]:not(.bg-v6):not(.bg-v6 *) {
+        #root *:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        [class*="font-"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
             font-family: 'Inter', sans-serif !important;
             font-style: normal !important;
             -webkit-font-smoothing: antialiased !important;
@@ -30,48 +31,48 @@
             text-rendering: optimizeLegibility !important;
         }
 
-        /* :not(.bg-v6):not(.bg-v6 *) en cada selector de estos dos bloques: el rediseño "v6/v7" del Workspace
-           de Closers (CloserWorkflowPage.jsx, raíz con class="bg-v6") define sus propios pesos
-           explícitos (700/800/900, sin !important, calcados de una referencia visual) para que
-           números y títulos se vean gruesos. Este <style> del <head> (carga antes que cualquier
-           CSS de Vite/Tailwind) tiene la MISMA regla duplicada en index.css — ahí también se
-           excluyó — pero como este bloque vive en el HTML y no en el CSS bundleado, ganaba igual
-           pase lo que pase: confirmado con getComputedStyle en el navegador, .tud-pct-v6
-           (font-weight:900 en su propia clase) computaba 400 con las dos reglas presentes y solo
-           la de index.css excluida. Sin esta segunda exclusión, TODO el Workspace (números del
-           hero, nombres de tarjetas del Kanban, navegación 01-06, etc.) se ve más fino que el
-           mockup, porque casi todos esos elementos son <div>/<span>/<button>/<h3>. */
-        h1:not(.bg-v6):not(.bg-v6 *),
-        h2:not(.bg-v6):not(.bg-v6 *),
-        h3:not(.bg-v6):not(.bg-v6 *),
-        h4:not(.bg-v6):not(.bg-v6 *),
-        h5:not(.bg-v6):not(.bg-v6 *),
-        h6:not(.bg-v6):not(.bg-v6 *),
-        .font-bold:not(.bg-v6):not(.bg-v6 *),
-        .font-semibold:not(.bg-v6):not(.bg-v6 *),
-        .font-black:not(.bg-v6):not(.bg-v6 *),
-        .font-medium:not(.bg-v6):not(.bg-v6 *),
-        b:not(.bg-v6):not(.bg-v6 *),
-        strong:not(.bg-v6):not(.bg-v6 *),
-        th:not(.bg-v6):not(.bg-v6 *),
-        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *),
-        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *),
-        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *),
-        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *) {
+        /* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) en cada selector de estos dos
+           bloques: el rediseño "v6/v7" del Workspace de Closers y el reskin de Workshop Intelligence
+           (ambos calcados de una referencia visual externa) definen sus propios pesos explícitos
+           (700/800/900, sin !important) para que números y títulos se vean gruesos. Este <style> del
+           <head> (carga antes que cualquier CSS de Vite/Tailwind) tiene la MISMA regla duplicada en
+           index.css — ahí también se excluyó — pero como este bloque vive en el HTML y no en el CSS
+           bundleado, ganaba igual pase lo que pase: confirmado con getComputedStyle en el navegador,
+           .tud-pct-v6 (font-weight:900 en su propia clase) computaba 400 con las dos reglas presentes
+           y solo la de index.css excluida. Sin esta segunda exclusión, TODO el bloque reskineado (números
+           del hero, tarjetas, navegación, etc.) se ve más fino que la referencia, porque casi todos esos
+           elementos son <div>/<span>/<button>/<h3>. */
+        h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        .font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        .font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        .font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        .font-medium:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        th:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
             font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
             font-weight: 600 !important;
             letter-spacing: -0.02em !important;
         }
 
-        p:not(.bg-v6):not(.bg-v6 *),
-        span:not(.bg-v6):not(.bg-v6 *),
-        div:not(.bg-v6):not(.bg-v6 *),
-        button:not(.bg-v6):not(.bg-v6 *),
-        input:not(.bg-v6):not(.bg-v6 *),
-        label:not(.bg-v6):not(.bg-v6 *),
-        a:not(.bg-v6):not(.bg-v6 *),
-        li:not(.bg-v6):not(.bg-v6 *),
-        td:not(.bg-v6):not(.bg-v6 *) {
+        p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        a:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        li:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
+        td:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
             font-weight: 400 !important;
             letter-spacing: -0.005em !important;
         }

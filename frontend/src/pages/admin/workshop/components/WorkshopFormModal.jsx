@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { RefreshCw, Loader2, ArrowLeft, ArrowRight, X, Check } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
+
+const STEP_META = [
+    { n: 1, title: 'Tráfico & ads', copy: 'Evento e inversión' },
+    { n: 2, title: 'Embudo del webinar', copy: 'Leads y retención' },
+    { n: 3, title: 'Validación del sistema', copy: 'Agendas, ventas y cash' },
+];
 
 const WorkshopFormModal = ({
     isEditMode,
@@ -50,9 +56,7 @@ const WorkshopFormModal = ({
 
     const handleNextStep = () => {
         if (currentStep === 1) {
-            if (!formData.date || !formData.name) {
-                return;
-            }
+            if (!formData.date || !formData.name) return;
             setCurrentStep(2);
         } else if (currentStep === 2) {
             setCurrentStep(3);
@@ -63,373 +67,211 @@ const WorkshopFormModal = ({
     };
 
     const handlePrevStep = () => {
-        if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
-        }
+        if (currentStep > 1) setCurrentStep(currentStep - 1);
     };
 
+    const field = (key) => ({
+        value: formData[key],
+        onChange: (e) => setFormData((prev) => ({ ...prev, [key]: e.target.value })),
+    });
+
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="bg-slate-950 border border-slate-800 w-full max-w-xl rounded-[2.5rem] overflow-hidden shadow-2xl relative border-indigo-500/20">
-                {/* Header Pasos */}
-                <div className="px-8 py-5 bg-slate-900/40 border-b border-slate-900 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 1 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-800'}`}>1</div>
-                        <div className="w-6 h-0.5 bg-slate-800" />
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 2 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-800'}`}>2</div>
-                        <div className="w-6 h-0.5 bg-slate-800" />
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 3 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-800'}`}>3</div>
+        <div className="modal-overlay">
+            <button type="button" className="modal-backdrop" aria-label="Cerrar ventana de registro" onClick={onClose} />
+            <div className="action-modal wide" role="dialog" aria-modal="true" aria-label={isEditMode ? 'Editar taller' : 'Registrar taller'}>
+                <header>
+                    <div>
+                        <p className="eyebrow">{isEditMode ? 'Editar taller' : 'Registro guiado'}</p>
+                        <h2>{STEP_META[currentStep - 1].title}</h2>
                     </div>
-                    <div className="text-right">
-                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Paso {currentStep} de 3</p>
-                        <p className="text-[10px] text-indigo-400 font-black uppercase tracking-wider italic">
-                            {currentStep === 1 ? 'Tráfico & Anuncios' : currentStep === 2 ? 'Embudo Webinar' : 'Validación NeurOPS'}
-                        </p>
+                    <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+                </header>
+
+                <div className="modal-body">
+                    <div className="wizard-steps" style={{ display: 'flex', gap: 8, marginBottom: 26 }}>
+                        {STEP_META.map((s) => (
+                            <button
+                                type="button"
+                                key={s.n}
+                                style={{ flex: 1 }}
+                                className={currentStep === s.n ? 'active' : currentStep > s.n ? 'complete' : ''}
+                                onClick={() => s.n < currentStep && setCurrentStep(s.n)}
+                            >
+                                <span>{currentStep > s.n ? <Check size={14} /> : s.n}</span>
+                                <div><strong>{s.title}</strong><small>{s.copy}</small></div>
+                            </button>
+                        ))}
                     </div>
-                </div>
 
-                <form onSubmit={onSubmit} className="p-8 space-y-6">
-                    {/* PASO 1: Tráfico y Anuncios */}
-                    {currentStep === 1 && (
-                        <div className="space-y-5 animate-fadeIn">
-                            <div>
-                                <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Tráfico & Ads</h3>
-                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Ingresa los datos generales del evento y la inversión publicitaria</p>
+                    <form onSubmit={onSubmit}>
+                        {currentStep === 1 && (
+                            <div className="form-grid">
+                                <label className="form-field">
+                                    <span>Fecha del evento</span>
+                                    <span className="field-control"><input type="date" disabled={isEditMode} required {...field('date')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>Nombre del workshop</span>
+                                    <span className="field-control"><input type="text" placeholder="Ej: Webinar IA Ventas" required {...field('name')} /></span>
+                                </label>
+                                <label className="form-field wide">
+                                    <span>Inversión ads (USD)</span>
+                                    <span className="field-control money"><b>$</b><input type="number" step="any" {...field('inversion')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>CPM (ads)</span>
+                                    <span className="field-control"><input type="number" step="any" {...field('cpm')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>CPC único</span>
+                                    <span className="field-control"><input type="number" step="any" {...field('cpc')} /></span>
+                                </label>
+                                <label className="form-field wide">
+                                    <span>Clics únicos</span>
+                                    <span className="field-control"><input type="number" {...field('clics')} /></span>
+                                </label>
                             </div>
+                        )}
 
-                            <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fecha del Evento</label>
-                                        <input
-                                            type="date"
-                                            disabled={isEditMode}
-                                            value={formData.date}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Nombre del Workshop</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ej: Webinar IA Ventas"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none uppercase font-bold"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Inversión Ads (USD)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-3 text-slate-500 text-xs">$</span>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={formData.inversion}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, inversion: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">CPM (Ads)</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={formData.cpm}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, cpm: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">CPC Único</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={formData.cpc}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, cpc: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Clics Únicos</label>
-                                    <input
-                                        type="number"
-                                        value={formData.clics}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, clics: e.target.value }))}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                    />
-                                </div>
+                        {currentStep === 2 && (
+                            <div className="form-grid">
+                                <label className="form-field">
+                                    <span>Leads totales</span>
+                                    <span className="field-control"><input type="number" {...field('leads')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>Leads en WhatsApp</span>
+                                    <span className="field-control"><input type="number" {...field('whatsapp_leads')} /></span>
+                                </label>
+                                <label className="form-field wide">
+                                    <span>Show up en webinar</span>
+                                    <span className="field-control"><input type="number" {...field('show_up')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>Leads en pitch</span>
+                                    <span className="field-control"><input type="number" {...field('pitch_leads')} /></span>
+                                </label>
+                                <label className="form-field">
+                                    <span>Leads final pitch</span>
+                                    <span className="field-control"><input type="number" {...field('pitch_final_leads')} /></span>
+                                </label>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* PASO 2: Asistencia & Retención */}
-                    {currentStep === 2 && (
-                        <div className="space-y-5 animate-fadeIn">
-                            <div>
-                                <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Asistencia & Retención</h3>
-                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Ingresa los leads captados y las métricas de retención durante el webinar</p>
-                            </div>
-
-                            <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads Totales</label>
-                                        <input
-                                            type="number"
-                                            value={formData.leads}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, leads: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads en WhatsApp</label>
-                                        <input
-                                            type="number"
-                                            value={formData.whatsapp_leads}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_leads: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
+                        {currentStep === 3 && (
+                            <>
+                                <div className="section-heading" style={{ marginBottom: 16 }}>
+                                    <div><p className="eyebrow">Confirmá los datos de NeurOPS</p></div>
+                                    <button type="button" className="icon-button" onClick={() => onPrefill(formData.date)} title="Sincronizar datos" aria-label="Sincronizar datos">
+                                        <RefreshCw size={16} className={loadingPrefill ? 'animate-spin' : ''} />
+                                    </button>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Show Up en Webinar</label>
-                                    <input
-                                        type="number"
-                                        value={formData.show_up}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, show_up: e.target.value }))}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                    />
-                                </div>
+                                <div style={{ position: 'relative' }}>
+                                    {loadingPrefill && (
+                                        <div style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(2,6,23,.75)', backdropFilter: 'blur(4px)', borderRadius: 16 }}>
+                                            <Loader2 size={22} className="animate-spin" style={{ color: 'var(--pink)' }} />
+                                            <p className="eyebrow" style={{ margin: 0 }}>Sincronizando base de datos…</p>
+                                        </div>
+                                    )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads en Pitch</label>
-                                        <input
-                                            type="number"
-                                            value={formData.pitch_leads}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, pitch_leads: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
+                                    <div className="form-grid">
+                                        <label className="form-field">
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Aplicaciones form <InfoTooltip label="Aplicaciones form" text="Cuánta gente completó el formulario de calificación para pedir una llamada. Suma la clase en vivo y la grabación de la landing." /></span>
+                                            <span className="field-control"><input type="number" {...field('aplicaciones_form')} /></span>
+                                        </label>
+                                        <label className="form-field">
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Agendas exitosas <InfoTooltip label="Agendas exitosas" text="Llamadas de venta que quedaron agendadas. Suma la clase en vivo y la grabación." /></span>
+                                            <span className="field-control"><input type="number" {...field('agendas_exitosas')} /></span>
+                                        </label>
+                                        <label className="form-field">
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Show up sales call <InfoTooltip label="Show up sales call" text="De esas agendas, a cuántas la persona realmente se presentó." /></span>
+                                            <span className="field-control"><input type="number" {...field('show_up_sales_call')} /></span>
+                                        </label>
+                                        <label className="form-field">
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Ventas (compradores) <InfoTooltip label="Ventas (compradores)" text="Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo Seña, Split Pay y pago Completo." /></span>
+                                            <span className="field-control"><input type="number" {...field('sales')} /></span>
+                                        </label>
+                                        <label className="form-field wide">
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Cash collected (USD) <InfoTooltip label="Cash collected (USD)" text="Plata efectivamente cobrada de esas ventas. No incluye cuotas posteriores, renovaciones ni upsells." /></span>
+                                            <span className="field-control money"><b style={{ color: 'var(--success)' }}>$</b><input type="number" step="any" {...field('cash_collected')} /></span>
+                                        </label>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads Final Pitch</label>
-                                        <input
-                                            type="number"
-                                            value={formData.pitch_final_leads}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, pitch_final_leads: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* PASO 3: Validación del Sistema */}
-                    {currentStep === 3 && (
-                        <div className="space-y-5 animate-fadeIn">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Validación del Sistema</h3>
-                                    <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Confirma los datos obtenidos automáticamente de NeurOPS</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => onPrefill(formData.date)}
-                                    className="p-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
-                                    title="Sincronizar datos"
-                                >
-                                    <RefreshCw size={14} className={loadingPrefill ? 'animate-spin' : ''} />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl relative">
-                                {loadingPrefill && (
-                                    <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-20 space-y-2">
-                                        <Loader2 size={20} className="animate-spin text-indigo-500" />
-                                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Sincronizando base de datos...</p>
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Aplicaciones Form <InfoTooltip label="Aplicaciones Form" text="Cuánta gente completó el formulario de calificación para pedir una llamada. Suma la clase en vivo y la grabación de la landing." /></label>
-                                        <input
-                                            type="number"
-                                            value={formData.aplicaciones_form}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, aplicaciones_form: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Agendas Exitosas <InfoTooltip label="Agendas Exitosas" text="Llamadas de venta que quedaron agendadas. Suma la clase en vivo y la grabación." /></label>
-                                        <input
-                                            type="number"
-                                            value={formData.agendas_exitosas}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, agendas_exitosas: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Show up Sales Call <InfoTooltip label="Show up Sales Call" text="De esas agendas, a cuántas la persona realmente se presentó." /></label>
-                                        <input
-                                            type="number"
-                                            value={formData.show_up_sales_call}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, show_up_sales_call: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Ventas por Lead (Compradores) <InfoTooltip label="Ventas por Lead (Compradores)" text="Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo Seña, Split Pay y pago Completo." /></label>
-                                        <input
-                                            type="number"
-                                            value={formData.sales}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, sales: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">Cash Collected (USD) <InfoTooltip label="Cash Collected (USD)" text="Plata efectivamente cobrada de esas ventas. No incluye cuotas posteriores, renovaciones ni upsells." /></label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-3 text-emerald-500 text-xs">$</span>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={formData.cash_collected}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, cash_collected: e.target.value }))}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 p-3 text-xs text-emerald-400 border-emerald-500/20 bg-emerald-500/5 focus:border-emerald-500 outline-none font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                {desglose && (
-                                    <div className="mt-3 bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-2">
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
-                                            De dónde salieron estos números
-                                            <InfoTooltip
-                                                label="De dónde salieron"
-                                                text="Un workshop tiene dos puertas de entrada: la clase en vivo del día y la grabación que queda publicada después. Los campos de arriba ya suman las dos; acá se ve cuánto puso cada una."
-                                            />
-                                        </p>
-                                        {ventana && (
-                                            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-wider">
-                                                Grabación contada del {ventana.landing_desde} al {ventana.landing_hasta}
-                                                {ventana.landing_recortada ? ' (recortada: hay otro workshop antes)' : ''}
+                                    {desglose && (
+                                        <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
+                                            <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                De dónde salieron estos números
+                                                <InfoTooltip label="De dónde salieron" text="Un workshop tiene dos puertas de entrada: la clase en vivo del día y la grabación que queda publicada después. Los campos de arriba ya suman las dos; acá se ve cuánto puso cada una." />
                                             </p>
-                                        )}
-                                        <div className="grid grid-cols-2 gap-2 text-[8px] font-bold">
-                                            {[
-                                                { t: 'Clase en vivo', d: desglose.vivo, c: 'text-indigo-300' },
-                                                { t: 'Grabación', d: desglose.landing, c: 'text-emerald-300' }
-                                            ].map(({ t, d, c }) => (
-                                                <div key={t} className="bg-slate-900/60 p-2 rounded space-y-0.5">
-                                                    <p className={`uppercase tracking-widest ${c}`}>{t}</p>
-                                                    <p className="text-slate-400">Aplicaciones: {d?.aplicaciones_form ?? 0}</p>
-                                                    <p className="text-slate-400">Agendas: {d?.agendas ?? 0}</p>
-                                                    <p className="text-slate-400">Asistieron: {d?.show_up ?? 0}</p>
-                                                    <p className="text-slate-400">Compradores: {d?.sales ?? 0}</p>
-                                                </div>
-                                            ))}
+                                            {ventana && (
+                                                <p className="secondary-copy" style={{ fontSize: 10, margin: '6px 0 12px' }}>
+                                                    Grabación contada del {ventana.landing_desde} al {ventana.landing_hasta}
+                                                    {ventana.landing_recortada ? ' (recortada: hay otro workshop antes)' : ''}
+                                                </p>
+                                            )}
+                                            <div className="source-grid" style={{ marginTop: 12 }}>
+                                                {[
+                                                    { t: 'Clase en vivo', d: desglose.vivo },
+                                                    { t: 'Grabación', d: desglose.landing },
+                                                ].map(({ t, d }) => (
+                                                    <article key={t}>
+                                                        <div className="source-title"><span>{t}</span></div>
+                                                        <dl style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                                                            <div><dt>Aplicaciones</dt><dd>{d?.aplicaciones_form ?? 0}</dd></div>
+                                                            <div><dt>Agendas</dt><dd>{d?.agendas ?? 0}</dd></div>
+                                                            <div><dt>Asistieron</dt><dd>{d?.show_up ?? 0}</dd></div>
+                                                            <div><dt>Compradores</dt><dd>{d?.sales ?? 0}</dd></div>
+                                                        </dl>
+                                                    </article>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {agendaBreakdown && (
-                                    <div className="mt-3 bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-1.5">
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Citas y Asistencias de Closer</p>
-                                        <div className="grid grid-cols-3 gap-1 text-[8px] font-bold text-slate-400">
-                                            <div className="bg-slate-900/60 p-1.5 rounded">Asistió: {agendaBreakdown["Show Up"]}</div>
-                                            <div className="bg-slate-900/60 p-1.5 rounded">No Asistió: {agendaBreakdown["No Show"]}</div>
-                                            <div className="bg-slate-900/60 p-1.5 rounded">Cancelada: {agendaBreakdown["Cancelada"]}</div>
-                                            <div className="bg-slate-900/60 p-1.5 rounded">Reagendada: {agendaBreakdown["Reagendada"]}</div>
-                                            <div className="bg-slate-900/60 p-1.5 rounded">Pendiente: {agendaBreakdown["Pendiente"]}</div>
-                                            <div className="bg-slate-900/60 p-1.5 rounded">Otros: {agendaBreakdown["Otros"]}</div>
+                                    {agendaBreakdown && (
+                                        <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
+                                            <p className="eyebrow">Citas y asistencias de closer</p>
+                                            <dl className="event-stats" style={{ marginTop: 10 }}>
+                                                <div><dt>Asistió</dt><dd>{agendaBreakdown['Show Up']}</dd></div>
+                                                <div><dt>No asistió</dt><dd>{agendaBreakdown['No Show']}</dd></div>
+                                                <div><dt>Cancelada</dt><dd>{agendaBreakdown['Cancelada']}</dd></div>
+                                                <div><dt>Reagendada</dt><dd>{agendaBreakdown['Reagendada']}</dd></div>
+                                                <div><dt>Pendiente</dt><dd>{agendaBreakdown['Pendiente']}</dd></div>
+                                                <div><dt>Otros</dt><dd>{agendaBreakdown['Otros']}</dd></div>
+                                            </dl>
                                         </div>
-                                    </div>
+                                    )}
+                                </div>
+
+                                <div className="wizard-preview" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                    <div><span>Costo por lead</span><strong>{formatCurrency(liveCalculations.cpl)}</strong></div>
+                                    <div><span>Costo por agenda</span><strong>{formatCurrency(liveCalculations.cost_ag)}</strong></div>
+                                    <div><span>ROAS estimado</span><strong className={liveCalculations.roas >= 3 ? 'positive' : ''}>{liveCalculations.roas.toFixed(2)}x</strong></div>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="wizard-footer">
+                            <div>
+                                {currentStep > 1 ? (
+                                    <button type="button" className="secondary-action" onClick={handlePrevStep}><ArrowLeft size={15} /> Atrás</button>
+                                ) : (
+                                    <button type="button" className="secondary-action" onClick={onClose}>Cancelar</button>
                                 )}
                             </div>
-
-                            {/* Previsualización Ratios */}
-                            <div className="bg-slate-900/5 border border-slate-900 p-4 rounded-xl space-y-2.5">
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 leading-none">Previsualización de Métricas</p>
-                                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
-                                        <p className="text-[8px] text-slate-500 font-bold uppercase">CPL</p>
-                                        <p className="font-black text-indigo-400">{formatCurrency(liveCalculations.cpl)}</p>
-                                    </div>
-                                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
-                                        <p className="text-[8px] text-slate-500 font-bold uppercase">Costo Agenda</p>
-                                        <p className="font-black text-slate-300">{formatCurrency(liveCalculations.cost_ag)}</p>
-                                    </div>
-                                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
-                                        <p className="text-[8px] text-slate-500 font-bold uppercase">ROAS Estimado</p>
-                                        <p className={`font-black ${liveCalculations.roas >= 3 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                            {liveCalculations.roas.toFixed(2)}x
-                                        </p>
-                                    </div>
-                                </div>
+                            <div>
+                                {currentStep < 3 ? (
+                                    <button type="button" className="primary-action" onClick={handleNextStep}>Siguiente <ArrowRight size={16} /></button>
+                                ) : (
+                                    <button type="submit" className="primary-action form-submit" disabled={!guardadoHabilitado}>
+                                        {isEditMode ? 'Guardar cambios' : 'Registrar evento'} <Check size={16} />
+                                    </button>
+                                )}
                             </div>
                         </div>
-                    )}
-
-                    {/* Botones de navegación modal */}
-                    <div className="flex justify-between items-center border-t border-slate-900 pt-6 mt-4">
-                        {currentStep > 1 ? (
-                            <button
-                                type="button"
-                                onClick={handlePrevStep}
-                                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest border border-slate-800 flex items-center gap-2"
-                            >
-                                <ArrowLeft size={12} />
-                                Atrás
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest border border-slate-800"
-                            >
-                                Cancelar
-                            </button>
-                        )}
-
-                        {currentStep < 3 ? (
-                            <button
-                                type="button"
-                                onClick={handleNextStep}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
-                            >
-                                Siguiente
-                                <ArrowRight size={12} />
-                            </button>
-                        ) : (
-                            <button
-                                type="submit"
-                                disabled={!guardadoHabilitado}
-                                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 border border-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isEditMode ? 'Guardar Cambios' : 'Registrar Evento'}
-                            </button>
-                        )}
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

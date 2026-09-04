@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, Activity, Loader2, Sparkles, LayoutGrid, List } from 'lucide-react';
+import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import './workshop-intel.css';
 import WorkshopKpiCards from './components/WorkshopKpiCards';
 import WorkshopCardsView from './components/WorkshopCardsView';
 import WorkshopTableView from './components/WorkshopTableView';
@@ -345,67 +346,38 @@ const WorkshopDashboardPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
-            {/* Ambient Background Glows */}
-            <div className="absolute top-0 inset-x-0 h-[400px] bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
-            <div className="absolute top-40 -left-40 w-96 h-96 bg-emerald-600/5 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-20 -right-40 w-96 h-96 bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
-
-            <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-                {/* Header Ejecutiva CEO */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-slate-900 pb-8">
-                    <div className="space-y-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                            <Sparkles size={12} className="animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">CEO Executive Analytics</span>
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                            Rendimiento & <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-400 to-emerald-400">Workshop Intelligence</span>
-                        </h1>
-                        <p className="text-slate-500 font-bold text-xs md:text-sm uppercase tracking-widest max-w-2xl">
-                            Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.
-                        </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button
-                            onClick={fetchEvents}
-                            className="p-4 bg-slate-900 border border-slate-800 rounded-2xl hover:bg-slate-800 transition-colors text-slate-400 hover:text-white"
-                            title="Recargar eventos"
-                        >
-                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                        
-                        <div className="flex bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
-                            <button
-                                onClick={() => setViewMode('cards')}
-                                className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                    viewMode === 'cards' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
-                                }`}
-                            >
-                                <LayoutGrid size={14} />
-                                Tarjetas
+        <div className="ws-shell">
+            <div className="dashboard">
+                {/* Hero */}
+                <section className="hero" aria-labelledby="workshop-intel-title">
+                    <div>
+                        <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {events.length} talleres</p>
+                        <h1 id="workshop-intel-title">Rendimiento & Workshop Intelligence.</h1>
+                        <p className="hero-copy">Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.</p>
+                        <div className="hero-actions" style={{ marginTop: 20 }}>
+                            <button type="button" className="icon-button" onClick={fetchEvents} title="Recargar eventos" aria-label="Recargar eventos">
+                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                             </button>
-                            <button
-                                onClick={() => setViewMode('table')}
-                                className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                    viewMode === 'table' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
-                                }`}
-                            >
-                                <List size={14} />
-                                Tabla Comparativa
+                            <div className="section-tabs" role="tablist" aria-label="Modo de vista">
+                                <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>
+                                    <LayoutGrid size={14} /> Tarjetas
+                                </button>
+                                <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
+                                    <List size={14} /> Tabla comparativa
+                                </button>
+                            </div>
+                            <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
+                                <Plus size={16} /> Registrar taller
                             </button>
                         </div>
-
-                        <button
-                            onClick={handleOpenCreateModal}
-                            className="flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 border border-indigo-500/30 text-white rounded-2xl hover:from-indigo-500 hover:to-indigo-400 transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 cursor-pointer"
-                        >
-                            <Plus size={16} />
-                            Registrar Taller
-                        </button>
                     </div>
-                </div>
+                    {events.length > 0 && (
+                        <div className="hero-period">
+                            <span>Período analizado</span>
+                            <strong>{formatDate(events[events.length - 1]?.date)} — {formatDate(events[0]?.date)}</strong>
+                        </div>
+                    )}
+                </section>
 
                 {/* Tarjetas KPI Ejecutivas */}
                 <WorkshopKpiCards totalStats={totalStats} eventsCount={events.length} />
@@ -423,50 +395,25 @@ const WorkshopDashboardPage = () => {
                 )}
 
                 {/* Navegación por pestañas */}
-                <div className="flex border-b border-slate-900 gap-6 flex-wrap">
-                    <button
-                        onClick={() => setActiveTab('list')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'list' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Historial de Eventos ({events.length})
+                <nav className="section-tabs" aria-label="Secciones de Workshop Intelligence" style={{ margin: '28px 0 22px', width: 'fit-content' }}>
+                    <button type="button" className={activeTab === 'list' ? 'active' : ''} onClick={() => setActiveTab('list')} aria-current={activeTab === 'list' ? 'page' : undefined}>
+                        <Layers size={14} /> Historial ({events.length})
                     </button>
-                    <button
-                        onClick={() => setActiveTab('funnel')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'funnel' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Análisis de Embudo (Funnel)
+                    <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
+                        <CalendarDays size={14} /> Embudo
                     </button>
-                    <button
-                        onClick={() => setActiveTab('simulador')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'simulador' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Simulador
+                    <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
+                        <Target size={14} /> Simulador
                     </button>
-                    <button
-                        onClick={() => setActiveTab('acciones')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'acciones' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
+                    <button type="button" className={activeTab === 'acciones' ? 'active' : ''} onClick={() => setActiveTab('acciones')} aria-current={activeTab === 'acciones' ? 'page' : undefined}>
+                        <Zap size={14} /> Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
                     </button>
                     {/* La grabación es OTRO embudo que el workshop en vivo: mismo
                         producto, fuente distinta ('workshop landing'). */}
-                    <button
-                        onClick={() => setActiveTab('landing')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'landing' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Landing de la Grabación
+                    <button type="button" className={activeTab === 'landing' ? 'active' : ''} onClick={() => setActiveTab('landing')} aria-current={activeTab === 'landing' ? 'page' : undefined}>
+                        <Video size={14} /> Landing grabación
                     </button>
-                </div>
+                </nav>
 
                 {/* Area Principal de Contenido */}
                 {/* La landing va PRIMERO y fuera de los guards de abajo: sus datos
@@ -475,16 +422,21 @@ const WorkshopDashboardPage = () => {
                 {activeTab === 'landing' ? (
                     <WorkshopLandingView />
                 ) : loading ? (
-                    <div className="flex flex-col items-center justify-center py-40 space-y-4">
-                        <Loader2 size={48} className="animate-spin text-indigo-500" />
-                        <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs">Cargando inteligencia de workshops...</p>
-                    </div>
+                    <section className="empty-state loading-state" role="status">
+                        <div><span /></div>
+                        <p className="eyebrow">Sincronizando</p>
+                        <h2>Cargando inteligencia de workshops…</h2>
+                    </section>
                 ) : events.length === 0 ? (
-                    <div className="py-32 text-center bg-slate-900/20 rounded-[2.5rem] border border-dashed border-slate-800 space-y-4">
-                        <Activity size={48} className="mx-auto text-slate-700" />
-                        <p className="text-slate-400 font-black uppercase text-sm">No hay workshops registrados</p>
-                        <p className="text-xs text-slate-600 font-bold uppercase tracking-wider">Haz clic en "+ Registrar Taller" para agregar tu primer evento</p>
-                    </div>
+                    <section className="empty-state">
+                        <div><CalendarDays size={26} /></div>
+                        <p className="eyebrow">Empezá por acá</p>
+                        <h2>No hay workshops registrados</h2>
+                        <p>Registrá el primero para empezar a medir el embudo.</p>
+                        <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
+                            <Plus size={16} /> Registrar taller
+                        </button>
+                    </section>
                 ) : activeTab === 'list' ? (
                     viewMode === 'cards' ? (
                         <WorkshopCardsView
@@ -548,19 +500,12 @@ const WorkshopDashboardPage = () => {
 
                 {/* Barra flotante de comparación (hasta 4 talleres) */}
                 {compareIds.length > 0 && activeTab === 'list' && (
-                    <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-4 px-6 py-3 bg-indigo-600 rounded-2xl shadow-2xl shadow-indigo-950/50">
-                        <span className="text-xs font-black text-white uppercase tracking-widest">{compareIds.length} seleccionados</span>
-                        <button
-                            onClick={() => setCompareModalOpen(true)}
-                            disabled={compareIds.length < 2}
-                            className="px-4 py-2 bg-white text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 cursor-pointer"
-                        >
+                    <div className="compare-bar">
+                        <span>{compareIds.length} seleccionados</span>
+                        <button type="button" className="confirm" onClick={() => setCompareModalOpen(true)} disabled={compareIds.length < 2}>
                             Comparar
                         </button>
-                        <button
-                            onClick={() => setCompareIds([])}
-                            className="text-[10px] font-black uppercase text-indigo-200 hover:text-white cursor-pointer"
-                        >
+                        <button type="button" className="clear" onClick={() => setCompareIds([])}>
                             Limpiar
                         </button>
                     </div>
