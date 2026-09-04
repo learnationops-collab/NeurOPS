@@ -60,12 +60,14 @@ const parseTipoPago = (raw) => {
 const VentaRow = ({ venta, onSaved }) => {
     const [abierto, setAbierto] = useState(false);
     const parsed = parseTipoPago(venta.tipo_pago);
+    const fechaInicial = venta.date ? venta.date.slice(0, 10) : '';
     const [form, setForm] = useState({
         monto: venta.monto ?? '',
         programa: parsed.programa,
         tipo: parsed.tipo,
         metodo_pago: venta.metodo_pago || '',
-        estado: venta.estado || 'Completada'
+        estado: venta.estado || 'Completada',
+        fecha: fechaInicial
     });
     // Apagado por defecto: corregir un typo no debería volver a disparar los mensajes que la
     // automatización de n8n manda al cliente cuando se registra una venta.
@@ -76,20 +78,23 @@ const VentaRow = ({ venta, onSaved }) => {
     const dirty = String(form.monto) !== String(venta.monto ?? '')
         || tipoPagoReconstruido !== (venta.tipo_pago || '')
         || form.metodo_pago !== (venta.metodo_pago || '')
-        || form.estado !== (venta.estado || 'Completada');
+        || form.estado !== (venta.estado || 'Completada')
+        || form.fecha !== fechaInicial;
 
     const tipoSeleccionado = TIPO_PAGO_OPTIONS.find(t => t.v === form.tipo);
 
     const guardar = async () => {
         setSaving(true);
         try {
-            const res = await api.put(`/closer/sales/${venta.id}`, {
+            const payload = {
                 monto: form.monto,
                 tipo_pago: tipoPagoReconstruido,
                 metodo_pago: form.metodo_pago,
                 estado: form.estado,
                 enviar_webhook: enviarWebhook
-            });
+            };
+            if (form.fecha && form.fecha !== fechaInicial) payload.date = form.fecha;
+            const res = await api.put(`/closer/sales/${venta.id}`, payload);
             toast.success(res.data?.message || 'Venta actualizada');
             setAbierto(false);
             onSaved?.(res.data.sale);
@@ -163,7 +168,15 @@ const VentaRow = ({ venta, onSaved }) => {
                         </p>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
+                        <label className="space-y-1">
+                            <span className="text-[8px] font-black uppercase text-slate-500 block">Fecha del pago</span>
+                            <input
+                                type="date" value={form.fecha}
+                                onChange={(e) => setForm(f => ({ ...f, fecha: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
+                            />
+                        </label>
                         <label className="space-y-1">
                             <span className="text-[8px] font-black uppercase text-slate-500 block">Método</span>
                             <input
