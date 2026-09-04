@@ -399,12 +399,20 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
             };
             const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
             if (res.data?.status !== 'success') {
-                console.error('No se pudo reportar el pago de la cuota:', res.data);
+                toast.error(res.data?.message || 'No se pudo reportar el pago de la cuota');
                 setMarking(false);
                 return;
             }
+            // Mismo aviso que ya muestra "Declarar Venta" (CloserWorkflowPage) cuando
+            // SalesConsistencyService detecta algo raro en la secuencia de pagos (ej. una Cuota
+            // sin un Parcial previo registrado) — el pago se guarda igual, pero antes esta
+            // pantalla lo hacía en silencio y el closer nunca se enteraba de que había algo para
+            // revisar.
+            if (res.data?.warning) {
+                toast(res.data.warning, { icon: '⚠️', duration: 7000 });
+            }
         } catch (err) {
-            console.error('Error al reportar el pago de la cuota:', err);
+            toast.error(err.response?.data?.message || 'Error al reportar el pago de la cuota');
             setMarking(false);
             return;
         }
