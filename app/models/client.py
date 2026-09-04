@@ -23,6 +23,15 @@ class Client(db.Model):
     # se muestra como "Grupo sin asignar" en vez de fabricar un valor.
     grupo = db.Column(db.String(50), nullable=True)
 
+    # Vinculación con la Academia (Learnation, academy.thelearnation.com) — ver
+    # docs/integracion_learnation_api.md. El cruce con la Academia es por email, pero se
+    # cachea el id que devuelve para no tener que resolverlo de nuevo en cada consulta/
+    # asignación. `academy_product_slug`/`academy_expires_at` reflejan la última sincronización
+    # exitosa (AcademyAccessService.grant_access), no se leen en vivo de la Academia en cada uso.
+    learnation_user_id = db.Column(db.Integer, nullable=True)
+    academy_product_slug = db.Column(db.String(100), nullable=True)
+    academy_expires_at = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

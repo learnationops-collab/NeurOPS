@@ -2590,6 +2590,34 @@ def get_client_full_history(client_id):
     return jsonify(history), 200
 
 
+@bp.route('/clients/<int:client_id>/academy-access', methods=['POST'])
+@login_required
+def grant_academy_access(client_id):
+    """Da (o renueva) el acceso del cliente en la Academia (Learnation): crea/actualiza su
+    usuario por email y le asigna el producto vinculado al programa vendido, con el
+    vencimiento calculado por AcademyAccessService (o el que el closer especifique a mano).
+    Ver docs/integracion_learnation_api.md §5."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    client = Client.query.get_or_404(client_id)
+    data = request.get_json() or {}
+    programa_code = (data.get('programa_code') or '').strip().upper()
+    tipo_venta = data.get('tipo_venta') or 'completo'
+    expires_at_override = data.get('expires_at') or None
+
+    if not programa_code:
+        return jsonify({"error": "Falta el programa (programa_code)"}), 400
+
+    from app.services.academy_access_service import AcademyAccessService, AcademyAccessError
+    try:
+        result = AcademyAccessService.grant_access(client, programa_code, tipo_venta, expires_at_override)
+    except AcademyAccessError as e:
+        return jsonify({"error": str(e)}), e.status_code
+
+    return jsonify(result), 200
+
+
 @bp.route('/deck/card/<int:appt_id>', methods=['GET'])
 @login_required
 def get_closer_deck_card(appt_id):
