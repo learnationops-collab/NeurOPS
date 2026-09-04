@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bug, AlertTriangle, X, History } from 'lucide-react';
+import { Bug, AlertTriangle, X, History, PenLine } from 'lucide-react';
 import BugReportChat from './BugReportChat';
 import BugReportHistory from './BugReportHistory';
 import { BUG_REPORT_EVENT } from '../../utils/bugReportBus';
@@ -19,7 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 // explícita del usuario sobre un fallo visible en pantalla.
 const BugReportWidget = () => {
     const { user } = useAuth();
-    const [view, setView] = useState('closed'); // 'closed' | 'chat' | 'history'
+    const [view, setView] = useState('closed'); // 'closed' | 'chat' | 'minimized' | 'history'
     const [technicalContext, setTechnicalContext] = useState(null);
     const [pendingPrompt, setPendingPrompt] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -143,9 +143,26 @@ const BugReportWidget = () => {
                 </div>
             )}
 
+            {view === 'minimized' && (
+                // Pestaña de retomar: reemplaza a los botones normales (no tendría sentido
+                // ofrecer "reportar" de nuevo mientras ya hay uno a medio llenar) y reabre el
+                // mismo drawer con isOpen=true sin tocar technicalContext ni el estado interno
+                // del chat, que sigue vivo porque BugReportChat nunca se desmonta.
+                <button
+                    data-bug-report-ignore="true"
+                    onClick={() => setView('chat')}
+                    className="fixed bottom-8 right-24 z-[190] flex items-center gap-2 bg-surface border border-[#FF3FA4]/50 rounded-full pl-4 pr-5 py-3 shadow-2xl text-xs font-bold text-white hover:border-[#FF3FA4] transition-all active:scale-95"
+                    title="Continuar reporte en progreso"
+                >
+                    <PenLine size={16} className="text-[#FF3FA4]" />
+                    Reporte en progreso
+                </button>
+            )}
+
             <BugReportChat
                 isOpen={view === 'chat'}
                 onClose={() => setView('closed')}
+                onMinimize={() => setView('minimized')}
                 technicalContext={technicalContext}
             />
 
