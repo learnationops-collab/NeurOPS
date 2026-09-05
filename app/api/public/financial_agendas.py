@@ -5,7 +5,8 @@ from datetime import datetime
 from . import bp
 from sqlalchemy import or_, and_, func
 
-from app.services.agenda_time_service import parse_a_utc, zona_origen, limites_dia_origen
+from app.services.agenda_time_service import (
+    parse_a_utc, zona_origen, limites_dia_origen, resolver_hora_agenda, como_se_ve)
 
 
 def parse_date_robustly(val):
@@ -119,6 +120,54 @@ def _build_agenda_queries():
 
     return date_query, query, closer_results
 
+@bp.route('/public/financial-agendas/verificar-hora', methods=['POST'])
+def verificar_hora_agenda():
+    """Prueba en seco: contesta "como interpretaria el sistema esta hora" SIN guardar nada.
+
+    Para que existe: hasta ahora, la unica forma de saber si n8n manda bien la hora era crear
+    una agenda de verdad y despues ir a mirarla. Este endpoint acepta el MISMO payload que el
+    webhook real y usa la MISMA funcion (`resolver_hora_agenda`), asi que lo que contesta es
+    literalmente lo que va a pasar al guardar -- si usara otro camino no probaria nada.
+
+    Se puede pegar desde n8n (duplicando el nodo HTTP Request y cambiandole la URL) o con curl.
+    No toca la base y no devuelve datos de nadie: solo la interpretacion de lo que le mandaste.
+    """
+    item = request.get_json() or {}
+    if isinstance(item, list):
+        item = item[0] if item else {}
+
+    utc, diag = resolver_hora_agenda(item)
+    zonas = ['UTC', str(zona_origen()), 'America/Sao_Paulo', 'America/Bogota', 'America/Buenos_Aires']
+    zona_pedida = item.get('tz_verificacion')
+    if zona_pedida and zona_pedida not in zonas:
+        zonas.append(str(zona_pedida))
+
+    veredicto = {
+        'ok': 'La hora llego completa (con zona horaria). No hay nada que corregir en n8n.',
+        'zona_asumida': 'La hora llego SIN zona horaria y el sistema tuvo que suponerla. '
+                        'Si n8n formatea en una zona distinta a la asumida, la agenda queda corrida.',
+        'campo_incorrecto': 'n8n no mando el campo de la hora de la cita; se uso el de registro. '
+                            'La agenda va a quedar con la hora equivocada.',
+        'ilegible': 'El valor que mando n8n no se puede interpretar como fecha.',
+        'ausente': 'n8n no mando ninguna hora.',
+    }.get(diag['nivel'], '')
+
+    return jsonify({
+        'guardaria_utc': diag['utc'],
+        'guardaria_un_respaldo': diag['es_respaldo'],
+        'se_veria_asi': como_se_ve(utc, zonas),
+        'campo_usado': diag['campo'],
+        'valor_recibido': diag['valor_recibido'],
+        'traia_zona_horaria': diag['traia_zona'],
+        'zona_asumida': diag['zona_asumida'],
+        'nivel': diag['nivel'],
+        'veredicto': veredicto,
+        'detalle': diag['detalle'],
+        'nota': 'Prueba en seco: no se guardo nada. Compara "se_veria_asi" contra la hora que '
+                'muestra Calendly para esa reunion.'
+    }), 200
+
+
 @bp.route('/public/financial-agendas', methods=['POST'])
 def receive_financial_agendas():
     # Recibe datos de agendas desde Excel/Apps Script/n8n
@@ -149,25 +198,18 @@ def receive_financial_agendas():
         if not setter:
             setter = 'Sin asignar'
 
-        dt_str = item.get('fecha') or item.get('date') or item.get('registro')
         # La columna `date` es UTC naive (la lee asi todo el sistema: las ventanas de dia de
         # user_time_service, el isoformat() de la API y el parseUtcIso() del frontend). Antes
         # aca se guardaba hora local de La Paz, y eso corria cada agenda de Calendly 4 horas
         # hacia atras -- ver app/services/agenda_time_service.py.
-        agenda_date = datetime.utcnow()
-        if dt_str:
-            parsed_utc, traia_offset = parse_a_utc(dt_str)
-            if parsed_utc:
-                agenda_date = parsed_utc
-                if not traia_offset:
-                    # Sin offset no hay forma de saber la zona: se asume AGENDAS_SOURCE_TZ. Queda
-                    # el aviso en Railway para poder pedirle a n8n que mande ISO con zona.
-                    current_app.logger.warning(
-                        f"[AGENDA SIN ZONA] '{dt_str}' llego sin offset; se asumio "
-                        f"{zona_origen()} para convertir a UTC (lead '{lead_val}').")
-            else:
-                current_app.logger.warning(
-                    f"[AGENDA FECHA INVALIDA] No se pudo interpretar '{dt_str}' (lead '{lead_val}').")
+        agenda_date, diag_hora = resolver_hora_agenda(item)
+        dt_str = diag_hora['valor_recibido']
+        if diag_hora['nivel'] != 'ok':
+            # Un aviso por nivel, con el string crudo, para poder pedirle a n8n el cambio exacto.
+            current_app.logger.warning(
+                f"[AGENDA HORA:{diag_hora['nivel'].upper()}] lead '{lead_val}': "
+                f"{diag_hora['detalle']} (campo='{diag_hora['campo']}', "
+                f"valor='{diag_hora['valor_recibido']}')")
 
         import pytz
         la_paz_tz = pytz.timezone('America/La_Paz')
@@ -268,7 +310,7 @@ def receive_financial_agendas():
                 existing.whatsapp = item.get('whatsapp') or item.get('phone') or item.get('telefono')
             if ig_norm and ig_norm != 'n/a':
                 existing.instagram = item.get('instagram') or item.get('ig')
-            existing.raw_data = item
+            existing.raw_data = {**item, '_hora_diagnostico': diag_hora}
             agendas_created.append(existing)
         else:
             if not (item.get('mail') or item.get('email')):
@@ -294,7 +336,7 @@ def receive_financial_agendas():
                 estado=item.get('estado') or 'Pendiente',
                 grupo=grupo_val,
                 encargado_triage=encargado_triage_val,
-                raw_data=item
+                raw_data={**item, '_hora_diagnostico': diag_hora}
             )
             db.session.add(agenda)
             agendas_created.append(agenda)
