@@ -1,18 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, MoreVertical, MessageSquare, AlertTriangle, CalendarCheck, CheckCircle2 } from 'lucide-react';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick, onOpenMenu, onMarkFollowUpDone }) => {
-    // Formatear hora de cita / meet
+    // Hora del meet en la zona horaria de quien mira. `lead.date` viene del backend en UTC sin
+    // sufijo 'Z', así que `new Date()` la leería como hora local y mostraría la cita corrida.
     const formatTime = (dateStr) => {
         if (!dateStr) return '12:00';
-        try {
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        } catch {
-            return dateStr;
-        }
+        const d = parseUtcIso(dateStr);
+        return d ? d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : dateStr;
     };
 
     // Estilos por tipo de sección

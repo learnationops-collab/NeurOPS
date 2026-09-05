@@ -4,6 +4,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import StatTooltip from '../shared/StatTooltip';
+import { parseUtcIso } from '../../utils/datetime';
 
 const AdDetailModal = ({ adId, isOpen, onClose }) => {
     const [details, setDetails] = useState(null);
@@ -351,7 +352,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-3 text-[10px] text-slate-500 font-mono">
-                                                                    {new Date(lead.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                                                    {parseUtcIso(lead.date)?.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
                                                                 </td>
                                                             </tr>
                                                         ))}

@@ -20,6 +20,7 @@ import {
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
+import { parseUtcIso } from '../../utils/datetime';
 
 const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [activeTab, setActiveTab] = useState('profile');
@@ -509,7 +510,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                 </div>
                                                 <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-6 rounded-3xl bg-main/50 border border-base">
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <time className="text-xs font-black text-base italic">{new Date(appt.start_time).toLocaleString()}</time>
+                                                        <time className="text-xs font-black text-base italic">{parseUtcIso(appt.start_time)?.toLocaleString()}</time>
                                                         <Badge variant={appt.status === 'completed' ? 'success' : appt.status === 'canceled' ? 'destructive' : 'primary'}>
                                                             {appt.status}
                                                         </Badge>

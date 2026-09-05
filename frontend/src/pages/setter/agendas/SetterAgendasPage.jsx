@@ -9,6 +9,7 @@ import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const SetterAgendasPage = () => {
     const [loading, setLoading] = useState(true);
@@ -199,7 +200,7 @@ const SetterAgendasPage = () => {
                                         </thead>
                                         <tbody>
                                             {agendas.map((agenda, idx) => {
-                                                const date = agenda.start_time ? new Date(agenda.start_time) : null;
+                                                const date = parseUtcIso(agenda.start_time);
                                                 return (
                                                     <motion.tr
                                                         initial={{ opacity: 0, y: 10 }}

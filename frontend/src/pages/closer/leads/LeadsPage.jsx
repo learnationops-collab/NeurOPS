@@ -29,6 +29,7 @@ import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
 import SaleDetailModal from '../../../components/modals/SaleDetailModal';
 import DateRangeFilter from '../../../components/shared/DateRangeFilter';
 import MultiSelectFilter from '../../../components/shared/MultiSelectFilter';
+import { parseUtcIso } from '../../../utils/datetime';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import CloserKanbanBoard from '../../../components/closer/CloserKanbanBoard';
 
@@ -484,7 +485,7 @@ const CloserLeadsPage = () => {
                                                             {selectedDb === 'agendas' ? (
                                                                 <>
                                                                     <td className="px-8 py-6 text-sm font-black text-primary">
-                                                                        {new Date(item.date).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                        {parseUtcIso(item.date)?.toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                                                     </td>
                                                                     <td className="px-8 py-6 text-[10px] font-black">{item.last_stage || 'N/A'}</td>
                                                                     <td className="px-8 py-6"><Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>{item.result || 'Sin resultado'}</Badge></td>
