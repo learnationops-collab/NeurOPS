@@ -262,9 +262,10 @@ def delete_workshop_event(event_id):
 def prefill_workshop_metrics():
     """Autocompleta las metricas del sistema para el workshop de una fecha.
 
-    El calculo vive en WorkshopMetricsService: incluye la clase en vivo y la
-    grabacion de la landing (que sigue disponible 2 dias) como un solo workshop,
-    y devuelve ademas el desglose de cuanto aporto cada una.
+    El calculo vive en workshop_metrics_service: incluye la clase en vivo y la
+    grabacion de la landing como un solo workshop, contando las agendas desde
+    el dia del taller hasta el dia anterior al siguiente taller registrado, y
+    devuelve ademas el desglose de cuanto aporto cada una.
     """
     date_str = request.args.get('date')
     if not date_str:

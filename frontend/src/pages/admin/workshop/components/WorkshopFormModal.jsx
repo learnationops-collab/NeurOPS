@@ -206,8 +206,8 @@ const WorkshopFormModal = ({
                                             </p>
                                             {ventana && (
                                                 <p className="secondary-copy" style={{ fontSize: 10, margin: '6px 0 12px' }}>
-                                                    Grabación contada del {ventana.landing_desde} al {ventana.landing_hasta}
-                                                    {ventana.landing_recortada ? ' (recortada: hay otro workshop antes)' : ''}
+                                                    Agendas contadas del {ventana.desde} al {ventana.hasta}
+                                                    {ventana.abierta ? ' (hasta hoy: se cierra al registrar el próximo taller)' : ` (hasta el día anterior al taller del ${ventana.siguiente})`}
                                                 </p>
                                             )}
                                             <div className="source-grid" style={{ marginTop: 12 }}>
