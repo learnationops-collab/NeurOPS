@@ -17,13 +17,20 @@ depends_on = None
 
 
 def upgrade():
-    # El feature de "videos de documentación" (sesión anterior, mismo día) nunca llegó a
-    # producción ni tiene datos reales -- se reemplaza por completo por la jerarquía de
-    # Playbook (Roadmap -> Módulo -> Lección) en vez de migrar datos.
-    op.drop_table('training_video_completions')
-    op.drop_table('training_video_options')
-    op.drop_table('training_video_questions')
-    op.drop_table('training_videos')
+    # En desarrollo local pudieron existir las tablas de la versión preliminar de
+    # "training_videos", pero en producción (Railway) nunca se crearon. Se eliminan
+    # solo si existen.
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = set(inspector.get_table_names())
+    for tbl in [
+        'training_video_completions',
+        'training_video_options',
+        'training_video_questions',
+        'training_videos',
+    ]:
+        if tbl in existing_tables:
+            op.drop_table(tbl)
 
     op.create_table('playbook_roadmaps',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -128,43 +135,3 @@ def downgrade():
     op.drop_table('playbook_lessons')
     op.drop_table('playbook_modules')
     op.drop_table('playbook_roadmaps')
-
-    op.create_table('training_videos',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('loom_link', sa.String(length=500), nullable=False),
-    sa.Column('target_roles', sa.JSON(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('training_video_questions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('video_id', sa.Integer(), nullable=False),
-    sa.Column('question_text', sa.Text(), nullable=False),
-    sa.Column('order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['video_id'], ['training_videos.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('training_video_options',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('question_id', sa.Integer(), nullable=False),
-    sa.Column('option_text', sa.String(length=500), nullable=False),
-    sa.Column('is_correct', sa.Boolean(), nullable=False),
-    sa.Column('order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['question_id'], ['training_video_questions.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('training_video_completions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('video_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['video_id'], ['training_videos.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('video_id', 'user_id', name='uq_training_video_completion')
-    )
