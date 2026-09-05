@@ -6,10 +6,12 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus,
+    Compass, Sparkles
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlaybook } from '../../contexts/PlaybookContext';
 import ClientHistoryModal from '../../components/shared/ClientHistoryModal';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
@@ -132,6 +134,7 @@ const waLinkForPhone = (phone, leadName) => {
 
 const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
+    const { pendingCount, openPlaybook } = usePlaybook();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showOperatorControls, setShowOperatorControls] = useState(false);
 
@@ -2291,7 +2294,7 @@ const CloserWorkflowPage = () => {
                         {steps.map((st, i) => (
                             <React.Fragment key={st.k}>
                                 <div className={`pstep ${i < currentIdx ? 'done' : ''} ${i === currentIdx ? 'cur' : ''}`}>
-                                    <div className="pn">{st.label}</div>
+                                    <div className="pn"><span className="pcircle">{i < currentIdx ? '✓' : i + 1}</span>{st.label}</div>
                                     <div className="pd">{st.desc}</div>
                                 </div>
                                 {i < steps.length - 1 && <span className="parrow">›</span>}
@@ -3424,6 +3427,31 @@ const CloserWorkflowPage = () => {
                         )}
                     </div>
 
+                    <button
+                        type="button"
+                        onClick={() => openPlaybook('pending')}
+                        className="relative shrink-0 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 hover:brightness-110 transition-all px-4 py-2 cursor-pointer"
+                        title="Videos de formación y actualizaciones"
+                    >
+                        <Compass size={13} className="text-white" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Playbook</span>
+                        {pendingCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-white text-slate-950 text-[9px] font-black flex items-center justify-center">
+                                {pendingCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' })}
+                        className="shrink-0 flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all px-4 py-2 cursor-pointer"
+                        title="Próximamente"
+                    >
+                        <Sparkles size={13} className="text-blue-400" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Learnito</span>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-blue-400/60">Pronto</span>
+                    </button>
+
                     {counts.seguimientos > 0 && (
                         <button
                             type="button"
@@ -3711,35 +3739,34 @@ const CloserWorkflowPage = () => {
                                 👏 No hay citas pendientes de confirmación.
                             </div>
                         ) : (
-                            <div className="kb-v6">
-                                {/* Columna Por confirmar */}
+                            <div className="kb-v6 kb2-v6">
+                                {/* Columna Por confirmar (fusiona "sin contactar" + "conversando" en
+                                    dos subgrupos de la MISMA columna — pedido explícito del usuario
+                                    para bajar de 3 a 2 columnas y quitar fricción visual. No se tocó
+                                    `confirmationsPipeline`/`confirm_status` ni el resto de la lógica:
+                                    cada tarjeta sigue recibiendo su `phase` real ('por_confirmar' o
+                                    'conversando'), solo cambia dónde se pinta.) */}
                                 <div className="kcol-v6 k1-v6">
                                     <div className="kch-v6">
                                         <span className="dt-v6"></span>
                                         <b>Por confirmar</b>
-                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length}</span>
+                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length + confirmationsPipeline.conversando.length}</span>
                                     </div>
                                     <div className="kbody-v6">
-                                        {confirmationsPipeline.porConfirmar.length > 0 ? (
-                                            confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))
-                                        ) : (
+                                        {confirmationsPipeline.porConfirmar.length === 0 && confirmationsPipeline.conversando.length === 0 && (
                                             <div className="kempty-v6 done-v6">✓ Ninguno sin tocar</div>
                                         )}
-                                    </div>
-                                </div>
-
-                                {/* Columna Conversando */}
-                                <div className="kcol-v6 k2-v6">
-                                    <div className="kch-v6">
-                                        <span className="dt-v6"></span>
-                                        <b>Conversando</b>
-                                        <span className="n-v6">{confirmationsPipeline.conversando.length}</span>
-                                    </div>
-                                    <div className="kbody-v6">
-                                        {confirmationsPipeline.conversando.length > 0 ? (
-                                            confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))
-                                        ) : (
-                                            <div className="kempty-v6">Sin leads conversando.</div>
+                                        {confirmationsPipeline.porConfirmar.length > 0 && (
+                                            <>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.16)' }}></span>Sin contactar</div>
+                                                {confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))}
+                                            </>
+                                        )}
+                                        {confirmationsPipeline.conversando.length > 0 && (
+                                            <>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px rgba(96,165,250,.16)' }}></span>Conversando</div>
+                                                {confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))}
+                                            </>
                                         )}
                                     </div>
                                 </div>

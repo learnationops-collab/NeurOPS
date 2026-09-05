@@ -75,6 +75,22 @@
 .ws-shell .section-tabs button:hover { color: #fff; background: rgba(255, 255, 255, .07); }
 .ws-shell .section-tabs button.active { color: #fff; background: var(--blue); box-shadow: 0 8px 20px rgba(19, 35, 198, .3); }
 
+/* Barra superior pegada (topbar): titulo compacto + pestañas siempre visibles
+   arriba, calcado del .topbar/.main-nav de la referencia -- ahí es lo primero
+   que se ve y nunca hay que scrollear para cambiar de sección. Pegada con
+   `sticky` contra el contenedor con scroll de la app (#app-main-scroll). */
+.ws-shell .ws-topbar { position: sticky; top: 0; z-index: 40; margin: 0 0 28px; padding: 18px 0 16px; background: rgba(5, 8, 34, .88); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ws-shell .ws-topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.ws-shell .ws-topbar-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ws-shell .ws-topbar-title h1 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: -.02em; }
+.ws-shell .live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 9px; border: 1px solid rgba(47, 191, 143, .35); border-radius: 999px; background: rgba(47, 191, 143, .1); color: var(--success); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.ws-shell .live-badge .live-dot { margin-right: 0; animation: ws-live-pulse 1.8s ease-in-out infinite; }
+.ws-shell .ws-topbar .section-tabs { width: 100%; }
+@keyframes ws-live-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 191, 143, .45); } 50% { box-shadow: 0 0 0 5px rgba(47, 191, 143, 0); } }
+
+/* "Sincronizado hace X" junto al boton de resync manual del embudo */
+.ws-shell .sync-status { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+
 /* KPI grid */
 .ws-shell .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; margin-bottom: 22px; padding: 1px; border-radius: var(--radius); background: var(--border); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
 .ws-shell .kpi-card { min-width: 0; padding: 24px; background: rgba(10, 14, 61, .9); transition: background-color 180ms ease; }

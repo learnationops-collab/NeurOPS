@@ -1,14 +1,20 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.services.closer_dashboard_service import CloserDashboardService
+from app.models.user import ROLE_DIRECTOR_COMERCIAL
 
 bp = Blueprint('closer_dashboard_api', __name__)
+
+# Además del propio closer (su bandeja) y admin (todo el equipo), director_comercial
+# ve este dashboard como parte de "closing" — llega por defecto al entrar a
+# /admin/ventas (ver App.jsx) y antes daba 403 al no estar en esta lista.
+ROLES_CON_VISTA_AGREGADA = ['admin', ROLE_DIRECTOR_COMERCIAL]
 
 
 @bp.route('/performance-dashboard', methods=['GET'])
 @login_required
 def get_performance_dashboard():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer'] + ROLES_CON_VISTA_AGREGADA:
         return jsonify({"message": "Forbidden"}), 403
 
     period = request.args.get('period', default='mes', type=str)
@@ -45,7 +51,7 @@ def get_pending_summary():
     completar" del dashboard), pensado para la tira de KPIs del admin en «Historial de
     Reportes» — sin traer todo el payload pesado de /performance-dashboard. Un closer solo ve
     lo suyo; el admin puede pedir un closer puntual o `closer_id=all` para todo el equipo."""
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer'] + ROLES_CON_VISTA_AGREGADA:
         return jsonify({"message": "Forbidden"}), 403
 
     from app.services.closer_pending_service import CloserPendingService

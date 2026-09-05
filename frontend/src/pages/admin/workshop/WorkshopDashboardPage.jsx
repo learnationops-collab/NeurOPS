@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video } from 'lucide-react';
+import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import './workshop-intel.css';
@@ -42,7 +42,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel' | 'simulador' | 'acciones' | 'landing'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'funnel' | 'simulador' | 'acciones' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
     // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
@@ -107,40 +107,64 @@ const WorkshopDashboardPage = () => {
 
     // El desglose por embudo se pide solo al abrir el análisis de un evento:
     // recorre agendas y ventas, así que no vale la pena calcularlo para la lista.
+    // Mientras la pestaña sigue abierta se refresca solo cada 30s (silencioso,
+    // sin el spinner de "cargandoDesglose") para que una agenda o venta nueva
+    // se vea sin tener que salir y volver a entrar a la pestaña.
     useEffect(() => {
         if (activeTab !== 'funnel' || !selectedEventForFunnel?.date) return;
         let cancelado = false;
-        setCargandoDesglose(true);
-        api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`)
-            .then(res => {
-                if (cancelado) return;
-                setDesglose(res.data.desglose || null);
-                setVentana(res.data.ventana || null);
-            })
-            .catch(err => {
-                if (!cancelado) console.error('Error cargando el desglose del workshop:', err);
-            })
-            .finally(() => { if (!cancelado) setCargandoDesglose(false); });
-        return () => { cancelado = true; };
+        const cargar = (silencioso) => {
+            if (!silencioso) setCargandoDesglose(true);
+            return api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`)
+                .then(res => {
+                    if (cancelado) return;
+                    setDesglose(res.data.desglose || null);
+                    setVentana(res.data.ventana || null);
+                })
+                .catch(err => {
+                    if (!cancelado) console.error('Error cargando el desglose del workshop:', err);
+                })
+                .finally(() => { if (!cancelado && !silencioso) setCargandoDesglose(false); });
+        };
+        cargar(false);
+        const interval = setInterval(() => cargar(true), 30000);
+        return () => { cancelado = true; clearInterval(interval); };
     }, [activeTab, selectedEventForFunnel?.date]);
 
-    const fetchEvents = async () => {
-        setLoading(true);
+    // `silent=true` es el modo que usa el polling en vivo: no prende el
+    // spinner de carga ni molesta con un toast si falla un tick (el proximo
+    // intento en 20s ya lo resuelve solo).
+    const fetchEvents = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const res = await api.get('workshop/events');
             if (Array.isArray(res.data)) {
                 setEvents(res.data);
-                if (res.data.length > 0 && !selectedEventForFunnel) {
-                    setSelectedEventForFunnel(res.data[0]);
-                }
+                // Mantiene la MISMA seleccion (por id) pero con los datos
+                // frescos -- sin esto, el evento abierto en "Embudo" se
+                // quedaba con los numeros de cuando se selecciono, aunque
+                // el snapshot ya se hubiera sincronizado en el servidor.
+                setSelectedEventForFunnel(prev => {
+                    if (!prev) return res.data[0] || null;
+                    return res.data.find(e => e.id === prev.id) || prev;
+                });
             }
         } catch (err) {
             console.error("Error fetching events:", err);
-            toast.error("Error al cargar los eventos");
+            if (!silent) toast.error("Error al cargar los eventos");
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+
+    // Sincronizacion en vivo: las agendas y ventas ya se reflejan solas en el
+    // snapshot del backend (workshop_live_sync.py) apenas se crean -- este
+    // polling silencioso es solo para que el panel ya abierto las recoja sin
+    // que el usuario tenga que recargar la pagina o tocar nada.
+    useEffect(() => {
+        const interval = setInterval(() => fetchEvents(true), 20000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handlePrefill = async (selectedDate) => {
         if (!selectedDate) return;
@@ -348,72 +372,50 @@ const WorkshopDashboardPage = () => {
     return (
         <div className="ws-shell">
             <div className="dashboard">
-                {/* Hero */}
-                <section className="hero" aria-labelledby="workshop-intel-title">
-                    <div>
-                        <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {events.length} talleres</p>
-                        <h1 id="workshop-intel-title">Rendimiento & Workshop Intelligence.</h1>
-                        <p className="hero-copy">Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.</p>
-                        <div className="hero-actions" style={{ marginTop: 20 }}>
-                            <button type="button" className="icon-button" onClick={fetchEvents} title="Recargar eventos" aria-label="Recargar eventos">
+                {/* Barra superior pegada: titulo compacto + pestañas SIEMPRE
+                    visibles arriba (calcado del topbar de la referencia) — antes
+                    la navegación vivía debajo del hero + KPIs + diagnóstico, así
+                    que cambiar de sección obligaba a scrollear cada vez. */}
+                <header className="ws-topbar">
+                    <div className="ws-topbar-row">
+                        <div className="ws-topbar-title">
+                            <h1>Workshop Intelligence</h1>
+                            <span className="live-badge" title="Las agendas y ventas nuevas se reflejan solas en el panel, sin recargar ni sincronizar a mano.">
+                                <span className="live-dot" /> En vivo
+                            </span>
+                        </div>
+                        <div className="hero-actions">
+                            <button type="button" className="icon-button" onClick={() => fetchEvents()} title="Recargar eventos" aria-label="Recargar eventos">
                                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                             </button>
-                            <div className="section-tabs" role="tablist" aria-label="Modo de vista">
-                                <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>
-                                    <LayoutGrid size={14} /> Tarjetas
-                                </button>
-                                <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
-                                    <List size={14} /> Tabla comparativa
-                                </button>
-                            </div>
                             <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
                                 <Plus size={16} /> Registrar taller
                             </button>
                         </div>
                     </div>
-                    {events.length > 0 && (
-                        <div className="hero-period">
-                            <span>Período analizado</span>
-                            <strong>{formatDate(events[events.length - 1]?.date)} — {formatDate(events[0]?.date)}</strong>
-                        </div>
-                    )}
-                </section>
-
-                {/* Tarjetas KPI Ejecutivas */}
-                <WorkshopKpiCards totalStats={totalStats} eventsCount={events.length} />
-
-                {/* Diagnóstico: siempre visible, no es una pestaña más — la lectura
-                    rápida de qué etapa frena las ventas antes de bajar al detalle. */}
-                {events.length > 0 && (
-                    <WorkshopDiagnostico
-                        events={events}
-                        goals={goals}
-                        actions={actions}
-                        onEditGoals={() => setGoalsModalOpen(true)}
-                        onGoToSimulador={goToSimulador}
-                    />
-                )}
-
-                {/* Navegación por pestañas */}
-                <nav className="section-tabs" aria-label="Secciones de Workshop Intelligence" style={{ margin: '28px 0 22px', width: 'fit-content' }}>
-                    <button type="button" className={activeTab === 'list' ? 'active' : ''} onClick={() => setActiveTab('list')} aria-current={activeTab === 'list' ? 'page' : undefined}>
-                        <Layers size={14} /> Historial ({events.length})
-                    </button>
-                    <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
-                        <CalendarDays size={14} /> Embudo
-                    </button>
-                    <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
-                        <Target size={14} /> Simulador
-                    </button>
-                    <button type="button" className={activeTab === 'acciones' ? 'active' : ''} onClick={() => setActiveTab('acciones')} aria-current={activeTab === 'acciones' ? 'page' : undefined}>
-                        <Zap size={14} /> Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
-                    </button>
-                    {/* La grabación es OTRO embudo que el workshop en vivo: mismo
-                        producto, fuente distinta ('workshop landing'). */}
-                    <button type="button" className={activeTab === 'landing' ? 'active' : ''} onClick={() => setActiveTab('landing')} aria-current={activeTab === 'landing' ? 'page' : undefined}>
-                        <Video size={14} /> Landing grabación
-                    </button>
-                </nav>
+                    <nav className="section-tabs" role="tablist" aria-label="Secciones de Workshop Intelligence">
+                        <button type="button" className={activeTab === 'resumen' ? 'active' : ''} onClick={() => setActiveTab('resumen')} aria-current={activeTab === 'resumen' ? 'page' : undefined}>
+                            <LayoutDashboard size={14} /> Resumen
+                        </button>
+                        <button type="button" className={activeTab === 'list' ? 'active' : ''} onClick={() => setActiveTab('list')} aria-current={activeTab === 'list' ? 'page' : undefined}>
+                            <Layers size={14} /> Historial ({events.length})
+                        </button>
+                        <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
+                            <CalendarDays size={14} /> Embudo
+                        </button>
+                        <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
+                            <Target size={14} /> Simulador
+                        </button>
+                        <button type="button" className={activeTab === 'acciones' ? 'active' : ''} onClick={() => setActiveTab('acciones')} aria-current={activeTab === 'acciones' ? 'page' : undefined}>
+                            <Zap size={14} /> Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
+                        </button>
+                        {/* La grabación es OTRO embudo que el workshop en vivo: mismo
+                            producto, fuente distinta ('workshop landing'). */}
+                        <button type="button" className={activeTab === 'landing' ? 'active' : ''} onClick={() => setActiveTab('landing')} aria-current={activeTab === 'landing' ? 'page' : undefined}>
+                            <Video size={14} /> Landing grabación
+                        </button>
+                    </nav>
+                </header>
 
                 {/* Area Principal de Contenido */}
                 {/* La landing va PRIMERO y fuera de los guards de abajo: sus datos
@@ -437,36 +439,72 @@ const WorkshopDashboardPage = () => {
                             <Plus size={16} /> Registrar taller
                         </button>
                     </section>
+                ) : activeTab === 'resumen' ? (
+                    <>
+                        {/* Resumen ejecutivo: separado de las pestañas de datos
+                            (Historial/Embudo/Simulador/Acciones) para no tener que
+                            scrollear pasando KPIs y diagnóstico cada vez que se
+                            quiere analizar un evento puntual. */}
+                        <section className="hero" aria-labelledby="workshop-intel-title">
+                            <div>
+                                <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {events.length} talleres</p>
+                                <h1 id="workshop-intel-title">Rendimiento & Workshop Intelligence.</h1>
+                                <p className="hero-copy">Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.</p>
+                            </div>
+                            <div className="hero-period">
+                                <span>Período analizado</span>
+                                <strong>{formatDate(events[events.length - 1]?.date)} — {formatDate(events[0]?.date)}</strong>
+                            </div>
+                        </section>
+                        <WorkshopKpiCards totalStats={totalStats} eventsCount={events.length} />
+                        <WorkshopDiagnostico
+                            events={events}
+                            goals={goals}
+                            actions={actions}
+                            onEditGoals={() => setGoalsModalOpen(true)}
+                            onGoToSimulador={goToSimulador}
+                        />
+                    </>
                 ) : activeTab === 'list' ? (
-                    viewMode === 'cards' ? (
-                        <WorkshopCardsView
-                            events={events}
-                            onSelectFunnel={(e) => {
-                                setSelectedEventForFunnel(e);
-                                setActiveTab('funnel');
-                            }}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteEvent}
-                            formatDate={formatDate}
-                            formatCurrency={formatCurrency}
-                            selectedIds={compareIds}
-                            onToggleSelect={toggleCompareId}
-                        />
-                    ) : (
-                        <WorkshopTableView
-                            events={events}
-                            onSelectFunnel={(e) => {
-                                setSelectedEventForFunnel(e);
-                                setActiveTab('funnel');
-                            }}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteEvent}
-                            formatDate={formatDate}
-                            formatCurrency={formatCurrency}
-                            selectedIds={compareIds}
-                            onToggleSelect={toggleCompareId}
-                        />
-                    )
+                    <>
+                        <div className="section-tabs" role="tablist" aria-label="Modo de vista" style={{ width: 'fit-content', marginBottom: 18 }}>
+                            <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>
+                                <LayoutGrid size={14} /> Tarjetas
+                            </button>
+                            <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
+                                <List size={14} /> Tabla comparativa
+                            </button>
+                        </div>
+                        {viewMode === 'cards' ? (
+                            <WorkshopCardsView
+                                events={events}
+                                onSelectFunnel={(e) => {
+                                    setSelectedEventForFunnel(e);
+                                    setActiveTab('funnel');
+                                }}
+                                onEdit={handleOpenEditModal}
+                                onDelete={handleDeleteEvent}
+                                formatDate={formatDate}
+                                formatCurrency={formatCurrency}
+                                selectedIds={compareIds}
+                                onToggleSelect={toggleCompareId}
+                            />
+                        ) : (
+                            <WorkshopTableView
+                                events={events}
+                                onSelectFunnel={(e) => {
+                                    setSelectedEventForFunnel(e);
+                                    setActiveTab('funnel');
+                                }}
+                                onEdit={handleOpenEditModal}
+                                onDelete={handleDeleteEvent}
+                                formatDate={formatDate}
+                                formatCurrency={formatCurrency}
+                                selectedIds={compareIds}
+                                onToggleSelect={toggleCompareId}
+                            />
+                        )}
+                    </>
                 ) : activeTab === 'funnel' ? (
                     <WorkshopFunnelView
                         events={events}

@@ -126,6 +126,41 @@ def update_bug_report_status(report_id):
         return jsonify({"message": f"Error al actualizar: {str(e)}"}), 500
 
 
+@bp.route('/bug-reports/<int:report_id>/reopen', methods=['POST'])
+@login_required
+def reopen_bug_report(report_id):
+    """El propio reportante marca que el problema sigue presente pese a estar 'resolved'.
+    Vuelve a 'open' (reaparece en la cola de pendientes del operador) en vez de obligar a
+    crear un reporte nuevo desde cero."""
+    report = BugReport.query.get_or_404(report_id)
+    if report.user_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+    if report.status != 'resolved':
+        return jsonify({"message": "Solo se puede reabrir un reporte ya resuelto"}), 400
+
+    data = request.get_json() or {}
+    note = (data.get('message') or '').strip()
+
+    try:
+        now = datetime.utcnow()
+        report.status = 'open'
+        report.user_last_read_at = now
+        msg = BugReportMessage(
+            bug_report_id=report.id,
+            sender_id=current_user.id,
+            sender_role=current_user.role,
+            message=note or 'El problema sigue presente, no quedó resuelto.',
+            created_at=now,
+        )
+        db.session.add(msg)
+        db.session.commit()
+        return jsonify(report.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al reabrir el reporte {report_id}: {str(e)}")
+        return jsonify({"message": f"Error al reabrir: {str(e)}"}), 500
+
+
 @bp.route('/bug-reports/<int:report_id>/messages', methods=['GET'])
 @login_required
 def list_bug_report_messages(report_id):
@@ -156,7 +191,8 @@ def create_bug_report_message(report_id):
 
     data = request.get_json() or {}
     text = (data.get('message') or '').strip()
-    if not text:
+    loom_link = (data.get('loom_link') or '').strip() or None
+    if not text and not loom_link:
         return jsonify({"message": "El mensaje no puede estar vacío"}), 400
 
     try:
@@ -166,6 +202,7 @@ def create_bug_report_message(report_id):
             sender_id=current_user.id,
             sender_role=current_user.role,
             message=text,
+            loom_link=loom_link,
             created_at=now,
         )
         db.session.add(msg)

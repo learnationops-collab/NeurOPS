@@ -881,6 +881,30 @@ header.top-v6 {
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
+/* Variante de 2 columnas (Confirmaciones, desde que se fusionó "Conversando" dentro de
+   "Por confirmar") -- modificador aparte para no afectar el kanban de Llamadas, que sigue
+   usando las 3 columnas de .kb-v6 tal cual. */
+.kb-v6.kb2-v6 {
+  grid-template-columns: repeat(2, 1fr);
+}
+/* Encabezado de subgrupo dentro de una columna fusionada (ej. "Sin contactar" / "Conversando"
+   ambos dentro de "Por confirmar"). */
+.ksub-v6 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--v6-tx2);
+  padding: 4px 2px 2px;
+}
+.ksub-v6:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--v6-bd);
+}
 .kcol-v6 {
   background: rgba(255,255,255,.022);
   border: 1px solid var(--v6-bd);
@@ -2231,6 +2255,10 @@ header.top-v6 {
   letter-spacing: .12em;
   text-transform: uppercase;
   color: #8C99E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .pstep .pd {
   font-size: 10px;
@@ -2238,16 +2266,28 @@ header.top-v6 {
   margin-top: 3px;
   font-weight: 500;
 }
+/* Círculo numerado por paso (1/2/3, o ✓ si ya se completó) -- toma la idea del stepper de
+   círculos del mockup de referencia sin rehacer el resto del componente, que ya andaba bien. */
+.pstep .pcircle {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 900;
+  border: 1.5px solid rgba(140, 153, 224, .5);
+  color: inherit;
+}
 .pstep.done .pn {
   color: #7DEAC0;
 }
-.pstep.done::before {
-  content: '✓';
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  font-size: 11px;
-  color: #7DEAC0;
+.pstep.done .pcircle {
+  background: #7DEAC0;
+  border-color: #7DEAC0;
+  color: #06210F;
 }
 .pstep.cur {
   background: linear-gradient(135deg, #1323C6, #FF3FA4);
@@ -2256,6 +2296,9 @@ header.top-v6 {
 .pstep.cur .pn,
 .pstep.cur .pd {
   color: #fff;
+}
+.pstep.cur .pcircle {
+  border-color: #fff;
 }
 .parrow {
   color: #8C99E0;

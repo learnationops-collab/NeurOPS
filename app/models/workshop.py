@@ -69,6 +69,12 @@ class WorkshopEvent(db.Model):
     sales = db.Column(db.Integer, default=0)
     cash_collected = db.Column(db.Float, default=0.0)
 
+    # Ultima vez que las 5 metricas automaticas de arriba se recalcularon desde
+    # el sistema (agendas/ventas reales) -- ya sea por el hook de sincronizacion
+    # en vivo (workshop_live_sync.py) o por un resync manual. Null si el evento
+    # nunca se sincronizo (solo tiene los valores con los que se creo).
+    synced_at = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -187,6 +193,7 @@ class WorkshopEvent(db.Model):
             "show_up_sales_call": self.show_up_sales_call,
             "sales": self.sales,
             "cash_collected": self.cash_collected,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
 
             # Calculadas
             "impresiones": round(self.impresiones, 2),

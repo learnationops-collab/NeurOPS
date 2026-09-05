@@ -12,7 +12,8 @@ import {
     History,
     ClipboardList,
     ShieldAlert,
-    Bug
+    Bug,
+    GraduationCap
 } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
@@ -23,6 +24,7 @@ import BitacoraPanel from '../../../components/operations/BitacoraPanel';
 import LeadsAuditTogglePanel from '../../../components/operations/LeadsAuditTogglePanel';
 import ReportBacklogTogglePanel from '../../../components/operations/ReportBacklogTogglePanel';
 import BugReportsPanel from '../../../components/operations/BugReportsPanel';
+import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPanel';
 import Card from '../../../components/ui/Card';
 
 const OperationsSettingsPage = () => {
@@ -34,6 +36,7 @@ const OperationsSettingsPage = () => {
         { id: 'leads_audit', label: 'Auditoría de Leads', icon: ClipboardList },
         { id: 'report_backlog', label: 'Bloqueo del Reporte', icon: ShieldAlert },
         { id: 'bug_reports', label: 'Reportes de Bugs', icon: Bug },
+        { id: 'playbook', label: 'Playbook', icon: GraduationCap },
         { id: 'bitacora', label: 'Bitácora de Cambios', icon: History },
         { id: 'marketing', label: 'Marketing UTMs', icon: Share2 },
         { id: 'database', label: 'Base de Datos', icon: Database },
@@ -96,6 +99,12 @@ const OperationsSettingsPage = () => {
                     {activeSection === 'bug_reports' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <BugReportsPanel />
+                        </div>
+                    )}
+
+                    {activeSection === 'playbook' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <PlaybookAdminPanel />
                         </div>
                     )}
 
