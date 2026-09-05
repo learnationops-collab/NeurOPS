@@ -143,6 +143,9 @@ def create_app(config_class=Config):
     from app.api.job_applications import bp as job_applications_bp
     app.register_blueprint(job_applications_bp, url_prefix='/api')
 
+    from app.api.training_videos import bp as training_videos_bp
+    app.register_blueprint(training_videos_bp, url_prefix='/api')
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):

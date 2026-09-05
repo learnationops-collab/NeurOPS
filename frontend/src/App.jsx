@@ -46,6 +46,7 @@ import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPag
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 import BugReportWidget from './components/feedback/BugReportWidget';
+import TrainingVideoGate from './components/training/TrainingVideoGate';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
@@ -98,6 +99,7 @@ function App() {
           <PixelTracker />
           <Toaster position="top-right" />
           <BugReportWidget />
+          <TrainingVideoGate />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
