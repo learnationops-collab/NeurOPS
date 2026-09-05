@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Palette, Check } from 'lucide-react';
+import { LogOut, Palette, Check, Compass } from 'lucide-react';
 import useDockNavigation from '../../hooks/useDockNavigation';
 import { useTheme } from '../../context/ThemeContext';
+import { usePlaybook } from '../../contexts/PlaybookContext';
 
 const Dock = () => {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
+    const { pendingCount, openPlaybook } = usePlaybook();
     const {
         pages,
         activePageIndex,
@@ -137,6 +139,20 @@ const Dock = () => {
 
                     {/* Balanced Right Container (Avatar + Options) */}
                     <div className="flex items-center gap-2 pr-1.5 shrink-0">
+                        {/* Playbook: formación interna (videos + quiz) */}
+                        <button
+                            onClick={() => openPlaybook('pending')}
+                            title="Playbook: videos de formación"
+                            className="relative w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                            <Compass size={18} />
+                            {pendingCount > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9px] font-black flex items-center justify-center">
+                                    {pendingCount}
+                                </span>
+                            )}
+                        </button>
+
                         {/* Selector de Tema Rápido */}
                         <div className="relative group">
                             <button className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer">

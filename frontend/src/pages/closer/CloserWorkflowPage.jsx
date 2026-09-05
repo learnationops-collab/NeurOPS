@@ -6,10 +6,12 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus,
+    Compass, Sparkles
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlaybook } from '../../contexts/PlaybookContext';
 import ClientHistoryModal from '../../components/shared/ClientHistoryModal';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
@@ -132,6 +134,7 @@ const waLinkForPhone = (phone, leadName) => {
 
 const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
+    const { pendingCount, openPlaybook } = usePlaybook();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showOperatorControls, setShowOperatorControls] = useState(false);
 
@@ -3423,6 +3426,31 @@ const CloserWorkflowPage = () => {
                             </>
                         )}
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => openPlaybook('pending')}
+                        className="relative shrink-0 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 hover:brightness-110 transition-all px-4 py-2 cursor-pointer"
+                        title="Videos de formación y actualizaciones"
+                    >
+                        <Compass size={13} className="text-white" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Playbook</span>
+                        {pendingCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-white text-slate-950 text-[9px] font-black flex items-center justify-center">
+                                {pendingCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' })}
+                        className="shrink-0 flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all px-4 py-2 cursor-pointer"
+                        title="Próximamente"
+                    >
+                        <Sparkles size={13} className="text-blue-400" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Learnito</span>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-blue-400/60">Pronto</span>
+                    </button>
 
                     {counts.seguimientos > 0 && (
                         <button
