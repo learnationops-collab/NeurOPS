@@ -53,6 +53,10 @@ class SheetsService:
         """
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
         inconsistency_warning = None
+        # Client resuelto/creado para esta venta (ver más abajo) -- se devuelve en la respuesta
+        # para que el frontend pueda encadenar otra llamada sobre este mismo cliente (ej. dar
+        # acceso a la Academia) sin tener que resolverlo de nuevo del lado del cliente.
+        result_client_id = None
         if tabla == "Ventas_DB":
             try:
                 from app.models.financial import FinancialSale
@@ -74,6 +78,7 @@ class SheetsService:
                     'instagram': payload.get('instagram'),
                     'phone': payload.get('telefono'),
                 })
+                result_client_id = client.id if client else None
 
                 # Validar secuencia de pago (Seña->Parcial/Completo->Cuota->Renovación/Upsell):
                 # se avisa, no se bloquea. Bloquear duro le impedía al closer reportar una venta
@@ -196,14 +201,14 @@ class SheetsService:
             response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
-                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets", "warning": inconsistency_warning}
+                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets", "warning": inconsistency_warning, "client_id": result_client_id}
 
             logger.error(f"[SHEETS POST] Error en respuesta: {response.status_code} - {response.text}")
-            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets.", "warning": inconsistency_warning}
+            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets.", "warning": inconsistency_warning, "client_id": result_client_id}
 
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
-            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning}
+            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning, "client_id": result_client_id}
 
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
 

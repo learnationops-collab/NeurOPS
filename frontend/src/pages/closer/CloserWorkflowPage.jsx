@@ -1689,6 +1689,29 @@ const CloserWorkflowPage = () => {
                 if (res.data.warning) {
                     toast(res.data.warning, { icon: '⚠️', duration: 7000 });
                 }
+
+                // Acceso a la Academia (opt-in, checkbox de la pantalla de revisión) — se dispara
+                // recién acá porque hasta este punto no existía un client_id confirmado (lo crea/
+                // resuelve post_to_sheets al declarar la venta). No bloquea el resto del flujo si
+                // falla: la venta ya quedó registrada, el acceso se puede reintentar después desde
+                // el historial del cliente.
+                if (saleForm.dar_acceso_academia && res.data.client_id) {
+                    try {
+                        const academyRes = await api.post(`/closer/clients/${res.data.client_id}/academy-access`, {
+                            programa_code: saleForm.programa,
+                            tipo_venta: (saleForm.tipo_pago_simple || '').toLowerCase(),
+                            email: saleForm.mail_cliente
+                        });
+                        toast.success(
+                            academyRes.data.was_created
+                                ? 'Cuenta creada en la Academia — se le envió un email para activar su contraseña.'
+                                : 'Acceso a la Academia actualizado.'
+                        );
+                    } catch (academyErr) {
+                        toast.error(academyErr.response?.data?.error || 'La venta se guardó, pero no se pudo dar el acceso a la Academia');
+                    }
+                }
+
                 const savedApptId = salePrompt.apptId;
 
                 // Si se definió una fecha de cobro en la venta, auto-guardarla para la agenda
