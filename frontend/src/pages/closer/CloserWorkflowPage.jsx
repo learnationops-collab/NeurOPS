@@ -2294,7 +2294,7 @@ const CloserWorkflowPage = () => {
                         {steps.map((st, i) => (
                             <React.Fragment key={st.k}>
                                 <div className={`pstep ${i < currentIdx ? 'done' : ''} ${i === currentIdx ? 'cur' : ''}`}>
-                                    <div className="pn">{st.label}</div>
+                                    <div className="pn"><span className="pcircle">{i < currentIdx ? '✓' : i + 1}</span>{st.label}</div>
                                     <div className="pd">{st.desc}</div>
                                 </div>
                                 {i < steps.length - 1 && <span className="parrow">›</span>}
@@ -3739,35 +3739,34 @@ const CloserWorkflowPage = () => {
                                 👏 No hay citas pendientes de confirmación.
                             </div>
                         ) : (
-                            <div className="kb-v6">
-                                {/* Columna Por confirmar */}
+                            <div className="kb-v6 kb2-v6">
+                                {/* Columna Por confirmar (fusiona "sin contactar" + "conversando" en
+                                    dos subgrupos de la MISMA columna — pedido explícito del usuario
+                                    para bajar de 3 a 2 columnas y quitar fricción visual. No se tocó
+                                    `confirmationsPipeline`/`confirm_status` ni el resto de la lógica:
+                                    cada tarjeta sigue recibiendo su `phase` real ('por_confirmar' o
+                                    'conversando'), solo cambia dónde se pinta.) */}
                                 <div className="kcol-v6 k1-v6">
                                     <div className="kch-v6">
                                         <span className="dt-v6"></span>
                                         <b>Por confirmar</b>
-                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length}</span>
+                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length + confirmationsPipeline.conversando.length}</span>
                                     </div>
                                     <div className="kbody-v6">
-                                        {confirmationsPipeline.porConfirmar.length > 0 ? (
-                                            confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))
-                                        ) : (
+                                        {confirmationsPipeline.porConfirmar.length === 0 && confirmationsPipeline.conversando.length === 0 && (
                                             <div className="kempty-v6 done-v6">✓ Ninguno sin tocar</div>
                                         )}
-                                    </div>
-                                </div>
-
-                                {/* Columna Conversando */}
-                                <div className="kcol-v6 k2-v6">
-                                    <div className="kch-v6">
-                                        <span className="dt-v6"></span>
-                                        <b>Conversando</b>
-                                        <span className="n-v6">{confirmationsPipeline.conversando.length}</span>
-                                    </div>
-                                    <div className="kbody-v6">
-                                        {confirmationsPipeline.conversando.length > 0 ? (
-                                            confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))
-                                        ) : (
-                                            <div className="kempty-v6">Sin leads conversando.</div>
+                                        {confirmationsPipeline.porConfirmar.length > 0 && (
+                                            <>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.16)' }}></span>Sin contactar</div>
+                                                {confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))}
+                                            </>
+                                        )}
+                                        {confirmationsPipeline.conversando.length > 0 && (
+                                            <>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px rgba(96,165,250,.16)' }}></span>Conversando</div>
+                                                {confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))}
+                                            </>
                                         )}
                                     </div>
                                 </div>
