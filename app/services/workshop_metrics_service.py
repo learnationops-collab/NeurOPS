@@ -1,17 +1,24 @@
 """Metricas del embudo de un workshop, para el autocompletado del panel.
 
 Vive fuera de `app/api/workshop.py` porque el calculo dejo de ser "contar lo del
-dia": desde el 20/08/2026 un workshop incluye DOS entradas de leads que ocurren
-en momentos distintos.
+dia": un workshop tiene DOS entradas de leads que ocurren en momentos distintos.
 
   · WORKSHOP EN VIVO  -> la clase del dia D (fuente 'workshop')
-  · WORKSHOP LANDING  -> la grabacion publicada en /replay/, disponible 2 dias
-                         despues de la clase (fuente 'workshop landing')
+  · WORKSHOP LANDING  -> la grabacion publicada en /replay/ despues de la clase
+                         (fuente 'workshop_landing')
 
 Las dos pertenecen al MISMO workshop y por eso suman en el analisis, pero se
-cuentan por separado para poder ver cuanto aporta cada una. La ventana de la
-grabacion se recorta si hay otro workshop antes de que terminen esos 2 dias, asi
-las agendas no se le suman a los dos eventos a la vez.
+cuentan por separado para poder ver cuanto aporta cada una.
+
+VENTANA DE ATRIBUCION (05/09/2026): las agendas y aplicaciones de las dos
+fuentes se cuentan ENTRE UN WORKSHOP Y EL SIGUIENTE. Al taller del dia D le
+pertenecen las creadas el dia D y los dias siguientes, hasta el dia anterior al
+proximo WorkshopEvent registrado. Si todavia no hay un proximo taller la ventana
+queda abierta hasta hoy, y se cierra sola cuando se registre el siguiente (el
+hook de `workshop_live_sync` recalcula el taller anterior en ese momento).
+
+Antes la grabacion contaba 2 dias fijos y el vivo solo el dia D: todo lo que
+caia despues no se le atribuia a ningun taller.
 """
 from datetime import datetime, time, timedelta
 
@@ -21,37 +28,43 @@ from sqlalchemy import or_, func
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo
 
-# Dias que la grabacion queda publicada despues de la clase en vivo
-DIAS_VENTANA_LANDING = 2
-
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
 
 ESTADOS_DE_VENTA = ['cierre', 'seña', 'sena', 'completo', 'ganado', 'venta', 'vendido', 'completado']
 
 
-def _limites_utc(dia, tz):
-    """Convierte un dia local completo al rango UTC equivalente."""
-    inicio = tz.localize(datetime.combine(dia, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
-    fin = tz.localize(datetime.combine(dia, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+def _tz(timezone_str):
+    try:
+        return pytz.timezone(timezone_str or 'America/La_Paz')
+    except Exception:
+        return pytz.timezone('America/La_Paz')
+
+
+def _limites_utc(desde, hasta, tz):
+    """Rango UTC naive que cubre completos los dias locales [desde, hasta]."""
+    inicio = tz.localize(datetime.combine(desde, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+    fin = tz.localize(datetime.combine(hasta, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
     return inicio, fin
 
 
-def _ventana_landing(dia):
-    """[desde, hasta] local de la grabacion, recortada por el proximo workshop.
+def siguiente_workshop(dia):
+    """Primer WorkshopEvent posterior a `dia`, o None si todavia no hay."""
+    return WorkshopEvent.query.filter(WorkshopEvent.date > dia).order_by(WorkshopEvent.date).first()
 
-    Sin el recorte, dos workshops separados por menos de 2 dias se disputarian
-    las mismas agendas de la grabacion y ambos las contarian como propias.
+
+def ventana_evento(dia, tz):
+    """(desde, hasta, siguiente): dias locales que le pertenecen al taller de `dia`.
+
+    Va del dia de la clase al dia anterior al proximo workshop registrado, asi
+    dos talleres seguidos nunca se disputan la misma agenda. Sin proximo taller
+    la ventana llega hasta hoy y sigue creciendo hasta que se registre uno.
     """
-    hasta = dia + timedelta(days=DIAS_VENTANA_LANDING)
-    siguiente = WorkshopEvent.query.filter(WorkshopEvent.date > dia).order_by(WorkshopEvent.date).first()
-    recortada = False
-    if siguiente and siguiente.date <= hasta:
-        hasta = siguiente.date - timedelta(days=1)
-        recortada = True
+    siguiente = siguiente_workshop(dia)
+    hasta = siguiente.date - timedelta(days=1) if siguiente else datetime.now(tz).date()
     if hasta < dia:
         hasta = dia
-    return dia, hasta, recortada
+    return dia, hasta, siguiente
 
 
 def _clasificar_fuente(*textos):
@@ -62,68 +75,44 @@ def _clasificar_fuente(*textos):
     return None
 
 
-def _contar_aplicaciones(dia, tz, fin_landing):
-    """Formularios de calificacion completados, separados por embudo.
-
-    El rango se amplia un dia sobre el final de cada ventana porque `created_at`
-    esta en UTC y el corte local puede caer del otro lado del cambio de dia.
-    """
-    inicio_vivo, fin_vivo = _limites_utc(dia, tz)
-    _, fin_landing_utc = _limites_utc(fin_landing, tz)
-    tope = max(fin_vivo, fin_landing_utc) + timedelta(days=1)
-
-    clientes = Client.query.filter(Client.created_at >= inicio_vivo, Client.created_at <= tope).all()
+def _contar_aplicaciones(desde, hasta, tz):
+    """Formularios de calificacion completados en la ventana, separados por embudo."""
+    inicio, fin = _limites_utc(desde, hasta, tz)
+    clientes = Client.query.filter(Client.created_at >= inicio, Client.created_at <= fin).all()
 
     conteo = {'vivo': 0, 'landing': 0}
     for c in clientes:
         fd = c.form_data or {}
         grupo = _clasificar_fuente(fd.get('fuente_form'), fd.get('fuente'))
-        if not grupo:
-            continue
-        # El vivo solo cuenta el dia de la clase; la grabacion, toda su ventana.
-        limite = fin_vivo + timedelta(days=1) if grupo == 'vivo' else tope
-        if c.created_at <= limite:
+        if grupo:
             conteo[grupo] += 1
     return conteo
 
 
-def _agendas_por_embudo(dia, tz, fin_landing):
-    """Agendas del workshop del dia, separadas en vivo y grabacion."""
-    inicio_vivo, fin_vivo = _limites_utc(dia, tz)
-    _, fin_landing_utc = _limites_utc(fin_landing, tz)
+def _agendas_por_embudo(desde, hasta, tz):
+    """Agendas del workshop dentro de su ventana, separadas en vivo y grabacion.
 
-    # `registro` es texto con la fecha local del alta en n8n; se incluye el dia
-    # anterior porque el desfase UTC/local puede correrlo.
-    dia_str = dia.strftime('%Y-%m-%d')
-    previo_str = (dia - timedelta(days=1)).strftime('%Y-%m-%d')
-    dias_landing = [
-        (dia + timedelta(days=n)).strftime('%Y-%m-%d')
-        for n in range((fin_landing - dia).days + 1)
-    ]
+    Una agenda entra si `created_at` (UTC) cae en la ventana o si `registro` (la
+    fecha local del alta, texto ISO que manda n8n) es de alguno de sus dias. No
+    hay tolerancia hacia el dia anterior ni horas de mas al final: las ventanas
+    de dos talleres seguidos son contiguas y cada agenda cuenta en uno solo.
+    """
+    inicio, fin = _limites_utc(desde, hasta, tz)
+    desde_str = desde.strftime('%Y-%m-%d')
+    tope_str = (hasta + timedelta(days=1)).strftime('%Y-%m-%d')
 
     candidatas = FinancialAgenda.query.filter(
         or_(
-            (FinancialAgenda.created_at >= inicio_vivo) & (FinancialAgenda.created_at <= fin_landing_utc + timedelta(hours=8)),
-            FinancialAgenda.registro.like(f"{dia_str}%"),
-            FinancialAgenda.registro.like(f"{previo_str}%"),
-            *[FinancialAgenda.registro.like(f"{d}%") for d in dias_landing]
+            (FinancialAgenda.created_at >= inicio) & (FinancialAgenda.created_at <= fin),
+            (FinancialAgenda.registro >= desde_str) & (FinancialAgenda.registro < tope_str),
         )
     ).all()
 
     grupos = {'vivo': [], 'landing': []}
-    tope_vivo = fin_vivo + timedelta(hours=8)
     for a in candidatas:
         raw = a.raw_data or {}
         grupo = _clasificar_fuente(a.nombre, raw.get('fuente'), raw.get('fuente_form'))
-        if not grupo:
-            continue
-        if grupo == 'vivo':
-            en_rango = (a.created_at and inicio_vivo <= a.created_at <= tope_vivo) \
-                or (a.registro or '').startswith((dia_str, previo_str))
-        else:
-            en_rango = (a.created_at and inicio_vivo <= a.created_at <= fin_landing_utc + timedelta(hours=8)) \
-                or any((a.registro or '').startswith(d) for d in dias_landing)
-        if en_rango:
+        if grupo:
             grupos[grupo].append(a)
     return grupos
 
@@ -259,15 +248,11 @@ def _resumen(agendas, compradores, ventas):
 
 def calcular_prefill(dia, timezone_str='America/La_Paz'):
     """Metricas automaticas del workshop del dia `dia` (date), vivo + grabacion."""
-    try:
-        tz = pytz.timezone(timezone_str or 'America/La_Paz')
-    except Exception:
-        tz = pytz.timezone('America/La_Paz')
+    tz = _tz(timezone_str)
+    desde, hasta, siguiente = ventana_evento(dia, tz)
 
-    _, fin_landing, recortada = _ventana_landing(dia)
-
-    aplicaciones = _contar_aplicaciones(dia, tz, fin_landing)
-    grupos = _agendas_por_embudo(dia, tz, fin_landing)
+    aplicaciones = _contar_aplicaciones(desde, hasta, tz)
+    grupos = _agendas_por_embudo(desde, hasta, tz)
 
     compradores_vivo, ventas_vivo = _ventas_de(grupos['vivo'], set())
     compradores_landing, ventas_landing = _ventas_de(grupos['landing'], compradores_vivo)
@@ -295,11 +280,14 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
             "vivo": resumen_vivo,
             "landing": resumen_landing,
         },
+        # Que dias se contaron. `abierta` = todavia no hay un taller posterior,
+        # asi que la ventana llega hasta hoy y va a seguir creciendo.
         "ventana": {
             "vivo": dia.strftime('%Y-%m-%d'),
-            "landing_desde": dia.strftime('%Y-%m-%d'),
-            "landing_hasta": fin_landing.strftime('%Y-%m-%d'),
-            "landing_dias": (fin_landing - dia).days + 1,
-            "landing_recortada": recortada,
+            "desde": desde.strftime('%Y-%m-%d'),
+            "hasta": hasta.strftime('%Y-%m-%d'),
+            "dias": (hasta - desde).days + 1,
+            "abierta": siguiente is None,
+            "siguiente": siguiente.date.strftime('%Y-%m-%d') if siguiente else None,
         },
     }

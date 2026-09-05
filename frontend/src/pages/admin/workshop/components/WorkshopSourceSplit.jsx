@@ -24,8 +24,9 @@ const Columna = ({ titulo, subtitulo, icono: Icono, datos, formatCurrency }) => 
  *
  * Los dos son el MISMO workshop (por eso suman en los totales de arriba), pero
  * separarlos es lo único que responde "¿vale la pena dejar la grabación
- * publicada?". La grabación queda arriba 2 días, así que sus agendas caen
- * después del día de la clase.
+ * publicada?". Las agendas de las dos fuentes se cuentan desde el día del
+ * taller hasta el día anterior al siguiente taller registrado (ventana abierta
+ * hasta hoy si todavía no hay uno).
  */
 const WorkshopSourceSplit = ({ desglose, ventana, cargando, formatCurrency }) => {
     if (cargando) {
@@ -46,23 +47,25 @@ const WorkshopSourceSplit = ({ desglose, ventana, cargando, formatCurrency }) =>
                         Vivo vs. grabación
                         <InfoTooltip
                             label="Aporte de cada entrada"
-                            text="Un workshop tiene dos puertas de entrada: la clase en vivo y la grabación que queda publicada después. Las dos cuentan como el mismo workshop en los totales de arriba; acá se ven separadas para saber cuánto aporta cada una."
+                            text="Un workshop tiene dos puertas de entrada: la clase en vivo y la grabación que queda publicada después. Las dos cuentan como el mismo workshop en los totales de arriba; acá se ven separadas para saber cuánto aporta cada una. Se cuentan las agendas creadas desde el día del taller hasta el día anterior al siguiente taller registrado."
                         />
                     </h2>
                 </div>
                 {ventana && (
                     <p className="secondary-copy">
-                        Grabación contada del {ventana.landing_desde} al {ventana.landing_hasta}
-                        {ventana.landing_recortada && <span className="status warning" style={{ marginLeft: 10 }}>Recortada</span>}
+                        Agendas contadas del {ventana.desde} al {ventana.hasta} ({ventana.dias} día{ventana.dias === 1 ? '' : 's'})
+                        {ventana.abierta
+                            ? <span className="status warning" style={{ marginLeft: 10 }}>Hasta hoy · se cierra al registrar el próximo taller</span>
+                            : <span style={{ marginLeft: 10 }}>· próximo taller: {ventana.siguiente}</span>}
                     </p>
                 )}
             </div>
 
             <div className="source-grid">
-                <Columna titulo="Clase en vivo" subtitulo="El día del workshop" icono={Radio} datos={desglose.vivo} formatCurrency={formatCurrency} />
+                <Columna titulo="Clase en vivo" subtitulo='Fuente "workshop"' icono={Radio} datos={desglose.vivo} formatCurrency={formatCurrency} />
                 <Columna
                     titulo="Grabación (landing)"
-                    subtitulo={ventana ? `${ventana.landing_dias} día(s) publicada` : 'Replay'}
+                    subtitulo='Fuente "workshop_landing" (replay)'
                     icono={PlayCircle}
                     datos={desglose.landing}
                     formatCurrency={formatCurrency}
