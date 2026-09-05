@@ -16,6 +16,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
+import { parseUtcIso, formatAgendaDateTime } from '../../utils/datetime';
 
 const PublicCallsBoardPage = () => {
     const [agendas, setAgendas] = useState([]);
@@ -93,7 +94,7 @@ const PublicCallsBoardPage = () => {
                         </div>
                         <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-2">Próximas Citas</p>
                         <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                            {agendas.filter(a => new Date(a.date) >= new Date()).length}
+                            {agendas.filter(a => { const d = parseUtcIso(a.date); return d && d >= new Date(); }).length}
                         </h3>
                     </Card>
                 </div>
@@ -132,7 +133,8 @@ const PublicCallsBoardPage = () => {
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
                                                     <span className="text-sm font-bold text-base">
-                                                        {agenda.fecha_meet}
+                                                        {/* El instante guardado en tu zona horaria; `fecha_meet` es el texto crudo de la fuente. */}
+                                                        {formatAgendaDateTime(agenda.date) || agenda.fecha_meet}
                                                     </span>
                                                 </div>
                                             </td>

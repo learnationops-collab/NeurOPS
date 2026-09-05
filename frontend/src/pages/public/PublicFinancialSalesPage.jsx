@@ -7,6 +7,7 @@ import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
 import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
 import { useNavigate } from 'react-router-dom';
+import { parseUtcIso } from '../../utils/datetime';
 
 
 const getFirstDayOfCurrentMonth = () => {
@@ -2438,7 +2439,7 @@ const PublicFinancialSalesPage = () => {
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-bold text-white text-sm">{agenda.lead}</span>
                                                     <span className="text-[10px] text-slate-405 font-bold uppercase">
-                                                        {agenda.date ? new Date(agenda.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'S/F'}
+                                                        {agenda.date ? parseUtcIso(agenda.date)?.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'S/F'}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs text-slate-400">

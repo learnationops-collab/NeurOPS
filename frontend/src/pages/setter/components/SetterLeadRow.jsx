@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { 
     Instagram, ExternalLink, Check, X, Loader2, Calendar, ChevronRight, Phone
 } from 'lucide-react';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const SetterLeadRow = ({ 
     lead, 
@@ -178,13 +179,13 @@ const SetterLeadRow = ({
                     <div className="space-y-1 md:text-right">
                         <div className="text-xs font-black text-white">
                             {lead.start_time ? (() => {
-                                const date = new Date(lead.start_time);
+                                const date = parseUtcIso(lead.start_time);
                                 return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
                             })() : 'Sin fecha'}
                         </div>
                         {lead.start_time && (
                             <div className="text-[9px] text-slate-400 font-mono font-bold">
-                                {new Date(lead.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                {parseUtcIso(lead.start_time)?.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                         )}
                     </div>

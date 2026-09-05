@@ -26,6 +26,7 @@ import Badge from '../../../components/ui/Badge';
 import DateRangeFilter from '../../../components/shared/DateRangeFilter';
 import MultiSelectFilter from '../../../components/shared/MultiSelectFilter';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const DatabasePage = () => {
     const [activeTab, setActiveTab] = useState('leads_raw'); // Default to leads for visibility
@@ -256,7 +257,7 @@ const DatabasePage = () => {
         if (activeTab === 'sales_raw') return (
             <>
                 <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
-                <td className="px-8 py-5 text-[10px] text-muted uppercase">{new Date(item.date).toLocaleDateString()}</td>
+                <td className="px-8 py-5 text-[10px] text-muted uppercase">{parseUtcIso(item.date)?.toLocaleDateString()}</td>
                 <td className="px-8 py-5">
                     <p className="text-base font-bold text-sm tracking-tight">{item.student}</p>
                     <p className="text-[10px] text-primary font-black uppercase">{item.program}</p>
@@ -269,7 +270,7 @@ const DatabasePage = () => {
         if (activeTab === 'agendas') return (
             <>
                 <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
-                <td className="px-8 py-5 text-xs text-base/80 font-bold">{editingId === item.id ? renderCell(item, 'start_time', 'datetime') : new Date(item.start_time).toLocaleString()}</td>
+                <td className="px-8 py-5 text-xs text-base/80 font-bold">{editingId === item.id ? renderCell(item, 'start_time', 'datetime') : parseUtcIso(item.start_time)?.toLocaleString()}</td>
                 <td className="px-8 py-5">
                     <p className="text-base font-bold text-sm">{item.lead}</p>
                     <p className="text-[10px] text-primary font-black uppercase">Closer: {item.closer}</p>

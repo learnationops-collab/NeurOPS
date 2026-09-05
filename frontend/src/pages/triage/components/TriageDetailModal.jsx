@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, Instagram, ExternalLink, Phone, Loader2, CalendarDays, MessageSquare, Send } from 'lucide-react';
 import CommentsSection from '../../../components/shared/CommentsSection';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const TriageDetailModal = ({
     selectedLead,
@@ -107,7 +108,7 @@ const TriageDetailModal = ({
                                             <span className="text-[9px] text-slate-500 uppercase font-black block">Fecha del Meet</span>
                                             <span className="text-slate-200 font-bold">
                                                 {selectedLead.date || selectedLead.fecha_meet ? (
-                                                    new Date(selectedLead.date || selectedLead.fecha_meet).toLocaleString('es-ES', {
+                                                    parseUtcIso(selectedLead.date || selectedLead.fecha_meet)?.toLocaleString('es-ES', {
                                                         day: '2-digit',
                                                         month: 'short',
                                                         year: 'numeric',

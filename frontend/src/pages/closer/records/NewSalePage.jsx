@@ -11,6 +11,7 @@ import {
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import toast from 'react-hot-toast';
+import { parseUtcIso } from '../../../utils/datetime';
 
 const CloserNewSalePage = () => {
     const navigate = useNavigate();
@@ -294,7 +295,7 @@ const CloserNewSalePage = () => {
                                     <div>
                                         <span className="block text-[8px] text-slate-600">Fecha de Agenda</span>
                                         <span className="text-slate-300">
-                                            {linkedAppointment?.start_time ? new Date(linkedAppointment.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin agenda registrada'}
+                                            {linkedAppointment?.start_time ? parseUtcIso(linkedAppointment.start_time)?.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin agenda registrada'}
                                         </span>
                                     </div>
                                 </div>

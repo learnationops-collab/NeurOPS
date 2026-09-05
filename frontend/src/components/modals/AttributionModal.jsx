@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { X, Users, Search, Plus, Check, AlertCircle } from 'lucide-react';
+import { parseUtcIso } from '../../utils/datetime';
 
 const AttributionModal = ({ sale, onClose, onSuccess }) => {
     const [saleIg, setSaleIg] = useState(sale.instagram || '');
@@ -205,7 +206,7 @@ const AttributionModal = ({ sale, onClose, onSuccess }) => {
                                         <Check className="w-3.5 h-3.5 text-indigo-400" /> ¡Match automático encontrado!
                                     </div>
                                     <p className="text-[10px] text-slate-400 font-semibold">
-                                        Agenda con Setter/Fuente <span className="text-white font-bold">{matchedAgenda.nombre}</span> del {new Date(matchedAgenda.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}.
+                                        Agenda con Setter/Fuente <span className="text-white font-bold">{matchedAgenda.nombre}</span> del {parseUtcIso(matchedAgenda.date)?.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}.
                                     </p>
                                 </div>
                                 <button
@@ -267,7 +268,7 @@ const AttributionModal = ({ sale, onClose, onSuccess }) => {
                                                         Fuente/Setter: <span className="text-slate-400">{agenda.nombre}</span> | Closer: <span className="text-slate-400">{agenda.closer}</span>
                                                     </p>
                                                     <p className="text-slate-600 font-semibold">
-                                                        Fecha: {new Date(agenda.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })} | IG: @{agenda.instagram || 'N/A'}
+                                                        Fecha: {parseUtcIso(agenda.date)?.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })} | IG: @{agenda.instagram || 'N/A'}
                                                     </p>
                                                 </div>
                                                 <button

@@ -30,6 +30,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 import Badge from '../ui/Badge';
+import { parseUtcIso } from '../../utils/datetime';
 
 // --- Sortable Item Component ---
 const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCardClick, isOverlay = false }) => {
@@ -76,7 +77,7 @@ const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCar
                     <div className="flex items-center gap-2 text-muted">
                         <Calendar size={10} className="text-primary/40" />
                         <span className="text-[9px] font-bold tracking-widest whitespace-nowrap">
-                            {new Date(item.start_time).toLocaleDateString()} - {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {parseUtcIso(item.start_time)?.toLocaleDateString()} - {parseUtcIso(item.start_time)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     </div>
                 </div>
@@ -298,7 +299,7 @@ const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome, v
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <Clock size={10} className="text-muted" />
                                                     <span className="text-[9px] font-bold text-muted">
-                                                        {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {parseUtcIso(item.start_time)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             </div>

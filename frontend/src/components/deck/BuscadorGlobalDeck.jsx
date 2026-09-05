@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, ClipboardList } from 'lucide-react';
 import api from '../../services/api';
+import { parseUtcIso } from '../../utils/datetime';
 
 const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) => {
     const [query, setQuery] = useState('');
@@ -110,7 +111,7 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
                                     >
                                         <div className="space-y-0.5">
                                             <p className="text-xs font-black text-white">{r.lead_name}</p>
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase">Agenda ID: {r.id} • {new Date(r.start_time).toLocaleDateString()}</p>
+                                            <p className="text-[9px] text-slate-500 font-bold uppercase">Agenda ID: {r.id} • {parseUtcIso(r.start_time)?.toLocaleDateString()}</p>
                                         </div>
                                         <div className="flex items-center gap-1.5 shrink-0">
                                             {r.setter_processed ? (

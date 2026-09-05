@@ -3,6 +3,7 @@ import { Loader2, X, Save, Check, DollarSign, Pencil, GraduationCap, ExternalLin
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { parseUtcIso } from '../../utils/datetime';
 
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
 
@@ -984,7 +985,7 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                         onClick={() => onOpenAppointment && onOpenAppointment(a.id)}
                                         className={`flex justify-between text-[10px] bg-slate-950/40 border border-slate-800 rounded-lg px-3 py-2 ${onOpenAppointment ? 'cursor-pointer hover:border-violet-500/40 hover:bg-slate-900/60 transition-all' : ''}`}
                                     >
-                                        <span className="text-slate-300">{a.start_time ? new Date(a.start_time).toLocaleDateString('es-ES') : '—'} · {a.origin || 'Sin origen'}</span>
+                                        <span className="text-slate-300">{a.start_time ? parseUtcIso(a.start_time)?.toLocaleDateString('es-ES') : '—'} · {a.origin || 'Sin origen'}</span>
                                         <span className="text-slate-500 font-bold uppercase">{a.closer_result || a.result || 'Pendiente'}</span>
                                     </div>
                                 ))}

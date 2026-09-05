@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../../../services/api';
+import { toDatetimeLocalValue, datetimeLocalToUtcIso, viewerTimezoneLabel } from '../../../utils/datetime';
 import {
     Calendar as CalendarIcon,
     Activity,
@@ -472,31 +473,11 @@ const formatDateOnly = (dateStr) => {
     }
 };
 
-const formatToDatetimeLocal = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) {
-            const parsed = Date.parse(dateStr);
-            if (isNaN(parsed)) return '';
-            const dp = new Date(parsed);
-            const year = dp.getFullYear();
-            const month = String(dp.getMonth() + 1).padStart(2, '0');
-            const day = String(dp.getDate()).padStart(2, '0');
-            const hours = String(dp.getHours()).padStart(2, '0');
-            const minutes = String(dp.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch {
-        return '';
-    }
-};
+// Nota de zona horaria para todo este archivo: `agenda.date` y `agenda.created_at` vienen del
+// backend en UTC naive (sin 'Z'). `new Date(str)` los leería como hora LOCAL y mostraría cada
+// agenda corrida por el offset de quien mira el panel, así que se pasan siempre por
+// `toDatetimeLocalValue` (parseUtcIso) para verlos, y por `datetimeLocalToUtcIso` para guardarlos.
+// `agenda.registro` es la excepción: es texto en hora local de la fuente, no UTC.
 
 const FinancialAgendasPage = () => {
     const { user } = useAuth();
@@ -609,13 +590,15 @@ const FinancialAgendasPage = () => {
             nombre: agenda.nombre || '',
             lead: agenda.lead || '',
             closer: agenda.closer || '',
-            fecha_meet: agenda.fecha_meet || '',
+            // Se edita como hora local del navegador (valor de <input datetime-local>) y se
+            // vuelve a UTC al guardar. `date` es el instante real; `fecha_meet` es texto crudo.
+            fecha_meet: toDatetimeLocalValue(agenda.date || agenda.fecha_meet),
             instagram: agenda.instagram || '',
             whatsapp: agenda.whatsapp || '',
             mail: agenda.mail || '',
             estado: agenda.estado || 'Pendiente',
             encargado_triage: agenda.encargado_triage || '',
-            created_at: agenda.created_at || ''
+            created_at: toDatetimeLocalValue(agenda.created_at)
         });
     };
 
@@ -712,9 +695,13 @@ const FinancialAgendasPage = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
+            // El formulario trabaja en hora local; el backend guarda UTC.
+            const fechaUtc = datetimeLocalToUtcIso(editForm.fecha_meet) || editForm.fecha_meet;
             const payload = {
                 ...editForm,
-                date: editForm.fecha_meet
+                fecha_meet: fechaUtc,
+                date: fechaUtc,
+                created_at: datetimeLocalToUtcIso(editForm.created_at) || editForm.created_at
             };
             const response = await api.put(`/public/financial-agendas/${editingAgenda.id}`, payload);
             const updated = response.data.agenda;
@@ -1341,14 +1328,17 @@ const FinancialAgendasPage = () => {
                                                     <CalendarIcon size={14} className="text-primary/70" />
                                                     <input 
                                                         type="datetime-local" 
-                                                        value={formatToDatetimeLocal(agenda.date || agenda.fecha_meet)}
+                                                        value={toDatetimeLocalValue(agenda.date || agenda.fecha_meet)}
+                                                        title={`Hora en tu zona horaria (${viewerTimezoneLabel()})`}
                                                         onChange={async (e) => {
                                                             const newVal = e.target.value;
                                                             if (!newVal) return;
                                                             try {
+                                                                // El input da hora local sin zona; el backend guarda UTC.
+                                                                const utcIso = datetimeLocalToUtcIso(newVal);
                                                                 const response = await api.put(`/public/financial-agendas/${agenda.id}`, {
-                                                                    date: newVal,
-                                                                    fecha_meet: newVal
+                                                                    date: utcIso,
+                                                                    fecha_meet: utcIso
                                                                 });
                                                                 const updated = response.data.agenda;
                                                                 setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
@@ -1652,7 +1642,7 @@ const FinancialAgendasPage = () => {
                                         <input 
                                             type="datetime-local"
                                             className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={formatToDatetimeLocal(editForm.fecha_meet)}
+                                            value={editForm.fecha_meet}
                                             onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
                                             required
                                         />
@@ -1730,7 +1720,7 @@ const FinancialAgendasPage = () => {
                                         <input 
                                             type="datetime-local"
                                             className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={formatToDatetimeLocal(editForm.created_at)}
+                                            value={editForm.created_at}
                                             onChange={e => setEditForm({...editForm, created_at: e.target.value})}
                                         />
                                     </div>
