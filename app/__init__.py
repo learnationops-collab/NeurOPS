@@ -143,8 +143,8 @@ def create_app(config_class=Config):
     from app.api.job_applications import bp as job_applications_bp
     app.register_blueprint(job_applications_bp, url_prefix='/api')
 
-    from app.api.training_videos import bp as training_videos_bp
-    app.register_blueprint(training_videos_bp, url_prefix='/api')
+    from app.api.playbook import bp as playbook_bp
+    app.register_blueprint(playbook_bp, url_prefix='/api')
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -191,5 +191,8 @@ def create_app(config_class=Config):
 
     from app.services.reminder_scheduler import start_scheduler
     start_scheduler(app)
+
+    from app.services.workshop_live_sync import register_workshop_live_sync
+    register_workshop_live_sync(app)
 
     return app

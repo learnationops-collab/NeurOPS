@@ -232,7 +232,12 @@ def update_workshop_event(event_id):
         event.sales = int(data['sales'])
     if 'cash_collected' in data:
         event.cash_collected = float(data['cash_collected'])
-        
+
+    # El resync manual del panel manda estas 4 metricas juntas (mismos campos
+    # que calcula workshop_live_sync.py) -- se trata igual que una sincronizacion.
+    if any(k in data for k in ('aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales')):
+        event.synced_at = datetime.utcnow()
+
     try:
         db.session.commit()
         return jsonify(event.to_dict()), 200

@@ -1,7 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Loader2, Zap } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
+
+// Texto relativo tipo "hace 2 min" para `synced_at`. Se recalcula cada 30s
+// (no solo cuando cambian los props) para que no se quede pegado en "hace 5s"
+// mientras el usuario sigue mirando la misma pestaña.
+function useRelativeTime(iso) {
+    const [, forceTick] = useState(0);
+    useEffect(() => {
+        if (!iso) return;
+        const id = setInterval(() => forceTick((n) => n + 1), 30000);
+        return () => clearInterval(id);
+    }, [iso]);
+    if (!iso) return null;
+    const diffSec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    if (diffSec < 45) return 'hace un momento';
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return `hace ${diffMin} min`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `hace ${diffH} h`;
+    return `hace ${Math.round(diffH / 24)} d`;
+}
 
 const WorkshopFunnelView = ({
     events,
@@ -47,6 +67,7 @@ const WorkshopFunnelView = ({
     const profit = selectedEvent ? selectedEvent.cash_collected - selectedEvent.inversion : 0;
     const cac = selectedEvent && selectedEvent.sales > 0 ? selectedEvent.inversion / selectedEvent.sales : 0;
     const leadsBase = selectedEvent?.leads || 0;
+    const syncedLabel = useRelativeTime(selectedEvent?.synced_at);
 
     return (
         <>
@@ -58,10 +79,17 @@ const WorkshopFunnelView = ({
                             <h2>{selectedEvent?.name}</h2>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-                            <button type="button" className="secondary-action" onClick={onResync} disabled={resyncing} title="Resincronizar aplicaciones, agendas y ventas desde base de datos">
-                                {resyncing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                                {resyncing ? 'Sincronizando…' : 'Resync sistema'}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                                <button type="button" className="secondary-action" onClick={onResync} disabled={resyncing} title="Forzar un resync manual ahora mismo (las agendas y ventas nuevas ya se sincronizan solas)">
+                                    {resyncing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                                    {resyncing ? 'Sincronizando…' : 'Resync sistema'}
+                                </button>
+                                {syncedLabel && (
+                                    <span className="sync-status" title="Las agendas y ventas nuevas actualizan este evento solas, sin recargar la página">
+                                        <span className="live-dot" style={{ width: 5, height: 5 }} /> Sincronizado {syncedLabel}
+                                    </span>
+                                )}
+                            </div>
                             <div style={{ textAlign: 'right' }}>
                                 <strong style={{ display: 'block', fontSize: 22, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
                                     {selectedEvent && `${selectedEvent.roas.toFixed(2)}x`}
