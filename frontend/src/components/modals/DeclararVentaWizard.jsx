@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard, AlertTriangle, History
+    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard, AlertTriangle, History, GraduationCap
 } from 'lucide-react';
 
 // --- Helpers de fecha (mismo criterio que InstallmentService._add_months: clampea al último
@@ -946,6 +946,22 @@ const DeclararVentaWizard = ({
                                     <span className="block font-medium" style={{ color: '#5C6699' }}>
                                         Prendido (recomendado), dispara los mensajes automáticos al cliente y las notificaciones
                                         del equipo. Apagalo solo si ya avisaste vos mismo o si es una venta de prueba.
+                                    </span>
+                                </span>
+                            </label>
+
+                            <label className="flex items-start gap-2 mt-2.5 rounded-xl px-3 py-2.5 cursor-pointer" style={{ background: 'rgba(0,0,0,.22)', border: '1px solid rgba(255,255,255,.10)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!saleForm.dar_acceso_academia}
+                                    onChange={(e) => set('dar_acceso_academia', e.target.checked)}
+                                    className="mt-0.5 accent-violet-500"
+                                />
+                                <span className="text-[10px] font-bold leading-snug flex items-center gap-1.5" style={{ color: '#8C99E0' }}>
+                                    <GraduationCap size={12} /> Dar acceso a la Academia con este mismo email ({saleForm.mail_cliente || 'sin email'})
+                                    <span className="block font-medium" style={{ color: '#5C6699' }}>
+                                        Apagado por defecto — prendelo si esta venta arranca (o renueva) el acceso real del cliente al programa.
+                                        No hace falta para corregir datos, ventas de prueba, o una Cuota de alguien que ya tiene acceso.
                                     </span>
                                 </span>
                             </label>
