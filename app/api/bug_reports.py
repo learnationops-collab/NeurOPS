@@ -191,7 +191,8 @@ def create_bug_report_message(report_id):
 
     data = request.get_json() or {}
     text = (data.get('message') or '').strip()
-    if not text:
+    loom_link = (data.get('loom_link') or '').strip() or None
+    if not text and not loom_link:
         return jsonify({"message": "El mensaje no puede estar vacío"}), 400
 
     try:
@@ -201,6 +202,7 @@ def create_bug_report_message(report_id):
             sender_id=current_user.id,
             sender_role=current_user.role,
             message=text,
+            loom_link=loom_link,
             created_at=now,
         )
         db.session.add(msg)

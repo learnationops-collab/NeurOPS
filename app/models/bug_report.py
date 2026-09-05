@@ -84,7 +84,14 @@ class BugReportMessage(db.Model):
     bug_report_id = db.Column(db.Integer, db.ForeignKey('bug_reports.id', ondelete='CASCADE'), nullable=False, index=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     sender_role = db.Column(db.String(20), nullable=True)
-    message = db.Column(db.Text, nullable=False)
+    # Puede venir vacio si el mensaje es solo un video (ver loom_link) -- pero nunca los dos
+    # vacios a la vez, eso lo valida el endpoint antes de crear la fila.
+    message = db.Column(db.Text, nullable=False, default='')
+    # Link de Loom opcional adjunto a ESTE mensaje puntual del hilo -- distinto del `loom_link`
+    # de `BugReport` (ese es el que manda el reportante al crear el reporte). Este es para que
+    # cualquiera de los dos lados pueda reenviar un video en plena conversacion (ej. el operador
+    # explicando la solucion).
+    loom_link = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     sender = db.relationship('User', foreign_keys=[sender_id])
@@ -97,5 +104,6 @@ class BugReportMessage(db.Model):
             "sender_name": self.sender.username if self.sender else None,
             "sender_role": self.sender_role,
             "message": self.message,
+            "loom_link": self.loom_link,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

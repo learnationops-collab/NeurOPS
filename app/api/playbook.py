@@ -257,6 +257,70 @@ def delete_lesson(lesson_id):
     return jsonify({"message": "Lección eliminada"}), 200
 
 
+DEFAULT_QUICK_ROADMAP_NAME = 'Soporte y Resolución de Bugs'
+DEFAULT_QUICK_MODULE_NAME = 'Videos de solución'
+
+
+def _find_or_create_default_module():
+    """Roadmap/Modulo donde caen las lecciones creadas por el atajo rapido (ej. desde el
+    chat de un reporte de bug) cuando el que publica no elige uno puntual. Se crea la
+    primera vez que hace falta, no de entrada -- si nunca se usa el atajo, no aparece
+    un roadmap vacio en el Playbook."""
+    roadmap = PlaybookRoadmap.query.filter_by(name=DEFAULT_QUICK_ROADMAP_NAME).first()
+    if not roadmap:
+        max_order = db.session.query(db.func.max(PlaybookRoadmap.order)).scalar() or 0
+        roadmap = PlaybookRoadmap(name=DEFAULT_QUICK_ROADMAP_NAME, accent='blue', order=max_order + 1)
+        db.session.add(roadmap)
+        db.session.flush()
+    module = PlaybookModule.query.filter_by(roadmap_id=roadmap.id, name=DEFAULT_QUICK_MODULE_NAME).first()
+    if not module:
+        max_order = db.session.query(db.func.max(PlaybookModule.order)).filter_by(roadmap_id=roadmap.id).scalar() or 0
+        module = PlaybookModule(roadmap_id=roadmap.id, name=DEFAULT_QUICK_MODULE_NAME, order=max_order + 1)
+        db.session.add(module)
+        db.session.flush()
+    return module
+
+
+@bp.route('/playbook/quick-lesson', methods=['POST'])
+@login_required
+def create_quick_lesson():
+    """Atajo para publicar un Loom como leccion del Playbook sin pasar por el formulario
+    completo de gestion (pensado para el chat de reportes de bugs: el operador resuelve
+    algo, manda un Loom explicando la solucion, y con un click lo deja como skill para que
+    el equipo lo vea despues). Sin quiz -- se puede agregar despues editando la leccion
+    desde el panel de administracion si hace falta."""
+    forbidden = check_manager()
+    if forbidden: return forbidden
+    data = request.get_json() or {}
+    title = (data.get('title') or '').strip()
+    loom_link = (data.get('loom_link') or '').strip()
+    if not title or not loom_link:
+        return jsonify({"message": "Título y link de Loom son obligatorios"}), 400
+
+    try:
+        module_id = data.get('module_id')
+        module = PlaybookModule.query.get_or_404(module_id) if module_id else _find_or_create_default_module()
+
+        max_order = db.session.query(db.func.max(PlaybookLesson.order)).filter_by(module_id=module.id).scalar() or 0
+        lesson = PlaybookLesson(
+            module_id=module.id,
+            title=title,
+            description=(data.get('description') or '').strip() or None,
+            loom_link=loom_link,
+            target_roles=[r for r in (data.get('target_roles') or []) if isinstance(r, str) and r] or None,
+            is_active=True,
+            order=max_order + 1,
+            created_by_id=current_user.id,
+        )
+        db.session.add(lesson)
+        db.session.commit()
+        return jsonify(lesson.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al crear lección rápida: {str(e)}")
+        return jsonify({"message": f"Error al guardar la lección: {str(e)}"}), 500
+
+
 @bp.route('/playbook/admin/overview', methods=['GET'])
 @login_required
 def admin_overview():

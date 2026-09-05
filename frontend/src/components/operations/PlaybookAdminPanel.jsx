@@ -39,7 +39,10 @@ const PlaybookAdminPanel = () => {
 
     const handleCreateRoadmap = async (e) => {
         e.preventDefault();
-        if (!newRoadmapName.trim()) return;
+        if (!newRoadmapName.trim()) {
+            toast.error('Escribí un nombre para el roadmap primero');
+            return;
+        }
         try {
             await api.post('/playbook/roadmaps', { name: newRoadmapName.trim(), accent: ACCENT_OPTIONS[(overview?.roadmaps.length || 0) % 3].value });
             setNewRoadmapName('');
@@ -50,7 +53,10 @@ const PlaybookAdminPanel = () => {
     };
 
     const handleCreateModule = async (roadmapId) => {
-        if (!newModuleName.trim()) return;
+        if (!newModuleName.trim()) {
+            toast.error('Escribí un nombre para el módulo primero');
+            return;
+        }
         try {
             await api.post('/playbook/modules', { roadmap_id: roadmapId, name: newModuleName.trim() });
             setNewModuleName('');
