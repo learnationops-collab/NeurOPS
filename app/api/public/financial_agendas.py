@@ -5,6 +5,9 @@ from datetime import datetime
 from . import bp
 from sqlalchemy import or_, and_, func
 
+from app.services.agenda_time_service import parse_a_utc, zona_origen, a_utc_naive, limites_dia_origen
+
+
 def parse_date_robustly(val):
     if not val:
         return datetime.utcnow()
@@ -147,14 +150,27 @@ def receive_financial_agendas():
             setter = 'Sin asignar'
 
         dt_str = item.get('fecha') or item.get('date') or item.get('registro')
+        # La columna `date` es UTC naive (la lee asi todo el sistema: las ventanas de dia de
+        # user_time_service, el isoformat() de la API y el parseUtcIso() del frontend). Antes
+        # aca se guardaba hora local de La Paz, y eso corria cada agenda de Calendly 4 horas
+        # hacia atras -- ver app/services/agenda_time_service.py.
         agenda_date = datetime.utcnow()
         if dt_str:
-            agenda_date = parse_date_robustly(dt_str)
+            parsed_utc, traia_offset = parse_a_utc(dt_str)
+            if parsed_utc:
+                agenda_date = parsed_utc
+                if not traia_offset:
+                    # Sin offset no hay forma de saber la zona: se asume AGENDAS_SOURCE_TZ. Queda
+                    # el aviso en Railway para poder pedirle a n8n que mande ISO con zona.
+                    current_app.logger.warning(
+                        f"[AGENDA SIN ZONA] '{dt_str}' llego sin offset; se asumio "
+                        f"{zona_origen()} para convertir a UTC (lead '{lead_val}').")
+            else:
+                current_app.logger.warning(
+                    f"[AGENDA FECHA INVALIDA] No se pudo interpretar '{dt_str}' (lead '{lead_val}').")
 
         import pytz
         la_paz_tz = pytz.timezone('America/La_Paz')
-        if agenda_date.tzinfo is not None:
-            agenda_date = agenda_date.astimezone(la_paz_tz).replace(tzinfo=None)
 
         # Normalizar el campo de registro a formato local de America/La_Paz
         registro_val = item.get('registro') or item.get('fecha') or datetime.now(la_paz_tz).isoformat()
@@ -185,8 +201,10 @@ def receive_financial_agendas():
             client_filters.append(FinancialAgenda.whatsapp.like(f"%{phone_val}%"))
 
         if client_filters and agenda_date:
-            start_day = agenda_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_day = agenda_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            # "El mismo dia" es el dia local de la fuente, no el dia UTC: con las fechas ya
+            # normalizadas a UTC, una cita de las 21:00 cae en el dia UTC siguiente y el
+            # deduplicador dejaria de reconocer la agenda que acaba de reprogramarse.
+            start_day, end_day = limites_dia_origen(agenda_date)
             existing = FinancialAgenda.query.filter(
                 or_(*client_filters),
                 FinancialAgenda.date >= start_day,
@@ -626,15 +644,22 @@ def update_financial_agenda(agenda_id):
         if 'seguimiento_realizado' in data:
             agenda.seguimiento_realizado = bool(data['seguimiento_realizado'])
         if 'date' in data:
-            agenda.date = parse_date_robustly(data['date'])
+            # Misma convencion que la ingesta: la columna guarda UTC naive. El editor del panel
+            # manda ISO con 'Z' (ver FinancialAgendasPage.handleEditSubmit); si por lo que sea
+            # llega un string sin zona, se asume AGENDAS_SOURCE_TZ igual que en el webhook.
+            nueva_fecha, _ = parse_a_utc(data['date'])
+            if nueva_fecha:
+                agenda.date = nueva_fecha
         if 'created_at' in data and data['created_at']:
-            new_created_at = parse_date_robustly(data['created_at'])
-            import pytz
-            la_paz_tz = pytz.timezone('America/La_Paz')
-            if new_created_at.tzinfo is not None:
-                new_created_at = new_created_at.astimezone(la_paz_tz).replace(tzinfo=None)
-            agenda.created_at = new_created_at
-            agenda.registro = new_created_at.isoformat()
+            nuevo_created_at, _ = parse_a_utc(data['created_at'])
+            if nuevo_created_at:
+                agenda.created_at = nuevo_created_at
+                # `registro` es el texto que se muestra/ordena en el panel de agendas y siempre
+                # fue hora local de la fuente, no UTC: se deja como estaba para no mover los
+                # listados que ordenan por ese campo.
+                import pytz
+                agenda.registro = pytz.UTC.localize(nuevo_created_at).astimezone(
+                    zona_origen()).replace(tzinfo=None).isoformat()
             
         if status_changed:
             from app.models import Notification
