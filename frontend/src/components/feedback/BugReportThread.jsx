@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, RotateCcw } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -10,10 +10,12 @@ import toast from 'react-hot-toast';
 // contestar; ahora es una conversación real vía GET/POST /bug-reports/<id>/messages.
 const BugReportThread = ({ reportId, onReportUpdate }) => {
     const { user } = useAuth();
+    const [report, setReport] = useState(null);
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [text, setText] = useState('');
     const [sending, setSending] = useState(false);
+    const [reopening, setReopening] = useState(false);
     const bottomRef = useRef(null);
 
     const fetchThread = () => {
@@ -21,6 +23,7 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
         return api.get(`/bug-reports/${reportId}/messages`, { skipBugReport: true })
             .then(res => {
                 setMessages(res.data.messages);
+                setReport(res.data.report);
                 onReportUpdate?.(res.data.report);
             })
             .catch(err => {
@@ -52,8 +55,39 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
         }
     };
 
+    const handleReopen = async () => {
+        setReopening(true);
+        try {
+            const res = await api.post(`/bug-reports/${reportId}/reopen`, {}, { skipBugReport: true });
+            setReport(res.data);
+            onReportUpdate?.(res.data);
+            toast.success('Marcado como que el problema sigue presente.');
+            fetchThread(); // trae el mensaje automático que se agregó al reabrir
+        } catch (err) {
+            console.error('Error al reabrir el reporte:', err);
+            toast.error(err.response?.data?.message || 'No se pudo reabrir el reporte.');
+        } finally {
+            setReopening(false);
+        }
+    };
+
+    const canReopen = report?.status === 'resolved' && report?.user_id === user?.id;
+
     return (
         <div className="space-y-3">
+            {canReopen && (
+                <div className="flex items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl px-3 py-2.5">
+                    <p className="text-[11px] font-medium leading-snug">Este reporte está marcado como resuelto. Si el problema sigue pasando, no hace falta reportarlo de nuevo.</p>
+                    <button
+                        onClick={handleReopen}
+                        disabled={reopening}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {reopening ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                        Sigue roto
+                    </button>
+                </div>
+            )}
             <div className="max-h-72 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                 {loading && (
                     <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted">
