@@ -1708,6 +1708,57 @@ def get_closer_deck():
     return jsonify(formatted_appointments), 200
 
 
+@bp.route('/next-appointment', methods=['GET'])
+@login_required
+def get_next_appointment():
+    """La proxima llamada del closer, para el cronometro fijo del header del workspace.
+
+    Aparte del mazo a proposito: el mazo se carga por pestana y por dia seleccionado, asi que
+    nunca puede contestar "cual es la proxima" cuando el closer esta mirando el reporte de ayer
+    o el dashboard. Esto sale de un solo SELECT con LIMIT 1.
+
+    `start_time` sale en UTC (convencion de la columna) y el frontend lo pinta en la zona del
+    navegador de quien mira -- que es lo que hace que, simulando a un closer de otro pais, la
+    hora siga siendo la del que simula.
+    """
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    # Margen hacia atras: una llamada que empezo hace 10 minutos sigue siendo "la de ahora",
+    # no una que ya paso. Es la misma ventana que usa el frontend para decir "Ahora mismo".
+    desde = datetime.utcnow() - timedelta(minutes=15)
+
+    query = Appointment.query.filter(
+        Appointment.start_time >= desde,
+        Appointment.closer_processed == False,
+        or_(
+            Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+            Appointment.result == None,
+            Appointment.result == ''
+        ),
+        # Un referido manual entra al pipeline con start_time = ahora como placeholder (todavia
+        # no se acordo fecha); el Kanban ya lo muestra como "Por agendar". Cronometrar ese
+        # placeholder seria mostrar una cuenta regresiva hacia una hora inventada.
+        or_(Appointment.origin == None, ~Appointment.origin.startswith('Referido de'))
+    )
+    if current_user.role != 'admin':
+        query = query.filter_by(closer_id=current_user.id)
+
+    appt = query.order_by(Appointment.start_time.asc()).first()
+    if not appt:
+        return jsonify({"appointment": None}), 200
+
+    cliente = appt.client
+    return jsonify({"appointment": {
+        "id": appt.id,
+        "start_time": appt.start_time.isoformat() if appt.start_time else None,
+        "lead_name": (cliente.full_name or cliente.email) if cliente else "Sin Nombre",
+        "instagram": cliente.instagram if cliente else None,
+        "origin": appt.origin,
+        "result": appt.result or "Pendiente"
+    }}), 200
+
+
 @bp.route('/deck/counts', methods=['GET'])
 @login_required
 def get_closer_deck_counts():

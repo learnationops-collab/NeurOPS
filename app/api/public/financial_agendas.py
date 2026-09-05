@@ -1,11 +1,11 @@
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import db, FinancialAgenda, User, Client
 from datetime import datetime
 from . import bp
 from sqlalchemy import or_, and_, func
 
-from app.services.agenda_time_service import parse_a_utc, zona_origen, a_utc_naive, limites_dia_origen
+from app.services.agenda_time_service import parse_a_utc, zona_origen, limites_dia_origen
 
 
 def parse_date_robustly(val):
@@ -777,7 +777,10 @@ def update_financial_agenda(agenda_id):
             from app.services.booking_service import BookingService
             BookingService.sync_financial_agenda_to_appointment(agenda)
         except Exception as sync_err:
-            pass
+            # Si este sync falla, la agenda queda con la fecha nueva y el Appointment con la
+            # vieja -- justo el tipo de desfase que se esta corrigiendo. Antes se silenciaba.
+            current_app.logger.error(
+                f"[SYNC ERROR] Agenda {agenda.id} editada pero no sincronizada a Appointment: {sync_err}")
 
         return jsonify({"message": "Agenda actualizada correctamente", "agenda": agenda.to_dict()}), 200
     except Exception as e:
