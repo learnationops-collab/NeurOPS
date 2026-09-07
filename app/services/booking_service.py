@@ -557,9 +557,32 @@ class BookingService:
         # 2. Resolver Closer
         closer_user = BookingService.resolve_user_by_name(agenda.closer, default_role='closer')
         if not closer_user:
-            # Fallback al primer closer/admin del sistema
+            # No se pudo resolver el texto de agenda.closer contra ningun User ni CloserAlias
+            # (tipicamente porque se renombro al closer y quedo un nombre viejo suelto en
+            # agendas anteriores). Appointment.closer_id es NOT NULL, asi que sigue haciendo
+            # falta un fallback - pero antes este fallback era silencioso: la agenda quedaba
+            # asignada al primer closer/admin de la tabla sin que nadie se enterara. Ahora se
+            # avisa a los admins via Notification para que la reasignen a mano.
             closer_user = User.query.filter_by(role='closer').first() or User.query.filter_by(role='admin').first()
-            
+            print(f"[SYNC WARNING] Agenda {agenda.id}: closer='{agenda.closer}' no resuelve a "
+                  f"ningun usuario. Fallback temporal a '{closer_user.username if closer_user else None}'.")
+            if closer_user:
+                try:
+                    db.session.add(Notification(
+                        subject="Agenda con closer sin resolver",
+                        content=(
+                            f"La agenda de '{agenda.lead or agenda.nombre or 'Desconocido'}' tiene "
+                            f"closer='{agenda.closer}', que no coincide con ningun usuario activo "
+                            f"(¿se renombro y falta un alias con el nombre viejo?). Se asigno "
+                            f"temporalmente a {closer_user.username} - revisar y reasignar."
+                        ),
+                        target_users=["role:admin"],
+                        associated_id=agenda.id,
+                        associated_type="agenda"
+                    ))
+                except Exception:
+                    pass
+
         if not closer_user:
             print("[SYNC ERROR] No se encontró Closer ni Admin en la base de datos.")
             return None

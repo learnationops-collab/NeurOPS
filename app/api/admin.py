@@ -409,8 +409,25 @@ def user_operations(id):
              existing = User.query.filter(or_(*filters)).first()
              if existing:
                  return jsonify({"message": "Username or Email already taken"}), 409
-            
+
+        old_username = user.username
         user.username = username or user.username
+
+        # Si cambia el username, dejamos el nombre viejo como CloserAlias apuntando a este
+        # mismo usuario -- texto historico guardado en otras tablas (ej. FinancialAgenda.closer,
+        # FinancialSale.email_vendedor) sigue referenciando el nombre viejo y se resuelve via
+        # BookingService.resolve_user_by_name / ClosernameService, que consultan CloserAlias
+        # antes que nada. Sin esto, ese texto viejo deja de resolver a nadie y las asignaciones
+        # que lo usan caen en el fallback de "primer closer/admin disponible" (ver
+        # BookingService.sync_financial_agenda_to_appointment) -- la causa de que una agenda
+        # asignada a un closer recien renombrado no aparezca en su espacio de trabajo.
+        if username and username != old_username and old_username:
+            from app.models import CloserAlias
+            alias_exists = CloserAlias.query.filter(
+                db.func.lower(CloserAlias.alias_name) == old_username.lower()
+            ).first()
+            if not alias_exists:
+                db.session.add(CloserAlias(user_id=user.id, alias_name=old_username))
         user.email = email or user.email
         user.role = data.get('role', user.role)
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
