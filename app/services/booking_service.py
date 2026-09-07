@@ -486,25 +486,43 @@ class BookingService:
 
     @staticmethod
     def find_or_create_client(nombre, email, instagram, phone, grupo=None):
-        """Busca o crea un cliente usando cruzado inteligente de campos."""
+        """Busca o crea un cliente usando cruzado inteligente de campos.
+
+        Prioridad email/telefono sobre Instagram, guiada por dos incidentes reales el mismo
+        dia (07/09/2026, ver bitacora): 'Joel Celis' se fusiono con un cliente de 2024 no
+        relacionado ('Juan Jose Silva Menchaca') y 'Diego Gutierrez' con uno de febrero
+        ('Jesus Emmanuel Cruz') -- en ambos casos el UNICO campo en comun era el instagram
+        (nombre, email y telefono completamente distintos). Un handle de Instagram se puede
+        tipear mal, reciclar o coincidir por casualidad; el email y el telefono no. Por eso
+        un match SOLO por instagram ya no se acepta a ciegas: hace falta que el nombre
+        corrobore (mismo criterio que SalesConsistencyService._names_corroborate, usado para
+        el mismo problema en ventas desde el 02/09) para fusionar el historial de dos leads
+        bajo el mismo Client. Sin corroboracion, se trata como un cliente nuevo -- preferible
+        duplicar (se arregla despues con un merge manual) a mezclar el historial de dos
+        personas reales."""
         email_clean = str(email).strip().lower() if email and '@' in str(email) else None
         ig_clean = str(instagram).strip().replace('@', '').lower() if instagram and str(instagram).lower() not in ('n/a', 'none', '') else None
         phone_clean = str(phone).strip() if phone and str(phone).lower() not in ('n/a', 'none', '') else None
-        
+
         client = None
-        
-        # 1. Buscar por email
+
+        # 1. Buscar por email (señal fuerte: confiable por sí sola)
         if email_clean:
             client = Client.query.filter_by(email=email_clean).first()
-            
-        # 2. Buscar por instagram normalizado
-        if not client and ig_clean:
-            client = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
-            
-        # 3. Buscar por teléfono (últimos 8 dígitos)
+
+        # 2. Buscar por teléfono (señal fuerte: confiable por sí sola). Va antes que Instagram
+        # a propósito -- ver docstring.
         if not client and phone_clean and len(phone_clean) >= 8:
             client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
-            
+
+        # 3. Buscar por instagram normalizado (señal débil: exige corroboración de nombre)
+        if not client and ig_clean:
+            candidate = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
+            if candidate:
+                from app.services.sales_consistency_service import SalesConsistencyService
+                if SalesConsistencyService._names_corroborate(nombre, candidate.full_name):
+                    client = candidate
+
         grupo_clean = str(grupo).strip() if grupo and str(grupo).strip() else None
 
         # 4. Crear si no existe
