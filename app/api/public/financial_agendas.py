@@ -578,6 +578,12 @@ def get_financial_agendas():
     closer_users = User.query.filter_by(role='closer', is_active=True).all()
     closer_usernames = [u.username for u in closer_users]
     unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
+    # Closers activos únicamente, sin mezclar con nombres históricos sueltos en
+    # agenda.closer (texto libre: closers renombrados, dados de baja, etc.). Es lo
+    # que debe verse en los selectores de REASIGNACIÓN (columna Closer y modal de
+    # edición) para no volver a asignar una agenda a alguien que ya no está activo
+    # y que por lo tanto no la vería en su espacio de trabajo.
+    active_closers = sorted(closer_usernames)
     
     triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
         FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
@@ -638,6 +644,7 @@ def get_financial_agendas():
             "by_triage_state": {},
             "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada', '2TH Call', 'No Lead', 'Follow Up'],
             "unique_closers": unique_closers,
+            "active_closers": active_closers,
             "unique_sources": unique_sources,
             "unique_triage": unique_triage,
             "page": page,
