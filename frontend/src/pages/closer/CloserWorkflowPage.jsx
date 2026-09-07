@@ -26,7 +26,6 @@ import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
-import NextAgendaChrono from '../../components/closer/NextAgendaChrono';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -3437,8 +3436,6 @@ const CloserWorkflowPage = () => {
                             <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Quiero procrastinar</span>
                         </button>
                     )}
-
-                    <NextAgendaChrono refreshKey={agendas.length + counts.calls + counts.confirmations} />
 
                     <div className="who-v6">
                         <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
