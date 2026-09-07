@@ -2,7 +2,7 @@ import React from 'react';
 import useNow from '../../hooks/useNow';
 import { formatCountdown } from '../../utils/datetime';
 
-// Cuenta regresiva viva hacia la hora de una agenda ("En 42:17", "Ahora mismo", "Hace 3 h").
+// Cuenta regresiva viva hacia la hora de una agenda ("En 42:17", "Justo ahora", "Hace 3 horas y 15 minutos").
 //
 // Es un componente y no una función suelta a propósito: el reloj de un segundo vive ACÁ, en una
 // hoja del árbol. Si el tick viviera en `CloserWorkflowPage` (5.000 líneas), cada segundo se
