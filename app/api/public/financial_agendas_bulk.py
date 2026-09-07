@@ -177,7 +177,7 @@ def bulk_update_financial_agendas():
 @admin_required
 def bulk_update_options():
     """Catálogo de valores válidos para el panel de edición masiva."""
-    closers = [u.username for u in User.query.filter_by(role='closer').order_by(User.username).all()]
+    closers = [u.username for u in User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()]
     triage = [u.username for u in User.query.filter_by(role='triage').order_by(User.username).all()]
     return jsonify({
         "fields": CAMPOS_MASIVOS,

@@ -510,6 +510,11 @@ const FinancialAgendasPage = () => {
 
     const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
+    // Solo closers activos (role='closer', is_active=True): son las únicas opciones
+    // válidas al REASIGNAR el closer de una agenda (columna de la tabla y modal de
+    // edición). `uniqueClosers` sigue usándose para el filtro de arriba, que sí debe
+    // incluir nombres históricos para poder filtrar agendas viejas.
+    const [activeClosers, setActiveClosers] = useState([]);
     const [uniqueSources, setUniqueSources] = useState([]);
     const [uniqueTriage, setUniqueTriage] = useState([]);
     const [isSummaryMinimized, setIsSummaryMinimized] = useState(true);
@@ -891,6 +896,7 @@ const FinancialAgendasPage = () => {
 
                 setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
+                setActiveClosers(resData.active_closers || []);
                 setUniqueSources(resData.unique_sources || []);
                 setUniqueTriage(resData.unique_triage || []);
             } else {
@@ -1466,7 +1472,10 @@ const FinancialAgendasPage = () => {
                                                     `}
                                                 >
                                                     <option value="Sin asignar" className="bg-slate-900 text-slate-500 font-semibold">Sin Asignar</option>
-                                                    {uniqueClosers.map(cl => (
+                                                    {agenda.closer && agenda.closer !== 'Sin asignar' && !activeClosers.includes(agenda.closer) && (
+                                                        <option value={agenda.closer} className="bg-slate-900 text-amber-500 font-semibold">{agenda.closer} (inactivo)</option>
+                                                    )}
+                                                    {activeClosers.map(cl => (
                                                         <option key={cl} value={cl} className="bg-slate-900 text-white font-semibold">{cl}</option>
                                                     ))}
                                                 </select>
@@ -1684,7 +1693,10 @@ const FinancialAgendasPage = () => {
                                             required
                                         >
                                             <option value="Sin asignar" className="bg-slate-900 text-slate-500">Sin Asignar</option>
-                                            {uniqueClosers.map(cl => (
+                                            {editForm.closer && editForm.closer !== 'Sin asignar' && !activeClosers.includes(editForm.closer) && (
+                                                <option value={editForm.closer} className="bg-slate-900 text-amber-500">{editForm.closer} (inactivo)</option>
+                                            )}
+                                            {activeClosers.map(cl => (
                                                 <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
                                             ))}
                                         </select>
