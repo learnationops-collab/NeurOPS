@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import flash, redirect, url_for, request, jsonify
 from flask_login import current_user
+import os
+import hmac
 import traceback
 
 def role_required(role):
@@ -102,7 +104,29 @@ def operator_required(f):
             return f(*args, **kwargs)
         except Exception as e:
             return jsonify({
-                "message": f"Server Error in operator check: {str(e)}", 
+                "message": f"Server Error in operator check: {str(e)}",
                 "trace": traceback.format_exc()
             }), 500
+    return decorated_function
+
+def require_academy_token(f):
+    """Autenticacion para la Academia (academy.thelearnation.com) consultando NeurOPS -
+    direccion inversa al ACADEMY_API_TOKEN que usa LearnationService. Valida
+    'Authorization: Bearer <token>' contra ACADEMY_INBOUND_API_TOKEN (env var, no hay
+    cuenta de usuario detras). Ver docs/academy_consulta_ventas.md."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        expected_token = os.environ.get('ACADEMY_INBOUND_API_TOKEN')
+        if not expected_token:
+            return jsonify({"error": "Integración no configurada (falta ACADEMY_INBOUND_API_TOKEN)"}), 500
+
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"error": "Falta el header Authorization: Bearer <token>"}), 401
+
+        provided_token = auth_header[len('Bearer '):].strip()
+        if not hmac.compare_digest(provided_token, expected_token):
+            return jsonify({"error": "Token inválido"}), 401
+
+        return f(*args, **kwargs)
     return decorated_function

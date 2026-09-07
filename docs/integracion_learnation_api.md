@@ -136,7 +136,7 @@ Por pedido explícito, el disparador principal es el rol `closer` (ROLE_CLOSER, 
 
 ## 4. API pública de NeurOPS para Academia (pagos y formulario)
 
-> **Estado**: Diseño — pendiente de implementar (no incluido en la Fase 1 de [§5](#5-fase-1-vinculación-de-productos-auto-login-y-vencimiento-automático)).
+> **Estado**: Implementado (2026-09-07). Documentación para el desarrollador de la Academia en [docs/academy_consulta_ventas.md](academy_consulta_ventas.md) — es ese archivo el que hay que compartirle, no este.
 > **Dirección**: inversa a las secciones 2-3 — acá es la **Academia la que consulta a NeurOPS**, no al revés.
 > **Objetivo**: que el desarrollador de la Academia pueda, dado el email de un alumno, consultar (a) su historial de pagos y (b) sus respuestas al formulario de calificación/triage, sin acceso directo a la base de datos de NeurOPS.
 
@@ -145,14 +145,14 @@ Por pedido explícito, el disparador principal es el rol `closer` (ROLE_CLOSER, 
 - **Pagos**: la fuente real hoy es [`FinancialSale`](../app/models/financial.py) (tabla `financial_sales`) — cada fila es un pago individual (seña/completo/parcial/cuota/renovación/upsell) sincronizado desde una Hoja de Cálculo vía Apps Script hacia `POST /api/public/financial-sales` ([app/api/public/financial_sales.py:121](../app/api/public/financial_sales.py)). *No* es el modelo `Enrollment`/`Payment` (legado, sin datos recientes — ver nota en [`InstallmentPlan`](../app/models/installment.py)). El cruce con el `Client` es por email/instagram normalizados.
 - **Respuestas de formulario**: [`SurveyAnswer`](../app/models/booking.py) (tabla `survey_answers`) enlazada a [`SurveyQuestion`](../app/models/booking.py) — las respuestas de calificación/triage que el prospecto llena antes o durante el proceso de venta, ligadas a `client_id`.
 
-### 4.2 Autenticación (a construir — hoy no existe)
+### 4.2 Autenticación (implementada)
 
-Ningún endpoint bajo `app/api/public/*` valida token hoy — están abiertos por oscuridad de URL, pensados para consumo interno (n8n, Apps Script) en una red donde no importaba. Exponer pagos y respuestas de formulario a un tercero externo **sí necesita autenticación real**, así que esto NO debe vivir en `app/api/public/*` tal cual. Propuesta: mismo patrón Bearer que usa la propia Academia (§2), pero en la dirección inversa —
-- Nuevo blueprint `app/api/external/academy.py`, montado en un prefijo separado (ej. `/api/external/academy`) para dejar clarísimo en logs y en el propio código que es tráfico de un tercero.
-- Token propio de NeurOPS para la Academia, generado acá (no en la Academia) y guardado igual que el resto de credenciales de integraciones — fila `Integration` (`key='academy_inbound'`, `payload_config.api_token`) o variable de entorno (`ACADEMY_API_TOKEN`, patrón ya usado por [`WhatchimpService`](../app/services/whatchimp_service.py)) — a decidir según si se necesita rotar sin redeploy.
-- Verificación con un decorador nuevo (`@require_academy_token`, mismo espíritu que `role_required` pero validando el header `Authorization: Bearer` contra el token guardado, no una sesión de `flask_login`).
+Ningún endpoint bajo `app/api/public/*` valida token — están abiertos por oscuridad de URL, pensados para consumo interno (n8n, Apps Script) en una red donde no importaba. Exponer pagos y respuestas de formulario a un tercero externo sí necesitaba autenticación real, así que esto vive aparte:
+- Blueprint nuevo [`app/api/external/academy.py`](../app/api/external/academy.py), montado en `/api/external/academy` ([app/__init__.py](../app/__init__.py) — buscar `external_academy_api_bp`), exento de CSRF (se autentica con Bearer token, no con sesión de `flask_login`).
+- Token propio de NeurOPS para la Academia, vía variable de entorno `ACADEMY_INBOUND_API_TOKEN` (mismo patrón que [`WhatchimpService`](../app/services/whatchimp_service.py) y que `ACADEMY_API_TOKEN` de la sección 3.1, pero en dirección inversa — no confundir los dos). Rotarlo implica cambiar la variable en Railway y redeployar.
+- Verificación con el decorador [`require_academy_token`](../app/decorators.py) — valida `Authorization: Bearer <token>` contra `ACADEMY_INBOUND_API_TOKEN` con `hmac.compare_digest` (comparación a tiempo constante).
 
-### 4.3 Endpoints propuestos
+### 4.3 Endpoints implementados
 
 **`GET /api/external/academy/students/<email>`** — ficha consolidada (recomendado, un solo request):
 ```json
@@ -160,7 +160,7 @@ Ningún endpoint bajo `app/api/public/*` valida token hoy — están abiertos po
   "success": true,
   "client": { "id": 89, "full_name": "Martín Rodríguez", "email": "...", "phone": "..." },
   "payments": [
-    { "fecha": "2026-08-01T00:00:00Z", "monto": 500.0, "tipo_pago": "AL - Completo", "metodo_pago": "Stripe", "estado": "Completada" }
+    { "fecha": "2026-08-01T00:00:00", "monto": 500.0, "tipo_pago": "AL - Completo", "metodo_pago": "Stripe", "estado": "Completada" }
   ],
   "survey_answers": [
     { "question": "¿Cuál es tu especialidad?", "answer": "Cardiología" }
@@ -168,9 +168,12 @@ Ningún endpoint bajo `app/api/public/*` valida token hoy — están abiertos po
 }
 ```
 - `404` si el email no corresponde a ningún `Client`.
+- El cruce de pagos es por `FinancialSale.mail_cliente` (no por `FinancialSale.client_id`, que hoy nunca se completa al recibir el webhook de la Hoja de Cálculo — ver [app/api/public/financial_sales.py](../app/api/public/financial_sales.py)) — mismo patrón de matching por email que ya usa [`new_clients.py`](../app/api/public/new_clients.py).
 - Pensado como espejo funcional de `GET /users/{id}/summary` que la propia Academia ya expone (§2.6) — misma idea, dirección opuesta.
 
-**`GET /api/external/academy/students/<email>/payments`** y **`GET /api/external/academy/students/<email>/survey`** — variantes separadas, por si la Academia prefiere pedir cada cosa por separado en vez de la ficha completa.
+**`GET /api/external/academy/students/<email>/payments`** y **`GET /api/external/academy/students/<email>/survey`** — variantes separadas ya implementadas, por si la Academia prefiere pedir cada cosa por separado en vez de la ficha completa.
+
+Documentación completa para compartir con el desarrollador de la Academia: [docs/academy_consulta_ventas.md](academy_consulta_ventas.md) (no incluye el valor del token — se comparte aparte, por un canal seguro).
 
 ### 4.4 Privacidad — qué NO exponer
 `FinancialSale` y `Client` tienen columnas internas de operación (comisiones, notas de triage, objeciones, observaciones del closer) que no le competen a la Academia. El `to_dict()` de esta API debe ser una lista blanca explícita de campos (fecha, monto, tipo de pago, método, estado) — nunca un `to_dict()` genérico reusado de otra pantalla interna, para no filtrar de más por accidente el día que alguien le agregue un campo nuevo a `Client` o `FinancialSale`.
