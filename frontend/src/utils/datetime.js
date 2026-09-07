@@ -74,9 +74,13 @@ export function countdownParts(isoStr, nowMs) {
     };
 }
 
-// Ventana en la que la cita se considera "ocurriendo": ni el closer ni el lead miran el reloj
-// al segundo, así que ±5 min alrededor de la hora agendada se muestra como "Ahora mismo".
-const VENTANA_AHORA_SEG = 5 * 60;
+// Ventana en la que la cita se considera "ocurriendo". Asimétrica a propósito: antes de que
+// arranque, ±5 min alrededor de la hora agendada alcanza (nadie mira el reloj al segundo). Pero
+// una vez que arrancó, se mantiene "Justo ahora" durante 1 hora completa — es la señal visual
+// (verde, pulsante) de que el closer está EN la llamada; cortarla a los 5 min hacía que pasara a
+// "Hace X minutos" mientras la llamada seguía en curso, lo que leía como que ya había terminado.
+const VENTANA_AHORA_ANTES_SEG = 5 * 60;
+const VENTANA_AHORA_DESPUES_SEG = 60 * 60;
 
 // `withSeconds` enciende el modo cronómetro (mm:ss / h:mm:ss). Solo aplica al tiempo que FALTA
 // y por debajo de un día: para algo ya pasado los segundos no aportan nada, y "Hace 6:00" se
@@ -84,16 +88,23 @@ const VENTANA_AHORA_SEG = 5 * 60;
 export function formatCountdown(isoStr, nowMs, { withSeconds = false } = {}) {
     const p = countdownParts(isoStr, nowMs);
     if (!p) return null;
-    if (p.totalSec <= VENTANA_AHORA_SEG) return { ...p, kind: 'now', label: 'Ahora mismo' };
+
+    const ventanaAhora = p.isPast ? VENTANA_AHORA_DESPUES_SEG : VENTANA_AHORA_ANTES_SEG;
+    if (p.totalSec <= ventanaAhora) return { ...p, kind: 'now', label: 'Justo ahora' };
 
     const cronometro = withSeconds && !p.isPast;
     let amount;
     if (p.days >= 1) {
         amount = `${p.days} día${p.days !== 1 ? 's' : ''}${p.hours > 0 ? ` ${p.hours} h` : ''}`;
     } else if (p.hours >= 1) {
-        amount = cronometro
-            ? `${p.hours}:${pad2(p.minutes)}:${pad2(p.seconds)}`
-            : `${p.hours} h${p.minutes > 0 ? ` ${p.minutes} min` : ''}`;
+        // Pasado el margen de "Justo ahora" (más de 1 h desde que arrancó), "horas y minutos"
+        // explícito en vez de "2 h 15 min": pedido puntual para que se lea de un vistazo cuánto
+        // lleva el closer en la llamada, sin tener que interpretar la abreviatura.
+        amount = p.isPast
+            ? `${p.hours} hora${p.hours !== 1 ? 's' : ''}${p.minutes > 0 ? ` y ${p.minutes} minuto${p.minutes !== 1 ? 's' : ''}` : ''}`
+            : cronometro
+                ? `${p.hours}:${pad2(p.minutes)}:${pad2(p.seconds)}`
+                : `${p.hours} h${p.minutes > 0 ? ` ${p.minutes} min` : ''}`;
     } else {
         amount = cronometro ? `${p.minutes}:${pad2(p.seconds)}` : `${p.minutes} min`;
     }
