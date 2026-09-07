@@ -175,6 +175,17 @@ Ningún endpoint bajo `app/api/public/*` valida token — están abiertos por os
 
 Documentación completa para compartir con el desarrollador de la Academia: [docs/academy_consulta_ventas.md](academy_consulta_ventas.md) (no incluye el valor del token — se comparte aparte, por un canal seguro).
 
+### 4.3.1 Extensión (2026-09-07): masivo, búsqueda flexible y edición
+
+A pedido del desarrollador de la Academia (necesitaba cruzar manualmente su base contra la de NeurOPS mientras no tenía un id propio de referencia — ya agregó un campo `work_id` en su lado para dejar de necesitar esto a futuro), se agregaron 11 endpoints más sobre los mismos 3 recursos, siguiendo el mismo blueprint y decorador:
+
+- **`GET /clients`**, **`GET /sales`**, **`GET /forms`** — volcado paginado (`page`/`limit`, máx. 500) de `Client`, `FinancialSale` y `SurveyAnswer` completos.
+- **`GET /clients/<identificador>`**, **`GET /sales/<identificador>`**, **`GET /forms/<identificador>`** — resuelven el identificador como id numérico, email exacto, o nombre parcial (`LIKE`, máx. 50 resultados), en ese orden.
+- **`PATCH /clients/<id>`** — corrige `full_name`/`email`/`phone`/`instagram` del `Client` maestro. Requiere id numérico (no acepta email/nombre, para no editar por un match difuso). Chequea unicidad de email (`409` si ya existe).
+- **`PATCH /sales/<id>`** — corrige `nombre_cliente`/`mail_cliente`/`telefono`/`instagram` de una venta puntual (no toca el `Client`). Si la venta tiene `marca_temporal`, la corrección se propaga a la Hoja de Cálculo vía `SheetsService.update_in_sheets` — mismo mecanismo que ya usa `update_financial_sale` en [app/api/public/financial_sales.py:250](../app/api/public/financial_sales.py) — para que el próximo resync automático no la revierta.
+
+No hay `PATCH` para `SurveyAnswer` (no tiene sentido corregir la respuesta que dio un alumno). Todo el detalle de request/respuesta está en [docs/academy_consulta_ventas.md](academy_consulta_ventas.md).
+
 ### 4.4 Privacidad — qué NO exponer
 `FinancialSale` y `Client` tienen columnas internas de operación (comisiones, notas de triage, objeciones, observaciones del closer) que no le competen a la Academia. El `to_dict()` de esta API debe ser una lista blanca explícita de campos (fecha, monto, tipo de pago, método, estado) — nunca un `to_dict()` genérico reusado de otra pantalla interna, para no filtrar de más por accidente el día que alguien le agregue un campo nuevo a `Client` o `FinancialSale`.
 
