@@ -69,10 +69,9 @@ def logout():
 def get_me():
     if not current_user.is_authenticated:
         return jsonify({"message": "Not authenticated"}), 401
-    
-    from flask import session
-    is_impersonating = session.get('is_impersonating', False)
-    original_user_role = session.get('original_user_role', None)
+
+    from app.models import get_impersonation_state
+    is_impersonating, _, original_user_role = get_impersonation_state()
 
     return jsonify({
         "user": {
@@ -90,19 +89,22 @@ def get_me():
 @login_required
 def impersonate():
     from flask import session
-    from app.models import ROLE_OPERATOR, ROLE_ADMIN
-    
+    from app.models import ROLE_OPERATOR, ROLE_ADMIN, get_impersonation_state
+
     # Check if user is allowed to impersonate
     # Must be ADMIN or OPERATOR OR already impersonating (to switch between users directly)
-    original_role = session.get('original_user_role')
-    is_impersonating = session.get('is_impersonating')
-    
+    is_impersonating, original_id, original_role = get_impersonation_state()
+
     if current_user.role not in [ROLE_ADMIN, ROLE_OPERATOR] and not is_impersonating:
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
     target_user_id = data.get('user_id')
-    
+    # Pestaña aislada (clic derecho -> "Simular en pestaña nueva"): no toca la cookie de
+    # sesión compartida por todo el navegador, solo emite un JWT propio de esa pestaña -
+    # ver TokenPriorityLoginManager en app/__init__.py.
+    isolated = bool(data.get('isolated'))
+
     if not target_user_id:
         return jsonify({"message": "User ID required"}), 400
 
@@ -110,17 +112,24 @@ def impersonate():
     if not target_user:
         return jsonify({"message": "User not found"}), 404
 
-    # Store original session data ONLY if not already impersonating
     if not is_impersonating:
-        session['original_user_id'] = current_user.id
-        session['original_user_role'] = current_user.role
-        session['is_impersonating'] = True
+        original_id, original_role = current_user.id, current_user.role
 
-    # Log in as the target user without requiring password
-    login_user(target_user)
-    
-    # Generate token for the target user (Sync for frontend)
-    token = target_user.get_auth_token()
+    if not isolated:
+        # Flujo clásico: la misma pestaña se convierte en el usuario simulado vía cookie.
+        if not session.get('is_impersonating'):
+            session['original_user_id'] = current_user.id
+            session['original_user_role'] = current_user.role
+            session['is_impersonating'] = True
+        login_user(target_user)
+
+    # El estado de suplantación viaja en las claims del propio JWT (no en session) para que
+    # cada pestaña con su propio token mantenga su propia identidad simulada.
+    token = target_user.get_auth_token(
+        is_impersonating=True,
+        original_user_id=original_id,
+        original_user_role=original_role,
+    )
 
     return jsonify({
         "message": f"Impersonating {target_user.username}",
@@ -131,7 +140,7 @@ def impersonate():
             "role": target_user.role,
             "email": target_user.email,
             "is_impersonating": True,
-            "original_user_role": session.get('original_user_role'),
+            "original_user_role": original_role,
             "can_view_finance": getattr(target_user, 'can_view_finance', False)
         }
     }), 200
@@ -140,32 +149,40 @@ def impersonate():
 @login_required
 def revert_impersonation():
     from flask import session
-    
-    if not session.get('is_impersonating'):
+    from app.models import get_impersonation_state
+
+    is_impersonating, original_user_id, _ = get_impersonation_state()
+
+    if not is_impersonating:
         return jsonify({"message": "Not impersonating"}), 400
-        
-    original_user_id = session.get('original_user_id')
+
     if not original_user_id:
          # Fallback if session corrupted, logout
          logout_user()
+         session.pop('original_user_id', None)
+         session.pop('original_user_role', None)
+         session.pop('is_impersonating', None)
          return jsonify({"message": "Session lost, logged out"}), 200
 
     original_user = User.query.get(original_user_id)
     if not original_user:
         logout_user()
+        session.pop('original_user_id', None)
+        session.pop('original_user_role', None)
+        session.pop('is_impersonating', None)
         return jsonify({"message": "Original user not found, logged out"}), 200
-        
-    # Restore original session
-    login_user(original_user)
-    
-    # Generate token for the original user
+
+    if session.get('is_impersonating'):
+        # Solo restaurar/limpiar la sesión de cookie si el flujo clásico la usó - una pestaña
+        # aislada (JWT en sessionStorage) nunca la tocó y revertir ahí no debe empezar a hacerlo.
+        login_user(original_user)
+        session.pop('original_user_id', None)
+        session.pop('original_user_role', None)
+        session.pop('is_impersonating', None)
+
+    # Token limpio (sin claims de suplantación) para la identidad original.
     token = original_user.get_auth_token()
-    
-    # Clear impersonation flags
-    session.pop('original_user_id', None)
-    session.pop('original_user_role', None)
-    session.pop('is_impersonating', None)
-    
+
     return jsonify({
         "message": "Reverted to original session",
         "token": token,

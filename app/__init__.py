@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from sqlalchemy import MetaData
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -15,10 +15,32 @@ naming_convention = {
     "pk": "pk_%(table_name)s"
 }
 
+
+class TokenPriorityLoginManager(LoginManager):
+    """
+    Flask-Login por defecto resuelve current_user primero contra la cookie de sesión, y solo
+    cae al Authorization Bearer (request_loader) si no hay cookie. Esa cookie es del NAVEGADOR
+    entero (todas las pestañas la comparten), no de una pestaña puntual, así que con esa
+    prioridad por defecto es imposible simular usuarios distintos en pestañas distintas del
+    mismo navegador: la última simulación pisa la cookie y con ella todas las demás pestañas.
+
+    Se invierte la prioridad: si el request trae un Bearer/token propio y resuelve a un
+    usuario válido, ese token manda (así cada pestaña puede llevar su propio JWT en
+    sessionStorage, aislado de las demás). Si no hay token, se cae al comportamiento normal
+    de Flask-Login (cookie de sesión) sin cambios.
+    """
+    def _load_user(self):
+        if self._request_callback is not None:
+            user = self._load_user_from_request(request)
+            if user is not None:
+                return self._update_request_context_with_user(user)
+        return super()._load_user()
+
+
 # Initialize extensions
 db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 migrate = Migrate()
-login = LoginManager()
+login = TokenPriorityLoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Por favor inicia sesión para acceder a esta página.'
 login.session_protection = 'strong'

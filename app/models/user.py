@@ -1,7 +1,7 @@
 from datetime import datetime
 import time
 import jwt
-from flask import current_app
+from flask import current_app, g
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login
@@ -27,17 +27,48 @@ def load_user_from_request(request):
         token = auth_header.replace('Bearer ', '', 1)
     else:
         token = request.args.get('token')
-        
+
     if token:
         try:
-            user_id = User.verify_auth_token(token)
-            if user_id:
-                user = User.query.get(user_id)
+            payload = User.decode_auth_token(token)
+            if payload:
+                user = User.query.get(payload.get('id'))
+                if user:
+                    # Guardado en g (vida = un solo request) para que get_impersonation_state()
+                    # pueda leer is_impersonating/original_user_* de ESTE token en vez de la
+                    # sesión de cookie compartida por todo el navegador - ver TokenPriorityLoginManager
+                    # en app/__init__.py para por qué este token manda sobre esa cookie.
+                    g.token_claims = payload
                 return user
         except Exception as e:
             print(f"DEBUG AUTH: Error in load_user_from_request: {e}")
             return None
     return None
+
+
+def get_impersonation_state():
+    """
+    (is_impersonating, original_user_id, original_user_role) del usuario actual.
+
+    Si el request se autenticó con un JWT propio (pestaña abierta vía "Simular en pestaña
+    nueva"), el estado sale de las claims de ESE token, no de la sesión de cookie compartida
+    por todas las pestañas del navegador - así cada pestaña simulada mantiene su propia
+    identidad sin pisar a las demás. Si no hay token (flujo clásico de cookie), cae a
+    flask.session como siempre.
+    """
+    claims = getattr(g, 'token_claims', None)
+    if claims is not None:
+        return (
+            bool(claims.get('is_impersonating')),
+            claims.get('original_user_id'),
+            claims.get('original_user_role'),
+        )
+    from flask import session
+    return (
+        bool(session.get('is_impersonating')),
+        session.get('original_user_id'),
+        session.get('original_user_role'),
+    )
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -52,25 +83,30 @@ class User(UserMixin, db.Model):
     can_view_finance = db.Column(db.Boolean, default=False, server_default="0")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def get_auth_token(self, expires_in=86400):
+    def get_auth_token(self, expires_in=86400, **extra_claims):
+        payload = {'id': self.id, 'exp': time.time() + expires_in}
+        payload.update(extra_claims)
         return jwt.encode(
-            {'id': self.id, 'exp': time.time() + expires_in},
+            payload,
             current_app.config['SECRET_KEY'],
             algorithm='HS256'
         )
 
     @staticmethod
-    def verify_auth_token(token):
+    def decode_auth_token(token):
         try:
-            data = jwt.decode(
+            return jwt.decode(
                 token,
                 current_app.config['SECRET_KEY'],
                 algorithms=['HS256']
             )
-            return data['id']
-        except Exception as e:
-            # print(f"DEBUG AUTH: Token verification failed: {e}")
+        except Exception:
             return None
+
+    @staticmethod
+    def verify_auth_token(token):
+        payload = User.decode_auth_token(token)
+        return payload.get('id') if payload else None
 
     # Relationships are now defined in Appointment model for better singular access
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
