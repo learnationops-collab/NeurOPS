@@ -24,6 +24,18 @@ import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import { saveSession } from '../../../utils/sessionStore';
+
+const roleLandingPath = (role) => {
+    if (role === 'admin') return '/admin/ventas';
+    if (role === 'operator') return '/ops/dashboard';
+    if (role === 'setter') return '/setter/deck?step=cualificacion';
+    if (role === 'triage') return '/triage/deck?step=confirmar';
+    if (role === 'closer') return '/closer/deck?step=confirmations';
+    if (role === 'director_comercial') return '/admin/ventas';
+    if (role === 'director_marketing') return '/admin/workshops';
+    return '/publico';
+};
 
 const TeamManagementPage = () => {
     const [users, setUsers] = useState([]);
@@ -121,22 +133,45 @@ const TeamManagementPage = () => {
             const res = await api.post('/auth/impersonate', { user_id: targetUser.id });
             const { user: impersonatedUser, token } = res.data;
 
-            localStorage.setItem('user', JSON.stringify(impersonatedUser));
-            if (token) localStorage.setItem('auth_token', token);
-
-            let path = '/publico';
-            if (impersonatedUser.role === 'admin') path = '/admin/ventas';
-            else if (impersonatedUser.role === 'operator') path = '/ops/dashboard';
-            else if (impersonatedUser.role === 'setter') path = '/setter/deck?step=cualificacion';
-            else if (impersonatedUser.role === 'triage') path = '/triage/deck?step=confirmar';
-            else if (impersonatedUser.role === 'closer') path = '/closer/deck?step=confirmations';
-            else if (impersonatedUser.role === 'director_comercial') path = '/admin/ventas';
-            else if (impersonatedUser.role === 'director_marketing') path = '/admin/workshops';
-
-            window.location.href = path;
+            saveSession(impersonatedUser, token);
+            window.location.href = roleLandingPath(impersonatedUser.role);
         } catch (err) {
             alert(err.response?.data?.message || 'Error al iniciar simulación');
             setImpersonatingId(null);
+        }
+    };
+
+    // Clic derecho sobre "Simular": abre al usuario simulado en una pestaña NUEVA, aislada
+    // de la pestaña actual (y de cualquier otra simulación ya abierta) - así se puede tener
+    // varios usuarios simulados a la vez en el mismo navegador. window.open() se llama
+    // síncrono, ANTES del await, porque los navegadores bloquean como popup cualquier
+    // window.open() disparado después de una espera asíncrona; se navega esa pestaña ya
+    // abierta recién cuando llega la respuesta.
+    const handleImpersonateNewTab = async (e, targetUser) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!targetUser.is_active) return;
+
+        const newTab = window.open('', '_blank');
+        try {
+            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true });
+            const { user: impersonatedUser, token } = res.data;
+
+            const params = new URLSearchParams({
+                token,
+                u: JSON.stringify(impersonatedUser),
+                next: roleLandingPath(impersonatedUser.role),
+            });
+            const url = `/session-entry?${params.toString()}`;
+
+            if (newTab) {
+                newTab.location.href = url;
+            } else {
+                alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
+            }
+        } catch (err) {
+            if (newTab) newTab.close();
+            alert(err.response?.data?.message || 'Error al iniciar simulación');
         }
     };
 
@@ -309,7 +344,9 @@ const TeamManagementPage = () => {
 
                                                 <button
                                                     onClick={(e) => handleImpersonate(e, u)}
+                                                    onContextMenu={(e) => handleImpersonateNewTab(e, u)}
                                                     disabled={!u.is_active || impersonatingId === u.id}
+                                                    title="Clic: simular en esta pestaña. Clic derecho: abrir en pestaña nueva (para simular varios usuarios a la vez)."
                                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${u.is_active
                                                         ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black shadow-lg shadow-amber-500/5'
                                                         : 'bg-slate-800 text-slate-600 cursor-not-allowed'
