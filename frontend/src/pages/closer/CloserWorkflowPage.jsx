@@ -1999,7 +1999,14 @@ const CloserWorkflowPage = () => {
                     confirm_status: 'por_confirmar',
                     result: 'Pendiente',
                     closer_notes: finalNotes,
-                    contact_result: sessionForm.result
+                    contact_result: sessionForm.result,
+                    // El seguimiento ya cumplió su propósito (el lead contestó y quedó una fecha
+                    // nueva agendada) - sin esto, el backend no tocaba seguimiento_realizado ni
+                    // fecha_seguimiento, así que la misma cita seguía matcheando la consulta de
+                    // "Asignados para hoy" y el seguimiento nunca desaparecía de la pestaña
+                    // aunque ya estuviera resuelto y reagendado.
+                    seguimiento_realizado: true,
+                    fecha_seguimiento: null
                 });
                 toast.success("Lead reagendado y enviado a confirmación");
                 setSelectedLead(null);
