@@ -2171,7 +2171,17 @@ def process_closer_card(appt_id):
     # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
     # (Por confirmar / Conversando / Confirmado), no se resolvió ni salió del mazo.
     confirm_only_keys = {'confirm_status', 'closer_notes', 'pre_call_reminder_at'}
-    if 'confirm_status' in data and set(data.keys()).issubset(confirm_only_keys):
+    # Bug real reportado en producción (08/sep/2026, Joaquín): reagendar una llamada devolviéndola
+    # explícitamente a "Pendiente" (ej. desde un seguimiento con "Contestó y agendó", una "2ª
+    # llamada" o un reagendado manual — los 3 mandan `result: 'Pendiente'` junto con otras claves
+    # como `seguimiento_realizado`/`closer_notes`, que no son subconjunto de `confirm_only_keys`)
+    # caía en el `else` de abajo y marcaba `closer_processed = True` sobre la MISMA fila cuyo
+    # `start_time` se acababa de mover a una fecha futura — la cita reagendada aparecía como "ya
+    # reportada" en el Kanban de Reportar de su fecha nueva, sin haberse reportado nunca ahí. El
+    # lead sigue vivo en el pipeline de la fecha nueva, así que no puede quedar procesada.
+    if 'result' in data and (data['result'] or '').strip().lower() == 'pendiente':
+        appt.closer_processed = False
+    elif 'confirm_status' in data and set(data.keys()).issubset(confirm_only_keys):
         pass
     else:
         appt.closer_processed = True
