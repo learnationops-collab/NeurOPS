@@ -2431,7 +2431,36 @@ class CloserService:
         }
         touched_today = Appointment.query.filter(Appointment.id.in_(touched_appt_ids)).all() if touched_appt_ids else []
 
-        conversando = confirmados = show_ups = reagendas = 0
+        # «Confirmado hoy» / «Show up reportado hoy»: a diferencia del resto de este resumen (que
+        # sí usa "tocada hoy + estado actual"), estos dos necesitan saber si el campo CAMBIÓ hoy,
+        # no solo si la cita se tocó hoy por cualquier motivo — resolver un seguimiento atrasado
+        # sobre una cita que YA estaba confirmada/show-up de antes no es "confirmar"/"reportar
+        # show up" hoy. Bug real encontrado en producción (08/sep/2026, Nerina): "Confirmaciones"
+        # y "Llamadas reportadas" de "Cerrar el día" mostraban 2 de 3 con una sola agenda del día
+        # y cero llamadas reportadas ese día (`/deck/counts` daba `calls_done: 0`), porque un
+        # seguimiento atrasado resuelto hoy sobre una cita ya confirmada/show-up de antes sumaba
+        # igual que una confirmación/reporte real de hoy. Se apoya en los eventos específicos
+        # 'confirmed'/'show_up_reported' de `process_closer_card`, que solo se escriben cuando
+        # `result`/`closer_result` realmente cambiaron de valor en ESE guardado.
+        confirmed_today_ids = {
+            row[0] for row in db.session.query(LeadEventLog.appointment_id).filter(
+                LeadEventLog.user_id == closer_id,
+                LeadEventLog.action_type == 'confirmed',
+                LeadEventLog.created_at >= start_utc,
+                LeadEventLog.created_at <= end_utc
+            ).distinct().all()
+        }
+        show_up_today_ids = {
+            row[0] for row in db.session.query(LeadEventLog.appointment_id).filter(
+                LeadEventLog.user_id == closer_id,
+                LeadEventLog.action_type == 'show_up_reported',
+                LeadEventLog.created_at >= start_utc,
+                LeadEventLog.created_at <= end_utc
+            ).distinct().all()
+        }
+        confirmed_today_appts = Appointment.query.filter(Appointment.id.in_(confirmed_today_ids)).all() if confirmed_today_ids else []
+
+        conversando = confirmados = reagendas = 0
         confirmados_hoy = confirmados_proximos = 0
         seguimientos_configurados = 0
         for a in touched_today:
@@ -2441,30 +2470,32 @@ class CloserService:
                 conversando += 1
             if result_lower == 'confirmado':
                 confirmados += 1
-                # Confirmar la llamada de hoy y confirmar una agenda de la semana que viene son
-                # dos trabajos distintos (pedido del usuario): el primero es el embudo del día,
-                # el segundo es pipeline hacia adelante. Se cuentan por separado según la fecha
-                # de la cita, no según cuándo se la tocó.
-                #
-                # BUG real encontrado y corregido (27/ago/2026): la rama de "próximas" solo
-                # cubría citas futuras (`start_time > end_utc`) y la de "hoy" solo citas del
-                # propio día (`start_time >= start_utc`) — una agenda ATRASADA (su llamada ya
-                # pasó, `start_time < start_utc`) no entraba en ninguna de las dos. Confirmar hoy
-                # una agenda vencida (ponerse al día con el backlog) es justo el tipo de trabajo
-                # que "Cerrar el día" tiene que reflejar, y antes desaparecía sin contar en
-                # ningún lado — coherente con el reporte del usuario de que el cierre del día
-                # "no se estaba actualizando". Ahora: futura → próximas: cualquier otra cosa
-                # (hoy o atrasada) → hoy, sin condición de piso.
-                if a.start_time and a.start_time > end_utc:
-                    confirmados_proximos += 1
-                else:
-                    confirmados_hoy += 1
-            if closer_result_lower == 'show up':
-                show_ups += 1
             if a.is_rescheduled or result_lower in ('reagendado', 'reagendada') or closer_result_lower in ('reagendado', 'reagendada'):
                 reagendas += 1
             if not a.seguimiento_realizado and a.fecha_seguimiento:
                 seguimientos_configurados += 1
+
+        show_ups = len(show_up_today_ids)
+
+        for a in confirmed_today_appts:
+            # Confirmar la llamada de hoy y confirmar una agenda de la semana que viene son
+            # dos trabajos distintos (pedido del usuario): el primero es el embudo del día,
+            # el segundo es pipeline hacia adelante. Se cuentan por separado según la fecha
+            # de la cita, no según cuándo se la tocó.
+            #
+            # BUG real encontrado y corregido (27/ago/2026): la rama de "próximas" solo
+            # cubría citas futuras (`start_time > end_utc`) y la de "hoy" solo citas del
+            # propio día (`start_time >= start_utc`) — una agenda ATRASADA (su llamada ya
+            # pasó, `start_time < start_utc`) no entraba en ninguna de las dos. Confirmar hoy
+            # una agenda vencida (ponerse al día con el backlog) es justo el tipo de trabajo
+            # que "Cerrar el día" tiene que reflejar, y antes desaparecía sin contar en
+            # ningún lado — coherente con el reporte del usuario de que el cierre del día
+            # "no se estaba actualizando". Ahora: futura → próximas: cualquier otra cosa
+            # (hoy o atrasada) → hoy, sin condición de piso.
+            if a.start_time and a.start_time > end_utc:
+                confirmados_proximos += 1
+            else:
+                confirmados_hoy += 1
 
         seguimientos_hechos = Appointment.query.filter(
             Appointment.closer_id == closer_id,

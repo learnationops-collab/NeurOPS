@@ -2088,6 +2088,13 @@ def process_closer_card(appt_id):
 
     data = request.get_json() or {}
 
+    # Valores previos de `result`/`closer_result`, para poder distinguir más abajo "este campo
+    # cambió de verdad en este guardado" de "esta carta se tocó por otro motivo (ej. un
+    # seguimiento) pero ya estaba en ese estado de antes" — ver el log específico cerca del
+    # final de esta función y CloserService.get_daily_activity_summary.
+    old_closer_result = appt.closer_result
+    old_result = appt.result
+
     # Actualizar campos de la agenda
     if 'keyword' in data:
         appt.keyword = data['keyword']
@@ -2174,7 +2181,24 @@ def process_closer_card(appt_id):
     if data.get('closer_notes'):
         description += f" Notas: \"{data['closer_notes']}\""
     BookingService.log_lead_event(appt.id, current_user.id, 'closer_notes', description)
-    
+
+    # Eventos específicos, ADEMÁS del genérico de arriba: `get_daily_activity_summary` ("Cerrar
+    # el día") contaba una cita como "confirmada hoy"/"show up reportado hoy" si se la tocaba por
+    # CUALQUIER motivo hoy (ej. resolver un seguimiento atrasado) y su estado actual ya era ese
+    # — no si ese estado se puso hoy. Bug real confirmado en producción (08/sep/2026, Nerina):
+    # `closer_result`/`result` no cambiaron en el guardado, pero igual sumaban a "Confirmaciones"
+    # y "Llamadas reportadas" del día. Estos dos logs solo se escriben cuando el campo relevante
+    # REALMENTE cambió de valor en este guardado, así el resumen del día puede distinguir "trabajo
+    # de hoy" de "trabajo de antes que hoy se volvió a tocar".
+    if 'result' in data and (old_closer_result or '').strip().lower() != (appt.closer_result or '').strip().lower() \
+            and (appt.closer_result or '').strip().lower() == 'show up':
+        BookingService.log_lead_event(appt.id, current_user.id, 'show_up_reported',
+                                       f"{current_user.username} reportó Show Up.")
+    if 'confirm_status' in data and (old_result or '').strip().lower() != (appt.result or '').strip().lower() \
+            and (appt.result or '').strip().lower() == 'confirmado':
+        BookingService.log_lead_event(appt.id, current_user.id, 'confirmed',
+                                       f"{current_user.username} confirmó la cita.")
+
     # Sincronizar de vuelta a FinancialAgenda
     try:
         BookingService.sync_appointment_to_financial_agenda(appt)
