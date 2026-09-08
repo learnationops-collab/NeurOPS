@@ -714,14 +714,30 @@ def update_appointment(id):
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
+    old_start_time = appt.start_time
     if 'start_time' in data:
         try:
             # Format usually comes as ISO from frontend
             appt.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
         except ValueError:
             return jsonify({"error": "Invalid date format"}), 400
-            
+
     db.session.commit()
+
+    # Este endpoint reemplaza start_time EN LA MISMA fila (no crea una agenda nueva) sin dejar
+    # ningún rastro de la fecha anterior en ningún otro lado — se detectó revisando un caso real
+    # donde, tras reagendar desde un seguimiento, no había forma de saber cuál había sido la
+    # fecha original. Se deja el registro acá, después del commit, para no bloquear el
+    # reagendado si el log llegara a fallar.
+    if 'start_time' in data and old_start_time != appt.start_time:
+        from app.services.booking_service import BookingService
+        old_str = old_start_time.strftime('%d/%m/%Y %H:%M') if old_start_time else 'sin fecha'
+        new_str = appt.start_time.strftime('%d/%m/%Y %H:%M')
+        BookingService.log_lead_event(
+            appt.id, current_user.id, 'reschedule',
+            f"{current_user.username} reagendó la cita: {old_str} → {new_str}."
+        )
+
     return jsonify({"message": "Agenda actualizada con éxito"}), 200
 
 @bp.route('/appointments/<int:id>/reassign', methods=['PATCH'])
