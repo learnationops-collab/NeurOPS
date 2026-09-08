@@ -3978,8 +3978,15 @@ const CloserWorkflowPage = () => {
                         real de cada pestaña, no un número inventado. */}
                     {(() => {
                         const cobrosPendientes = seguimientosHoyGrouped?.cerrada?.length || 0;
+                        // Confirmaciones: `counts.confirmations` ya es el total del pool (incluye las
+                        // ya resueltas que siguen visibles, ver el nav 01-05 más arriba) — sumarle
+                        // `done` encima las contaba dos veces. Bug real confirmado en producción
+                        // (08/sep/2026, Nerina): con 1 sola agenda del día mostraba "2 de 3" acá
+                        // mientras el nav de arriba, para el mismo pool, mostraba "1/1" correctamente.
+                        const confirmDoneKpi = dailyActivity?.confirmados_hoy || 0;
+                        const confirmPendingKpi = Math.max(0, counts.confirmations - confirmDoneKpi);
                         const kpis = [
-                            { label: 'Confirmaciones', done: dailyActivity?.confirmados_hoy || 0, pending: counts.confirmations, color: '#4E8BD8' },
+                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: confirmPendingKpi, color: '#4E8BD8' },
                             { label: 'Llamadas reportadas', done: dailyActivity?.show_ups || 0, pending: counts.calls, color: '#4E8BD8' },
                             { label: 'Seguimientos hechos', done: dailyActivity?.seguimientos_hechos || 0, pending: counts.seguimientos, color: '#2FBF8F' },
                             { label: 'Cobros resueltos', done: dailyActivity?.ventas_count || 0, pending: cobrosPendientes, color: '#FF3FA4' },

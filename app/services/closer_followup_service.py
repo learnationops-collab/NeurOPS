@@ -899,8 +899,16 @@ class CloserFollowUpService:
 
         `commission_rate`: mismo 10% que ya usa `CloserService.get_stats` como comisión estándar
         del closer sobre el cash cobrado (no existía como constante compartida) — se aplica sobre
-        cualquiera de las bases de arriba para llegar a "cuánto ganás vos", no "cuánto entra"."""
-        from app.services.closer_service import CloserService
+        cualquiera de las bases de arriba para llegar a "cuánto ganás vos", no "cuánto entra".
+
+        Fallback a nivel equipo (pedido del usuario, 08/sep/2026): un closer nuevo, o uno que
+        simplemente todavía no cerró ningún PIF/Split (o ninguna seña) en su propio historial,
+        tenía su promedio propio en 0 — y la fila de seguimiento mostraba "Podrías ganar $0",
+        que no cumple el propósito de la estimación ("sale cero, entonces no es la idea"). Si
+        cualquiera de los 3 promedios propios queda en 0, se completa con el promedio del mismo
+        tipo calculado sobre TODO el equipo (mismo filtro de estado, sin restringir por closer)
+        en vez de dejarlo en cero."""
+        from app.services.closer_service import CloserService, REAL_SALE_TIPOS
         from app.services.sheets_service import SheetsService
         from app.models import User, FinancialSale
 
@@ -929,6 +937,28 @@ class CloserFollowUpService:
 
         avg_seña = round(sum(seña_amounts) / len(seña_amounts), 2) if seña_amounts else 0.0
         avg_renewal_upsell = round(sum(ru_amounts) / len(ru_amounts), 2) if ru_amounts else 0.0
+
+        if ticket_promedio <= 0 or avg_seña <= 0 or avg_renewal_upsell <= 0:
+            team_ticket_amounts, team_seña_amounts, team_ru_amounts = [], [], []
+            team_sales = FinancialSale.query.filter(
+                or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+            ).all()
+            for s in team_sales:
+                _, tipo_simple = SheetsService.parse_tipo_pago(s.tipo_pago)
+                monto = float(s.monto or 0.0)
+                if tipo_simple in REAL_SALE_TIPOS:
+                    team_ticket_amounts.append(monto)
+                elif tipo_simple == 'seña':
+                    team_seña_amounts.append(monto)
+                elif tipo_simple in ('renovacion', 'upsell'):
+                    team_ru_amounts.append(monto)
+
+            if ticket_promedio <= 0 and team_ticket_amounts:
+                ticket_promedio = round(sum(team_ticket_amounts) / len(team_ticket_amounts), 2)
+            if avg_seña <= 0 and team_seña_amounts:
+                avg_seña = round(sum(team_seña_amounts) / len(team_seña_amounts), 2)
+            if avg_renewal_upsell <= 0 and team_ru_amounts:
+                avg_renewal_upsell = round(sum(team_ru_amounts) / len(team_ru_amounts), 2)
 
         return {
             'commission_rate': COMMISSION_RATE,
