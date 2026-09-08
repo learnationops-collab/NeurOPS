@@ -398,12 +398,14 @@ class BookingService:
 
     @staticmethod
     def log_lead_event(appt_id, user_id, action_type, description):
-        from app.models import LeadEventLog, User
-        from flask import has_request_context, session
-        
-        # Validar trazabilidad si se realiza bajo suplantación de identidad
-        if has_request_context() and session.get('is_impersonating'):
-            original_user_id = session.get('original_user_id')
+        from app.models import LeadEventLog, User, get_impersonation_state
+        from flask import has_request_context
+
+        # Validar trazabilidad si se realiza bajo suplantación de identidad. El estado puede
+        # venir de la cookie de sesión (flujo clásico) o del JWT propio de una pestaña aislada
+        # (clic derecho -> "Simular en pestaña nueva") - ver get_impersonation_state().
+        is_impersonating, original_user_id, _ = get_impersonation_state() if has_request_context() else (False, None, None)
+        if is_impersonating:
             original_user = db.session.get(User, original_user_id)
             target_user = db.session.get(User, user_id)
             

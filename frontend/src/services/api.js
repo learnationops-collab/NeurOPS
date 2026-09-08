@@ -47,8 +47,10 @@ const fetchCsrfToken = (forceRefresh = false) => {
 // Request interceptor to add JWT and CSRF tokens
 api.interceptors.request.use(
     async (config) => {
-        // 1. Inyectar token JWT si existe
-        const token = localStorage.getItem('auth_token');
+        // 1. Inyectar token JWT si existe. sessionStorage tiene prioridad: es donde vive el
+        // token de una pestaña de simulación aislada (clic derecho -> "Simular en pestaña
+        // nueva"), y no está compartido con las demás pestañas como sí lo está localStorage.
+        const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

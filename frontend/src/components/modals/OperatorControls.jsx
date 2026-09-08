@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { X, Power, Users, AlertTriangle, Loader2, ArrowLeft, Ghost } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
+import { saveSession } from '../../utils/sessionStore';
+
+const roleLandingPath = (role) => {
+    if (role === 'admin') return '/admin/ventas';
+    if (role === 'setter') return '/setter/deck?step=cualificacion';
+    if (role === 'triage') return '/triage/deck?step=confirmar';
+    if (role === 'closer') return '/closer/deck?step=confirmations';
+    if (role === 'operator') return '/ops/dashboard';
+    return '/login';
+};
 
 const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
@@ -56,27 +66,47 @@ const OperatorControls = ({ isOpen, onClose }) => {
             const res = await api.post('/auth/impersonate', { user_id: selectedUserId });
             const { user: targetUser, token } = res.data;
 
-            // Sincronizar estado local
-            localStorage.setItem('user', JSON.stringify(targetUser));
-            if (token) localStorage.setItem('auth_token', token);
+            // Sincronizar estado local (mismo store que ya esté usando esta pestaña)
+            saveSession(targetUser, token);
 
-            // Redirigir según el rol del usuario simulado
-            let redirectPath = '/login';
-            if (targetUser.role === 'admin') {
-                redirectPath = '/admin/ventas';
-            } else if (targetUser.role === 'setter') {
-                redirectPath = '/setter/deck?step=cualificacion';
-            } else if (targetUser.role === 'triage') {
-                redirectPath = '/triage/deck?step=confirmar';
-            } else if (targetUser.role === 'closer') {
-                redirectPath = '/closer/deck?step=confirmations';
-            } else if (targetUser.role === 'operator') {
-                redirectPath = '/ops/dashboard';
-            }
-
-            window.location.href = redirectPath;
+            window.location.href = roleLandingPath(targetUser.role);
         } catch (err) {
             alert(err.response?.data?.message || 'Error executing impersonation');
+            setLoading(false);
+        }
+    };
+
+    // Clic derecho sobre "Iniciar Simulación": abre al usuario elegido en una pestaña NUEVA,
+    // aislada de esta y de cualquier otra simulación ya abierta - para simular varios
+    // usuarios a la vez en el mismo navegador. window.open() se llama síncrono, antes del
+    // await, porque los navegadores bloquean como popup un window.open() disparado después
+    // de una espera asíncrona; se navega la pestaña ya abierta recién cuando llega la respuesta.
+    const handleImpersonateNewTab = async (e) => {
+        e.preventDefault();
+        if (!selectedUserId || loading) return;
+
+        const newTab = window.open('', '_blank');
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/impersonate', { user_id: selectedUserId, isolated: true });
+            const { user: targetUser, token } = res.data;
+
+            const params = new URLSearchParams({
+                token,
+                u: JSON.stringify(targetUser),
+                next: roleLandingPath(targetUser.role),
+            });
+            const url = `/session-entry?${params.toString()}`;
+
+            if (newTab) {
+                newTab.location.href = url;
+            } else {
+                alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
+            }
+        } catch (err) {
+            if (newTab) newTab.close();
+            alert(err.response?.data?.message || 'Error executing impersonation');
+        } finally {
             setLoading(false);
         }
     };
@@ -87,19 +117,10 @@ const OperatorControls = ({ isOpen, onClose }) => {
             const res = await api.post('/auth/revert');
             const { user: originalUser, token } = res.data;
 
-            // Sincronizar estado local
-            localStorage.setItem('user', JSON.stringify(originalUser));
-            if (token) localStorage.setItem('auth_token', token);
+            // Sincronizar estado local (mismo store que ya esté usando esta pestaña)
+            saveSession(originalUser, token);
 
-            // Redirigir al dashboard original
-            let redirectPath = '/login';
-            if (originalUser.role === 'admin') redirectPath = '/admin/ventas';
-            if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
-            if (originalUser.role === 'setter') redirectPath = '/setter/deck?step=cualificacion';
-            if (originalUser.role === 'triage') redirectPath = '/triage/deck?step=confirmar';
-            if (originalUser.role === 'closer') redirectPath = '/closer/deck?step=confirmations';
-
-            window.location.href = redirectPath;
+            window.location.href = roleLandingPath(originalUser.role);
         } catch (err) {
             alert('Error reverting session');
             setLoading(false);
@@ -225,12 +246,17 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
                                 <button
                                     onClick={handleImpersonate}
+                                    onContextMenu={handleImpersonateNewTab}
                                     disabled={!selectedUserId || loading}
+                                    title="Clic: simular en esta pestaña. Clic derecho: abrir en pestaña nueva (para simular varios usuarios a la vez)."
                                     className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-2xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-3 active:scale-[0.98]"
                                 >
                                     {loading ? <Loader2 className="animate-spin" size={24} /> : <Ghost size={24} />}
                                     <span className="uppercase tracking-widest text-sm font-black">Iniciar Simulación</span>
                                 </button>
+                                <p className="text-center text-[10px] text-muted font-bold uppercase tracking-widest">
+                                    Clic derecho para abrir en una pestaña nueva
+                                </p>
 
                                 <div className="p-5 bg-amber-500/5 rounded-3xl border border-amber-500/10 flex gap-4">
                                     <AlertTriangle className="text-amber-500 shrink-0" size={20} />

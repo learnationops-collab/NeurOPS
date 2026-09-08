@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { browserTimezone } from '../utils/datetime';
+import { loadSession, clearSession } from '../utils/sessionStore';
 
 const AuthContext = createContext();
 
@@ -9,10 +10,11 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Inicializar desde localStorage para evitar parpadeos
-        const savedUser = localStorage.getItem('user');
+        // Inicializar desde sessionStorage (pestaña de simulación aislada) o localStorage
+        // (flujo normal) para evitar parpadeos - ver utils/sessionStore.js.
+        const savedUser = loadSession();
         if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            setUser(savedUser);
         }
         setLoading(false);
 
@@ -45,8 +47,10 @@ export const AuthProvider = ({ children }) => {
         } catch (e) { /* ignore */ }
         finally {
             setUser(null);
-            localStorage.removeItem('user');
-            localStorage.removeItem('auth_token');
+            // Limpia solo el store activo de ESTA pestaña (sessionStorage si es una pestaña
+            // de simulación aislada, localStorage si es la pestaña normal) - no debe apagar
+            // la sesión de otras pestañas simuladas ni la de la pestaña "real".
+            clearSession();
             window.location.href = '/login';
         }
     };
