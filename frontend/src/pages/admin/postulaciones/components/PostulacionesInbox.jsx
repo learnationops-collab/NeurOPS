@@ -19,6 +19,7 @@ const FILTROS = [
     { id: 'preseleccionadas', label: 'Preseleccionadas' },
     { id: 'decidir', label: 'Decidir' },
     { id: 'descartadas', label: 'Descartadas' },
+    { id: 'bajas', label: 'De baja' },
 ];
 
 const VEREDICTO_BADGE = {
@@ -26,6 +27,7 @@ const VEREDICTO_BADGE = {
     en_reserva: { label: 'En reserva', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     decidir: { label: 'Decidir', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     descartado: { label: 'Descartado', cls: 'bg-slate-800 text-slate-400 border-slate-700' },
+    baja: { label: 'De baja', cls: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20' },
     sin_calificar: { label: 'Sin calificar', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
     incompleta: { label: 'Incompleta', cls: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
 };

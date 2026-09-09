@@ -17,6 +17,13 @@ CLARITY_CRITERIA = [
 
 VOTE_VALUES = ('pre', 'res', 'des')
 
+# Decisión manual de un admin que pisa el veredicto calculado por votos:
+# 'preseleccionada' para destrabar un 'decidir' (revisores en desacuerdo) sin
+# esperar a que alguno cambie su voto, y 'baja' para un closer que ya había
+# sido preseleccionado pero se fue por cualquier motivo (no es lo mismo que
+# 'descartado', que es un rechazo durante la revisión).
+RESOLUCION_VALUES = ('preseleccionada', 'baja')
+
 # Las 24 columnas que representan una respuesta del formulario (en el mismo
 # orden que las preguntas). Sirve para calcular cuántas contestó alguien que
 # no terminó, sin depender de qué preguntas le tocaron ver (ej. "bolsa" es
@@ -71,8 +78,16 @@ class JobApplication(db.Model):
     # qué paso quedó alguien que no terminó, en vez de perder el intento.
     completo = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Ver RESOLUCION_VALUES: decisión manual de un admin que pisa el veredicto
+    # calculado por votos. None mientras nadie resolvió a mano.
+    resolucion = db.Column(db.String(20), nullable=True)
+    resuelto_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    resuelto_at = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    resuelto_por = db.relationship('User', foreign_keys=[resuelto_por_id])
 
     def respondidas(self):
         def vacio(v):
@@ -80,6 +95,12 @@ class JobApplication(db.Model):
         return sum(1 for campo in CAMPOS_FORMULARIO if not vacio(getattr(self, campo)))
 
     def veredicto(self):
+        # Una resolución manual pisa el cálculo por votos: así un admin puede
+        # destrabar un 'decidir' o marcar una baja sin depender de que los
+        # revisores cambien su voto.
+        if self.resolucion:
+            return self.resolucion
+
         votos = {v.reviewer_id: v.vote for v in self.votes}
         valores = votos.values()
         hay_pre = 'pre' in valores
@@ -111,6 +132,9 @@ class JobApplication(db.Model):
             "email": self.email,
             "veredicto": self.veredicto(),
             "votos": {v.reviewer_id: v.vote for v in self.votes},
+            "resolucion": self.resolucion,
+            "resuelto_por": self.resuelto_por.username if self.resuelto_por else None,
+            "resuelto_at": self.resuelto_at.isoformat() if self.resuelto_at else None,
             "score": clarity.score_de(self, weights) if weights is not None else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

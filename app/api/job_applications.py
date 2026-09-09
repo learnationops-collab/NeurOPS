@@ -11,12 +11,12 @@ from flask_login import login_required, current_user
 
 from app import db
 from app.models import JobApplication, JobApplicationVote, ClarityWeight, User
-from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES
+from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES, RESOLUCION_VALUES
 from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
 
-FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'decidir', 'descartadas')
+FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'decidir', 'descartadas', 'bajas')
 # 'incompletas' no entra en FILTROS_VALIDOS: no es un veredicto de revisión
 # (no tiene sentido votar algo a medio completar), es una vista aparte para
 # ver dónde quedó alguien que no terminó.
@@ -49,6 +49,8 @@ def _aplica_filtro(app_row, filtro):
         return veredicto == 'decidir'
     if filtro == 'descartadas':
         return veredicto == 'descartado'
+    if filtro == 'bajas':
+        return veredicto == 'baja'
     return True
 
 
@@ -142,6 +144,42 @@ def votar_job_application(app_id):
         return jsonify({"message": "Error interno al votar"}), 500
 
 
+@bp.route('/job-applications/<int:app_id>/resolver', methods=['POST'])
+@login_required
+def resolver_job_application(app_id):
+    """Decisión manual de un admin que pisa el veredicto calculado por votos:
+    'preseleccionada' para destrabar un 'decidir' sin esperar a que algún
+    revisor cambie su voto, o 'baja' para un closer ya preseleccionado que se
+    fue por cualquier motivo (a diferencia de 'descartado', que es un rechazo
+    durante la revisión). `valor: null` deshace la resolución."""
+    forbidden = check_admin()
+    if forbidden:
+        return forbidden
+
+    data = request.get_json(silent=True) or {}
+    valor = data.get('valor')
+    if valor is not None and valor not in RESOLUCION_VALUES:
+        return jsonify({"message": "valor debe ser 'preseleccionada', 'baja' o null"}), 400
+
+    app_row = JobApplication.query.get_or_404(app_id)
+
+    try:
+        app_row.resolucion = valor
+        app_row.resuelto_por_id = current_user.id if valor else None
+        app_row.resuelto_at = datetime.utcnow() if valor else None
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "resolucion": app_row.resolucion,
+            "veredicto": app_row.veredicto(),
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.error("[job-applications] Error al resolver: %s", e)
+        return jsonify({"message": "Error interno al resolver"}), 500
+
+
 @bp.route('/job-applications/clarity-weights', methods=['GET'])
 @login_required
 def ver_clarity_weights():
@@ -195,7 +233,7 @@ def stats_job_applications():
     if forbidden:
         return forbidden
 
-    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'descartados', 'incompletos')
+    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'descartados', 'bajas', 'incompletos')
     segmento = request.args.get('segmento', 'todos')
     if segmento not in SEGMENTOS_VALIDOS:
         segmento = 'todos'
@@ -212,6 +250,7 @@ def stats_job_applications():
         'preseleccionados': 'preseleccionada',
         'en_reserva': 'en_reserva',
         'descartados': 'descartado',
+        'bajas': 'baja',
     }
     if segmento == 'incompletos':
         todas = [a for a in todas_las_filas if not a.completo]

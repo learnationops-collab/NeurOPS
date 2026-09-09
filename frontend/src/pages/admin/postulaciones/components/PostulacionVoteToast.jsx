@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Clock, X } from 'lucide-react';
+import { Check, Clock, X, UserX } from 'lucide-react';
 
 const VOTO_TOAST = {
     pre: { label: 'Preseleccionado', color: '#34d399', bg: 'rgba(52,211,153,.15)', Icon: Check },
     res: { label: 'En reserva', color: '#fbbf24', bg: 'rgba(251,191,36,.15)', Icon: Clock },
     des: { label: 'Descartado', color: '#f87171', bg: 'rgba(248,113,113,.15)', Icon: X },
+    baja: { label: 'Dado de baja', color: '#e879f9', bg: 'rgba(232,121,249,.15)', Icon: UserX },
 };
 
 const PostulacionVoteToast = ({ toast, onDone }) => {

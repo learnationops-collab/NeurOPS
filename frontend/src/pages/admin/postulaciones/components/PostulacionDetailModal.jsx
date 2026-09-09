@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink, UserX, Scale } from 'lucide-react';
 import api from '../../../../services/api';
 
 const CAMPOS_CORTOS = [
@@ -14,8 +14,8 @@ const CAMPOS_ABIERTOS = [
     ['Objetivos a largo plazo', 'objetivos'], ['¿Por qué es la mejor opción?', 'porque_mejor_opcion'],
 ];
 
-const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar' };
-const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa' };
+const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar', baja: 'De baja' };
+const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa', baja: '#e879f9' };
 const OTRO_VOTO_LABEL = { pre: 'Preseleccionar', res: 'Reservar', des: 'Descartar' };
 
 const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, onVoted, onNavigate }) => {
@@ -54,8 +54,25 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
         }
     };
 
+    // Decisión manual de un admin que pisa el veredicto por votos: destraba un
+    // "decidir" preseleccionando igual, o marca la baja de alguien que ya
+    // había sido preseleccionado. Tocar el mismo botón otra vez la deshace.
+    const resolver = async (valor) => {
+        try {
+            const nuevoValor = data?.resolucion === valor ? null : valor;
+            const res = await api.post(`/job-applications/${applicationId}/resolver`, { valor: nuevoValor });
+            onVoted(applicationId, nuevoValor ? (nuevoValor === 'baja' ? 'baja' : 'pre') : null, res.data.veredicto);
+            cargar(applicationId);
+        } catch (err) {
+            console.error('Error al resolver:', err);
+        }
+    };
+
     const miVoto = data?.votos ? data.votos[currentUserId] : null;
     const otroVoto = data?.votos_detalle?.find(v => v.reviewer_id !== currentUserId);
+    // "Dar de baja" solo tiene sentido si ya está (o estuvo) preseleccionado:
+    // es para un closer que se fue, no para descartar durante la revisión.
+    const mostrarBaja = data?.veredicto === 'preseleccionada' || data?.resolucion === 'baja';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#04061480] p-8 backdrop-blur-sm" onClick={onClose}>
@@ -141,6 +158,11 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                                     <span className="text-[15px] font-bold" style={{ color: VOTO_COLOR[data.veredicto] }}>
                                         {VOTO_LABEL[data.veredicto]}
                                     </span>
+                                    {data.resolucion && (
+                                        <span className="text-[12px] text-white/50">
+                                            Resuelto a mano por {data.resuelto_por || 'un admin'}
+                                        </span>
+                                    )}
                                     {otroVoto && (
                                         <span className="text-[12px] text-white/50">
                                             {otroVoto.reviewer_name || 'El otro revisor'} votó: {OTRO_VOTO_LABEL[otroVoto.vote] || otroVoto.vote}
@@ -171,26 +193,49 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                 </div>
 
                 {/* Footer */}
-                <div className="flex flex-none items-center justify-end gap-3 border-t border-white/10 bg-white/5 px-8 py-5">
-                    <div className="grid w-full max-w-[560px] grid-cols-3 gap-3">
-                        <button
-                            onClick={() => votar('pre')}
-                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'pre' ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}
-                        >
-                            <Check size={16} /> Preseleccionar
-                        </button>
-                        <button
-                            onClick={() => votar('res')}
-                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'res' ? 'border-amber-400 bg-amber-500 text-[#1a1204]' : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'}`}
-                        >
-                            <Clock size={16} /> Reserva
-                        </button>
-                        <button
-                            onClick={() => votar('des')}
-                            className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'des' ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'}`}
-                        >
-                            <X size={16} /> Descartar
-                        </button>
+                <div className="flex flex-none flex-col gap-3 border-t border-white/10 bg-white/5 px-8 py-5">
+                    {data?.veredicto === 'decidir' && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-3.5">
+                            <span className="text-[13px] font-bold text-amber-300">
+                                Los revisores no coinciden. Podés resolverlo y preseleccionar igual.
+                            </span>
+                            <button
+                                onClick={() => resolver('preseleccionada')}
+                                className="flex items-center gap-2 rounded-full border border-emerald-400 bg-emerald-500 px-4 py-2 text-[12px] font-bold text-white transition-all hover:bg-emerald-600"
+                            >
+                                <Scale size={14} /> Preseleccionar de todas formas
+                            </button>
+                        </div>
+                    )}
+                    <div className="flex items-center justify-end">
+                        <div className={`grid w-full gap-3 ${mostrarBaja ? 'max-w-[720px] grid-cols-4' : 'max-w-[560px] grid-cols-3'}`}>
+                            <button
+                                onClick={() => votar('pre')}
+                                className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'pre' ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}
+                            >
+                                <Check size={16} /> Preseleccionar
+                            </button>
+                            <button
+                                onClick={() => votar('res')}
+                                className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'res' ? 'border-amber-400 bg-amber-500 text-[#1a1204]' : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'}`}
+                            >
+                                <Clock size={16} /> Reserva
+                            </button>
+                            <button
+                                onClick={() => votar('des')}
+                                className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'des' ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'}`}
+                            >
+                                <X size={16} /> Descartar
+                            </button>
+                            {mostrarBaja && (
+                                <button
+                                    onClick={() => resolver('baja')}
+                                    className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${data.resolucion === 'baja' ? 'border-fuchsia-400 bg-fuchsia-500 text-white' : 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20'}`}
+                                >
+                                    <UserX size={16} /> {data.resolucion === 'baja' ? 'De baja' : 'Dar de baja'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
