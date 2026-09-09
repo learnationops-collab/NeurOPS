@@ -21,7 +21,7 @@ import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
-import MiCarteraPane from './components/MiCarteraPane';
+import CarteraPane from './components/CarteraPane';
 import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -4175,7 +4175,7 @@ const CloserWorkflowPage = () => {
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : activeView === 'cartera' ? (
-                    <MiCarteraPane onOpenLead={handleSelectLead} />
+                    <CarteraPane onOpenLead={handleSelectLead} />
                 ) : (
                     <CloserDashboard
                         embedded
