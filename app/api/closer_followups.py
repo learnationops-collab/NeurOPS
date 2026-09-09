@@ -135,3 +135,25 @@ def cron_send_followup_reminders():
     selected_date = request.args.get('date')
     result = CloserFollowUpService.send_due_reminders(selected_date)
     return jsonify({"status": "success", **result}), 200
+
+
+@bp.route('/cartera/agendas', methods=['GET'])
+@login_required
+def get_cartera_agendas():
+    """Pestaña "Agendas" de Mi cartera: TODAS las citas del closer en el período pedido, cada
+    una con su estado derivado y los totales por estado, para que pueda corroborar cuántas
+    agendas tiene y en qué quedó cada una (ver `CloserAgendasService`). Los ids de `period`
+    son los mismos de "Ver mis datos" más `proximas` y `todo`; `custom` usa `start_date`/
+    `end_date` (YYYY-MM-DD). Un admin sin simular puede pedir un closer puntual con
+    `closer_id`; sin eso responde vacío, igual que `/cartera`."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    from app.services.closer_agendas_service import CloserAgendasService
+    closer_id = _resolve_closer_id() or request.args.get('closer_id', type=int)
+    data = CloserAgendasService.get_ledger(
+        closer_id,
+        period=request.args.get('period') or 'mes',
+        start_date=request.args.get('start_date'),
+        end_date=request.args.get('end_date')
+    )
+    return jsonify(data), 200

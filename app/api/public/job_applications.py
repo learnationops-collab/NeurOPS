@@ -102,12 +102,16 @@ def crear_job_application():
         _set_si_presente(app_row, 'ingles', _texto(data.get('ingles'), 20))
         _set_si_presente(app_row, 'herramientas', _lista(data.get('herramientas')))
         _set_si_presente(app_row, 'reporte', _texto(data.get('reporte'), 160))
-        _set_si_presente(app_row, 'aportes', _lista(data.get('aportes')))
+        # 'aportes' y 'porque' eran checkboxes (listas) y pasaron a ser
+        # preguntas abiertas de texto libre en el formulario (ver
+        # institute-site) — se guardan igual como texto en la misma columna
+        # JSON, las postulaciones viejas quedan con su lista original.
+        _set_si_presente(app_row, 'aportes', _texto(data.get('aportes'), MAX_LARGO))
         _set_si_presente(app_row, 'habilidades', _texto(data.get('habilidades'), MAX_LARGO))
         _set_si_presente(app_row, 'obstaculo', _texto(data.get('obstaculo'), MAX_LARGO))
         _set_si_presente(app_row, 'objetivos', _texto(data.get('objetivos'), MAX_LARGO))
         _set_si_presente(app_row, 'porque_mejor_opcion', _texto(data.get('porque_mejor_opcion'), MAX_LARGO))
-        _set_si_presente(app_row, 'porque', _lista(data.get('porque')))
+        _set_si_presente(app_row, 'porque', _texto(data.get('porque'), MAX_LARGO))
         _set_si_presente(app_row, 'fuente', _texto(data.get('fuente'), 60))
         _set_si_presente(app_row, 'bolsa', _texto(data.get('bolsa'), 120))
         _set_si_presente(app_row, 'video', _texto(data.get('video'), 500))

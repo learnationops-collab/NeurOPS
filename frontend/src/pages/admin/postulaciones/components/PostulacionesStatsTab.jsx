@@ -7,6 +7,7 @@ const SEGMENTOS = [
     { id: 'preseleccionados', label: 'Preseleccionados' },
     { id: 'en_reserva', label: 'En reserva' },
     { id: 'descartados', label: 'Descartados' },
+    { id: 'bajas', label: 'De baja' },
     { id: 'incompletos', label: 'Incompletos' },
 ];
 
@@ -17,6 +18,7 @@ const FILTRO_DE_SEGMENTO = {
     preseleccionados: 'preseleccionadas',
     en_reserva: 'en_reserva',
     descartados: 'descartadas',
+    bajas: 'bajas',
     incompletos: 'incompletas',
 };
 
@@ -28,6 +30,7 @@ const KPI_PRINCIPAL = {
     preseleccionados: (s) => ({ label: 'Preseleccionados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     en_reserva: (s) => ({ label: 'En reserva', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     descartados: (s) => ({ label: 'Descartados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    bajas: (s) => ({ label: 'De baja', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     incompletos: (s) => ({ label: 'Incompletos', valor: s.total, unidad: `de ${s.abrieron_formulario} que abrieron` }),
 };
 
