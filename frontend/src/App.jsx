@@ -242,10 +242,11 @@ function App() {
             <Route
               path="/admin/postulaciones"
               element={
+                // Sin MainLayout a propósito: esta vista es su propia "sub-app" con
+                // header y menú inferior propios (ver PostulacionesDashboardPage),
+                // en vez de vivir dentro del dock global del admin.
                 <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <PostulacionesDashboardPage />
-                  </MainLayout>
+                  <PostulacionesDashboardPage />
                 </ProtectedRoute>
               }
             />
