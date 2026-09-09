@@ -10,9 +10,15 @@ const CAMPOS_CORTOS = [
 
 const CAMPOS_ABIERTOS = [
     ['¿A qué te dedicás?', 'dedicacion'], ['Formación como closer', 'formacion'],
-    ['Habilidades y experiencias relevantes', 'habilidades'], ['Ante un obstáculo', 'obstaculo'],
-    ['Objetivos a largo plazo', 'objetivos'], ['¿Por qué es la mejor opción?', 'porque_mejor_opcion'],
+    ['Qué más puede aportar al equipo', 'aportes'], ['Habilidades y experiencias relevantes', 'habilidades'],
+    ['Ante un obstáculo', 'obstaculo'], ['Objetivos a largo plazo', 'objetivos'],
+    ['¿Por qué es la mejor opción?', 'porque_mejor_opcion'],
 ];
+
+// 'aportes' y 'porque' eran checkboxes (listas) y pasaron a ser preguntas de
+// texto libre — las postulaciones viejas todavía guardan la lista original,
+// así que hay que soportar los dos formatos al mostrarlas.
+const textoRespuesta = (valor) => (Array.isArray(valor) ? valor.join(' · ') : valor);
 
 const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar', baja: 'De baja' };
 const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa', baja: '#e879f9' };
@@ -176,15 +182,19 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                                 {CAMPOS_ABIERTOS.filter(([, key]) => data[key]).map(([label, key]) => (
                                     <div key={key} className="rounded-2xl border border-white/12 bg-white/5 p-5">
                                         <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-pink-300">{label}</p>
-                                        <p className="text-[14px] leading-relaxed text-white/85">{data[key]}</p>
+                                        <p className="text-[14px] leading-relaxed text-white/85">{textoRespuesta(data[key])}</p>
                                     </div>
                                 ))}
                                 {data.porque?.length > 0 && (
                                     <div className="rounded-2xl border border-white/12 bg-white/5 p-5">
                                         <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-pink-300">Por qué le interesa Learnation</p>
-                                        <ul className="list-disc pl-4 text-[14px] leading-relaxed text-white/85">
-                                            {data.porque.map(p => <li key={p}>{p}</li>)}
-                                        </ul>
+                                        {Array.isArray(data.porque) ? (
+                                            <ul className="list-disc pl-4 text-[14px] leading-relaxed text-white/85">
+                                                {data.porque.map(p => <li key={p}>{p}</li>)}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-[14px] leading-relaxed text-white/85">{data.porque}</p>
+                                        )}
                                     </div>
                                 )}
                             </div>

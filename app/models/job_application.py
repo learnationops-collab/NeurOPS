@@ -161,12 +161,15 @@ class JobApplication(db.Model):
                 "formacion": self.formacion,
                 "herramientas": self.herramientas or [],
                 "reporte": self.reporte,
-                "aportes": self.aportes or [],
+                # Ya no se guardan como lista vacía (ver _set_si_presente en el
+                # alta pública): quedan None hasta que respondan, sea texto
+                # libre (formulario actual) o lista (postulaciones viejas).
+                "aportes": self.aportes,
                 "habilidades": self.habilidades,
                 "obstaculo": self.obstaculo,
                 "objetivos": self.objetivos,
                 "porque_mejor_opcion": self.porque_mejor_opcion,
-                "porque": self.porque or [],
+                "porque": self.porque,
                 "fuente": self.fuente,
                 "bolsa": self.bolsa,
             })
