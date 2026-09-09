@@ -273,15 +273,16 @@ def stats_job_applications():
 
     con_material = sum(1 for a in todas if a.video and a.llamada)
     score_85 = sum(1 for s in scores if s >= 85)
-    pasaron_disclaimer = sum(1 for a in todas_las_filas if a.disclaimer)
-    # El embudo de captación (abrieron -> disclaimer -> completaron...) describe
-    # el pool entero, no tiene sentido recortado a un solo veredicto (sería un
-    # único escalón) — se omite fuera de 'todos', el frontend oculta el panel.
+    # El embudo de captación (abrieron -> completaron...) describe el pool
+    # entero, no tiene sentido recortado a un solo veredicto (sería un único
+    # escalón) — se omite fuera de 'todos', el frontend oculta el panel.
+    # El disclaimer se sacó del formulario (ver institute-site), así que ya no
+    # es un escalón del embudo: mezclar postulaciones viejas (que sí lo
+    # respondieron) con las nuevas (que nunca lo ven) inflaba la caída ahí.
     embudo = None
     if segmento == 'todos':
         embudo = [
             {"etapa": "Abrieron el formulario", "cantidad": len(todas_las_filas)},
-            {"etapa": "Pasaron el disclaimer", "cantidad": pasaron_disclaimer},
             {"etapa": "Completaron", "cantidad": len(completas)},
             {"etapa": "Con video y llamada", "cantidad": con_material},
             {"etapa": "Score 85+", "cantidad": score_85},

@@ -24,13 +24,15 @@ VOTE_VALUES = ('pre', 'res', 'des')
 # 'descartado', que es un rechazo durante la revisión).
 RESOLUCION_VALUES = ('preseleccionada', 'baja')
 
-# Las 24 columnas que representan una respuesta del formulario (en el mismo
-# orden que las preguntas). Sirve para calcular cuántas contestó alguien que
-# no terminó, sin depender de qué preguntas le tocaron ver (ej. "bolsa" es
+# Las columnas que representan una respuesta del formulario ACTUAL (en el
+# mismo orden que las preguntas). Sirve para calcular cuántas contestó alguien
+# que no terminó, sin depender de qué preguntas le tocaron ver (ej. "bolsa" es
 # condicional) — es una cuenta aproximada, no exacta pregunta por pregunta.
+# 'disclaimer', 'instagram' y 'herramientas' se sacaron del formulario (ver
+# institute-site) pero las columnas quedan para no perder lo ya respondido.
 CAMPOS_FORMULARIO = [
-    'nombre', 'email', 'disclaimer', 'whatsapp', 'edad', 'pais', 'instagram',
-    'dedicacion', 'conocimiento', 'formacion', 'cierre', 'ingles', 'herramientas',
+    'nombre', 'email', 'whatsapp', 'edad', 'pais',
+    'dedicacion', 'conocimiento', 'formacion', 'cierre', 'ingles',
     'reporte', 'aportes', 'habilidades', 'obstaculo', 'objetivos', 'porque_mejor_opcion',
     'porque', 'fuente', 'bolsa', 'video', 'llamada',
 ]
