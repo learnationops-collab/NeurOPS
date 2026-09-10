@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -157,3 +158,58 @@ def get_cartera_agendas():
         end_date=request.args.get('end_date')
     )
     return jsonify(data), 200
+
+
+@bp.route('/cartera/agendas/<int:appt_id>/marcar-duplicada', methods=['POST'])
+@login_required
+def marcar_agenda_duplicada(appt_id):
+    """Resuelve una inconsistencia de agenda duplicada desde la pestaña "Agendas" de Mi cartera
+    (pedido del usuario, 10/sep/2026, caso real de Nerina con la lead "Mia Sky": dos citas
+    idénticas -- mismo cliente, mismo horario -- nacidas de una sincronización que se procesó
+    dos veces; una quedó "Show up" con la llamada real y la otra huérfana en "Sin reportar",
+    inflando el total de agendas que el closer ve).
+
+    Solo cancela la copia todavía sin reportar -- nunca la que ya tiene un resultado real --
+    para que esta acción no pueda borrar el historial de una llamada que sí ocurrió. Reusa
+    `CloserService.process_agenda` (mismo camino que "Canceló" desde el mazo) para que quede
+    el mismo rastro de auditoría (ClientComment, borrado de evento de Google Calendar)."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    from app.services.closer_agendas_service import derivar_estado
+    from app.services.closer_service import CloserService
+
+    appt = Appointment.query.get_or_404(appt_id)
+    closer_id = _resolve_closer_id()
+    if closer_id and appt.closer_id != closer_id:
+        return jsonify({"message": "Forbidden"}), 403
+    if not appt.client_id or not appt.start_time:
+        return jsonify({"message": "Esta agenda no tiene cliente u hora válidos"}), 400
+
+    estado = derivar_estado(appt, datetime.utcnow())
+    if estado not in ('por_confirmar', 'confirmada', 'sin_reportar'):
+        return jsonify({"message": "Esta agenda ya tiene un resultado reportado — no se puede marcar como duplicada."}), 400
+
+    ventana = timedelta(hours=6)
+    hermana = Appointment.query.filter(
+        Appointment.client_id == appt.client_id,
+        Appointment.closer_id == appt.closer_id,
+        Appointment.id != appt.id,
+        Appointment.start_time >= appt.start_time - ventana,
+        Appointment.start_time <= appt.start_time + ventana,
+    ).first()
+    if not hermana:
+        return jsonify({"message": "No se encontró otra agenda cercana de este cliente — no parece una duplicada."}), 400
+
+    CloserService.process_agenda(
+        closer_id=appt.closer_id,
+        appt_id=appt.id,
+        data={
+            'status': 'Cancelado',
+            'role': 'closer',
+            'note': f'Agenda duplicada — se conserva la cita #{hermana.id} del mismo cliente.',
+        },
+        is_admin=True
+    )
+    db.session.commit()
+    return jsonify({"message": "Agenda marcada como duplicada y cancelada", "kept_id": hermana.id}), 200
