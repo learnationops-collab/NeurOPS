@@ -136,20 +136,42 @@ class CloserDashboardService:
         empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'sin_plan': 0.0,
                  'count': 0, 'count_vencido': 0, 'count_sin_plan': 0}
 
-        # 1. Deuda por cliente: precio del programa − pagos completados, sobre sus inscripciones.
+        # 1. Deuda por cliente: precio negociado − pagos completados, sobre sus inscripciones.
+        # `Client.total_amount` manda sobre `Program.price` cuando el closer lo cargó — mismo
+        # criterio que ya usa `SalesConsistencyService.validate_next_payment_type` para "lo que
+        # ESTE cliente negoció" (Program.price es el precio de lista, igual para todos). Antes
+        # esta función lo ignoraba y usaba siempre el precio de lista, así que un cliente con un
+        # precio negociado más alto (caso real: Susett Anahí Cochachín Luna, `total_amount=1000`
+        # pero `Program.price=500`) aparecía debiendo mucho menos de lo real — reportado por el
+        # usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900".
         pagado_por_enrollment = dict(
             db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
             .filter(Payment.status == 'completed').group_by(Payment.enrollment_id).all()
         )
-        deuda_por_cliente, programas_por_cliente = {}, {}
+        total_amount_por_cliente = dict(
+            db.session.query(Client.id, Client.total_amount).filter(Client.total_amount.isnot(None)).all()
+        )
+        enrollments_por_cliente = {}
         for e in Enrollment.query.all():
             if not e.program or not e.client_id:
                 continue
-            saldo = (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
+            enrollments_por_cliente.setdefault(e.client_id, []).append(e)
+
+        deuda_por_cliente, programas_por_cliente = {}, {}
+        for client_id, enrollments in enrollments_por_cliente.items():
+            programas_por_cliente[client_id] = [e.program.name for e in enrollments]
+            total_amount = total_amount_por_cliente.get(client_id)
+            if total_amount is not None:
+                pagado_total = sum(float(pagado_por_enrollment.get(e.id) or 0) for e in enrollments)
+                saldo = float(total_amount) - pagado_total
+            else:
+                saldo = sum(
+                    (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
+                    for e in enrollments
+                )
             if saldo <= 0.01:
                 continue
-            deuda_por_cliente[e.client_id] = deuda_por_cliente.get(e.client_id, 0.0) + saldo
-            programas_por_cliente.setdefault(e.client_id, []).append(e.program.name)
+            deuda_por_cliente[client_id] = saldo
 
         if not deuda_por_cliente:
             return [], empty

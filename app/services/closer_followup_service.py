@@ -213,9 +213,21 @@ class CloserFollowUpService:
 
     @staticmethod
     def _client_debt(client_id):
-        """Deuda real pendiente del cliente: Program.price - total pagado, sobre sus inscripciones."""
+        """Deuda real pendiente del cliente: precio negociado menos total pagado, sobre sus
+        inscripciones.
+
+        `Client.total_amount` manda sobre `Program.price` cuando el closer lo cargó — mismo
+        criterio que ya usa `SalesConsistencyService.validate_next_payment_type` para "lo que
+        ESTE cliente negoció" (Program.price es el precio de lista, igual para todos, y no
+        refleja descuentos o planes a medida). Antes esta función ignoraba `total_amount` por
+        completo, así que un cliente con un precio negociado más alto que el de lista (caso
+        real: Susett Anahí Cochachín Luna, `total_amount=1000` pero `Program.price=500`)
+        aparecía debiendo mucho menos de lo real tanto en "Mi cartera" como en "Ver mis datos"
+        (reportado por el usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900")."""
         if not client_id:
             return 0.0
+        from app.models import Client
+        client = Client.query.get(client_id)
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
         if not enrollments:
             return 0.0
@@ -224,6 +236,9 @@ class CloserFollowUpService:
             .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed') \
             .group_by(Payment.enrollment_id).all()
         paid_map = {eid: float(total or 0) for eid, total in paid_rows}
+        if client and client.total_amount is not None:
+            total_paid = sum(paid_map.values())
+            return round(max(0.0, float(client.total_amount) - total_paid), 2)
         total_debt = 0.0
         for e in enrollments:
             if not e.program:
