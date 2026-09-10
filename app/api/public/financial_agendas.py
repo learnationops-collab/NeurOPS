@@ -681,6 +681,31 @@ def update_financial_agenda(agenda_id):
             agenda.whatsapp = data['whatsapp']
         if 'mail' in data:
             agenda.mail = data['mail']
+            # Propagar la corrección al Cliente ya existente cuando el mail real llega DESPUÉS
+            # de que el Cliente ya se hubiera creado con un placeholder (p.ej. agendó por
+            # Calendly antes de que n8n mandara su mail real, o el mail vino vacío la primera
+            # vez y alguien lo corrige acá a mano). Sin esto, `agenda.mail` queda correcto pero
+            # `Client.email` se queda con el placeholder para siempre -- el mismo problema que
+            # ya se había resuelto para el flujo de sincronización normal en
+            # `BookingService.find_or_create_client`, pero que faltaba acá en la edición manual
+            # (bug real reportado por el usuario, 10/sep/2026, caso "Mia Sky": corrigió el mail
+            # que llega de n8n en el Registro de Agendas pero el Cliente seguía "Sin email real").
+            nuevo_mail = (data['mail'] or '').strip().lower()
+            if nuevo_mail and '@' in nuevo_mail:
+                ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+                whatsapp_clean = (agenda.whatsapp or '').strip()
+                client_filters = []
+                if ig_clean:
+                    client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+                if whatsapp_clean and len(whatsapp_clean) >= 8:
+                    client_filters.append(Client.phone.like(f"%{whatsapp_clean[-8:]}%"))
+                client = Client.query.filter(or_(*client_filters)).first() if client_filters else None
+                if client:
+                    email_actual = (client.email or '').lower()
+                    es_placeholder = (not email_actual or 'no-email-' in email_actual or 'no_email_' in email_actual
+                                       or '@neurops.com' in email_actual or '@neurops.temp' in email_actual)
+                    if es_placeholder:
+                        client.email = nuevo_mail
         status_changed = False
         if 'estado' in data and data['estado'] != agenda.estado:
             status_changed = True
@@ -723,7 +748,7 @@ def update_financial_agenda(agenda_id):
             
             # Sincronización in-line de razones para Setter (Confirmer)
             if agenda.estado in ('Cancelada', 'Reagendada'):
-                from app.models import Client, Appointment
+                from app.models import Appointment
                 from app.services.closer_service import CloserService
                 from flask_login import current_user
                 
@@ -763,7 +788,7 @@ def update_financial_agenda(agenda_id):
 
         # Si se edita closer_result (desde la vista de admin/closer)
         if 'closer_result' in data:
-            from app.models import Client, Appointment
+            from app.models import Appointment
             from app.services.booking_service import BookingService
             from app.services.closer_service import CloserService
             from flask_login import current_user
