@@ -1,7 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Search, CalendarRange } from 'lucide-react';
+import { Loader2, Search, CalendarRange, CopyX } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import { parseUtcIso, toLocalDateStr, localToday, viewerTimezoneLabel } from '../../../utils/datetime';
+
+// Estados en los que una agenda todavía no tiene un resultado real cargado — los únicos que
+// se pueden marcar como "duplicada" (ver ESTADOS_SIN_REPORTAR abajo y `marcar-duplicada` en
+// el backend). Nunca se ofrece esta acción sobre una llamada que sí ocurrió.
+const ESTADOS_SIN_REPORTAR = new Set(['por_confirmar', 'confirmada', 'sin_reportar']);
+
+// Ventana para considerar dos agendas del mismo cliente "la misma cita duplicada" — igual que
+// la que usa el backend (`marcar_agenda_duplicada`) para no divergir en qué cuenta como cerca.
+const VENTANA_DUPLICADO_MS = 6 * 60 * 60 * 1000;
 
 // Mismos ids y etiquetas que los filtros de "Ver mis datos" (PerformanceFilters.jsx) a propósito:
 // "Este mes" tiene que significar exactamente lo mismo en las dos pestañas para que el closer
@@ -89,6 +99,7 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
     const [venta, setVenta] = useState('todas');
     const [sort, setSort] = useState('reciente');
     const [limit, setLimit] = useState(30);
+    const [resolvingId, setResolvingId] = useState(null);
 
     const fetchItems = useCallback(async () => {
         if (period === 'custom' && !(customRange.start && customRange.end)) return;
@@ -120,6 +131,48 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
     };
 
     const estadoInfo = useMemo(() => Object.fromEntries(estados.map(e => [e.key, e])), [estados]);
+
+    // Posibles duplicados: misma cita cargada dos veces (visto en producción con Nerina / "Mia
+    // Sky", 10/sep/2026 — puede pasar cuando una sincronización se procesa dos veces). Solo se
+    // marca la fila como "posible duplicado" si TODAVÍA no tiene un resultado real reportado
+    // (`ESTADOS_SIN_REPORTAR`) y existe otra cita del mismo cliente a menos de 6h — misma
+    // ventana que valida el backend en `marcar-duplicada`, para no ofrecer la acción donde el
+    // backend la va a rechazar igual.
+    const duplicateOf = useMemo(() => {
+        const map = {};
+        items.forEach(a => {
+            if (!a.client_id || !ESTADOS_SIN_REPORTAR.has(a.estado)) return;
+            const tA = parseUtcIso(a.start_time)?.getTime();
+            if (!tA) return;
+            const hermana = items.find(b => {
+                if (b.id === a.id || b.client_id !== a.client_id) return false;
+                const tB = parseUtcIso(b.start_time)?.getTime();
+                return tB && Math.abs(tB - tA) <= VENTANA_DUPLICADO_MS;
+            });
+            if (hermana) map[a.id] = hermana;
+        });
+        return map;
+    }, [items]);
+
+    const marcarDuplicada = async (it, e) => {
+        e.stopPropagation();
+        if (resolvingId) return;
+        const hermana = duplicateOf[it.id];
+        if (!window.confirm(
+            `¿Marcar esta agenda de ${it.lead_name} como duplicada y cancelarla?\n\n` +
+            `Se conserva la otra cita de este cliente (${hermana ? new Date(hermana.start_time).toLocaleString() : 'agenda cercana'}).`
+        )) return;
+        setResolvingId(it.id);
+        try {
+            await api.post(`/closer/cartera/agendas/${it.id}/marcar-duplicada`);
+            toast.success('Agenda marcada como duplicada y cancelada');
+            fetchItems();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'No se pudo marcar la agenda como duplicada');
+        } finally {
+            setResolvingId(null);
+        }
+    };
 
     const filtered = useMemo(() => {
         const query = q.trim().toLowerCase();
@@ -408,6 +461,25 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
                                             )}
                                         </div>
                                     </div>
+                                    {duplicateOf[it.id] && (
+                                        <div
+                                            style={{ minWidth: MIN_W, padding: '8px 20px 8px 24px', background: 'rgba(249,115,22,.07)', borderBottom: '1px solid rgba(255,255,255,.055)' }}
+                                            className="flex items-center justify-between gap-3 flex-wrap"
+                                        >
+                                            <span className="text-[10px] font-bold flex items-center gap-1.5" style={{ color: '#F97316' }}>
+                                                <CopyX size={12} /> Posible duplicado de la cita de {fmtHora(parseUtcIso(duplicateOf[it.id].start_time))} — no tiene resultado reportado
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => marcarDuplicada(it, e)}
+                                                disabled={resolvingId === it.id}
+                                                className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all disabled:opacity-50"
+                                                style={{ background: 'rgba(249,115,22,.15)', border: '1px solid rgba(249,115,22,.4)', color: '#FDBA74' }}
+                                            >
+                                                {resolvingId === it.id ? 'Cancelando…' : 'Marcar como duplicada'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
