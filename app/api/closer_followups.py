@@ -160,6 +160,17 @@ def get_cartera_agendas():
     return jsonify(data), 200
 
 
+@bp.route('/commission', methods=['GET'])
+@login_required
+def get_closer_commission():
+    """Comisión del mes en curso para el espacio de trabajo del closer (pedido del usuario,
+    10/sep/2026): 10% del cash collected neto, mismo total que ya alimenta "Ver mis datos"."""
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    from app.services.commission_service import CommissionService
+    return jsonify(CommissionService.get_closer_commission(current_user)), 200
+
+
 @bp.route('/cartera/agendas/<int:appt_id>/marcar-duplicada', methods=['POST'])
 @login_required
 def marcar_agenda_duplicada(appt_id):

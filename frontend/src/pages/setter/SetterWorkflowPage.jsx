@@ -13,6 +13,7 @@ import SetterCualificacionFilters from './components/SetterCualificacionFilters'
 import SetterAgendasList from './components/SetterAgendasList';
 import SetterBulkActionBar from './components/SetterBulkActionBar';
 import SetterCualificacionList from './components/SetterCualificacionList';
+import SetterComisionMesCard from './components/SetterComisionMesCard';
 
 const SetterWorkflowPage = () => {
     const { user } = useAuth();
@@ -377,7 +378,9 @@ const SetterWorkflowPage = () => {
                 
                 {/* Lista de Leads / Agendas (Ancho completo 12 columnas) */}
                 <div className="lg:col-span-12 space-y-4">
-                    
+
+                    <SetterComisionMesCard />
+
                     {/* Acciones Masivas */}
                     <SetterBulkActionBar
                         selectedIds={selectedIds}

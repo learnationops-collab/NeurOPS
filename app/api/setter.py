@@ -1652,5 +1652,14 @@ def assign_unattributed_ad_setter():
     return force_manual_attribution_agenda()
 
 
+@bp.route('/commission', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_setter_commission():
+    """Comisión del mes en curso para el espacio de trabajo del setter (pedido del usuario,
+    10/sep/2026): 8% del cash collected neto de las ventas que se originaron en sus agendas."""
+    from app.services.commission_service import CommissionService
+    return jsonify(CommissionService.get_setter_commission(current_user)), 200
+
+
 
 

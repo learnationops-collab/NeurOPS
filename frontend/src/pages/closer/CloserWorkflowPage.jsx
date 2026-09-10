@@ -22,6 +22,7 @@ import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import CarteraPane from './components/CarteraPane';
+import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -3606,6 +3607,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     );
                 })()}
+
+                <ComisionMesCard />
 
                 {/* NAVEGACIÓN 01-05 (v7): reemplaza las 3 pestañas + el dock flotante como fuente
                     principal de "adónde ir" — el dock sigue abajo como acceso rápido mientras se
