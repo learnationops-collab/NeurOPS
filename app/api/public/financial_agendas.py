@@ -1044,14 +1044,17 @@ def receive_financial_agendas_form():
     if not client and clean_phone and len(clean_phone) > 4:
         client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
 
-    # 3. Buscar por nombre en FinancialAgenda (campo lead o nombre) → obtener el Client vinculado
+    # 3. Buscar por nombre en FinancialAgenda.lead → obtener el Client vinculado.
+    # OJO: no incluir FinancialAgenda.nombre acá — pese al nombre de la columna, ese campo
+    # guarda la FUENTE/atribución de la agenda (username de un setter tipo 'Elias'/'Ivan', o
+    # un embudo como 'workshop'), no el nombre del lead. Como hay setters reales llamados
+    # igual que leads comunes, un ILIKE contra `nombre` terminaba matcheando la agenda más
+    # futura de CUALQUIER lead atribuido a ese setter — le pegó el formulario de un lead
+    # "Ivan" al Client de otro lead sin ninguna relación entre ambos (10/sep/2026).
     if not client and nombre:
         nombre_norm = nombre.strip().lower()
         agenda_match = FinancialAgenda.query.filter(
-            or_(
-                func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%"),
-                func.lower(FinancialAgenda.nombre).like(f"%{nombre_norm}%")
-            )
+            func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%")
         ).order_by(FinancialAgenda.date.desc()).first()
         if agenda_match:
             # Buscar el Client asociado por instagram o mail de la agenda
