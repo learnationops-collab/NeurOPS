@@ -19,10 +19,11 @@ VOTE_VALUES = ('pre', 'res', 'des')
 
 # Decisión manual de un admin que pisa el veredicto calculado por votos:
 # 'preseleccionada' para destrabar un 'decidir' (revisores en desacuerdo) sin
-# esperar a que alguno cambie su voto, y 'baja' para un closer que ya había
-# sido preseleccionado pero se fue por cualquier motivo (no es lo mismo que
-# 'descartado', que es un rechazo durante la revisión).
-RESOLUCION_VALUES = ('preseleccionada', 'baja')
+# esperar a que alguno cambie su voto; 'testeo' para un closer preseleccionado
+# que ya está en su etapa de prueba; y 'baja' para uno que se fue por
+# cualquier motivo (no es lo mismo que 'descartado', que es un rechazo
+# durante la revisión, previo a la selección).
+RESOLUCION_VALUES = ('preseleccionada', 'testeo', 'baja')
 
 # Las columnas que representan una respuesta del formulario ACTUAL (en el
 # mismo orden que las preguntas). Sirve para calcular cuántas contestó alguien
