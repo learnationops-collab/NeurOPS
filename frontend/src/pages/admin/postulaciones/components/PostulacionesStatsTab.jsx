@@ -3,12 +3,13 @@ import { Download } from 'lucide-react';
 import api from '../../../../services/api';
 
 const SEGMENTOS = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'preseleccionados', label: 'Preseleccionados' },
-    { id: 'en_reserva', label: 'En reserva' },
-    { id: 'descartados', label: 'Descartados' },
-    { id: 'bajas', label: 'De baja' },
-    { id: 'incompletos', label: 'Incompletos' },
+    { id: 'todos', label: 'Completaron', conteo: 'todas' },
+    { id: 'preseleccionados', label: 'Seleccionados', conteo: 'preseleccionadas' },
+    { id: 'en_reserva', label: 'En reserva', conteo: 'en_reserva' },
+    { id: 'testeo', label: 'Testeo', conteo: 'testeo' },
+    { id: 'descartados', label: 'Descartados', conteo: 'descartadas' },
+    { id: 'bajas', label: 'De baja', conteo: 'bajas' },
+    { id: 'incompletos', label: 'Incompletas', conteo: 'incompletas' },
 ];
 
 // Filtro del listado (/job-applications?filtro=...) que trae la misma gente
@@ -17,6 +18,7 @@ const FILTRO_DE_SEGMENTO = {
     todos: 'todas',
     preseleccionados: 'preseleccionadas',
     en_reserva: 'en_reserva',
+    testeo: 'testeo',
     descartados: 'descartadas',
     bajas: 'bajas',
     incompletos: 'incompletas',
@@ -27,8 +29,9 @@ const FILTRO_DE_SEGMENTO = {
 // abrieron" cuando X ya son los preseleccionados, por ejemplo.
 const KPI_PRINCIPAL = {
     todos: (s) => ({ label: 'Completaron', valor: s.total, unidad: `de ${s.abrieron_formulario} que abrieron` }),
-    preseleccionados: (s) => ({ label: 'Preseleccionados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    preseleccionados: (s) => ({ label: 'Seleccionados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     en_reserva: (s) => ({ label: 'En reserva', valor: s.total, unidad: `de ${s.total_completas} completas` }),
+    testeo: (s) => ({ label: 'En testeo', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     descartados: (s) => ({ label: 'Descartados', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     bajas: (s) => ({ label: 'De baja', valor: s.total, unidad: `de ${s.total_completas} completas` }),
     incompletos: (s) => ({ label: 'Incompletos', valor: s.total, unidad: `de ${s.abrieron_formulario} que abrieron` }),
@@ -38,6 +41,17 @@ const KPI_PRINCIPAL = {
 // gruesa se lee mucho mejor (y entra el número adentro); con muchos, una más
 // fina evita que el panel crezca demasiado.
 const grosorBarra = (n) => (n <= 3 ? 'h-9' : n <= 6 ? 'h-7' : 'h-5');
+
+// Encabezado de sección numerado ("01 · Lo que hay que saber"), para agrupar los paneles en
+// bloques temáticos en vez de un único grid parejo — mockup de referencia, 10/sep/2026.
+const SeccionHeader = ({ n, title }) => (
+    <div className="flex items-center gap-3 pt-2">
+        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-pink-500/20 text-[11px] font-black text-pink-300">
+            {n}
+        </span>
+        <span className="text-lg font-black text-white">{title}</span>
+    </div>
+);
 
 const Panel = ({ title, subtitle, children, delay = 0 }) => (
     <div
@@ -100,6 +114,15 @@ const PostulacionesStatsTab = () => {
     const [segmento, setSegmento] = useState('todos');
     const [stats, setStats] = useState(null);
     const [exportando, setExportando] = useState(false);
+    // Conteos por segmento para los chips ("Completaron · 48") — se reusa el mismo `conteos`
+    // que ya devuelve el listado principal en vez de agregar un endpoint nuevo solo para esto.
+    const [conteosSegmento, setConteosSegmento] = useState({});
+
+    useEffect(() => {
+        api.get('/job-applications?filtro=todas')
+            .then(res => setConteosSegmento(res.data.conteos || {}))
+            .catch(err => console.error('Error al cargar conteos de postulaciones:', err));
+    }, []);
 
     useEffect(() => {
         setStats(null);
@@ -137,17 +160,29 @@ const PostulacionesStatsTab = () => {
         <div className="flex flex-col gap-6">
             <style>{`@keyframes ln-stats-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
+            <div className="flex flex-col gap-1">
+                <span className="text-2xl font-black text-white">Estadísticas</span>
+                <span className="text-[13px] text-white/55">De dónde llegan, dónde se caen y cómo se reparte el embudo.</span>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[.03] p-1.5 w-fit">
                     {SEGMENTOS.map(s => (
                         <button
                             key={s.id}
                             onClick={() => setSegmento(s.id)}
-                            className={`rounded-xl px-6 py-3 text-[13px] font-bold transition-all ${
-                                segmento === s.id ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' : 'text-white/60 hover:text-white'
+                            className={`rounded-xl px-5 py-3 text-[13px] font-bold transition-all ${
+                                segmento === s.id
+                                    ? 'bg-gradient-to-r from-blue-600 to-pink-500 text-white shadow-lg shadow-pink-500/20'
+                                    : 'text-white/60 hover:text-white'
                             }`}
                         >
                             {s.label}
+                            {typeof conteosSegmento[s.conteo] === 'number' && (
+                                <span className={segmento === s.id ? 'ml-1.5 text-white/80' : 'ml-1.5 text-white/35'}>
+                                    · {conteosSegmento[s.conteo]}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -183,10 +218,69 @@ const StatsBody = ({ stats, segmento }) => {
 
     return (
         <div className="flex flex-col gap-6">
+            <SeccionHeader n="01" title="Lo que hay que saber" />
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {kpis.map((k, i) => <KpiTile key={k.label} {...k} delay={i * 40} />)}
             </div>
 
+            <SeccionHeader n="02" title="Volumen y embudo" />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {stats.embudo && (
+                    <Panel title="Embudo de búsqueda" subtitle="De abrir el formulario a candidato fuerte" delay={0}>
+                        <div className="flex flex-col gap-1">
+                            {stats.embudo.map((e, i) => {
+                                const anterior = i > 0 ? stats.embudo[i - 1].cantidad : null;
+                                const caida = anterior ? Math.round(((anterior - e.cantidad) / anterior) * 100) : null;
+                                return (
+                                    <div key={e.etapa} className="flex flex-col gap-1.5">
+                                        {i > 0 && (
+                                            <div className="flex items-center gap-2 pl-1 text-[11px] font-bold text-white/35">
+                                                <span>↓</span>
+                                                <span className={caida >= 50 ? 'text-rose-400' : 'text-white/35'}>
+                                                    {caida}% no siguió
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-[13px]">
+                                            <span className="text-white/75">{e.etapa}</span>
+                                            <span className="font-black text-white">{e.cantidad}</span>
+                                        </div>
+                                        <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+                                            <div className="h-full origin-left rounded-full bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-700" style={{ width: `${(e.cantidad / maxEmbudo) * 100}%` }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Panel>
+                )}
+
+                <Panel title="Postulaciones por día" subtitle="Últimas 2 semanas" delay={40}>
+                    {stats.por_dia.every(d => d.cantidad === 0) ? (
+                        <span className="text-[13px] text-white/40">Sin postulaciones recientes.</span>
+                    ) : (
+                        <div className="flex gap-1.5">
+                            {stats.por_dia.map(d => {
+                                const max = Math.max(1, ...stats.por_dia.map(x => x.cantidad));
+                                return (
+                                    <div key={d.fecha} className="flex flex-1 flex-col items-center gap-1.5">
+                                        <span className="h-4 text-[10px] font-bold text-white/60">{d.cantidad || ''}</span>
+                                        <div className="flex h-24 w-full items-end">
+                                            <div
+                                                className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-pink-500 transition-all duration-500"
+                                                style={{ height: `${(d.cantidad / max) * 100}%`, minHeight: d.cantidad ? 4 : 0 }}
+                                            />
+                                        </div>
+                                        <span className="text-[9px] text-white/40">{d.fecha.slice(5)}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </Panel>
+            </div>
+
+            <SeccionHeader n="03" title="Calidad del pool" />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Panel title="Calidad del pool" subtitle="Distribución de score por tramo" delay={0}>
                     <div className="flex items-center gap-8">
@@ -229,60 +323,6 @@ const StatsBody = ({ stats, segmento }) => {
                             </div>
                         ))}
                     </div>
-                </Panel>
-
-                {stats.embudo && (
-                    <Panel title="Embudo de búsqueda" subtitle="De abrir el formulario a candidato fuerte" delay={80}>
-                        <div className="flex flex-col gap-1">
-                            {stats.embudo.map((e, i) => {
-                                const anterior = i > 0 ? stats.embudo[i - 1].cantidad : null;
-                                const caida = anterior ? Math.round(((anterior - e.cantidad) / anterior) * 100) : null;
-                                return (
-                                    <div key={e.etapa} className="flex flex-col gap-1.5">
-                                        {i > 0 && (
-                                            <div className="flex items-center gap-2 pl-1 text-[11px] font-bold text-white/35">
-                                                <span>↓</span>
-                                                <span className={caida >= 50 ? 'text-rose-400' : 'text-white/35'}>
-                                                    {caida}% no siguió
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between text-[13px]">
-                                            <span className="text-white/75">{e.etapa}</span>
-                                            <span className="font-black text-white">{e.cantidad}</span>
-                                        </div>
-                                        <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                                            <div className="h-full origin-left rounded-full bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-700" style={{ width: `${(e.cantidad / maxEmbudo) * 100}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Panel>
-                )}
-
-                <Panel title="Postulaciones por día" subtitle="Últimas 2 semanas" delay={120}>
-                    {stats.por_dia.every(d => d.cantidad === 0) ? (
-                        <span className="text-[13px] text-white/40">Sin postulaciones recientes.</span>
-                    ) : (
-                        <div className="flex gap-1.5">
-                            {stats.por_dia.map(d => {
-                                const max = Math.max(1, ...stats.por_dia.map(x => x.cantidad));
-                                return (
-                                    <div key={d.fecha} className="flex flex-1 flex-col items-center gap-1.5">
-                                        <span className="h-4 text-[10px] font-bold text-white/60">{d.cantidad || ''}</span>
-                                        <div className="flex h-24 w-full items-end">
-                                            <div
-                                                className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-pink-500 transition-all duration-500"
-                                                style={{ height: `${(d.cantidad / max) * 100}%`, minHeight: d.cantidad ? 4 : 0 }}
-                                            />
-                                        </div>
-                                        <span className="text-[9px] text-white/40">{d.fecha.slice(5)}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </Panel>
 
                 <Panel title="Conocimiento como closer" delay={160}>
