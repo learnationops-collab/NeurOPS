@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink, UserX, Scale } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink, UserX, Scale, FlaskConical, ChevronDown } from 'lucide-react';
 import api from '../../../../services/api';
 
 const CAMPOS_CORTOS = [
@@ -20,13 +20,17 @@ const CAMPOS_ABIERTOS = [
 // así que hay que soportar los dos formatos al mostrarlas.
 const textoRespuesta = (valor) => (Array.isArray(valor) ? valor.join(' · ') : valor);
 
-const VOTO_LABEL = { preseleccionada: 'Preseleccionada', en_reserva: 'En reserva', decidir: 'Decidir', descartado: 'Descartado', sin_calificar: 'Sin calificar', baja: 'De baja' };
-const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa', baja: '#e879f9' };
+const VOTO_LABEL = { preseleccionada: 'Seleccionada', en_reserva: 'En reserva', decidir: 'Decidir', testeo: 'En testeo', descartado: 'Descartado', sin_calificar: 'Sin calificar', baja: 'De baja' };
+const VOTO_COLOR = { preseleccionada: '#34d399', en_reserva: '#fbbf24', decidir: '#fbbf24', testeo: '#38bdf8', descartado: 'rgba(255,255,255,.5)', sin_calificar: '#60a5fa', baja: '#e879f9' };
 const OTRO_VOTO_LABEL = { pre: 'Preseleccionar', res: 'Reservar', des: 'Descartar' };
 
 const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, onVoted, onNavigate }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    // Tarjetas de respuestas abiertas: cuáles están expandidas (colapsadas por defecto, para
+    // que el resumen de 8 preguntas entre en pantalla de un vistazo — "Abrir todas" las
+    // expande todas de una, mismo mecanismo que el mockup de referencia).
+    const [abiertas, setAbiertas] = useState(new Set());
 
     const cargar = useCallback(async (id) => {
         setLoading(true);
@@ -42,7 +46,14 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
 
     useEffect(() => {
         if (applicationId) cargar(applicationId);
+        setAbiertas(new Set());
     }, [applicationId, cargar]);
+
+    const toggleAbierta = (key) => setAbiertas(prev => {
+        const next = new Set(prev);
+        next.has(key) ? next.delete(key) : next.add(key);
+        return next;
+    });
 
     if (!applicationId) return null;
 
@@ -61,13 +72,14 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
     };
 
     // Decisión manual de un admin que pisa el veredicto por votos: destraba un
-    // "decidir" preseleccionando igual, o marca la baja de alguien que ya
-    // había sido preseleccionado. Tocar el mismo botón otra vez la deshace.
+    // "decidir" preseleccionando igual, marca a alguien en su etapa de prueba
+    // (testeo) o le da de baja. Tocar el mismo botón otra vez la deshace.
     const resolver = async (valor) => {
         try {
             const nuevoValor = data?.resolucion === valor ? null : valor;
             const res = await api.post(`/job-applications/${applicationId}/resolver`, { valor: nuevoValor });
-            onVoted(applicationId, nuevoValor ? (nuevoValor === 'baja' ? 'baja' : 'pre') : null, res.data.veredicto);
+            const valorToast = nuevoValor === 'baja' ? 'baja' : nuevoValor === 'testeo' ? 'testeo' : nuevoValor === 'preseleccionada' ? 'pre' : null;
+            onVoted(applicationId, valorToast, res.data.veredicto);
             cargar(applicationId);
         } catch (err) {
             console.error('Error al resolver:', err);
@@ -76,9 +88,6 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
 
     const miVoto = data?.votos ? data.votos[currentUserId] : null;
     const otroVoto = data?.votos_detalle?.find(v => v.reviewer_id !== currentUserId);
-    // "Dar de baja" solo tiene sentido si ya está (o estuvo) preseleccionado:
-    // es para un closer que se fue, no para descartar durante la revisión.
-    const mostrarBaja = data?.veredicto === 'preseleccionada' || data?.resolucion === 'baja';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#04061480] p-8 backdrop-blur-sm" onClick={onClose}>
@@ -90,9 +99,19 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                 <div className="flex flex-none items-center justify-between gap-6 border-b border-white/10 bg-white/5 px-8 py-6">
                     <div className="min-w-0">
                         <p className="text-[11px] font-black uppercase tracking-widest text-pink-400">
-                            Formulario completo · todas las respuestas
+                            Postulación
                         </p>
-                        <p className="truncate text-2xl font-bold tracking-tight text-white">{data?.nombre || '...'}</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="truncate text-2xl font-bold tracking-tight text-white">{data?.nombre || '...'}</p>
+                            {data?.completo && (
+                                <span
+                                    className="flex-none rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-widest"
+                                    style={{ color: VOTO_COLOR[data.veredicto], borderColor: `${VOTO_COLOR[data.veredicto]}55`, background: `${VOTO_COLOR[data.veredicto]}1a` }}
+                                >
+                                    {VOTO_LABEL[data.veredicto]}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[13px] text-white/55">{data?.email || 'Sin correo todavía'}</p>
                         {data && !data.completo && (
                             <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-bold text-orange-400">
@@ -159,44 +178,70 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                                     ))}
                                 </div>
 
-                                <div className="flex flex-col gap-2 border-t border-white/10 pt-5">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-white/40">Veredicto</span>
-                                    <span className="text-[15px] font-bold" style={{ color: VOTO_COLOR[data.veredicto] }}>
-                                        {VOTO_LABEL[data.veredicto]}
-                                    </span>
-                                    {data.resolucion && (
-                                        <span className="text-[12px] text-white/50">
-                                            Resuelto a mano por {data.resuelto_por || 'un admin'}
-                                        </span>
-                                    )}
-                                    {otroVoto && (
-                                        <span className="text-[12px] text-white/50">
-                                            {otroVoto.reviewer_name || 'El otro revisor'} votó: {OTRO_VOTO_LABEL[otroVoto.vote] || otroVoto.vote}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-5">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-white/40">Respuestas abiertas</span>
-                                {CAMPOS_ABIERTOS.filter(([, key]) => data[key]).map(([label, key]) => (
-                                    <div key={key} className="rounded-2xl border border-white/12 bg-white/5 p-5">
-                                        <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-pink-300">{label}</p>
-                                        <p className="text-[14px] leading-relaxed text-white/85">{textoRespuesta(data[key])}</p>
-                                    </div>
-                                ))}
-                                {data.porque?.length > 0 && (
-                                    <div className="rounded-2xl border border-white/12 bg-white/5 p-5">
-                                        <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-pink-300">Por qué le interesa Learnation</p>
-                                        {Array.isArray(data.porque) ? (
-                                            <ul className="list-disc pl-4 text-[14px] leading-relaxed text-white/85">
-                                                {data.porque.map(p => <li key={p}>{p}</li>)}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-[14px] leading-relaxed text-white/85">{data.porque}</p>
+                                {(data.resolucion || otroVoto) && (
+                                    <div className="flex flex-col gap-2 border-t border-white/10 pt-5">
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-white/40">Detalle del veredicto</span>
+                                        {data.resolucion && (
+                                            <span className="text-[12px] text-white/50">
+                                                Resuelto a mano por {data.resuelto_por || 'un admin'}
+                                            </span>
+                                        )}
+                                        {otroVoto && (
+                                            <span className="text-[12px] text-white/50">
+                                                {otroVoto.reviewer_name || 'El otro revisor'} votó: {OTRO_VOTO_LABEL[otroVoto.vote] || otroVoto.vote}
+                                            </span>
                                         )}
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="flex flex-col gap-4">
+                                {(() => {
+                                    const items = CAMPOS_ABIERTOS.filter(([, key]) => data[key])
+                                        .map(([label, key]) => ({ key, label, texto: textoRespuesta(data[key]) }));
+                                    const tienePorque = data.porque && (Array.isArray(data.porque) ? data.porque.length > 0 : true);
+                                    if (tienePorque) {
+                                        items.push({
+                                            key: 'porque',
+                                            label: 'Por qué le interesa Learnation',
+                                            texto: Array.isArray(data.porque) ? data.porque.join(' · ') : data.porque,
+                                        });
+                                    }
+                                    const todasAbiertas = items.length > 0 && items.every(it => abiertas.has(it.key));
+                                    return (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-black uppercase tracking-widest text-white/40">Respuestas</span>
+                                                <button
+                                                    onClick={() => setAbiertas(todasAbiertas ? new Set() : new Set(items.map(it => it.key)))}
+                                                    className="rounded-full border border-white/20 px-4 py-1.5 text-[12px] font-bold text-white hover:bg-white/10"
+                                                >
+                                                    {todasAbiertas ? 'Cerrar todas' : 'Abrir todas'}
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                {items.map(it => {
+                                                    const abierta = abiertas.has(it.key);
+                                                    return (
+                                                        <div
+                                                            key={it.key}
+                                                            onClick={() => toggleAbierta(it.key)}
+                                                            className={`cursor-pointer rounded-2xl border p-4 transition-all ${abierta ? 'border-pink-400/50 bg-pink-500/[.07]' : 'border-white/12 bg-white/5 hover:border-white/25'}`}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <p className="text-[13px] font-bold text-white">{it.label}</p>
+                                                                <ChevronDown size={15} className={`flex-none text-white/50 transition-transform ${abierta ? 'rotate-180' : ''}`} />
+                                                            </div>
+                                                            <p className={`mt-2 text-[13px] leading-relaxed text-white/70 ${abierta ? '' : 'line-clamp-2'}`}>
+                                                                {it.texto}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </>
                     )}
@@ -218,12 +263,15 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                         </div>
                     )}
                     <div className="flex items-center justify-end">
-                        <div className={`grid w-full gap-3 ${mostrarBaja ? 'max-w-[720px] grid-cols-4' : 'max-w-[560px] grid-cols-3'}`}>
+                        {/* 5 acciones siempre visibles, mismo peso — Seleccionar/Reserva/Descartar son el
+                            voto de este revisor; Testeo/Baja son una resolución manual de un admin que no
+                            necesita el acuerdo del otro revisor (closer que ya está probando, o que se fue). */}
+                        <div className="grid w-full max-w-[860px] grid-cols-5 gap-3">
                             <button
                                 onClick={() => votar('pre')}
                                 className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${miVoto === 'pre' ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}
                             >
-                                <Check size={16} /> Preseleccionar
+                                <Check size={16} /> Seleccionar
                             </button>
                             <button
                                 onClick={() => votar('res')}
@@ -237,14 +285,18 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                             >
                                 <X size={16} /> Descartar
                             </button>
-                            {mostrarBaja && (
-                                <button
-                                    onClick={() => resolver('baja')}
-                                    className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${data.resolucion === 'baja' ? 'border-fuchsia-400 bg-fuchsia-500 text-white' : 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20'}`}
-                                >
-                                    <UserX size={16} /> {data.resolucion === 'baja' ? 'De baja' : 'Dar de baja'}
-                                </button>
-                            )}
+                            <button
+                                onClick={() => resolver('testeo')}
+                                className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${data?.resolucion === 'testeo' ? 'border-sky-400 bg-sky-500 text-white' : 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'}`}
+                            >
+                                <FlaskConical size={16} /> Testeo
+                            </button>
+                            <button
+                                onClick={() => resolver('baja')}
+                                className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[13px] font-bold transition-all ${data?.resolucion === 'baja' ? 'border-fuchsia-400 bg-fuchsia-500 text-white' : 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20'}`}
+                            >
+                                <UserX size={16} /> Baja
+                            </button>
                         </div>
                     </div>
                 </div>

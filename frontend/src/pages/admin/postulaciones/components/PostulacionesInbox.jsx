@@ -5,27 +5,32 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import PostulacionDetailModal from './PostulacionDetailModal';
 import PostulacionVoteToast from './PostulacionVoteToast';
 
-const VISTAS = [
-    { id: 'pipeline', label: 'Revisión' },
-    { id: 'reserva', label: 'En reserva' },
-    { id: 'incompletas', label: 'Incompletas' },
-];
-
-const FILTRO_DE_VISTA = { reserva: 'en_reserva', incompletas: 'incompletas' };
-
-const FILTROS = [
-    { id: 'mis_pendientes', label: 'Mis pendientes' },
-    { id: 'todas', label: 'Todas' },
-    { id: 'preseleccionadas', label: 'Preseleccionadas' },
-    { id: 'decidir', label: 'Decidir' },
-    { id: 'descartadas', label: 'Descartadas' },
-    { id: 'bajas', label: 'De baja' },
-];
+// Sub-filtros contextuales por grupo (pedido del usuario a partir de un mockup de
+// referencia, 10/sep/2026): la pestaña inferior "Pendientes" solo ofrece "Sin analizar" y
+// "Decidir"; "Analizados" agrupa todo lo que ya tiene un veredicto. El `id` de cada uno es
+// directamente el valor de `filtro` que ya entiende `GET /job-applications` — "sin analizar"
+// reusa el filtro `mis_pendientes` que ya existía (candidatos que este admin no votó todavía),
+// solo cambia la etiqueta visible.
+const SUBTABS_POR_GRUPO = {
+    pend: [
+        { id: 'mis_pendientes', label: 'Sin analizar' },
+        { id: 'decidir', label: 'Decidir' },
+    ],
+    anal: [
+        { id: 'preseleccionadas', label: 'Seleccionados' },
+        { id: 'en_reserva', label: 'En reserva' },
+        { id: 'testeo', label: 'Testeo' },
+        { id: 'bajas', label: 'Baja' },
+        { id: 'descartadas', label: 'Descartados' },
+        { id: 'incompletas', label: 'Incompletos' },
+    ],
+};
 
 const VEREDICTO_BADGE = {
-    preseleccionada: { label: 'Preseleccionada', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    preseleccionada: { label: 'Seleccionado', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
     en_reserva: { label: 'En reserva', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
     decidir: { label: 'Decidir', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    testeo: { label: 'Testeo', cls: 'bg-sky-500/10 text-sky-300 border-sky-500/20' },
     descartado: { label: 'Descartado', cls: 'bg-slate-800 text-slate-400 border-slate-700' },
     baja: { label: 'De baja', cls: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20' },
     sin_calificar: { label: 'Sin calificar', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
@@ -36,10 +41,10 @@ const soloDigitos = (texto) => (texto || '').replace(/\D/g, '');
 
 const metaLinea = (p) => [p.pais, p.edad].filter(Boolean).join(' · ');
 
-const PostulacionesInbox = () => {
+const PostulacionesInbox = ({ grupo = 'pend' }) => {
     const { user } = useAuth();
-    const [vista, setVista] = useState('pipeline');
-    const [filtro, setFiltro] = useState('mis_pendientes');
+    const subtabs = SUBTABS_POR_GRUPO[grupo] || SUBTABS_POR_GRUPO.pend;
+    const [sub, setSub] = useState(subtabs[0].id);
     const [postulaciones, setPostulaciones] = useState([]);
     const [conteos, setConteos] = useState({});
     const [total, setTotal] = useState(0);
@@ -47,7 +52,10 @@ const PostulacionesInbox = () => {
     const [selectedId, setSelectedId] = useState(null);
     const [toast, setToast] = useState(null);
 
-    const filtroActivo = FILTRO_DE_VISTA[vista] || filtro;
+    // Al cambiar de grupo (pestaña inferior Pendientes <-> Analizados) se vuelve al primer
+    // sub-filtro de ese grupo — mantener el `sub` anterior mostraría un filtro que ni
+    // siquiera aparece en la fila de arriba.
+    useEffect(() => { setSub(subtabs[0].id); }, [grupo]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const cargar = useCallback(async (f) => {
         setLoading(true);
@@ -63,14 +71,14 @@ const PostulacionesInbox = () => {
         }
     }, []);
 
-    useEffect(() => { cargar(filtroActivo); }, [filtroActivo, cargar]);
+    useEffect(() => { cargar(sub); }, [sub, cargar]);
 
     const ids = useMemo(() => postulaciones.map(p => p.id), [postulaciones]);
     const pendientes = conteos.mis_pendientes ?? 0;
 
     const irSiguiente = async () => {
         let lista = postulaciones;
-        if (filtro !== 'mis_pendientes') {
+        if (sub !== 'mis_pendientes') {
             const res = await api.get('/job-applications?filtro=mis_pendientes');
             lista = res.data.postulaciones;
         }
@@ -86,9 +94,10 @@ const PostulacionesInbox = () => {
                 mensajeFin: 'Actualizamos tu inbox de pendientes.',
             });
         }
-        cargar(filtroActivo);
-        // Autoavance: si quedan otros pendientes, saltar al siguiente.
-        if (valor) {
+        cargar(sub);
+        // Autoavance: si quedan otros pendientes, saltar al siguiente (solo tiene sentido
+        // en el grupo "Pendientes" — en "Analizados" cada fila ya tiene veredicto).
+        if (valor && grupo === 'pend') {
             setTimeout(async () => {
                 const res = await api.get('/job-applications?filtro=mis_pendientes');
                 const restante = res.data.postulaciones.find(p => p.id !== id);
@@ -119,65 +128,45 @@ const PostulacionesInbox = () => {
                 </div>
             </div>
 
-            {/* Vistas */}
-            <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[.03] p-1.5 w-fit">
-                {VISTAS.map(v => {
-                    const count = v.id === 'pipeline' ? conteos.todas : conteos[FILTRO_DE_VISTA[v.id]];
-                    return (
-                        <button
-                            key={v.id}
-                            onClick={() => setVista(v.id)}
-                            className={`rounded-xl px-6 py-3 text-[13px] font-bold transition-all ${
-                                vista === v.id ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' : 'text-white/60 hover:text-white'
-                            }`}
-                        >
-                            {v.label} {typeof count === 'number' ? `(${count})` : ''}
-                        </button>
-                    );
-                })}
+            {/* Sub-filtros: solo los del grupo activo (Pendientes o Analizados) */}
+            <div className="flex flex-wrap gap-2.5">
+                {subtabs.map(s => (
+                    <button
+                        key={s.id}
+                        onClick={() => setSub(s.id)}
+                        className={`rounded-full border px-5 py-2.5 text-[13px] font-bold transition-all ${
+                            sub === s.id
+                                ? 'border-pink-500 bg-pink-500/15 text-white'
+                                : 'border-white/15 bg-white/[.03] text-white/70 hover:border-white/30'
+                        }`}
+                    >
+                        {s.label} {typeof conteos[s.id] === 'number' ? `(${conteos[s.id]})` : ''}
+                    </button>
+                ))}
             </div>
 
-            {vista === 'pipeline' && (
-                <>
-                    {/* Inbox card */}
-                    <div className="flex flex-wrap items-center gap-7 rounded-3xl border border-pink-400/30 bg-gradient-to-r from-blue-600/20 to-pink-500/15 px-7 py-6">
-                        <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                            <span className="text-[11px] font-black uppercase tracking-widest text-white/55">
-                                Tu inbox · {user?.username}
-                            </span>
-                            <span className="text-xl font-black tracking-tight text-white">
-                                Te faltan {pendientes} de {total} candidatos
-                            </span>
-                        </div>
-                        <button
-                            onClick={irSiguiente}
-                            disabled={pendientes === 0}
-                            className={`flex flex-none items-center gap-2 rounded-full bg-white px-7 py-4 text-[13px] font-black text-[#0B0F26] transition-transform hover:-translate-y-0.5 disabled:opacity-40 ${pendientes > 0 ? 'animate-pulse' : ''}`}
-                        >
-                            Revisar el siguiente <ArrowRight size={16} />
-                        </button>
+            {grupo === 'pend' && (
+                /* Inbox card: revisar el siguiente sin analizar, uno por uno */
+                <div className="flex flex-wrap items-center gap-7 rounded-3xl border border-pink-400/30 bg-gradient-to-r from-blue-600/20 to-pink-500/15 px-7 py-6">
+                    <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-white/55">
+                            Tu inbox · {user?.username}
+                        </span>
+                        <span className="text-xl font-black tracking-tight text-white">
+                            Te faltan {pendientes} de {total} candidatos
+                        </span>
                     </div>
-
-                    {/* Filtros */}
-                    <div className="flex flex-wrap gap-2.5">
-                        {FILTROS.map(f => (
-                            <button
-                                key={f.id}
-                                onClick={() => setFiltro(f.id)}
-                                className={`rounded-full border px-5 py-2.5 text-[13px] font-bold transition-all ${
-                                    filtro === f.id
-                                        ? 'border-pink-500 bg-pink-500/15 text-white'
-                                        : 'border-white/15 bg-white/[.03] text-white/70 hover:border-white/30'
-                                }`}
-                            >
-                                {f.label} {typeof conteos[f.id] === 'number' ? `(${conteos[f.id]})` : ''}
-                            </button>
-                        ))}
-                    </div>
-                </>
+                    <button
+                        onClick={irSiguiente}
+                        disabled={pendientes === 0}
+                        className={`flex flex-none items-center gap-2 rounded-full bg-white px-7 py-4 text-[13px] font-black text-[#0B0F26] transition-transform hover:-translate-y-0.5 disabled:opacity-40 ${pendientes > 0 ? 'animate-pulse' : ''}`}
+                    >
+                        Revisar el siguiente <ArrowRight size={16} />
+                    </button>
+                </div>
             )}
 
-            {(vista === 'pipeline' || vista === 'reserva') && (
+            {sub !== 'incompletas' && (
                 <div className="overflow-x-auto rounded-3xl border border-white/12">
                     <table className="w-full min-w-[720px] border-collapse text-left">
                         <thead>
@@ -228,7 +217,7 @@ const PostulacionesInbox = () => {
                 </div>
             )}
 
-            {vista === 'incompletas' && (
+            {sub === 'incompletas' && (
                 <>
                     <p className="max-w-3xl text-[14px] leading-relaxed text-white/55">
                         Guardaron la postulación pero no la enviaron. Tenés su WhatsApp y su correo para empujarlas: son las que ya invirtieron tiempo y se cayeron en el camino.

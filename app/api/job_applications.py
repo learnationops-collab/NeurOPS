@@ -16,7 +16,7 @@ from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
 
-FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'decidir', 'descartadas', 'bajas')
+FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 'testeo', 'decidir', 'descartadas', 'bajas')
 # 'incompletas' no entra en FILTROS_VALIDOS: no es un veredicto de revisión
 # (no tiene sentido votar algo a medio completar), es una vista aparte para
 # ver dónde quedó alguien que no terminó.
@@ -45,6 +45,8 @@ def _aplica_filtro(app_row, filtro):
         return veredicto == 'preseleccionada'
     if filtro == 'en_reserva':
         return veredicto == 'en_reserva'
+    if filtro == 'testeo':
+        return veredicto == 'testeo'
     if filtro == 'decidir':
         return veredicto == 'decidir'
     if filtro == 'descartadas':
@@ -149,9 +151,10 @@ def votar_job_application(app_id):
 def resolver_job_application(app_id):
     """Decisión manual de un admin que pisa el veredicto calculado por votos:
     'preseleccionada' para destrabar un 'decidir' sin esperar a que algún
-    revisor cambie su voto, o 'baja' para un closer ya preseleccionado que se
-    fue por cualquier motivo (a diferencia de 'descartado', que es un rechazo
-    durante la revisión). `valor: null` deshace la resolución."""
+    revisor cambie su voto, 'testeo' para un closer preseleccionado que ya
+    está en su etapa de prueba, o 'baja' para uno que se fue por cualquier
+    motivo (a diferencia de 'descartado', que es un rechazo durante la
+    revisión). `valor: null` deshace la resolución."""
     forbidden = check_admin()
     if forbidden:
         return forbidden
@@ -159,7 +162,7 @@ def resolver_job_application(app_id):
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor is not None and valor not in RESOLUCION_VALUES:
-        return jsonify({"message": "valor debe ser 'preseleccionada', 'baja' o null"}), 400
+        return jsonify({"message": "valor debe ser 'preseleccionada', 'testeo', 'baja' o null"}), 400
 
     app_row = JobApplication.query.get_or_404(app_id)
 
@@ -233,7 +236,7 @@ def stats_job_applications():
     if forbidden:
         return forbidden
 
-    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'descartados', 'bajas', 'incompletos')
+    SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'testeo', 'descartados', 'bajas', 'incompletos')
     segmento = request.args.get('segmento', 'todos')
     if segmento not in SEGMENTOS_VALIDOS:
         segmento = 'todos'
@@ -249,6 +252,7 @@ def stats_job_applications():
     VEREDICTO_DE_SEGMENTO = {
         'preseleccionados': 'preseleccionada',
         'en_reserva': 'en_reserva',
+        'testeo': 'testeo',
         'descartados': 'descartado',
         'bajas': 'baja',
     }
