@@ -89,12 +89,19 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
     const miVoto = data?.votos ? data.votos[currentUserId] : null;
     const otroVoto = data?.votos_detalle?.find(v => v.reviewer_id !== currentUserId);
 
+    // Página completa, no un modal chico centrado (pedido explícito del usuario a partir del
+    // mockup de referencia: "que no sea solo un pedacito... que no haya ni siquiera necesidad
+    // de hacer scroll"). Sin backdrop ni click-afuera-para-cerrar: ya no hay "afuera", el cierre
+    // es solo por la X o Escape.
+    useEffect(() => {
+        const onKey = (e) => e.key === 'Escape' && onClose();
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#04061480] p-8 backdrop-blur-sm" onClick={onClose}>
-            <div
-                className="flex h-[88vh] w-full max-w-[1240px] flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#111634] shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden bg-[#111634]">
+            <div className="flex h-full w-full flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex flex-none items-center justify-between gap-6 border-b border-white/10 bg-white/5 px-8 py-6">
                     <div className="min-w-0">

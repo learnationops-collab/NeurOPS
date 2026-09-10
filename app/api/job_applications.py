@@ -356,13 +356,26 @@ def revisores_job_applications():
     admins = User.query.filter_by(role='admin').order_by(User.username).all()
     revisores = []
     for u in admins:
-        hechas = sum(1 for a in completas if any(v.reviewer_id == u.id for v in a.votes))
+        # `mosaico`: un valor por postulación completa, en el mismo orden que `completas`, con
+        # el voto de este revisor o None si todavía no llegó — pensado para dibujar una barra
+        # segmentada de color por candidato (mockup de referencia) en vez de una sola barra de
+        # progreso sin desglose. `conteo` es el mismo dato resumido por tipo de voto.
+        conteo = {'pre': 0, 'res': 0, 'des': 0}
+        mosaico = []
+        for a in completas:
+            voto = next((v.vote for v in a.votes if v.reviewer_id == u.id), None)
+            if voto:
+                conteo[voto] = conteo.get(voto, 0) + 1
+            mosaico.append(voto)
+        hechas = sum(1 for v in mosaico if v)
         revisores.append({
             "id": u.id,
             "nombre": u.username,
             "hechas": hechas,
             "faltan": total - hechas,
             "pct": round((hechas / total) * 100) if total else 0,
+            "conteo": conteo,
+            "mosaico": mosaico,
         })
 
     desacuerdos = []
