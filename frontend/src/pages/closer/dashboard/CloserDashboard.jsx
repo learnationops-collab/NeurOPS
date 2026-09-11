@@ -137,7 +137,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                 </div>
 
                 <SectionTitle>02 · Dónde se cae</SectionTitle>
-                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} cashMix={data.current.cash_mix} />
+                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} cashMix={data.current.cash_mix} confirmaciones={data.current.confirmaciones} />
 
                 <SectionTitle>03 · Calidad de la llamada</SectionTitle>
                 <div className="space-y-4">

@@ -38,9 +38,15 @@ export const ConfirmacionesCard = ({ confirmaciones }) => (
     </Card>
 );
 
-const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
+const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones }) => {
     const { labels, values } = funnel;
     const max = values[0] || 1;
+    // "Agendas" (fila 1) solo cuenta las que ya tuvieron su llamada dentro del período — a
+    // propósito, para no ensuciar las tasas de conversión con trabajo que todavía no pasó (ver
+    // ConfirmacionesCard arriba). El usuario pidió poder ver, al lado, cuántas hay agendadas
+    // más adelante — mismo número que ya se calculaba para "Próximas agendas", en un color
+    // aparte para no confundirlas con las que sí alimentan show up/no show/reagendadas/etc.
+    const agendasProximas = confirmaciones?.agendas_proximas || 0;
 
     let worst = { idx: 1, rate: 100 };
     const rows = values.map((v, i) => {
@@ -63,7 +69,7 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
                     <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-primary" /> Embudo completo
                         <MetricTip iconOnly title="Cómo se arma el embudo" source="derivado"
-                            note="Conversión de cada paso respecto al anterior. «Ventas» cuenta solo PIF y Split Pay. Slots, agendas, asistencias y presentaciones salen de los reportes diarios; confirmadas y ventas, de las agendas y del registro financiero." />
+                            note="Conversión de cada paso respecto al anterior. «Ventas» cuenta solo PIF y Split Pay. Solo Slots sale del reporte diario; agendas, confirmadas, asistencias y presentaciones salen de la bandeja (Appointment) y ventas del registro financiero." />
                     </h3>
                     <div className="flex items-center gap-2 flex-wrap">
                         {worst.idx && worst.rate < 55 && (
@@ -94,6 +100,14 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
                                     {r.v}
                                 </div>
                             </div>
+                            {i === 1 && agendasProximas > 0 && (
+                                <span
+                                    className="shrink-0 text-[10px] font-black px-2 py-1 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30 cursor-help"
+                                    title="Ya agendadas para después de hoy — todavía no tuvieron su llamada, así que no suman a Agendas ni a lo que sigue del embudo."
+                                >
+                                    +{agendasProximas} próx.
+                                </span>
+                            )}
                             <div className={`w-12 text-right text-[11px] font-black ${r.conv === null ? 'text-muted' : r.conv > 100 ? 'text-amber-400' : r.conv < 50 ? 'text-rose-400' : r.conv < 70 ? 'text-amber-400' : 'text-emerald-400'}`}>
                                 {r.conv === null ? '—' : `${r.conv}%`}
                             </div>
