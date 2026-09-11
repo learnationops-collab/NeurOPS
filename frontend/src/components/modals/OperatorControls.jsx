@@ -3,15 +3,8 @@ import { X, Power, Users, AlertTriangle, Loader2, ArrowLeft, Ghost } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import { saveSession } from '../../utils/sessionStore';
-
-const roleLandingPath = (role) => {
-    if (role === 'admin') return '/admin/ventas';
-    if (role === 'setter') return '/setter/deck?step=cualificacion';
-    if (role === 'triage') return '/triage/deck?step=confirmar';
-    if (role === 'closer') return '/closer/deck?step=confirmations';
-    if (role === 'operator') return '/ops/dashboard';
-    return '/login';
-};
+import { roleLandingPath } from '../../utils/roleLanding';
+import { revertImpersonation } from '../../utils/impersonation';
 
 const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
@@ -114,13 +107,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
     const handleRevert = async () => {
         setLoading(true);
         try {
-            const res = await api.post('/auth/revert');
-            const { user: originalUser, token } = res.data;
-
-            // Sincronizar estado local (mismo store que ya esté usando esta pestaña)
-            saveSession(originalUser, token);
-
-            window.location.href = roleLandingPath(originalUser.role);
+            await revertImpersonation();
         } catch (err) {
             alert('Error reverting session');
             setLoading(false);
@@ -139,6 +126,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
         { id: 'setter', label: 'Setters' },
         { id: 'triage', label: 'Triaje' },
         { id: 'operator', label: 'Operadores' },
+        { id: 'hiring', label: 'Hiring' },
         { id: 'admin', label: 'Admins' },
     ];
 

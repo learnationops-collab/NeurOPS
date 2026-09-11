@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Target, Sliders, Search, X, ArrowLeft } from 'lucide-react';
+import { Inbox, CheckCircle2, Target, Sliders, Search, X, ArrowLeft, LogOut, Ghost, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import OperatorControls from '../../../components/modals/OperatorControls';
+import { revertImpersonation } from '../../../utils/impersonation';
 import HiringInbox from './components/HiringInbox';
 import HiringStatsTab from './components/HiringStatsTab';
 import HiringClarityTab from './components/HiringClarityTab';
@@ -23,15 +25,22 @@ const TITULOS = {
 };
 
 const HiringDashboardPage = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [vista, setVista] = useState('pendientes');
     const [query, setQuery] = useState('');
     // Los badges del dock (cuántas sin analizar / cuántas analizadas) los sube
     // el inbox cuando carga: el dock no pide los datos por su cuenta.
     const [badges, setBadges] = useState({ pendientes: 0, analizados: 0 });
     const buscador = useRef(null);
+    // Modal de Acceso Simulado (el mismo que abre la tecla `w` dentro de
+    // MainLayout). Esta ruta corre sin MainLayout, así que no hereda el
+    // HotkeysManager global ni el modal: se montan acá, igual que en
+    // CloserWorkflowPage, para que un operador pueda salir de la simulación.
+    const [showOperatorControls, setShowOperatorControls] = useState(false);
+    const [saliendo, setSaliendo] = useState(false);
 
     // Ctrl/Cmd+P enfoca el buscador, Escape lo limpia — mismos atajos del mockup.
+    // `w` (sin modificadores y fuera de un input) abre Acceso Simulado.
     useEffect(() => {
         const onKey = (e) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
@@ -39,10 +48,29 @@ const HiringDashboardPage = () => {
                 buscador.current?.focus();
             }
             if (e.key === 'Escape' && query) setQuery('');
+
+            const enCampo = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+            if (!enCampo && e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault();
+                setShowOperatorControls((prev) => !prev);
+            }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [query]);
+
+    // "Volver a mi sesión": misma salida que ofrece el modal de Acceso Simulado,
+    // pero como botón visible en el header — la persona que simula a la usuaria
+    // de hiring no tiene por qué saber el atajo de teclado.
+    const volverAMiSesion = async () => {
+        setSaliendo(true);
+        try {
+            await revertImpersonation();
+        } catch (err) {
+            alert(err.response?.data?.message || 'No se pudo volver a tu sesión');
+            setSaliendo(false);
+        }
+    };
 
     // Al limpiar la búsqueda se vuelve donde estabas, salvo que estuvieras en
     // Clarity: ahí el resultado que acabás de buscar es lo que querés seguir
@@ -121,8 +149,37 @@ const HiringDashboardPage = () => {
                             </span>
                         )}
                     </div>
+
+                    {/* Acciones de sesión. El rol hiring no tiene dock global (ni
+                        MainLayout), así que cerrar sesión y salir de la simulación
+                        tienen que vivir en este header o no existen para él. */}
+                    <div className="flex flex-none items-center gap-2">
+                        {user?.is_impersonating && (
+                            <button
+                                type="button"
+                                onClick={volverAMiSesion}
+                                disabled={saliendo}
+                                title="Volver a tu sesión original (también con la tecla W)"
+                                className="flex h-9 items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 text-[12px] font-extrabold uppercase tracking-wide text-amber-300 transition-all hover:bg-amber-400/20 hover:text-amber-200 disabled:opacity-60"
+                            >
+                                {saliendo ? <Loader2 size={15} className="animate-spin" /> : <Ghost size={15} />}
+                                <span className="hidden sm:inline">Volver a mi sesión</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={logout}
+                            title="Cerrar sesión"
+                            className="flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-extrabold uppercase tracking-wide text-white/50 transition-all hover:bg-white/10 hover:text-white"
+                        >
+                            <LogOut size={15} />
+                            <span className="hidden sm:inline">Salir</span>
+                        </button>
+                    </div>
                 </div>
             </header>
+
+            <OperatorControls isOpen={showOperatorControls} onClose={() => setShowOperatorControls(false)} />
 
             <main className="px-4 py-8 sm:px-8 lg:px-14">
                 <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-black leading-none tracking-tight">
