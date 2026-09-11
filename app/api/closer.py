@@ -1717,6 +1717,12 @@ def get_closer_deck():
     for a in appointments:
         formatted = _format_appointment_for_deck(a)
         formatted["unread_comment"] = a.client_id in unread_client_ids if a.client_id else False
+        # Progreso del wizard de confirmación (ver Appointment.confirmation_* en
+        # app/models/booking.py) — se agrega acá en vez de en _format_appointment_for_deck para
+        # no tocar esa función (en revisión paralela por otro fix sin relación con esto).
+        formatted["confirmation_stage"] = a.confirmation_stage
+        formatted["confirmation_contact_status"] = a.confirmation_contact_status
+        formatted["confirmation_pain_points"] = a.confirmation_pain_points
         formatted_appointments.append(formatted)
         
     formatted_appointments.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
@@ -2121,7 +2127,20 @@ def process_closer_card(appt_id):
         
     if 'confirm_status' in data:
         appt.result = data['confirm_status']
-        
+
+    # Progreso granular del wizard de "Proceso de confirmación" (ver Appointment.confirmation_*
+    # en app/models/booking.py) — aditivo, no reemplaza `confirm_status`/`result` de arriba, que
+    # siguen mandando para el Kanban de 3 columnas (por_confirmar/conversando/confirmado).
+    if 'confirmation_stage' in data:
+        appt.confirmation_stage = data['confirmation_stage'] or None
+    if 'confirmation_contact_status' in data:
+        appt.confirmation_contact_status = data['confirmation_contact_status'] or None
+    if 'confirmation_pain_points' in data:
+        pain_points = data['confirmation_pain_points']
+        if isinstance(pain_points, list):
+            pain_points = ','.join(p for p in pain_points if p)
+        appt.confirmation_pain_points = pain_points or None
+
     if 'with_decision_maker' in data:
         if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
             appt.with_decision_maker = None
@@ -2170,7 +2189,13 @@ def process_closer_card(appt_id):
     # Si es una actualización de confirmación rápida (con o sin nota adjunta), no marcamos
     # la cita como procesada: el lead sigue vivo dentro del pipeline de confirmaciones
     # (Por confirmar / Conversando / Confirmado), no se resolvió ni salió del mazo.
-    confirm_only_keys = {'confirm_status', 'closer_notes', 'pre_call_reminder_at'}
+    confirm_only_keys = {
+        'confirm_status', 'closer_notes', 'pre_call_reminder_at',
+        # Autoguardado del wizard de confirmación (cada toque de etapa/tag dispara un guardado
+        # parcial): sin esto, tocar una etapa mientras el lead sigue "conversando" marcaría la
+        # cita como `closer_processed = True` y la sacaría del mazo antes de llegar a Testimonio.
+        'confirmation_stage', 'confirmation_contact_status', 'confirmation_pain_points'
+    }
     # Bug real reportado en producción (08/sep/2026, Joaquín): reagendar una llamada devolviéndola
     # explícitamente a "Pendiente" (ej. desde un seguimiento con "Contestó y agendó", una "2ª
     # llamada" o un reagendado manual — los 3 mandan `result: 'Pendiente'` junto con otras claves
@@ -2746,6 +2771,11 @@ def get_closer_deck_card(appt_id):
     card = _format_appointment_for_deck(appt, recover_form=True)
     card['can_edit'] = True
     card['owner_closer_name'] = None if appt.closer_id == current_user.id else (appt.closer.username if appt.closer else None)
+    # Ver comentario equivalente en get_closer_deck: agregado acá para no tocar
+    # _format_appointment_for_deck.
+    card['confirmation_stage'] = appt.confirmation_stage
+    card['confirmation_contact_status'] = appt.confirmation_contact_status
+    card['confirmation_pain_points'] = appt.confirmation_pain_points
     return jsonify(card), 200
 
 
