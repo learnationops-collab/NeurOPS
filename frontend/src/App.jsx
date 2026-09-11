@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
 import FinancePage from './pages/admin/reports/FinancePage';
@@ -82,15 +83,8 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
   if (roles.length > 0 && !roles.includes(user.role)) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
-    if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
-    if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
-    if (user.role === 'setter') return <Navigate to="/setter/deck?step=cualificacion" />;
-    if (user.role === 'closer') return <Navigate to="/closer/deck?step=confirmations" />;
-    if (user.role === 'triage') return <Navigate to="/triage/deck?step=confirmar" />;
-    if (user.role === 'director_comercial') return <Navigate to="/admin/ventas" />;
-    if (user.role === 'director_marketing') return <Navigate to="/admin/workshops" />;
-    if (user.role === 'hiring') return <Navigate to="/admin/hiring" />;
-    return <Navigate to="/" />;
+    // (mapa único en utils/roleLanding.js, el mismo que usa el login).
+    return <Navigate to={roleLandingPath(user.role)} />;
   }
 
   return children;

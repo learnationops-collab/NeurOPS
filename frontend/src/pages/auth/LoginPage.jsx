@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { roleLandingPath } from '../../utils/roleLanding';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import DebugConsole from '../../components/modals/DebugConsole';
@@ -20,24 +21,10 @@ const LoginPage = () => {
     setError(null);
     try {
       const user = await login(username, password);
-
-      if (user.role === 'admin') {
-        navigate('/admin/ventas');
-      } else if (user.role === 'setter') {
-        navigate('/setter/deck?step=cualificacion');
-      } else if (user.role === 'triage') {
-        navigate('/triage/deck?step=confirmar');
-      } else if (user.role === 'closer') {
-        navigate('/closer/deck?step=confirmations');
-      } else if (user.role === 'operator') {
-        navigate('/ops/dashboard');
-      } else if (user.role === 'director_comercial') {
-        navigate('/admin/ventas');
-      } else if (user.role === 'director_marketing') {
-        navigate('/admin/workshops');
-      } else {
-        navigate('/login');
-      }
+      // Un solo mapa rol -> pantalla (utils/roleLanding.js), compartido con
+      // ProtectedRoute y con la simulación desde Equipo. Tener la lista repetida
+      // acá dejaba afuera a los roles nuevos (`hiring` se quedaba en el login).
+      navigate(roleLandingPath(user.role));
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');
     } finally {

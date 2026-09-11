@@ -25,18 +25,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import { saveSession } from '../../../utils/sessionStore';
-
-const roleLandingPath = (role) => {
-    if (role === 'admin') return '/admin/ventas';
-    if (role === 'operator') return '/ops/dashboard';
-    if (role === 'setter') return '/setter/deck?step=cualificacion';
-    if (role === 'triage') return '/triage/deck?step=confirmar';
-    if (role === 'closer') return '/closer/deck?step=confirmations';
-    if (role === 'director_comercial') return '/admin/ventas';
-    if (role === 'director_marketing') return '/admin/workshops';
-    if (role === 'hiring') return '/admin/hiring';
-    return '/publico';
-};
+import { roleLandingPath } from '../../../utils/roleLanding';
 
 const TeamManagementPage = () => {
     const [users, setUsers] = useState([]);
