@@ -10,8 +10,9 @@ La deteccion original era `'workshop' in fuente`, un substring, asi que
 dentro de las metricas del workshop en vivo.
 
 No dependemos del texto exacto a proposito: la fuente la escribe n8n / el
-formulario y ya conviven variantes ('workshop manychat', mayusculas, guiones).
-Normalizamos y decidimos por palabras, no por igualdad.
+formulario y ya conviven variantes ('workshop manychat', mayusculas, guiones,
+y hasta 'worshop_landing' sin la k). Normalizamos y decidimos por palabras, no
+por igualdad.
 """
 import re
 import unicodedata
@@ -88,6 +89,16 @@ def normalizar(texto):
     return re.sub(r'\s+', ' ', t).strip()
 
 
+# Como llega escrita la palabra 'workshop' en la practica. La ultima ('worshop')
+# entro por el webhook de agendas el 05/09/2026 y sin esto caia en 'otro'.
+VARIANTES_WORKSHOP = ('workshop', 'worshop', 'workshp', 'wokshop')
+
+
+def menciona_workshop(texto_normalizado):
+    """True si el texto (ya normalizado) nombra al workshop, con o sin typo."""
+    return any(v in texto_normalizado for v in VARIANTES_WORKSHOP)
+
+
 def es_workshop_landing(*textos):
     """True si la fuente es la grabacion.
 
@@ -98,7 +109,7 @@ def es_workshop_landing(*textos):
         t = normalizar(texto)
         if not t:
             continue
-        if 'workshop' in t and ('landing' in t or 'replay' in t or 'grabacion' in t):
+        if menciona_workshop(t) and ('landing' in t or 'replay' in t or 'grabacion' in t):
             return True
     return False
 
@@ -108,7 +119,7 @@ def es_workshop_vivo(*textos):
     if es_workshop_landing(*textos):
         return False
     for texto in textos:
-        if 'workshop' in normalizar(texto):
+        if menciona_workshop(normalizar(texto)):
             return True
     return False
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, Clock, ExternalLink, UserX, Scale, FlaskConical, ChevronDown } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Clock, UserX, Scale, FlaskConical, ChevronDown, Video, Phone } from 'lucide-react';
 import api from '../../../../services/api';
 
 const CAMPOS_CORTOS = [
@@ -100,7 +100,9 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden bg-[#111634]">
+        // z-[300]: por encima del botón flotante de reportar bugs (z-[190]/[210], ver
+        // BugReportWidget) — si no, sus botones de voto quedan tapados por ese botón.
+        <div className="fixed inset-0 z-[300] flex flex-col overflow-hidden bg-[#111634]">
             <div className="flex h-full w-full flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex flex-none items-center justify-between gap-6 border-b border-white/10 bg-white/5 px-8 py-6">
@@ -120,6 +122,30 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                             )}
                         </div>
                         <p className="text-[13px] text-white/55">{data?.email || 'Sin correo todavía'}</p>
+                        {data && (
+                            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                {['video', 'llamada'].map(key => (
+                                    data[key] ? (
+                                        <a
+                                            key={key}
+                                            href={data[key]}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[12px] font-bold text-emerald-400 hover:bg-emerald-500/20"
+                                        >
+                                            {key === 'video' ? <Video size={13} /> : <Phone size={13} />} Ver {key}
+                                        </a>
+                                    ) : (
+                                        <span
+                                            key={key}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/35"
+                                        >
+                                            {key === 'video' ? <Video size={13} /> : <Phone size={13} />} Sin {key}
+                                        </span>
+                                    )
+                                ))}
+                            </div>
+                        )}
                         {data && !data.completo && (
                             <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-bold text-orange-400">
                                 Quedó a mitad de camino · respondió {data.respondidas} de {data.total_preguntas}
@@ -174,16 +200,6 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                                         </div>
                                     </div>
                                 )}
-
-                                <div className="flex flex-col gap-2.5">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-white/40">Material enviado</span>
-                                    {['video', 'llamada'].map(key => data[key] && (
-                                        <a key={key} href={data[key]} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3.5 rounded-2xl border border-white/12 bg-white/5 px-4.5 py-3.5 text-white no-underline hover:border-pink-400/60">
-                                            <span className="text-[13px] text-white/60 capitalize">{key} <ExternalLink size={12} className="inline" /></span>
-                                            <span className="truncate text-[13px] font-bold">{data[key]}</span>
-                                        </a>
-                                    ))}
-                                </div>
 
                                 {(data.resolucion || otroVoto) && (
                                     <div className="flex flex-col gap-2 border-t border-white/10 pt-5">
