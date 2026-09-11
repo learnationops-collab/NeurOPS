@@ -74,6 +74,27 @@ class Appointment(db.Model):
     followup_reminder_enabled = db.Column(db.Boolean, default=False, server_default='0', nullable=True)
     followup_reminder_time = db.Column(db.String(5), nullable=True)
 
+    # Progreso granular del "Proceso de confirmación" (ovLead / modalStep 'confirm', rediseño v8
+    # a partir del mockup "Closer Workspace.html"): antes ese paso solo distinguía 3 estados
+    # gruesos (por_confirmar/conversando/Confirmado, todavía en `result`, sin tocar). El mockup
+    # pide 5 sub-etapas dentro de "conversando" (el closer toca la etapa a la que llegó la
+    # llamada de confirmación, se guarda solo) — se agregan como campos nuevos y aditivos en vez
+    # de reemplazar `result`, para no romper `confirmationsPipeline`/Kanban/reportes que ya
+    # agrupan por esos 3 estados.
+    # 'por_contactar' | 'contactado' | 'horario' | 'videoask' | 'testimonio'. None == 'por_contactar'
+    # (mismo criterio que `result` None == "Por confirmar": el valor por defecto no se persiste).
+    confirmation_stage = db.Column(db.String(20), nullable=True)
+    # "Cómo viene" — 'pendiente' | 'espera_respuesta' | 'no_contesta'. Distinto de
+    # `last_contact_outcome` (no_resp/contesto/agendo/cerro/pago): ese campo alimenta las
+    # métricas de actividad de SEGUIMIENTOS (CloserFollowUpService/CloserService) y reutilizarlo
+    # acá con un vocabulario distinto ensuciaría esos conteos con toques del flujo de
+    # confirmación. None == 'pendiente'.
+    confirmation_contact_status = db.Column(db.String(20), nullable=True)
+    # "Dolores que contó" — lista de slugs separados por coma (ej. "ansiedad,sin_metodo"),
+    # tocados libremente por el closer durante la confirmación. Texto plano simple, mismo
+    # criterio de bajo ceremonial que el resto del modelo (sin JSON column).
+    confirmation_pain_points = db.Column(db.String(255), nullable=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')
