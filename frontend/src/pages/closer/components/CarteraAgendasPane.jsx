@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Search, CalendarRange, CopyX } from 'lucide-react';
+import { Loader2, Search, CalendarRange, CopyX, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import { parseUtcIso, toLocalDateStr, localToday, viewerTimezoneLabel } from '../../../utils/datetime';
@@ -169,6 +169,35 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
             fetchItems();
         } catch (err) {
             toast.error(err.response?.data?.message || 'No se pudo marcar la agenda como duplicada');
+        } finally {
+            setResolvingId(null);
+        }
+    };
+
+    // Eliminar de verdad una agenda cancelada (pedido del usuario, 10/sep/2026: una cancelación
+    // — sobre todo una duplicada — "no fue una agenda" y no debería quedar dando vueltas en el
+    // registro). Reusa DELETE /closer/deck/<id>, el mismo endpoint que ya usa "Descartar lead"
+    // desde el modal de confirmación — no es una acción nueva, solo un segundo lugar desde
+    // donde llamarla. Solo se ofrece sobre agendas YA canceladas: el endpoint en sí no exige
+    // ningún estado (borra cualquier cita del closer), así que la restricción es a propósito
+    // acá, para que esta lista de auditoría nunca pueda borrar un resultado real (show up, no
+    // show, etc.) — solo lo que ya no cuenta como una agenda real.
+    const eliminarAgenda = async (it, e) => {
+        e.stopPropagation();
+        if (resolvingId) return;
+        const fecha = parseUtcIso(it.start_time);
+        if (!window.confirm(
+            `¿Eliminar definitivamente la agenda de ${it.lead_name}` +
+            `${fecha ? ` del ${fmtDia(fecha)}` : ''}?\n\n` +
+            `Esta acción no se puede deshacer.`
+        )) return;
+        setResolvingId(it.id);
+        try {
+            await api.delete(`/closer/deck/${it.id}`);
+            toast.success('Agenda eliminada');
+            fetchItems();
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.response?.data?.error || 'No se pudo eliminar la agenda');
         } finally {
             setResolvingId(null);
         }
@@ -477,6 +506,25 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
                                                 style={{ background: 'rgba(249,115,22,.15)', border: '1px solid rgba(249,115,22,.4)', color: '#FDBA74' }}
                                             >
                                                 {resolvingId === it.id ? 'Cancelando…' : 'Marcar como duplicada'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {it.estado === 'cancelada' && (
+                                        <div
+                                            style={{ minWidth: MIN_W, padding: '8px 20px 8px 24px', background: 'rgba(255,255,255,.02)', borderBottom: '1px solid rgba(255,255,255,.055)' }}
+                                            className="flex items-center justify-between gap-3 flex-wrap"
+                                        >
+                                            <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,.4)' }}>
+                                                Cancelada — si no debería figurar (ej. una agenda duplicada), se puede eliminar del registro.
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => eliminarAgenda(it, e)}
+                                                disabled={resolvingId === it.id}
+                                                className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.4)', color: '#FCA5A5' }}
+                                            >
+                                                <Trash2 size={11} /> {resolvingId === it.id ? 'Eliminando…' : 'Eliminar agenda'}
                                             </button>
                                         </div>
                                     )}
