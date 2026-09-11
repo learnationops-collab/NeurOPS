@@ -100,6 +100,13 @@ const useDockNavigation = () => {
                 { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' },
                 { id: 'marketing', icon: Activity, label: 'Marketing', path: '/admin/marketing' }
             ];
+        } else if (user?.role === 'hiring') {
+            // Rol de una sola pantalla: el panel de contratación para el puesto
+            // de Asistente. No ve nada más del admin, así que el dock tiene un
+            // único destino (la propia pantalla trae su menú interno).
+            return [
+                { id: 'hiring', icon: UserCheck, label: 'Contratación', path: '/admin/hiring' }
+            ];
         }
 
         return [];

@@ -62,6 +62,7 @@ import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
+import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
@@ -88,6 +89,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'triage') return <Navigate to="/triage/deck?step=confirmar" />;
     if (user.role === 'director_comercial') return <Navigate to="/admin/ventas" />;
     if (user.role === 'director_marketing') return <Navigate to="/admin/workshops" />;
+    if (user.role === 'hiring') return <Navigate to="/admin/hiring" />;
     return <Navigate to="/" />;
   }
 
@@ -247,6 +249,16 @@ function App() {
                 // en vez de vivir dentro del dock global del admin.
                 <ProtectedRoute roles={['admin']}>
                   <PostulacionesDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/hiring"
+              element={
+                // Igual que Postulaciones: sub-app con header y dock propios, sin
+                // MainLayout. Es la única pantalla del rol `hiring`.
+                <ProtectedRoute roles={['admin', 'hiring']}>
+                  <HiringDashboardPage />
                 </ProtectedRoute>
               }
             />
