@@ -32,6 +32,47 @@ const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', '
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+// Wizard de "Proceso de confirmación" v8 (mockup "Closer Workspace.html", 10/sep/2026): 5
+// sub-etapas dentro de "conversando" que el closer toca a medida que avanza la confirmación
+// pre-llamada. Viven en Appointment.confirmation_stage (nuevo, aditivo — ver app/models/
+// booking.py), NO reemplazan `result`/confirm_status ('por_confirmar'/'conversando'/
+// 'Confirmado'), que siguen derivándose de esto mismo para no romper el Kanban de 3 columnas.
+const CONFIRM_STAGES = [
+    { key: 'por_contactar', label: 'Por contactar' },
+    { key: 'contactado', label: 'Contactado' },
+    { key: 'horario', label: 'Horario' },
+    { key: 'videoask', label: 'VideoAsk' },
+    { key: 'testimonio', label: 'Testimonio' }
+];
+
+// "Cómo viene" (Appointment.confirmation_contact_status) — distinto de last_contact_outcome
+// (no_resp/contesto/agendo/cerro/pago), que alimenta las métricas de actividad de SEGUIMIENTOS
+// y no debe mezclarse con el vocabulario de este wizard.
+const CONFIRM_CONTACT_STATUS = [
+    { key: 'pendiente', label: 'Pendiente' },
+    { key: 'espera_respuesta', label: 'A la espera de respuesta' },
+    { key: 'no_contesta', label: 'No contesta' }
+];
+
+// "Dolores que contó" (Appointment.confirmation_pain_points, lista separada por coma) — lo que
+// el lead menciona espontáneamente durante la llamada de confirmación.
+const CONFIRM_PAIN_POINTS = [
+    { key: 'procrastinacion', label: 'Procrastinación' },
+    { key: 'ansiedad', label: 'Ansiedad' },
+    { key: 'estres', label: 'Estrés' },
+    { key: 'sin_metodo', label: 'Sin método' },
+    { key: 'miedo_fracasar', label: 'Miedo a fracasar' },
+    { key: 'desorganizacion', label: 'Desorganización' },
+    { key: 'se_distrae', label: 'Se distrae' },
+    { key: 'intentos_previos', label: 'Intentos previos' }
+];
+
+// Deriva el confirm_status (result) de 3 valores que ya entiende el resto del pipeline
+// (Kanban/heroLead/reportes) a partir de la etapa granular del wizard — 'por_contactar' sigue
+// siendo "por_confirmar"; cualquier etapa intermedia ya es "conversando"; "Confirmado" solo lo
+// pone la acción explícita "Listo · 100% confirmado", nunca con solo llegar a Testimonio.
+const stageToConfirmStatus = (stageKey) => (stageKey === 'por_contactar' ? 'por_confirmar' : 'conversando');
+
 // Qué falta para poder guardar, en palabras y al lado del botón. Nace de un reporte real: un
 // closer completaba todo lo que la pantalla marcaba como obligatorio, tocaba "Completar
 // Seguimiento" y no pasaba nada — el botón estaba deshabilitado por un requisito que no se
@@ -1192,7 +1233,12 @@ const CloserWorkflowPage = () => {
             fecha_seguimiento_cobro_next: localDateFromNow(3),
             refs_ask: undefined,
             refs_rows: [],
-            showRefsStep: false
+            showRefsStep: false,
+            // Wizard de "Proceso de confirmación" v8 — ver CONFIRM_STAGES/app/models/booking.py.
+            // None se trata como el primer valor de cada lista (por_contactar/pendiente/[]).
+            confirmation_stage: lead.confirmation_stage || 'por_contactar',
+            confirmation_contact_status: lead.confirmation_contact_status || 'pendiente',
+            confirmation_pain_points: lead.confirmation_pain_points ? lead.confirmation_pain_points.split(',').filter(Boolean) : []
         });
 
         // 2. Determinar paso inicial del árbol por contexto. `lead.fase`, cuando viene
@@ -1202,16 +1248,12 @@ const CloserWorkflowPage = () => {
         // ella). `activeStep` solo se usa como respaldo cuando `lead.fase` no viene seteado
         // (tarjetas del mazo, que dependen de la pestaña donde viven).
         if (lead.fase === 'confirm' || (lead.fase === undefined && activeStep === 'confirmations')) {
-            // Un lead ya "Confirmado" no tiene nada más que confirmar: se abre directo en el
-            // reporte de resultado de la llamada, igual que si viniera de la pestaña Llamadas.
-            const normalizedResult = (lead.result || '').toLowerCase();
-            if (normalizedResult === 'confirmado') {
-                setModalStep('root');
-                setModalFlowLabel('Reporte de llamada');
-            } else {
-                setModalStep('confirm');
-                setModalFlowLabel('Proceso de confirmación');
-            }
+            // v8: un lead ya "Confirmado" también abre acá (antes saltaba directo al reporte de
+            // llamada) — el wizard es ahora la vista durable de todo el pipeline de confirmación,
+            // con la etapa completa y el panel de éxito ya armados; "reportar la llamada" sigue
+            // viviendo aparte, en la pestaña Reportar, para cuando la hora de la cita ya pasó.
+            setModalStep('confirm');
+            setModalFlowLabel('Proceso de confirmación');
         } else if (lead.fase === 'seg' || (lead.fase === undefined && activeStep === 'seguimientos')) {
             setModalStep(lead.tipo === 'cerrada' ? 'segventa' : 'seg');
             setModalFlowLabel('Seguimiento');
@@ -1807,90 +1849,179 @@ const CloserWorkflowPage = () => {
         setModalStep(nextStep);
     };
 
-    const saveConfirmReport = async () => {
-        if (sessionForm.notes.trim().length < 10) {
-            toast.error("Contá en qué va el proceso con al menos 10 caracteres");
-            return;
+    // Autoguardado del wizard de "Proceso de confirmación" (v8): cada toque de etapa/chip
+    // dispara esto con un patch parcial sobre sessionForm — "se guarda solo", tal como dice el
+    // mockup debajo del stepper. `confirm_status`/`result` (el pipeline de 3 columnas que ya
+    // entienden Kanban/heroLead/reportes) se derivan siempre de la etapa nueva, nunca se piden
+    // aparte. Optimista: actualiza selectedLead/agendas de una para que el Kanban de fondo y el
+    // resto del modal reflejen el cambio sin esperar un refetch completo.
+    const saveConfirmStage = async (patch) => {
+        const next = { ...sessionForm, ...patch };
+        setSessionForm(next);
+        const confirmStatus = stageToConfirmStatus(next.confirmation_stage);
+        const painPointsStr = (next.confirmation_pain_points || []).join(',');
+        const payload = {
+            confirm_status: confirmStatus,
+            closer_notes: next.notes,
+            confirmation_stage: next.confirmation_stage,
+            confirmation_contact_status: next.confirmation_contact_status,
+            confirmation_pain_points: painPointsStr
+        };
+        // El recordatorio pre-llamada solo tiene sentido mientras el lead sigue en "Por
+        // contactar" — mismo criterio que ya usaba esta pantalla antes del wizard.
+        if (next.confirmation_stage === 'por_contactar') {
+            payload.pre_call_reminder_at = (next.pre_call_reminder_enabled && next.pre_call_reminder_at)
+                ? localInputsToUtcIso(...next.pre_call_reminder_at.split('T'))
+                : null;
         }
-        if (!sessionForm.confirm_status) {
-            toast.error("Elegí si ya hubo contacto o confirmó antes de guardar");
-            return;
+        try {
+            await api.post(`/closer/deck/${selectedLead.id}`, payload);
+            // Refleja EXACTAMENTE lo que se acaba de persistir — no solo `result` — para que
+            // reabrir esta misma ficha sin pasar por un fetchAgendas() de por medio (ej. cerrar
+            // y volver a abrir desde la misma tarjeta del Kanban) encuentre la etapa/tags tal
+            // como quedaron, en vez de reiniciar a "Por contactar" por leer un `lead` local
+            // desactualizado en handleSelectLead.
+            const localPatch = {
+                result: confirmStatus,
+                closer_notes: next.notes,
+                confirmation_stage: next.confirmation_stage,
+                confirmation_contact_status: next.confirmation_contact_status,
+                confirmation_pain_points: painPointsStr
+            };
+            setSelectedLead(prev => (prev ? { ...prev, ...localPatch } : prev));
+            setAgendas(prev => prev.map(item => item.id === selectedLead.id ? { ...item, ...localPatch } : item));
+        } catch (err) {
+            console.error("Error al autoguardar el progreso de confirmación:", err);
+            toast.error("No se pudo guardar ese cambio. Probá de nuevo.");
         }
+    };
+
+    // "Listo · 100% confirmado": única acción que de verdad pone confirm_status='Confirmado'.
+    // Llegar a la etapa Testimonio por sí solo NO confirma — reusa exactamente la lógica de
+    // celebración/racha que ya existía (confirmadosHoy, pcRemaining/cvRemaining), solo cambia
+    // de dónde saca los datos de entrada (el wizard nuevo en vez de las 2 preguntas viejas). A
+    // diferencia de antes, el modal de la ficha NO se cierra: el mockup deja el wizard abierto
+    // mostrando el panel de éxito (Deshacer / Volver al board) — cerrar es ahora una elección.
+    const handleConfirmFinal = async () => {
         const leadName = selectedLead.lead_name || 'El lead';
-        const newStatus = sessionForm.confirm_status;
-        const prevStatus = (selectedLead.result || '').toLowerCase();
-        const wasPorConfirmar = !['conversando', 'contactado', 'confirmado'].includes(prevStatus);
         const pcRemaining = confirmationsPipeline.porConfirmar.filter(a => a.id !== selectedLead.id).length;
         const cvRemaining = confirmationsPipeline.conversando.filter(a => a.id !== selectedLead.id).length;
-
-        // Misma derivación de "etapa actual" que usa el paso de confirmación al renderizar
-        const normalizedCurrentResult = (selectedLead.result || '').toLowerCase();
-        const isPorConfirmar = normalizedCurrentResult !== 'confirmado'
-            && normalizedCurrentResult !== 'conversando' && normalizedCurrentResult !== 'contactado';
-
-        let reminderPayload;
-        if (isPorConfirmar) {
-            if (sessionForm.pre_call_reminder_enabled && sessionForm.pre_call_reminder_at) {
-                const [d, t] = sessionForm.pre_call_reminder_at.split('T');
-                reminderPayload = localInputsToUtcIso(d, t);
-            } else {
-                reminderPayload = null;
-            }
-        }
+        // "Cómo viene" no puede quedar en "Pendiente" una vez 100% confirmado (mismo ajuste
+        // automático que hace el mockup al tocar Listo); si el closer ya lo había cambiado a
+        // mano, se respeta.
+        const nextContactStatus = sessionForm.confirmation_contact_status === 'pendiente'
+            ? 'espera_respuesta'
+            : sessionForm.confirmation_contact_status;
 
         setProcessingId(selectedLead.id);
         try {
             await api.post(`/closer/deck/${selectedLead.id}`, {
-                confirm_status: newStatus,
+                confirm_status: 'Confirmado',
                 closer_notes: sessionForm.notes,
-                ...(reminderPayload !== undefined ? { pre_call_reminder_at: reminderPayload } : {})
+                confirmation_stage: 'testimonio',
+                confirmation_contact_status: nextContactStatus,
+                confirmation_pain_points: (sessionForm.confirmation_pain_points || []).join(',')
             });
-            setSelectedLead(null);
-            fetchAgendas();
+            setSessionForm(prev => ({
+                ...prev,
+                confirmation_stage: 'testimonio',
+                confirmation_contact_status: nextContactStatus
+            }));
+            // `selectedLead.result` es la única fuente de verdad para decidir si el wizard
+            // muestra el panel de éxito o la vista editable (ver modalStep === 'confirm' más
+            // abajo) — no hace falta una bandera local aparte. Se patchea también la etapa/tags
+            // (mismo motivo que en saveConfirmStage): si reabre sin pasar por fetchAgendas, tiene
+            // que encontrar "Testimonio" ya marcado, no lo último que hubiera en caché.
+            const localPatch = {
+                result: 'Confirmado',
+                closer_notes: sessionForm.notes,
+                confirmation_stage: 'testimonio',
+                confirmation_contact_status: nextContactStatus,
+                confirmation_pain_points: (sessionForm.confirmation_pain_points || []).join(',')
+            };
+            setSelectedLead(prev => (prev ? { ...prev, ...localPatch } : prev));
+            setAgendas(prev => prev.map(item => item.id === selectedLead.id ? { ...item, ...localPatch } : item));
 
-            if (newStatus === 'Confirmado') {
-                const newConfirmadosHoy = confirmadosHoy + 1;
-                setConfirmadosHoy(newConfirmadosHoy);
-                if (pcRemaining === 0 && cvRemaining === 0) {
-                    setCelebration({
-                        emoji: '🏆',
-                        title: 'Pipeline blindado',
-                        body: `${newConfirmadosHoy} agenda${newConfirmadosHoy !== 1 ? 's' : ''} confirmada${newConfirmadosHoy !== 1 ? 's' : ''}. Ninguna se te va a caer por falta de recordatorio.`,
-                        next: 'Siguiente paso: reportá las llamadas que ya ocurrieron.',
-                        bar: null
-                    });
-                } else {
-                    setCelebration({
-                        emoji: '✅',
-                        title: `Tu ${ORDINALES[Math.min(9, newConfirmadosHoy - 1)]} confirmado del día`,
-                        body: `${leadName} asiste seguro. Una agenda confirmada muestra el doble que una sin confirmar.`,
-                        next: pcRemaining
-                            ? `Te quedan ${pcRemaining} por confirmar y ${cvRemaining} conversando.`
-                            : `No queda nadie sin tocar. Faltan ${cvRemaining} conversando.`,
-                        bar: { v: newConfirmadosHoy, t: newConfirmadosHoy + pcRemaining + cvRemaining, label: 'Confirmados del día' }
-                    });
-                }
-            } else if (newStatus === 'conversando' && wasPorConfirmar) {
-                if (pcRemaining === 0 && !vaciamosPorConfirmar) {
-                    setVaciamosPorConfirmar(true);
-                    setCelebration({
-                        emoji: '🎯',
-                        title: 'Ninguno quedó sin tocar',
-                        body: 'Todas tus agendas tienen contacto registrado. Eso es lo que desbloquea el reporte del día.',
-                        next: 'Los que están conversando no bloquean: no todos responden y eso no es tu culpa.',
-                        bar: null
-                    });
-                } else {
-                    toast.success(`${leadName} → Conversando 💬`);
-                }
+            const newConfirmadosHoy = confirmadosHoy + 1;
+            setConfirmadosHoy(newConfirmadosHoy);
+            if (pcRemaining === 0 && cvRemaining === 0) {
+                setCelebration({
+                    emoji: '🏆',
+                    title: 'Pipeline blindado',
+                    body: `${newConfirmadosHoy} agenda${newConfirmadosHoy !== 1 ? 's' : ''} confirmada${newConfirmadosHoy !== 1 ? 's' : ''}. Ninguna se te va a caer por falta de recordatorio.`,
+                    next: 'Siguiente paso: reportá las llamadas que ya ocurrieron.',
+                    bar: null
+                });
             } else {
-                toast.success("Nota guardada. Sigue en la misma etapa.");
+                setCelebration({
+                    emoji: '✅',
+                    title: `Tu ${ORDINALES[Math.min(9, newConfirmadosHoy - 1)]} confirmado del día`,
+                    body: `${leadName} asiste seguro. Una agenda confirmada muestra el doble que una sin confirmar.`,
+                    next: pcRemaining
+                        ? `Te quedan ${pcRemaining} por confirmar y ${cvRemaining} conversando.`
+                        : `No queda nadie sin tocar. Faltan ${cvRemaining} conversando.`,
+                    bar: { v: newConfirmadosHoy, t: newConfirmadosHoy + pcRemaining + cvRemaining, label: 'Confirmados del día' }
+                });
             }
         } catch (err) {
-            console.error("Error en saveConfirmReport:", err);
+            console.error("Error al confirmar la agenda:", err);
             toast.error("Error al guardar confirmación");
         } finally {
             setProcessingId(null);
+        }
+    };
+
+    // "Deshacer" del panel de éxito: vuelve a "conversando" (la etapa granular sigue en
+    // Testimonio, así que el wizard queda igual de completo, solo re-habilitado para editar y
+    // volver a tocar "Listo" si hizo falta corregir algo antes).
+    const handleConfirmUndo = async () => {
+        setProcessingId(selectedLead.id);
+        try {
+            await api.post(`/closer/deck/${selectedLead.id}`, {
+                confirm_status: 'conversando',
+                closer_notes: sessionForm.notes
+            });
+            setSelectedLead(prev => (prev ? { ...prev, result: 'conversando' } : prev));
+            setAgendas(prev => prev.map(item => item.id === selectedLead.id ? { ...item, result: 'conversando' } : item));
+            toast.success("Confirmación deshecha. Podés seguir editando.");
+        } catch (err) {
+            console.error("Error al deshacer la confirmación:", err);
+            toast.error("No se pudo deshacer");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // "Seguir después": el autoguardado ya deja todo persistido en cada toque, así que solo
+    // hace falta cerrar la ficha y refrescar el mazo (por si el pipeline cambió de columna).
+    const handleConfirmSeguirDespues = () => {
+        setSelectedLead(null);
+        fetchAgendas();
+    };
+
+    // "Descargar lead" del header (mockup): en vez de un archivo, copia al portapapeles un
+    // resumen de contacto listo para pegar en WhatsApp/notas — más útil para un closer en
+    // movimiento que un archivo que después hay que abrir en otro lado, y no depende de ningún
+    // endpoint nuevo.
+    const handleCopyLeadSummary = async () => {
+        const l = selectedLead;
+        if (!l) return;
+        const lines = [
+            `Lead: ${l.lead_name || 'Sin nombre'}`,
+            l.instagram ? `Instagram: @${l.instagram.replace('@', '')}` : null,
+            l.phone ? `Teléfono: ${l.phone}` : null,
+            l.email ? `Correo: ${l.email}` : null,
+            l.examen ? `Examen: ${l.examen}` : null,
+            l.start_time ? `Agendada: ${formatAgendaDateTime(l.start_time)}` : null,
+            l.setter_name ? `Setter: ${l.setter_name}` : null,
+            sessionForm.notes ? `Notas: ${sessionForm.notes}` : null
+        ].filter(Boolean).join('\n');
+        try {
+            await navigator.clipboard.writeText(lines);
+            toast.success("Datos del lead copiados");
+        } catch (err) {
+            console.error("Error al copiar los datos del lead:", err);
+            toast.error("No se pudo copiar. Revisá los permisos del navegador.");
         }
     };
 
@@ -2252,165 +2383,212 @@ const CloserWorkflowPage = () => {
         );
 
         if (modalStep === 'confirm') {
-            const steps = [
-                { k: 'por_confirmar', label: 'Por confirmar', desc: 'Sin contacto' },
-                { k: 'conversando', label: 'Conversando', desc: 'Respondió' },
-                { k: 'confirmado', label: 'Confirmado', desc: 'Asiste seguro' }
-            ];
-            const normalizedResult = (selectedLead.result || '').toLowerCase();
-            const currentKey = normalizedResult === 'confirmado'
-                ? 'confirmado'
-                : (normalizedResult === 'conversando' || normalizedResult === 'contactado') ? 'conversando' : 'por_confirmar';
-            const currentIdx = steps.findIndex(x => x.k === currentKey);
+            // Única fuente de verdad para "¿está confirmado?": `selectedLead.result`, el mismo
+            // campo que ya usan confirmationsPipeline/Kanban/heroLead — nada de bandera local
+            // aparte (ver handleConfirmFinal/handleConfirmUndo).
+            const isConfirmed = (selectedLead.result || '').toLowerCase() === 'confirmado';
+            const stageIdx = Math.max(0, CONFIRM_STAGES.findIndex(s => s.key === sessionForm.confirmation_stage));
+            const atTestimonio = sessionForm.confirmation_stage === 'testimonio';
+            const isBusy = processingId === selectedLead.id;
             // Llegó la hora de la llamada y el lead nunca llegó a "Confirmado": no tiene sentido
-            // que esa hora pase en silencio dentro del pipeline de conversación — se puede cerrar
-            // como No Show directo, sin pasar por "Confirmado" (pedido explícito del usuario).
+            // que esa hora pase en silencio — se puede cerrar como No Show directo, sin pasar
+            // por "Confirmado" (pedido explícito del usuario, preservado del diseño anterior).
             const callTimePassed = selectedLead.start_time
                 ? (parseUtcIso(selectedLead.start_time)?.getTime() ?? Infinity) <= nowTick
                 : false;
 
+            const togglePainPoint = (key) => {
+                const current = sessionForm.confirmation_pain_points || [];
+                const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
+                saveConfirmStage({ confirmation_pain_points: next });
+            };
+            const openDiscardModal = () => {
+                setReasonInput('');
+                setReasonModal({
+                    show: true,
+                    title: "Descartar lead",
+                    description: `¿Seguro que deseas descartar a ${selectedLead.lead_name}? Ingresa un motivo:`,
+                    placeholder: "Motivo...",
+                    confirmText: "Confirmar descarte",
+                    requireText: true,
+                    actionType: 'confirm_discard',
+                    apptId: selectedLead.id
+                });
+            };
+            const openNoShowModal = () => {
+                setReasonInput('');
+                setReasonModal({
+                    show: true,
+                    title: "Marcar No Show",
+                    description: `Ya pasó la hora de la llamada y ${selectedLead.lead_name} nunca confirmó. Se marca como No Show y NO pasa a "Confirmado". Notas adicionales (opcional):`,
+                    placeholder: "Notas adicionales...",
+                    confirmText: "Marcar No Show",
+                    requireText: false,
+                    actionType: 'conversando_no_show',
+                    apptId: selectedLead.id
+                });
+            };
+
             return (
-                <div className="space-y-6">
-                    {/* Banda de pipeline (v7) */}
-                    <div className="pipe">
-                        {steps.map((st, i) => (
-                            <React.Fragment key={st.k}>
-                                <div className={`pstep ${i < currentIdx ? 'done' : ''} ${i === currentIdx ? 'cur' : ''}`}>
-                                    <div className="pn"><span className="pcircle">{i < currentIdx ? '✓' : i + 1}</span>{st.label}</div>
-                                    <div className="pd">{st.desc}</div>
-                                </div>
-                                {i < steps.length - 1 && <span className="parrow">›</span>}
-                            </React.Fragment>
-                        ))}
+                <div className="space-y-5">
+                    {/* Etapa de confirmación — wizard v8 (mockup "Closer Workspace.html") */}
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Etapa de confirmación</h4>
+                        <p className="text-[10px] font-medium text-slate-500 mt-0.5 mb-3">
+                            {isConfirmed ? 'Confirmación completa' : 'Tocá la etapa a la que llegó · se guarda solo'}
+                        </p>
+                        <div className="cfstages">
+                            {CONFIRM_STAGES.map((st, i) => (
+                                <button
+                                    key={st.key}
+                                    type="button"
+                                    disabled={isConfirmed || isBusy}
+                                    onClick={() => saveConfirmStage({ confirmation_stage: st.key })}
+                                    className={`cfstage ${i < stageIdx || isConfirmed ? 'done' : ''} ${i === stageIdx && !isConfirmed ? 'cur' : ''}`}
+                                >
+                                    <span className="cfs-dot">{(i < stageIdx || isConfirmed) ? '✓' : i + 1}</span>
+                                    <span className="cfs-label">{st.label}</span>
+                                    <span className="cfs-line" />
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    {currentKey === 'confirmado' ? (
-                        <div className="space-y-4">
-                            <div className="note">✓ Este lead ya está confirmado: no bloquea nada.</div>
-                            <div className="q">
-                                <h4>Otras acciones</h4>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Cambia fecha')}
-                                    {option(() => {
-                                        setReasonInput('');
-                                        setReasonModal({
-                                            show: true,
-                                            title: "Descartar lead",
-                                            description: `¿Seguro que deseas descartar a ${selectedLead.lead_name}? Ingresa un motivo:`,
-                                            placeholder: "Motivo...",
-                                            confirmText: "Confirmar descarte",
-                                            requireText: true,
-                                            actionType: 'confirm_discard',
-                                            apptId: selectedLead.id
-                                        });
-                                    }, 'bad', 'Descartar lead', 'Lead frío o no responde')}
-                                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <div className="flex items-baseline justify-between gap-2 mb-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Cómo viene</h4>
+                                <span className="text-[9px] font-medium text-slate-500 text-right">Se pone solo · cambialo si hace falta</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {CONFIRM_CONTACT_STATUS.map(cs => (
+                                    <button
+                                        key={cs.key}
+                                        type="button"
+                                        disabled={isConfirmed || isBusy}
+                                        onClick={() => saveConfirmStage({ confirmation_contact_status: cs.key })}
+                                        className={`cftag ${sessionForm.confirmation_contact_status === cs.key ? 'sel-info' : ''}`}
+                                    >
+                                        {cs.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className={`q req ${sessionForm.notes.trim().length >= 10 ? 'done' : ''}`}>
-                                <h4><span className="num">1</span>¿En qué va el proceso?</h4>
-                                <p>Sin esto no se puede avanzar. Es lo que ve el resto del equipo.</p>
-                                <textarea
-                                    rows={3}
-                                    value={sessionForm.notes}
-                                    onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
-                                    placeholder="Le escribí por WhatsApp e Instagram. Me contestó que está de turno, le hablo por la tarde."
-                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                        <div>
+                            <div className="flex items-baseline justify-between gap-2 mb-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dolores que contó</h4>
+                                <span className="text-[9px] font-medium text-slate-500 text-right">Tocá los que aparezcan</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {CONFIRM_PAIN_POINTS.map(p => (
+                                    <button
+                                        key={p.key}
+                                        type="button"
+                                        disabled={isConfirmed || isBusy}
+                                        onClick={() => togglePainPoint(p.key)}
+                                        className={`cftag ${(sessionForm.confirmation_pain_points || []).includes(p.key) ? 'sel-warn' : ''}`}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {!isConfirmed && sessionForm.confirmation_stage === 'por_contactar' && (
+                        <div className="q space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!!sessionForm.pre_call_reminder_enabled}
+                                    onChange={(e) => {
+                                        const enabled = e.target.checked;
+                                        setSessionForm(prev => ({ ...prev, pre_call_reminder_enabled: enabled }));
+                                        saveConfirmStage({ pre_call_reminder_enabled: enabled });
+                                    }}
+                                    className="w-4 h-4 accent-violet-500"
                                 />
-                            </div>
-
-                            <div className={`q req ${sessionForm.confirm_status ? 'done' : ''}`}>
-                                <h4><span className="num">2</span>{currentKey === 'por_confirmar' ? '¿Ya hubo contacto?' : '¿Confirmó que asiste?'}</h4>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {currentKey === 'por_confirmar' ? (
-                                        <>
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'info', 'Sí, conversando', 'Respondió mensaje', sessionForm.confirm_status === 'conversando')}
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'por_confirmar' })), 'no', 'No responde aún', 'Registrar intento', sessionForm.confirm_status === 'por_confirmar')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'Confirmado' })), 'ok', 'Sí, confirmó', 'Asiste seguro', sessionForm.confirm_status === 'Confirmado')}
-                                            {option(() => setSessionForm(prev => ({ ...prev, confirm_status: 'conversando' })), 'no', 'Sigue conversando', 'Aún no confirma', sessionForm.confirm_status === 'conversando')}
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            {currentKey === 'por_confirmar' && (
-                                <div className="q space-y-2">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={!!sessionForm.pre_call_reminder_enabled}
-                                            onChange={(e) => setSessionForm(prev => ({ ...prev, pre_call_reminder_enabled: e.target.checked }))}
-                                            className="w-4 h-4 accent-violet-500"
-                                        />
-                                        <h4 className="text-[10px] font-black uppercase text-slate-400">
-                                            Recordarme escribirle antes de la llamada
-                                        </h4>
-                                    </label>
-                                    {sessionForm.pre_call_reminder_enabled && (
-                                        <input
-                                            type="datetime-local"
-                                            value={sessionForm.pre_call_reminder_at || ''}
-                                            onChange={(e) => setSessionForm(prev => ({ ...prev, pre_call_reminder_at: e.target.value }))}
-                                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium"
-                                        />
-                                    )}
-                                </div>
+                                <h4 className="text-[10px] font-black uppercase text-slate-400">
+                                    Recordarme escribirle antes de la llamada
+                                </h4>
+                            </label>
+                            {sessionForm.pre_call_reminder_enabled && (
+                                <input
+                                    type="datetime-local"
+                                    value={sessionForm.pre_call_reminder_at || ''}
+                                    onChange={(e) => setSessionForm(prev => ({ ...prev, pre_call_reminder_at: e.target.value }))}
+                                    onBlur={() => saveConfirmStage({})}
+                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium"
+                                />
                             )}
-
-                            <div className="q">
-                                <h4>Otras acciones</h4>
-                                <div className={`grid ${currentKey === 'conversando' ? (callTimePassed ? 'grid-cols-3' : 'grid-cols-2') : 'grid-cols-1'} gap-3`}>
-                                    {currentKey === 'conversando' && option(() => setModalStep('reagQ'), 'info', 'Reagendar', 'Pidió otra fecha')}
-                                    {currentKey === 'conversando' && callTimePassed && option(() => {
-                                        setReasonInput('');
-                                        setReasonModal({
-                                            show: true,
-                                            title: "Marcar No Show",
-                                            description: `Ya pasó la hora de la llamada y ${selectedLead.lead_name} nunca confirmó. Se marca como No Show y NO pasa a "Confirmado". Notas adicionales (opcional):`,
-                                            placeholder: "Notas adicionales...",
-                                            confirmText: "Marcar No Show",
-                                            requireText: false,
-                                            actionType: 'conversando_no_show',
-                                            apptId: selectedLead.id
-                                        });
-                                    }, 'bad', 'No show', 'Hora ya pasó')}
-                                    {option(() => {
-                                        setReasonInput('');
-                                        setReasonModal({
-                                            show: true,
-                                            title: "Descartar lead",
-                                            description: `¿Seguro que deseas descartar a ${selectedLead.lead_name}? Ingresa un motivo:`,
-                                            placeholder: "Motivo...",
-                                            confirmText: "Confirmar descarte",
-                                            requireText: true,
-                                            actionType: 'confirm_discard',
-                                            apptId: selectedLead.id
-                                        });
-                                    }, 'bad', 'Descartar lead', 'Exige motivo')}
-                                </div>
-                                {currentKey === 'por_confirmar' && (
-                                    <p className="text-[10px] text-slate-500 font-medium">
-                                        Reagendar aparece recién cuando el lead está conversando: si todavía no respondió, no hay nada que reagendar.
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-800">
-                                <button
-                                    onClick={saveConfirmReport}
-                                    disabled={sessionForm.notes.trim().length < 10 || !sessionForm.confirm_status || processingId === selectedLead.id}
-                                    className="w-full h-11 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                                >
-                                    {processingId === selectedLead.id ? <Loader2 size={14} className="animate-spin" /> : 'Guardar Reporte'}
-                                </button>
-                            </div>
                         </div>
                     )}
+
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 block mb-2">Nota para la llamada (opcional)</label>
+                        <textarea
+                            rows={3}
+                            value={sessionForm.notes}
+                            disabled={isConfirmed}
+                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
+                            onBlur={() => !isConfirmed && saveConfirmStage({})}
+                            placeholder="Ej: pidió que lo llamemos después de las 20 h. Trabaja de guardia."
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar disabled:opacity-60"
+                        />
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-800">
+                        {isConfirmed ? (
+                            <div className="flex items-center justify-between gap-3 flex-wrap p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25">
+                                <div className="flex items-center gap-2.5">
+                                    <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                                    <div>
+                                        <p className="text-[11px] font-black uppercase tracking-wide text-emerald-400">Lead 100% confirmado</p>
+                                        <p className="text-[10px] font-medium text-emerald-200/70">Queda listo para el día de la llamada.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={handleConfirmUndo} disabled={isBusy} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer disabled:opacity-50">
+                                        {isBusy ? <Loader2 size={12} className="animate-spin" /> : 'Deshacer'}
+                                    </button>
+                                    <button type="button" onClick={handleConfirmSeguirDespues} className="h-9 px-4 bg-white hover:bg-slate-200 text-slate-950 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer">
+                                        Volver al board
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cerrar la confirmación</p>
+                                    <p className="text-[10px] font-medium text-slate-500">
+                                        {atTestimonio ? 'Llegó a Testimonio: ya se puede confirmar' : 'Falta: marcar hasta Testimonio'}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={handleConfirmSeguirDespues} className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer">
+                                        Seguir después
+                                    </button>
+                                    <button type="button" onClick={handleConfirmFinal} disabled={!atTestimonio || isBusy} className="cf-cta">
+                                        {isBusy ? <Loader2 size={13} className="animate-spin" /> : <><CheckCircle2 size={13} /> Listo · 100% confirmado</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Acciones destructivas/secundarias: discretas a propósito (el mockup no las
+                        muestra en pantalla), pero Descartar lead y No show son acciones de
+                        backend existentes que este rediseño no puede dejar inalcanzables. */}
+                    <div className="flex items-center justify-end gap-4 flex-wrap">
+                        {!isConfirmed && callTimePassed && (
+                            <button type="button" onClick={openNoShowModal} className="text-[9.5px] font-black uppercase tracking-wide text-rose-400/80 hover:text-rose-400 transition-colors cursor-pointer">
+                                Hora ya pasó · marcar No show
+                            </button>
+                        )}
+                        <button type="button" onClick={openDiscardModal} className="text-[9.5px] font-black uppercase tracking-wide text-rose-400/80 hover:text-rose-400 transition-colors cursor-pointer">
+                            Descartar lead
+                        </button>
+                    </div>
                 </div>
             );
         }
@@ -4228,6 +4406,29 @@ const CloserWorkflowPage = () => {
                                         </a>
                                     )}
                                 </div>
+                                {/* Reprogramar/Descargar lead (v8, mockup "Closer Workspace.html"): antes
+                                    "Reagendar" solo aparecía recién en la etapa "conversando", metido entre
+                                    "Otras acciones" — el mockup lo sube al header como acción siempre
+                                    disponible, así que se relaja esa restricción a propósito (reagendar algo
+                                    que nunca respondió no rompe nada, solo confirma una fecha sin más
+                                    contexto). "Descargar lead" no tenía equivalente: en vez de un archivo se
+                                    copia un resumen de contacto al portapapeles (ver handleCopyLeadSummary). */}
+                                {modalStep === 'confirm' && selectedLead.can_edit !== false && (
+                                    <>
+                                        <button
+                                            className="h-8 px-3.5 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/40 text-violet-300 rounded-xl text-[9.5px] font-black uppercase tracking-wide transition-all cursor-pointer mr-2"
+                                            onClick={() => addDecisionPath('Reagendó', 'reagQ')}
+                                        >
+                                            Reprogramar
+                                        </button>
+                                        <button
+                                            className="h-8 px-3.5 bg-transparent hover:bg-white/5 border border-slate-700 text-slate-400 hover:text-slate-200 rounded-xl text-[9.5px] font-black uppercase tracking-wide transition-all cursor-pointer mr-2"
+                                            onClick={handleCopyLeadSummary}
+                                        >
+                                            Descargar lead
+                                        </button>
+                                    </>
+                                )}
                                 {selectedLead.can_edit !== false && (
                                     <button
                                         className="p-2 hover:bg-violet-500/20 text-violet-300 rounded-xl transition-all cursor-pointer border border-violet-500/30 mr-2"

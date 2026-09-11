@@ -1969,9 +1969,12 @@ header.top-v6 {
 .md {
   width: 100%;
   max-width: 900px;
-  background: linear-gradient(180deg, #111862, #0A0E3D);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 24px;
+  /* v8 (mockup "Closer Workspace.html", 10/sep/2026): navy casi negro en vez del
+     degradé índigo de v7 — verificado con getComputedStyle sobre la tarjeta real
+     del modal (rgba(2,6,23,.9)), no es el mismo tono que el resto de la app. */
+  background: rgba(2, 6, 23, .9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 32px;
   box-shadow: 0 40px 110px rgba(0, 0, 0, 0.88);
   overflow: hidden;
   animation: pop .24s cubic-bezier(.2, 1.1, .4, 1);
@@ -2230,81 +2233,147 @@ header.top-v6 {
 }
 
 /* ==========================================================================
-   BANDA DE PIPELINE (etapa de confirmación) v7 (closer-workspace-v7.html)
+   ETAPA DE CONFIRMACIÓN — wizard v8 (mockup "Closer Workspace.html", 10/sep/2026)
+   Reemplaza la banda .pipe/.pstep de 3 cajas (v7): el mockup pide 5 sub-etapas
+   dentro de "conversando" (Por contactar/Contactado/Horario/VideoAsk/Testimonio),
+   tocables en cualquier orden ("tocá la etapa a la que llegó"), como un stepper
+   compacto de nodos+línea en vez de cajas grandes. Colores verificados con
+   getComputedStyle sobre el mockup real, no adivinados: #FF3FA4 (etapa actual,
+   mismo rosa que .ltab.on) y #7DEAC0 (etapa hecha, mismo verde que antes usaba
+   .pstep.done) ya eran parte de esta paleta; se reusan tal cual.
    ========================================================================== */
-.pipe {
+.cfstages {
   display: flex;
-  align-items: center;
-  background: rgba(0, 0, 0, .30);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 6px;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  margin-bottom: 4px;
 }
-.pstep {
+.cfstage {
   flex: 1;
-  text-align: center;
-  padding: 14px 8px;
-  border-radius: 12px;
-  transition: .22s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 2px 2px 0;
+  cursor: pointer;
   position: relative;
 }
-.pstep .pn {
-  font-size: 10.5px;
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: #8C99E0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.pstep .pd {
-  font-size: 10px;
-  color: #8C99E0;
-  margin-top: 3px;
-  font-weight: 500;
-}
-/* Círculo numerado por paso (1/2/3, o ✓ si ya se completó) -- toma la idea del stepper de
-   círculos del mockup de referencia sin rehacer el resto del componente, que ya andaba bien. */
-.pstep .pcircle {
-  width: 16px;
-  height: 16px;
+.cfstage .cfs-dot {
+  width: 26px;
+  height: 26px;
   flex: none;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
-  border: 1.5px solid rgba(140, 153, 224, .5);
-  color: inherit;
+  border: 1.5px solid rgba(255, 255, 255, .32);
+  color: rgba(255, 255, 255, .55);
+  background: transparent;
+  transition: .18s;
 }
-.pstep.done .pn {
-  color: #7DEAC0;
+.cfstage .cfs-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .5);
+  text-align: center;
+  transition: .18s;
 }
-.pstep.done .pcircle {
+.cfstage .cfs-line {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, .16);
+  z-index: -1;
+}
+.cfstage:last-child .cfs-line {
+  display: none;
+}
+.cfstage.done .cfs-dot {
   background: #7DEAC0;
   border-color: #7DEAC0;
   color: #06210F;
 }
-.pstep.cur {
-  background: linear-gradient(135deg, #1323C6, #FF3FA4);
-  box-shadow: 0 6px 22px rgba(19, 35, 198, .48);
-}
-.pstep.cur .pn,
-.pstep.cur .pd {
+.cfstage.done .cfs-label {
   color: #fff;
 }
-.pstep.cur .pcircle {
-  border-color: #fff;
+.cfstage.done .cfs-line {
+  background: #7DEAC0;
 }
-.parrow {
-  color: #8C99E0;
-  font-size: 13px;
-  flex: none;
-  padding: 0 2px;
+.cfstage.cur .cfs-dot {
+  background: #FF3FA4;
+  border-color: #FF3FA4;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 63, 164, .18);
+}
+.cfstage.cur .cfs-label {
+  color: #fff;
+}
+.cfstage:disabled {
+  cursor: default;
+}
+
+/* Chips de una sola selección ("Cómo viene") y multi-selección ("Dolores que
+   contó"), tocables libremente. Dos variantes de color al seleccionar, ambas
+   verificadas contra el mockup: azul info (#4E8BD8) y ámbar (#D9A441, el mismo
+   tono ya usado en .q.req/.fq.warn de esta hoja). */
+.cftag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .32);
+  color: rgba(255, 255, 255, .62);
+  transition: .15s;
+  cursor: pointer;
+}
+.cftag:hover {
+  border-color: rgba(255, 255, 255, .5);
+  color: #fff;
+}
+.cftag.sel-info {
+  background: rgba(78, 139, 216, .12);
+  border-color: #4E8BD8;
+  color: #4E8BD8;
+}
+.cftag.sel-warn {
+  background: rgba(217, 164, 65, .12);
+  border-color: #D9A441;
+  color: #D9A441;
+}
+
+/* Botón hero "Listo · 100% confirmado" — rosa sólido en píldora, distinto del
+   degradé índigo-rosa que ya usan .pstep.cur/.q > h4 .num en esta hoja (ese es
+   para acentos chicos; acá el mockup usa el rosa sólido a pantalla completa). */
+.cf-cta {
+  background: #FF3FA4;
+  color: #1a0313;
+  border: none;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 11px 22px;
+  transition: .15s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cf-cta:hover:not(:disabled) {
+  background: #ff5cb1;
+}
+.cf-cta:disabled {
+  background: rgba(255, 255, 255, .08);
+  color: rgba(255, 255, 255, .32);
+  cursor: not-allowed;
 }
 
 /* PREGUNTAS DEL ÁRBOL DE DECISIÓN v7 */
