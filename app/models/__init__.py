@@ -21,6 +21,7 @@ from .installment import InstallmentPlan
 from .client_merge_log import ClientMergeLog
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
+from .assistant_application import AssistantApplication, AssistantClarityWeight
 from .playbook import (
     PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion, PlaybookOption,
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
@@ -46,6 +47,7 @@ __all__ = [
     'InstallmentPlan', 'ClientMergeLog',
     'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
+    'AssistantApplication', 'AssistantClarityWeight',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES'
 ]

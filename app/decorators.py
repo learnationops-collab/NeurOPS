@@ -84,6 +84,35 @@ def workshop_required(f):
             }), 500
     return decorated_function
 
+def hiring_required(f):
+    """Acceso al panel de contratación (`/admin/hiring` y su API): admin y el
+    rol hiring (revisa las postulaciones a Asistente Administrativa y Personal,
+    pero no debe heredar el resto de `admin_required` — finanzas, equipo, base
+    de datos — que no se le pidió)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            from app.models.user import ROLE_HIRING
+
+            if not current_user.is_authenticated:
+                if request.path.startswith('/api/'):
+                    return jsonify({"error": "Authentication required"}), 401
+                return redirect(url_for('auth.login'))
+
+            if current_user.role not in ['admin', ROLE_HIRING]:
+                if request.path.startswith('/api/'):
+                    return jsonify({"error": "Hiring access required"}), 403
+                flash('No tienes permiso para acceder a esta página.')
+                return redirect('/')
+
+            return f(*args, **kwargs)
+        except Exception as e:
+            return jsonify({
+                "message": f"Server Error in hiring check: {str(e)}",
+                "trace": traceback.format_exc()
+            }), 500
+    return decorated_function
+
 def operator_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

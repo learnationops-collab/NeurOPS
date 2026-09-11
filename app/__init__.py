@@ -169,6 +169,9 @@ def create_app(config_class=Config):
     from app.api.job_applications import bp as job_applications_bp
     app.register_blueprint(job_applications_bp, url_prefix='/api')
 
+    from app.api.assistant_applications import bp as assistant_applications_bp
+    app.register_blueprint(assistant_applications_bp, url_prefix='/api')
+
     from app.api.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp, url_prefix='/api')
 

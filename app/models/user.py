@@ -14,6 +14,11 @@ ROLE_OPERATOR = 'operator'
 ROLE_TRIAGE = 'triage'
 ROLE_DIRECTOR_COMERCIAL = 'director_comercial'
 ROLE_DIRECTOR_MARKETING = 'director_marketing'
+# Rol acotado al panel de contratación (`/admin/hiring`): revisa las
+# postulaciones a Asistente Administrativa y Personal y nada más. No hereda
+# `admin_required` (finanzas, equipo, base de datos) — ver `hiring_required`
+# en app/decorators.py.
+ROLE_HIRING = 'hiring'
 
 @login.user_loader
 def load_user(id):
