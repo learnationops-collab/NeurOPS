@@ -346,11 +346,18 @@ const PagoRow = ({ pago, onSaved }) => {
     );
 };
 
-const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
+const CuotaRow = ({ cuota, esUltimaPendiente, client, vendedorEmail, onSaved }) => {
     const [fecha, setFecha] = useState(cuota.fecha_vencimiento || '');
     const [saving, setSaving] = useState(false);
     const [marking, setMarking] = useState(false);
     const [reportando, setReportando] = useState(false);
+    // Monto pactado de la cuota (lo que el closer negoció que se le va a cobrar) — editable
+    // salvo en la última cuota pendiente del plan, que siempre se recalcula sola como "lo que
+    // falta" para que la suma del plan siga cerrando exacto (ver InstallmentService.
+    // update_cuota). Estado separado de `montoPagado` de abajo, que es cuánto entró de verdad
+    // al reportar el cobro — pueden diferir (el cliente pagó más o menos que lo pactado).
+    const [montoCuota, setMontoCuota] = useState(String(cuota.monto ?? ''));
+    const [savingMonto, setSavingMonto] = useState(false);
     // El cliente puede pagar más o menos que lo pactado en la cuota — lo decide el closer al
     // momento de reportar, no queda fijo al monto original de la cuota (mismo criterio que ya
     // aplica DeclararVentaWizard para el flujo de "Reportar pago").
@@ -359,6 +366,8 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
     // (VentaRow arriba), así que sí debe disparar la automatización como cualquier venta.
     const [enviarWebhook, setEnviarWebhook] = useState(true);
     const dirty = fecha !== (cuota.fecha_vencimiento || '');
+    const dirtyMonto = montoCuota !== String(cuota.monto ?? '');
+    const puedeEditarMonto = cuota.estado !== 'pagado' && !esUltimaPendiente;
 
     const patch = async (payload, setFlag) => {
         setFlag(true);
@@ -429,7 +438,33 @@ const CuotaRow = ({ cuota, client, vendedorEmail, onSaved }) => {
                         {cuota.estado}
                     </span>
                     <span className="text-slate-300">Cuota {cuota.numero_cuota}</span>
-                    <span className="text-emerald-400 font-bold">{money(cuota.monto)}</span>
+                    {puedeEditarMonto ? (
+                        <span className="flex items-center gap-1">
+                            <input
+                                type="number" min="0" step="0.01"
+                                value={montoCuota}
+                                onChange={(e) => setMontoCuota(e.target.value)}
+                                className="w-20 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-0.5 text-[10px] font-bold text-emerald-400"
+                            />
+                            {dirtyMonto && (
+                                <button
+                                    onClick={() => patch({ monto: parseFloat(montoCuota) || 0 }, setSavingMonto)}
+                                    disabled={savingMonto}
+                                    title="Guardar nuevo monto — la última cuota pendiente del plan absorbe la diferencia"
+                                    className="p-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 cursor-pointer"
+                                >
+                                    {savingMonto ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />}
+                                </button>
+                            )}
+                        </span>
+                    ) : (
+                        <span
+                            className="text-emerald-400 font-bold"
+                            title={esUltimaPendiente ? 'Se ajusta sola: absorbe lo que falta del plan.' : undefined}
+                        >
+                            {money(cuota.monto)}
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-center gap-1.5">
                     <input
@@ -511,20 +546,32 @@ const defaultCuotaDate = (i) => {
 const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
     const [numCuotas, setNumCuotas] = useState(3);
     const [fechas, setFechas] = useState({});
+    // Montos por cuota, editables salvo el de la última posición — esa siempre se muestra (y se
+    // guarda) como "lo que falta" del saldo, mismo criterio que la cuota ya creada (CuotaRow):
+    // así arrancar un plan a mano con montos disparejos (ej. una cuota más grande al principio)
+    // no obliga a crearlo parejo y corregir cada cuota después una por una.
+    const [montos, setMontos] = useState({});
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
+
+    const cadaUna = deuda / (numCuotas || 1);
+    const montoDe = (i) => montos[i] !== undefined && montos[i] !== '' ? parseFloat(montos[i]) || 0 : Math.round(cadaUna * 100) / 100;
+    const sumaPrevias = Array.from({ length: Math.max(0, numCuotas - 1) }, (_, i) => montoDe(i)).reduce((a, b) => a + b, 0);
+    const ultimaCalculada = Math.round((deuda - sumaPrevias) * 100) / 100;
 
     const crear = async () => {
         setCreating(true);
         setError('');
         try {
             const fechasList = Array.from({ length: numCuotas }, (_, i) => fechas[i] || null);
+            const montosList = Array.from({ length: numCuotas }, (_, i) => i === numCuotas - 1 ? ultimaCalculada : montoDe(i));
             const res = await api.post('/closer/installments', {
                 appointment_id: appointmentId,
                 total: deuda,
                 cobrado_hoy: 0,
                 num_cuotas: numCuotas,
                 fechas: fechasList,
+                montos: montosList,
                 programa_code: programaCode
             });
             onCreated(res.data.cuotas);
@@ -535,12 +582,10 @@ const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
         }
     };
 
-    const cadaUna = deuda / (numCuotas || 1);
-
     return (
         <div className="bg-slate-950/40 border border-amber-500/20 rounded-lg p-3 space-y-2">
             <p className="text-[10px] text-amber-300 font-bold">
-                Debe {money(deuda)} y no tiene plan de cuotas armado — se puede repartir ese saldo en cuotas ahora, eligiendo cuándo cobrar cada una.
+                Debe {money(deuda)} y no tiene plan de cuotas armado — se puede repartir ese saldo en cuotas ahora, eligiendo cuánto y cuándo cobrar cada una.
             </p>
             <div className="flex items-center gap-2">
                 <label className="text-[9px] text-slate-500 font-bold uppercase">Cuotas</label>
@@ -552,21 +597,41 @@ const CreatePlanForm = ({ deuda, appointmentId, programaCode, onCreated }) => {
                     onChange={(e) => setNumCuotas(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
                 />
-                <span className="text-[9px] text-slate-500">de {money(cadaUna)} cada una</span>
+                <span className="text-[9px] text-slate-500">de {money(cadaUna)} cada una por defecto</span>
             </div>
             <div className="space-y-1">
-                {Array.from({ length: numCuotas }, (_, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                        <span className="text-slate-400 w-16">Cuota {i + 1}</span>
-                        <input
-                            type="date"
-                            value={fechas[i] || defaultCuotaDate(i)}
-                            onChange={(e) => setFechas(prev => ({ ...prev, [i]: e.target.value }))}
-                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
-                        />
-                    </div>
-                ))}
+                {Array.from({ length: numCuotas }, (_, i) => {
+                    const esUltima = i === numCuotas - 1;
+                    return (
+                        <div key={i} className="flex items-center gap-2 text-[10px]">
+                            <span className="text-slate-400 w-16">Cuota {i + 1}</span>
+                            {esUltima ? (
+                                <span className="w-20 text-emerald-400 font-bold" title="Se ajusta sola: absorbe lo que falta del plan.">
+                                    {money(ultimaCalculada)}
+                                </span>
+                            ) : (
+                                <input
+                                    type="number" min="0" step="0.01"
+                                    value={montos[i] ?? Math.round(cadaUna * 100) / 100}
+                                    onChange={(e) => setMontos(prev => ({ ...prev, [i]: e.target.value }))}
+                                    className="w-20 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-emerald-400"
+                                />
+                            )}
+                            <input
+                                type="date"
+                                value={fechas[i] || defaultCuotaDate(i)}
+                                onChange={(e) => setFechas(prev => ({ ...prev, [i]: e.target.value }))}
+                                className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                            />
+                        </div>
+                    );
+                })}
             </div>
+            {ultimaCalculada < 0 && (
+                <p className="text-[9px] text-rose-400 font-bold">
+                    Las cuotas anteriores ya suman más que {money(deuda)} — la última quedaría negativa.
+                </p>
+            )}
             <button
                 onClick={crear}
                 disabled={creating || !appointmentId}
@@ -927,6 +992,19 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
     const seguimientosPorHacer = (history?.appointments || []).filter(a => a.fecha_seguimiento && !a.seguimiento_realizado);
     const seguimientosHechos = (history?.appointments || []).filter(a => a.seguimiento_realizado || a.last_contact_at);
 
+    // Un cliente puede tener más de un plan de cuotas (uno por programa comprado) mezclados en
+    // `history.installments` — para saber, por cada cuota, si es "la última pendiente" de SU
+    // plan (la que se recalcula sola y no se edita a mano, ver CuotaRow) hay que agrupar por
+    // client_id + programa_code, el mismo criterio que ya usa el backend para delimitar un plan.
+    const ultimaPorPlan = {};
+    (history?.installments || []).filter(c => c.estado === 'pendiente').forEach(c => {
+        const key = `${c.client_id}|${c.programa_code || ''}`;
+        if (!ultimaPorPlan[key] || c.numero_cuota > ultimaPorPlan[key].numero_cuota) {
+            ultimaPorPlan[key] = c;
+        }
+    });
+    const ultimaPendientePorPlan = Object.fromEntries(Object.entries(ultimaPorPlan).map(([k, c]) => [k, c.id]));
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-[2rem] p-6 space-y-5">
@@ -1063,11 +1141,16 @@ const ClientHistoryModal = ({ clientId, onClose, onOpenAppointment, onRegisterSa
                                     <CuotaRow
                                         key={c.id}
                                         cuota={c}
+                                        esUltimaPendiente={ultimaPendientePorPlan[`${c.client_id}|${c.programa_code || ''}`] === c.id}
                                         client={history.client}
                                         vendedorEmail={user?.email}
-                                        onSaved={(updated) => setHistory(prev => ({
+                                        onSaved={({ cuota: updated, ajustada }) => setHistory(prev => ({
                                             ...prev,
-                                            installments: prev.installments.map(i => i.id === updated.id ? updated : i)
+                                            installments: prev.installments.map(i => {
+                                                if (i.id === updated.id) return updated;
+                                                if (ajustada && i.id === ajustada.id) return ajustada;
+                                                return i;
+                                            })
                                         }))}
                                     />
                                 ))}

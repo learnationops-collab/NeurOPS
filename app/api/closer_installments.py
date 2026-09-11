@@ -81,13 +81,18 @@ def update_installment(cuota_id):
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
-    InstallmentService.update_cuota(
+    cuota, ajustada = InstallmentService.update_cuota(
         cuota,
         monto=data.get('monto'),
         fecha_vencimiento=data.get('fecha_vencimiento'),
         estado=data.get('estado')
     )
-    return jsonify(cuota.to_dict()), 200
+    resultado = {"cuota": cuota.to_dict()}
+    if ajustada:
+        # La última cuota pendiente del plan absorbió la diferencia (ver InstallmentService.
+        # update_cuota) — el frontend necesita su valor nuevo para no quedar desactualizado.
+        resultado["ajustada"] = ajustada.to_dict()
+    return jsonify(resultado), 200
 
 
 @bp.route('/installments/cuota', methods=['POST'])
