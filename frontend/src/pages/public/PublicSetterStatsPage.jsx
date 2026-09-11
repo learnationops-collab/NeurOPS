@@ -411,19 +411,17 @@ const PublicSetterStatsPage = () => {
                 {/* FILTERS BAR (Only for General) */}
                 {activeTab === 'general' && (
                     <div className="flex flex-wrap items-center gap-6 bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl backdrop-blur-md">
-                        {user.role !== 'setter' && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter / Equipo</label>
-                                <select
-                                    className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all cursor-pointer min-w-[200px]"
-                                    value={filters.setter_id}
-                                    onChange={e => setFilters({ ...filters, setter_id: e.target.value })}
-                                >
-                                    <option value="">Todo el Equipo</option>
-                                    {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
-                        )}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter / Equipo</label>
+                            <select
+                                className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all cursor-pointer min-w-[200px]"
+                                value={filters.setter_id}
+                                onChange={e => setFilters({ ...filters, setter_id: e.target.value })}
+                            >
+                                <option value="">Todo el Equipo</option>
+                                {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
