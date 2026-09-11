@@ -34,6 +34,7 @@ const roleLandingPath = (role) => {
     if (role === 'closer') return '/closer/deck?step=confirmations';
     if (role === 'director_comercial') return '/admin/ventas';
     if (role === 'director_marketing') return '/admin/workshops';
+    if (role === 'hiring') return '/admin/hiring';
     return '/publico';
 };
 
@@ -194,6 +195,7 @@ const TeamManagementPage = () => {
         { id: 'operator', label: 'Operadores', icon: Zap },
         { id: 'director_comercial', label: 'Director Comercial', icon: Shield },
         { id: 'director_marketing', label: 'Director de Marketing', icon: Shield },
+        { id: 'hiring', label: 'Hiring', icon: Shield },
         { id: 'admin', label: 'Admins', icon: Shield },
     ];
 
@@ -461,6 +463,7 @@ const TeamManagementPage = () => {
                                                 <option value="triage">Call Confirmer</option>
                                                 <option value="director_comercial">Director Comercial</option>
                                                 <option value="director_marketing">Director de Marketing</option>
+                                                <option value="hiring">Hiring (Asistente)</option>
                                             </select>
                                         </div>
 
