@@ -37,6 +37,7 @@ class InstallmentPlan(db.Model):
         return {
             'id': self.id,
             'appointment_id': self.appointment_id,
+            'client_id': self.client_id,
             'programa_code': self.programa_code,
             'numero_cuota': self.numero_cuota,
             'monto': self.monto,

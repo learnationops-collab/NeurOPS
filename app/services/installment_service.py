@@ -118,15 +118,36 @@ class InstallmentService:
 
     @staticmethod
     def update_cuota(cuota, monto=None, fecha_vencimiento=None, estado=None):
+        """Devuelve (cuota, ajustada): `ajustada` es la última cuota pendiente del mismo plan
+        (client_id + programa_code) cuando `monto` cambia y esa última es una cuota DISTINTA
+        de la que se está editando — None si no hubo que tocar ninguna otra.
+
+        El closer puede necesitar cambiar cuánto se cobra en una cuota puntual (ej. el cliente
+        pidió pagar menos este mes) sin tener que recrear el plan entero. Para que la suma de
+        lo pendiente siga cerrando contra el saldo real, la diferencia se absorbe siempre en la
+        ÚLTIMA cuota todavía pendiente del plan — la misma regla que ya aplica `create_plan` al
+        armar un cronograma nuevo ("la última cuota siempre es lo que falta"). Si la cuota que
+        se edita YA ES esa última pendiente, se guarda tal cual: no hay ninguna otra cuota
+        después para absorber la diferencia."""
+        ajustada = None
         if monto is not None:
-            cuota.monto = float(monto)
+            nuevo_monto = round(float(monto), 2)
+            if nuevo_monto != cuota.monto:
+                pendientes = InstallmentPlan.query.filter_by(
+                    client_id=cuota.client_id, programa_code=cuota.programa_code, estado='pendiente'
+                ).order_by(InstallmentPlan.numero_cuota.asc()).all()
+                ultima = pendientes[-1] if pendientes else None
+                if ultima and ultima.id != cuota.id:
+                    ultima.monto = round(ultima.monto + (cuota.monto - nuevo_monto), 2)
+                    ajustada = ultima
+            cuota.monto = nuevo_monto
         if fecha_vencimiento is not None:
             cuota.fecha_vencimiento = datetime.strptime(fecha_vencimiento, '%Y-%m-%d').date()
         if estado is not None:
             cuota.estado = estado
             cuota.fecha_pago = datetime.utcnow() if estado == 'pagado' else None
         db.session.commit()
-        return cuota
+        return cuota, ajustada
 
     @staticmethod
     def add_cuota(client_id, appointment_id, programa_code, monto, fecha_vencimiento):
