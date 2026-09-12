@@ -60,7 +60,10 @@ def _apply_questions(lesson, questions_data):
         if q_type == 'single' and sum(1 for o in cleaned_options if o['is_correct']) > 1:
             raise ValueError(f'La pregunta "{text}" es de selección única: marcá solo una opción correcta')
 
-        question = PlaybookQuestion(lesson=lesson, question_text=text, question_type=q_type, order=q_order)
+        explanation = (q_data.get('explanation') or '').strip() or None
+        question = PlaybookQuestion(
+            lesson=lesson, question_text=text, question_type=q_type, order=q_order, explanation=explanation
+        )
         db.session.add(question)
         for o_order, opt in enumerate(cleaned_options):
             db.session.add(PlaybookOption(
@@ -82,7 +85,12 @@ def create_roadmap():
     if not name:
         return jsonify({"message": "El nombre es obligatorio"}), 400
     max_order = db.session.query(db.func.max(PlaybookRoadmap.order)).scalar() or 0
-    roadmap = PlaybookRoadmap(name=name, accent=data.get('accent') or 'magenta', order=max_order + 1)
+    roadmap = PlaybookRoadmap(
+        name=name, accent=data.get('accent') or 'magenta',
+        icon=(data.get('icon') or '').strip() or None,
+        description=(data.get('description') or '').strip() or None,
+        order=max_order + 1,
+    )
     db.session.add(roadmap)
     db.session.commit()
     return jsonify(roadmap.to_dict()), 201
@@ -100,6 +108,10 @@ def update_roadmap(roadmap_id):
         return jsonify({"message": "El nombre es obligatorio"}), 400
     roadmap.name = name
     roadmap.accent = data.get('accent') or roadmap.accent
+    if 'icon' in data:
+        roadmap.icon = (data.get('icon') or '').strip() or None
+    if 'description' in data:
+        roadmap.description = (data.get('description') or '').strip() or None
     db.session.commit()
     return jsonify(roadmap.to_dict()), 200
 
@@ -229,8 +241,12 @@ def update_lesson(lesson_id):
         lesson.target_roles = [r for r in (data.get('target_roles') or []) if isinstance(r, str) and r] or None
         lesson.is_active = data.get('is_active', lesson.is_active)
         if data.get('module_id') and data['module_id'] != lesson.module_id:
-            PlaybookModule.query.get_or_404(data['module_id'])
-            lesson.module_id = data['module_id']
+            new_module = PlaybookModule.query.get_or_404(data['module_id'])
+            # Va al final del módulo destino -- sin esto, la lección se quedaba con el
+            # `order` de su módulo viejo, pudiendo colisionar con lecciones ya existentes ahí.
+            max_order = db.session.query(db.func.max(PlaybookLesson.order)).filter_by(module_id=new_module.id).scalar() or 0
+            lesson.module_id = new_module.id
+            lesson.order = max_order + 1
         if 'questions' in data:
             _apply_questions(lesson, data.get('questions') or [])
             # El quiz cambió: quien ya la había aprobado con las preguntas viejas vuelve a deberla.
@@ -255,6 +271,77 @@ def delete_lesson(lesson_id):
     db.session.delete(lesson)
     db.session.commit()
     return jsonify({"message": "Lección eliminada"}), 200
+
+
+@bp.route('/playbook/modules/<int:module_id>/lessons/reorder', methods=['PUT'])
+@login_required
+def reorder_module_lessons(module_id):
+    """Único endpoint detrás de las 3 formas de reordenar/mover una lección (drag, flechas
+    de teclado, modal de mover): el caller manda la lista COMPLETA y final de IDs que debe
+    tener este módulo -- lecciones movidas desde otro módulo quedan asignadas acá, y las que
+    ya estaban se renumeran en el orden mandado. Las lecciones de OTROS módulos no se tocan
+    (sus `order` pueden quedar con huecos, es inofensivo para el ORDER BY)."""
+    forbidden = check_manager()
+    if forbidden: return forbidden
+    module = PlaybookModule.query.get_or_404(module_id)
+    data = request.get_json() or {}
+    lesson_ids = data.get('lesson_ids')
+    if not isinstance(lesson_ids, list) or not lesson_ids:
+        return jsonify({"message": "lesson_ids es obligatorio y no puede estar vacío"}), 400
+
+    lessons = {l.id: l for l in PlaybookLesson.query.filter(PlaybookLesson.id.in_(lesson_ids)).all()}
+    missing = [lid for lid in lesson_ids if lid not in lessons]
+    if missing:
+        return jsonify({"message": f"Lección(es) inexistente(s): {missing}"}), 404
+
+    for index, lid in enumerate(lesson_ids):
+        lessons[lid].module_id = module.id
+        lessons[lid].order = index
+    db.session.commit()
+
+    ordered = [lessons[lid] for lid in lesson_ids]
+    return jsonify({"module": module.to_dict(), "lessons": [l.to_dict() for l in ordered]}), 200
+
+
+@bp.route('/playbook/modules/<int:module_id>/duplicate', methods=['POST'])
+@login_required
+def duplicate_module(module_id):
+    """Clona el módulo con todas sus lecciones/preguntas/opciones (IDs nuevos, sin ninguna
+    fila de PlaybookCompletion/PlaybookLessonProgress asociada -- es contenido nuevo, nadie
+    lo completó todavía)."""
+    forbidden = check_manager()
+    if forbidden: return forbidden
+    source = PlaybookModule.query.get_or_404(module_id)
+
+    max_order = db.session.query(db.func.max(PlaybookModule.order)).filter_by(roadmap_id=source.roadmap_id).scalar() or 0
+    new_module = PlaybookModule(roadmap_id=source.roadmap_id, name=f"{source.name} (copia)", order=max_order + 1)
+    db.session.add(new_module)
+    db.session.flush()
+
+    for lesson in source.lessons:
+        new_lesson = PlaybookLesson(
+            module_id=new_module.id, title=lesson.title, description=lesson.description,
+            loom_link=lesson.loom_link, duration_minutes=lesson.duration_minutes,
+            transcript=lesson.transcript, target_roles=lesson.target_roles,
+            is_active=lesson.is_active, order=lesson.order, created_by_id=current_user.id,
+        )
+        db.session.add(new_lesson)
+        db.session.flush()
+        for q in lesson.questions:
+            new_question = PlaybookQuestion(
+                lesson_id=new_lesson.id, question_text=q.question_text,
+                question_type=q.question_type, order=q.order, explanation=q.explanation,
+            )
+            db.session.add(new_question)
+            db.session.flush()
+            for o in q.options:
+                db.session.add(PlaybookOption(
+                    question_id=new_question.id, option_text=o.option_text,
+                    is_correct=o.is_correct, order=o.order,
+                ))
+
+    db.session.commit()
+    return jsonify({**new_module.to_dict(), "lessons": [l.to_dict() for l in new_module.lessons]}), 201
 
 
 DEFAULT_QUICK_ROADMAP_NAME = 'Soporte y Resolución de Bugs'
@@ -364,22 +451,40 @@ def admin_overview():
     week_ago = datetime.utcnow()
     published_this_week = [l for l in published if (week_ago - l.created_at).days < 7] if published else []
 
+    # "Vieron" (para el chip de avance de la tarjeta raíz) es más amplio que "completaron":
+    # incluye a quien miró el video pero todavía no aprobó el quiz.
+    watched_by_lesson = {}
+    for p in PlaybookLessonProgress.query.filter(PlaybookLessonProgress.video_watched_at.isnot(None)).all():
+        watched_by_lesson.setdefault(p.lesson_id, set()).add(p.user_id)
+
     roadmaps_out = []
     for roadmap in PlaybookRoadmap.query.order_by(PlaybookRoadmap.order).all():
         modules_out = []
+        progress_ratios = []
         for module in roadmap.modules:
             lessons_out = []
             for lesson in module.lessons:
                 targets = assigned_users(lesson)
-                completed_count = len({c.user_id for c in lesson.completions} & {u.id for u in targets})
+                target_ids = {u.id for u in targets}
+                completed_count = len({c.user_id for c in lesson.completions} & target_ids)
+                seen_ids = ({c.user_id for c in lesson.completions} | watched_by_lesson.get(lesson.id, set())) & target_ids
                 lessons_out.append({
                     **lesson.to_dict(),
                     "audience_label": "Todo el equipo" if not lesson.target_roles else ", ".join(lesson.target_roles),
                     "completed_count": completed_count,
                     "assigned_count": len(targets),
+                    "seen_count": len(seen_ids),
                 })
+                if lesson.is_active and target_ids:
+                    progress_ratios.append(len(seen_ids) / len(target_ids))
             modules_out.append({**module.to_dict(), "lessons": lessons_out})
-        roadmaps_out.append({**roadmap.to_dict(), "modules": modules_out})
+        avg_progress_pct = round(100 * sum(progress_ratios) / len(progress_ratios)) if progress_ratios else 0
+        roadmaps_out.append({
+            **roadmap.to_dict(),
+            "lesson_count": sum(len(m['lessons']) for m in modules_out),
+            "avg_progress_pct": avg_progress_pct,
+            "modules": modules_out,
+        })
 
     return jsonify({
         "lessons_published": len(published),

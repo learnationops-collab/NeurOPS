@@ -15,6 +15,10 @@ class PlaybookRoadmap(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     accent = db.Column(db.String(20), default='magenta', nullable=False)
+    # Key de ícono lucide-react (ej. 'Orbit', 'Layers') para la tarjeta del Editor de curso.
+    # Nulo = el frontend cae a un ícono genérico por defecto.
+    icon = db.Column(db.String(50), nullable=True)
+    description = db.Column(db.String(500), nullable=True)
     order = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -28,6 +32,8 @@ class PlaybookRoadmap(db.Model):
             "id": self.id,
             "name": self.name,
             "accent": self.accent,
+            "icon": self.icon,
+            "description": self.description,
             "order": self.order,
             "module_count": self.modules.count(),
         }
@@ -127,6 +133,9 @@ class PlaybookQuestion(db.Model):
     lesson_id = db.Column(db.Integer, db.ForeignKey('playbook_lessons.id', ondelete='CASCADE'), nullable=False, index=True)
     question_text = db.Column(db.Text, nullable=False)
     question_type = db.Column(db.String(20), default='single', nullable=False)
+    # Sólo se muestra al operador (y al alumno una vez que aprueba, fuera de alcance por
+    # ahora) -- se gatea igual que PlaybookOption.is_correct, nunca se filtra en el quiz.
+    explanation = db.Column(db.Text, nullable=True)
     order = db.Column(db.Integer, default=0, nullable=False)
 
     options = db.relationship(
@@ -139,6 +148,7 @@ class PlaybookQuestion(db.Model):
             "id": self.id,
             "question_text": self.question_text,
             "question_type": self.question_type,
+            "explanation": self.explanation if include_correct else None,
             "order": self.order,
             "options": [o.to_dict(include_correct=include_correct) for o in self.options],
         }
