@@ -75,6 +75,17 @@ class WorkshopEvent(db.Model):
     # nunca se sincronizo (solo tiene los valores con los que se creo).
     synced_at = db.Column(db.DateTime, nullable=True)
 
+    # Config del replay publico (institute-site/replay/) para este taller. El
+    # endpoint publico /api/public/workshop-lead/replay-config sirve el ultimo
+    # WorkshopEvent (por fecha) que tenga replay_loom_id cargado -- asi "el
+    # replay activo" es siempre el ultimo que el director de marketing configuro,
+    # sin necesitar un mecanismo de seleccion aparte (12/sep/2026).
+    replay_loom_id = db.Column(db.String(64), nullable=True)
+    replay_activo_desde = db.Column(db.DateTime, nullable=True)
+    replay_vence_hasta = db.Column(db.DateTime, nullable=True)
+    replay_info_segundos = db.Column(db.Integer, default=0)
+    replay_oferta_segundos = db.Column(db.Integer, default=120)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -194,6 +205,12 @@ class WorkshopEvent(db.Model):
             "sales": self.sales,
             "cash_collected": self.cash_collected,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+
+            "replay_loom_id": self.replay_loom_id,
+            "replay_activo_desde": self.replay_activo_desde.isoformat() if self.replay_activo_desde else None,
+            "replay_vence_hasta": self.replay_vence_hasta.isoformat() if self.replay_vence_hasta else None,
+            "replay_info_segundos": self.replay_info_segundos,
+            "replay_oferta_segundos": self.replay_oferta_segundos,
 
             # Calculadas
             "impresiones": round(self.impresiones, 2),

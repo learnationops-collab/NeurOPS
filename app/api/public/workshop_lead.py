@@ -13,7 +13,7 @@ from flask import request, jsonify
 from flask_login import login_required
 
 from app import db
-from app.models import WorkshopLead
+from app.models import WorkshopLead, WorkshopEvent
 from app.api.public import bp
 from app.decorators import admin_required
 
@@ -109,6 +109,32 @@ def stats_workshop_lead():
     except Exception as e:
         logging.error("[workshop-lead] Error en stats: %s", e)
         return jsonify({"total": 0, "ultimas_24h": 0}), 200
+
+
+@bp.route('/public/workshop-lead/replay-config', methods=['GET'])
+def replay_config():
+    """Config del replay activo para institute-site/replay/.
+
+    "El replay activo" es siempre el WorkshopEvent mas reciente (por fecha) que
+    tenga un Loom cargado: el director de marketing configura Loom + fechas +
+    timings en el panel de Workshop de NeurOPS cada vez que sube una grabacion
+    nueva, sin tocar codigo del lado de la landing. Devuelve {} si todavia no
+    hay ninguno configurado, para que la landing caiga a sus defaults.
+    """
+    evento = WorkshopEvent.query.filter(
+        WorkshopEvent.replay_loom_id.isnot(None)
+    ).order_by(WorkshopEvent.date.desc()).first()
+
+    if not evento:
+        return jsonify({}), 200
+
+    return jsonify({
+        "loom_id": evento.replay_loom_id,
+        "activo_desde": evento.replay_activo_desde.isoformat() if evento.replay_activo_desde else None,
+        "vence_hasta": evento.replay_vence_hasta.isoformat() if evento.replay_vence_hasta else None,
+        "info_segundos": evento.replay_info_segundos,
+        "oferta_segundos": evento.replay_oferta_segundos,
+    }), 200
 
 
 @bp.route('/public/workshop-lead/list', methods=['GET'])

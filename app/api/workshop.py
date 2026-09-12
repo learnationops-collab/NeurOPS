@@ -149,6 +149,16 @@ def get_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     return jsonify(event.to_dict()), 200
 
+def _parse_replay_datetime(valor):
+    """Datetime-local del form (YYYY-MM-DDTHH:MM) o ISO completo; None si vacio o invalido."""
+    if not valor:
+        return None
+    try:
+        return datetime.fromisoformat(valor)
+    except ValueError:
+        return None
+
+
 @bp.route('/events', methods=['POST'])
 @workshop_required
 def create_workshop_event():
@@ -185,7 +195,12 @@ def create_workshop_event():
         agendas_exitosas=int(data.get('agendas_exitosas', 0)),
         show_up_sales_call=int(data.get('show_up_sales_call', 0)),
         sales=int(data.get('sales', 0)),
-        cash_collected=float(data.get('cash_collected', 0.0))
+        cash_collected=float(data.get('cash_collected', 0.0)),
+        replay_loom_id=(data.get('replay_loom_id') or None),
+        replay_activo_desde=_parse_replay_datetime(data.get('replay_activo_desde')),
+        replay_vence_hasta=_parse_replay_datetime(data.get('replay_vence_hasta')),
+        replay_info_segundos=int(data.get('replay_info_segundos') or 0),
+        replay_oferta_segundos=int(data.get('replay_oferta_segundos') or 120)
     )
     
     try:
@@ -232,6 +247,16 @@ def update_workshop_event(event_id):
         event.sales = int(data['sales'])
     if 'cash_collected' in data:
         event.cash_collected = float(data['cash_collected'])
+    if 'replay_loom_id' in data:
+        event.replay_loom_id = data['replay_loom_id'] or None
+    if 'replay_activo_desde' in data:
+        event.replay_activo_desde = _parse_replay_datetime(data['replay_activo_desde'])
+    if 'replay_vence_hasta' in data:
+        event.replay_vence_hasta = _parse_replay_datetime(data['replay_vence_hasta'])
+    if 'replay_info_segundos' in data:
+        event.replay_info_segundos = int(data['replay_info_segundos'] or 0)
+    if 'replay_oferta_segundos' in data:
+        event.replay_oferta_segundos = int(data['replay_oferta_segundos'] or 0)
 
     # El resync manual del panel manda estas 4 metricas juntas (mismos campos
     # que calcula workshop_live_sync.py) -- se trata igual que una sincronizacion.

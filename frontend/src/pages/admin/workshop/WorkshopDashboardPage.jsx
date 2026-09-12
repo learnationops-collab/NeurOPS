@@ -31,7 +31,12 @@ const initialFormData = {
     agendas_exitosas: 0,
     show_up_sales_call: 0,
     sales: 0,
-    cash_collected: 0.0
+    cash_collected: 0.0,
+    replay_loom_id: '',
+    replay_activo_desde: '',
+    replay_vence_hasta: '',
+    replay_info_minutos: 0,
+    replay_oferta_minutos: 2
 };
 
 const WorkshopDashboardPage = () => {
@@ -228,7 +233,12 @@ const WorkshopDashboardPage = () => {
             agendas_exitosas: event.agendas_exitosas,
             show_up_sales_call: event.show_up_sales_call,
             sales: event.sales,
-            cash_collected: event.cash_collected
+            cash_collected: event.cash_collected,
+            replay_loom_id: event.replay_loom_id || '',
+            replay_activo_desde: event.replay_activo_desde ? event.replay_activo_desde.slice(0, 16) : '',
+            replay_vence_hasta: event.replay_vence_hasta ? event.replay_vence_hasta.slice(0, 16) : '',
+            replay_info_minutos: event.replay_info_segundos != null ? Math.round((event.replay_info_segundos / 60) * 10) / 10 : 0,
+            replay_oferta_minutos: event.replay_oferta_segundos != null ? Math.round((event.replay_oferta_segundos / 60) * 10) / 10 : 2
         });
         setModalOpen(true);
         fetchHistoricalBreakdown(event.date);
@@ -274,8 +284,15 @@ const WorkshopDashboardPage = () => {
             agendas_exitosas: parseInt(formData.agendas_exitosas),
             show_up_sales_call: parseInt(formData.show_up_sales_call),
             sales: parseInt(formData.sales),
-            cash_collected: parseFloat(formData.cash_collected)
+            cash_collected: parseFloat(formData.cash_collected),
+            replay_loom_id: formData.replay_loom_id || null,
+            replay_activo_desde: formData.replay_activo_desde || null,
+            replay_vence_hasta: formData.replay_vence_hasta || null,
+            replay_info_segundos: Math.round((parseFloat(formData.replay_info_minutos) || 0) * 60),
+            replay_oferta_segundos: Math.round((parseFloat(formData.replay_oferta_minutos) || 0) * 60)
         };
+        delete payload.replay_info_minutos;
+        delete payload.replay_oferta_minutos;
 
         try {
             if (isEditMode && selectedEvent) {
