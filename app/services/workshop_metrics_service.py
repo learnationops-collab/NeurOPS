@@ -207,6 +207,14 @@ def _ventas_de(agendas, compradores_ya_contados):
     `compradores_ya_contados` evita que la misma persona sume en los dos embudos:
     quien aparece en el vivo y despues en la grabacion se cuenta una sola vez, del
     lado del vivo, para que los dos grupos sumen exactamente el total.
+
+    El cruce con `FinancialSale` es por identidad (instagram/mail/nombre), asi que
+    sin filtro de fecha una venta VIEJA de alguien que vuelve a agendar para un
+    taller nuevo se le sumaba a ese taller aunque sea de semanas atras -- un
+    evento del mismo dia llegaba a mostrar ROAS positivo antes de que sus propias
+    agendas tuvieran chance de cerrar. Una venta solo cuenta si es igual o
+    posterior a la agenda que la trajo (con 1 dia de margen por huso horario)
+    (12/sep/2026).
     """
     compradores = set()
     ventas = set()
@@ -234,7 +242,11 @@ def _ventas_de(agendas, compradores_ya_contados):
         if lead:
             condiciones.append(func.lower(FinancialSale.nombre_cliente) == lead)
 
-        validas = [s for s in FinancialSale.query.filter(or_(*condiciones)).all() if _es_venta_valida(s)]
+        piso_venta = a.created_at - timedelta(days=1) if a.created_at else None
+        validas = [
+            s for s in FinancialSale.query.filter(or_(*condiciones)).all()
+            if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
+        ]
         if validas:
             compradores.add(clave)
             ventas.update(validas)
