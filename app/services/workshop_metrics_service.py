@@ -26,7 +26,7 @@ import pytz
 from sqlalchemy import or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
-from app.services.fuente_service import es_workshop_landing, es_workshop_vivo
+from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
@@ -76,14 +76,24 @@ def _clasificar_fuente(*textos):
 
 
 def _contar_aplicaciones(desde, hasta, tz):
-    """Formularios de calificacion completados en la ventana, separados por embudo."""
+    """Formularios de calificacion completados en la ventana, separados por embudo.
+
+    Un `fuente_form` vacio no es un formulario real: son Clients que entraron por
+    otro flujo (ej. sync de agenda) y nunca completaron el cuestionario, asi que
+    no cuentan. 'No identificado' si es un formulario real completo -- el lead
+    respondio todo el cuestionario, solo fallo el tag de que pagina lo origino --
+    asi que en vez de perderse cuenta del lado del vivo (12/sep/2026).
+    """
     inicio, fin = _limites_utc(desde, hasta, tz)
     clientes = Client.query.filter(Client.created_at >= inicio, Client.created_at <= fin).all()
 
     conteo = {'vivo': 0, 'landing': 0}
     for c in clientes:
         fd = c.form_data or {}
-        grupo = _clasificar_fuente(fd.get('fuente_form'), fd.get('fuente'))
+        fuente_form = fd.get('fuente_form')
+        grupo = _clasificar_fuente(fuente_form, fd.get('fuente'))
+        if not grupo and fuente_form and es_sin_dueno(fuente_form):
+            grupo = 'vivo'
         if grupo:
             conteo[grupo] += 1
     return conteo
