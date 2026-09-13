@@ -4,6 +4,7 @@ from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
 from datetime import datetime
+import pytz
 import logging
 
 logger = logging.getLogger(__name__)
@@ -141,22 +142,54 @@ def get_workshop_stats_summary():
 @workshop_required
 def get_workshop_events():
     events = WorkshopEvent.query.order_by(WorkshopEvent.date.desc()).all()
-    return jsonify([e.to_dict() for e in events]), 200
+    return jsonify([_con_replay_local(e.to_dict(), e) for e in events]), 200
 
 @bp.route('/events/<int:event_id>', methods=['GET'])
 @workshop_required
 def get_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
-    return jsonify(event.to_dict()), 200
+    return jsonify(_con_replay_local(event.to_dict(), event)), 200
+
+def _tz_usuario():
+    try:
+        return pytz.timezone(getattr(current_user, 'timezone', None) or 'America/La_Paz')
+    except Exception:
+        return pytz.timezone('America/La_Paz')
+
 
 def _parse_replay_datetime(valor):
-    """Datetime-local del form (YYYY-MM-DDTHH:MM) o ISO completo; None si vacio o invalido."""
+    """Datetime-local del form (hora local del usuario, sin zona) -> UTC naive para guardar.
+
+    El input datetime-local del navegador manda la hora tal como la escribio el
+    admin, sin zona. Si se guardara tal cual, `to_dict()`/el endpoint publico
+    la devolverian ambiguas: un `new Date()` del lado de la landing la
+    interpretaria en la zona horaria de CADA visitante, no en la del admin que
+    la configuro. Se convierte a UTC acá (mismo criterio de zona que
+    workshop_metrics_service) para que sea un instante absoluto sin ambiguedad.
+    """
     if not valor:
         return None
     try:
-        return datetime.fromisoformat(valor)
+        ingenuo = datetime.fromisoformat(valor)
     except ValueError:
         return None
+    return _tz_usuario().localize(ingenuo).astimezone(pytz.UTC).replace(tzinfo=None)
+
+
+def _con_replay_local(data, event):
+    """Vuelve replay_activo_desde/replay_vence_hasta a la hora local del admin.
+
+    Se guardan en UTC (ver _parse_replay_datetime); si el panel los mostrara
+    tal cual, el admin veria una hora distinta a la que tipeo. El endpoint
+    publico (/api/public/workshop-lead/replay-config) es el que sirve el UTC
+    real con zona explicita para que la landing lo interprete sin ambiguedad.
+    """
+    tz = _tz_usuario()
+    if event.replay_activo_desde:
+        data['replay_activo_desde'] = pytz.UTC.localize(event.replay_activo_desde).astimezone(tz).replace(tzinfo=None).isoformat()
+    if event.replay_vence_hasta:
+        data['replay_vence_hasta'] = pytz.UTC.localize(event.replay_vence_hasta).astimezone(tz).replace(tzinfo=None).isoformat()
+    return data
 
 
 @bp.route('/events', methods=['POST'])
@@ -206,7 +239,7 @@ def create_workshop_event():
     try:
         db.session.add(event)
         db.session.commit()
-        return jsonify(event.to_dict()), 201
+        return jsonify(_con_replay_local(event.to_dict(), event)), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Error al guardar en base de datos: {str(e)}"}), 500
@@ -265,7 +298,7 @@ def update_workshop_event(event_id):
 
     try:
         db.session.commit()
-        return jsonify(event.to_dict()), 200
+        return jsonify(_con_replay_local(event.to_dict(), event)), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Error al actualizar la base de datos: {str(e)}"}), 500

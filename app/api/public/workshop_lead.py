@@ -128,10 +128,13 @@ def replay_config():
     if not evento:
         return jsonify({}), 200
 
+    # Se guardan en UTC naive (ver _parse_replay_datetime en app/api/workshop.py);
+    # el 'Z' es lo que le dice al `new Date()` del lado de la landing que es un
+    # instante UTC absoluto y no una hora local del navegador de cada visitante.
     return jsonify({
         "loom_id": evento.replay_loom_id,
-        "activo_desde": evento.replay_activo_desde.isoformat() if evento.replay_activo_desde else None,
-        "vence_hasta": evento.replay_vence_hasta.isoformat() if evento.replay_vence_hasta else None,
+        "activo_desde": (evento.replay_activo_desde.isoformat() + 'Z') if evento.replay_activo_desde else None,
+        "vence_hasta": (evento.replay_vence_hasta.isoformat() + 'Z') if evento.replay_vence_hasta else None,
         "info_segundos": evento.replay_info_segundos,
         "oferta_segundos": evento.replay_oferta_segundos,
     }), 200
