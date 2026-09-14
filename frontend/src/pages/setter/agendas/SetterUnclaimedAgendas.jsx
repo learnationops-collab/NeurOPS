@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, Check, X, Instagram, Phone, Mail, Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -56,9 +57,15 @@ const SetterUnclaimedAgendas = ({ agendas, onResuelta }) => {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                <AnimatePresence initial={false}>
                 {agendas.map(a => (
-                    <div
+                    <motion.div
                         key={a.id}
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.18 } }}
+                        transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
                         className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4"
                     >
                         <div className="min-w-0 space-y-1">
@@ -81,25 +88,28 @@ const SetterUnclaimedAgendas = ({ agendas, onResuelta }) => {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                            <button
+                            <motion.button
                                 onClick={() => responder(a, 'mia')}
                                 disabled={!!enviando}
+                                whileTap={{ scale: 0.94 }}
                                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 cursor-pointer"
                             >
                                 {enviando === `${a.id}-mia` ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                                 Es mía
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
                                 onClick={() => responder(a, 'no_mia')}
                                 disabled={!!enviando}
+                                whileTap={{ scale: 0.94 }}
                                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 cursor-pointer"
                             >
                                 {enviando === `${a.id}-no_mia` ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
                                 No es mía
-                            </button>
+                            </motion.button>
                         </div>
-                    </div>
+                    </motion.div>
                 ))}
+                </AnimatePresence>
             </div>
         </div>
     );
