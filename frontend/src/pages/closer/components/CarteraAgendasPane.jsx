@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Search, CalendarRange, CopyX, Trash2 } from 'lucide-react';
+import { Loader2, Search, CalendarRange, CopyX } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import { parseUtcIso, toLocalDateStr, localToday, viewerTimezoneLabel } from '../../../utils/datetime';
+import DeleteButton from '../../../components/rare-ui/delete-button';
 
 // Estados en los que una agenda todavía no tiene un resultado real cargado — los únicos que
 // se pueden marcar como "duplicada" (ver ESTADOS_SIN_REPORTAR abajo y `marcar-duplicada` en
@@ -182,15 +183,8 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
     // ningún estado (borra cualquier cita del closer), así que la restricción es a propósito
     // acá, para que esta lista de auditoría nunca pueda borrar un resultado real (show up, no
     // show, etc.) — solo lo que ya no cuenta como una agenda real.
-    const eliminarAgenda = async (it, e) => {
-        e.stopPropagation();
+    const eliminarAgenda = async (it) => {
         if (resolvingId) return;
-        const fecha = parseUtcIso(it.start_time);
-        if (!window.confirm(
-            `¿Eliminar definitivamente la agenda de ${it.lead_name}` +
-            `${fecha ? ` del ${fmtDia(fecha)}` : ''}?\n\n` +
-            `Esta acción no se puede deshacer.`
-        )) return;
         setResolvingId(it.id);
         try {
             await api.delete(`/closer/deck/${it.id}`);
@@ -517,15 +511,10 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
                                             <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,.4)' }}>
                                                 Cancelada — si no debería figurar (ej. una agenda duplicada), se puede eliminar del registro.
                                             </span>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => eliminarAgenda(it, e)}
-                                                disabled={resolvingId === it.id}
-                                                className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all disabled:opacity-50 flex items-center gap-1.5"
-                                                style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.4)', color: '#FCA5A5' }}
-                                            >
-                                                <Trash2 size={11} /> {resolvingId === it.id ? 'Eliminando…' : 'Eliminar agenda'}
-                                            </button>
+                                            <DeleteButton
+                                                className="bg-rose-500/10 text-rose-300 shadow-none"
+                                                onConfirm={() => eliminarAgenda(it)}
+                                            />
                                         </div>
                                     )}
                                 </div>
