@@ -146,13 +146,18 @@ const SetterAgendasPage = () => {
                                     key={f.id}
                                     onClick={() => setFilter(f.id)}
                                     className={`
-                                        px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300
-                                        ${filter === f.id
-                                            ? 'bg-[#1534ff] text-white shadow-lg shadow-blue-500/20'
-                                            : 'text-muted hover:text-white hover:bg-white/5'}
+                                        relative px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300
+                                        ${filter === f.id ? 'text-white' : 'text-muted hover:text-white'}
                                     `}
                                 >
-                                    {f.label}
+                                    {filter === f.id && (
+                                        <motion.span
+                                            layoutId="setter-agenda-filter-pill"
+                                            className="absolute inset-0 rounded-xl bg-[#1534ff] shadow-lg shadow-blue-500/20"
+                                            transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                                        />
+                                    )}
+                                    <span className="relative">{f.label}</span>
                                 </button>
                             ))}
                         </div>
