@@ -1474,7 +1474,6 @@ class CloserService:
         from types import SimpleNamespace
         from app.models import Appointment, CloserDailyReport, FinancialSale
         from app.services.closer_followup_service import CloserFollowUpService
-        from sqlalchemy import func
 
         start_dt, end_dt = CloserService._parse_range(start_date, end_date)
 
@@ -1587,18 +1586,14 @@ class CloserService:
                     ic[key][1] += float(sale.monto or 0)
 
         # `slots` es lo único que sigue viniendo del reporte diario: no hay forma de derivarlo de
-        # la bandeja (ver docstring).
-        slots_filters = []
-        if closer_id:
-            slots_filters.append(CloserDailyReport.closer_id == closer_id)
-        if start_date:
-            slots_filters.append(CloserDailyReport.date >= CloserService._as_date(start_date))
-        if end_date:
-            slots_filters.append(CloserDailyReport.date <= CloserService._as_date(end_date))
-        slots = db.session.query(func.sum(CloserDailyReport.slots)).filter(*slots_filters).scalar() or 0
+        # la bandeja (ver docstring). Días sin reporte se estiman en vez de sumar 0 (ver
+        # _slots_with_estimate) -- sumar 0 dejaba el embudo entero roto (28 agendas reales
+        # contra "0 slots") apenas faltaba un solo reporte del período.
+        slots, slots_estimated_days = CloserService._slots_with_estimate(closer_id, start_dt, end_dt)
 
         return SimpleNamespace(
             slots=slots,
+            slots_estimated_days=slots_estimated_days,
             offers_made=offers_made,
             decision_makers=decision_makers,
             rescheduled_calls=rescheduled_total,
@@ -1615,6 +1610,80 @@ class CloserService:
             rec_contacted=rec_contacted, rec_replied=rec_replied, rec_scheduled=rec_scheduled,
             ref_sourced=referidos, ref_scheduled=referidos
         )
+
+    @staticmethod
+    def _slots_with_estimate(closer_id, start_dt, end_dt):
+        """Cupos de agenda del período: reales donde el closer los declaró, estimados donde no.
+
+        Antes un día sin `CloserDailyReport` sumaba 0 lisa y llanamente -- si faltaban TODOS
+        los reportes del período (nada raro: nadie llena "Cerrar el día" todos los días), el
+        primer paso del embudo quedaba en "0 cupos" contra decenas de agendas reales, un
+        número imposible que hacía desconfiar del embudo entero (ver bitácora 15/sep/2026).
+
+        Cada día sin declarar se reemplaza por el promedio histórico de ESE closer (todo su
+        historial de valores reales, no solo este período -- si hoy no reportó nada todavía,
+        la semana pasada sigue siendo la mejor estimación disponible), con piso en sus propias
+        agendas del día (un cupo ocupado sigue siendo un cupo, misma regla que ya exige
+        `save_slots_for_days`). Un closer sin ningún historial real todavía usa sus propias
+        agendas de ese día como piso y techo.
+
+        Devuelve (total, dias_estimados): `dias_estimados` es cuántos días de los sumados son
+        un promedio y no un valor que el closer realmente escribió, para que el dashboard lo
+        pueda decir en vez de mezclarlo en silencio con lo real."""
+        from collections import defaultdict
+        from app.models import Appointment, CloserDailyReport
+
+        if not start_dt or not end_dt:
+            return 0, 0
+
+        closer_ids = [closer_id] if closer_id else [c.id for c in User.query.filter_by(role='closer').all()]
+        if not closer_ids:
+            return 0, 0
+
+        agendas_por_closer_dia = defaultdict(int)
+        q = Appointment.query.filter(
+            Appointment.start_time >= start_dt, Appointment.start_time < end_dt,
+            Appointment.closer_id.in_(closer_ids)
+        )
+        for cid, start_time in q.with_entities(Appointment.closer_id, Appointment.start_time).all():
+            agendas_por_closer_dia[(cid, start_time.date())] += 1
+
+        if not agendas_por_closer_dia:
+            return 0, 0
+
+        dias = [d for (_, d) in agendas_por_closer_dia]
+        declarados = {
+            (r.closer_id, r.date): r.slots
+            for r in CloserDailyReport.query.with_entities(
+                CloserDailyReport.closer_id, CloserDailyReport.date, CloserDailyReport.slots
+            ).filter(
+                CloserDailyReport.closer_id.in_(closer_ids),
+                CloserDailyReport.date >= min(dias),
+                CloserDailyReport.date <= max(dias)
+            ).all()
+        }
+
+        historicos = defaultdict(list)
+        for cid, slots_val in CloserDailyReport.query.with_entities(
+            CloserDailyReport.closer_id, CloserDailyReport.slots
+        ).filter(
+            CloserDailyReport.closer_id.in_(closer_ids),
+            CloserDailyReport.slots.isnot(None),
+            CloserDailyReport.slots > 0
+        ).all():
+            historicos[cid].append(slots_val)
+        promedio_historico = {cid: round(sum(vals) / len(vals)) for cid, vals in historicos.items()}
+
+        total = 0
+        dias_estimados = 0
+        for (cid, dia), agendas in agendas_por_closer_dia.items():
+            real = declarados.get((cid, dia))
+            if real:
+                total += real
+            else:
+                total += max(promedio_historico.get(cid, agendas), agendas)
+                dias_estimados += 1
+        return total, dias_estimados
 
     @staticmethod
     def get_missing_slots_days(closer_id, start_date, end_date):
@@ -2231,6 +2300,7 @@ class CloserService:
             },
             "general": {
                 "slots": val(stats.slots),
+                "slots_estimated_days": stats.slots_estimated_days,
                 "offers_made": val(stats.offers_made),
                 "decision_makers": val(stats.decision_makers),
                 "rescheduled_calls": val(stats.rescheduled_calls),

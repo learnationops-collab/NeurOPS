@@ -424,7 +424,11 @@ class CloserDashboardService:
         return {
             'funnel': {
                 'labels': ['Slots', 'Agendas', 'Confirmadas', 'Asistencias', 'Presentaciones', 'Ventas'],
-                'values': [slots, agendas, confirmadas, asistencias, presentaciones, ventas]
+                'values': [slots, agendas, confirmadas, asistencias, presentaciones, ventas],
+                # Cuántos de los "slots" de arriba son un promedio histórico y no lo que el
+                # closer realmente declaró (ver CloserService._slots_with_estimate) -- el
+                # frontend lo usa para no mostrar el número como si fuera 100% real.
+                'slots_estimated_days': g.get('slots_estimated_days', 0)
             },
             'kpis': {
                 'cash_collected': round(cash, 2),

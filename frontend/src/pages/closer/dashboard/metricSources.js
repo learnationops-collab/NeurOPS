@@ -107,7 +107,7 @@ export const METRICS = {
         title: 'Cupos de agenda que abriste',
         source: 'reporte',
         formula: 'cupos ocupados + cupos que quedaron libres',
-        note: 'Es el único número del reporte que se escribe a mano: el sistema no tiene dónde leer tu capacidad configurada. Nunca puede ser menor que tus agendas.'
+        note: 'Es el único número del reporte que se escribe a mano: el sistema no tiene dónde leer tu capacidad configurada. Nunca puede ser menor que tus agendas. Los días que todavía no reportaste usan tu propio promedio histórico como estimado (marcado con ~) hasta que lo actualices a mano.'
     },
     funnel_agendas: {
         title: 'Llamadas agendadas',

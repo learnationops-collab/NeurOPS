@@ -39,7 +39,7 @@ export const ConfirmacionesCard = ({ confirmaciones }) => (
 );
 
 const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones }) => {
-    const { labels, values } = funnel;
+    const { labels, values, slots_estimated_days: slotsEstimatedDays = 0 } = funnel;
     const max = values[0] || 1;
     // "Agendas" (fila 1) solo cuenta las que ya tuvieron su llamada dentro del período — a
     // propósito, para no ensuciar las tasas de conversión con trabajo que todavía no pasó (ver
@@ -53,7 +53,10 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones
     let worst = { idx: 1, rate: 100 };
     const rows = values.map((v, i) => {
         const width = Math.max(6, Math.round((v / max) * 100));
-        const conv = i ? (values[i - 1] ? Math.round((v / values[i - 1]) * 100) : 0) : null;
+        // Sin agendas previas para dividir no hay conversión que mostrar -- antes se mostraba
+        // "0%", que se lee como "0% de conversión" en vez de "no hay datos" (pasaba siempre
+        // que Slots venía en 0 por falta de reporte, antes de que se empezara a estimar).
+        const conv = i ? (values[i - 1] ? Math.round((v / values[i - 1]) * 100) : null) : null;
         if (i && conv !== null && conv < worst.rate) worst = { idx: i, rate: conv };
         return { label: labels[i], v, width, conv, metric: FUNNEL_METRICS[i] };
     });
@@ -88,8 +91,11 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones
                     </div>
                 </div>
                 <div className="space-y-2">
-                    {rows.map((r, i) => (
-                        <div key={r.label} className="flex items-center gap-3">
+                    {rows.map((r, i) => {
+                        const isEstimatedSlots = i === 0 && slotsEstimatedDays > 0;
+                        return (
+                        <div key={r.label}>
+                        <div className="flex items-center gap-3">
                             <div className="w-32 shrink-0 text-[11px] font-bold text-muted flex items-center gap-1.5">
                                 <span className="truncate">{r.label}</span>
                                 <MetricTip iconOnly {...tip(r.metric)} />
@@ -97,9 +103,19 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones
                             <div className="flex-1 h-8 rounded-lg bg-main border border-base overflow-hidden relative flex">
                                 <div
                                     className="h-full flex items-center pl-3 text-[12px] font-black text-white transition-all"
-                                    style={{ width: `${r.width}%`, background: FUNNEL_COLORS[i] }}
+                                    style={{
+                                        width: `${r.width}%`,
+                                        background: FUNNEL_COLORS[i],
+                                        // Rayado sutil en vez de sólido: la barra de Slots avisa a simple
+                                        // vista que el número no es 100% real cuando incluye días sin
+                                        // reportar (ver funnel_slots en metricSources.js).
+                                        backgroundImage: isEstimatedSlots
+                                            ? 'repeating-linear-gradient(135deg, rgba(255,255,255,.22) 0 6px, transparent 6px 12px)'
+                                            : undefined,
+                                    }}
+                                    title={isEstimatedSlots ? `Incluye ${slotsEstimatedDays} día${slotsEstimatedDays === 1 ? '' : 's'} sin reportar, estimado con tu propio promedio histórico.` : undefined}
                                 >
-                                    {r.v}
+                                    {isEstimatedSlots ? `~${r.v}` : r.v}
                                 </div>
                                 {i === 1 && proximasWidth > 0 && (
                                     <div
@@ -113,7 +129,14 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones
                                 {r.conv === null ? '—' : `${r.conv}%`}
                             </div>
                         </div>
-                    ))}
+                        {isEstimatedSlots && (
+                            <p className="pl-[8.75rem] text-[9px] font-bold text-amber-400/80 mt-0.5">
+                                ≈ incluye {slotsEstimatedDays} día{slotsEstimatedDays === 1 ? '' : 's'} sin reportar — estimado con tu promedio, se corrige cuando reportes ese día
+                            </p>
+                        )}
+                        </div>
+                        );
+                    })}
                 </div>
             </Card>
 
