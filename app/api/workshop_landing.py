@@ -1,4 +1,4 @@
-"""Panel de la landing de la grabacion (/replay/) — solo administradores.
+"""Panel de la landing de la grabacion (/replay/).
 
 Se cuelga del blueprint `workshop` para que viva en la misma pestaña del panel
 que el workshop en vivo, pero mide un embudo distinto:
@@ -7,8 +7,13 @@ que el workshop en vivo, pero mide un embudo distinto:
   WORKSHOP LANDING  -> la grabacion en /replay/, fuente 'workshop landing'
 
 Estos endpoints SI devuelven datos personales, asi que van todos con
-@login_required + @admin_required. El contador publico de la landing usa
-/api/public/workshop-lead/stats, que solo devuelve enteros.
+@login_required + @workshop_required (admin, operator y director_marketing:
+mismo criterio que el resto de `/admin/workshops`, ver app/decorators.py).
+Iban con @admin_required, que EXCLUYE a director_marketing -- eso tiraba 403
+en la pestaña "Landing grabación" para ese rol, aunque el resto del panel de
+Workshop Intelligence (app/api/workshop.py) ya lo tenia permitido (14/sep/2026).
+El contador publico de la landing usa /api/public/workshop-lead/stats, que
+solo devuelve enteros.
 """
 import logging
 from datetime import datetime, timedelta
@@ -19,7 +24,7 @@ from sqlalchemy import func
 
 from app import db
 from app.models import LandingSession, WorkshopLead, FinancialAgenda, Client
-from app.decorators import admin_required
+from app.decorators import workshop_required
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo
 from app.api.workshop import bp
 
@@ -54,7 +59,7 @@ def _pct(parte, total):
 
 @bp.route('/landing/leads', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def listar_leads_landing():
     """Personas que completaron el gate, con su comportamiento en la pagina."""
     desde, hasta = _rango()
@@ -102,7 +107,7 @@ def listar_leads_landing():
 
 @bp.route('/landing/sesiones', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def listar_sesiones_landing():
     """Todas las visitas, hayan completado el gate o no.
 
@@ -139,7 +144,7 @@ def listar_sesiones_landing():
 
 @bp.route('/landing/stats', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def stats_landing():
     """KPIs del embudo de la grabacion + rendimiento de la fuente."""
     desde, hasta = _rango()
@@ -233,7 +238,7 @@ def stats_landing():
 
 @bp.route('/landing/agendas', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def agendas_por_fuente():
     """Compara las agendas del workshop EN VIVO contra las de la GRABACION.
 
