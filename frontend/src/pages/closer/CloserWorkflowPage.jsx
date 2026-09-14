@@ -32,6 +32,24 @@ const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', '
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+// Fondo de la pestaña activa del nav principal (".nav5-v6"): un solo `motion.span` compartido
+// (mismo layoutId) que se monta como hijo del botón activo en cada momento. Framer Motion nota
+// que "se movió" de un padre a otro y anima la transición (posición + tamaño) en vez de que la
+// pestaña nueva aparezca de golpe -- el color en sí sigue en el CSS (".nc-v6.on"), acá solo va
+// el fondo/borde que antes pintaba esa clase de forma instantánea.
+const NavPill = () => (
+    <motion.span
+        layoutId="nav5-active-pill"
+        className="absolute inset-0 rounded-[1.1rem]"
+        style={{
+            background: 'rgba(255,63,164,.08)',
+            border: '1px solid rgba(255,63,164,.5)',
+            boxShadow: '0 6px 18px rgba(255,63,164,.16)',
+        }}
+        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+    />
+);
+
 // Wizard de "Proceso de confirmación" v8 (mockup "Closer Workspace.html", 10/sep/2026): 5
 // sub-etapas dentro de "conversando" que el closer toca a medida que avanza la confirmación
 // pre-llamada. Viven en Appointment.confirmation_stage (nuevo, aditivo — ver app/models/
@@ -3816,57 +3834,67 @@ const CloserWorkflowPage = () => {
                     const segTotal = segDone + counts.seguimientos;
                     return (
                 <div className="nav5-v6">
+                    {/* El fondo/borde rosa de cada pestaña activa ya no lo pinta el CSS ".on" de
+                        golpe: es este mismo `motion.span` (layoutId compartido entre las 5-7
+                        pestañas) que Framer Motion desliza de una a otra en vez de teletransportarse,
+                        igual que la técnica que ya usa AgendaManagerModal para su selector de tabs. */}
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'inbox' && activeStep === 'confirmations' ? 'on' : ''}`}
                         onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'confirmations', selected_date: selectedDate }); }}
                     >
-                        <span className="nc-n-v6">01</span>
-                        <span className="nc-lbl-v6">Confirmar</span>
-                        <span className={`nc-count-v6 ${counts.confirmations === 0 ? 'zero' : ''}`}>{confirmDone}/{confirmTotal}</span>
+                        {activeView === 'inbox' && activeStep === 'confirmations' && <NavPill />}
+                        <span className="nc-n-v6 relative">01</span>
+                        <span className="nc-lbl-v6 relative">Confirmar</span>
+                        <span className={`nc-count-v6 relative ${counts.confirmations === 0 ? 'zero' : ''}`}>{confirmDone}/{confirmTotal}</span>
                     </button>
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'inbox' && activeStep === 'calls' ? 'on' : ''}`}
                         onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'calls', selected_date: selectedDate }); }}
                     >
-                        <span className="nc-n-v6">02</span>
-                        <span className="nc-lbl-v6">Reportar</span>
-                        <span className={`nc-count-v6 ${counts.calls === 0 ? 'zero' : ''}`}>{callsDone}/{callsTotal}</span>
+                        {activeView === 'inbox' && activeStep === 'calls' && <NavPill />}
+                        <span className="nc-n-v6 relative">02</span>
+                        <span className="nc-lbl-v6 relative">Reportar</span>
+                        <span className={`nc-count-v6 relative ${counts.calls === 0 ? 'zero' : ''}`}>{callsDone}/{callsTotal}</span>
                     </button>
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'inbox' && activeStep === 'seguimientos' ? 'on' : ''}`}
                         onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'seguimientos', selected_date: selectedDate }); }}
                     >
-                        <span className="nc-n-v6">03</span>
-                        <span className="nc-lbl-v6">Seguir</span>
-                        <span className={`nc-count-v6 ${counts.seguimientos === 0 ? 'zero' : ''}`}>{segDone}/{segTotal}</span>
+                        {activeView === 'inbox' && activeStep === 'seguimientos' && <NavPill />}
+                        <span className="nc-n-v6 relative">03</span>
+                        <span className="nc-lbl-v6 relative">Seguir</span>
+                        <span className={`nc-count-v6 relative ${counts.seguimientos === 0 ? 'zero' : ''}`}>{segDone}/{segTotal}</span>
                     </button>
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'report' ? 'on' : ''}`}
                         onClick={() => setActiveView('report')}
                     >
-                        <span className="nc-n-v6">04</span>
-                        <span className="nc-lbl-v6">Cerrar el día</span>
-                        {todayReportSent && <span className="nc-check-v6">✓</span>}
+                        {activeView === 'report' && <NavPill />}
+                        <span className="nc-n-v6 relative">04</span>
+                        <span className="nc-lbl-v6 relative">Cerrar el día</span>
+                        {todayReportSent && <span className="nc-check-v6 relative">✓</span>}
                     </button>
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
                         onClick={() => setActiveView('dashboard')}
                     >
-                        <span className="nc-n-v6">05</span>
-                        <span className="nc-lbl-v6">Ver mis datos</span>
+                        {activeView === 'dashboard' && <NavPill />}
+                        <span className="nc-n-v6 relative">05</span>
+                        <span className="nc-lbl-v6 relative">Ver mis datos</span>
                     </button>
                     <button
                         type="button"
                         className={`nc-v6 ${activeView === 'cartera' ? 'on' : ''}`}
                         onClick={() => setActiveView('cartera')}
                     >
-                        <span className="nc-n-v6">06</span>
-                        <span className="nc-lbl-v6">Mi cartera</span>
+                        {activeView === 'cartera' && <NavPill />}
+                        <span className="nc-n-v6 relative">06</span>
+                        <span className="nc-lbl-v6 relative">Mi cartera</span>
                     </button>
                     {/* Pestaña temporal: solo aparece mientras Operaciones la tenga activada
                         (ver GET /closer/leads-audit/status). No tiene número fijo en la
@@ -3877,8 +3905,9 @@ const CloserWorkflowPage = () => {
                             className={`nc-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
                             onClick={() => setActiveView('auditoria')}
                         >
-                            <span className="nc-n-v6">🗂️</span>
-                            <span className="nc-lbl-v6">Auditoría</span>
+                            {activeView === 'auditoria' && <NavPill />}
+                            <span className="nc-n-v6 relative">🗂️</span>
+                            <span className="nc-lbl-v6 relative">Auditoría</span>
                         </button>
                     )}
                 </div>
