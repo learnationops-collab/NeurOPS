@@ -62,6 +62,7 @@ import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
+import CourseEditorPage from './pages/operations/course-editor/CourseEditorPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 
@@ -231,6 +232,16 @@ function App() {
                 <ProtectedRoute roles={['admin', 'director_marketing']}>
                   <MainLayout>
                     <WorkshopDashboardPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ops/course-editor"
+              element={
+                <ProtectedRoute roles={['operator', 'admin']}>
+                  <MainLayout>
+                    <CourseEditorPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

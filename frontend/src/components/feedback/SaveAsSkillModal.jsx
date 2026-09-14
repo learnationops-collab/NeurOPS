@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Loader2, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import { ROLE_OPTIONS } from '../operations/PlaybookLessonFormModal';
+import { ROLE_OPTIONS } from '../../pages/operations/course-editor/constants';
 
 // Atajo para que un manager deje un Loom del chat de un reporte de bug como skill del
 // Playbook, sin pasar por el formulario completo de gestión (ese sigue existiendo para

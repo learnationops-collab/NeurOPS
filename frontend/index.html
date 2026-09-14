@@ -12,18 +12,19 @@
         rel="stylesheet">
     <title>Learnation Workers</title>
     <style>
-        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) en cada
-           selector: el Closer Workspace (CloserWorkflowPage.jsx, raíz con class="bg-v6") y ahora
-           Workshop Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell") usan Montserrat,
-           no Inter (mismo patrón: reskin calcado de una referencia visual externa, y Inter/Montserrat
-           tienen métricas de letra distintas aunque coincidan peso y tamaño). Sin esta exclusión, este
-           `!important` le hubiera ganado igual a cualquier font-family que se declare para
-           `.bg-v6`/`.ws-shell` más abajo / en workshop-intel.css. */
+        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) en cada
+           selector: el Closer Workspace (CloserWorkflowPage.jsx, raíz con class="bg-v6"), Workshop
+           Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell") y el Editor de curso
+           (CourseEditorPage.jsx, raíz con class="ce-shell") usan Montserrat, no Inter (mismo patrón:
+           reskin calcado de una referencia visual externa, y Inter/Montserrat tienen métricas de
+           letra distintas aunque coincidan peso y tamaño). Sin esta exclusión, este `!important` le
+           hubiera ganado igual a cualquier font-family que se declare para `.bg-v6`/`.ws-shell`/
+           `.ce-shell` más abajo / en workshop-intel.css / course-editor.css. */
         html,
         body,
         #root,
-        #root *:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        [class*="font-"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
+        #root *:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        [class*="font-"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
             font-family: 'Inter', sans-serif !important;
             font-style: normal !important;
             -webkit-font-smoothing: antialiased !important;
@@ -31,7 +32,7 @@
             text-rendering: optimizeLegibility !important;
         }
 
-        /* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) en cada selector de estos dos
+        /* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) en cada selector de estos dos
            bloques: el rediseño "v6/v7" del Workspace de Closers y el reskin de Workshop Intelligence
            (ambos calcados de una referencia visual externa) definen sus propios pesos explícitos
            (700/800/900, sin !important) para que números y títulos se vean gruesos. Este <style> del
@@ -42,37 +43,37 @@
            y solo la de index.css excluida. Sin esta segunda exclusión, TODO el bloque reskineado (números
            del hero, tarjetas, navegación, etc.) se ve más fino que la referencia, porque casi todos esos
            elementos son <div>/<span>/<button>/<h3>. */
-        h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        .font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        .font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        .font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        .font-medium:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        th:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
+        h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        .font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        .font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        .font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        .font-medium:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        th:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
             font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
             font-weight: 600 !important;
             letter-spacing: -0.02em !important;
         }
 
-        p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        a:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        li:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *),
-        td:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *) {
+        p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        a:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        li:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
+        td:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
             font-weight: 400 !important;
             letter-spacing: -0.005em !important;
         }
