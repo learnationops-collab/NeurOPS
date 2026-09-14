@@ -17,7 +17,8 @@ import {
     Link2Off,
     Layers,
     DollarSign,
-    UserCheck
+    UserCheck,
+    GraduationCap
 } from 'lucide-react';
 
 /**
@@ -72,14 +73,20 @@ const useDockNavigation = () => {
             return [
                 { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' },
                 { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' },
-                { id: 'ventas', icon: DollarSign, label: 'Registro Ventas', path: '/ops/ventas' }
+                { id: 'ventas', icon: DollarSign, label: 'Registro Ventas', path: '/ops/ventas' },
+                { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' }
             ];
         } else if (user?.role === 'admin') {
             const adminPages = [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
                 { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' },
-                { id: 'postulaciones', icon: UserCheck, label: 'Postulaciones', path: '/admin/postulaciones' }
+                { id: 'postulaciones', icon: UserCheck, label: 'Postulaciones', path: '/admin/postulaciones' },
+                // El resto del panel de Operaciones (Equipo, Bugs, Bitácora, etc.) el admin lo
+                // sigue teniendo solo por URL (/ops/dashboard) -- pero el Editor de curso es lo
+                // bastante autónomo (su propia ruta full-bleed) como para ganarse su propio
+                // ícono, si no el admin no tenía NINGUNA forma de encontrarlo (13/sep/2026).
+                { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' }
                 // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
                 // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
             ];

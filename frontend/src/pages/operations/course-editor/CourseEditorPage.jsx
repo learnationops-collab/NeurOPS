@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Loader2, GraduationCap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, GraduationCap, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import AreaGrid from './AreaGrid';
@@ -9,6 +10,7 @@ import './course-editor.css';
 const ACCENT_CYCLE = ['magenta', 'blue', 'green'];
 
 const CourseEditorPage = () => {
+    const navigate = useNavigate();
     const [overview, setOverview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openRoadmapId, setOpenRoadmapId] = useState(null);
@@ -49,6 +51,9 @@ const CourseEditorPage = () => {
             <div className="ce-page">
                 <div className="ce-header">
                     <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><GraduationCap size={26} /> Editor de curso</h1>
+                    <button type="button" className="ce-back-btn" onClick={() => navigate('/ops/dashboard')}>
+                        <ArrowLeft size={14} /> Operaciones
+                    </button>
                 </div>
 
                 {loading ? (
