@@ -2291,16 +2291,19 @@ const CloserWorkflowPage = () => {
 
     const renderActionStepContent = () => {
         const option = (fn, type, label, sub, selected = false) => (
-            <button
+            <motion.button
                 type="button"
                 onClick={fn}
                 data-t={type}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
                 className={`opt ${selected ? 'sel' : ''}`}
             >
                 {selected && <Check size={13} className="absolute top-3 right-3 text-white" />}
                 {label}
                 {sub && <small>{sub}</small>}
-            </button>
+            </motion.button>
         );
 
         // Chips de menciones (equipo) debajo de las notas del seguimiento — insertan "@usuario " en el texto.
@@ -4603,15 +4606,34 @@ const CloserWorkflowPage = () => {
                                                         </span>
                                                     ) : (
                                                         decisionPath.map((crumb, idx) => (
-                                                            <span key={idx} className="crumb">
+                                                            <motion.span
+                                                                key={idx}
+                                                                initial={{ opacity: 0, scale: 0.7, x: -6 }}
+                                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                                transition={{ type: 'spring', bounce: 0.4, duration: 0.4 }}
+                                                                className="crumb"
+                                                            >
                                                                 {crumb}
-                                                            </span>
+                                                            </motion.span>
                                                         ))
                                                     )}
                                                 </div>
-                                                <div id="ldBody">
+                                                {/* key={modalStep}: cada pregunta del arbol de decision entra
+                                                    deslizandose en vez de reemplazarse de golpe. Sin
+                                                    AnimatePresence a proposito (ver nota mas arriba, junto al
+                                                    modal "ovLead", sobre el bug de salida con esta version de
+                                                    framer-motion) -- solo animacion de entrada, que alcanza
+                                                    porque el contenido viejo nunca necesita un fade de salida
+                                                    propio, se reemplaza entero. */}
+                                                <motion.div
+                                                    key={modalStep}
+                                                    id="ldBody"
+                                                    initial={{ opacity: 0, x: 14 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                                                >
                                                     {renderActionStepContent()}
-                                                </div>
+                                                </motion.div>
                                             </>
                                         )}
                                     </div>
