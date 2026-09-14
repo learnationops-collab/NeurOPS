@@ -3,6 +3,7 @@ import { PlayCircle, Save, ExternalLink, Settings2 } from 'lucide-react';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import { extractLoomId } from '../../../../utils/loom';
 
 /*
  * Control rápido del replay público (institute-site/replay/): qué Loom se
@@ -154,9 +155,9 @@ const WorkshopReplayConfigPanel = ({ events, onSaved }) => {
 
                     <div className="form-grid">
                         <label className="form-field wide">
-                            <span>ID del video de Loom</span>
+                            <span>Link o ID del video de Loom</span>
                             <span className="field-control">
-                                <input type="text" placeholder="Ej: c2c09fecec2347b8b0b6d51b80a788d1" value={loomId} onChange={(e) => setLoomId(e.target.value)} />
+                                <input type="text" placeholder="Pegá el link de Loom (https://www.loom.com/share/...) o solo el ID" value={loomId} onChange={(e) => setLoomId(extractLoomId(e.target.value))} />
                             </span>
                         </label>
                         <label className="form-field">

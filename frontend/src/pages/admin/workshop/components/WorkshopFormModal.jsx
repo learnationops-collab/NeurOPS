@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Loader2, ArrowLeft, ArrowRight, X, Check } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import { extractLoomId } from '../../../../utils/loom';
 
 const STEP_META = [
     { n: 1, title: 'Tráfico & ads', copy: 'Evento e inversión' },
@@ -205,8 +206,15 @@ const WorkshopFormModal = ({
                                         </p>
                                         <div className="form-grid" style={{ marginTop: 10 }}>
                                             <label className="form-field wide">
-                                                <span>ID del video de Loom</span>
-                                                <span className="field-control"><input type="text" placeholder="Ej: c2c09fecec2347b8b0b6d51b80a788d1" {...field('replay_loom_id')} /></span>
+                                                <span>Link o ID del video de Loom</span>
+                                                <span className="field-control">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Pegá el link de Loom (https://www.loom.com/share/...) o solo el ID"
+                                                        value={formData.replay_loom_id}
+                                                        onChange={(e) => setFormData((prev) => ({ ...prev, replay_loom_id: extractLoomId(e.target.value) }))}
+                                                    />
+                                                </span>
                                             </label>
                                             <label className="form-field">
                                                 <span>Disponible desde</span>
