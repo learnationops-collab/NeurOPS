@@ -42,14 +42,22 @@ const BugReportWidget = () => {
     // Fetch pasivo (solo la lista, nunca abre un hilo) para saber si hay mensajes nuevos y
     // mostrar el badge en el botón flotante — se consume de verdad al abrir "Mis reportes"
     // y entrar a la conversación (GET /bug-reports/<id>/messages marca la lectura ahí).
+    // Antes solo se pedía una vez al montar (con el login) — si te respondían mientras ya
+    // tenías la app abierta, el badge no aparecía hasta recargar. El poll cada 45s lo detecta
+    // sin que el usuario tenga que hacer nada.
     useEffect(() => {
         if (!user) return;
-        api.get('/bug-reports/mine', { skipBugReport: true })
-            .then(res => {
-                const unread = res.data.filter(r => r.unread_for_user).length;
-                setUnreadCount(unread);
-            })
-            .catch(() => { });
+        const cargarNoLeidos = () => {
+            api.get('/bug-reports/mine', { skipBugReport: true })
+                .then(res => {
+                    const unread = res.data.filter(r => r.unread_for_user).length;
+                    setUnreadCount(unread);
+                })
+                .catch(() => { });
+        };
+        cargarNoLeidos();
+        const interval = setInterval(cargarNoLeidos, 45000);
+        return () => clearInterval(interval);
     }, [user]);
 
     useEffect(() => {
@@ -130,15 +138,33 @@ const BugReportWidget = () => {
                         )}
                     </button>
                     <button
-                        onClick={openManually}
+                        // Con algo sin leer, el clic va directo a "Mis reportes" en vez de abrir el chat de
+                        // reporte nuevo -- pedido explícito: antes había que abrir el historial a mano para
+                        // enterarte de una respuesta pendiente, y no tenía sentido tapar ese aviso con un
+                        // formulario en blanco. Sin nada pendiente, el botón vuelve a su función normal.
+                        onClick={unreadCount > 0 ? openHistory : openManually}
                         // Rosado fijo de marca (#FF3FA4, ver --brand-secondary/--v6-pink en index.css) en vez
                         // de bg-primary/bg-secondary: esos tokens cambian de color según el tema elegido
                         // (azul, índigo, custom...), y este botón necesita quedar siempre rosado y llamativo
                         // sin importar el tema activo — a diferencia del resto de la UI, que sí debe seguirlo.
-                        className="w-12 h-12 rounded-full bg-[#FF3FA4] shadow-2xl shadow-[#FF3FA4]/50 flex items-center justify-center text-white hover:bg-[#FF6AD5] hover:shadow-[#FF3FA4]/70 hover:scale-105 transition-all active:scale-95"
-                        title="Reportar un problema o feedback"
+                        className="relative w-12 h-12 rounded-full bg-[#FF3FA4] shadow-2xl shadow-[#FF3FA4]/50 flex items-center justify-center text-white hover:bg-[#FF6AD5] hover:shadow-[#FF3FA4]/70 hover:scale-105 transition-all active:scale-95"
+                        title={unreadCount > 0 ? `Tenés ${unreadCount} respuesta(s) sin leer` : 'Reportar un problema o feedback'}
                     >
                         <Bug size={20} />
+                        {unreadCount > 0 && (
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 border-2 border-[#0d0b1a] text-white text-[10px] font-black flex items-center justify-center"
+                            >
+                                <motion.span
+                                    animate={{ scale: [1, 1.25, 1] }}
+                                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                                    className="absolute inset-0 rounded-full bg-rose-500 -z-10"
+                                />
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </motion.span>
+                        )}
                     </button>
                 </div>
             )}
