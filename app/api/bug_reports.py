@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import BugReport, BugReportMessage, STATUS_VALUES
+from app.models import BugReport, BugReportMessage, STATUS_VALUES, REPORT_TYPES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,12 @@ def create_bug_report():
     problem = (data.get('problem') or '').strip()
     technical_context = data.get('technical_context')
     loom_link = (data.get('loom_link') or '').strip() or None
+    # Los reportes reactivos (disparados por un error 5xx/de render capturado) son siempre
+    # 'bug' de por si -- el selector solo se le muestra al usuario en el flujo manual, asi que
+    # cualquier valor invalido o ausente cae a 'bug' en vez de rechazar el reporte.
+    report_type = (data.get('report_type') or 'bug').strip()
+    if report_type not in REPORT_TYPES:
+        report_type = 'bug'
     # Capturas extra pegadas a mano (Ctrl+V): opcionales, puede venir vacía o ausente. Se filtran
     # strings vacíos/no-string por si el frontend manda basura.
     extra_screenshots = [s for s in (data.get('extra_screenshots') or []) if isinstance(s, str) and s]
@@ -49,6 +55,7 @@ def create_bug_report():
         report = BugReport(
             user_id=current_user.id,
             user_role=current_user.role,
+            report_type=report_type,
             problem=problem or None,
             description=description,
             route=data.get('route'),
@@ -82,6 +89,7 @@ def list_bug_reports():
 
     status_filter = request.args.get('status')  # comma separated
     urgency_filter = request.args.get('urgency')
+    type_filter = request.args.get('type')  # comma separated ('bug', 'mejora')
     query = BugReport.query
     if status_filter:
         statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
@@ -89,8 +97,17 @@ def list_bug_reports():
             query = query.filter(BugReport.status.in_(statuses))
     if urgency_filter:
         query = query.filter(BugReport.urgency == urgency_filter)
+    if type_filter:
+        types = [t.strip() for t in type_filter.split(',') if t.strip()]
+        if types:
+            query = query.filter(BugReport.report_type.in_(types))
 
-    reports = query.order_by(BugReport.created_at.desc()).all()
+    # Los bugs son mas prioritarios que las mejoras -- se listan primero (mismo criterio en
+    # BugReportsPanel del lado del operador), y dentro de cada tipo el mas nuevo arriba.
+    reports = query.order_by(
+        db.case((BugReport.report_type == 'bug', 0), else_=1),
+        BugReport.created_at.desc()
+    ).all()
     return jsonify([r.to_dict() for r in reports]), 200
 
 

@@ -3,6 +3,10 @@ from app import db
 
 URGENCY_LEVELS = ('muy_urgente', 'urgente', 'neutro', 'sin_urgencia')
 STATUS_VALUES = ('open', 'reviewed', 'resolved')
+# 'bug' = algo esta roto (prioridad alta, lo que ya existia). 'mejora' = sugerencia/pedido
+# que no es un error -- se reporta por el mismo flujo pero es menos prioritario, asi que el
+# panel del operador los distingue visualmente y los ordena despues de los bugs (14/sep/2026).
+REPORT_TYPES = ('bug', 'mejora')
 
 
 class BugReport(db.Model):
@@ -10,6 +14,9 @@ class BugReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     user_role = db.Column(db.String(20), nullable=True)
+    # Ver REPORT_TYPES. default='bug' cubre los reportes historicos (creados antes de este
+    # campo) y cualquier payload viejo que no lo mande.
+    report_type = db.Column(db.String(20), nullable=False, default='bug', server_default='bug')
     problem = db.Column(db.Text, nullable=True)
     description = db.Column(db.Text, nullable=False)
     # Ya no se pide en el flujo del chat (se sacaron los botones de urgencia); queda nullable
@@ -56,6 +63,7 @@ class BugReport(db.Model):
             "user_id": self.user_id,
             "user_name": self.user.username if self.user else None,
             "user_role": self.user_role,
+            "report_type": self.report_type,
             "problem": self.problem,
             "description": self.description,
             "urgency": self.urgency,

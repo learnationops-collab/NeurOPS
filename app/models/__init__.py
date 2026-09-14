@@ -19,7 +19,7 @@ from .landing_session import LandingSession
 from .alert import AlertRule, Alert
 from .installment import InstallmentPlan
 from .client_merge_log import ClientMergeLog
-from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES
+from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
 from .assistant_application import AssistantApplication, AssistantClarityWeight
 from .playbook import (
@@ -45,7 +45,7 @@ __all__ = [
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
     'InstallmentPlan', 'ClientMergeLog',
-    'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES',
+    'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',

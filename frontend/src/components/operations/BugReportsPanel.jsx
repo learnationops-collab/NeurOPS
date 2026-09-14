@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video } from 'lucide-react';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video, Lightbulb } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
@@ -20,6 +20,12 @@ const URGENCY_LABELS = {
     neutro: 'Neutro',
     sin_urgencia: 'Sin urgencia',
 };
+
+const TYPE_OPTIONS = [
+    { id: 'bug', label: 'Bug', icon: Bug, color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+    { id: 'mejora', label: 'Mejora', icon: Lightbulb, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+];
+const TYPE_META = Object.fromEntries(TYPE_OPTIONS.map(t => [t.id, t]));
 
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -64,6 +70,8 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     const [showLoom, setShowLoom] = useState(false);
 
     const statusMeta = STATUS_OPTIONS.find(s => s.id === report.status) || STATUS_OPTIONS[0];
+    const typeMeta = TYPE_META[report.report_type] || TYPE_META.bug;
+    const TypeIcon = typeMeta.icon;
 
     return (
         <Card variant="surface" className="p-6 space-y-4 bg-surface/30 backdrop-blur-md border-white/5">
@@ -76,6 +84,9 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                     {report.unread_for_manager && (
                         <span className="w-2 h-2 rounded-full bg-rose-500" title="El usuario respondió" />
                     )}
+                    <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${typeMeta.color}`}>
+                        <TypeIcon size={11} /> {typeMeta.label}
+                    </span>
                     {report.urgency && (
                         <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                             {URGENCY_LABELS[report.urgency] || report.urgency}
@@ -149,11 +160,14 @@ const BugReportsPanel = () => {
     // un solo valor — el operador pedía poder ver, por ejemplo, "pendientes" + "en revisión"
     // juntos sin los resueltos, así que pasa a multi-selección.
     const [statusFilter, setStatusFilter] = useState([]);
+    const [typeFilter, setTypeFilter] = useState([]);
 
     const fetchReports = async () => {
         setLoading(true);
         try {
-            const params = statusFilter.length ? { status: statusFilter.join(',') } : {};
+            const params = {};
+            if (statusFilter.length) params.status = statusFilter.join(',');
+            if (typeFilter.length) params.type = typeFilter.join(',');
             const res = await api.get('/bug-reports', { params, skipBugReport: true });
             setReports(res.data);
         } catch (err) {
@@ -164,7 +178,7 @@ const BugReportsPanel = () => {
         }
     };
 
-    useEffect(() => { fetchReports(); }, [statusFilter]);
+    useEffect(() => { fetchReports(); }, [statusFilter, typeFilter]);
 
     const handleReportUpdate = (updatedReport) => {
         setReports(prev => prev.map(r => r.id === updatedReport.id ? updatedReport : r));
@@ -180,7 +194,8 @@ const BugReportsPanel = () => {
         }
     };
 
-    const openCount = useMemo(() => reports.filter(r => r.status === 'open').length, [reports]);
+    const openBugs = useMemo(() => reports.filter(r => r.status === 'open' && r.report_type !== 'mejora').length, [reports]);
+    const openMejoras = useMemo(() => reports.filter(r => r.status === 'open' && r.report_type === 'mejora').length, [reports]);
 
     return (
         <div className="space-y-6">
@@ -189,9 +204,17 @@ const BugReportsPanel = () => {
                     <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white flex items-center gap-2">
                         <Bug size={22} /> Reportes de Bugs y Feedback
                     </h2>
-                    <p className="text-xs text-muted uppercase tracking-widest font-medium">{openCount} pendiente(s) de revisar</p>
+                    <p className="text-xs text-muted uppercase tracking-widest font-medium">
+                        {openBugs} bug(s) pendiente(s) · {openMejoras} mejora(s) pendiente(s)
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <MultiSelectFilter
+                        label="Tipo"
+                        options={TYPE_OPTIONS.map(t => ({ value: t.id, label: t.label }))}
+                        value={typeFilter}
+                        onChange={setTypeFilter}
+                    />
                     <MultiSelectFilter
                         label="Estado"
                         options={STATUS_OPTIONS.map(s => ({ value: s.id, label: s.label }))}

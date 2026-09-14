@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle } from 'lucide-react';
+import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle, Bug, Lightbulb } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -58,15 +58,22 @@ const blobToCompressedDataUrl = (blob) => new Promise((resolve, reject) => {
 const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
     const { user } = useAuth();
     const isReactive = !!technicalContext;
-    const [step, setStep] = useState(isReactive ? 'description' : 'problem');
+    // Un reporte reactivo (disparado por un error 5xx/de render que la app capturó sola) es
+    // siempre un bug de por sí -- no tiene sentido preguntarle al usuario, así que ahí se
+    // salta el selector y arranca directo en 'description' como ya hacía antes.
+    const [step, setStep] = useState(isReactive ? 'description' : 'type');
+    const [reportType, setReportType] = useState('bug'); // 'bug' | 'mejora'
     const [problem, setProblem] = useState('');
     const [description, setDescription] = useState('');
     const [extraScreenshots, setExtraScreenshots] = useState([]);
     const [loomLink, setLoomLink] = useState('');
     const [pasting, setPasting] = useState(false);
 
+    const isMejora = reportType === 'mejora';
+
     const reset = () => {
-        setStep(isReactive ? 'description' : 'problem');
+        setStep(isReactive ? 'description' : 'type');
+        setReportType('bug');
         setProblem('');
         setDescription('');
         setExtraScreenshots([]);
@@ -165,6 +172,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
 
         try {
             await api.post('/bug-reports', {
+                report_type: reportType,
                 problem: isReactive ? null : problem,
                 description,
                 route: window.location.pathname,
@@ -229,13 +237,52 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                             </div>
                         )}
 
-                        {!isReactive && (
+                        {step === 'type' && (
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-2">
+                                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                                        <Bot size={14} />
+                                    </div>
+                                    <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
+                                        ¿Qué querés reportar?
+                                    </div>
+                                </div>
+                                <div className="pl-9 grid grid-cols-1 gap-2">
+                                    <button
+                                        onClick={() => { setReportType('bug'); setStep('problem'); }}
+                                        className="flex items-start gap-3 text-left bg-surface border border-base hover:border-rose-500/50 hover:bg-rose-500/5 rounded-2xl p-3 transition-all active:scale-[0.98]"
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                                            <Bug size={16} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-wide">Encontré un problema</p>
+                                            <p className="text-[11px] text-muted">Algo no está funcionando como debería</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => { setReportType('mejora'); setStep('problem'); }}
+                                        className="flex items-start gap-3 text-left bg-surface border border-base hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl p-3 transition-all active:scale-[0.98]"
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                                            <Lightbulb size={16} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-wide">Tengo una idea o sugerencia</p>
+                                            <p className="text-[11px] text-muted">Una mejora o pedido, no es un error</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isReactive && step !== 'type' && (
                             <div className="flex items-start gap-2">
                                 <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
                                     <Bot size={14} />
                                 </div>
                                 <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                    ¿Cuál es el problema?
+                                    {isMejora ? '¿Qué mejora o idea te gustaría proponer?' : '¿Cuál es el problema?'}
                                 </div>
                             </div>
                         )}
@@ -246,7 +293,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     autoFocus
                                     value={problem}
                                     onChange={(e) => setProblem(e.target.value)}
-                                    placeholder="Describe el problema..."
+                                    placeholder={isMejora ? 'Describe tu idea o sugerencia...' : 'Describe el problema...'}
                                     className="w-full bg-surface border border-base rounded-2xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                                 <button
@@ -271,7 +318,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     <Bot size={14} />
                                 </div>
                                 <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                    ¿Qué intentabas hacer cuando apareció el error o problema?
+                                    {isMejora ? '¿Por qué te serviría este cambio? Contanos el contexto.' : '¿Qué intentabas hacer cuando apareció el error o problema?'}
                                 </div>
                             </div>
                         )}
@@ -282,7 +329,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     autoFocus
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Escribe qué estabas haciendo..."
+                                    placeholder={isMejora ? 'Escribe el contexto de tu idea...' : 'Escribe qué estabas haciendo...'}
                                     className="w-full bg-surface border border-base rounded-2xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                                 <button
