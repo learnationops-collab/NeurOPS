@@ -26,7 +26,7 @@ import pytz
 from sqlalchemy import or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
-from app.services.fuente_service import es_workshop_landing, es_workshop_vivo
+from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
@@ -76,14 +76,24 @@ def _clasificar_fuente(*textos):
 
 
 def _contar_aplicaciones(desde, hasta, tz):
-    """Formularios de calificacion completados en la ventana, separados por embudo."""
+    """Formularios de calificacion completados en la ventana, separados por embudo.
+
+    Un `fuente_form` vacio no es un formulario real: son Clients que entraron por
+    otro flujo (ej. sync de agenda) y nunca completaron el cuestionario, asi que
+    no cuentan. 'No identificado' si es un formulario real completo -- el lead
+    respondio todo el cuestionario, solo fallo el tag de que pagina lo origino --
+    asi que en vez de perderse cuenta del lado del vivo (12/sep/2026).
+    """
     inicio, fin = _limites_utc(desde, hasta, tz)
     clientes = Client.query.filter(Client.created_at >= inicio, Client.created_at <= fin).all()
 
     conteo = {'vivo': 0, 'landing': 0}
     for c in clientes:
         fd = c.form_data or {}
-        grupo = _clasificar_fuente(fd.get('fuente_form'), fd.get('fuente'))
+        fuente_form = fd.get('fuente_form')
+        grupo = _clasificar_fuente(fuente_form, fd.get('fuente'))
+        if not grupo and fuente_form and es_sin_dueno(fuente_form):
+            grupo = 'vivo'
         if grupo:
             conteo[grupo] += 1
     return conteo
@@ -197,6 +207,14 @@ def _ventas_de(agendas, compradores_ya_contados):
     `compradores_ya_contados` evita que la misma persona sume en los dos embudos:
     quien aparece en el vivo y despues en la grabacion se cuenta una sola vez, del
     lado del vivo, para que los dos grupos sumen exactamente el total.
+
+    El cruce con `FinancialSale` es por identidad (instagram/mail/nombre), asi que
+    sin filtro de fecha una venta VIEJA de alguien que vuelve a agendar para un
+    taller nuevo se le sumaba a ese taller aunque sea de semanas atras -- un
+    evento del mismo dia llegaba a mostrar ROAS positivo antes de que sus propias
+    agendas tuvieran chance de cerrar. Una venta solo cuenta si es igual o
+    posterior a la agenda que la trajo (con 1 dia de margen por huso horario)
+    (12/sep/2026).
     """
     compradores = set()
     ventas = set()
@@ -224,7 +242,11 @@ def _ventas_de(agendas, compradores_ya_contados):
         if lead:
             condiciones.append(func.lower(FinancialSale.nombre_cliente) == lead)
 
-        validas = [s for s in FinancialSale.query.filter(or_(*condiciones)).all() if _es_venta_valida(s)]
+        piso_venta = a.created_at - timedelta(days=1) if a.created_at else None
+        validas = [
+            s for s in FinancialSale.query.filter(or_(*condiciones)).all()
+            if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
+        ]
         if validas:
             compradores.add(clave)
             ventas.update(validas)

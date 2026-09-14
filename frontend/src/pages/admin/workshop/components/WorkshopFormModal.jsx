@@ -198,6 +198,35 @@ const WorkshopFormModal = ({
                                         </label>
                                     </div>
 
+                                    <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
+                                        <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                            Replay público (institute-site)
+                                            <InfoTooltip label="Replay público" text="Controla la grabación que se muestra en la landing pública de institute-site (/replay/): qué video de Loom, entre qué fechas está disponible, y a los cuántos minutos de reproducción aparecen la información principal y la oferta con agendamiento. El más reciente evento con un Loom cargado es el que la landing muestra." />
+                                        </p>
+                                        <div className="form-grid" style={{ marginTop: 10 }}>
+                                            <label className="form-field wide">
+                                                <span>ID del video de Loom</span>
+                                                <span className="field-control"><input type="text" placeholder="Ej: c2c09fecec2347b8b0b6d51b80a788d1" {...field('replay_loom_id')} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>Disponible desde</span>
+                                                <span className="field-control"><input type="datetime-local" {...field('replay_activo_desde')} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>Vence</span>
+                                                <span className="field-control"><input type="datetime-local" {...field('replay_vence_hasta')} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>Mostrar info principal a los (min)</span>
+                                                <span className="field-control"><input type="number" step="any" min="0" {...field('replay_info_minutos')} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>Mostrar oferta/agendamiento a los (min)</span>
+                                                <span className="field-control"><input type="number" step="any" min="0" {...field('replay_oferta_minutos')} /></span>
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     {desglose && (
                                         <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
                                             <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
