@@ -38,17 +38,14 @@ export const ConfirmacionesCard = ({ confirmaciones }) => (
     </Card>
 );
 
-const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones }) => {
+const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
     const { labels, values, slots_estimated_days: slotsEstimatedDays = 0 } = funnel;
     const max = values[0] || 1;
     // "Agendas" (fila 1) solo cuenta las que ya tuvieron su llamada dentro del período — a
     // propósito, para no ensuciar las tasas de conversión con trabajo que todavía no pasó (ver
-    // ConfirmacionesCard arriba). El usuario pidió ver, igual, cuántas hay agendadas más
-    // adelante — mismo número que ya se calculaba para "Próximas agendas", como un tramo extra
-    // pegado a la punta de la MISMA barra de Agendas (no un elemento aparte), en un color
-    // distinto para no confundirlas con las que sí alimentan show up/no show/reagendadas/etc.
-    const agendasProximas = confirmaciones?.agendas_proximas || 0;
-    const proximasWidth = agendasProximas > 0 ? Math.max(4, Math.round((agendasProximas / max) * 100)) : 0;
+    // ConfirmacionesCard arriba). Las próximas agendas (pipeline hacia adelante) ya no se
+    // muestran acá pegadas a la barra -- el usuario pidió sacarlas (15/sep/2026): quedan solo
+    // en ConfirmacionesCard, que ya las muestra por separado con su propio rótulo.
 
     let worst = { idx: 1, rate: 100 };
     const rows = values.map((v, i) => {
@@ -117,13 +114,6 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, confirmaciones
                                 >
                                     {isEstimatedSlots ? `~${r.v}` : r.v}
                                 </div>
-                                {i === 1 && proximasWidth > 0 && (
-                                    <div
-                                        className="h-full shrink-0 cursor-help"
-                                        style={{ width: `${proximasWidth}%`, background: '#38BDF8' }}
-                                        title={`+${agendasProximas} agendada${agendasProximas === 1 ? '' : 's'} para después de hoy — todavía no tuvo su llamada, así que no suma a Agendas ni a lo que sigue del embudo.`}
-                                    />
-                                )}
                             </div>
                             <div className={`w-12 text-right text-[11px] font-black ${r.conv === null ? 'text-muted' : r.conv > 100 ? 'text-amber-400' : r.conv < 50 ? 'text-rose-400' : r.conv < 70 ? 'text-amber-400' : 'text-emerald-400'}`}>
                                 {r.conv === null ? '—' : `${r.conv}%`}
