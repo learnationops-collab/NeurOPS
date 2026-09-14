@@ -1,8 +1,33 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
 import api from '../../services/api';
 import useNow from '../../hooks/useNow';
 import { formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
+import AnimatedCounter from '../rare-ui/animated-counter';
+
+// mm:ss / h:mm:ss son los únicos formatos de `formatCountdown` con dígitos que cambian cada
+// segundo (el resto -- "En 3 días", "Hace 2 horas y 15 minutos" -- combina texto y números de
+// forma irregular, sin nada que valga la pena animar dígito por dígito). Se replica acá la
+// misma condición que usa `formatCountdown` internamente para decidir el modo cronómetro, en
+// vez de parsear su `label` ya armado.
+const isCronometro = (countdown) => !countdown.isPast && countdown.kind !== 'now' && countdown.days === 0;
+
+// Dígitos del cronómetro (mm:ss, o h:mm:ss pasada la hora) con rueda animada por dígito en vez
+// de texto plano -- el resto de estados (now/past/lejos) siguen usando `countdown.label` tal cual.
+const CronometroDigits = ({ countdown }) => (
+    <span className="inline-flex items-baseline">
+        {countdown.hours > 0 && (
+            <>
+                <AnimatedCounter value={countdown.hours} duration={0.4} />
+                <span>:</span>
+            </>
+        )}
+        <AnimatedCounter value={countdown.minutes} padStart={2} duration={0.4} />
+        <span>:</span>
+        <AnimatedCounter value={countdown.seconds} padStart={2} duration={0.4} />
+    </span>
+);
 
 // Cronómetro fijo de la próxima llamada, en el header del workspace.
 //
@@ -55,11 +80,20 @@ const NextAgendaChrono = ({ refreshKey = 0 }) => {
             className={`shrink-0 hidden md:flex items-center gap-2 rounded-full border px-3 py-1.5 ${tono}`}
             title={`${appt.lead_name} · ${formatAgendaDateTime(appt.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
         >
-            <Clock size={13} className={countdown.kind === 'now' ? 'animate-pulse' : ''} />
+            <span className="relative flex items-center justify-center">
+                {countdown.kind === 'now' && (
+                    <motion.span
+                        className="absolute inset-0 rounded-full bg-emerald-400"
+                        animate={{ scale: [1, 2.2], opacity: [0.55, 0] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+                    />
+                )}
+                <Clock size={13} className="relative" />
+            </span>
             <div className="leading-none">
                 <div className="text-[8px] font-black uppercase tracking-[0.15em] opacity-70">Próxima agenda</div>
                 <div className="text-[11px] font-black tabular-nums">
-                    {countdown.label}
+                    {isCronometro(countdown) ? <CronometroDigits countdown={countdown} /> : countdown.label}
                     <span className="opacity-60 font-bold"> · {appt.lead_name}</span>
                 </div>
             </div>
