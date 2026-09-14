@@ -6,6 +6,7 @@ import {
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import WorkshopReplayConfigPanel from './WorkshopReplayConfigPanel';
 
 /*
  * Panel de la landing de la GRABACIÓN (/replay/).
@@ -91,7 +92,7 @@ const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
     );
 };
 
-const WorkshopLandingView = () => {
+const WorkshopLandingView = ({ events, onConfigSaved }) => {
     const [stats, setStats] = useState(null);
     const [sesiones, setSesiones] = useState([]);
     const [agendas, setAgendas] = useState(null);
@@ -151,6 +152,8 @@ const WorkshopLandingView = () => {
 
     return (
         <>
+            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} />
+
             {/* Controles */}
             <div className="hero-actions" style={{ marginBottom: 22 }}>
                 <div className="pill-toggle">

@@ -439,7 +439,7 @@ const WorkshopDashboardPage = () => {
                     no dependen de que haya workshops en vivo cargados, asi que el
                     "no hay workshops registrados" no tiene que taparla. */}
                 {activeTab === 'landing' ? (
-                    <WorkshopLandingView />
+                    <WorkshopLandingView events={events} onConfigSaved={() => fetchEvents(true)} />
                 ) : loading ? (
                     <section className="empty-state loading-state" role="status">
                         <div><span /></div>
