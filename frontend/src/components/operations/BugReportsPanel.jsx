@@ -153,14 +153,36 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     );
 };
 
+const STATUS_FILTER_KEY = 'bugReportsPanel:statusFilter';
+const TYPE_FILTER_KEY = 'bugReportsPanel:typeFilter';
+
+const readStoredFilter = (key, fallback) => {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch {
+        return fallback;
+    }
+};
+
 const BugReportsPanel = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     // Array de status ids seleccionados; vacío = sin filtrar (todos). Antes era un <select> de
     // un solo valor — el operador pedía poder ver, por ejemplo, "pendientes" + "en revisión"
-    // juntos sin los resueltos, así que pasa a multi-selección.
-    const [statusFilter, setStatusFilter] = useState([]);
-    const [typeFilter, setTypeFilter] = useState([]);
+    // juntos sin los resueltos, así que pasa a multi-selección. Se persiste en localStorage
+    // (y por defecto, la primera vez, excluye "resuelto") porque al operador le molestaba
+    // tener que volver a ocultarlos cada vez que entraba al panel.
+    const [statusFilter, setStatusFilter] = useState(() => readStoredFilter(STATUS_FILTER_KEY, ['open', 'reviewed']));
+    const [typeFilter, setTypeFilter] = useState(() => readStoredFilter(TYPE_FILTER_KEY, []));
+
+    useEffect(() => {
+        try { localStorage.setItem(STATUS_FILTER_KEY, JSON.stringify(statusFilter)); } catch { /* localStorage no disponible */ }
+    }, [statusFilter]);
+
+    useEffect(() => {
+        try { localStorage.setItem(TYPE_FILTER_KEY, JSON.stringify(typeFilter)); } catch { /* localStorage no disponible */ }
+    }, [typeFilter]);
 
     const fetchReports = async () => {
         setLoading(true);
