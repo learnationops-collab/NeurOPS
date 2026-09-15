@@ -31,7 +31,7 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
     const [viewingLoom, setViewingLoom] = useState(null);
     const [savingSkillFor, setSavingSkillFor] = useState(null);
     const [expanded, setExpanded] = useState(false);
-    const bottomRef = useRef(null);
+    const listRef = useRef(null);
 
     const fetchThread = () => {
         setLoading(true);
@@ -50,8 +50,13 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
 
     useEffect(() => { fetchThread(); }, [reportId]);
 
+    // scrollTop directo en el propio contenedor, nunca scrollIntoView: con muchos
+    // ReportCard montados a la vez (cada uno con su propio hilo cargando en paralelo),
+    // scrollIntoView arrastra también al scroll de la página entera hacia el hilo que
+    // termine de cargar último, saltando la vista mientras el operador revisa la lista.
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const el = listRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
     }, [messages, expanded]);
 
     const handleSend = async () => {
@@ -111,7 +116,7 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
                     </button>
                 </div>
             )}
-            <div className={`${messageListHeight} overflow-y-auto custom-scrollbar space-y-2 pr-1`}>
+            <div ref={listRef} className={`${messageListHeight} overflow-y-auto custom-scrollbar space-y-2 pr-1`}>
                 {loading && (
                     <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted">
                         <Loader2 size={14} className="animate-spin" /> Cargando conversación...
@@ -174,7 +179,6 @@ const BugReportThread = ({ reportId, onReportUpdate }) => {
                         </div>
                     );
                 })}
-                <div ref={bottomRef} />
             </div>
 
             <div className="space-y-2 pt-2 border-t border-white/5 shrink-0">
