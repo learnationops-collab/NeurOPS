@@ -608,7 +608,9 @@ def answer_question(lesson_id):
     question = PlaybookQuestion.query.filter_by(id=data.get('question_id'), lesson_id=lesson_id).first_or_404()
     correct_ids = {o.id for o in question.options if o.is_correct}
     selected_ids = set(data.get('selected_option_ids') or [])
-    return jsonify({"correct": selected_ids == correct_ids}), 200
+    # Recién acá se revela cuáles eran correctas -- una vez que el usuario ya contestó esta
+    # pregunta puntual, no antes (el resto del quiz sigue sin filtrarse por adelantado).
+    return jsonify({"correct": selected_ids == correct_ids, "correct_option_ids": list(correct_ids)}), 200
 
 
 @bp.route('/playbook/lessons/<int:lesson_id>/complete', methods=['POST'])

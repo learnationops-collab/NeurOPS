@@ -28,6 +28,7 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
     const [stage, setStage] = useState('video'); // video | questions
     const [answers, setAnswers] = useState({}); // { questionId: [optionId,...] }
     const [results, setResults] = useState({}); // { questionId: true|false }
+    const [correctOptions, setCorrectOptions] = useState({}); // { questionId: [optionId,...] }, se llena recién al comprobar
     const [checking, setChecking] = useState(false);
     const [completing, setCompleting] = useState(false);
 
@@ -40,6 +41,7 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
                 setStage('video');
                 setAnswers({});
                 setResults({});
+                setCorrectOptions({});
                 onModuleResolved?.(res.data.module.id, res.data.module.roadmap_id);
             })
             .catch(() => toast.error('No se pudo cargar la lección'))
@@ -80,6 +82,7 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
             return { ...prev, [question.id]: next };
         });
         setResults(prev => ({ ...prev, [question.id]: undefined }));
+        setCorrectOptions(prev => ({ ...prev, [question.id]: undefined }));
     };
 
     const checkAnswer = async (question) => {
@@ -91,6 +94,7 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
                 question_id: question.id, selected_option_ids: selected,
             });
             setResults(prev => ({ ...prev, [question.id]: res.data.correct }));
+            setCorrectOptions(prev => ({ ...prev, [question.id]: res.data.correct_option_ids }));
         } catch {
             toast.error('No se pudo comprobar la respuesta');
         } finally {
@@ -238,18 +242,24 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
                                     {q.options.map(o => {
                                         const isSelected = selected.includes(o.id);
                                         const showState = result !== undefined;
+                                        const isCorrectOption = showState && (correctOptions[q.id] || []).includes(o.id);
+                                        const isWrongPick = showState && isSelected && !isCorrectOption;
                                         return (
                                             <button
                                                 key={o.id}
                                                 type="button"
                                                 onClick={() => toggleOption(q, o.id)}
                                                 disabled={result === true}
-                                                className={`w-full flex items-center gap-2.5 text-left px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${showState && isSelected
-                                                        ? (result ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-rose-500/10 border-rose-500 text-rose-400')
+                                                className={`w-full flex items-center gap-2.5 text-left px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${showState
+                                                        ? (isCorrectOption ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : isWrongPick ? 'bg-rose-500/10 border-rose-500 text-rose-400' : 'bg-main border-base text-muted opacity-60')
                                                         : isSelected ? 'bg-primary/10 border-primary text-primary' : 'bg-main border-base text-muted hover:text-white'
                                                     }`}
                                             >
-                                                {showState && isSelected ? (result ? <CheckCircle2 size={14} /> : <XCircle size={14} />) : (
+                                                {showState ? (
+                                                    isCorrectOption ? <CheckCircle2 size={14} /> : isWrongPick ? <XCircle size={14} /> : (
+                                                        <span className={`w-3.5 h-3.5 border shrink-0 ${q.question_type === 'multiple' ? 'rounded-sm' : 'rounded-full'} border-base`} />
+                                                    )
+                                                ) : (
                                                     <span className={`w-3.5 h-3.5 border shrink-0 ${q.question_type === 'multiple' ? 'rounded-sm' : 'rounded-full'} ${isSelected ? 'bg-primary border-primary' : 'border-base'}`} />
                                                 )}
                                                 {o.option_text}
@@ -257,6 +267,9 @@ const PlaybookLessonView = ({ lessonId, onBack, onNavigateLesson, onCompleted, o
                                         );
                                     })}
                                 </div>
+                                {result === false && (
+                                    <p className="text-[11px] font-medium text-rose-400">Esa no era. Fíjate en las opciones marcadas en verde e intenta de nuevo.</p>
+                                )}
                                 {result !== true && (
                                     <button
                                         onClick={() => checkAnswer(q)}
