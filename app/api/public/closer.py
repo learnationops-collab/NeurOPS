@@ -134,29 +134,68 @@ def submit_public_closer_report():
 
 
 def _prepare_report_data(report):
-    """Calcula y estructura todas las métricas del reporte diario de un closer (KISS & DRY)."""
+    """Calcula y estructura las métricas del reporte diario de un closer para la imagen única
+    que se manda a Discord (KISS & DRY) — pensada como el resumen ejecutivo que un director de
+    ventas quiere ver de cada closer al cierre del día: cuánto cash entró, cuántas ventas se
+    cerraron y cómo se movió el embudo de agendas/leads trabajados ese día. Reemplaza los ~40
+    campos "de formulario" (muchos ya sin dato real desde que el reporte pasó a calcularse solo
+    a partir de las agendas/leads del closer, ver CloserService.compute_daily_report_fields) por
+    los totales que sí reflejan ese trabajo real."""
     closer_name = report.closer.username if report.closer else "Closer"
     date_str = report.date.strftime('%d/%m/%Y')
 
     def safe_percent(part, total):
+        # Capado a 100%: reportes viejos con datos manuales inconsistentes (ej. ventas cargadas
+        # sin su asistencia correspondiente) pueden dar una división > 1 — una "tasa" mostrada
+        # como 2000% no comunica nada útil a un director de ventas, así que se acota a lo que
+        # una tasa puede significar visualmente.
         try:
             if total > 0:
-                return round((part / total) * 100)
-        except:
+                return min(100, round((part / total) * 100))
+        except Exception:
             pass
         return 0
 
-    # Totales de ventas
-    total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
-    total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0) + (report.installment_cash_collected or 0.0)
+    def money(value):
+        return f"{round(value or 0):,}"
+
+    # Ventas: los 6 tipos que el sistema clasifica solo a partir de FinancialSale (mismo criterio
+    # que `ventas_count`/`ventas_cash` de CloserService.get_daily_activity_summary — el número que
+    # ve el closer en "Cerrar el día" tiene que ser el mismo que recibe el director en Discord).
+    # `installment`/`renewal`/`upsell` no se mostraban en la imagen anterior aunque el modelo y el
+    # cálculo automático ya los tenían.
+    SALE_TYPES = ['pif', 'split', 'deposit', 'installment', 'renewal', 'upsell']
+    SALE_LABELS = {
+        'pif': 'PIF', 'split': 'Split Pay', 'deposit': 'Señas',
+        'installment': 'Cuotas', 'renewal': 'Renovación', 'upsell': 'Upsell',
+    }
+    sales = {}
+    total_count = total_cash = total_ic_count = total_ic_cash = 0
+    for t in SALE_TYPES:
+        count = getattr(report, f'{t}_count') or 0
+        cash = getattr(report, f'{t}_cash_collected') or 0.0
+        ic_count = getattr(report, f'{t}_in_call_count') or 0
+        ic_cash = getattr(report, f'{t}_in_call_cash') or 0.0
+        sales[t] = {
+            'label': SALE_LABELS[t],
+            'count': count,
+            'cash': money(cash),
+            'in_call_count': ic_count,
+            'in_call_cash': money(ic_cash),
+        }
+        total_count += count
+        total_cash += cash
+        total_ic_count += ic_count
+        total_ic_cash += ic_cash
 
     # Totales de agendas
     total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
     total_attended = (report.first_call_attended or 0) + (report.second_call_attended or 0)
-    
+
     offers_made = report.offers_made or 0
     decision_makers = report.decision_makers or 0
     rescheduled_calls = report.rescheduled_calls or 0
+    confirmations_done = report.confirmations_done or 0
 
     # Cálculos de porcentajes y tasas
     total_no_show = (report.first_call_no_show or 0) + (report.second_call_no_show or 0)
@@ -166,12 +205,14 @@ def _prepare_report_data(report):
     concluded_calls = total_attended + total_no_show
     show_rate = safe_percent(total_attended, concluded_calls)
     pitch_rate = safe_percent(offers_made, total_attended)
-    # Close rate promesa: incluye señas (compromiso de compra)
-    close_rate_promesa = safe_percent(total_sales, total_attended)
-    # Close rate operativo: solo PIF + Split (dinero real cerrado en llamada)
+    # Close rate promesa/operativo mantienen su definición original (PIF+Split, +Señas para la
+    # "promesa") sobre asistencias — Renovación/Upsell/Cuotas no son ventas nuevas comparables a
+    # un cierre en llamada de primera vez, así que no se suman acá aunque sí entran en el total de
+    # ventas de la cabecera.
+    promesa_count = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
+    close_rate_promesa = safe_percent(promesa_count, total_attended)
     sales_operativo = (report.pif_count or 0) + (report.split_count or 0)
     close_rate_operativo = safe_percent(sales_operativo, total_attended)
-    offer_to_sale = safe_percent(total_sales, offers_made)
     no_show_rate = safe_percent(total_no_show, concluded_calls)
     total_canc_rep = (
         (report.first_call_canceled or 0) + (report.second_call_canceled or 0) +
@@ -192,14 +233,14 @@ def _prepare_report_data(report):
             "slots_available_pct": slots_available_pct,
             "offers_made": offers_made,
             "decision_makers": decision_makers,
-            "rescheduled_calls": rescheduled_calls
+            "rescheduled_calls": rescheduled_calls,
+            "confirmations_done": confirmations_done,
         },
         "rates": {
             "show_rate": show_rate,
             "pitch_rate": pitch_rate,
             "close_rate_promesa": close_rate_promesa,
             "close_rate_operativo": close_rate_operativo,
-            "offer_to_sale": offer_to_sale,
             "no_show_rate": no_show_rate,
             "canc_rep_rate": canc_rep_rate
         },
@@ -228,37 +269,14 @@ def _prepare_report_data(report):
         },
         "sales": {
             "totals": {
-                "count": total_sales,
-                "cash": total_cash,
-                "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0) + (report.installment_in_call_count or 0),
-                "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0) + (report.installment_in_call_cash or 0.0),
-                "out_call_count": total_sales - ((report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0) + (report.installment_in_call_count or 0)),
-                "out_call_cash": total_cash - ((report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0) + (report.installment_in_call_cash or 0.0)),
+                "count": total_count,
+                "cash": money(total_cash),
+                "in_call_count": total_ic_count,
+                "in_call_cash": money(total_ic_cash),
+                "out_call_count": total_count - total_ic_count,
+                "out_call_cash": money(total_cash - total_ic_cash),
             },
-            "pif": {
-                "count": report.pif_count or 0,
-                "cash": report.pif_cash_collected or 0,
-                "in_call_count": report.pif_in_call_count or 0,
-                "in_call_cash": report.pif_in_call_cash or 0,
-            },
-            "split": {
-                "count": report.split_count or 0,
-                "cash": report.split_cash_collected or 0,
-                "in_call_count": report.split_in_call_count or 0,
-                "in_call_cash": report.split_in_call_cash or 0,
-            },
-            "deposit": {
-                "count": report.deposit_count or 0,
-                "cash": report.deposit_cash_collected or 0,
-                "in_call_count": report.deposit_in_call_count or 0,
-                "in_call_cash": report.deposit_in_call_cash or 0,
-            },
-            "installment": {
-                "count": report.installment_count or 0,
-                "cash": report.installment_cash_collected or 0.0,
-                "in_call_count": report.installment_in_call_count or 0,
-                "in_call_cash": report.installment_in_call_cash or 0.0,
-            }
+            **sales,
         },
         "follow_up": {
             "total_sent": report.follow_ups_sent or 0,
@@ -284,11 +302,12 @@ def _prepare_report_data(report):
 
 
 def _trigger_closer_report_discord(report):
-    """Envía el reporte diario del closer a Discord con un embed formateado y una imagen renderizada."""
+    """Envía el reporte diario del closer a Discord con un embed formateado y una única imagen
+    renderizada (resumen del día + reflexión en la misma tarjeta — antes eran dos imágenes
+    separadas, una de métricas y otra de reflexión)."""
     try:
         import requests as req
         import json
-        from datetime import datetime
         from app.services.image_service import ImageService
 
         import os
@@ -306,19 +325,9 @@ def _trigger_closer_report_discord(report):
         closer_name = report.closer.username if report.closer else "Closer"
         date_str = report.date.strftime('%d/%m/%Y')
 
-        # Obtener los datos estructurados del reporte
+        # Obtener los datos estructurados del reporte y generar la imagen única
         img_data = _prepare_report_data(report)
-
-        # Generar Imagen Principal
         img_buffer = ImageService.generate_closer_report_card(img_data)
-
-        # Generar Imagen de Reflexión
-        reflection_data = {
-            "user_name": closer_name,
-            "date": date_str,
-            "reflections": report.reflections or {}
-        }
-        reflection_buffer = ImageService.generate_reflection_card(reflection_data)
 
         # Payload para Discord
         content = (
@@ -337,18 +346,12 @@ def _trigger_closer_report_discord(report):
                     "color": 9384170, # Violeta
                     "image": {"url": "attachment://closer_report.png"},
                     "footer": {"text": "NeurOPS Performance"}
-                },
-                {
-                    "color": 6502897, # Indigo
-                    "image": {"url": "attachment://reflection.png"},
-                    "footer": {"text": "Daily Reflection"}
                 }
             ]
         }
 
         files = {
             'file1': ('closer_report.png', img_buffer, 'image/png'),
-            'file2': ('reflection.png', reflection_buffer, 'image/png')
         }
 
         res = req.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=25)

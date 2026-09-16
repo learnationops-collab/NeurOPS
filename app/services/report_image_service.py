@@ -110,10 +110,13 @@ class ReportImageService:
 
     @staticmethod
     def generate_closer_report_card(data):
+        # Altura medida a mano contra el caso mas exigente probado (nombre largo en 2 lineas +
+        # reflexion larga en 4 lineas + los 6 tipos de venta con fila propia): ~1871px de
+        # contenido real. 1950 deja margen sin dejar demasiado espacio vacio en un dia normal.
         return ReportImageService._render_and_capture(
             'templates/reports/closer_report.html',
             data,
-            (1200, 2600),
+            (1200, 1950),
             'closer_report'
         )
 
