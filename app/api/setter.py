@@ -30,13 +30,17 @@ def _get_setter_stages_ordered():
 
 def _trigger_setter_report_webhook(stat):
     """
-    Triggers the Discord webhook with a generated image of the setter report.
+    Triggers the Discord webhook with a single generated image of the setter report — el
+    template `setter_report.html` ya incluye su propia seccion de "Reflexiones de Alto
+    Rendimiento" (reflections.daily_reflection / reflections.win_of_day), asi que la segunda
+    imagen de reflexion (generate_reflection_card, pensada para las 5 preguntas viejas que
+    setter nunca llena) era pura redundancia.
     """
     try:
         import requests
         import json
         from app.services.image_service import ImageService
-        
+
         import os
         url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
         if not url:
@@ -48,23 +52,16 @@ def _trigger_setter_report_webhook(stat):
         if not url:
             print("[Discord Setter] No webhook URL configured in environment or database.")
             return
-        
+
         # 1. Prepare Data for Image
         from app.api.public.setter import _prepare_setter_report_data
         img_data = _prepare_setter_report_data(stat)
         setter_name = img_data.get("setter_name", "Setter")
 
-        # 4. Generate Images
+        # 2. Generate Image (metricas + reflexion, ya integradas en la misma tarjeta)
         img_buffer = ImageService.generate_setter_report_card(img_data)
-        
-        reflection_data = {
-            "user_name": setter_name,
-            "date": stat.date.strftime('%d/%m/%Y'),
-            "reflections": stat.reflections or {}
-        }
-        reflection_buffer = ImageService.generate_reflection_card(reflection_data)
-        
-        # 5. Discord Metadata
+
+        # 3. Discord Metadata
         content = (
             f"🚀 **NUEVO REPORTE DIARIO DE SETTER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -73,7 +70,7 @@ def _trigger_setter_report_webhook(stat):
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
-        
+
         json_payload = {
             "content": content,
             "embeds": [
@@ -81,21 +78,15 @@ def _trigger_setter_report_webhook(stat):
                     "color": 4521291, # #2DD4BF
                     "image": {"url": "attachment://setter_report.png"},
                     "footer": {"text": "NeurOPS Stats"}
-                },
-                {
-                    "color": 6502897, # #6366F1
-                    "image": {"url": "attachment://reflection.png"},
-                    "footer": {"text": "Daily Reflection"}
                 }
             ]
         }
-        
+
         files = {
             'file1': ('setter_report.png', img_buffer, 'image/png'),
-            'file2': ('reflection.png', reflection_buffer, 'image/png')
         }
-        
-        # 6. Send
+
+        # 4. Send
         res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=20)
         print(f"[Discord Setter] Status: {res.status_code}")
         
