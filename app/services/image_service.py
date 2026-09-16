@@ -143,11 +143,3 @@ class ImageService:
         """
         from app.services.report_image_service import ReportImageService
         return ReportImageService.generate_triage_tracker_card(data)
-
-    @staticmethod
-    def generate_reflection_card(data):
-        """
-        Delegated to ReportImageService.
-        """
-        from app.services.report_image_service import ReportImageService
-        return ReportImageService.generate_reflection_card(data)

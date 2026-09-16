@@ -137,12 +137,3 @@ class ReportImageService:
             (1200, 1800),
             'triage_tracker'
         )
-
-    @staticmethod
-    def generate_reflection_card(data):
-        return ReportImageService._render_and_capture(
-            'templates/reports/reflection_image.html',
-            data,
-            (1200, 1400),
-            'reflection'
-        )
