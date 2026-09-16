@@ -1,6 +1,7 @@
 import os
 import io
 import uuid
+import tempfile
 from flask import render_template_string
 from html2image import Html2Image
 
@@ -12,18 +13,21 @@ class ReportImageService:
         """
         custom_flags = []
         browser_executable = None
-        output_path = None
-        temp_path = None
-        
+        # Html2Image explota con TypeError si se le pasa output_path/temp_path=None (su default
+        # real es os.getcwd(), pero un None explícito lo pisa) — en Windows (dev local) usamos el
+        # directorio temporal del sistema en vez de dejarlos en None.
+        output_path = tempfile.gettempdir()
+        temp_path = tempfile.gettempdir()
+
         if os.name != 'nt':  # Entorno Docker/Linux (produccion)
             custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--headless=new',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
-                '--disable-dbus', 
+                '--disable-dbus',
                 '--disable-extensions',
                 '--log-level=3'
             ]
@@ -35,7 +39,7 @@ class ReportImageService:
             # Forzar uso de /tmp para permisos en Docker
             output_path = '/tmp'
             temp_path = '/tmp'
-            
+
         return Html2Image(
             size=size, 
             custom_flags=custom_flags,
