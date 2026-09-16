@@ -159,3 +159,26 @@ def require_academy_token(f):
 
         return f(*args, **kwargs)
     return decorated_function
+
+def require_dev_platform_token(f):
+    """Autenticacion para la plataforma de gestion de trabajo del equipo (consumidora
+    externa, repo aparte) consultando/actualizando bug reports de NeurOPS. Mismo patron
+    que require_academy_token: 'Authorization: Bearer <token>' contra
+    DEV_PLATFORM_INBOUND_API_TOKEN (env var, no hay cuenta de usuario detras).
+    Ver docs/dev_platform_bug_reports.md."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        expected_token = os.environ.get('DEV_PLATFORM_INBOUND_API_TOKEN')
+        if not expected_token:
+            return jsonify({"success": False, "error": "Integración no configurada (falta DEV_PLATFORM_INBOUND_API_TOKEN)"}), 500
+
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "error": "Falta el header Authorization: Bearer <token>"}), 401
+
+        provided_token = auth_header[len('Bearer '):].strip()
+        if not hmac.compare_digest(provided_token, expected_token):
+            return jsonify({"success": False, "error": "Token inválido"}), 401
+
+        return f(*args, **kwargs)
+    return decorated_function

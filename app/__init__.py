@@ -110,6 +110,10 @@ def create_app(config_class=Config):
     app.register_blueprint(external_academy_api_bp, url_prefix='/api/external/academy')
     csrf.exempt(external_academy_api_bp) # Exento - consumido por la Academia con token Bearer propio, no sesión
 
+    from app.api.external.dev_platform import bp as external_dev_platform_api_bp
+    app.register_blueprint(external_dev_platform_api_bp, url_prefix='/api/external/dev-platform')
+    csrf.exempt(external_dev_platform_api_bp) # Exento - consumido con token Bearer propio, no sesión
+
     from app.api.setter import bp as setter_api_bp
     from app.api import setter_agendas  # noqa: F401  (cuelga rutas del mismo blueprint)
     from app.api import setter_mazo     # noqa: F401  (idem)
