@@ -10,6 +10,7 @@ eligió el candidato (no un enum codificado) — misma convención que
 `JobApplication`: el formulario vive en otro repo (institute-site) y puede
 cambiar la redacción de una opción sin que haga falta migrar nada acá.
 """
+import unicodedata
 from datetime import datetime
 from app import db
 
@@ -62,6 +63,9 @@ class AssistantApplication(db.Model):
 
     # --- Bloque 1 · Identificación ---
     pais = db.Column(db.String(60), nullable=True)
+    # Provincia/estado (según el país). La manda el formulario público (otro
+    # repo, institute-site) solo para decidir modalidad — ver `modalidad()`.
+    provincia = db.Column(db.String(80), nullable=True)
     nombre = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160), nullable=True)
     whatsapp = db.Column(db.String(40), nullable=True)
@@ -164,6 +168,19 @@ class AssistantApplication(db.Model):
     def video_ok(self):
         return bool(self.video) and self.video_verificado == VERIFICADO_OK
 
+    def modalidad(self):
+        """Híbrido si vive en una provincia/estado desde donde puede ir a la
+        oficina (Salta en Argentina, Paraná en Brasil); todo lo demás —
+        incluido no tener `provincia` todavía— es online."""
+        provincia = _normaliza(self.provincia)
+        if not provincia:
+            return 'online'
+        if self.pais == 'Argentina' and provincia == 'salta':
+            return 'hibrido'
+        if self.pais == 'Brasil' and provincia == 'parana':
+            return 'hibrido'
+        return 'online'
+
     def veredicto(self):
         """Estado que ve el panel. `descartado` (del propio formulario) pisa
         todo: esa postulación ni siquiera llegó a hacerse."""
@@ -185,6 +202,8 @@ class AssistantApplication(db.Model):
             "email": self.email,
             "whatsapp": self.whatsapp,
             "pais": self.pais,
+            "provincia": self.provincia,
+            "modalidad": self.modalidad(),
             "edad": self.edad,
             "veredicto": self.veredicto(),
             "estado": self.estado,
@@ -231,11 +250,19 @@ def _vacio(v):
     return v is None or v == '' or v == []
 
 
+def _normaliza(texto):
+    """minúsculas y sin acentos, para comparar 'Paraná'/'Parana' sin líos."""
+    if not texto:
+        return ''
+    sin_acentos = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('ascii')
+    return sin_acentos.strip().lower()
+
+
 # Veredictos manuales que puede poner un revisor desde el panel. Mismo criterio
 # que el mockup de referencia: seleccionar / reserva / testeo / descartar /
-# baja. 'descartado' acá es manual; el automático sale de `descartado` (columna)
-# o de `auto_ko()`.
-ESTADOS = ('seleccionada', 'en_reserva', 'testeo', 'descartado', 'baja')
+# baja — más 'winner'/'top_tier', los dos sub-estados de Finalistas que se
+# deciden ya adentro de 'testeo' (quién quedó, quién es el backup rankeado).
+ESTADOS = ('seleccionada', 'en_reserva', 'testeo', 'descartado', 'baja', 'winner', 'top_tier')
 
 
 class AssistantClarityWeight(db.Model):
