@@ -41,7 +41,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 const POTENTIAL_EXPORT_COLUMNS = [
     { id: 'date', label: 'Fecha Meet', getValue: (l) => (l.date ? String(l.date).split('T')[0] : '') },
     { id: 'registro', label: 'Fecha Registro', getValue: (l) => (l.registro ? String(l.registro).split('T')[0] : '') },
-    { id: 'lead', label: 'Nombre', getValue: (l) => l.lead || '' },
+    { id: 'lead', label: 'Nombre', getValue: (l) => getAgendaLeadName(l) },
     { id: 'whatsapp', label: 'Telefono', getValue: (l) => l.whatsapp || '' },
     { id: 'mail', label: 'Email', getValue: (l) => l.mail || '' },
     { id: 'instagram', label: 'Instagram', getValue: (l) => l.instagram || '' },
@@ -65,7 +65,7 @@ const DEFAULT_EXPORT_COLUMNS = ['date', 'lead', 'whatsapp', 'mail', 'instagram']
 const AGENDA_REVIEW_COLUMNS = [
     { id: 'date', label: 'Fecha Meet', getValue: (a) => (a.date ? String(a.date).split('T')[0] : (a.fecha_meet || '')) },
     { id: 'hora', label: 'Hora Meet', getValue: (a) => (a.date ? (String(a.date).split('T')[1] || '').slice(0, 5) : '') },
-    { id: 'lead', label: 'Cliente', getValue: (a) => a.lead || '' },
+    { id: 'lead', label: 'Cliente', getValue: (a) => getAgendaLeadName(a) },
     { id: 'whatsapp', label: 'Telefono', getValue: (a) => a.whatsapp || '' },
     { id: 'mail', label: 'Email', getValue: (a) => a.mail || '' },
     { id: 'instagram', label: 'Instagram', getValue: (a) => a.instagram || '' },
@@ -478,6 +478,22 @@ const formatDateOnly = (dateStr) => {
 // agenda corrida por el offset de quien mira el panel, así que se pasan siempre por
 // `toDatetimeLocalValue` (parseUtcIso) para verlos, y por `datetimeLocalToUtcIso` para guardarlos.
 // `agenda.registro` es la excepción: es texto en hora local de la fuente, no UTC.
+
+// En agendas muy viejas (migración histórica previa a jun/2026, ver bitácora "Corrección de
+// Inversión de Campos") el nombre del lead a veces quedó cargado en `nombre` (Fuente) y `lead`
+// (Cliente) se guardó vacío. Antes de mostrar "sin nombre" probamos con `nombre`, salvo que sea
+// una fuente/setter conocida (mismo catálogo que usa el backend en el repair de agendas).
+const KNOWN_SOURCE_LABELS = new Set([
+    'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
+    'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
+    'tiktok', 'manychat', 'workshop manychat'
+]);
+const getAgendaLeadName = (agenda) => {
+    if (agenda.lead && agenda.lead.trim()) return agenda.lead.trim();
+    const nombre = (agenda.nombre || '').trim();
+    if (nombre && !KNOWN_SOURCE_LABELS.has(nombre.toLowerCase())) return nombre;
+    return '';
+};
 
 const FinancialAgendasPage = () => {
     const { user } = useAuth();
@@ -1360,16 +1376,16 @@ const FinancialAgendasPage = () => {
                                             <td className="py-4 px-4">
                                                 <div className="flex flex-col gap-1 text-left">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span 
+                                                        <span
                                                             className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
                                                             onClick={() => setSelectedRoadmapLead({
                                                                 instagram: agenda.instagram,
                                                                 email: agenda.mail,
                                                                 phone: agenda.whatsapp,
-                                                                full_name: agenda.lead
+                                                                full_name: getAgendaLeadName(agenda)
                                                             })}
                                                         >
-                                                            {agenda.lead}
+                                                            {getAgendaLeadName(agenda) || 'Sin nombre'}
                                                         </span>
                                                         {agenda.has_sale && (
                                                             <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] py-0.5 px-1.5 font-bold shrink-0">
@@ -1951,7 +1967,7 @@ const FinancialAgendasPage = () => {
                             <div className="p-6 space-y-5 flex-1">
                                 <div className="space-y-1 text-left">
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cliente</p>
-                                    <p className="text-sm font-black text-white">{statusActionModal.agenda?.lead}</p>
+                                    <p className="text-sm font-black text-white">{statusActionModal.agenda ? (getAgendaLeadName(statusActionModal.agenda) || 'Sin nombre') : ''}</p>
                                 </div>
 
                                 {statusActionModal.requiresDate && (
@@ -2015,11 +2031,12 @@ const FinancialAgendasPage = () => {
                 </div>
             )}
 
-            <LeadRoadmapModal 
+            <LeadRoadmapModal
                 isOpen={!!selectedRoadmapLead}
                 instagram={selectedRoadmapLead?.instagram}
                 email={selectedRoadmapLead?.email}
                 phone={selectedRoadmapLead?.phone}
+                fullName={selectedRoadmapLead?.full_name}
                 onClose={() => setSelectedRoadmapLead(null)}
                 onSuccess={() => fetchAgendas(1)}
             />
