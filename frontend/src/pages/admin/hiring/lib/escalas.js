@@ -20,6 +20,14 @@ export const BANDERA = {
     Brasil: 'linear-gradient(135deg,#009739 0%,#009739 38%,#FEDD00 50%,#009739 62%,#009739 100%)',
 };
 
+// Híbrido (Salta/Argentina, Paraná/Brasil — puede ir a la oficina) vs. Online
+// (todo el resto). La cuenta la hace el backend (`modalidad()` del modelo);
+// esto es solo la presentación del badge.
+export const MODALIDAD = {
+    hibrido: { label: 'Híbrido', fg: '#FF6AD5', bg: 'rgba(255,63,164,.12)', bd: 'rgba(255,63,164,.45)' },
+    online: { label: 'Online', fg: '#5B7CFF', bg: 'rgba(91,124,255,.12)', bd: 'rgba(91,124,255,.42)' },
+};
+
 export const soloDigitos = (texto) => (texto || '').replace(/\D/g, '');
 
 // Asegura protocolo para que un link guardado sin "https://" siga siendo

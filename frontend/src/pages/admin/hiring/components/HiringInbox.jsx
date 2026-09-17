@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Inbox, Clock, CheckCircle2, XCircle, Target, Trash2, MessageCircle,
-    ChevronRight, AlertTriangle,
+    ChevronRight, AlertTriangle, Trophy, Star, Zap, Globe,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import HiringCandidateModal from './HiringCandidateModal';
 import {
-    escalaDe, nivelDe, techoIA, BANDERA, soloDigitos,
+    escalaDe, nivelDe, techoIA, BANDERA, soloDigitos, MODALIDAD,
 } from '../lib/escalas';
 
 // Sub-filtros por grupo. El `id` es directamente el valor de `filtro` que
@@ -19,16 +19,31 @@ const SUBFILTROS = {
     analizados: [
         { id: 'seleccionadas', label: 'Seleccionadas', icon: CheckCircle2, color: '#2FBF8F' },
         { id: 'en_reserva', label: 'Reserva', icon: Clock, color: '#8AA3FF' },
-        { id: 'testeo', label: 'Testeo', icon: Target, color: '#D9A441' },
         { id: 'descartadas', label: 'Descartadas', icon: XCircle, color: '#7F8CA8' },
+    ],
+    // Todo lo que sigue en carrera después de seleccionado: quién está a
+    // prueba, quién ganó, quién queda de backup rankeado y quién se bajó.
+    finalistas: [
+        { id: 'testeo', label: 'Prueba', icon: Target, color: '#D9A441' },
+        { id: 'winners', label: 'Winner', icon: Trophy, color: '#2FBF8F' },
+        { id: 'top_tier', label: 'Top tier', icon: Star, color: '#8AA3FF' },
         { id: 'bajas', label: 'Baja', icon: Trash2, color: '#E85C4A' },
     ],
 };
 
+// Toggle de modalidad: solo tiene sentido en Pendientes, que es donde se
+// revisa en tandas (primero híbridos, después online) — ver la sesión grabada.
+const MODALIDADES = [
+    { id: 'hibrido', label: 'Híbridos', icon: Zap },
+    { id: 'online', label: 'Online', icon: Globe },
+];
+
 export const VEREDICTO = {
     seleccionada: { label: 'Seleccionada', fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
     en_reserva: { label: 'En reserva', fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
-    testeo: { label: 'En testeo', fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
+    testeo: { label: 'En prueba', fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
+    winner: { label: 'Winner', fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
+    top_tier: { label: 'Top tier', fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
     descartado: { label: 'Descartada', fg: 'rgba(255,255,255,.82)', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.38)' },
     baja: { label: 'Baja', fg: '#E85C4A', bg: '#1B0F1D', bd: '#4C2227' },
     incompleta: { label: 'Incompleta', fg: '#E85C4A', bg: '#1B0F1D', bd: '#4C2227' },
@@ -80,24 +95,29 @@ const AVATARES = [
 const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
     const subfiltros = SUBFILTROS[grupo] || [];
     const [sub, setSub] = useState(subfiltros[0]?.id || 'todas');
+    // El toggle Híbridos/Online solo aparece en Pendientes (ver SUBFILTROS de
+    // arriba): en Analizados/Finalistas ese lugar lo ocupan sus propios
+    // sub-filtros de estado.
+    const [modalidad, setModalidad] = useState(null);
     const [postulaciones, setPostulaciones] = useState([]);
     const [conteos, setConteos] = useState({});
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
 
-    // Al cambiar de destino (Pendientes ↔ Analizados) se vuelve al primer
-    // sub-filtro de ese grupo: mantener el anterior mostraría un filtro que ni
-    // siquiera aparece en la fila de arriba.
-    useEffect(() => { setSub(subfiltros[0]?.id || 'todas'); }, [grupo]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Al cambiar de destino (Pendientes ↔ Analizados ↔ Finalistas) se vuelve al
+    // primer sub-filtro de ese grupo y se limpia la modalidad: mantener el
+    // filtro anterior mostraría algo que ni siquiera aparece en la fila de arriba.
+    useEffect(() => { setSub(subfiltros[0]?.id || 'todas'); setModalidad(null); }, [grupo]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Buscar recorre todo el pool, no sólo la vista activa.
     const filtroEfectivo = grupo === 'busqueda' ? 'todas' : sub;
+    const modalidadEfectiva = grupo === 'pendientes' ? modalidad : null;
 
-    const cargar = useCallback(async (f) => {
+    const cargar = useCallback(async (f, m) => {
         setLoading(true);
         try {
-            const res = await api.get(`/assistant-applications?filtro=${f}`);
+            const res = await api.get(`/assistant-applications?filtro=${f}${m ? `&modalidad=${m}` : ''}`);
             setPostulaciones(res.data.postulaciones);
             setConteos(res.data.conteos);
             setTotal(res.data.total);
@@ -108,14 +128,14 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
         }
     }, []);
 
-    useEffect(() => { cargar(filtroEfectivo); }, [filtroEfectivo, cargar]);
+    useEffect(() => { cargar(filtroEfectivo, modalidadEfectiva); }, [filtroEfectivo, modalidadEfectiva, cargar]);
 
     // Los badges del dock los mantiene el padre; se los pasamos al cargar.
     useEffect(() => {
         if (!onConteos || !conteos.todas) return;
-        const analizados = (conteos.seleccionadas || 0) + (conteos.en_reserva || 0)
-            + (conteos.testeo || 0) + (conteos.descartadas || 0) + (conteos.bajas || 0);
-        onConteos({ pendientes: conteos.sin_analizar || 0, analizados });
+        const analizados = (conteos.seleccionadas || 0) + (conteos.en_reserva || 0) + (conteos.descartadas || 0);
+        const finalistas = (conteos.testeo || 0) + (conteos.winners || 0) + (conteos.top_tier || 0) + (conteos.bajas || 0);
+        onConteos({ pendientes: conteos.sin_analizar || 0, analizados, finalistas });
     }, [conteos, onConteos]);
 
     const filas = useMemo(() => {
@@ -148,6 +168,31 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
                 />
                 <MetricCard icon={Target} n={conteos.con_video ?? 0} label="Con video verificado" color="#2FBF8F" bg="#071A24" bd="#10413D" />
             </div>
+
+            {grupo === 'pendientes' && !query && (
+                <div className="inline-flex max-w-full items-stretch gap-1 self-end overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5">
+                    {MODALIDADES.map((m) => {
+                        const activo = modalidad === m.id;
+                        return (
+                            <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setModalidad(activo ? null : m.id)}
+                                className={`flex h-11 flex-none items-center gap-2.5 whitespace-nowrap rounded-[14px] px-4 text-[13.5px] font-bold transition-all ${
+                                    activo ? 'text-white' : 'text-white/60 hover:bg-[#5B7CFF]/10 hover:text-white'
+                                }`}
+                                style={activo ? { background: 'linear-gradient(100deg,#1323C6,#5B7CFF)', boxShadow: '0 8px 20px rgba(19,35,198,.42)' } : undefined}
+                            >
+                                <m.icon size={16} />
+                                <span>{m.label}</span>
+                                <span className="tabular-nums" style={{ color: activo ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.38)' }}>
+                                    {conteos[m.id] ?? 0}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {subfiltros.length > 0 && !query && (
                 <div className="inline-flex max-w-full items-stretch gap-1 self-start overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5">
@@ -215,12 +260,18 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
                                             </span>
                                             <span className="flex min-w-0 flex-col gap-1">
                                                 <span className="truncate font-bold">{p.nombre}</span>
-                                                <span className="flex items-center gap-1.5 text-[11px] text-white/45">
+                                                <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-white/45">
                                                     <span
                                                         className="h-2.5 w-3.5 flex-none rounded-[2px]"
                                                         style={{ background: BANDERA[p.pais] || 'rgba(255,255,255,.2)' }}
                                                     />
                                                     {[p.pais, p.edad && `${p.edad} años`].filter(Boolean).join(' · ') || '—'}
+                                                    <span
+                                                        className="rounded-full border px-1.5 py-[1px] text-[8.5px] font-black uppercase tracking-[.1em]"
+                                                        style={{ color: MODALIDAD[p.modalidad]?.fg, borderColor: MODALIDAD[p.modalidad]?.bd, background: MODALIDAD[p.modalidad]?.bg }}
+                                                    >
+                                                        {MODALIDAD[p.modalidad]?.label}
+                                                    </span>
                                                 </span>
                                             </span>
                                         </div>
