@@ -1,25 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
     X, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock,
-    Target, Trash2, Video, FileText, Mail, MessageCircle, AlertTriangle, Copy,
+    Target, Trash2, Trophy, Star, Video, FileText, Mail, MessageCircle,
+    AlertTriangle, Copy, DollarSign,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import {
     PREGUNTA_CORTA, CAMPOS_LARGOS, VAL_CORTO, AREA_CORTO,
-    escalaDe, nivelDe, techoIA, nivelCorto, BANDERA, soloDigitos, href,
+    escalaDe, nivelDe, techoIA, nivelCorto, BANDERA, soloDigitos, href, MODALIDAD,
 } from '../lib/escalas';
 import { Dots, Chip } from './HiringInbox';
 
-// Los cinco veredictos que puede poner un revisor. 'baja' pide motivo: es la
-// única que describe algo que pasó DESPUÉS de contratar y conviene dejarlo
-// escrito.
+// Los siete veredictos que puede poner un revisor. 'baja' pide motivo: es la
+// única que describe algo que pasó DESPUÉS de seleccionar/hacer entrar a
+// prueba a alguien, y conviene dejarlo escrito.
 const ACCIONES = [
     { id: 'seleccionada', label: 'Seleccionar', icon: CheckCircle2, fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
     { id: 'en_reserva', label: 'Reserva', icon: Clock, fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
     { id: 'testeo', label: 'Testeo', icon: Target, fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
+    { id: 'winner', label: 'Winner', icon: Trophy, fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
+    { id: 'top_tier', label: 'Top tier', icon: Star, fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
     { id: 'descartado', label: 'Descartar', icon: XCircle, fg: 'rgba(255,255,255,.82)', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.38)' },
     { id: 'baja', label: 'Baja', icon: Trash2, fg: '#E85C4A', bg: '#1B0F1D', bd: '#4C2227' },
 ];
+
+// Qué botones se ven según el veredicto actual — ya no son siempre los 5/7:
+// cada estado tiene un siguiente paso lógico, no todos a la vez.
+const ACCIONES_POR_VEREDICTO = {
+    sin_analizar: ['seleccionada', 'en_reserva', 'descartado'],
+    incompleta: ['seleccionada', 'en_reserva', 'descartado'],
+    seleccionada: ['testeo', 'en_reserva', 'descartado'],
+    en_reserva: ['seleccionada', 'descartado'],
+    descartado: ['descartado'], // tocarlo de nuevo deshace el descarte
+    testeo: ['winner', 'top_tier', 'baja'],
+    winner: ['baja'],
+    top_tier: ['baja'],
+    baja: [], // terminal: ya se fue, no hay a dónde moverlo
+};
 
 // Los 4 excluyentes + la verificación de comprensión: son lo primero que mira
 // un revisor, así que van en un riel propio arriba en vez de perdidos dentro
@@ -107,15 +124,27 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     if (!applicationId) return null;
 
     const decidir = async (valor, motivoTexto) => {
+        // Tocar de nuevo el mismo botón activo lo deshace (vuelve a null) — eso
+        // no es "avanzar a la próxima decisión", es corregir la actual, así que
+        // no dispara el auto-avance.
+        const esUndo = data?.estado === valor && !motivoTexto;
         try {
             await api.post(`/assistant-applications/${applicationId}/estado`, {
-                valor: data?.estado === valor && !motivoTexto ? null : valor,
+                valor: esUndo ? null : valor,
                 motivo: motivoTexto || null,
             });
             setBajaAbierta(false);
             setMotivo('');
-            await cargar(applicationId);
             onDecidido?.();
+            // Auto-avance: decidido el veredicto, se salta sola a la siguiente
+            // postulación de la lista para poder despachar en cadena, igual que
+            // pidió Kerwin en la grabación. Si era la última, se queda mostrando
+            // esta (ya actualizada).
+            if (!esUndo && idx < ids.length - 1) {
+                siguiente();
+            } else {
+                await cargar(applicationId);
+            }
         } catch (err) {
             console.error('Error al guardar el veredicto:', err);
         }
@@ -150,33 +179,34 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                 className="w-full max-w-[1560px] overflow-hidden rounded-[28px] border border-white/[.12] bg-[#0B0F26] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Cabecera: identidad, veredicto, score y navegación entre candidatas */}
-                <div className="sticky top-0 z-10 flex flex-wrap items-center gap-4 border-b border-white/10 bg-[#020617]/95 px-5 py-4 backdrop-blur-xl sm:px-7">
-                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                        <span
-                            className="grid h-11 w-11 flex-none place-items-center rounded-2xl text-[18px] font-black"
-                            style={{ background: 'linear-gradient(135deg,#1323C6,#FF3FA4)' }}
-                        >
-                            {(d.nombre || '?')[0]}
-                        </span>
-                        <div className="min-w-0">
-                            <h2 className="truncate text-[20px] font-black leading-tight tracking-tight">{d.nombre || '—'}</h2>
-                            <span className="mt-1 flex items-center gap-2 text-[12px] text-white/50">
-                                <span className="h-2.5 w-3.5 flex-none rounded-[2px]" style={{ background: BANDERA[d.pais] || 'rgba(255,255,255,.2)' }} />
-                                {[d.pais, d.edad && `${d.edad} años`].filter(Boolean).join(' · ') || '—'}
+                {/* Cabecera: identidad + navegación arriba, pills de acceso rápido abajo */}
+                <div className="sticky top-0 z-10 flex flex-col gap-3.5 border-b border-white/10 bg-[#020617]/95 px-5 py-4 backdrop-blur-xl sm:px-7">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                            <span
+                                className="grid h-11 w-11 flex-none place-items-center rounded-2xl text-[18px] font-black"
+                                style={{ background: 'linear-gradient(135deg,#1323C6,#FF3FA4)' }}
+                            >
+                                {(d.nombre || '?')[0]}
                             </span>
+                            <div className="min-w-0">
+                                <h2 className="truncate text-[20px] font-black leading-tight tracking-tight">{d.nombre || '—'}</h2>
+                                <span className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-white/50">
+                                    <span className="h-2.5 w-3.5 flex-none rounded-[2px]" style={{ background: BANDERA[d.pais] || 'rgba(255,255,255,.2)' }} />
+                                    {[d.pais, d.provincia, d.edad && `${d.edad} años`].filter(Boolean).join(' · ') || '—'}
+                                    {d.modalidad && (
+                                        <span
+                                            className="rounded-full border px-2 py-[2px] text-[9px] font-black uppercase tracking-[.12em]"
+                                            style={{ color: MODALIDAD[d.modalidad]?.fg, borderColor: MODALIDAD[d.modalidad]?.bd, background: MODALIDAD[d.modalidad]?.bg }}
+                                        >
+                                            {MODALIDAD[d.modalidad]?.label}
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex flex-none items-center gap-4">
-                        <Chip veredicto={d.veredicto} />
-                        <span className="flex flex-col items-end leading-none">
-                            <span className="text-[26px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
-                                {d.score ?? '—'}
-                            </span>
-                            <span className="mt-1 text-[9px] font-extrabold uppercase tracking-[.18em] text-white/40">Score</span>
-                        </span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex flex-none items-center gap-1.5">
                             <button type="button" onClick={anterior} disabled={idx <= 0} aria-label="Anterior" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[.38] bg-white/5 transition-all hover:bg-[#5B7CFF]/20 disabled:opacity-30">
                                 <ChevronLeft size={17} />
                             </button>
@@ -188,6 +218,44 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                             </button>
                         </span>
                     </div>
+
+                    {!loading && (
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            {videoHref ? (
+                                <a href={videoHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-white/[.38] bg-white/5 px-4 py-2 text-[12.5px] font-bold transition-all hover:bg-[#5B7CFF]/20">
+                                    <Video size={14} /> Presentación
+                                    {!d.video_ok && <span className="text-[10px] font-bold text-[#FF6AD5]">· sin verificar</span>}
+                                </a>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4C2227] bg-[#1B0F1D] px-4 py-2 text-[12.5px] font-bold text-[#E85C4A]">
+                                    <Video size={14} /> Sin video
+                                </span>
+                            )}
+                            {cvHref ? (
+                                <a href={cvHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-white/[.38] bg-white/5 px-4 py-2 text-[12.5px] font-bold transition-all hover:bg-[#5B7CFF]/20">
+                                    <FileText size={14} /> CV
+                                </a>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4C2227] bg-[#1B0F1D] px-4 py-2 text-[12.5px] font-bold text-[#E85C4A]">
+                                    <FileText size={14} /> Sin CV
+                                </span>
+                            )}
+                            <Chip veredicto={d.veredicto} />
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[.38] bg-white/5 px-4 py-2 text-[12.5px] font-black tabular-nums">
+                                <DollarSign size={14} className="text-white/45" />
+                                <span style={{ color: Number(d.remuneracion) > 400 ? '#FF6AD5' : '#fff' }}>
+                                    {d.remuneracion ? `${d.remuneracion} USD` : '—'}
+                                </span>
+                                <span className="font-semibold text-white/40">/ mes</span>
+                            </span>
+                            <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-white/[.38] bg-white/5 px-4 py-2">
+                                <span className="text-[9px] font-extrabold uppercase tracking-[.18em] text-white/40">Score</span>
+                                <span className="text-[17px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
+                                    {d.score ?? '—'}
+                                </span>
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {loading && <div className="px-7 py-20 text-center text-white/40">Cargando la postulación…</div>}
@@ -208,9 +276,9 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                             </div>
                         )}
 
-                        {/* Rieles: requisitos, contacto y material, experiencia, stack */}
-                        <div className="grid items-start gap-5 lg:grid-cols-2 xl:grid-cols-4">
-                            <Riel titulo="Requisitos">
+                        {/* Rieles: filtros y jornada (+ contacto), experiencia, stack */}
+                        <div className="grid items-start gap-5 lg:grid-cols-2 xl:grid-cols-3">
+                            <Riel titulo="Filtros y jornada">
                                 {REQUISITOS.map(([campo, ok]) => {
                                     const valor = d[campo];
                                     const pasa = ok(valor);
@@ -229,15 +297,6 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                         </Fila>
                                     );
                                 })}
-                            </Riel>
-
-                            <Riel titulo="Contacto y material">
-                                <Fila k="Pide">
-                                    <span className="text-[17px] font-black tabular-nums" style={{ color: Number(d.remuneracion) > 400 ? '#FF6AD5' : '#fff' }}>
-                                        {d.remuneracion ? `${d.remuneracion} USD` : '—'}
-                                    </span>
-                                    <span className="ml-1.5 text-[11px] font-semibold text-white/40">por mes</span>
-                                </Fila>
                                 <Fila k="Correo">
                                     {d.email ? (
                                         <button type="button" onClick={() => copiar(d.email, 'correo')} className="flex w-full items-center gap-2 text-left hover:text-white">
@@ -249,38 +308,17 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                 </Fila>
                                 <Fila k="WhatsApp">
                                     {digitos ? (
-                                        <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 tabular-nums hover:text-[#25D366]">
-                                            <MessageCircle size={13} className="flex-none text-white/45" />
-                                            {d.whatsapp}
-                                        </a>
-                                    ) : <span className="text-white/35">Sin WhatsApp</span>}
-                                </Fila>
-                                <Fila k="Video">
-                                    <span className="flex flex-wrap items-center gap-2">
-                                        {videoHref ? (
-                                            <a href={videoHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-white/[.38] bg-white/5 px-3 py-1.5 text-[11.5px] hover:bg-[#5B7CFF]/20">
-                                                <Video size={13} /> Abrir video
+                                        <span className="flex items-center gap-2">
+                                            <button type="button" onClick={() => copiar(d.whatsapp, 'whatsapp')} className="flex min-w-0 flex-1 items-center gap-2 text-left tabular-nums hover:text-white">
+                                                <MessageCircle size={13} className="flex-none text-white/45" />
+                                                <span className="truncate">{d.whatsapp}</span>
+                                                <Copy size={12} className="flex-none text-white/30" />
+                                            </button>
+                                            <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" aria-label="Abrir WhatsApp" className="flex-none text-white/45 hover:text-[#25D366]">
+                                                <MessageCircle size={15} />
                                             </a>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4C2227] bg-[#1B0F1D] px-3 py-1.5 text-[11.5px] text-[#E85C4A]">
-                                                <Video size={13} /> Sin video
-                                            </span>
-                                        )}
-                                        {videoHref && !d.video_ok && (
-                                            <span className="text-[10.5px] font-bold text-[#FF6AD5]">Sin verificar</span>
-                                        )}
-                                    </span>
-                                </Fila>
-                                <Fila k="CV">
-                                    {cvHref ? (
-                                        <a href={cvHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-white/[.38] bg-white/5 px-3 py-1.5 text-[11.5px] hover:bg-[#5B7CFF]/20">
-                                            <FileText size={13} /> Abrir CV
-                                        </a>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4C2227] bg-[#1B0F1D] px-3 py-1.5 text-[11.5px] text-[#E85C4A]">
-                                            <FileText size={13} /> Sin CV
                                         </span>
-                                    )}
+                                    ) : <span className="text-white/35">Sin WhatsApp</span>}
                                 </Fila>
                             </Riel>
 
@@ -430,7 +468,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                             </div>
                         ) : (
                             <div className="flex flex-wrap items-center gap-2.5">
-                                {ACCIONES.map((a) => {
+                                {ACCIONES.filter((a) => (ACCIONES_POR_VEREDICTO[d.veredicto] || []).includes(a.id)).map((a) => {
                                     const activo = d.estado === a.id;
                                     return (
                                         <button
