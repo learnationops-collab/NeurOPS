@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Target, Sliders, Search, X, ArrowLeft, LogOut, Ghost, Loader2 } from 'lucide-react';
+import { Inbox, CheckCircle2, Target, Award, Sliders, Search, X, ArrowLeft, LogOut, Ghost, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import OperatorControls from '../../../components/modals/OperatorControls';
 import { revertImpersonation } from '../../../utils/impersonation';
@@ -14,12 +14,14 @@ import HiringClarityTab from './components/HiringClarityTab';
 const DESTINOS = [
     { id: 'pendientes', label: 'Pendientes', icon: Inbox, color: '#D9A441' },
     { id: 'analizados', label: 'Analizados', icon: CheckCircle2, color: '#2FBF8F' },
+    { id: 'finalistas', label: 'Finalistas', icon: Award, color: '#FF6AD5' },
     { id: 'stats', label: 'Estadísticas', icon: Target, color: '#5B7CFF' },
 ];
 
 const TITULOS = {
     pendientes: 'Pendientes',
     analizados: 'Analizados',
+    finalistas: 'Finalistas',
     stats: 'Estadísticas',
     clarity: 'Clarity',
 };
@@ -30,7 +32,7 @@ const HiringDashboardPage = () => {
     const [query, setQuery] = useState('');
     // Los badges del dock (cuántas sin analizar / cuántas analizadas) los sube
     // el inbox cuando carga: el dock no pide los datos por su cuenta.
-    const [badges, setBadges] = useState({ pendientes: 0, analizados: 0 });
+    const [badges, setBadges] = useState({ pendientes: 0, analizados: 0, finalistas: 0 });
     const buscador = useRef(null);
     // Modal de Acceso Simulado (el mismo que abre la tecla `w` dentro de
     // MainLayout). Esta ruta corre sin MainLayout, así que no hereda el
@@ -188,7 +190,7 @@ const HiringDashboardPage = () => {
 
                 {/* El inbox se monta en las dos vistas de lista; `grupo` decide qué
                     sub-filtros ofrece, igual que en el panel de Closer. */}
-                {(vista === 'pendientes' || vista === 'analizados' || enBusqueda) && (
+                {(vista === 'pendientes' || vista === 'analizados' || vista === 'finalistas' || enBusqueda) && (
                     <HiringInbox
                         grupo={enBusqueda ? 'busqueda' : vista}
                         query={enBusqueda ? query.trim() : ''}
@@ -208,7 +210,7 @@ const HiringDashboardPage = () => {
                 >
                     {DESTINOS.map((d) => {
                         const activo = vista === d.id;
-                        const badge = d.id === 'pendientes' ? badges.pendientes : d.id === 'analizados' ? badges.analizados : 0;
+                        const badge = badges[d.id] || 0;
                         return (
                             <button
                                 key={d.id}
