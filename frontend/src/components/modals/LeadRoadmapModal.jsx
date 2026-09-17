@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import LeadRoadmapDetail from '../leads/LeadRoadmapDetail';
 
-const LeadRoadmapModal = ({ isOpen, instagram, clientId, email, phone, onClose, onSuccess }) => {
+const LeadRoadmapModal = ({ isOpen, instagram, clientId, email, phone, fullName, onClose, onSuccess }) => {
     if (!isOpen) return null;
 
     return (
@@ -36,11 +36,12 @@ const LeadRoadmapModal = ({ isOpen, instagram, clientId, email, phone, onClose, 
                     </button>
 
                     <div className="p-2 sm:p-4 md:p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                        <LeadRoadmapDetail 
+                        <LeadRoadmapDetail
                             instagram={instagram}
                             clientId={clientId}
                             email={email}
                             phone={phone}
+                            name={fullName}
                             onBack={onClose}
                             onUpdate={onSuccess}
                         />

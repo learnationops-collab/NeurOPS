@@ -9,17 +9,18 @@ import LeadRoadmapHeader from './components/LeadRoadmapHeader';
 import LeadRoadmapFunnel from './components/LeadRoadmapFunnel';
 import LeadRoadmapFormInfo from './components/LeadRoadmapFormInfo';
 
-const LeadRoadmapDetail = ({ 
-    instagram, 
-    clientId, 
-    email, 
-    phone, 
-    onBack, 
-    onUpdate, 
-    availableKeywords = [], 
-    userRole, 
-    appointmentId, 
-    compact = false 
+const LeadRoadmapDetail = ({
+    instagram,
+    clientId,
+    email,
+    phone,
+    name,
+    onBack,
+    onUpdate,
+    availableKeywords = [],
+    userRole,
+    appointmentId,
+    compact = false
 }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
@@ -31,7 +32,7 @@ const LeadRoadmapDetail = ({
 
     useEffect(() => {
         fetchRoadmap();
-    }, [instagram, clientId, email, phone]);
+    }, [instagram, clientId, email, phone, name]);
 
     const fetchRoadmap = async () => {
         setLoading(true);
@@ -41,6 +42,7 @@ const LeadRoadmapDetail = ({
             if (instagram) params.instagram = instagram;
             if (email) params.email = email;
             if (phone) params.phone = phone;
+            if (name) params.name = name;
 
             const res = await api.get('/public/lead-roadmap', { params });
             setData(res.data);

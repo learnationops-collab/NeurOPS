@@ -6,6 +6,25 @@ from app.models.marketing import ManychatLead, LeadAnswer
 from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, func
+import unicodedata
+
+def _strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
+
+def names_plausibly_match(name_a, name_b):
+    # En agendas historicas, el mail/telefono de una fila a veces quedo mal cargado y
+    # coincide con el de OTRO cliente ya existente (ver caso Yrein Cordova / Rolando
+    # Sanchez Perez, sep/2026): sin este chequeo, resolver por mail/telefono terminaba
+    # mostrando la ficha completa (ventas, chat, historial) de una persona distinta a
+    # la que se hizo click. Si no hay nombre de un lado o del otro no podemos comparar,
+    # asi que no bloqueamos (evita falsos negativos cuando el lead nunca tuvo nombre).
+    if not name_a or not name_b:
+        return True
+    a_tokens = {t for t in _strip_accents(name_a).lower().split() if len(t) > 2}
+    b_tokens = {t for t in _strip_accents(name_b).lower().split() if len(t) > 2}
+    if not a_tokens or not b_tokens:
+        return True
+    return bool(a_tokens & b_tokens)
 
 def normalize_ig(ig_str):
     # Normaliza el usuario de Instagram removiendo @ y espacios
@@ -66,11 +85,23 @@ def get_lead_roadmap():
         
         if not client:
             if ig_norm:
-                client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
+                candidate = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
+                if candidate and not names_plausibly_match(candidate.full_name, clean_name):
+                    ig_norm = None  # este instagram quedo mal cargado en la fila: no es de este lead
+                else:
+                    client = candidate
             if not client and clean_email:
-                client = Client.query.filter(func.lower(Client.email) == clean_email).first()
+                candidate = Client.query.filter(func.lower(Client.email) == clean_email).first()
+                if candidate and not names_plausibly_match(candidate.full_name, clean_name):
+                    clean_email = None  # idem con el mail
+                else:
+                    client = candidate
             if not client and clean_phone:
-                client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+                candidate = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+                if candidate and not names_plausibly_match(candidate.full_name, clean_name):
+                    clean_phone = None  # idem con el telefono
+                else:
+                    client = candidate
             # Búsqueda por nombre (parcial, case-insensitive) como último recurso
             if not client and clean_name:
                 client = Client.query.filter(
@@ -149,7 +180,11 @@ def get_lead_roadmap():
         # Consolidar datos de perfil del lead
         lead_profile = {
             "id": client.id if client else None,
-            "full_name": client.full_name if client else (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido"))),
+            # `clean_name` (el nombre de la fila sobre la que se hizo click) va antes que
+            # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
+            # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
+            # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
+            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido")))),
             "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
             "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
             "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
