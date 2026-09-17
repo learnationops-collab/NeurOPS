@@ -25,21 +25,28 @@ from flask_login import current_user
 bp = Blueprint('assistant_applications', __name__)
 
 # Los filtros del inbox, agrupados igual que el mockup: "Pendientes" son las que
-# todavía nadie miró, "Analizados" las que ya tienen veredicto.
+# todavía nadie miró, "Analizados" ya tienen veredicto de selección/descarte, y
+# "Finalistas" (testeo/winners/top_tier/bajas) son los que siguen en carrera
+# después de seleccionados.
 FILTROS_VALIDOS = (
     'sin_analizar', 'incompletas', 'todas',
-    'seleccionadas', 'en_reserva', 'testeo', 'descartadas', 'bajas',
+    'seleccionadas', 'en_reserva', 'descartadas',
+    'testeo', 'winners', 'top_tier', 'bajas',
 )
 
 VEREDICTO_DE_FILTRO = {
     'seleccionadas': 'seleccionada',
     'en_reserva': 'en_reserva',
     'testeo': 'testeo',
+    'winners': 'winner',
+    'top_tier': 'top_tier',
     'descartadas': 'descartado',
     'bajas': 'baja',
     'sin_analizar': 'sin_analizar',
     'incompletas': 'incompleta',
 }
+
+MODALIDADES_VALIDAS = ('hibrido', 'online')
 
 
 def _weights_map():
@@ -66,13 +73,29 @@ def listar_assistant_applications():
     if filtro not in FILTROS_VALIDOS:
         filtro = 'sin_analizar'
 
+    modalidad = request.args.get('modalidad')
+    if modalidad not in MODALIDADES_VALIDAS:
+        modalidad = None
+
     weights = _weights_map()
     todas = AssistantApplication.query.order_by(AssistantApplication.created_at.desc()).all()
 
     filtradas = [a for a in todas if _aplica_filtro(a, filtro)]
+
+    # Los contadores de modalidad se calculan sobre el filtro (Pendientes,
+    # Analizados, etc.) ANTES de aplicar el propio filtro de modalidad — así el
+    # toggle Híbridos/Online siempre suma el total de esa pestaña.
+    conteos_modalidad = {
+        'hibrido': sum(1 for a in filtradas if a.modalidad() == 'hibrido'),
+        'online': sum(1 for a in filtradas if a.modalidad() == 'online'),
+    }
+    if modalidad:
+        filtradas = [a for a in filtradas if a.modalidad() == modalidad]
+
     filtradas.sort(key=lambda a: assistant_clarity.score_de(a, weights), reverse=True)
 
     conteos = {f: len([a for a in todas if _aplica_filtro(a, f)]) for f in FILTROS_VALIDOS}
+    conteos.update(conteos_modalidad)
     completas = [a for a in todas if a.completo]
     conteos['completas'] = len(completas)
     conteos['con_video'] = sum(1 for a in todas if a.video_ok())

@@ -24,7 +24,7 @@ MAX_LARGO = 4000
 # haga fallar el INSERT entero en Postgres.
 CAMPOS = {
     # Bloque 1 · Identificación ('nombre' se trata aparte: es obligatorio)
-    'pais': 60, 'email': 160, 'whatsapp': 40, 'edad': 40,
+    'pais': 60, 'provincia': 80, 'email': 160, 'whatsapp': 40, 'edad': 40,
     # Bloque 2 · Requisitos
     'equipo': 200, 'disponibilidad': 200, 'horario': 200, 'empleo': 200,
     # Bloque 3 · Remuneración
