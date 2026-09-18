@@ -173,3 +173,23 @@ def closers_conocidos():
             nombres.add(nombre)
 
     return sorted(nombres)
+
+
+def identificadores_de_closer(nombre_canonico):
+    """Todos los valores crudos de `FinancialSale.email_vendedor` que resuelven a este nombre.
+
+    Existe para que quien necesite filtrar `FinancialSale` por closer (ej. el dashboard de
+    performance) lo haga con la MISMA resolucion que ya usa la lista de ventas, en vez de un
+    mapeo nombre -> correos escrito a mano aparte. Ese mapeo duplicado comparaba por substring
+    ('mario' adentro de 'Mario Closer') y devolvia los correos de otro closer historico con ese
+    mismo substring, asi que alguien con ventas reales bajo un correo no listado en el mapeo
+    aparecia con cero ventas en el dashboard aunque la lista de ventas SI se las mostrara
+    (caso real: 'Mario Closer', sep/2026 — sus 2 ventas usan `mario.buhler.br@gmail.com`, que no
+    estaba en la lista a mano)."""
+    from app.models.financial import FinancialSale
+    from app import db
+
+    if not nombre_canonico:
+        return []
+    valores = db.session.query(FinancialSale.email_vendedor).distinct().all()
+    return [valor for (valor,) in valores if valor and resolver_nombre_closer(valor) == nombre_canonico]

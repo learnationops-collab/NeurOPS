@@ -1911,35 +1911,19 @@ class CloserService:
         def div(n, d):
             return round((n / d) * 100, 1) if d and d > 0 else 0
 
-        # Retrieve closer identifiers to link with official sales
+        # Identificadores crudos de `email_vendedor` que corresponden a este closer, resueltos con
+        # la misma logica canonica que usa el resto del sistema (closer_name_service: usuarios +
+        # CloserAlias + diccionario historico) en vez de un mapeo nombre->correos escrito a mano
+        # aparte. Ese mapeo comparaba por substring ('mario' adentro de 'Mario Closer') y terminaba
+        # devolviendo el correo de OTRO Mario historico, asi que un closer con ventas reales bajo
+        # un correo no listado aparecia con 0 ventas en este dashboard aunque la lista de ventas
+        # SI se las mostrara (caso real: 'Mario Closer', sep/2026).
         closer_identifiers = []
         if closer_id:
             user = User.query.get(closer_id)
-            if user:
-                username_lower = (user.username or '').lower()
-                mapping = {
-                    'jean carlo': ['jeancarlo@thelearnation.com'],
-                    'marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
-                    'guillermo': ['guillermo@thelearnation.com'],
-                    'tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
-                    'mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
-                    'mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
-                    'iñaki': ['iñaki', 'inaki'],
-                    'rafael': ['rafael'],
-                    'mateo': ['mateo'],
-                    'belén': ['mbelenamerise@gmail.com', 'belen'],
-                    'valery': ['valeryjohana.cabrera@gmail.com', 'valery']
-                }
-                
-                matched = False
-                for key, val_list in mapping.items():
-                    if key in username_lower:
-                        closer_identifiers = val_list
-                        matched = True
-                        break
-                
-                if not matched and user.email:
-                    closer_identifiers = [user.email]
+            if user and user.username:
+                from app.services.closer_name_service import identificadores_de_closer
+                closer_identifiers = identificadores_de_closer(user.username)
 
         # Query official sales from FinancialSale to match Sales Log exactly
         from app.models import FinancialSale
@@ -1973,9 +1957,13 @@ class CloserService:
                 sales_filters.append(FinancialSale.date < (end_dt + timedelta(days=1)))
             except ValueError:
                 pass
-        if closer_identifiers:
+        if closer_id:
+            # `.in_([])` sigue siendo un filtro valido (no matchea nada): a diferencia del `if
+            # closer_identifiers:` anterior, esto no se salta el filtro cuando el closer pedido
+            # no tiene ningun `email_vendedor` que le resuelva todavia. Sin esto, un closer sin
+            # ventas resueltas mostraba el total de TODOS los closers combinados en vez de $0.
             sales_filters.append(FinancialSale.email_vendedor.in_(closer_identifiers))
-            
+
         sales_rows = sales_query.filter(*sales_filters).group_by(FinancialSale.tipo_pago).all()
         
         # Clasificación del tipo de pago: se delega en SheetsService.parse_tipo_pago, el mismo
@@ -2429,28 +2417,15 @@ class CloserService:
 
     @staticmethod
     def _resolve_sale_identifiers(user):
-        """Mismo mapeo username->emails usado en get_comprehensive_stats, para cruzar
-        FinancialSale.email_vendedor con el closer autenticado (username o email de fallback)."""
-        if not user:
+        """Identificadores de `FinancialSale.email_vendedor` para el closer autenticado, resueltos
+        con la misma logica canonica que usa la lista de ventas (ver closer_name_service). Antes
+        esto tenia su propio mapeo username->emails a mano, copiado de get_comprehensive_stats
+        (y con el mismo bug: 'mario' matcheaba por substring y devolvia el correo de OTRO Mario
+        historico en vez del real)."""
+        if not user or not user.username:
             return []
-        username_lower = (user.username or '').lower()
-        mapping = {
-            'jean carlo': ['jeancarlo@thelearnation.com'],
-            'marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
-            'guillermo': ['guillermo@thelearnation.com'],
-            'tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
-            'mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
-            'mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
-            'iñaki': ['iñaki', 'inaki'],
-            'rafael': ['rafael'],
-            'mateo': ['mateo'],
-            'belén': ['mbelenamerise@gmail.com', 'belen'],
-            'valery': ['valeryjohana.cabrera@gmail.com', 'valery']
-        }
-        for key, val_list in mapping.items():
-            if key in username_lower:
-                return val_list
-        return [user.email] if user.email else []
+        from app.services.closer_name_service import identificadores_de_closer
+        return identificadores_de_closer(user.username)
 
     @staticmethod
     def _day_bounds_utc(user, day_local):
@@ -2880,8 +2855,10 @@ class CloserService:
             FinancialSale.date >= start_utc, FinancialSale.date <= end_utc,
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         )
-        if identifiers:
-            sales_q = sales_q.filter(FinancialSale.email_vendedor.in_(identifiers))
+        # Siempre se aplica el filtro (incluso vacio) cuando el reporte es de un closer puntual:
+        # saltearlo sin identificadores mostraba las ventas de TODOS los closers combinadas en el
+        # reporte de uno solo, en vez de las $0 reales de ese closer.
+        sales_q = sales_q.filter(FinancialSale.email_vendedor.in_(identifiers))
         sales = sales_q.all()
 
         sale_buckets = {
