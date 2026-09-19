@@ -1,9 +1,36 @@
-from flask import Blueprint, jsonify, Response, current_app
-from app import db
-import sqlalchemy as sa
 import datetime
+import hmac
+import os
+
+import sqlalchemy as sa
+from flask import Blueprint, Response, current_app, jsonify
+
+from app import db
+from app.decorators import role_required
 
 bp = Blueprint('backup', __name__)
+
+# Largo minimo de la clave configurada: una variable con "1234" no debe abrir la puerta.
+LARGO_MINIMO_DE_CLAVE = 20
+
+
+def _rechazar_si_la_clave_no_vale(secret_key):
+    """None si la clave es correcta; si no, la respuesta que hay que devolver.
+
+    La clave sale de BACKUP_SECRET_KEY y NUNCA del codigo: estuvo escrita en el repositorio y en el
+    bundle publico de la web. Sin la variable (o con una demasiado corta) la funcion queda APAGADA
+    (503), jamas abierta. Se compara en tiempo constante y sobre bytes: con str, un caracter no ASCII
+    lanzaria TypeError y produciria un 500.
+    """
+    esperada = os.environ.get('BACKUP_SECRET_KEY', '')
+    if len(esperada) < LARGO_MINIMO_DE_CLAVE:
+        return jsonify({
+            "message": f"Backup deshabilitado: falta BACKUP_SECRET_KEY (minimo {LARGO_MINIMO_DE_CLAVE} caracteres)."
+        }), 503
+    if not hmac.compare_digest(secret_key.encode('utf-8'), esperada.encode('utf-8')):
+        return jsonify({"message": "Invalid secret key. Access Denied."}), 403
+    return None
+
 
 def format_value(value):
     if value is None:
@@ -28,14 +55,14 @@ def format_value(value):
     return str(value)
 
 @bp.route('/secret-backup-preview/<string:secret_key>', methods=['GET'])
+@role_required('admin')
 def preview_db(secret_key):
     """
     Returns statistics about the database tables.
     """
-    EXPECTED_KEY = 'neurops_secret_backup_2024'
-    
-    if secret_key != EXPECTED_KEY:
-         return jsonify({"message": "Invalid secret key. Access Denied."}), 403
+    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
+    if rechazo:
+        return rechazo
 
     try:
         stats = []
@@ -53,14 +80,14 @@ def preview_db(secret_key):
         return jsonify({"message": f"Preview failed: {str(e)}"}), 500
 
 @bp.route('/secret-backup-export/<string:secret_key>', methods=['GET'])
+@role_required('admin')
 def export_db(secret_key):
     """
     Exports the entire database as a SQL dump (INSERT statements).
     """
-    EXPECTED_KEY = 'neurops_secret_backup_2024'
-    
-    if secret_key != EXPECTED_KEY:
-         return jsonify({"message": "Invalid secret key. Access Denied."}), 403
+    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
+    if rechazo:
+        return rechazo
 
     try:
         sql_lines = []
@@ -103,17 +130,19 @@ def export_db(secret_key):
             headers={'Content-Disposition': 'attachment;filename=neurops_backup.sql'}
         )
     except Exception as e:
-        print(f"Backup Error: {e}")
+        current_app.logger.error(f"Backup Error: {e}")
+        return jsonify({"message": "Backup failed"}), 500
+
 @bp.route('/secret-restore-import/<string:secret_key>', methods=['POST'])
+@role_required('admin')
 def restore_db(secret_key):
     """
     Restores the database from an uploaded SQL file.
     WARNING: THIS WILL WIPE ALL EXISTING DATA.
     """
-    EXPECTED_KEY = 'neurops_secret_backup_2024'
-    
-    if secret_key != EXPECTED_KEY:
-         return jsonify({"message": "Invalid secret key. Access Denied."}), 403
+    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
+    if rechazo:
+        return rechazo
 
     from flask import request
     
