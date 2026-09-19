@@ -63,6 +63,11 @@ _CANCELADA = {'cancelado', 'cancelada'}
 _REAGENDADA = {'reagendado', 'reagendada'}
 _PENDIENTE = {'', 'pendiente'}
 
+# Resultados de llamada que las cargas viejas de agendas guardaron en `result` en vez de en
+# `closer_result` (ver derivar_estado). Solo Show up / No show: `result='2TH Call'` lo escribe el
+# flujo de segunda llamada en la agenda NUEVA, que sigue pendiente — no es un resultado.
+_RESULTADO_EN_RESULT = _SHOW_UP | _NO_SHOW
+
 PERIODOS = ('hoy', 'ayer', '7d', '30d', 'mes', 'mes_pasado', '90', 'custom', 'proximas', 'todo')
 
 # Tamaño de los lotes para las cláusulas IN sobre FinancialSale (SQLite viejo corta en 999
@@ -126,9 +131,15 @@ def derivar_estado(appt, now_utc):
     cr = (appt.closer_result or '').strip().lower()
     res = (appt.result or '').strip().lower()
 
-    if cr in _SHOW_UP:
+    # Las cargas viejas (mayo-junio 2026) guardaron el resultado de la llamada en `result`
+    # ('Show Up', 'No Show', 'Cerrada'...) y dejaron `closer_result` vacío: sin esto una llamada
+    # ya reportada figuraba como "Sin reportar" (~80 agendas en producción). Solo se mira `result`
+    # si el closer no puso ningún resultado — lo que él escribió manda siempre.
+    resultado = res if (cr in _PENDIENTE and res in _RESULTADO_EN_RESULT) else cr
+
+    if resultado in _SHOW_UP:
         return 'show_up'
-    if cr in _NO_SHOW:
+    if resultado in _NO_SHOW:
         return 'no_show'
     if cr in _SEGUNDA:
         return 'segunda_llamada'
