@@ -79,38 +79,38 @@ export const nivelCorto = (valor) => {
 const ESCALAS = {
     experiencia: [
         { full: 'No tengo experiencia en este tipo de puesto', corto: 'Sin experiencia' },
-        { full: 'Menos de 1 año', corto: '< 1 año' },
-        { full: 'Entre 1 y 2 años', corto: '1-2 años' },
-        { full: 'Entre 3 y 5 años', corto: '3-5 años' },
-        { full: 'Más de 5 años', corto: '+5 años' },
+        { full: 'Menos de 1 año', corto: 'Menos de 1 año' },
+        { full: 'Entre 1 y 2 años', corto: '1 a 2 años' },
+        { full: 'Entre 3 y 5 años', corto: '3 a 5 años' },
+        { full: 'Más de 5 años', corto: 'Más de 5 años' },
     ],
     digital: [
         { full: 'Nunca', corto: 'Nunca' },
-        { full: 'Sí, menos de 1 año', corto: '< 1 año' },
-        { full: 'Sí, entre 1 y 3 años', corto: '1-3 años' },
-        { full: 'Sí, más de 3 años', corto: '+3 años' },
+        { full: 'Sí, menos de 1 año', corto: 'Menos de 1 año' },
+        { full: 'Sí, entre 1 y 3 años', corto: '1 a 3 años' },
+        { full: 'Sí, más de 3 años', corto: 'Más de 3 años' },
     ],
     remoto: [
         { full: 'Nunca trabajé remoto', corto: 'Nunca' },
-        { full: 'Menos de 1 año', corto: '< 1 año' },
-        { full: 'Entre 1 y 3 años', corto: '1-3 años' },
-        { full: 'Más de 3 años', corto: '+3 años' },
+        { full: 'Menos de 1 año', corto: 'Menos de 1 año' },
+        { full: 'Entre 1 y 3 años', corto: '1 a 3 años' },
+        { full: 'Más de 3 años', corto: 'Más de 3 años' },
     ],
     dinero: [
         { full: 'No, nunca', corto: 'Nunca' },
         { full: 'Cargaba datos que otra persona revisaba', corto: 'Cargaba datos' },
-        { full: 'Preparaba pagos o liquidación de comisiones', corto: 'Preparaba pagos' },
+        { full: 'Preparaba pagos o liquidación de comisiones', corto: 'Pagos y comisiones' },
         { full: 'Era responsable del control financiero', corto: 'Control financiero' },
     ],
     pm: [
         { full: 'No', corto: 'No' },
         { full: 'Informalmente, sin que fuera mi rol', corto: 'Informal' },
-        { full: 'Sí, con 2 a 5 personas', corto: '2-5 personas' },
-        { full: 'Sí, con más de 5 personas', corto: '+5 personas' },
+        { full: 'Sí, con 2 a 5 personas', corto: '2 a 5 personas' },
+        { full: 'Sí, con más de 5 personas', corto: 'Más de 5 personas' },
     ],
     educacion: [
         { full: 'Secundario completo', corto: 'Secundario' },
-        { full: 'Terciario o técnico', corto: 'Terciario/técnico' },
+        { full: 'Terciario o técnico', corto: 'Terciario o técnico' },
         { full: 'Universitario en curso', corto: 'Univ. en curso' },
         { full: 'Universitario completo', corto: 'Universitario' },
         { full: 'Posgrado', corto: 'Posgrado' },
@@ -119,7 +119,7 @@ const ESCALAS = {
         { full: 'Nunca entré', corto: 'Nunca entró' },
         { full: 'Entré pero no publiqué anuncios', corto: 'Sin publicar' },
         { full: 'Publiqué anuncios siguiendo instrucciones', corto: 'Con instrucciones' },
-        { full: 'Monto y publico campañas sola/o', corto: 'Autónomo' },
+        { full: 'Monto y publico campañas sola/o', corto: 'Monta campañas' },
         { full: 'Gestioné cuentas publicitarias de forma habitual', corto: 'Gestión habitual' },
     ],
     notion: [
@@ -144,17 +144,31 @@ const ESCALAS = {
         { full: 'Armé automatizaciones simples', corto: 'Simples' },
         { full: 'Armo automatizaciones con varios pasos y condiciones', corto: 'Multi-paso' },
     ],
+    // "¿Cómo manejás tus pendientes?": el formulario ofrece de más a menos
+    // ordenado; acá van ascendentes, como el resto de las escalas.
+    pendientes: [
+        { full: 'Voy resolviendo lo que va apareciendo', corto: 'Sin sistema' },
+        { full: 'Lo anoto cuando me acuerdo', corto: 'Lo anota a veces' },
+        { full: 'Uso una lista de tareas simple', corto: 'Lista simple' },
+        { full: 'Tengo un sistema propio (tablero o lista priorizada) y lo actualizo todos los días', corto: 'Sistema propio' },
+    ],
 };
 
-/** {n, label} de un valor dentro de la escala propia de `campo` (n=0 es el
- * piso de esa escala). Con valor vacío o sin matchear, n=0. */
+/** {n, max, ok, label} de un valor dentro de la escala propia de `campo` (n=0
+ * es el piso de esa escala, `max` su techo). `ok` es false cuando el valor no
+ * matchea ninguna opción (vacío o redactado distinto): n=0 ahí no significa
+ * "nivel más bajo", significa "no se pudo medir". */
 export const escalaDe = (campo, valor) => {
     const escala = ESCALAS[campo];
-    if (!escala) return { n: 0, label: valor || '—' };
+    if (!escala) return { n: 0, max: 0, ok: false, label: valor || '—' };
     const idx = escala.findIndex((o) => o.full === valor);
-    if (idx < 0) return { n: 0, label: valor || 'Sin respuesta' };
-    return { n: idx, label: escala[idx].corto };
+    if (idx < 0) return { n: 0, max: escala.length - 1, ok: false, label: valor || 'Sin respuesta' };
+    return { n: idx, max: escala.length - 1, ok: true, label: escala[idx].corto };
 };
+
+/** Puntaje 1-5 (las estrellitas de una tarjeta) de un nivel `n` dentro de una
+ * escala 0..max. Escalas de distinto largo caen todas en el mismo 1-5. */
+export const estrellas = (n, max) => 1 + Math.round((n / max) * 4);
 
 // --- Techo de uso de IA: 8 opciones de "casi no la usa" a "construyó algo
 // funcional", comprimidas a una escala de 0-4 para los 4 puntitos. ---
@@ -172,33 +186,36 @@ const TECHO_IA = [
 
 export const techoIA = (valor) => {
     const idx = TECHO_IA.findIndex((o) => o.full === valor);
-    if (idx < 0) return { n: 0, label: valor ? valor.slice(0, 28) : 'Sin respuesta' };
-    return { n: Math.round((idx / (TECHO_IA.length - 1)) * 4), label: TECHO_IA[idx].corto };
+    if (idx < 0) return { n: 0, max: 4, ok: false, label: valor ? valor.slice(0, 28) : 'Sin respuesta' };
+    return { n: Math.round((idx / (TECHO_IA.length - 1)) * 4), max: 4, ok: true, label: TECHO_IA[idx].corto };
 };
 
 // --- Encabezados cortos para las 41 preguntas (rieles y grilla de respuestas) ---
 
 export const PREGUNTA_CORTA = {
     pais: 'País', nombre: 'Nombre', email: 'Email', whatsapp: 'WhatsApp', edad: 'Edad',
-    equipo: 'Equipo', disponibilidad: 'Disponib.', horario: 'Horario', empleo: 'Otro empleo',
-    confirma: 'Entendió jornada', remuneracion: 'Pide/mes',
-    experiencia: 'Experiencia', digital: 'Negocio digital', remoto: 'Remoto', dinero: 'Manejó dinero',
-    pm: 'Project mgmt', educacion: 'Educación', area: 'Área',
+    equipo: 'Equipo', disponibilidad: 'Jornada 4 → 8', horario: 'Horario', empleo: 'Otro empleo',
+    confirma: 'Confirmación', remuneracion: 'Pide/mes',
+    experiencia: 'Asistente / Ops', digital: 'Negocio digital', remoto: 'Remoto', dinero: 'Dinero',
+    pm: 'Coordinación', educacion: 'Estudios', area: 'Área',
     idioma2: 'Idioma 2', ingles: 'Inglés',
     sheets: 'Sheets', ia_nivel: 'Nivel IA', ia_avanzado: 'Techo IA',
     ia_construido: 'Qué construyó', ia_uso: 'Uso de IA',
     meta: 'Meta Ads', meta_presupuesto: 'Presupuesto Ads', notion: 'Notion',
-    wa_tools: 'WhatsApp masivo', automatizaciones: 'Automatizaciones', automatizacion_ejemplo: 'Ejemplo automat.',
+    wa_tools: 'WhatsApp masivo', automatizaciones: 'Automatizaciones', automatizacion_ejemplo: 'Automatización',
     diseno: 'Diseño', diseno_link: 'Link diseño',
+    aporte: 'Aporte diferencial',
     pendientes: 'Pendientes', instrucciones: 'Instrucciones',
-    retraso: 'Caso: atraso', monitor: 'Caso: monitor', martes: 'Caso: priorizar',
+    retraso: 'Retraso', monitor: 'Caso: monitor', martes: 'Caso: priorizar',
     video: 'Video', video_verificado: 'Video verificado', cv: 'CV',
 };
 
-// Preguntas de texto largo (tipo 'parrafo'): ocupan la fila completa y
-// arrancan colapsadas en la grilla de las 41 respuestas.
-export const CAMPOS_LARGOS = new Set([
-    'ia_construido', 'ia_uso', 'meta_presupuesto', 'instrucciones', 'retraso', 'martes',
+// Preguntas de respuesta escrita (texto libre, sea un párrafo o una línea): se
+// agrupan aparte de las de opción y arrancan colapsadas, porque hay que
+// leerlas, no compararlas de un vistazo.
+export const CAMPOS_ESCRITOS = new Set([
+    'ia_construido', 'ia_uso', 'meta_presupuesto', 'automatizacion_ejemplo', 'diseno_link',
+    'aporte', 'instrucciones', 'retraso', 'martes',
 ]);
 
 // Versión corta de las respuestas de los 4 excluyentes + la verificación de
@@ -207,26 +224,26 @@ export const VAL_CORTO = {
     'Sí, las tres cosas': 'Las tres cosas',
     'Tengo computadora y celular, pero mi internet falla seguido': 'Internet inestable',
     'Me falta alguna de las tres': 'Falta algo',
-    'Sí, las 4 horas ahora y las 8 desde el tercer mes': 'Puede escalar a 8h',
-    'Solo podría las 4 horas, no podría escalar a 8': 'Solo 4h, no escala',
+    'Sí, las 4 horas ahora y las 8 desde el tercer mes': '4 h hoy · 8 h al 3.er mes',
+    'Solo podría las 4 horas, no podría escalar a 8': 'Solo 4 h, no escala',
     'No tengo esa disponibilidad': 'Sin disponibilidad',
-    'Sí, me organizo sin problema': 'Se organiza sola/o',
+    'Sí, me organizo sin problema': 'Se organiza sin problema',
     'No, necesito un horario fijo y cerrado': 'Necesita horario fijo',
-    'No': 'No',
+    'No': 'No tiene otro',
     'Sí, medio tiempo o freelance, y podría acomodarlo': 'Medio tiempo, acomodable',
     'Sí, tiempo completo, y lo mantendría': 'Full-time, lo mantiene',
-    'Arranco con 4 horas diarias y desde el tercer mes paso a 8 horas': 'Entendió: 4h → 8h',
-    'Arranco con 8 horas diarias desde el primer día': 'Creyó que arranca en 8h',
+    'Arranco con 4 horas diarias y desde el tercer mes paso a 8 horas': 'Entendió: 4 h → 8 h',
+    'Arranco con 8 horas diarias desde el primer día': 'Creyó que arranca en 8 h',
     'Son 4 horas diarias siempre, no cambia': 'Creyó que no escala',
-    'Son 8 horas los primeros dos meses y después bajan a 4': 'Creyó que baja a 4h',
+    'Son 8 horas los primeros dos meses y después bajan a 4': 'Creyó que baja a 4 h',
 };
 
 // Versión corta de las 6 opciones de área de formación.
 export const AREA_CORTO = {
-    'Administración, contabilidad o finanzas': 'Admin/Finanzas',
-    'Marketing, comunicación o publicidad': 'Marketing/Comunicación',
-    'Psicología, recursos humanos o educación': 'Psicología/RRHH',
-    'Ingeniería, sistemas o datos': 'Ingeniería/Datos',
+    'Administración, contabilidad o finanzas': 'Administración y finanzas',
+    'Marketing, comunicación o publicidad': 'Marketing y comunicación',
+    'Psicología, recursos humanos o educación': 'Psicología y RR. HH.',
+    'Ingeniería, sistemas o datos': 'Ingeniería y datos',
     'Otra área': 'Otra área',
     'No tengo formación terciaria ni universitaria': 'Sin formación terciaria',
 };

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../../../../services/api';
 import {
-    PREGUNTA_CORTA, CAMPOS_LARGOS, VAL_CORTO, AREA_CORTO,
+    PREGUNTA_CORTA, CAMPOS_ESCRITOS, VAL_CORTO, AREA_CORTO,
     escalaDe, nivelDe, techoIA, nivelCorto, BANDERA, soloDigitos, href, MODALIDAD,
 } from '../lib/escalas';
 import { Dots, Chip } from './HiringInbox';
@@ -393,7 +393,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                 <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                                     {bloque.campos.map((campo) => {
                                         const valor = d[campo];
-                                        const esLargo = CAMPOS_LARGOS.has(campo);
+                                        const esLargo = CAMPOS_ESCRITOS.has(campo);
                                         const abierta = todasAbiertas || abiertas.has(campo);
                                         const texto = valor == null || valor === '' ? null : String(valor);
                                         const preview = texto && texto.length > 110 && !abierta ? `${texto.slice(0, 110)}…` : texto;
