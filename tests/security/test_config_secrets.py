@@ -33,7 +33,20 @@ def importar_config(**entorno):
 
 # --- SECRET_KEY -------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('entorno', [{'FLASK_ENV': 'production'}, {'ENV': 'production'}])
+# Produccion = FLASK_ENV/ENV en 'production' o CUALQUIER despliegue de Railway (define siempre
+# RAILWAY_ENVIRONMENT, con el nombre del entorno: production, staging, pr-123...). El guard solo
+# miraba las dos primeras y, si Railway perdiera SECRET_KEY, la app arrancaria con la clave de
+# desarrollo (que esta en el repositorio) y cualquiera podria firmar un JWT de admin.
+ENTORNOS_DE_PRODUCCION = [
+    {'FLASK_ENV': 'production'},
+    {'ENV': 'production'},
+    {'RAILWAY_ENVIRONMENT': 'production'},
+    {'RAILWAY_ENVIRONMENT': 'staging'},
+    {'RAILWAY_ENVIRONMENT': ''},  # definida pero vacia: cuenta igual que para las cookies seguras
+]
+
+
+@pytest.mark.parametrize('entorno', ENTORNOS_DE_PRODUCCION)
 def test_en_produccion_sin_secret_key_no_arranca(entorno):
     codigo, _, error = importar_config(**entorno)
 
@@ -41,11 +54,20 @@ def test_en_produccion_sin_secret_key_no_arranca(entorno):
     assert 'SECRET_KEY' in error
 
 
-def test_en_produccion_con_secret_key_la_usa_tal_cual():
-    codigo, config, _ = importar_config(FLASK_ENV='production', SECRET_KEY='clave-real-de-produccion-1234567890')
+@pytest.mark.parametrize('entorno', ENTORNOS_DE_PRODUCCION)
+def test_en_produccion_con_secret_key_la_usa_tal_cual(entorno):
+    codigo, config, _ = importar_config(SECRET_KEY='clave-real-de-produccion-1234567890', **entorno)
 
     assert codigo == 0
     assert config['secret'] == 'clave-real-de-produccion-1234567890'
+
+
+def test_una_secret_key_vacia_en_produccion_tampoco_arranca():
+    # Railway permite definir una variable sin valor: cuenta como no configurada.
+    codigo, _, error = importar_config(FLASK_ENV='production', SECRET_KEY='')
+
+    assert codigo != 0
+    assert 'SECRET_KEY' in error
 
 
 def test_fuera_de_produccion_sin_secret_key_usa_una_clave_de_desarrollo():
@@ -55,17 +77,6 @@ def test_fuera_de_produccion_sin_secret_key_usa_una_clave_de_desarrollo():
     assert config['secret']
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "RIESGO: el guard de SECRET_KEY solo mira FLASK_ENV/ENV == 'production'; RAILWAY_ENVIRONMENT "
-    "(que Railway define siempre y que si usa el flag de cookies seguras) no cuenta. Si un despliegue "
-    "en Railway perdiera SECRET_KEY, arrancaria con la clave de desarrollo, que esta en el repositorio, "
-    "y cualquiera podria firmar un JWT de admin. La documentacion dice que es obligatoria en produccion."))
-def test_en_railway_sin_secret_key_no_arranca():
-    codigo, _, _ = importar_config(RAILWAY_ENVIRONMENT='production')
-
-    assert codigo != 0
-
-
 # --- Cookies seguras --------------------------------------------------------------------------
 
 @pytest.mark.parametrize('entorno,seguras', [
@@ -73,7 +84,7 @@ def test_en_railway_sin_secret_key_no_arranca():
     ({'FLASK_ENV': 'development'}, False),
     ({'FLASK_ENV': 'production', 'SECRET_KEY': 'x' * 32}, True),
     ({'ENV': 'production', 'SECRET_KEY': 'x' * 32}, True),
-    ({'RAILWAY_ENVIRONMENT': 'production'}, True),
+    ({'RAILWAY_ENVIRONMENT': 'production', 'SECRET_KEY': 'x' * 32}, True),
 ])
 def test_las_cookies_son_seguras_solo_en_produccion_o_railway(entorno, seguras):
     codigo, config, _ = importar_config(**entorno)

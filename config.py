@@ -4,9 +4,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    # Produccion: FLASK_ENV/ENV en 'production' o cualquier despliegue de Railway (que siempre define
+    # RAILWAY_ENVIRONMENT). Antes el guard de SECRET_KEY no miraba Railway y las cookies seguras si.
+    _is_prod = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENV') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT') is not None
+
     SECRET_KEY = os.environ.get('SECRET_KEY')
     if not SECRET_KEY:
-        if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENV') == 'production':
+        if _is_prod:
             raise RuntimeError("La variable de entorno SECRET_KEY es obligatoria en produccion.")
         SECRET_KEY = 'neurops-secret-key-development-fallback-2026'
     
@@ -33,7 +37,6 @@ class Config:
     
     # Production Security
     # Habilitar cookies seguras solo si se ejecuta en entorno de produccion.
-    _is_prod = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENV') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT') is not None
     SESSION_COOKIE_SECURE = _is_prod
     REMEMBER_COOKIE_SECURE = _is_prod
     SESSION_COOKIE_SAMESITE = 'Lax'
