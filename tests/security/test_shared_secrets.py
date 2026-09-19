@@ -6,6 +6,8 @@ imposible de rotar sin desplegar. Ahora fallan CERRADAS: sin la variable, o con 
 corto para ser un secreto, contestan 503 y nada abre la puerta. La comparacion es en tiempo
 constante sobre bytes.
 """
+import logging
+
 import pytest
 from flask import Flask, jsonify
 
@@ -237,3 +239,115 @@ def test_con_un_secreto_equivocado_los_crons_reales_no_hacen_nada(client, cron_r
     assert respuesta.status_code == 401
     assert respuesta.get_json() == NO_AUTORIZADO
     assert ejecuciones == []
+
+
+# --- Modo de migracion (INTEGRATIONS_AUTH_MODE=log_only) ---------------------------------------
+# Valvula opt-in para desplegar la proteccion sin cortar flujos que todavia no mandan su secreto: lo que
+# se habria rechazado PASA pero queda registrado para localizar a quien falta configurar. Sin la variable,
+# todo sigue fallando cerrado.
+
+@pytest.fixture()
+def migracion(monkeypatch):
+    monkeypatch.setenv('INTEGRATIONS_AUTH_MODE', 'log_only')
+
+
+def _avisos(caplog):
+    return [r.getMessage() for r in caplog.records if 'MIGRACION DE SECRETOS' in r.getMessage()]
+
+
+def test_en_migracion_una_ruta_sin_configurar_pasa_y_avisa(ruta_de_cron, migracion, caplog):
+    cliente, ejecuciones = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = cliente.get('/cron')
+
+    assert respuesta.status_code == 200 and len(ejecuciones) == 1
+    avisos = _avisos(caplog)
+    assert len(avisos) == 1
+    assert 'GET /cron' in avisos[0] and 'CRON_SECRET sin configurar' in avisos[0]
+
+
+def test_en_migracion_una_llamada_sin_secreto_pasa_y_avisa(ruta_de_cron, migracion, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, ejecuciones = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = cliente.get('/cron')
+
+    assert respuesta.status_code == 200 and len(ejecuciones) == 1
+    assert 'no presento el secreto' in _avisos(caplog)[0]
+
+
+def test_en_migracion_un_secreto_equivocado_pasa_y_avisa(ruta_de_cron, migracion, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, ejecuciones = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = cliente.get('/cron', headers=_bearer('mal'))
+
+    assert respuesta.status_code == 200 and len(ejecuciones) == 1
+    assert 'secreto incorrecto' in _avisos(caplog)[0]
+
+
+def test_en_migracion_con_el_secreto_correcto_no_hay_aviso(ruta_de_cron, migracion, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, ejecuciones = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = cliente.get('/cron', headers=_bearer(SECRETO))
+
+    assert respuesta.status_code == 200 and len(ejecuciones) == 1
+    assert _avisos(caplog) == []
+
+
+def test_el_aviso_registra_ruta_origen_y_agente_pero_nunca_secretos_ni_la_cadena_de_consulta(
+        ruta_de_cron, migracion, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, _ = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        cliente.get('/cron?token=presentado-en-la-url-1234&otro=dato', headers={
+            'X-Forwarded-For': '203.0.113.7, 10.0.0.1', 'User-Agent': 'n8n-workflow/1.0'})
+
+    aviso = _avisos(caplog)[0]
+    assert 'GET /cron' in aviso and '203.0.113.7' in aviso and '10.0.0.1' not in aviso
+    assert 'n8n-workflow/1.0' in aviso
+    for secreto in (SECRETO, 'presentado-en-la-url-1234', 'otro=dato'):
+        assert secreto not in aviso
+
+
+@pytest.mark.parametrize('valor', ['log_only', 'LOG_ONLY', ' Log_Only '])
+def test_el_modo_de_migracion_se_activa_con_log_only(monkeypatch, valor):
+    monkeypatch.setenv('INTEGRATIONS_AUTH_MODE', valor)
+
+    assert decorators.en_modo_de_migracion() is True
+
+
+@pytest.mark.parametrize('valor', ['', 'true', '1', 'off', 'enforce', 'log-only', 'log_only_x'])
+def test_cualquier_otro_valor_no_activa_el_modo_de_migracion(ruta_de_cron, monkeypatch, valor):
+    monkeypatch.setenv('INTEGRATIONS_AUTH_MODE', valor)
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, ejecuciones = ruta_de_cron
+
+    assert decorators.en_modo_de_migracion() is False
+    assert cliente.get('/cron').status_code == 401
+    assert ejecuciones == []
+
+
+def test_sin_la_variable_el_modo_de_migracion_esta_apagado(ruta_de_cron):
+    cliente, ejecuciones = ruta_de_cron
+
+    assert decorators.en_modo_de_migracion() is False
+    assert cliente.get('/cron').status_code == 503
+    assert ejecuciones == []
+
+
+def test_en_migracion_los_crons_reales_pasan_sin_secreto_y_avisan(client, cron_real, migracion, caplog):
+    url, ejecuciones = cron_real
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = client.get(url)
+
+    assert respuesta.status_code == 200
+    assert len(ejecuciones) == 1
+    assert len(_avisos(caplog)) == 1

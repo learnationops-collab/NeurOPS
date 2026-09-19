@@ -4,6 +4,8 @@ No hay usuario detras: la unica proteccion es el header X-ManyChat-Token contra 
 MANYCHAT_WEBHOOK_TOKEN. El token estaba escrito en el codigo (conocido por cualquiera con acceso al
 repositorio, imposible de rotar sin desplegar) y ahora, sin la variable, la ruta queda CERRADA (503).
 """
+import logging
+
 import pytest
 
 from app.models import Lead, Pipeline, PipelineStage
@@ -156,3 +158,30 @@ def test_al_actualizar_las_etiquetas_se_reemplazan_y_se_agrega_la_de_la_palabra_
     enviar(client, {**LEAD, 'keyword': 'K'})  # repetir la palabra clave no duplica la etiqueta
 
     assert Lead.query.one().tags == ['b', 'kw:K']
+
+
+# --- Modo de migracion --------------------------------------------------------------------------
+# INTEGRATIONS_AUTH_MODE=log_only deja pasar (y registra) lo que se habria rechazado: sirve para desplegar
+# sin cortar la entrada de leads mientras ManyChat todavia no manda el header. Opt-in; sin la variable, 503.
+
+@pytest.mark.parametrize('enviado', [None, 'mal'])
+def test_en_modo_de_migracion_el_webhook_pasa_sin_token_valido_y_avisa(client, monkeypatch, caplog, enviado):
+    monkeypatch.setenv('INTEGRATIONS_AUTH_MODE', 'log_only')
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = enviar(client, token=enviado)
+
+    assert respuesta.status_code == 201
+    assert Lead.query.count() == 1
+    avisos = [r.getMessage() for r in caplog.records if 'MIGRACION DE SECRETOS' in r.getMessage()]
+    assert len(avisos) == 1 and 'POST /api/webhooks/manychat' in avisos[0]
+
+
+def test_con_el_token_correcto_el_modo_de_migracion_no_avisa(client, token_configurado, monkeypatch, caplog):
+    monkeypatch.setenv('INTEGRATIONS_AUTH_MODE', 'log_only')
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = enviar(client)
+
+    assert respuesta.status_code == 201
+    assert not [r for r in caplog.records if 'MIGRACION DE SECRETOS' in r.getMessage()]

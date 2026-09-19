@@ -10,7 +10,7 @@ import hmac
 import os
 from functools import wraps
 
-from flask import flash, jsonify, redirect, request
+from flask import current_app, flash, jsonify, redirect, request
 from flask_login import current_user
 
 from app.models.user import ROLE_DIRECTOR_MARKETING, ROLE_HIRING, ROLE_OPERATOR
@@ -111,6 +111,45 @@ require_dev_platform_token = _requiere_token_bearer('DEV_PLATFORM_INBOUND_API_TO
 # Un secreto de menos caracteres que esto no es un secreto: se rechaza al configurarlo.
 LARGO_MINIMO_DE_SECRETO = 20
 
+# Modo de migracion (INTEGRATIONS_AUTH_MODE=log_only): valvula para desplegar la proteccion de las
+# integraciones sin cortar flujos que todavia no mandan su secreto (n8n, Apps Script, ManyChat, crons). En
+# ese modo lo que se habria rechazado PASA, pero queda registrado con la ruta y el origen para localizar a
+# quien falta configurar; quitar la variable lo vuelve obligatorio. Es opt-in: sin ella todo falla cerrado.
+MODO_DE_MIGRACION = 'log_only'
+
+
+def en_modo_de_migracion():
+    return os.environ.get('INTEGRATIONS_AUTH_MODE', '').strip().lower() == MODO_DE_MIGRACION
+
+
+def avisar_llamada_sin_credencial(motivo):
+    """Registra una llamada que el modo de migracion dejo pasar. Nunca escribe secretos ni la cadena de
+    consulta (request.path no la incluye): solo metodo, ruta, motivo, origen y agente."""
+    origen = (request.headers.get('X-Forwarded-For') or request.remote_addr or '?').split(',')[0].strip()
+    current_app.logger.warning(
+        '[MIGRACION DE SECRETOS] %s %s pasa SIN credencial valida (%s) desde %r, agente %r. Configura el secreto '
+        'en quien llama y quita INTEGRATIONS_AUTH_MODE para que sea obligatorio.',
+        request.method, request.path, motivo, origen, (request.headers.get('User-Agent') or '?')[:80])
+
+
+def _comprobar_secreto(variable_de_entorno, leer_secreto):
+    """(None, None) si el secreto es correcto; si no, (respuesta de error, motivo para el registro)."""
+    esperado = os.environ.get(variable_de_entorno, '')
+    if len(esperado) < LARGO_MINIMO_DE_SECRETO:
+        respuesta = jsonify({
+            "status": "error",
+            "message": f"Integración no configurada: define {variable_de_entorno} "
+                       f"(mínimo {LARGO_MINIMO_DE_SECRETO} caracteres)",
+        }), 503
+        return respuesta, f'{variable_de_entorno} sin configurar'
+
+    provisto = leer_secreto()
+    if not provisto:
+        return (jsonify({"status": "error", "message": "Unauthorized"}), 401), 'no presento el secreto'
+    if not _iguales_en_tiempo_constante(provisto, esperado):
+        return (jsonify({"status": "error", "message": "Unauthorized"}), 401), 'secreto incorrecto'
+    return None, None
+
 
 def _requiere_secreto_compartido(variable_de_entorno, leer_secreto):
     """Ruta de una integracion que llama sin usuario (un cron, un webhook) e identifica con un secreto.
@@ -118,22 +157,16 @@ def _requiere_secreto_compartido(variable_de_entorno, leer_secreto):
     Falla CERRADA: sin la variable de entorno, o con un valor demasiado corto para ser un secreto, la
     ruta contesta 503 y no existe un valor por defecto que sirva. Antes cada ruta traia uno escrito en el
     codigo, es decir, conocido por cualquiera con acceso al repositorio y imposible de rotar sin
-    desplegar. `leer_secreto()` saca de la peticion el secreto presentado (o '' si no vino)."""
+    desplegar. `leer_secreto()` saca de la peticion el secreto presentado (o '' si no vino). Solo el modo de
+    migracion (INTEGRATIONS_AUTH_MODE=log_only) deja pasar lo que se habria rechazado, y lo registra."""
     def decorador(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            esperado = os.environ.get(variable_de_entorno, '')
-            if len(esperado) < LARGO_MINIMO_DE_SECRETO:
-                return jsonify({
-                    "status": "error",
-                    "message": f"Integración no configurada: define {variable_de_entorno} "
-                               f"(mínimo {LARGO_MINIMO_DE_SECRETO} caracteres)",
-                }), 503
-
-            provisto = leer_secreto()
-            if not provisto or not _iguales_en_tiempo_constante(provisto, esperado):
-                return jsonify({"status": "error", "message": "Unauthorized"}), 401
-
+            rechazo, motivo = _comprobar_secreto(variable_de_entorno, leer_secreto)
+            if rechazo is not None:
+                if not en_modo_de_migracion():
+                    return rechazo
+                avisar_llamada_sin_credencial(motivo)
             return f(*args, **kwargs)
         return decorated_function
     return decorador
