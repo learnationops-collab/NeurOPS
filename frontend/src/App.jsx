@@ -63,6 +63,8 @@ import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage'
 import CourseEditorPage from './pages/operations/course-editor/CourseEditorPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
+import BackupPage from './pages/admin/backup/BackupPage';
+import RestorePage from './pages/admin/backup/RestorePage';
 
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
@@ -228,6 +230,30 @@ function App() {
                 <ProtectedRoute roles={['admin', 'director_marketing']}>
                   <MainLayout>
                     <WorkshopDashboardPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Respaldo y restauración de la base: solo admin (el servidor lo vuelve a exigir, además de
+                la clave BACKUP_SECRET_KEY que escribe la persona en la pantalla). Antes eran páginas
+                públicas (/backup y /restore) con la clave escrita en el bundle de la web. Sin enlace en
+                el menú a propósito: se entra por la URL. */}
+            <Route
+              path="/admin/backup"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <BackupPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/restore"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <RestorePage />
                   </MainLayout>
                 </ProtectedRoute>
               }
