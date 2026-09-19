@@ -615,6 +615,14 @@ class CloserService:
     # como "la venta de esa llamada": la hora agendada y la real no siempre coinciden.
     SALE_LOOKAHEAD = timedelta(hours=3)
 
+    # Sin agenda exacta, hasta dónde se adivina. Una llamada de hace más de SALE_MAX_AFTER_CALL antes
+    # de la venta, o que empieza más de SALE_MAX_BEFORE_CALL después de ella, ya no es "la llamada de
+    # la venta" sino otra cosa (una seña de mayo no vuelve Show up la llamada de septiembre): ante la
+    # duda no se toca nada — una agenda que se queda "Sin reportar" la puede reportar el closer,
+    # un Show up falso infla su show rate sin que nadie lo note.
+    SALE_MAX_AFTER_CALL = timedelta(days=14)
+    SALE_MAX_BEFORE_CALL = timedelta(days=3)
+
     # Una venta cuyo `created_at` está a más de esto de su `date` viene de una carga en bloque
     # (ahí `created_at` es el día de la importación, no el de la venta) — ver sale_registered_at.
     SALE_CREATED_AT_TRUST = timedelta(days=4)
@@ -626,7 +634,9 @@ class CloserService:
         Si quien registra la venta ya sabe de qué agenda viene (`appointment_id`: el modal de venta
         se abre desde una agenda concreta) es esa, sin adivinar. Si no, la última agenda que ya
         había empezado cuando se REGISTRÓ la venta (con un margen por delante, SALE_LOOKAHEAD) o,
-        si ninguna había empezado todavía, la más próxima (venta cargada antes que la llamada).
+        si ninguna había empezado todavía, la más próxima (venta cargada antes que la llamada) — en
+        los dos casos solo si está dentro de los márgenes SALE_MAX_AFTER_CALL/SALE_MAX_BEFORE_CALL;
+        si no, None.
 
         `registered_at` es el instante real del registro, en UTC — el mismo reloj que
         `Appointment.start_time` — y NO la fecha que el closer eligió en el formulario
@@ -646,8 +656,10 @@ class CloserService:
 
         ya_empezadas = [a for a in con_fecha if a.start_time <= registered_at + CloserService.SALE_LOOKAHEAD]
         if ya_empezadas:
-            return max(ya_empezadas, key=lambda a: a.start_time)
-        return min(con_fecha, key=lambda a: a.start_time)
+            ultima = max(ya_empezadas, key=lambda a: a.start_time)
+            return ultima if registered_at - ultima.start_time <= CloserService.SALE_MAX_AFTER_CALL else None
+        proxima = min(con_fecha, key=lambda a: a.start_time)
+        return proxima if proxima.start_time - registered_at <= CloserService.SALE_MAX_BEFORE_CALL else None
 
     @staticmethod
     def sale_registered_at(sale):
