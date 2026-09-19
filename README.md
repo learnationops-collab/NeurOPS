@@ -125,7 +125,7 @@ real, nunca tocan una base real y la red está bloqueada (ver `tests/conftest.py
 # Una sola vez, con el entorno virtual activo (las dependencias de test NO van a producción)
 pip install -r requirements-dev.txt
 
-# Toda la suite (~20 s)
+# Toda la suite (~50 s)
 python -m pytest
 
 # Un archivo, o solo los tests cuyo nombre contenga una palabra
@@ -143,7 +143,9 @@ python -m pytest --cov=app/services --cov-report=term-missing:skip-covered
   la marca `xfail`. `python -m pytest -rx` los lista con su motivo.
 - Estructura: `tests/services/` (lógica de cada servicio), `tests/api/` (endpoints con el cliente de
   Flask), `tests/security/` (autenticación, permisos, CSRF/CORS y secretos) y `tests/contracts/`
-  (invariantes que deben cumplirse en todo `app/`). Cada archivo de test respeta el límite de 500 líneas.
+  (invariantes que deben cumplirse en todo `app/`, p. ej. que no haya nombres sin definir: un import que
+  falta solo revienta al llamar a la ruta; ese test usa `ruff`, incluido en `requirements-dev.txt`).
+  Cada archivo de test respeta el límite de 500 líneas.
 - Trinquetes: `tests/security/anonymous_surface.py` inventaría las rutas que responden sin autenticar y
   `test_hardcoded_secrets.py` los secretos escritos en el código. Una ruta o un secreto nuevo rompe el
   test; proteger o quitar uno existente obliga a actualizar la lista.
