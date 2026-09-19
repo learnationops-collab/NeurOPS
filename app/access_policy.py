@@ -30,6 +30,7 @@ from flask_login import current_user
 
 from app.decorators import (
     LARGO_MINIMO_DE_SECRETO, _iguales_en_tiempo_constante, avisar_llamada_sin_credencial, en_modo_de_migracion,
+    registrar_rechazo_de_integracion,
 )
 from app.models.user import (
     ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_DIRECTOR_MARKETING, ROLE_OPERATOR, ROLE_SETTER,
@@ -207,4 +208,8 @@ def guardia():
     if en_modo_de_migracion():
         avisar_llamada_sin_credencial(motivo)
         return None
+    if politica.ingesta and not current_user.is_authenticated:
+        # Una ruta que usan n8n o Apps Script rechazo a alguien sin sesion ni secreto: casi seguro un sistema
+        # al que le falta configurarlo. Las demas rutas no se registran (un 401 de un navegador es ruido).
+        registrar_rechazo_de_integracion(motivo)
     return rechazo

@@ -122,14 +122,31 @@ def en_modo_de_migracion():
     return os.environ.get('INTEGRATIONS_AUTH_MODE', '').strip().lower() == MODO_DE_MIGRACION
 
 
+def _origen_y_agente():
+    """Quien llama, para el registro: el primer origen de X-Forwarded-For (lo pone el proxy, pero un cliente
+    puede falsearlo: es solo informativo) y el agente, recortado."""
+    origen = (request.headers.get('X-Forwarded-For') or request.remote_addr or '?').split(',')[0].strip()
+    return origen, (request.headers.get('User-Agent') or '?')[:80]
+
+
 def avisar_llamada_sin_credencial(motivo):
     """Registra una llamada que el modo de migracion dejo pasar. Nunca escribe secretos ni la cadena de
     consulta (request.path no la incluye): solo metodo, ruta, motivo, origen y agente."""
-    origen = (request.headers.get('X-Forwarded-For') or request.remote_addr or '?').split(',')[0].strip()
+    origen, agente = _origen_y_agente()
     current_app.logger.warning(
         '[MIGRACION DE SECRETOS] %s %s pasa SIN credencial valida (%s) desde %r, agente %r. Configura el secreto '
         'en quien llama y quita INTEGRATIONS_AUTH_MODE para que sea obligatorio.',
-        request.method, request.path, motivo, origen, (request.headers.get('User-Agent') or '?')[:80])
+        request.method, request.path, motivo, origen, agente)
+
+
+def registrar_rechazo_de_integracion(motivo):
+    """Registra una llamada de un sistema externo que se RECHAZO: tras desplegar, el log muestra de
+    inmediato a quien le falta el secreto (o lo manda mal). Solo metodo, ruta, motivo, origen y agente."""
+    origen, agente = _origen_y_agente()
+    current_app.logger.warning(
+        '[INTEGRACION RECHAZADA] %s %s (%s) desde %r, agente %r. Si es un sistema legitimo le falta su '
+        'secreto: configuralo o activa INTEGRATIONS_AUTH_MODE=log_only mientras migras.',
+        request.method, request.path, motivo, origen, agente)
 
 
 def _comprobar_secreto(variable_de_entorno, leer_secreto):
@@ -165,6 +182,7 @@ def _requiere_secreto_compartido(variable_de_entorno, leer_secreto):
             rechazo, motivo = _comprobar_secreto(variable_de_entorno, leer_secreto)
             if rechazo is not None:
                 if not en_modo_de_migracion():
+                    registrar_rechazo_de_integracion(motivo)
                     return rechazo
                 avisar_llamada_sin_credencial(motivo)
             return f(*args, **kwargs)

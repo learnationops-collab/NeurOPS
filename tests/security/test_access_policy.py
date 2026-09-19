@@ -328,3 +328,44 @@ def test_en_migracion_lo_permitido_no_genera_avisos(app, db, migracion, make_use
 
 def test_sin_migracion_no_pasa_nadie_sin_credencial(app, db):
     assert codigo(consultar(app, 'DELETE', '/api/public/financial-sales/1')) == 401
+
+
+# --- Registro de las llamadas de integracion rechazadas -----------------------------------------
+
+def _rechazos(caplog):
+    return [r.getMessage() for r in caplog.records if 'INTEGRACION RECHAZADA' in r.getMessage()]
+
+
+def test_una_ruta_de_ingesta_rechazada_a_un_anonimo_queda_registrada(app, db, ingesta, caplog):
+    with caplog.at_level(logging.WARNING):
+        resultado = consultar(app, 'POST', '/api/public/financial-sales', {'X-Api-Token': 'mal', 'User-Agent': 'n8n/1.0'})
+
+    assert codigo(resultado) == 401
+    rechazos = _rechazos(caplog)
+    assert len(rechazos) == 1 and 'POST /api/public/financial-sales' in rechazos[0]
+    assert 'n8n/1.0' in rechazos[0] and 'sin sesion ni secreto de ingesta' in rechazos[0]
+
+
+def test_el_registro_de_un_rechazo_de_ingesta_no_incluye_el_secreto_esperado_ni_el_presentado(app, db, ingesta, caplog):
+    with caplog.at_level(logging.WARNING):
+        consultar(app, 'POST', '/api/public/financial-sales', {'X-Api-Token': 'presentado-equivocado-1234'})
+
+    rechazo = _rechazos(caplog)[0]
+    assert TOKEN not in rechazo and 'presentado-equivocado-1234' not in rechazo
+
+
+def test_una_ruta_que_no_es_de_ingesta_no_registra_el_rechazo_de_un_anonimo(app, db, caplog):
+    # Un 401 de un navegador con la sesion vencida es ruido: solo se registran las rutas que usan los sistemas.
+    with caplog.at_level(logging.WARNING):
+        consultar(app, 'DELETE', '/api/public/financial-sales/1')
+
+    assert _rechazos(caplog) == []
+
+
+def test_un_usuario_sin_permiso_en_una_ruta_de_ingesta_no_se_registra_como_integracion(
+        app, db, make_user, auth_headers, caplog):
+    with caplog.at_level(logging.WARNING):
+        resultado = consultar(app, 'POST', '/api/public/financial-sales', auth_headers(make_user(role='closer')))
+
+    assert codigo(resultado) == 403
+    assert _rechazos(caplog) == []

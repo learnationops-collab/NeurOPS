@@ -351,3 +351,61 @@ def test_en_migracion_los_crons_reales_pasan_sin_secreto_y_avisan(client, cron_r
     assert respuesta.status_code == 200
     assert len(ejecuciones) == 1
     assert len(_avisos(caplog)) == 1
+
+
+# --- Registro de las llamadas de integracion rechazadas ------------------------------------------
+# Tras desplegar, el log debe mostrar de inmediato a que sistema le falta su secreto.
+
+def _rechazos(caplog):
+    return [r.getMessage() for r in caplog.records if 'INTEGRACION RECHAZADA' in r.getMessage()]
+
+
+@pytest.mark.parametrize('configurado,cabeceras,motivo', [
+    (False, {}, 'CRON_SECRET sin configurar'),
+    (True, {}, 'no presento el secreto'),
+    (True, _bearer('mal'), 'secreto incorrecto'),
+])
+def test_una_llamada_rechazada_queda_registrada_con_el_motivo(
+        ruta_de_cron, monkeypatch, caplog, configurado, cabeceras, motivo):
+    if configurado:
+        monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, ejecuciones = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        respuesta = cliente.get('/cron', headers=cabeceras)
+
+    assert respuesta.status_code in (401, 503) and ejecuciones == []
+    rechazos = _rechazos(caplog)
+    assert len(rechazos) == 1 and 'GET /cron' in rechazos[0] and motivo in rechazos[0]
+    assert 'INTEGRATIONS_AUTH_MODE=log_only' in rechazos[0]  # dice como migrar sin cortar el flujo
+
+
+def test_lo_autorizado_no_se_registra_como_rechazo(ruta_de_cron, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, _ = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        cliente.get('/cron', headers=_bearer(SECRETO))
+
+    assert _rechazos(caplog) == []
+
+
+def test_el_registro_de_rechazos_nunca_incluye_secretos_ni_la_cadena_de_consulta(ruta_de_cron, monkeypatch, caplog):
+    monkeypatch.setenv('CRON_SECRET', SECRETO)
+    cliente, _ = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        cliente.get('/cron?token=presentado-en-la-url-1234', headers={'User-Agent': 'n8n/1.0', **_bearer('otro-secreto-1')})
+
+    rechazo = _rechazos(caplog)[0]
+    for secreto in (SECRETO, 'presentado-en-la-url-1234', 'otro-secreto-1'):
+        assert secreto not in rechazo
+
+
+def test_en_migracion_no_hay_registro_de_rechazo_solo_el_aviso_de_migracion(ruta_de_cron, migracion, caplog):
+    cliente, _ = ruta_de_cron
+
+    with caplog.at_level(logging.WARNING):
+        cliente.get('/cron')
+
+    assert _rechazos(caplog) == [] and len(_avisos(caplog)) == 1
