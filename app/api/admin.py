@@ -11,7 +11,7 @@ from app.decorators import admin_required, operator_required, role_required
 import pandas as pd
 import io
 import json
-from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
+from app.models import db, User, Client, Lead, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
