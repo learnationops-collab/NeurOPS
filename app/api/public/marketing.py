@@ -1,6 +1,7 @@
 # pyrefly: ignore [missing-import]
 from flask import request, jsonify
 from app.models import db, User
+from app.services.identity_service import normalize_ig
 from datetime import datetime, date, timedelta
 from . import bp
 import json
@@ -735,11 +736,6 @@ def get_unattributed_leads():
             end_dt = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
         except ValueError:
             return jsonify({"error": "Formato de fecha invalido"}), 400
-
-    def normalize_ig(ig_str):
-        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-            return None
-        return ig_str.strip().lstrip('@').lower()
 
     unattributed_sales_map = {}
     unattributed_sales = []

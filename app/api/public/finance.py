@@ -19,11 +19,6 @@ def finance_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def normalize_ig(ig_str):
-    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-        return None
-    return ig_str.strip().lstrip('@').lower()
-
 def resolve_closer_name(email_or_name):
     """Nombre canonico del closer. La logica vive en `closer_name_service`,
     que resuelve contra los usuarios y alias reales antes de caer al diccionario

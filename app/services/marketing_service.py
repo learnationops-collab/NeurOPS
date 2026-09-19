@@ -5,6 +5,7 @@ from app.models import (
     Campaign, AdSet, Ad, LeadAnswer, ManychatLead,
     FinancialAgenda, FinancialSale, AdPeriodSpend
 )
+from app.services.identity_service import normalize_ig
 
 class MarketingService:
     @staticmethod
@@ -83,11 +84,6 @@ class MarketingService:
 
         start_date_only = start_dt.date()
         end_date_only   = end_dt.date()
-
-        def normalize_ig(ig_str):
-            if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-                return None
-            return ig_str.strip().lstrip('@').lower()
 
         # 1. Obtener todos los anuncios, conjuntos y campañas
         ads_raw = db.session.query(Ad, AdSet, Campaign)\

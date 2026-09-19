@@ -306,8 +306,14 @@ def test_leads_distintos_no_se_mezclan():
     assert mapa[11] is beto
 
 
-@pytest.mark.parametrize('placeholder', ['N/A', 'n/a', ''])
-def test_un_placeholder_exacto_no_junta_a_dos_personas(placeholder):
+# Un placeholder ('N/A') en lugar del dato nunca es una identidad. Los que traen espacios vienen de
+# celdas de Google Sheets y antes se tomaban como un usuario real: Union-Find fusionaba a dos
+# personas distintas y la venta de una se atribuia a la agenda de la otra.
+PLACEHOLDERS = ['N/A', 'n/a', '', 'N/A ', ' n/a', '  N/A  ', '   ']
+
+
+@pytest.mark.parametrize('placeholder', PLACEHOLDERS)
+def test_un_instagram_placeholder_no_junta_a_dos_personas(placeholder):
     beto = agenda(1, placeholder, 'b@y.com', D(2026, 1, 1))
     ana = agenda(2, placeholder, 'a@x.com', D(2026, 1, 5))
     s = venta(10, None, 'b@y.com', 'RR - Completo', D(2026, 1, 10))
@@ -315,28 +321,47 @@ def test_un_placeholder_exacto_no_junta_a_dos_personas(placeholder):
     assert atribuir([s], [ana, beto])[10] is beto
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: un Instagram placeholder con espacio ('N/A ', ' n/a') no se detecta: normalize_ig compara "
-    "con 'n/a' ANTES de recortar, asi que devuelve 'n/a' como si fuera un usuario real y Union-Find "
-    "fusiona a dos personas distintas; la venta de una se atribuye a la agenda de la otra. "
-    "Arreglo: recortar antes de comparar (como ya hace conversational.py)."))
-def test_un_instagram_placeholder_con_espacio_no_junta_a_dos_personas():
-    beto = agenda(1, 'N/A ', 'b@y.com', D(2026, 1, 1))
-    ana = agenda(2, 'N/A ', 'a@x.com', D(2026, 1, 5))
-    s = venta(10, None, 'b@y.com', 'RR - Completo', D(2026, 1, 10))
-
-    assert atribuir([s], [ana, beto])[10] is beto
-
-
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: igual que con el Instagram, un mail placeholder con espacio ('N/A ') se toma como un mail "
-    "real ('n/a') y fusiona a dos personas con Instagram distintos."))
-def test_un_mail_placeholder_con_espacio_no_junta_a_dos_personas():
-    beto = agenda(1, 'persona_b', 'N/A ', D(2026, 1, 1))
-    ana = agenda(2, 'persona_a', 'N/A ', D(2026, 1, 5))
+@pytest.mark.parametrize('placeholder', PLACEHOLDERS)
+def test_un_mail_placeholder_no_junta_a_dos_personas(placeholder):
+    beto = agenda(1, 'persona_b', placeholder, D(2026, 1, 1))
+    ana = agenda(2, 'persona_a', placeholder, D(2026, 1, 5))
     s = venta(10, 'persona_b', None, 'RR - Completo', D(2026, 1, 10))
 
     assert atribuir([s], [ana, beto])[10] is beto
+
+
+@pytest.mark.parametrize('placeholder', PLACEHOLDERS)
+def test_un_mail_placeholder_en_la_venta_tampoco_la_liga_a_otro_lead(placeholder):
+    # La venta de Beto trae el placeholder en su mail: solo su Instagram puede ligarla a su agenda.
+    beto = agenda(1, 'persona_b', 'b@y.com', D(2026, 1, 1))
+    ana = agenda(2, 'persona_a', placeholder, D(2026, 1, 5))
+    s = venta(10, 'persona_b', placeholder, 'RR - Completo', D(2026, 1, 10))
+
+    assert atribuir([s], [ana, beto])[10] is beto
+
+
+@pytest.mark.parametrize('placeholder', PLACEHOLDERS)
+def test_dos_ventas_con_mail_placeholder_no_juntan_a_sus_leads(placeholder):
+    # Cada venta trae un Instagram distinto y el mismo placeholder como mail: no son la misma persona.
+    beto = agenda(1, 'persona_b', 'b@y.com', D(2026, 1, 1))
+    ana = agenda(2, 'persona_a', 'a@x.com', D(2026, 1, 5))
+    venta_beto = venta(10, 'persona_b', placeholder, 'RR - Completo', D(2026, 1, 10))
+    venta_ana = venta(11, 'persona_a', placeholder, 'RR - Completo', D(2026, 1, 11))
+
+    mapa = atribuir([venta_beto, venta_ana], [beto, ana])
+
+    assert mapa[10] is beto
+    assert mapa[11] is ana
+
+
+@pytest.mark.parametrize('placeholder', PLACEHOLDERS)
+def test_un_registro_con_solo_un_mail_placeholder_no_tiene_identidad(placeholder):
+    # Sin Instagram y con un placeholder como mail no hay nada que lo identifique: ni la venta se
+    # atribuye a esa agenda ni la agenda a esa venta (antes compartian la "identidad" 'n/a').
+    sin_identidad = agenda(1, None, placeholder, D(2026, 1, 1))
+    s = venta(10, None, placeholder, 'RR - Completo', D(2026, 1, 10))
+
+    assert 10 not in atribuir([s], [sin_identidad])
 
 
 # --- Fechas -----------------------------------------------------------------------------------

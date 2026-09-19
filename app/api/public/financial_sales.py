@@ -2,6 +2,7 @@ from flask import request, jsonify, current_app
 from flask_login import login_required
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from app.decorators import admin_required
+from app.services.identity_service import normalize_ig
 from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func, case
@@ -21,12 +22,6 @@ def split_tipo_pago(tp):
         parts = tp.split(" - ", 1)
         return parts[0].strip(), parts[1].strip()
     return "Desconocido", tp.strip()
-
-def normalize_ig(ig_str):
-    # Normaliza el usuario de Instagram removiendo @ y espacios
-    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-        return None
-    return ig_str.strip().lstrip('@').lower()
 
 def parse_date_robustly(val):
     if not val:

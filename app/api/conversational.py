@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models import ConversationalMessage, LeadAnswer, ManychatLead, Ad, FinancialAgenda, FinancialSale
+from app.services.identity_service import normalize_ig
 from sqlalchemy import func, not_
 from datetime import datetime, timedelta
 import logging
@@ -237,12 +238,6 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     }
 
     # ── 3. Atribución de Agendas y Ventas ──
-    def normalize_ig(val):
-        if not val or not isinstance(val, str):
-            return None
-        v = val.strip().lstrip('@').lower()
-        return v if v and v not in ('n/a', '') else None
-
     # Agendas del período
     agendas_all = FinancialAgenda.query.filter(
         FinancialAgenda.date >= start_dt,

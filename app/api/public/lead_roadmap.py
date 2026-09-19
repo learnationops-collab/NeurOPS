@@ -3,6 +3,7 @@ from app import db
 from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User, Enrollment, Program
 from app.models.financial import FinancialSale, FinancialAgenda
 from app.models.marketing import ManychatLead, LeadAnswer
+from app.services.identity_service import normalize_ig
 from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, func
@@ -25,12 +26,6 @@ def names_plausibly_match(name_a, name_b):
     if not a_tokens or not b_tokens:
         return True
     return bool(a_tokens & b_tokens)
-
-def normalize_ig(ig_str):
-    # Normaliza el usuario de Instagram removiendo @ y espacios
-    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-        return None
-    return ig_str.strip().lstrip('@').lower()
 
 def is_generic_val(val):
     # Valida si un valor es generico o no valido
@@ -665,9 +660,12 @@ def update_client_roadmap():
     if client_id:
         client = Client.query.get(client_id)
         
-    if not client and instagram:
-        client = Client.query.filter(func.lower(Client.instagram) == normalize_ig(instagram)).first()
-        
+    # Solo se busca por Instagram si hay un usuario real: `== None` se traduce a IS NULL y
+    # empataria con el primer cliente sin Instagram (que luego se sobrescribe).
+    ig_norm = normalize_ig(instagram)
+    if not client and ig_norm:
+        client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
+
     if not client and email:
         client = Client.query.filter(func.lower(Client.email) == email.strip().lower()).first()
 

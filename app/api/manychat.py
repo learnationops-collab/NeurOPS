@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from app import db
+from app.services.identity_service import normalize_ig
 from app.services.setter_assignment_service import condicion_leads_visibles
 import logging
 import traceback
@@ -743,12 +744,6 @@ def get_ad_dashboard_stats():
         start_dt = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
         end_dt = now
 
-    # Helper para normalizar IG
-    def normalize_ig(ig_str):
-        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-            return None
-        return ig_str.strip().lstrip('@').lower()
-
     # 1. LEADS DEL PERIODO
     stats = db.session.query(
         LeadAnswer.ad_id,
@@ -1154,11 +1149,6 @@ def get_ad_details(ad_id):
     # 4. Agendas y Ventas (Atribución histórica completa)
     from app.models import FinancialAgenda, FinancialSale
     from sqlalchemy import String
-    
-    def normalize_ig(ig_str):
-        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-            return None
-        return ig_str.strip().lstrip('@').lower()
 
     # IGs vinculados a este anuncio
     all_lead_igs = db.session.query(ManychatLead.ig).join(LeadAnswer, LeadAnswer.lead_id == ManychatLead.id)\

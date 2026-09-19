@@ -1,10 +1,6 @@
 from datetime import datetime
 from app.models import db, FinancialSale, FinancialAgenda
-
-def normalize_ig(ig_str):
-    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-        return None
-    return ig_str.strip().lstrip('@').lower()
+from app.services.identity_service import normalize_email, normalize_ig
 
 class UnionFind:
     def __init__(self):
@@ -53,14 +49,14 @@ class AttributionService:
         # Primero procesamos agendas
         for a in agendas:
             ig = normalize_ig(a.instagram)
-            mail = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+            mail = normalize_email(a.mail)
             if ig and mail:
                 uf.union(ig, mail)
 
         # Luego procesamos ventas
         for s in sales:
             ig = normalize_ig(s.instagram)
-            mail = s.mail_cliente.strip().lower() if s.mail_cliente and s.mail_cliente.lower() not in ('n/a', '') else None
+            mail = normalize_email(s.mail_cliente)
             if ig and mail:
                 uf.union(ig, mail)
 
@@ -69,7 +65,7 @@ class AttributionService:
 
         for a in agendas:
             ig = normalize_ig(a.instagram)
-            mail = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+            mail = normalize_email(a.mail)
             
             key = None
             if ig:
@@ -84,7 +80,7 @@ class AttributionService:
 
         for s in sales:
             ig = normalize_ig(s.instagram)
-            mail = s.mail_cliente.strip().lower() if s.mail_cliente and s.mail_cliente.lower() not in ('n/a', '') else None
+            mail = normalize_email(s.mail_cliente)
             
             key = None
             if ig:

@@ -2,6 +2,7 @@ from flask import request, jsonify
 from app import db
 from app.models import FinancialSale, Client
 from app.api.public import bp
+from app.services.identity_service import normalize_email, normalize_ig
 from datetime import datetime
 from sqlalchemy import func, or_
 
@@ -12,16 +13,6 @@ def split_tipo_pago(tp):
         parts = tp.split(" - ", 1)
         return parts[0].strip(), parts[1].strip()
     return "Desconocido", tp.strip()
-
-def normalize_ig(ig_str):
-    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-        return None
-    return ig_str.strip().lstrip('@').lower()
-
-def normalize_email(email_str):
-    if not email_str or not isinstance(email_str, str) or email_str.lower() in ('n/a', ''):
-        return None
-    return email_str.strip().lower()
 
 class UnionFind:
     def __init__(self):
