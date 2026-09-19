@@ -43,6 +43,19 @@ def test_los_sockets_estan_bloqueados():
             s.connect(('127.0.0.1', 9))
 
 
+def test_cada_peticion_arranca_sin_el_usuario_de_la_anterior(client, make_user, auth_headers):
+    # Flask-Login cachea current_user en `g`; el cliente de tests lo limpia por peticion (como
+    # produccion). Sin eso, el usuario de la primera peticion se quedaria pegado en las demas.
+    ana, beto = make_user(role='closer'), make_user(role='setter')
+
+    def quien_soy(usuario):
+        return client.get('/api/auth/me', headers=auth_headers(usuario)).get_json()['user']['id']
+
+    assert quien_soy(ana) == ana.id
+    assert quien_soy(beto) == beto.id
+    assert quien_soy(ana) == ana.id
+
+
 def test_requests_no_puede_salir_a_internet(monkeypatch):
     # Se simula que el DNS resolvio para llegar hasta el connect y comprobar que ahi se corta.
     monkeypatch.setattr(

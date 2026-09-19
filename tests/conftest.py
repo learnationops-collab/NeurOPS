@@ -16,6 +16,8 @@ import socket
 
 import dotenv
 import pytest
+from flask import g, has_app_context
+from flask.testing import FlaskClient
 
 # --- 1) Aislamiento del entorno ---------------------------------------------------------------
 
@@ -64,6 +66,21 @@ def _sin_red(monkeypatch):
 
 # --- 3) App y base de datos -------------------------------------------------------------------
 
+class ClienteDeTests(FlaskClient):
+    """Cada peticion arranca con `g` limpio, como en produccion (un app context por peticion).
+
+    Flask-Login guarda `current_user` en `g`. Los fixtures abren un app context que dura todo el
+    test, asi que sin esto el usuario de la PRIMERA peticion se queda pegado en todas las siguientes
+    y un test no puede simular dos identidades (ni comprobar que un rol es rechazado despues de que
+    otro fue aceptado). Lo mismo pasa con `g.token_claims` (estado de suplantacion).
+    """
+
+    def open(self, *args, **kwargs):
+        if has_app_context():
+            g.__dict__.clear()
+        return super().open(*args, **kwargs)
+
+
 @pytest.fixture(scope='session')
 def app():
     """Una sola app por sesion: crearla cuesta ~2 s (importa los 26 blueprints)."""
@@ -85,6 +102,7 @@ def app():
         REMEMBER_COOKIE_SECURE = False
 
     flask_app = create_app(TestConfig)
+    flask_app.test_client_class = ClienteDeTests
     with flask_app.app_context():
         url = str(db.engine.url)
     if url != 'sqlite://':
@@ -107,6 +125,14 @@ def db(app):
 @pytest.fixture()
 def client(app, db):
     return app.test_client()
+
+
+@pytest.fixture()
+def csrf_enabled(app):
+    """Activa la proteccion CSRF (en los tests esta apagada) solo durante el test."""
+    app.config['WTF_CSRF_ENABLED'] = True
+    yield
+    app.config['WTF_CSRF_ENABLED'] = False
 
 
 # --- 4) Fabricas ------------------------------------------------------------------------------
