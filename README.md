@@ -125,7 +125,7 @@ real, nunca tocan una base real y la red está bloqueada (ver `tests/conftest.py
 # Una sola vez, con el entorno virtual activo (las dependencias de test NO van a producción)
 pip install -r requirements-dev.txt
 
-# Toda la suite (~12 s)
+# Toda la suite (~20 s)
 python -m pytest
 
 # Un archivo, o solo los tests cuyo nombre contenga una palabra
@@ -138,10 +138,17 @@ python -m pytest --cov=app/services --cov-report=term-missing:skip-covered
 
 - Pasa la cobertura **por directorio** (`--cov=app/services`), no como módulo con puntos
   (`--cov=app.services.x`): así `coverage` no importa `app` antes del aislamiento de `conftest.py`.
-- Los `xfail` con motivo `BUG:` documentan errores conocidos. Son `strict`: cuando alguien arregla el
-  bug, el test pasa a fallar y hay que quitarle la marca `xfail`.
-- Estructura: `tests/services/` (lógica de cada servicio) y `tests/contracts/` (invariantes entre
-  copias de una misma regla). Cada archivo de test debe respetar el límite de 500 líneas.
+- Los `xfail` con motivo `BUG:` documentan errores conocidos (los de seguridad dicen `BUG DE SEGURIDAD`
+  o `BUG CRITICO`). Son `strict`: cuando alguien arregla el bug, el test pasa a fallar y hay que quitarle
+  la marca `xfail`. `python -m pytest -rx` los lista con su motivo.
+- Estructura: `tests/services/` (lógica de cada servicio), `tests/api/` (endpoints con el cliente de
+  Flask), `tests/security/` (autenticación, permisos, CSRF/CORS y secretos) y `tests/contracts/`
+  (invariantes que deben cumplirse en todo `app/`). Cada archivo de test respeta el límite de 500 líneas.
+- Trinquetes: `tests/security/anonymous_surface.py` inventaría las rutas que responden sin autenticar y
+  `test_hardcoded_secrets.py` los secretos escritos en el código. Una ruta o un secreto nuevo rompe el
+  test; proteger o quitar uno existente obliga a actualizar la lista.
+- El cliente de tests limpia `g` en cada petición (Flask-Login guarda ahí `current_user`); sin eso el
+  usuario de la primera petición de un test se quedaría pegado en las siguientes.
 
 ## Estructura del Proyecto
 
