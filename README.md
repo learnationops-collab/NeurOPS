@@ -73,8 +73,16 @@ repositorio se da por comprometido: se rota, no se reutiliza.
 | `BACKUP_SECRET_KEY` | `/api/backup/secret-*` (además hay que ser `admin`) | el admin, que la escribe en las pantallas `/admin/backup` y `/admin/restore` (sin enlace en el menú; se entra por la URL); usa una hexadecimal, porque viaja como parte de la ruta |
 | `CRON_SECRET` | `GET /api/sheets/cron-sync` y `GET /api/closer/followups/cron/send-reminders` | el cron externo: `Authorization: Bearer <valor>` (o, por compatibilidad, `?token=<valor>`) |
 | `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/webhooks/manychat` | ManyChat, en el header `X-ManyChat-Token` |
+| `INGEST_API_TOKEN` | las rutas de ingesta y consulta de n8n y Apps Script (agendas, ventas, clientes; lista en `app/access_policy.py`) | n8n y Apps Script, en el header `X-Api-Token` (o `Authorization: Bearer`) |
 | `ACADEMY_INBOUND_API_TOKEN` | `/api/external/academy/*` | la Academia, `Authorization: Bearer <valor>` |
 | `DEV_PLATFORM_INBOUND_API_TOKEN` | `/api/external/dev-platform/*` | la plataforma de gestión de trabajo, `Authorization: Bearer <valor>` |
+| `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar lo que se habría rechazado y lo registra (`[MIGRACION DE SECRETOS]` en el log) | — (quítala cuando cada sistema mande su secreto) |
+
+Además, **el resto de las rutas de la herramienta interna** (ventas, agendas, clientes, marketing, reportes…) exigen
+sesión con el rol que corresponde a cada pantalla (`app/access_policy.py`; el test
+`tests/security/test_frontend_role_contract.py` comprueba contra `App.jsx` que ningún rol pierde una pantalla).
+**Antes de desplegar lee [docs/seguridad_despliegue.md](docs/seguridad_despliegue.md)**: explica qué sistema debe
+mandar qué secreto y cómo desplegar sin cortar integraciones con el modo de migración.
 
 Para saber si alguna cuenta conserva una contraseña por defecto que el código usó alguna vez (las
 cuentas creadas por una importación, por ejemplo), corre el script de auditoría, que **solo lee** la

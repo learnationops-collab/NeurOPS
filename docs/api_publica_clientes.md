@@ -8,7 +8,7 @@
 - **Blueprint**: `app/api/public/*`, montado bajo el prefijo `/api` (`app/__init__.py:84`) — por eso cada ruta abajo empieza con `/api/public/...`.
 - **Base URL producción**: `https://work.thelearnation.com`
 - **Base URL local**: `http://localhost:5000` (o el puerto que uses con `flask run` / `run.py`)
-- **Auth**: ninguna. Estas rutas están abiertas "por oscuridad de URL" — cualquiera que conozca la URL puede llamarlas. Están pensadas para consumidores **de confianza** (n8n, Apps Script, el propio frontend de NeurOPS, u otra página interna tuya). No las expongas como si fueran una API pública de verdad para terceros sin dueño.
+- **Auth** (actualizado el 19/09/2026; antes eran rutas abiertas "por oscuridad de URL"): `POST /clients/check` es pública a propósito (la usa la página de reservas), pero a un anónimo solo le devuelve `id`, `full_name`, `phone` e `instagram`: las `survey_answers` solo se incluyen si quien llama es un usuario logueado o un sistema con el secreto. `GET /clients/search`, `GET /new-clients` y `POST /clients/follow-up` exigen **sesión con rol** (`Authorization: Bearer <JWT>` del login) **o el secreto de ingesta** (`X-Api-Token: <INGEST_API_TOKEN>` o `Authorization: Bearer <INGEST_API_TOKEN>`); sin credencial contestan `401`. La política completa está en `app/access_policy.py` y la guía de despliegue en [seguridad_despliegue.md](seguridad_despliegue.md). Siguen pensadas para consumidores **de confianza** (n8n, Apps Script, el propio frontend de NeurOPS, u otra página interna tuya); no las expongas como si fueran una API pública de verdad para terceros sin dueño.
 - **CORS**: si "la otra página" corre JavaScript en el navegador (fetch/axios desde el navegador del usuario, no un backend-a-backend), el origen debe estar en la lista blanca de `app/__init__.py:55-61`. Hoy incluye `localhost:5173`, `localhost:3000`, `work.thelearnation.com`, `neurops-production.up.railway.app` e `institute.thelearnation.com`. Si tu otra página vive en un dominio distinto, hay que agregarlo ahí o las llamadas del navegador fallarán con error de CORS aunque el endpoint responda bien por curl/Postman. Las llamadas servidor-a-servidor (n8n, Apps Script, cURL) no pasan por CORS y no tienen este problema.
 - **CSRF**: exento para este blueprint (`app/__init__.py:85`) — los `POST` no necesitan token CSRF.
 
@@ -23,7 +23,7 @@ Busca un cliente ya cargado en NeurOPS y, si existe, devuelve sus datos básicos
 { "email": "cliente@correo.com", "instagram": "@usuario" }
 ```
 
-**Respuesta si existe** (`200`):
+**Respuesta si existe** (`200`; `survey_answers` solo se incluye si quien llama es un usuario logueado o un sistema con el secreto de ingesta):
 ```json
 {
   "exists": true,
