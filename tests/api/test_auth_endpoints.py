@@ -1,0 +1,221 @@
+"""/api/auth/*: login, logout, me, csrf-token y debug.
+
+Login devuelve un JWT (metodo principal de la SPA) y ademas abre una sesion de cookie. Un error de
+credenciales debe ser IDENTICO para un usuario inexistente y para una clave incorrecta, para no
+revelar que usuarios existen.
+"""
+import jwt
+import pytest
+
+from app.models import User
+from tests.conftest import ENTORNO_DE_TEST
+
+LOGIN = '/api/auth/login'
+CLAVE = 'secret123'
+
+
+def entrar(client, username, password=CLAVE, **extra):
+    return client.post(LOGIN, json={'username': username, 'password': password, **extra})
+
+
+def quien_soy(client, token=None):
+    cabeceras = {'Authorization': f'Bearer {token}'} if token else {}
+    return client.get('/api/auth/me', headers=cabeceras)
+
+
+# --- Login ------------------------------------------------------------------------------------
+
+def test_login_correcto_devuelve_token_y_usuario(client, make_user):
+    usuario = make_user(role='closer', username='ana', email='ana@x.com', can_view_finance=True)
+
+    respuesta = entrar(client, 'ana')
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.get_json()
+    assert cuerpo['message'] == 'Login successful'
+    assert cuerpo['user'] == {'id': usuario.id, 'username': 'ana', 'role': 'closer',
+                              'email': 'ana@x.com', 'can_view_finance': True}
+    assert jwt.decode(cuerpo['token'], ENTORNO_DE_TEST['SECRET_KEY'], algorithms=['HS256'])['id'] == usuario.id
+
+
+def test_se_puede_entrar_con_el_email(client, make_user):
+    make_user(username='ana', email='ana@x.com')
+
+    assert entrar(client, 'ana@x.com').status_code == 200
+
+
+def test_login_nunca_devuelve_el_hash_de_la_clave(client, make_user):
+    usuario = make_user(username='ana')
+
+    texto = entrar(client, 'ana').get_data(as_text=True)
+
+    assert usuario.password_hash not in texto
+    assert 'password' not in texto.lower()
+
+
+@pytest.mark.parametrize('cuerpo', [{}, {'username': 'ana'}, {'password': CLAVE}, {'username': '', 'password': ''}])
+def test_faltan_credenciales_es_400(client, make_user, cuerpo):
+    make_user(username='ana')
+
+    respuesta = client.post(LOGIN, json=cuerpo)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'message': 'Username and password required'}
+
+
+def test_un_json_roto_es_400_y_no_un_500(client):
+    respuesta = client.post(LOGIN, data='{no es json', content_type='application/json')
+
+    assert respuesta.status_code == 400
+
+
+def test_clave_incorrecta_y_usuario_inexistente_son_indistinguibles(client, make_user):
+    make_user(username='ana')
+
+    clave_mala = entrar(client, 'ana', 'incorrecta')
+    sin_usuario = entrar(client, 'nadie', 'incorrecta')
+
+    assert clave_mala.status_code == sin_usuario.status_code == 401
+    assert clave_mala.get_json() == sin_usuario.get_json() == {'message': 'Invalid credentials'}
+
+
+@pytest.mark.parametrize('usuario', ["' OR '1'='1", "ana'--", 'ana"; DROP TABLE users;--', '%', '*'])
+def test_un_usuario_con_sintaxis_de_inyeccion_no_entra_ni_rompe(client, make_user, usuario):
+    make_user(username='ana')
+
+    respuesta = entrar(client, usuario, "' OR '1'='1")
+
+    assert respuesta.status_code == 401
+    assert User.query.count() == 1
+
+
+def test_el_usuario_distingue_mayusculas(client, make_user):
+    make_user(username='ana')
+
+    assert entrar(client, 'ANA').status_code == 401
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "BUG: un usuario sin password_hash (importado, creado sin clave...) hace que login devuelva 500: "
+    "check_password_hash(None, ...) lanza una excepcion en vez de dar False. Cualquiera puede "
+    "provocar el error escribiendo ese usuario, lo que ademas delata que existe y no tiene clave."))
+def test_un_usuario_sin_clave_guardada_no_entra_ni_rompe(client, make_user, db):
+    usuario = make_user(username='ana')
+    usuario.password_hash = None
+    db.session.commit()
+
+    assert entrar(client, 'ana').status_code == 401
+
+
+def test_login_abre_tambien_la_sesion_de_cookie(client, make_user):
+    make_user(username='ana')
+
+    entrar(client, 'ana')
+
+    assert quien_soy(client).get_json()['user']['username'] == 'ana'  # sin token, solo la cookie
+
+
+def test_login_sincroniza_la_zona_horaria_del_navegador(client, make_user, db):
+    usuario = make_user(username='ana')
+
+    entrar(client, 'ana', timezone='America/Caracas')
+
+    db.session.refresh(usuario)
+    assert usuario.timezone == 'America/Caracas'
+
+
+@pytest.mark.parametrize('zona', ['Marte/Olympus', '', None, 'no-es-una-zona'])
+def test_una_zona_invalida_se_ignora_y_el_login_sigue_funcionando(client, make_user, db, zona):
+    usuario = make_user(username='ana')
+    original = usuario.timezone
+
+    respuesta = entrar(client, 'ana', timezone=zona)
+
+    assert respuesta.status_code == 200
+    db.session.refresh(usuario)
+    assert usuario.timezone == original
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "BUG DE SEGURIDAD: login no comprueba is_active. login_user() devuelve False para un usuario "
+    "desactivado pero el endpoint ignora ese resultado y le entrega igual un JWT de 24 h."))
+def test_un_usuario_desactivado_no_puede_entrar(client, make_user):
+    make_user(username='ana', is_active=False)
+
+    respuesta = entrar(client, 'ana')
+
+    assert respuesta.status_code in (401, 403)
+    assert 'token' not in respuesta.get_json()
+
+
+# --- me ---------------------------------------------------------------------------------------
+
+def test_me_sin_sesion_es_401(client):
+    respuesta = quien_soy(client)
+
+    assert respuesta.status_code == 401
+    assert respuesta.get_json() == {'message': 'Not authenticated'}
+
+
+def test_me_con_token_devuelve_al_usuario(client, make_user, auth_headers):
+    usuario = make_user(role='setter', username='beto', email='beto@x.com')
+
+    respuesta = client.get('/api/auth/me', headers=auth_headers(usuario))
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()['user'] == {
+        'id': usuario.id, 'username': 'beto', 'role': 'setter', 'email': 'beto@x.com',
+        'is_impersonating': False, 'original_user_role': None, 'can_view_finance': False,
+    }
+
+
+def test_un_token_basura_es_401(client):
+    assert quien_soy(client, 'basura').status_code == 401
+
+
+def test_el_token_manda_sobre_la_cookie_del_navegador(client, make_user):
+    # La cookie es de TODO el navegador: si ganara, una pestana simulada pisaria a las demas.
+    ana, beto = make_user(username='ana'), make_user(username='beto')
+    entrar(client, 'ana')  # deja la cookie de ana
+
+    con_token_de_beto = quien_soy(client, beto.get_auth_token())
+
+    assert con_token_de_beto.get_json()['user']['id'] == beto.id
+    assert quien_soy(client).get_json()['user']['id'] == ana.id  # sin token vuelve a mandar la cookie
+
+
+# --- logout -----------------------------------------------------------------------------------
+
+def test_logout_cierra_la_sesion_de_cookie(client, make_user):
+    make_user(username='ana')
+    entrar(client, 'ana')
+
+    respuesta = client.post('/api/auth/logout')
+
+    assert respuesta.status_code == 200
+    assert quien_soy(client).status_code == 401
+
+
+def test_logout_sin_sesion_no_falla(client):
+    assert client.post('/api/auth/logout').status_code == 200
+
+
+# --- csrf-token y debug -----------------------------------------------------------------------
+
+def test_csrf_token_entrega_un_token(client):
+    respuesta = client.get('/api/auth/csrf-token')
+
+    assert respuesta.status_code == 200
+    assert len(respuesta.get_json()['csrf_token']) > 20
+
+
+def test_debug_no_devuelve_las_cabeceras_ni_cookies_sensibles(client):
+    client.set_cookie('otra', 'VALOR-SECRETO-DE-COOKIE')
+
+    respuesta = client.get('/api/auth/debug', headers={'Authorization': 'Bearer VALOR-SECRETO-DEL-TOKEN'})
+
+    cuerpo = respuesta.get_data(as_text=True)
+    assert respuesta.status_code == 200
+    assert 'VALOR-SECRETO-DEL-TOKEN' not in cuerpo
+    assert 'VALOR-SECRETO-DE-COOKIE' not in cuerpo
+    assert 'otra' in respuesta.get_json()['cookies_received']  # solo el NOMBRE de la cookie
