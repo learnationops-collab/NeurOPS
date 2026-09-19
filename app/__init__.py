@@ -180,6 +180,17 @@ def create_app(config_class=Config):
     from app.api.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp, url_prefix='/api')
 
+    # Politica de acceso de la herramienta interna: quien puede llamar a las rutas que antes respondian a
+    # cualquiera en internet (ver app/access_policy.py). Una sola guarda; lo que no esta en su tabla no se toca.
+    from app.access_policy import guardia
+    from app.decorators import en_modo_de_migracion
+    app.before_request(guardia)
+    if en_modo_de_migracion():
+        app.logger.warning(
+            '[MIGRACION DE SECRETOS] INTEGRATIONS_AUTH_MODE=log_only: las rutas protegidas y las integraciones '
+            'dejan pasar las llamadas sin credencial valida (y las registran). Es solo para migrar: quita la '
+            'variable cuando cada sistema externo mande su secreto.')
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):

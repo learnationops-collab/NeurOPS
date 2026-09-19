@@ -8,8 +8,6 @@ rompe el test, y proteger una existente obliga a quitarla del inventario.
 import re
 from collections import Counter
 
-import pytest
-
 from tests.security.anonymous_surface import EXPUESTAS_SIN_AUTENTICACION, PUBLICAS_POR_DISENO
 
 CON_CUERPO = {'POST', 'PUT', 'PATCH', 'DELETE'}
@@ -67,12 +65,9 @@ def test_el_inventario_no_se_pisa_a_si_mismo():
     assert PUBLICAS_POR_DISENO.isdisjoint(EXPUESTAS_SIN_AUTENTICACION)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: todo el blueprint `public` (y varios mas) responde a cualquiera en internet, sin "
-    "sesion ni token: lecturas de ventas, nomina y clientes; altas, ediciones y BORRADOS de agendas, "
-    "ventas, campanas y reportes; mantenimiento (repair-db, cleanup-*, migrate, records/clear); y la "
-    "ingesta de n8n, que permite inyectar ventas falsas. Ver EXPUESTAS_SIN_AUTENTICACION."))
 def test_ninguna_ruta_de_la_herramienta_interna_responde_a_anonimos():
+    # Estuvo llena (91 rutas: ventas, nomina, clientes, borrados, mantenimiento e ingesta sin secreto) y se
+    # cerro con la politica de app/access_policy.py. Debe seguir vacia.
     por_metodo = dict(sorted(Counter(m for m, _ in EXPUESTAS_SIN_AUTENTICACION).items()))
 
     assert not EXPUESTAS_SIN_AUTENTICACION, (

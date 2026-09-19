@@ -4,12 +4,20 @@
 None en SQLAlchemy genera `IS NULL`, que empata con el PRIMER cliente sin Instagram: el endpoint lo
 "encontraba" y le pisaba nombre, mail y telefono con los de otra persona. Ahora solo se busca por
 Instagram cuando hay un usuario real.
+
+La ruta exige sesion (la usa el roadmap del lead desde el mazo de closers y setters): antes respondia a
+cualquiera en internet.
 """
 import pytest
 
 from app.models import Client
 
 URL = '/api/public/lead-roadmap/update-client'
+
+
+@pytest.fixture()
+def cabeceras(make_user, auth_headers):
+    return auth_headers(make_user(role='closer'))
 
 
 @pytest.fixture()
@@ -22,8 +30,8 @@ def cliente_sin_instagram(db):
 
 @pytest.mark.parametrize('placeholder', ['N/A', 'n/a', 'N/A ', ' n/a', '@', '   '])
 def test_un_instagram_placeholder_no_empata_con_un_cliente_sin_instagram(
-        client, db, cliente_sin_instagram, placeholder):
-    respuesta = client.post(URL, json={
+        client, db, cabeceras, cliente_sin_instagram, placeholder):
+    respuesta = client.post(URL, headers=cabeceras, json={
         'instagram': placeholder, 'full_name': 'Persona Nueva', 'email': 'nueva@x.com',
     })
 
@@ -37,19 +45,19 @@ def test_un_instagram_placeholder_no_empata_con_un_cliente_sin_instagram(
     assert nuevo.instagram is None
 
 
-def test_un_instagram_real_sigue_encontrando_al_cliente_por_su_usuario(client, db):
+def test_un_instagram_real_sigue_encontrando_al_cliente_por_su_usuario(client, db, cabeceras):
     db.session.add(Client(full_name='Ana', instagram='ana_g'))
     db.session.commit()
 
-    respuesta = client.post(URL, json={'instagram': '@Ana_G ', 'full_name': 'Ana Gomez'})
+    respuesta = client.post(URL, headers=cabeceras, json={'instagram': '@Ana_G ', 'full_name': 'Ana Gomez'})
 
     assert respuesta.status_code == 200
     assert Client.query.count() == 1
     assert Client.query.one().full_name == 'Ana Gomez'
 
 
-def test_sin_instagram_util_ni_mail_conocido_pide_el_nombre_para_crear(client, db, cliente_sin_instagram):
-    respuesta = client.post(URL, json={'instagram': 'N/A ', 'email': 'otro@x.com'})
+def test_sin_instagram_util_ni_mail_conocido_pide_el_nombre_para_crear(client, db, cabeceras, cliente_sin_instagram):
+    respuesta = client.post(URL, headers=cabeceras, json={'instagram': 'N/A ', 'email': 'otro@x.com'})
 
     assert respuesta.status_code == 400
     assert Client.query.count() == 1

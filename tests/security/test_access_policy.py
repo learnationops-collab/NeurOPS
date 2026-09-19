@@ -74,16 +74,20 @@ def test_las_rutas_de_ingesta_son_exactamente_las_esperadas():
     assert {clave for clave, politica in POLITICA.items() if politica.ingesta} == RUTAS_DE_INGESTA
 
 
-def test_la_tabla_cubre_las_rutas_que_estaban_abiertas_a_anonimos(app):
-    from tests.security.anonymous_surface import EXPUESTAS_SIN_AUTENTICACION
+def test_lo_publico_por_diseno_no_esta_en_la_tabla():
+    from tests.security.anonymous_surface import PUBLICAS_POR_DISENO
 
-    # Las tres que NO se protegen son publicas por diseno y estan en su propio inventario.
-    publicas = {('GET', '/api/public/funnel/<string:utm_source>'), ('POST', '/api/public/clients/check'),
-                ('GET', '/api/public/workshop-lead/stats')}
-    sin_politica = EXPUESTAS_SIN_AUTENTICACION - set(POLITICA) - publicas
+    # Una ruta o es publica (formularios, reservas, telemetria, callbacks) o tiene politica: nunca las dos.
+    assert PUBLICAS_POR_DISENO.isdisjoint(POLITICA)
 
-    assert sin_politica == set(), f'Rutas abiertas a anonimos sin politica: {sorted(sin_politica)}'
-    assert publicas.isdisjoint(POLITICA)
+
+def test_las_tres_rutas_que_parecian_expuestas_son_publicas_por_diseno():
+    from tests.security.anonymous_surface import PUBLICAS_POR_DISENO
+
+    # El funnel y la comprobacion de cliente de la pagina de reservas y el contador de la landing (solo
+    # totales): protegerlas rompe el embudo de reservas y la prueba social de la landing.
+    assert {('GET', '/api/public/funnel/<string:utm_source>'), ('POST', '/api/public/clients/check'),
+            ('GET', '/api/public/workshop-lead/stats')} <= PUBLICAS_POR_DISENO
 
 
 # --- Sin credenciales: nadie pasa ---------------------------------------------------------------

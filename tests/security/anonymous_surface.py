@@ -1,13 +1,13 @@
 """Inventario de las rutas que responden a un visitante ANONIMO (sin cookie ni token).
 
-Salio de pedir cada ruta registrada, con cada metodo, sin ninguna credencial: 112 de las
-combinaciones ruta x metodo no devuelven 401/403 (las de /api/external/* quedan cerradas porque exigen
-su propio token Bearer). Es un trinquete: una ruta nueva sin autenticacion rompe el test y hay que
-decidirla a conciencia; proteger una existente obliga a quitarla de aca.
+Sale de pedir cada ruta registrada, con cada metodo, sin ninguna credencial: las que no devuelven 401/403
+estan abiertas (las de /api/external/*, los crons y los webhooks quedan cerradas porque exigen su propio
+secreto). Es un trinquete: una ruta nueva sin autenticacion rompe el test y hay que decidirla a
+conciencia; proteger una existente obliga a quitarla de aca.
 """
 
-# Deben funcionar sin sesion: arranque de la sesion, captacion de leads desde las paginas publicas,
-# telemetria de la landing y callbacks de terceros.
+# Deben funcionar sin sesion: arranque de la sesion, captacion de leads y reservas desde las paginas
+# publicas, telemetria de la landing y callbacks de terceros.
 PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/auth/csrf-token'),
     ('GET', '/api/auth/debug'),
@@ -18,6 +18,11 @@ PUBLICAS_POR_DISENO = frozenset({
     ('POST', '/api/manychat-webhook'),
     ('POST', '/api/public/assistant-applications'),
     ('POST', '/api/public/book'),
+    # Pagina publica de reservas (BookingPage): el visitante carga el evento con sus preguntas y horarios y
+    # comprueba si ya lo conocemos por email o Instagram para precargar el formulario. La comprobacion solo
+    # devuelve las respuestas de la encuesta a un usuario o a un sistema con secreto, no a un anonimo.
+    ('GET', '/api/public/funnel/<string:utm_source>'),
+    ('POST', '/api/public/clients/check'),
     ('POST', '/api/public/job-applications'),
     ('POST', '/api/public/landing-session'),
     ('GET', '/api/public/slots'),
@@ -25,108 +30,18 @@ PUBLICAS_POR_DISENO = frozenset({
     ('POST', '/api/public/submit-survey'),
     ('POST', '/api/public/workshop-lead'),
     ('GET', '/api/public/workshop-lead/replay-config'),
+    # Contador de prueba social de la landing: devuelve SOLO totales (total y ultimas 24 h).
+    ('GET', '/api/public/workshop-lead/stats'),
     ('POST', '/api/v1/metrics/track-visit'),
     ('POST', '/api/workshop/interaction'),
     ('POST', '/api/workshop/plantilla-sent'),
     ('GET', '/google/callback'),
 })
 
-# Hoy responden a CUALQUIERA en internet y no deberian: son endpoints de la herramienta interna
-# (lecturas de ventas, nomina y clientes; altas, ediciones y BORRADOS de agendas, ventas, campanas y
-# reportes; tareas de mantenimiento como repair-db, cleanup-*, migrate y records/clear; la
-# ingesta de n8n, que no lleva ningun secreto compartido). Todo el blueprint `public` esta exento de
-# CSRF y no tiene ninguna autenticacion. (GET /api/backup/fix-auth, que reseteaba la clave de un admin,
-# ya fue eliminada.)
-EXPUESTAS_SIN_AUTENTICACION = frozenset({
-    ('GET', '/api/conversational/messages'),
-    ('POST', '/api/conversational/messages'),
-    ('DELETE', '/api/conversational/messages/<int:msg_id>'),
-    ('PUT', '/api/conversational/messages/<int:msg_id>'),
-    ('DELETE', '/api/conversational/records/clear'),
-    ('GET', '/api/conversational/stats/conversational'),
-    ('GET', '/api/manychat-webhook/ad-details/<int:ad_id>'),
-    ('PUT', '/api/manychat-webhook/answer/<int:answer_id>'),
-    ('POST', '/api/manychat-webhook/bulk-reassign'),
-    ('POST', '/api/manychat-webhook/bulk-reassign/preview'),
-    ('POST', '/api/manychat-webhook/cleanup-cuf'),
-    ('POST', '/api/manychat-webhook/cleanup-duplicates'),
-    ('GET', '/api/manychat-webhook/log'),
-    ('POST', '/api/manychat-webhook/migrate'),
-    ('GET', '/api/manychat-webhook/stats'),
-    ('GET', '/api/manychat-webhook/stats/dashboard'),
-    ('GET', '/api/manychat-webhook/stats/segmentation'),
-    ('POST', '/api/marketing/ads/<int:ad_id>/adjust-leads'),
-    ('GET', '/api/public/active-closers'),
-    ('GET', '/api/public/active-setters'),
-    ('GET', '/api/public/active-triage'),
-    ('GET', '/api/public/ads'),
-    ('POST', '/api/public/ads'),
-    ('DELETE', '/api/public/ads/<int:ad_id>'),
-    ('PUT', '/api/public/ads/<int:ad_id>'),
-    ('GET', '/api/public/ads/period-spend'),
-    ('POST', '/api/public/ads/period-spend'),
-    ('DELETE', '/api/public/ads/period-spend/<int:spend_id>'),
-    ('PUT', '/api/public/ads/period-spend/<int:spend_id>'),
-    ('POST', '/api/public/adsets'),
-    ('DELETE', '/api/public/adsets/<int:adset_id>'),
-    ('PUT', '/api/public/adsets/<int:adset_id>'),
-    ('GET', '/api/public/campaigns'),
-    ('POST', '/api/public/campaigns'),
-    ('DELETE', '/api/public/campaigns/<int:campaign_id>'),
-    ('PUT', '/api/public/campaigns/<int:campaign_id>'),
-    ('POST', '/api/public/clients/check'),
-    ('POST', '/api/public/clients/follow-up'),
-    ('GET', '/api/public/clients/search'),
-    ('POST', '/api/public/closer-report'),
-    ('GET', '/api/public/closer-report/prefill'),
-    ('GET', '/api/public/closer-reports'),
-    ('DELETE', '/api/public/closer-reports/<int:report_id>'),
-    ('PUT', '/api/public/closer-reports/<int:report_id>'),
-    ('GET', '/api/public/closer-stats'),
-    ('GET', '/api/public/financial-agendas'),
-    ('POST', '/api/public/financial-agendas'),
-    ('POST', '/api/public/financial-agendas-form'),
-    ('DELETE', '/api/public/financial-agendas/<int:agenda_id>'),
-    ('PUT', '/api/public/financial-agendas/<int:agenda_id>'),
-    ('POST', '/api/public/financial-agendas/repair-db'),
-    ('POST', '/api/public/financial-agendas/sync'),
-    ('POST', '/api/public/financial-agendas/sync-appointments'),
-    ('POST', '/api/public/financial-agendas/verificar-hora'),
-    ('GET', '/api/public/financial-sales'),
-    ('POST', '/api/public/financial-sales'),
-    ('DELETE', '/api/public/financial-sales/<int:sale_id>'),
-    ('PUT', '/api/public/financial-sales/<int:sale_id>'),
-    ('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'),
-    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'),
-    ('POST', '/api/public/financial-sales/new'),
-    ('GET', '/api/public/financial-sales/payroll'),
-    ('POST', '/api/public/financial-sales/sync'),
-    ('GET', '/api/public/funnel/<string:utm_source>'),
-    ('GET', '/api/public/lead-roadmap'),
-    ('POST', '/api/public/lead-roadmap/relate-event'),
-    ('POST', '/api/public/lead-roadmap/update-client'),
-    ('POST', '/api/public/marketing/manual-attribution'),
-    ('POST', '/api/public/marketing/manual-attribution-agenda'),
-    ('GET', '/api/public/marketing/unattributed-leads'),
-    ('GET', '/api/public/new-clients'),
-    ('GET', '/api/public/reports/sales-attribution'),
-    ('GET', '/api/public/setter-questions'),
-    ('POST', '/api/public/setter-report'),
-    ('GET', '/api/public/setter-report/prefill'),
-    ('GET', '/api/public/setter-reports'),
-    ('DELETE', '/api/public/setter-reports/<int:report_id>'),
-    ('PUT', '/api/public/setter-reports/<int:report_id>'),
-    ('GET', '/api/public/setter-stats'),
-    ('POST', '/api/public/triage-report'),
-    ('GET', '/api/public/triage-report/prefill'),
-    ('GET', '/api/public/triage-reports'),
-    ('DELETE', '/api/public/triage-reports/<int:report_id>'),
-    ('PUT', '/api/public/triage-reports/<int:report_id>'),
-    ('GET', '/api/public/triage-stats'),
-    ('GET', '/api/public/workshop-lead/stats'),
-    ('GET', '/api/triage/tracker'),
-    ('POST', '/api/triage/tracker'),
-    ('DELETE', '/api/triage/tracker/<int:report_id>'),
-    ('GET', '/api/triage/tracker/stats'),
-    ('GET', '/api/workshop/stats/summary'),
-})
+# Rutas de la herramienta interna que responden a CUALQUIERA en internet y no deberian. Estuvo llena: 91
+# rutas (lecturas de ventas, nomina y clientes; altas, ediciones y BORRADOS de agendas, ventas, campanas y
+# reportes; mantenimiento como repair-db, cleanup-*, migrate y records/clear; y la ingesta de n8n, que no
+# llevaba ningun secreto) porque todo el blueprint `public` estaba sin autenticacion. Ahora la politica de
+# app/access_policy.py exige sesion con rol o el secreto de ingesta. Debe seguir VACIA: una ruta nueva que
+# responda a un anonimo se declara publica por diseno (arriba) o se agrega a la politica.
+EXPUESTAS_SIN_AUTENTICACION = frozenset()
