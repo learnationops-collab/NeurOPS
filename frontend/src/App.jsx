@@ -33,8 +33,6 @@ import OperationsDashboard from './pages/operations/dashboard/OperationsDashboar
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
 import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
-import BackupPage from './pages/public/BackupPage';
-import RestorePage from './pages/public/RestorePage';
 import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
 import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
@@ -108,8 +106,6 @@ function App() {
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
-            <Route path="/backup" element={<BackupPage />} />
-            <Route path="/restore" element={<RestorePage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
