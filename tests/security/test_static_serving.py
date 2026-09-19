@@ -52,11 +52,40 @@ def test_no_se_pueden_leer_archivos_fuera_de_la_carpeta_estatica(client, estatic
     assert SECRETO not in respuesta.get_data(as_text=True)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG menor: la ruta comodin sirve index.html (200) para CUALQUIER GET, tambien /api/...: una URL "
-    "de API mal escrita devuelve HTML con 200 y axios lo toma como una respuesta valida en vez de "
-    "fallar, lo que esconde el error. Deberia ser un 404 JSON para todo lo que empiece por /api/."))
-def test_una_ruta_de_la_api_inexistente_es_404_y_no_la_spa(client, estaticos):
-    respuesta = client.get('/api/ruta-que-no-existe')
+# La ruta comodin servia index.html (200) para CUALQUIER GET, tambien /api/...: una URL de API mal
+# escrita devolvia HTML con 200 y axios lo tomaba por una respuesta valida en vez de fallar, lo que
+# escondia el error.
+@pytest.mark.parametrize('ruta', ['/api', '/api/', '/api/ruta-que-no-existe', '/api/a/b/c', '/api/auth'])
+def test_una_ruta_de_la_api_inexistente_es_404_json_y_no_la_spa(client, estaticos, ruta):
+    respuesta = client.get(ruta)
 
     assert respuesta.status_code == 404
+    assert respuesta.get_json() == {'message': 'Not found'}
+    assert INDICE not in respuesta.get_data(as_text=True)
+
+
+@pytest.mark.parametrize('ruta', ['/apiario', '/api-docs', '/apis/x', '/admin/api/x'])
+def test_solo_el_prefijo_api_barra_es_de_la_api(client, estaticos, ruta):
+    # '/apiario' o '/admin/api/x' son rutas de la SPA: no se confunden con el prefijo /api/.
+    respuesta = client.get(ruta)
+
+    assert respuesta.status_code == 200
+    assert INDICE in respuesta.get_data(as_text=True)
+
+
+def test_una_ruta_real_de_la_api_sigue_funcionando(client, estaticos):
+    respuesta = client.get('/api/auth/csrf-token')
+
+    assert respuesta.status_code == 200
+    assert 'csrf_token' in respuesta.get_json()
+
+
+def test_un_archivo_estatico_llamado_api_no_se_sirve_bajo_el_prefijo(client, estaticos):
+    # Nada en /api/ sale de la carpeta estatica, exista o no un archivo con ese nombre.
+    (estaticos / 'api').mkdir()
+    (estaticos / 'api' / 'dato.json').write_text('{"filtrado": true}')
+
+    respuesta = client.get('/api/dato.json')
+
+    assert respuesta.status_code == 404
+    assert 'filtrado' not in respuesta.get_data(as_text=True)

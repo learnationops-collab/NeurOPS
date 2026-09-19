@@ -183,7 +183,11 @@ def create_app(config_class=Config):
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
-        from flask import send_from_directory
+        from flask import jsonify, send_from_directory
+        if path == 'api' or path.startswith('api/'):
+            # Una URL de API que no existe no es una ruta de la SPA: sin esto devolvia index.html con
+            # 200 y el cliente (axios) lo tomaba por una respuesta valida en vez de fallar.
+            return jsonify({"message": "Not found"}), 404
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
         return send_from_directory(app.static_folder, 'index.html')
