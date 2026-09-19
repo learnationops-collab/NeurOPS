@@ -114,6 +114,8 @@ def client(app, db):
 @pytest.fixture()
 def make_user(db):
     """make_user(role='closer', **campos) -> User ya guardado, con clave 'secret123'."""
+    from werkzeug.security import generate_password_hash
+
     from app.models import User
 
     contador = itertools.count(1)
@@ -126,7 +128,9 @@ def make_user(db):
             role=role,
             **campos,
         )
-        user.set_password(password)
+        # Hash barato: el scrypt por defecto tarda ~0.1 s por usuario y triplicaba la suite.
+        # check_password lee el metodo del propio hash, asi que verifica igual.
+        user.password_hash = generate_password_hash(password, method='pbkdf2:sha256:1')
         db.session.add(user)
         db.session.commit()
         return user
