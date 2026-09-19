@@ -150,3 +150,7 @@ def _secreto_de_cron():
 
 # Crons externos (sincronizacion de Google Sheets y recordatorios de seguimiento por WhatsApp).
 require_cron_secret = _requiere_secreto_compartido('CRON_SECRET', _secreto_de_cron)
+
+# Webhook de ManyChat (leads de Instagram): ManyChat manda el secreto en el header X-ManyChat-Token.
+require_manychat_token = _requiere_secreto_compartido(
+    'MANYCHAT_WEBHOOK_TOKEN', lambda: request.headers.get('X-ManyChat-Token', ''))

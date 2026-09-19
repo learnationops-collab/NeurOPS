@@ -18,12 +18,11 @@ RAIZ = Path(__file__).resolve().parents[2]
 NOMBRE_SECRETO = re.compile(r'(SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|EXPECTED_KEY)', re.IGNORECASE)
 
 # (archivo, nombre) -> cuantas veces. Todos son hallazgos reales salvo el ultimo. (Ya salieron del
-# codigo la clave de backup/restore, las contrasenas fijas de fix-auth y el valor por defecto de
-# CRON_SECRET de los dos crons.)
+# codigo la clave de backup/restore, las contrasenas fijas de fix-auth, el valor por defecto de
+# CRON_SECRET de los dos crons y el token del webhook de ManyChat.)
 CONOCIDOS = {
     ('app/services/import_service.py', 'set_password'): 3,  # la misma clave por defecto para todo usuario importado
     ('app/services/user_service.py', 'set_password'): 1,  # clave debil por defecto si se crea un usuario sin clave
-    ('app/api/webhooks.py', 'EXPECTED_TOKEN'): 1,  # token del webhook de ManyChat
     ('config.py', 'SECRET_KEY'): 1,  # respaldo de DESARROLLO: solo se usa fuera de produccion
 }
 ACEPTABLES = {('config.py', 'SECRET_KEY')}
@@ -95,9 +94,8 @@ def test_los_secretos_escritos_en_el_codigo_son_exactamente_los_conocidos():
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: hay secretos escritos en el codigo (token del webhook de ManyChat y las "
-    "contrasenas por defecto de usuarios importados o creados sin clave). Deben salir a variables de "
-    "entorno, rotarse y no tener valor por defecto."))
+    "BUG DE SEGURIDAD: hay secretos escritos en el codigo (las contrasenas por defecto de usuarios "
+    "importados o creados sin clave). Deben dejar de existir: una clave aleatoria que nadie conoce."))
 def test_no_hay_secretos_escritos_en_el_codigo():
     reales = sorted(set(_todos_los_hallazgos()) - ACEPTABLES)
 
