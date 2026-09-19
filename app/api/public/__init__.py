@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User, Notification
 from app.services.booking_service import BookingService
 from datetime import datetime, date, timedelta
+from sqlalchemy import or_
 import json
 
 bp = Blueprint('public_api', __name__)
