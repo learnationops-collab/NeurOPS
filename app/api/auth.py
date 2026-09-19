@@ -12,10 +12,13 @@ def login():
     Prioritizes JWT Token generation.
     """
     data = request.get_json() or {}
+    if not isinstance(data, dict):  # un JSON valido pero que no es un objeto (lista, numero, texto)
+        data = {}
     username = data.get('username')
     password = data.get('password')
 
-    if not username or not password:
+    # Solo texto: un numero, lista u objeto rompia la consulta o el hash y contestaba 500 a quien quisiera.
+    if not isinstance(username, str) or not isinstance(password, str) or not username or not password:
         return jsonify({"message": "Username and password required"}), 400
 
     # 1. Find User

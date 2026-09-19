@@ -79,6 +79,27 @@ def test_clave_incorrecta_y_usuario_inexistente_son_indistinguibles(client, make
     assert clave_mala.get_json() == sin_usuario.get_json() == {'message': 'Invalid credentials'}
 
 
+@pytest.mark.parametrize('cuerpo', [
+    {'username': 123, 'password': CLAVE},
+    {'username': 'ana', 'password': 123},
+    {'username': ['ana'], 'password': CLAVE},
+    {'username': 'ana', 'password': ['secret123']},
+    {'username': {'$ne': ''}, 'password': CLAVE},
+    {'username': 'ana', 'password': {'$ne': ''}},
+    {'username': True, 'password': True},
+    [1, 2],  # un JSON valido pero que ni siquiera es un objeto
+    'ana',
+    5,
+])
+def test_credenciales_o_cuerpo_que_no_son_texto_dan_400_y_no_un_500(client, make_user, cuerpo):
+    make_user(username='ana')
+
+    respuesta = client.post(LOGIN, json=cuerpo)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'message': 'Username and password required'}
+
+
 @pytest.mark.parametrize('usuario', ["' OR '1'='1", "ana'--", 'ana"; DROP TABLE users;--', '%', '*'])
 def test_un_usuario_con_sintaxis_de_inyeccion_no_entra_ni_rompe(client, make_user, usuario):
     make_user(username='ana')
