@@ -746,11 +746,13 @@ class CloserService:
         return cambio
 
     @staticmethod
-    def backfill_show_up_from_sales(dry_run=True, limit=None):
+    def backfill_show_up_from_sales(dry_run=True, limit=None, desde=None):
         """Pasada retroactiva de `mark_sale_appointment_as_show_up` sobre todas las ventas ya
         registradas: corrige las agendas históricas de leads que compraron pero quedaron como
         'Pendiente' o 'No Show'. Arranca en `dry_run` a propósito — primero se mira cuántas
-        cambiarían y recién después se aplica."""
+        cambiarían y recién después se aplica. `desde` (datetime) acota a las ventas registradas
+        de esa fecha en adelante: cambiar el show up de llamadas viejas mueve las estadísticas de
+        meses que ya se dieron por cerrados, y eso conviene decidirlo aparte."""
         from app.models import FinancialSale
         from app.services.closer_followup_service import CloserFollowUpService
 
@@ -762,6 +764,8 @@ class CloserService:
         cambios, vistos, vendedores = [], set(), {}
         for sale in sales:
             registrada = CloserService.sale_registered_at(sale)
+            if desde and (not registrada or registrada < desde):
+                continue
             clave = (sale.client_id, registrada.date() if registrada else None)
             if clave in vistos:
                 continue
