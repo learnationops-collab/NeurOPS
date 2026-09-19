@@ -613,14 +613,17 @@ def manage_db_agendas():
     if request.method == 'POST':
         data = request.get_json() or {}
         id = data.get('id')
-        if id:
-            a = Appointment.query.get_or_404(id)
-            if 'status' in data: a.result = data['status']
-            if 'origin' in data: a.origin = data['origin']
-            if 'start_time' in data: a.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+        # Solo edita agendas existentes. Sin `id` no hay nada que actualizar, y contestar 200
+        # "Agenda actualizada" hacia creer que se guardo algo (aca no se crean agendas a mano).
+        if not id:
+            return jsonify({"error": "Falta el id de la agenda"}), 400
+        a = Appointment.query.get_or_404(id)
+        if 'status' in data: a.result = data['status']
+        if 'origin' in data: a.origin = data['origin']
+        if 'start_time' in data: a.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
         db.session.commit()
         return jsonify({"message": "Agenda actualizada"}), 200
-    
+
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     start_date = request.args.get('start_date')
@@ -1459,57 +1462,6 @@ def quick_create_sale():
         db.session.commit()
         return jsonify({"message": "Venta registrada exitosamente", "enrollment_id": enrollment.id}), 201
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@bp.route('/admin/db/agendas', methods=['POST'])
-@login_required
-@admin_required
-def create_admin_appointment():
-    # Helper to allow admin to create appointment manually
-    data = request.get_json() or {}
-    try:
-        lead_id = data.get('lead_id')
-        start_time_str = data.get('start_time')
-        appt_type = data.get('type', 'Primera agenda')
-        
-        if not lead_id or not start_time_str:
-            return jsonify({"error": "Faltan datos (lead_id, start_time)"}), 400
-            
-        lead = Lead.query.get(lead_id)
-        if not lead:
-             return jsonify({"error": "Lead no encontrado"}), 404
-             
-        # Create/Find Client
-        client = Client.query.filter_by(email=lead.email).first()
-        if not client:
-            client = Client(
-                full_name=lead.name,
-                email=lead.email,
-                phone=lead.phone if hasattr(lead, 'phone') else None,
-                instagram=lead.instagram_username
-            )
-            db.session.add(client)
-            db.session.flush()
-            
-        start_time = datetime.fromisoformat(start_time_str)
-        
-        appt = Appointment(
-            closer_id=current_user.id, # Admin assigned to self
-            client_id=client.id,
-            start_time=start_time,
-            origin=data.get('origin', 'Manual (Admin)'),
-            last_stage='Nueva',
-            result=None,
-            is_pinned=False
-        )
-        
-        db.session.add(appt)
-        db.session.commit()
-        
-        return jsonify({"message": "Agenda creada", "id": appt.id}), 201
-        
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

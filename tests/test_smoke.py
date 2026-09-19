@@ -1,15 +1,6 @@
 """Humo: la app arranca, las tablas se crean y las rutas estan bien cableadas."""
 import collections
 
-# Rutas repetidas (metodo, regla) que YA existen. Flask no avisa cuando dos funciones registran la
-# misma regla: la segunda queda tapada y su codigo nunca corre. Esta lista es un trinquete: un
-# duplicado NUEVO rompe el test, y arreglar uno viejo obliga a sacarlo de aca.
-DUPLICADOS_CONOCIDOS = {
-    # `create_admin_appointment` (admin.py) es codigo muerto: siempre gana `manage_db_agendas`,
-    # cuya rama POST sin `id` responde "Agenda actualizada" sin crear nada.
-    ('POST', '/api/admin/db/agendas'): ['api.manage_db_agendas', 'api.create_admin_appointment'],
-}
-
 BLUEPRINTS_ESPERADOS = {
     'api', 'closer_api', 'closer_dashboard_api', 'closer_followups_api', 'closer_installments_api',
     'public_api', 'external_academy_api', 'external_dev_platform_api', 'setter', 'google_calendar_bp',
@@ -72,9 +63,11 @@ def test_cada_prefijo_critico_tiene_rutas(app):
     assert sin_rutas == []
 
 
-def test_no_aparecen_rutas_duplicadas_nuevas(app):
+def test_no_hay_rutas_duplicadas(app):
+    # Flask no avisa cuando dos funciones registran la misma regla y metodo: la segunda queda
+    # tapada y su codigo nunca corre (asi paso con POST /api/admin/db/agendas).
     duplicadas = {clave: eps for clave, eps in _rutas(app).items() if len(eps) > 1}
-    assert duplicadas == DUPLICADOS_CONOCIDOS
+    assert duplicadas == {}
 
 
 # --- Base de datos ------------------------------------------------------------------------------
