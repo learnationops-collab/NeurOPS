@@ -8,7 +8,6 @@ import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
-import EmergencyCreatePage from './pages/auth/EmergencyCreatePage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
@@ -105,7 +104,6 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />
-            <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
