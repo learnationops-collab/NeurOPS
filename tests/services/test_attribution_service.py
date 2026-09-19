@@ -173,7 +173,9 @@ def test_un_upsell_se_atribuye_a_su_propia_agenda_mas_reciente():
 
 
 @pytest.mark.parametrize('tipo_primer_pago', [
-    'RR - Seña', 'RR - Con Seña', 'sena', 'RR - Completo', 'PIF', 'Split Pay', 'RR - Split', 'splt',
+    'RR - Seña', 'RR - Con Seña', 'sena', 'RR - Completo', 'PIF',
+    'RR - Parcial', 'rr - parcial', 'Desconocido - Parcial',  # el Split Pay de hoy
+    'Split Pay', 'RR - Split', 'splt',  # el vocabulario historico del sheet
 ])
 def test_estos_tipos_de_primer_pago_anclan_la_atribucion(tipo_primer_pago):
     a1, a2 = agenda(1, 'foo', None, D(2026, 1, 1)), agenda(2, 'foo', None, D(2026, 1, 20))
@@ -203,18 +205,33 @@ def test_si_el_primer_pago_es_anterior_a_todas_las_agendas_se_usa_la_primera_del
     assert atribuir([pago], [a_tardia, a_temprana])[10] is a_temprana
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: 'parcial' no se reconoce como primer pago. Hoy el Split Pay se registra como "
-    "'RR - Parcial' (DeclararVentaWizard, NewSalePage, closer_service: 'parcial' -> 'split'), pero la "
-    "lista de tipos calificados es split/splt/sena/completo/pif. En la copia local hay 231 de 889 "
-    "ventas 'parcial' y 0 'split'. Con >1 agenda, las cuotas se van a la agenda mas reciente en vez "
-    "de la que origino el primer pago. Arreglo: agregar 'parcial' a la lista de attribution_service."))
 def test_un_parcial_ancla_la_atribucion_como_lo_hacia_el_split():
+    # Regresion: el Split Pay hoy se registra como 'RR - Parcial' (en la copia local, 231 de 889
+    # ventas son parcial y 0 dicen split) y no se reconocia como primer pago, asi que con mas de
+    # una agenda las cuotas se iban a la agenda mas reciente y no a la que origino el pago.
     a1, a2 = agenda(1, 'foo', None, D(2026, 1, 1)), agenda(2, 'foo', None, D(2026, 1, 20))
     parcial = venta(10, 'foo', None, 'RR - Parcial', D(2026, 1, 5))
-    cuota = venta(11, 'foo', None, 'RR - Cuota', D(2026, 2, 1))
+    cuota_1 = venta(11, 'foo', None, 'RR - Cuota', D(2026, 2, 1))
+    cuota_2 = venta(12, 'foo', None, 'RR - Cuota', D(2026, 3, 1))
 
-    assert atribuir([parcial, cuota], [a1, a2])[11] is a1
+    mapa = atribuir([parcial, cuota_1, cuota_2], [a1, a2])
+
+    assert mapa[10] is a1
+    assert mapa[11] is a1
+    assert mapa[12] is a1
+
+
+def test_una_sena_anterior_al_parcial_sigue_siendo_el_primer_pago():
+    # Sena (12-ene) -> Parcial (20-ene) -> Cuota: el primer pago es la sena, no el parcial.
+    a1, a2, a3 = (agenda(1, 'foo', None, D(2026, 1, 1)), agenda(2, 'foo', None, D(2026, 1, 10)),
+                  agenda(3, 'foo', None, D(2026, 1, 25)))
+    sena = venta(10, 'foo', None, 'RR - Seña', D(2026, 1, 12))
+    parcial = venta(11, 'foo', None, 'RR - Parcial', D(2026, 1, 20))
+    cuota = venta(12, 'foo', None, 'RR - Cuota', D(2026, 2, 1))
+
+    mapa = atribuir([sena, parcial, cuota], [a1, a2, a3])
+
+    assert mapa[10] is a2 and mapa[11] is a2 and mapa[12] is a2
 
 
 # --- Leads sin datos suficientes --------------------------------------------------------------

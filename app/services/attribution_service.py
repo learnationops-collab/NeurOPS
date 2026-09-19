@@ -37,7 +37,7 @@ class AttributionService:
         Aplica la regla de negocio:
         1. Agrupa las ventas y agendas por Lead (utilizando Union-Find sobre Instagram y Correo).
         2. Para cada Lead, ordena cronológicamente sus agendas y ventas.
-        3. Identifica la primera venta del lead que sea un pago de tipo 'split', 'seña' o 'completo'.
+        3. Identifica la primera venta del lead que sea un pago de tipo 'parcial' (antes 'split'), 'seña' o 'completo'.
         4. Resuelve la agenda asociada a esa primera venta (la más reciente hasta el momento de la venta).
         5. Atribuye todos los pagos posteriores de ese lead (excepto upsells) a la misma agenda del primer pago.
         6. Para upsells o leads sin primer pago calificado, se atribuye a la agenda más reciente hasta la fecha del pago.
@@ -108,12 +108,13 @@ class AttributionService:
             lead_agendas = sorted(data["agendas"], key=get_date)
             lead_sales = sorted(data["sales"], key=get_date)
 
-            # Buscar primer pago calificado (split, splt, seña, sena, completo, pif)
+            # Buscar primer pago calificado (parcial, seña, completo/pif). El Split Pay hoy se
+            # registra como 'Parcial'; 'split'/'splt' quedan por las ventas historicas del sheet.
             first_pay_sale = None
             for s in lead_sales:
                 tp = s.tipo_pago or ""
                 tp_lower = tp.lower()
-                is_qualified = any(x in tp_lower for x in ["split", "splt", "seña", "sena", "completo", "pif"])
+                is_qualified = any(x in tp_lower for x in ["parcial", "split", "splt", "seña", "sena", "completo", "pif"])
                 if is_qualified:
                     first_pay_sale = s
                     break
