@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from app.access_policy import es_llamada_de_confianza
 from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User, Notification
 from app.services.booking_service import BookingService
 from datetime import datetime, date, timedelta
@@ -118,17 +119,18 @@ def check_client_exists():
         client = Client.query.filter(or_(Client.instagram == ig_username, Client.instagram == f"@{ig_username}")).first()
     
     if client:
-        answers = {sa.question_id: sa.answer for sa in client.survey_answers}
-        return jsonify({
-            "exists": True,
-            "client": {
-                "id": client.id,
-                "full_name": client.full_name,
-                "phone": client.phone,
-                "instagram": client.instagram,
-                "survey_answers": answers
-            }
-        }), 200
+        datos = {
+            "id": client.id,
+            "full_name": client.full_name,
+            "phone": client.phone,
+            "instagram": client.instagram,
+        }
+        # Ruta publica (la pagina de reservas precarga el formulario de quien ya conocemos): a un anonimo no se
+        # le devuelven las respuestas de la encuesta, que la pagina ni usa. Solo a un usuario o a un sistema
+        # con el secreto de ingesta (n8n, Apps Script).
+        if es_llamada_de_confianza():
+            datos["survey_answers"] = {sa.question_id: sa.answer for sa in client.survey_answers}
+        return jsonify({"exists": True, "client": datos}), 200
     return jsonify({"exists": False}), 200
 
 @bp.route('/public/submit-lead', methods=['POST'])

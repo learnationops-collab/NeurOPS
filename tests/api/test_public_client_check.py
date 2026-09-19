@@ -4,9 +4,12 @@ Busca por email y, si no lo encuentra, por Instagram (con o sin arroba) para pre
 quien ya reservo antes. La busqueda por Instagram usaba `or_` sin importarlo: el NameError daba un 500
 cada vez que el visitante escribia su Instagram y no coincidia su email.
 
-La ruta es anonima a proposito (la usa la pagina de reservas sin sesion). Que devuelva telefono y
-respuestas de la encuesta de cualquier cliente conocido a quien acierte un email es un riesgo de
-privacidad que se trata junto con el resto de la superficie anonima (ver test_anonymous_surface).
+La ruta es anonima a proposito (la usa la pagina de reservas sin sesion). A un anonimo se le devuelven
+solo los datos que la pagina usa para precargar el formulario (id, nombre, telefono e Instagram); las
+respuestas de la encuesta, que la pagina no usa, solo van a un usuario logueado o a un sistema con el
+secreto de ingesta (n8n, Apps Script). Que telefono y nombre se devuelvan a quien acierte un email o un
+Instagram sigue siendo un riesgo de privacidad que exige rehacer la experiencia de la reserva (verificar
+al visitante); queda como decision pendiente.
 """
 import pytest
 
@@ -40,7 +43,7 @@ def test_un_cliente_conocido_se_encuentra_por_email(client, ana):
 
     assert respuesta.status_code == 200
     assert respuesta.get_json() == {'exists': True, 'client': {
-        'id': ana.id, 'full_name': 'Ana Gomez', 'phone': '+58 412 0000000', 'instagram': 'ana.g', 'survey_answers': {}}}
+        'id': ana.id, 'full_name': 'Ana Gomez', 'phone': '+58 412 0000000', 'instagram': 'ana.g'}}
 
 
 def test_un_desconocido_no_existe(client, ana):
@@ -89,13 +92,44 @@ def test_un_instagram_desconocido_no_existe(client, ana):
     assert consultar(client, instagram='@nadie').get_json() == {'exists': False}
 
 
-def test_devuelve_las_respuestas_de_la_encuesta_por_pregunta(client, db, ana):
+@pytest.fixture()
+def respuesta_de_ana(db, ana):
     pregunta = SurveyQuestion(text='Cual es tu meta?')
     db.session.add(pregunta)
     db.session.commit()
     db.session.add(SurveyAnswer(client_id=ana.id, question_id=pregunta.id, answer='Vender mas'))
     db.session.commit()
+    return pregunta
 
+
+def test_un_anonimo_no_recibe_las_respuestas_de_la_encuesta(client, respuesta_de_ana):
+    # La pagina de reservas es publica y ni usa las respuestas: no se le entregan a cualquiera que acierte un email.
     respuesta = consultar(client, email='ana@x.com')
 
-    assert respuesta.get_json()['client']['survey_answers'] == {str(pregunta.id): 'Vender mas'}
+    assert 'survey_answers' not in respuesta.get_json()['client']
+    assert 'Vender mas' not in respuesta.get_data(as_text=True)
+
+
+def test_un_usuario_logueado_recibe_las_respuestas_de_la_encuesta_por_pregunta(
+        client, respuesta_de_ana, make_user, auth_headers):
+    respuesta = client.post(URL, json={'email': 'ana@x.com'}, headers=auth_headers(make_user(role='closer')))
+
+    assert respuesta.get_json()['client']['survey_answers'] == {str(respuesta_de_ana.id): 'Vender mas'}
+
+
+def test_un_sistema_con_el_secreto_de_ingesta_recibe_las_respuestas(client, respuesta_de_ana, monkeypatch):
+    monkeypatch.setenv('INGEST_API_TOKEN', 'secreto-de-ingesta-de-prueba-con-mas-de-veinte-caracteres')
+
+    respuesta = client.post(URL, json={'email': 'ana@x.com'},
+                            headers={'X-Api-Token': 'secreto-de-ingesta-de-prueba-con-mas-de-veinte-caracteres'})
+
+    assert respuesta.get_json()['client']['survey_answers'] == {str(respuesta_de_ana.id): 'Vender mas'}
+
+
+def test_un_secreto_equivocado_se_trata_como_anonimo(client, respuesta_de_ana, monkeypatch):
+    monkeypatch.setenv('INGEST_API_TOKEN', 'secreto-de-ingesta-de-prueba-con-mas-de-veinte-caracteres')
+
+    respuesta = client.post(URL, json={'email': 'ana@x.com'}, headers={'X-Api-Token': 'mal'})
+
+    assert respuesta.status_code == 200
+    assert 'survey_answers' not in respuesta.get_json()['client']
