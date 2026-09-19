@@ -32,6 +32,9 @@ ESTADOS = [
      'desc': 'Confirmada, esperando la fecha de la llamada.'},
     {'key': 'sin_reportar', 'label': 'Sin reportar', 'color': '#FF3FA4',
      'desc': 'La hora ya pasó y no se reportó qué pasó en la llamada.'},
+    {'key': 'reportada_sin_resultado', 'label': 'Reportada · sin resultado', 'color': '#C77DA3',
+     'desc': 'El closer la marcó como reportada en el mazo (reagendó, hizo un seguimiento…) pero no '
+             'quedó un resultado de llamada (Asistió, No show…). Ábrela para completarlo.'},
     {'key': 'show_up', 'label': 'Asistió', 'color': '#2FBF8F',
      'desc': 'Show up: el lead asistió a la llamada.'},
     {'key': 'segunda_llamada', 'label': '2da llamada', 'color': '#22D3C4',
@@ -50,6 +53,12 @@ ESTADOS = [
      'desc': 'Resultado que no encaja en ninguna categoría conocida (se muestra el valor crudo).'},
 ]
 ESTADO_LABELS = {e['key']: e['label'] for e in ESTADOS}
+
+# Estados de una agenda que todavía no tiene un resultado real de llamada. Son los únicos sobre
+# los que tiene sentido "marcar como duplicada" (nunca se cancela una llamada con resultado real)
+# y los que suman al KPI "Todavía sin resultado". El frontend tiene su propia copia
+# (CarteraAgendasPane.jsx: ESTADOS_SIN_REPORTAR): si se cambia acá, cambiarla allá.
+ESTADOS_SIN_RESULTADO = ('por_confirmar', 'confirmada', 'sin_reportar', 'reportada_sin_resultado')
 
 # Valores crudos de `closer_result` tal como los escriben los distintos orígenes (el closer
 # desde el mazo, la sincronización del Registro de Agendas en `BookingService`, cargas
@@ -127,7 +136,14 @@ def derivar_estado(appt, now_utc):
     `is_rescheduled` NO entra acá: se marca en la agenda NUEVA que nace de una reagenda (ver
     `CloserService.process_agenda`), no en la que se movió — la movida queda con
     `closer_result='Reagendado'`. Tratarlo como "reagendada" pondría en ese estado a la cita
-    vigente, que en realidad está por confirmar."""
+    vigente, que en realidad está por confirmar.
+
+    `closer_processed` es lo que el mazo usa para su columna "Reportadas": una llamada ya pasada
+    sin resultado pero con `closer_processed=True` la ve el closer como reportada, y llamarla
+    "Sin reportar" acá contradecía su propio tablero (en producción, 57 agendas: reagendadas desde
+    Confirmación antes del arreglo del 8/sep, cargas históricas y seguimientos que no dejan
+    resultado de llamada). Sin inventar un resultado, se muestra aparte como
+    'reportada_sin_resultado'."""
     cr = (appt.closer_result or '').strip().lower()
     res = (appt.result or '').strip().lower()
 
@@ -156,7 +172,7 @@ def derivar_estado(appt, now_utc):
     # Sin resultado del closer todavía: depende de si la llamada ya pasó.
     if appt.start_time and appt.start_time > now_utc:
         return 'confirmada' if res == 'confirmado' else 'por_confirmar'
-    return 'sin_reportar'
+    return 'reportada_sin_resultado' if appt.closer_processed else 'sin_reportar'
 
 
 class CloserAgendasService:
@@ -202,7 +218,9 @@ class CloserAgendasService:
         `CloserFollowUpService.get_client_lead_stage`, pero para ESTA cita puntual)."""
         if estado in ('por_confirmar', 'confirmada'):
             return 'confirm', None
-        if estado == 'sin_reportar':
+        # Sin resultado (nunca reportada, o marcada reportada sin resultado): lo que falta es el
+        # reporte de la llamada, no un seguimiento.
+        if estado in ('sin_reportar', 'reportada_sin_resultado'):
             return 'call', None
         if not appt.seguimiento_realizado:
             tipo = CloserFollowUpService._effective_tipo(appt, has_sale=venta)

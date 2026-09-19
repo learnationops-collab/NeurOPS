@@ -7,8 +7,9 @@ import DeleteButton from '../../../components/rare-ui/delete-button';
 
 // Estados en los que una agenda todavía no tiene un resultado real cargado — los únicos que
 // se pueden marcar como "duplicada" (ver ESTADOS_SIN_REPORTAR abajo y `marcar-duplicada` en
-// el backend). Nunca se ofrece esta acción sobre una llamada que sí ocurrió.
-const ESTADOS_SIN_REPORTAR = new Set(['por_confirmar', 'confirmada', 'sin_reportar']);
+// el backend). Nunca se ofrece esta acción sobre una llamada que sí ocurrió. Misma lista que
+// `ESTADOS_SIN_RESULTADO` de closer_agendas_service.py: si cambia allá, cambiarla acá.
+const ESTADOS_SIN_REPORTAR = new Set(['por_confirmar', 'confirmada', 'sin_reportar', 'reportada_sin_resultado']);
 
 // Ventana para considerar dos agendas del mismo cliente "la misma cita duplicada" — igual que
 // la que usa el backend (`marcar_agenda_duplicada`) para no divergir en qué cuenta como cerca.
@@ -254,7 +255,7 @@ const CarteraAgendasPane = ({ onOpenLead }) => {
     };
 
     const porEstado = counts?.por_estado || {};
-    const sinResultado = (porEstado.por_confirmar || 0) + (porEstado.confirmada || 0) + (porEstado.sin_reportar || 0);
+    const sinResultado = [...ESTADOS_SIN_REPORTAR].reduce((n, k) => n + (porEstado[k] || 0), 0);
     const tzLabel = viewerTimezoneLabel();
 
     let lastDay = null;

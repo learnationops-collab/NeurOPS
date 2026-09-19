@@ -187,7 +187,7 @@ def marcar_agenda_duplicada(appt_id):
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
-    from app.services.closer_agendas_service import derivar_estado
+    from app.services.closer_agendas_service import ESTADOS_SIN_RESULTADO, derivar_estado
     from app.services.closer_service import CloserService
 
     appt = Appointment.query.get_or_404(appt_id)
@@ -198,7 +198,7 @@ def marcar_agenda_duplicada(appt_id):
         return jsonify({"message": "Esta agenda no tiene cliente u hora válidos"}), 400
 
     estado = derivar_estado(appt, datetime.utcnow())
-    if estado not in ('por_confirmar', 'confirmada', 'sin_reportar'):
+    if estado not in ESTADOS_SIN_RESULTADO:
         return jsonify({"message": "Esta agenda ya tiene un resultado reportado — no se puede marcar como duplicada."}), 400
 
     ventana = timedelta(hours=6)
