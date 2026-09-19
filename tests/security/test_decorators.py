@@ -9,7 +9,7 @@ reales: el rol llega en la cabecera X-Rol y las rutas devuelven {"ok": true}. Po
   role_required('closer')            -> solo closer
 """
 import pytest
-from flask import Blueprint, Flask, abort, jsonify
+from flask import Flask, abort, jsonify
 from flask_login import LoginManager, UserMixin
 
 from app.decorators import (
@@ -52,11 +52,6 @@ def mini_app():
     def cargar_usuario(peticion):
         rol = peticion.headers.get('X-Rol')
         return Usuario(rol) if rol else None
-
-    # Los decoradores redirigen a `url_for('auth.login')` cuando la ruta no es de la API.
-    auth = Blueprint('auth', __name__)
-    auth.add_url_rule('/login', endpoint='login', view_func=lambda: 'pantalla de login')
-    app.register_blueprint(auth)
 
     for nombre, (decorador, _) in DECORADORES.items():
         def vista_ok():
@@ -128,25 +123,35 @@ def test_la_politica_de_roles_es_la_documentada():
     }
 
 
-# --- Configuracion del login manager ----------------------------------------------------------
+# --- Manejador de no autenticado de la app real -----------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG latente: login.login_view es 'auth.login' y los decoradores redirigen a url_for('auth.login') "
-    "en rutas que no son de /api/, pero ese endpoint no existe (el login es 'api.login'). Hoy todas las "
-    "rutas protegidas son /api/..., asi que no se nota; la primera que no lo sea devolveria 500 en vez "
-    "de redirigir al login."))
-def test_el_endpoint_de_login_al_que_se_redirige_existe(app):
-    from app import login
+def test_una_ruta_protegida_fuera_de_la_api_redirige_a_la_pantalla_de_login(app):
+    # Antes hacia url_for('auth.login'), un endpoint que no existe (el login de la API es 'api.login'):
+    # la primera ruta protegida que no fuera /api/... habria devuelto 500 en vez de redirigir.
+    from app import unauthorized
 
-    assert login.login_view in {regla.endpoint for regla in app.url_map.iter_rules()}
+    with app.test_request_context('/panel/algo'):
+        respuesta = unauthorized()
+
+    assert respuesta.status_code == 302
+    assert respuesta.headers['Location'] == '/login'
+
+
+def test_una_ruta_protegida_de_la_api_responde_401_json(app):
+    from app import unauthorized
+
+    with app.test_request_context('/api/algo'):
+        cuerpo, codigo = unauthorized()
+
+    assert codigo == 401
+    assert cuerpo.get_json() == {'message': 'Unauthorized'}
 
 
 # --- Que hacen con los errores de la vista ----------------------------------------------------
+# Antes los decoradores envolvian TAMBIEN la vista en try/except Exception: un abort(404) salia como
+# HTTP 500 y una excepcion devolvia al cliente el mensaje y el traceback completo con rutas del
+# servidor. Afectaba a toda vista con role_required/admin_required/etc. (69 + 38 usos).
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: los decoradores envuelven la vista en try/except Exception, asi que un abort(404) "
-    "(get_or_404, abort(400)...) sale como HTTP 500. Afecta a toda vista con role_required, "
-    "admin_required, operator_required, workshop_required o hiring_required (69 + 38 usos)."))
 def test_un_abort_de_la_vista_conserva_su_codigo(mini_app):
     con_otro_codigo = {}
     for nombre in DECORADORES:
@@ -157,10 +162,6 @@ def test_un_abort_de_la_vista_conserva_su_codigo(mini_app):
     assert con_otro_codigo == {}
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: ante una excepcion de la vista el decorador devuelve al cliente el mensaje "
-    "y el traceback completo ('trace', con rutas del servidor), aunque create_app oculta las trazas "
-    "fuera de debug. La excepcion deberia llegar al manejador de errores de la app."))
 def test_una_excepcion_de_la_vista_no_se_devuelve_al_cliente(mini_app):
     filtran = []
     for nombre in DECORADORES:

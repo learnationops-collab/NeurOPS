@@ -70,13 +70,12 @@ def test_un_post_vacio_tambien_es_400(client, admin, auth_headers):
     assert client.post(URL, headers=auth_headers(admin), json={}).status_code == 400
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG (decoradores): admin_required envuelve la vista en try/except Exception, asi que el "
-    "abort(404) de get_or_404 se convierte en HTTP 500 y el JSON incluye el traceback completo "
-    "('trace') con rutas del servidor, aunque create_app oculta las trazas fuera de debug. Afecta a "
-    "toda vista con role_required/admin_required/operator_required/workshop_required/hiring_required."))
 def test_editar_una_agenda_inexistente_es_404(client, admin, auth_headers):
-    assert client.post(URL, headers=auth_headers(admin), json={'id': 9999, 'status': 'Show Up'}).status_code == 404
+    # Antes admin_required convertia el abort(404) de get_or_404 en un 500 con el traceback en el JSON.
+    respuesta = client.post(URL, headers=auth_headers(admin), json={'id': 9999, 'status': 'Show Up'})
+
+    assert respuesta.status_code == 404
+    assert 'Traceback' not in respuesta.get_data(as_text=True)
 
 
 # --- Listar y borrar --------------------------------------------------------------------------

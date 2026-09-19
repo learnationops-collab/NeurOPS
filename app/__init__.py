@@ -41,7 +41,6 @@ class TokenPriorityLoginManager(LoginManager):
 db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 migrate = Migrate()
 login = TokenPriorityLoginManager()
-login.login_view = 'auth.login'
 login.login_message = 'Por favor inicia sesión para acceder a esta página.'
 login.session_protection = 'strong'
 
@@ -50,9 +49,11 @@ def unauthorized():
     from flask import request, jsonify
     if request.path.startswith('/api/'):
         return jsonify({"message": "Unauthorized"}), 401
-    from flask import redirect, url_for, flash
+    from flask import redirect, flash
     flash(login.login_message)
-    return redirect(url_for(login.login_view))
+    # La pantalla de login es una ruta de la SPA. Antes se hacia url_for('auth.login'), un endpoint que
+    # no existe (el login de la API es 'api.login'): cualquier ruta protegida fuera de /api daba 500.
+    return redirect('/login')
 
 def create_app(config_class=Config):
     app = Flask(__name__, 
