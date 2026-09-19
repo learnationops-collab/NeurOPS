@@ -150,6 +150,17 @@ def test_un_cuerpo_vacio_es_400(client, admin, auth_headers):
     assert client.post(URL, headers=auth_headers(admin), json={}).status_code == 400
 
 
+@pytest.mark.parametrize('monto', ['abc', [1], {'a': 1}, 'nan', 'inf', '-inf'])
+def test_un_monto_que_no_es_un_numero_finito_es_400_y_no_crea_nada(client, admin, auth_headers, catalogo, monto):
+    # Antes el float() fallaba dentro del try general: 500 con el texto crudo de la excepcion, o (con
+    # nan e inf, que float() acepta) un pago con un monto imposible.
+    respuesta = vender(client, admin, auth_headers, catalogo, payment_amount=monto)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'error': 'payment_amount debe ser un numero'}
+    assert (Client.query.count(), Enrollment.query.count(), Payment.query.count()) == (0, 0, 0)
+
+
 @pytest.mark.parametrize('cambio', [{'lead_id': 9999}, {'program_id': 9999}, {'payment_method_id': 9999}])
 def test_una_entidad_que_no_existe_es_404_y_no_crea_nada(client, admin, auth_headers, catalogo, cambio):
     respuesta = vender(client, admin, auth_headers, catalogo, **cambio)

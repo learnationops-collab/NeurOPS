@@ -11,6 +11,7 @@ from app.decorators import admin_required, operator_required, role_required
 import pandas as pd
 import io
 import json
+import math
 from app.models import db, User, Client, Lead, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
@@ -1415,6 +1416,14 @@ def quick_create_sale():
             if not data.get(field):
                 return jsonify({"error": f"Falta el campo {field}"}), 400
 
+        # float() acepta 'nan' e 'inf' y falla con un 500 (texto crudo de la excepcion) si no es un numero
+        try:
+            amount = float(data['payment_amount'])
+        except (TypeError, ValueError):
+            amount = math.nan
+        if not math.isfinite(amount):
+            return jsonify({"error": "payment_amount debe ser un numero"}), 400
+
         # 2. Get entities
         lead = Lead.query.get(data['lead_id'])
         program = Program.query.get(data['program_id'])
@@ -1452,7 +1461,7 @@ def quick_create_sale():
         payment = Payment(
             enrollment_id=enrollment.id,
             payment_method_id=method.id,
-            amount=float(data['payment_amount']),
+            amount=amount,
             payment_type=data['payment_type'],
             status=data.get('status', 'completed'),
             date=datetime.utcnow()
