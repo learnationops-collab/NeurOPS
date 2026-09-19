@@ -33,6 +33,11 @@ if os.path.basename(current_dir) == 'scripts':
 else:
     sys.path.append(current_dir)
 
+# `create_app()` arranca el scheduler de recordatorios de seguimiento, que manda WhatsApp apenas
+# arranca el proceso (ver reminder_scheduler.start_scheduler). Este script solo toca la base —y
+# se corre a mano contra la de producción— así que ese envío tiene que quedar apagado siempre.
+os.environ['DISABLE_REMINDER_SCHEDULER'] = 'true'
+
 from app import create_app
 from app.services.closer_service import CloserService
 
