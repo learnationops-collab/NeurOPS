@@ -65,6 +65,16 @@ def test_la_clave_distingue_mayusculas():
     assert usuario.check_password('clave') is False
 
 
+@pytest.mark.parametrize('hash_guardado', [None, ''])
+def test_un_usuario_sin_clave_guardada_no_coincide_con_ninguna(hash_guardado):
+    # Cuentas importadas o creadas a medias: antes check_password_hash(None, ...) lanzaba.
+    usuario = User(username='ana')
+    usuario.password_hash = hash_guardado
+
+    assert usuario.check_password('cualquiera') is False
+    assert usuario.check_password('') is False
+
+
 # --- get_auth_token / decode_auth_token -------------------------------------------------------
 
 def test_el_token_lleva_el_id_y_vence_en_24_horas(con_app, make_user):

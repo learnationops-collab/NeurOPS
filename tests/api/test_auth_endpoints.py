@@ -95,16 +95,18 @@ def test_el_usuario_distingue_mayusculas(client, make_user):
     assert entrar(client, 'ANA').status_code == 401
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: un usuario sin password_hash (importado, creado sin clave...) hace que login devuelva 500: "
-    "check_password_hash(None, ...) lanza una excepcion en vez de dar False. Cualquiera puede "
-    "provocar el error escribiendo ese usuario, lo que ademas delata que existe y no tiene clave."))
-def test_un_usuario_sin_clave_guardada_no_entra_ni_rompe(client, make_user, db):
+@pytest.mark.parametrize('hash_guardado', [None, ''])
+def test_un_usuario_sin_clave_guardada_no_entra_ni_rompe(client, make_user, db, hash_guardado):
+    # Antes check_password_hash(None, ...) lanzaba: el login contestaba 500, y quien escribiera el
+    # nombre de una cuenta importada sin clave lo veia (y sabia que existe y no tiene clave).
     usuario = make_user(username='ana')
-    usuario.password_hash = None
+    usuario.password_hash = hash_guardado
     db.session.commit()
 
-    assert entrar(client, 'ana').status_code == 401
+    respuesta = entrar(client, 'ana')
+
+    assert respuesta.status_code == 401
+    assert respuesta.get_json() == {'message': 'Invalid credentials'}  # igual que una clave mala
 
 
 def test_login_abre_tambien_la_sesion_de_cookie(client, make_user):

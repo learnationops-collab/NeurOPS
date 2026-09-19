@@ -139,6 +139,10 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        # Un usuario sin clave guardada (importado, creado a medias) no coincide con ninguna: antes
+        # check_password_hash(None, ...) lanzaba y el login contestaba 500.
+        if not self.password_hash:
+            return False
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
