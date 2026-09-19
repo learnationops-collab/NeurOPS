@@ -50,13 +50,14 @@ export const VEREDICTO = {
     sin_analizar: { label: 'Sin analizar', fg: '#4E8BD8', bg: '#0A152C', bd: '#1A3155' },
 };
 
-/** Medidor de 4 puntitos: el nivel de una respuesta de un vistazo. */
-export const Dots = ({ n, color = '#5B7CFF' }) => (
+/** Medidor de 4 puntitos: el nivel de una respuesta de un vistazo. `redondos`
+ * los achica a puntos, para las filas angostas del modal. */
+export const Dots = ({ n, color = '#5B7CFF', redondos = false }) => (
     <span className="flex gap-[3px]">
         {[1, 2, 3, 4].map((j) => (
             <span
                 key={j}
-                className="h-[5px] w-[9px] rounded-sm"
+                className={redondos ? 'h-[5px] w-[5px] rounded-full' : 'h-[5px] w-[9px] rounded-sm'}
                 style={{ background: j <= n ? color : 'rgba(255,255,255,.14)' }}
             />
         ))}
