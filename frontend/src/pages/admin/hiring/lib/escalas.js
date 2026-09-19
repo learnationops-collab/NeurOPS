@@ -219,23 +219,25 @@ export const CAMPOS_ESCRITOS = new Set([
 ]);
 
 // Versión corta de las respuestas de los 4 excluyentes + la verificación de
-// comprensión (riel "Requisitos"), para que quepan en una línea.
+// comprensión (riel "Requisitos"), para que quepan en una línea. El espacio
+// entre un número y su unidad es no separable ( ): en el riel angosto el
+// texto se parte, pero nunca deja "8" en una línea y "h" en la siguiente.
 export const VAL_CORTO = {
     'Sí, las tres cosas': 'Las tres cosas',
     'Tengo computadora y celular, pero mi internet falla seguido': 'Internet inestable',
     'Me falta alguna de las tres': 'Falta algo',
-    'Sí, las 4 horas ahora y las 8 desde el tercer mes': '4 h hoy · 8 h al 3.er mes',
-    'Solo podría las 4 horas, no podría escalar a 8': 'Solo 4 h, no escala',
+    'Sí, las 4 horas ahora y las 8 desde el tercer mes': '4 h hoy · 8 h al 3.er mes',
+    'Solo podría las 4 horas, no podría escalar a 8': 'Solo 4 h, no escala',
     'No tengo esa disponibilidad': 'Sin disponibilidad',
     'Sí, me organizo sin problema': 'Se organiza sin problema',
     'No, necesito un horario fijo y cerrado': 'Necesita horario fijo',
     'No': 'No tiene otro',
     'Sí, medio tiempo o freelance, y podría acomodarlo': 'Medio tiempo, acomodable',
     'Sí, tiempo completo, y lo mantendría': 'Full-time, lo mantiene',
-    'Arranco con 4 horas diarias y desde el tercer mes paso a 8 horas': 'Entendió: 4 h → 8 h',
-    'Arranco con 8 horas diarias desde el primer día': 'Creyó que arranca en 8 h',
+    'Arranco con 4 horas diarias y desde el tercer mes paso a 8 horas': 'Entendió: 4 h → 8 h',
+    'Arranco con 8 horas diarias desde el primer día': 'Creyó que arranca en 8 h',
     'Son 4 horas diarias siempre, no cambia': 'Creyó que no escala',
-    'Son 8 horas los primeros dos meses y después bajan a 4': 'Creyó que baja a 4 h',
+    'Son 8 horas los primeros dos meses y después bajan a 4': 'Creyó que baja a 4 h',
 };
 
 // Versión corta de las 6 opciones de área de formación.
