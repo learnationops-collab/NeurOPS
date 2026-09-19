@@ -48,25 +48,29 @@ def test_una_clave_equivocada_no_filtra_estadisticas_de_la_base(client, make_use
 
 # --- fix-auth ---------------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG CRITICO: GET /api/backup/fix-auth no tiene autenticacion y RESETEA la clave de "
-    "admin@neurops.com a un valor fijo escrito en el codigo (y la de closer@neurops.com), la reactiva "
-    "y devuelve las credenciales en la respuesta. Cualquiera en internet puede tomar esa cuenta admin. "
-    "Solucion: eliminar la ruta (o protegerla con un secreto de entorno y dejarla apagada por defecto)."))
-def test_fix_auth_no_resetea_la_clave_de_un_admin_a_un_anonimo(client, db, make_user):
+@pytest.fixture()
+def sin_spa(app, tmp_path, monkeypatch):
+    """Carpeta estatica vacia: lo que no es una ruta real da 404 en vez de servir index.html."""
+    monkeypatch.setattr(app, 'static_folder', str(tmp_path))
+
+
+def test_fix_auth_ya_no_existe(client, sin_spa):
+    # Antes GET /api/backup/fix-auth, sin autenticacion, reseteaba la clave de admin@neurops.com a un
+    # valor fijo del codigo (y creaba el admin y un closer si no existian) y devolvia las credenciales.
+    assert client.get('/api/backup/fix-auth').status_code == 404
+
+
+def test_fix_auth_no_crea_usuarios_para_un_anonimo(client, db, sin_spa):
+    client.get('/api/backup/fix-auth')
+
+    assert User.query.count() == 0
+
+
+def test_fix_auth_no_resetea_la_clave_de_un_admin(client, db, make_user, sin_spa):
     admin = make_user(role='admin', username='dueno', email=CORREO_ADMIN, password='clave-original')
 
     respuesta = client.get('/api/backup/fix-auth')
 
     db.session.refresh(admin)
     assert admin.check_password('clave-original')
-    assert respuesta.status_code in (401, 403, 404)
-
-
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG CRITICO: GET /api/backup/fix-auth crea un admin (y un closer) con credenciales fijas del "
-    "codigo si no existen, sin autenticacion."))
-def test_fix_auth_no_crea_usuarios_para_un_anonimo(client, db):
-    client.get('/api/backup/fix-auth')
-
-    assert User.query.count() == 0
+    assert 'credentials' not in respuesta.get_data(as_text=True)

@@ -34,10 +34,10 @@ PUBLICAS_POR_DISENO = frozenset({
 # Hoy responden a CUALQUIERA en internet y no deberian: son endpoints de la herramienta interna
 # (lecturas de ventas, nomina y clientes; altas, ediciones y BORRADOS de agendas, ventas, campanas y
 # reportes; tareas de mantenimiento como repair-db, cleanup-*, migrate y records/clear; la
-# ingesta de n8n, que no lleva ningun secreto compartido) mas GET /api/backup/fix-auth, que crea o
-# resetea un admin. Todo el blueprint `public` esta exento de CSRF y no tiene ninguna autenticacion.
+# ingesta de n8n, que no lleva ningun secreto compartido). Todo el blueprint `public` esta exento de
+# CSRF y no tiene ninguna autenticacion. (GET /api/backup/fix-auth, que reseteaba la clave de un admin,
+# ya fue eliminada.)
 EXPUESTAS_SIN_AUTENTICACION = frozenset({
-    ('GET', '/api/backup/fix-auth'),
     ('GET', '/api/conversational/messages'),
     ('POST', '/api/conversational/messages'),
     ('DELETE', '/api/conversational/messages/<int:msg_id>'),

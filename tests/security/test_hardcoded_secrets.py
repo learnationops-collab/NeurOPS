@@ -20,7 +20,6 @@ NOMBRE_SECRETO = re.compile(r'(SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|EXPECTED_KE
 # (archivo, nombre) -> cuantas veces. Todos son hallazgos reales salvo el ultimo.
 CONOCIDOS = {
     ('app/api/backup.py', 'EXPECTED_KEY'): 3,  # clave de exportar/restaurar/previsualizar TODA la base
-    ('app/api/backup.py', 'set_password'): 2,  # fix-auth: contrasenas fijas de admin y closer
     ('app/services/import_service.py', 'set_password'): 3,  # la misma clave por defecto para todo usuario importado
     ('app/services/user_service.py', 'set_password'): 1,  # clave debil por defecto si se crea un usuario sin clave
     ('app/api/webhooks.py', 'EXPECTED_TOKEN'): 1,  # token del webhook de ManyChat
@@ -98,9 +97,9 @@ def test_los_secretos_escritos_en_el_codigo_son_exactamente_los_conocidos():
 
 @pytest.mark.xfail(strict=True, reason=(
     "BUG DE SEGURIDAD: hay secretos escritos en el codigo (clave de backup/restore de toda la base, "
-    "token del webhook de ManyChat, valor por defecto del secreto de los crons, las contrasenas fijas "
-    "de fix-auth y las contrasenas por defecto de usuarios importados o creados sin clave). Deben "
-    "salir a variables de entorno, rotarse y no tener valor por defecto."))
+    "token del webhook de ManyChat, valor por defecto del secreto de los crons y las contrasenas por "
+    "defecto de usuarios importados o creados sin clave). Deben salir a variables de entorno, rotarse "
+    "y no tener valor por defecto."))
 def test_no_hay_secretos_escritos_en_el_codigo():
     reales = sorted(set(_todos_los_hallazgos()) - ACEPTABLES)
 
