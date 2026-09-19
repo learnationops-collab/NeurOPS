@@ -116,6 +116,33 @@ La interfaz estará expuesta en `http://localhost:5173`
 
 ---
 
+## Tests
+
+Los tests del backend usan **pytest** y corren contra una base SQLite en memoria: nunca leen el `.env`
+real, nunca tocan una base real y la red está bloqueada (ver `tests/conftest.py`).
+
+```bash
+# Una sola vez, con el entorno virtual activo (las dependencias de test NO van a producción)
+pip install -r requirements-dev.txt
+
+# Toda la suite (~12 s)
+python -m pytest
+
+# Un archivo, o solo los tests cuyo nombre contenga una palabra
+python -m pytest tests/services/test_agenda_time_service.py
+python -m pytest -k atribucion
+
+# Con cobertura de los servicios
+python -m pytest --cov=app/services --cov-report=term-missing:skip-covered
+```
+
+- Pasa la cobertura **por directorio** (`--cov=app/services`), no como módulo con puntos
+  (`--cov=app.services.x`): así `coverage` no importa `app` antes del aislamiento de `conftest.py`.
+- Los `xfail` con motivo `BUG:` documentan errores conocidos. Son `strict`: cuando alguien arregla el
+  bug, el test pasa a fallar y hay que quitarle la marca `xfail`.
+- Estructura: `tests/services/` (lógica de cada servicio) y `tests/contracts/` (invariantes entre
+  copias de una misma regla). Cada archivo de test debe respetar el límite de 500 líneas.
+
 ## Estructura del Proyecto
 
 *   `app/`: Código fuente del Backend (Python/Flask)
