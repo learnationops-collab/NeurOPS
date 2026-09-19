@@ -51,6 +51,15 @@ class SheetsService:
         """
         Escritura (POST): Envía datos con acción 'insert', los guarda localmente y los propaga a Google Sheets.
         """
+        # La agenda desde la que se declara la venta (la conoce el modal de venta) es un dato
+        # interno de NeurOPS: se usa para marcarla como Show up sin adivinar cuál es y se saca del
+        # payload para que no viaje a Google Sheets ni a n8n, que no lo esperan.
+        payload = dict(payload)
+        try:
+            appointment_id = int(payload.pop('appointment_id', None) or 0) or None
+        except (TypeError, ValueError):
+            appointment_id = None
+
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
         inconsistency_warning = None
         # Client resuelto/creado para esta venta (ver más abajo) -- se devuelve en la respuesta
@@ -171,11 +180,20 @@ class SheetsService:
                 # Una venta registrada prueba que el lead asistió a la llamada: se marca esa
                 # agenda como 'Show up' si había quedado sin reportar o como No Show (ver
                 # CloserService.mark_sale_appointment_as_show_up, que solo toca la agenda de la
-                # venta, no todo el historial del lead).
+                # venta, no todo el historial del lead). Se le pasa el instante real del registro
+                # y NO `sale_date`: ésa es la fecha que tipeó el closer, en su hora local, y
+                # comparada contra las citas (UTC) elegía la agenda equivocada.
                 try:
                     from app.services.closer_service import CloserService
+                    from app.services.closer_followup_service import CloserFollowUpService
+                    vendedor = CloserFollowUpService._resolve_closer_for_email_vendedor(payload.get('email_vendedor'))
                     marcada = CloserService.mark_sale_appointment_as_show_up(
-                        client.id if client else None, sale_date
+                        client.id if client else None,
+                        registered_at=CloserService.sale_registered_at(sale) or datetime.utcnow(),
+                        appointment_id=appointment_id,
+                        sale_id=sale.id,
+                        seller_id=vendedor.id if vendedor else None,
+                        report_today=True
                     )
                     if marcada:
                         db.session.commit()

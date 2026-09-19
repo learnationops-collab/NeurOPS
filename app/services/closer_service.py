@@ -611,35 +611,87 @@ class CloserService:
     # ocurrieron — la venta salió de OTRA llamada, no de la que se canceló.
     RESULTS_OVERRIDABLE_BY_SALE = {'', 'pendiente', 'no show', '2da call'}
 
+    # Cuánto antes del inicio agendado de una llamada puede registrarse su venta y seguir contando
+    # como "la venta de esa llamada": la hora agendada y la real no siempre coinciden.
+    SALE_LOOKAHEAD = timedelta(hours=3)
+
+    # Una venta cuyo `created_at` está a más de esto de su `date` viene de una carga en bloque
+    # (ahí `created_at` es el día de la importación, no el de la venta) — ver sale_registered_at.
+    SALE_CREATED_AT_TRUST = timedelta(days=4)
+
     @staticmethod
-    def mark_sale_appointment_as_show_up(client_id, sale_date=None, dry_run=False):
-        """Marca como 'Show up' la agenda en la que se hizo una venta: un lead que compró
-        obviamente asistió a la llamada, pero el closer muchas veces registra la venta sin volver
-        a la bandeja a reportar el resultado, y la agenda queda en 'Pendiente' o incluso 'No Show'.
+    def pick_sale_appointment(appts, registered_at, appointment_id=None):
+        """La agenda de la que salió una venta, entre las agendas de UN cliente.
 
-        **Solo se toca la agenda más reciente anterior o igual a la fecha de la venta** (si no hay
-        ninguna previa, la más antigua posterior — caso de venta cargada antes que la agenda). No
-        se marca todo el historial del lead: un No Show real de hace dos meses sigue siendo un No
-        Show aunque la persona haya comprado después, y darlo por asistido falsearía el show rate.
+        Si quien registra la venta ya sabe de qué agenda viene (`appointment_id`: el modal de venta
+        se abre desde una agenda concreta) es esa, sin adivinar. Si no, la última agenda que ya
+        había empezado cuando se REGISTRÓ la venta (con un margen por delante, SALE_LOOKAHEAD) o,
+        si ninguna había empezado todavía, la más próxima (venta cargada antes que la llamada).
 
-        Devuelve el dict de lo que cambió (o cambiaría, con `dry_run=True`), o None si no había
-        nada que corregir."""
-        if not client_id:
-            return None
-
-        appts = Appointment.query.filter_by(client_id=client_id).all()
-        if not appts:
-            return None
+        `registered_at` es el instante real del registro, en UTC — el mismo reloj que
+        `Appointment.start_time` — y NO la fecha que el closer eligió en el formulario
+        (`FinancialSale.date`): esa se guarda en la hora local de quien la escribe (y además se puede
+        cambiar a mano), así que compararla contra `start_time` (UTC) descuadraba la elección. Caso
+        real (David Hernandez, 14/sep/2026): la venta salía fechada un día antes de la llamada, caía
+        "antes" de ella, y se marcaba Show up una llamada de OTRO closer de dos semanas atrás mientras
+        la agenda de la venta se quedaba en 'Pendiente'."""
+        if appointment_id:
+            exacta = next((a for a in appts if a.id == appointment_id), None)
+            if exacta:
+                return exacta
 
         con_fecha = [a for a in appts if a.start_time]
         if not con_fecha:
             return None
 
-        if sale_date:
-            previas = [a for a in con_fecha if a.start_time <= sale_date]
-            objetivo = max(previas, key=lambda a: a.start_time) if previas else min(con_fecha, key=lambda a: a.start_time)
-        else:
-            objetivo = max(con_fecha, key=lambda a: a.start_time)
+        ya_empezadas = [a for a in con_fecha if a.start_time <= registered_at + CloserService.SALE_LOOKAHEAD]
+        if ya_empezadas:
+            return max(ya_empezadas, key=lambda a: a.start_time)
+        return min(con_fecha, key=lambda a: a.start_time)
+
+    @staticmethod
+    def sale_registered_at(sale):
+        """Instante real (UTC) en que se registró una venta ya guardada. `created_at` es el reloj
+        del servidor; si está a más de SALE_CREATED_AT_TRUST de `date` no es creíble como "cuándo se
+        vendió" y se usa `date`: en las cargas en bloque es lo único que tiene el día real de la
+        venta, y una venta que el closer cargó a propósito con una fecha bien anterior quiere decir
+        esa fecha. Dentro de ese margen (el desfase de un día y unas horas que dejaba el formulario
+        viejo) manda `created_at`."""
+        creada, fecha = sale.created_at, sale.date
+        if creada and (not fecha or abs(creada - fecha) <= CloserService.SALE_CREATED_AT_TRUST):
+            return creada
+        return fecha or creada
+
+    @staticmethod
+    def mark_sale_appointment_as_show_up(client_id, registered_at=None, dry_run=False, appointment_id=None,
+                                         sale_id=None, seller_id=None, report_today=False):
+        """Marca como 'Show up' la agenda en la que se hizo una venta: un lead que compró
+        obviamente asistió a la llamada, pero el closer muchas veces registra la venta sin volver
+        a la bandeja a reportar el resultado (el modal de "¿Se cerró la venta?" del reporte de
+        llamada salta directo a declarar la venta sin guardar el reporte), y la agenda queda en
+        'Pendiente' o incluso 'No Show'.
+
+        **Se toca UNA sola agenda** (ver `pick_sale_appointment`: la exacta si se sabe, si no la
+        última que ya había empezado al registrar la venta). No se marca todo el historial del lead:
+        un No Show real de hace dos meses sigue siendo un No Show aunque la persona haya comprado
+        después, y darlo por asistido falsearía el show rate. Y solo se pisa un resultado que la
+        venta contradice (RESULTS_OVERRIDABLE_BY_SALE), nunca uno definitivo.
+
+        Deja un evento `sale_show_up` en la agenda con lo que había antes — es un cambio automático
+        sobre un dato del closer y sin rastro no había forma de saber qué se pisó ni deshacerlo.
+        Con `report_today=True` (el closer lo está registrando ahora) deja además `show_up_reported`,
+        el evento que "Cerrar el día" usa para contar las llamadas que reportó hoy; en una pasada
+        retroactiva no va, o inflaría el resumen de HOY con llamadas de otro día.
+
+        Devuelve el dict de lo que cambió (o cambiaría, con `dry_run=True`), o None si no había
+        nada que corregir. El commit lo hace quien llama."""
+        if not client_id:
+            return None
+
+        appts = Appointment.query.filter_by(client_id=client_id).all()
+        objetivo = CloserService.pick_sale_appointment(appts, registered_at or datetime.utcnow(), appointment_id)
+        if not objetivo:
+            return None
 
         actual = (objetivo.closer_result or '').strip().lower()
         if actual not in CloserService.RESULTS_OVERRIDABLE_BY_SALE:
@@ -648,9 +700,10 @@ class CloserService:
         cambio = {
             'appointment_id': objetivo.id,
             'client_id': client_id,
-            'start_time': objetivo.start_time.isoformat(),
+            'start_time': objetivo.start_time.isoformat() if objetivo.start_time else None,
             'closer_result_antes': objetivo.closer_result,
-            'result_antes': objetivo.result
+            'result_antes': objetivo.result,
+            'closer_processed_antes': bool(objetivo.closer_processed)
         }
         if dry_run:
             return cambio
@@ -662,6 +715,22 @@ class CloserService:
         # `result == 'Confirmado'`). No se pisan los estados terminales de la agenda.
         if (objetivo.result or '').strip().lower() not in ('cancelado', 'cancelada', 'reagendado', 'reagendada'):
             objetivo.result = 'Confirmado'
+
+        from app.models import LeadEventLog
+        autor_id = seller_id or objetivo.closer_id
+        autor = User.query.get(autor_id) if autor_id else None
+        origen = f"la venta #{sale_id}" if sale_id else "una venta registrada"
+        db.session.add(LeadEventLog(
+            appointment_id=objetivo.id, user_id=autor_id, action_type='sale_show_up',
+            description=(f"[Sistema] Marcada como Show up por {origen}. Antes: closer_result="
+                         f"{cambio['closer_result_antes']!r}, result={cambio['result_antes']!r}, "
+                         f"procesada={cambio['closer_processed_antes']}.")
+        ))
+        if report_today:
+            db.session.add(LeadEventLog(
+                appointment_id=objetivo.id, user_id=autor_id, action_type='show_up_reported',
+                description=f"{autor.username if autor else 'El closer'} reportó Show Up al registrar la venta."
+            ))
         return cambio
 
     @staticmethod
@@ -671,19 +740,27 @@ class CloserService:
         'Pendiente' o 'No Show'. Arranca en `dry_run` a propósito — primero se mira cuántas
         cambiarían y recién después se aplica."""
         from app.models import FinancialSale
+        from app.services.closer_followup_service import CloserFollowUpService
 
         sales = FinancialSale.query.filter(
             FinancialSale.client_id.isnot(None),
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).order_by(FinancialSale.date.asc()).all()
 
-        cambios, vistos = [], set()
+        cambios, vistos, vendedores = [], set(), {}
         for sale in sales:
-            clave = (sale.client_id, sale.date.date() if sale.date else None)
+            registrada = CloserService.sale_registered_at(sale)
+            clave = (sale.client_id, registrada.date() if registrada else None)
             if clave in vistos:
                 continue
             vistos.add(clave)
-            cambio = CloserService.mark_sale_appointment_as_show_up(sale.client_id, sale.date, dry_run=dry_run)
+            if sale.email_vendedor not in vendedores:
+                vendedor = CloserFollowUpService._resolve_closer_for_email_vendedor(sale.email_vendedor)
+                vendedores[sale.email_vendedor] = vendedor.id if vendedor else None
+            cambio = CloserService.mark_sale_appointment_as_show_up(
+                sale.client_id, registrada, dry_run=dry_run, sale_id=sale.id,
+                seller_id=vendedores[sale.email_vendedor]
+            )
             if cambio:
                 cambio['sale_id'] = sale.id
                 cambios.append(cambio)
