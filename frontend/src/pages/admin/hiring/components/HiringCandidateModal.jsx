@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
     X, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock,
     Target, Trash2, Trophy, Star, Video, FileText, Mail, MessageCircle,
@@ -87,15 +87,21 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     const [motivo, setMotivo] = useState('');
     const [copiado, setCopiado] = useState(null);
 
+    // Al navegar rápido (flechas, auto-avance) puede haber dos pedidos en vuelo:
+    // si el de la postulación anterior llega tarde, no debe pisar a la actual —
+    // los botones de decisión actúan sobre `applicationId`, no sobre lo que se ve.
+    const idVigente = useRef(applicationId);
+    useEffect(() => { idVigente.current = applicationId; }, [applicationId]);
+
     const cargar = useCallback(async (id) => {
         setLoading(true);
         try {
             const res = await api.get(`/assistant-applications/${id}`);
-            setData(res.data);
+            if (id === idVigente.current) setData(res.data);
         } catch (err) {
             console.error('Error al cargar la postulación:', err);
         } finally {
-            setLoading(false);
+            if (id === idVigente.current) setLoading(false);
         }
     }, []);
 
