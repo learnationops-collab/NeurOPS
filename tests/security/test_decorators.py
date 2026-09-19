@@ -128,6 +128,19 @@ def test_la_politica_de_roles_es_la_documentada():
     }
 
 
+# --- Configuracion del login manager ----------------------------------------------------------
+
+@pytest.mark.xfail(strict=True, reason=(
+    "BUG latente: login.login_view es 'auth.login' y los decoradores redirigen a url_for('auth.login') "
+    "en rutas que no son de /api/, pero ese endpoint no existe (el login es 'api.login'). Hoy todas las "
+    "rutas protegidas son /api/..., asi que no se nota; la primera que no lo sea devolveria 500 en vez "
+    "de redirigir al login."))
+def test_el_endpoint_de_login_al_que_se_redirige_existe(app):
+    from app import login
+
+    assert login.login_view in {regla.endpoint for regla in app.url_map.iter_rules()}
+
+
 # --- Que hacen con los errores de la vista ----------------------------------------------------
 
 @pytest.mark.xfail(strict=True, reason=(
