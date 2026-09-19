@@ -133,14 +133,13 @@ def test_compara_en_tiempo_constante(integracion, monkeypatch):
 
     _pedir(cliente, 'Bearer mal')
 
-    assert llamadas == [('mal', TOKEN)]  # nunca `==`, que filtra el largo del prefijo coincidente
+    # Sobre bytes y nunca con `==`, que filtra el largo del prefijo coincidente.
+    assert llamadas == [(b'mal', TOKEN.encode())]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: hmac.compare_digest lanza TypeError con un token con caracteres no ASCII, asi que una "
-    "cabecera como 'Bearer tokén' produce un 500 en vez de un 401 (sin impacto de seguridad, pero "
-    "cualquiera puede generar errores 500 a voluntad y ensuciar las alertas)."))
 def test_un_token_con_caracteres_no_ascii_es_401(integracion):
+    # Antes hmac.compare_digest lanzaba TypeError con str no ASCII y la cabecera 'Bearer tokén'
+    # producia un 500: cualquiera podia generar errores a voluntad y ensuciar las alertas.
     _, cliente, configurar = integracion
     configurar()
 

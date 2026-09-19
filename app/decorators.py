@@ -154,7 +154,7 @@ def require_academy_token(f):
             return jsonify({"error": "Falta el header Authorization: Bearer <token>"}), 401
 
         provided_token = auth_header[len('Bearer '):].strip()
-        if not hmac.compare_digest(provided_token, expected_token):
+        if not hmac.compare_digest(provided_token.encode('utf-8'), expected_token.encode('utf-8')):
             return jsonify({"error": "Token inválido"}), 401
 
         return f(*args, **kwargs)
@@ -177,7 +177,7 @@ def require_dev_platform_token(f):
             return jsonify({"success": False, "error": "Falta el header Authorization: Bearer <token>"}), 401
 
         provided_token = auth_header[len('Bearer '):].strip()
-        if not hmac.compare_digest(provided_token, expected_token):
+        if not hmac.compare_digest(provided_token.encode('utf-8'), expected_token.encode('utf-8')):
             return jsonify({"success": False, "error": "Token inválido"}), 401
 
         return f(*args, **kwargs)
