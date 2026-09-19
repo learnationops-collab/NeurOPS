@@ -69,13 +69,14 @@ _SEGUNDA = {'2da call', '2th call', '2da llamada', 'follow up'}
 _LEAD_PERDIDO = {'lead perdido', 'perdido'}
 _NO_LEAD = {'no lead'}
 _CANCELADA = {'cancelado', 'cancelada'}
-_REAGENDADA = {'reagendado', 'reagendada'}
+_REAGENDADA = {'reagendado', 'reagendada', 'reprogramado', 'reprogramada'}
 _PENDIENTE = {'', 'pendiente'}
 
 # Resultados de llamada que las cargas viejas de agendas guardaron en `result` en vez de en
-# `closer_result` (ver derivar_estado). Solo Show up / No show: `result='2TH Call'` lo escribe el
-# flujo de segunda llamada en la agenda NUEVA, que sigue pendiente — no es un resultado.
-_RESULTADO_EN_RESULT = _SHOW_UP | _NO_SHOW
+# `closer_result` (ver derivar_estado): Show up, No show y 'Follow Up' (2da llamada). NO entra
+# '2TH Call': lo escribe el flujo de segunda llamada en la agenda NUEVA, que sigue pendiente — no
+# es un resultado.
+_RESULTADO_EN_RESULT = _SHOW_UP | _NO_SHOW | {'follow up'}
 
 PERIODOS = ('hoy', 'ayer', '7d', '30d', 'mes', 'mes_pasado', '90', 'custom', 'proximas', 'todo')
 
@@ -148,16 +149,16 @@ def derivar_estado(appt, now_utc):
     res = (appt.result or '').strip().lower()
 
     # Las cargas viejas (mayo-junio 2026) guardaron el resultado de la llamada en `result`
-    # ('Show Up', 'No Show', 'Cerrada'...) y dejaron `closer_result` vacío: sin esto una llamada
-    # ya reportada figuraba como "Sin reportar" (~80 agendas en producción). Solo se mira `result`
-    # si el closer no puso ningún resultado — lo que él escribió manda siempre.
+    # ('Show Up', 'No Show', 'Cerrada', 'Follow Up'...) y dejaron `closer_result` vacío: sin esto una
+    # llamada ya reportada figuraba como "Sin reportar" (~80 agendas en producción). Solo se mira
+    # `result` si el closer no puso ningún resultado — lo que él escribió manda siempre.
     resultado = res if (cr in _PENDIENTE and res in _RESULTADO_EN_RESULT) else cr
 
     if resultado in _SHOW_UP:
         return 'show_up'
     if resultado in _NO_SHOW:
         return 'no_show'
-    if cr in _SEGUNDA:
+    if resultado in _SEGUNDA:
         return 'segunda_llamada'
     if cr in _LEAD_PERDIDO:
         return 'lead_perdido'
