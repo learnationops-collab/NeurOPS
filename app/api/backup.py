@@ -1,6 +1,7 @@
 import datetime
 import hmac
 import os
+import sqlite3
 
 import sqlalchemy as sa
 from flask import Blueprint, Response, current_app, jsonify
@@ -156,8 +157,8 @@ def restore_db(secret_key):
         
     if file:
         try:
-            # Read file content
-            sql_content = file.read().decode('utf-8')
+            # Read file content (utf-8-sig: un editor de Windows puede haberle puesto una marca BOM)
+            sql_content = file.read().decode('utf-8-sig')
             
             # Execute logic
             # 1. Truncate all tables first to avoid conflicts
@@ -190,27 +191,34 @@ def restore_db(secret_key):
                 
                 # 2. Execute Script
                 if 'sqlite' in db_url:
-                    # SQLite: Execute line by line to avoid "executescript" parser quirks with timestamps
-                    # and to provide better error context.
-                    # Our backup format is guaranteed to be one INSERT per line context.
-                    statements = sql_content.split(';')
-                    start_index = 0
-                    for i, stmt in enumerate(statements):
-                        stmt = stmt.strip()
-                        if not stmt:
+                    # SQLite: se ejecuta sentencia por sentencia (evita las rarezas de "executescript" con
+                    # timestamps y da mejor contexto de error). Una sentencia termina donde
+                    # sqlite3.complete_statement lo indica: un ';' dentro de un texto ('hola; adios') NO la
+                    # termina y un valor con saltos de linea ocupa varias lineas. Antes se partia el script
+                    # por ';' y se descartaba todo trozo que empezara por '--': como el comentario
+                    # '-- Table: x (3 records)' va pegado al primer INSERT, la primera fila de cada tabla
+                    # no se restauraba. Los comentarios solo se ignoran ENTRE sentencias.
+                    pendiente = ''
+                    numero = 0
+                    for linea in sql_content.splitlines(keepends=True):
+                        if not pendiente.strip() and (not linea.strip() or linea.lstrip().startswith('--')):
                             continue
-                        if stmt.upper().startswith('BEGIN') or stmt.upper().startswith('COMMIT'):
-                            continue # Skip transaction control
-                        if stmt.startswith('--'):
-                            continue 
-                            
+                        pendiente += linea
+                        if not sqlite3.complete_statement(pendiente):
+                            continue
+                        stmt, pendiente = pendiente.strip(), ''
+                        if stmt.upper().startswith(('BEGIN', 'COMMIT')):
+                            continue  # Skip transaction control
+                        numero += 1
                         try:
                             cursor.execute(stmt)
                         except Exception as line_err:
                             # Capture detailed context
-                            error_ctx = f"Statement #{i+1} failed.\nError: {str(line_err)}\nSQL Snippet: {stmt[:150]}..."
+                            error_ctx = f"Statement #{numero} failed.\nError: {str(line_err)}\nSQL Snippet: {stmt[:150]}..."
                             print(f"Restore Line Error: {error_ctx}")
                             raise Exception(error_ctx)
+                    if pendiente.strip():
+                        raise Exception("El archivo termina a mitad de una sentencia (archivo truncado o incompleto).")
                 else:
                     # PostgreSQL
                     cursor.execute(sql_content)
