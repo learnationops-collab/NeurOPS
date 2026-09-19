@@ -79,7 +79,8 @@ def abrir_solo_lectura(url):
 
 
 def _estado(cuenta):
-    return 'activa' if cuenta['is_active'] or cuenta['is_active'] is None else 'DESACTIVADA'
+    # Falsy (False o NULL) es "desactivada", el mismo criterio de la app (Flask-Login).
+    return 'activa' if cuenta['is_active'] else 'DESACTIVADA'
 
 
 def _linea(cuenta):
@@ -89,6 +90,8 @@ def _linea(cuenta):
 
 def main(argv=None, salida=None):
     salida = salida or sys.stdout
+    if hasattr(salida, 'reconfigure'):  # una consola de Windows con codificacion antigua no debe romper con un acento
+        salida.reconfigure(errors='replace')
     analizador = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     analizador.add_argument('--url', default=os.environ.get('DATABASE_URL'),
                             help='URL de la base (por defecto, la variable de entorno DATABASE_URL)')
@@ -115,6 +118,9 @@ def main(argv=None, salida=None):
         print(f'\nATENCION: {len(afectadas)} cuenta(s) con una clave por defecto conocida:', file=salida)
         for cuenta in afectadas:
             print(f"{_linea(cuenta)}\n      clave por defecto de: {cuenta['origen']}", file=salida)
+        if any(not c['is_active'] for c in afectadas):
+            print('\nLas DESACTIVADAS no pueden entrar hoy, pero entrarian con esa clave en cuanto alguien las '
+                  'reactive: cambiales la clave antes de reactivarlas.', file=salida)
         print('\nCambiales la clave (o desactivalas) y vuelve a correr este script.', file=salida)
     else:
         print('Ninguna cuenta tiene una clave por defecto conocida.', file=salida)

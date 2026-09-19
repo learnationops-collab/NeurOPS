@@ -114,6 +114,55 @@ def test_con_cuentas_afectadas_sale_1_y_las_lista(base):
     assert '1 cuenta(s) sin clave guardada' in texto
 
 
+def test_avisa_de_que_una_cuenta_desactivada_con_clave_conocida_entra_al_reactivarla(base):
+    url, _ = base
+    motor = create_engine(url)
+    with motor.begin() as conexion:
+        conexion.execute(text('UPDATE users SET is_active = 0 WHERE username = :u'), {'u': 'beto'})
+    motor.dispose()
+
+    codigo, texto = _correr(['--url', url])
+
+    assert codigo == 1  # desactivada o no, la clave sigue siendo conocida
+    assert 'DESACTIVADA' in texto
+    assert 'en cuanto alguien las reactive' in texto
+
+
+def test_sin_cuentas_desactivadas_afectadas_no_habla_de_reactivar(base):
+    url, _ = base
+
+    _, texto = _correr(['--url', url])
+
+    assert 'DESACTIVADA' not in texto and 'reactive' not in texto
+
+
+def test_una_cuenta_con_is_active_nulo_se_muestra_como_desactivada(base):
+    url, _ = base
+    motor = create_engine(url)
+    with motor.begin() as conexion:
+        conexion.execute(text('UPDATE users SET is_active = NULL WHERE username = :u'), {'u': 'beto'})
+    motor.dispose()
+
+    _, texto = _correr(['--url', url])
+
+    # Como para la app: NULL no puede iniciar sesion. Se mira la LINEA de la cuenta, no todo el texto.
+    assert 'usuario=beto  email=beto@x.com  rol=closer  DESACTIVADA' in texto
+
+
+def test_una_consola_que_no_puede_escribir_un_acento_no_rompe_la_auditoria(base):
+    url, _ = base
+    motor = create_engine(url)
+    with motor.begin() as conexion:
+        conexion.execute(text("UPDATE users SET username = 'Belén' WHERE username = 'beto'"))
+    motor.dispose()
+    consola_antigua = io.TextIOWrapper(io.BytesIO(), encoding='ascii', write_through=True)
+
+    codigo = auditoria.main(['--url', url], salida=consola_antigua)
+
+    assert codigo == 1
+    assert b'usuario=Bel?n' in consola_antigua.buffer.getvalue()  # el acento se reemplaza en vez de fallar
+
+
 def test_nunca_imprime_claves_ni_hashes(base):
     url, _ = base
 
