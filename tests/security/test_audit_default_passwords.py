@@ -4,27 +4,14 @@ Es una herramienta para que el DUENO la corra contra la base real (solo lectura)
 cada clave por defecto historica, no marca una clave propia, no escribe nada, y NUNCA imprime claves ni
 hashes ni la URL de la base (que lleva la clave de la base).
 """
-import importlib.util
 import io
-from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash
 
-RAIZ = Path(__file__).resolve().parents[2]
-
-
-def _cargar_script():
-    ruta = RAIZ / 'scripts' / 'auditar_contrasenas_por_defecto.py'
-    especificacion = importlib.util.spec_from_file_location('auditar_contrasenas_por_defecto', ruta)
-    modulo = importlib.util.module_from_spec(especificacion)
-    especificacion.loader.exec_module(modulo)
-    return modulo
-
-
-auditoria = _cargar_script()
+from tests.security.claves_por_defecto import auditoria
 
 
 def _hash(clave):
