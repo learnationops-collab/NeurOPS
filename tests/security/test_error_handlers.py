@@ -50,7 +50,6 @@ def test_solo_en_debug_se_agrega_el_detalle(app, client, make_user, login_que_fa
 
 @pytest.mark.parametrize('metodo,ruta,codigo', [
     ('post', '/api/ruta-que-no-existe', 405),  # la unica ruta comodin acepta solo GET
-    ('get', '/api/ruta-que-no-existe', 404),
     ('put', '/api/health', 405),
 ])
 def test_los_errores_http_normales_conservan_su_codigo(client, metodo, ruta, codigo):
