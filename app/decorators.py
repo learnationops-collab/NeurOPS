@@ -106,3 +106,47 @@ require_academy_token = _requiere_token_bearer('ACADEMY_INBOUND_API_TOKEN', con_
 # Autenticacion de la plataforma de gestion de trabajo del equipo (consumidora externa, repo aparte)
 # que consulta y actualiza bug reports de NeurOPS. Ver docs/dev_platform_bug_reports.md.
 require_dev_platform_token = _requiere_token_bearer('DEV_PLATFORM_INBOUND_API_TOKEN', con_success=True)
+
+
+# Un secreto de menos caracteres que esto no es un secreto: se rechaza al configurarlo.
+LARGO_MINIMO_DE_SECRETO = 20
+
+
+def _requiere_secreto_compartido(variable_de_entorno, leer_secreto):
+    """Ruta de una integracion que llama sin usuario (un cron, un webhook) e identifica con un secreto.
+
+    Falla CERRADA: sin la variable de entorno, o con un valor demasiado corto para ser un secreto, la
+    ruta contesta 503 y no existe un valor por defecto que sirva. Antes cada ruta traia uno escrito en el
+    codigo, es decir, conocido por cualquiera con acceso al repositorio y imposible de rotar sin
+    desplegar. `leer_secreto()` saca de la peticion el secreto presentado (o '' si no vino)."""
+    def decorador(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            esperado = os.environ.get(variable_de_entorno, '')
+            if len(esperado) < LARGO_MINIMO_DE_SECRETO:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Integración no configurada: define {variable_de_entorno} "
+                               f"(mínimo {LARGO_MINIMO_DE_SECRETO} caracteres)",
+                }), 503
+
+            provisto = leer_secreto()
+            if not provisto or not _iguales_en_tiempo_constante(provisto, esperado):
+                return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorador
+
+
+def _secreto_de_cron():
+    """Bearer del header Authorization (no queda en los logs de acceso) o, por compatibilidad con los
+    crons ya configurados, el parametro ?token=."""
+    cabecera = request.headers.get('Authorization', '')
+    if cabecera.startswith('Bearer '):
+        return cabecera[len('Bearer '):].strip()
+    return request.args.get('token', '')
+
+
+# Crons externos (sincronizacion de Google Sheets y recordatorios de seguimiento por WhatsApp).
+require_cron_secret = _requiere_secreto_compartido('CRON_SECRET', _secreto_de_cron)

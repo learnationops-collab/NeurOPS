@@ -39,9 +39,12 @@ def _formato(rutas):
 
 
 def test_las_rutas_abiertas_a_anonimos_son_exactamente_las_inventariadas(app, db, monkeypatch):
-    # Con estos tokens configurados, /api/external/* contesta 401 (sin ellos contestaria 500: cerrada).
+    # Con estos secretos configurados, las rutas de integraciones contestan 401 a quien no los presenta.
+    # Sin configurarlos quedan cerradas de todos modos (500 las externas, 503 los crons), pero con un
+    # codigo que este test no cuenta como "cerrada".
     monkeypatch.setenv('ACADEMY_INBOUND_API_TOKEN', 'token-de-prueba')
     monkeypatch.setenv('DEV_PLATFORM_INBOUND_API_TOKEN', 'token-de-prueba')
+    monkeypatch.setenv('CRON_SECRET', 'secreto-de-prueba-con-mas-de-veinte-caracteres')
 
     abiertas = _rutas_abiertas_a_anonimos(app)
 

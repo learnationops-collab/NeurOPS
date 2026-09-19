@@ -1,8 +1,8 @@
-import os
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
+from app.decorators import require_cron_secret
 from app.models import Appointment
 from app.services.closer_followup_service import CloserFollowUpService, TIPOS_SEGUIMIENTO, PROGRAM_CODE_NAMES
 
@@ -120,19 +120,15 @@ def schedule_followup(appt_id):
 
 
 @bp.route('/followups/cron/send-reminders', methods=['GET'])
+@require_cron_secret
 def cron_send_followup_reminders():
     """Manda los avisos de seguimiento por WhatsApp (Whatchimp) que ya llegaron a la hora que el
-    closer eligió al programarlos. Pensado para un cron externo (mismo patrón/token que
-    /api/sheets/cron-sync) como alternativa al scheduler interno — llamarlo de más es seguro, el
-    "una vez por día por cita" evita reenviar.
+    closer eligió al programarlos. Pensado para un cron externo (mismo secreto CRON_SECRET que
+    /api/sheets/cron-sync; sin esa variable configurada responde 503) como alternativa al scheduler
+    interno — llamarlo de más es seguro, el "una vez por día por cita" evita reenviar.
 
     Si el interruptor global está apagado (`FOLLOWUP_REMINDERS_ENABLED=false`) responde 200 con
     `disabled: true` y no envía nada, para que un cron ya configurado no empiece a fallar."""
-    token = request.args.get('token')
-    expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
-    if not token or token != expected_token:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-
     selected_date = request.args.get('date')
     result = CloserFollowUpService.send_due_reminders(selected_date)
     return jsonify({"status": "success", **result}), 200

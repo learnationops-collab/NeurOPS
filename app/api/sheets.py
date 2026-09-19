@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from app.decorators import require_cron_secret
 from app.services.sheets_service import SheetsService
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +35,13 @@ def sync_sheets():
         return jsonify(result), 500
 
 @bp.route('/cron-sync', methods=['GET'])
+@require_cron_secret
 def cron_sync():
     """
     Endpoint para ser llamado por una función serverless (Cron).
-    Requiere un token de seguridad en lugar de sesión activa.
+    Requiere el secreto CRON_SECRET (header Authorization: Bearer o parámetro ?token=) en lugar de
+    sesión activa; sin esa variable configurada responde 503.
     """
-    token = request.args.get('token')
-    expected_token = os.getenv('CRON_SECRET', 'token-seguro-neur0ps-2026')
-    
-    if not token or token != expected_token:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-        
     logger.info("[CRON] Iniciando sincronización automática")
     res_ventas = SheetsService.sync_from_sheets('Ventas_DB')
     # res_agendas = SheetsService.sync_from_sheets('Llamadas_DB')
