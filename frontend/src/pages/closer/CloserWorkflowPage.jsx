@@ -1681,6 +1681,10 @@ const CloserWorkflowPage = () => {
         estado: saleForm.estado,
         setter: saleForm.setter || '',
         documento_identidad: saleForm.documento_identidad || '',
+        // La agenda desde la que se declara la venta: el backend la marca como Show up sin
+        // adivinar cuál es (ver CloserService.mark_sale_appointment_as_show_up). Sin esto, si el
+        // lead tenía más de una agenda la venta podía caer en una anterior.
+        appointment_id: salePrompt.apptId || undefined,
         marca_temporal: (() => {
             const selectedDate = new Date(saleForm.date);
             const now = new Date();
