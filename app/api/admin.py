@@ -1424,11 +1424,14 @@ def quick_create_sale():
             return jsonify({"error": "Entidades no encontradas (Lead, Programa o Método)"}), 404
 
         # 3. Create or Find Client (from Lead)
-        client = Client.query.filter_by(email=lead.email).first()
+        # Sin email no hay con quien cruzar: filter_by(email=None) es `email IS NULL` y le colgaba la venta
+        # al primer cliente sin email (otra persona). Un email vacio se guarda como NULL (la columna es unica).
+        email = (lead.email or '').strip() or None
+        client = Client.query.filter_by(email=email).first() if email else None
         if not client:
             client = Client(
                 full_name=lead.name,
-                email=lead.email,
+                email=email,
                 phone=lead.phone if hasattr(lead, 'phone') else None,
                 instagram=lead.instagram_username
             )

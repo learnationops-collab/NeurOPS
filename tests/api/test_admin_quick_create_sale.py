@@ -87,6 +87,42 @@ def test_si_ya_existe_un_cliente_con_ese_email_se_reutiliza(client, db, admin, a
     assert existente.full_name == 'Ana G. (ya cargada)'  # no se pisan sus datos con los del lead
 
 
+@pytest.mark.parametrize('email_del_lead', [None, ''])
+def test_un_lead_sin_email_no_se_confunde_con_un_cliente_sin_email(client, db, admin, auth_headers, catalogo, email_del_lead):
+    # filter_by(email=None) es `email IS NULL`: la venta se le colgaba al primer cliente que no tuviera
+    # email (otra persona), y con '' se usaria un cliente con email vacio. Sin email no hay con quien cruzar.
+    ajeno = Client(full_name='Otra Persona', email=None)
+    db.session.add(ajeno)
+    catalogo.lead.email = email_del_lead
+    db.session.commit()
+
+    respuesta = vender(client, admin, auth_headers, catalogo)
+
+    assert respuesta.status_code == 201
+    assert Client.query.count() == 2
+    inscripcion = Enrollment.query.one()
+    assert inscripcion.client_id != ajeno.id
+    assert inscripcion.client.full_name == 'Ana Gomez'
+    assert Enrollment.query.filter_by(client_id=ajeno.id).count() == 0
+
+
+def test_dos_leads_sin_email_dan_dos_clientes_distintos(client, db, admin, auth_headers, catalogo):
+    # Un email vacio se guarda como NULL: si se guardara '', el segundo lead sin email reutilizaria (o
+    # chocaria con la restriccion de unicidad de) el cliente del primero.
+    otro = Lead(manychat_id='mc-2', name='Beto Ruiz', email='   ')
+    db.session.add(otro)
+    catalogo.lead.email = None
+    db.session.commit()
+
+    vender(client, admin, auth_headers, catalogo)
+    respuesta = vender(client, admin, auth_headers, catalogo, lead_id=otro.id)
+
+    assert respuesta.status_code == 201
+    assert sorted(c.full_name for c in Client.query.all()) == ['Ana Gomez', 'Beto Ruiz']
+    assert {c.email for c in Client.query.all()} == {None}
+    assert Enrollment.query.count() == 2
+
+
 def test_dos_ventas_al_mismo_lead_comparten_el_cliente(client, admin, auth_headers, catalogo):
     vender(client, admin, auth_headers, catalogo, payment_amount=300)
     vender(client, admin, auth_headers, catalogo, payment_amount=700)
