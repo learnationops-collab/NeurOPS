@@ -1686,9 +1686,15 @@ const CloserWorkflowPage = () => {
         // lead tenía más de una agenda la venta podía caer en una anterior.
         appointment_id: salePrompt.apptId || undefined,
         marca_temporal: (() => {
-            const selectedDate = new Date(saleForm.date);
+            // `saleForm.date` es 'YYYY-MM-DD' (input date / localToday()). `new Date('YYYY-MM-DD')`
+            // lo lee como medianoche UTC, que en cualquier zona al oeste de UTC (todo América) es
+            // el DÍA ANTERIOR: cada venta quedaba fechada un día antes de la real. Con las partes
+            // locales la fecha que se elige es la que se guarda.
+            const [y, m, d] = String(saleForm.date).split('-').map(Number);
             const now = new Date();
-            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            const selectedDate = (y && m && d)
+                ? new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+                : now;
             return selectedDate.toLocaleString("es-ES");
         })(),
         // El closer decide si quiere disparar la automatización de n8n (mensajes al cliente +
