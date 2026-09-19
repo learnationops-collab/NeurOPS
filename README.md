@@ -58,6 +58,32 @@ FLASK_APP=run.py
 FLASK_ENV=development
 ```
 
+#### Secretos de las integraciones (producción)
+
+Las rutas que llaman sistemas externos sin usuario, y las de respaldo, **no tienen ningún valor por
+defecto**: sin su variable de entorno quedan cerradas (contestan 503; las de la Academia y la plataforma
+de desarrollo, 500). En Railway hay que definir cada una con un valor propio y distinto de al menos 20
+caracteres (excepto los dos tokens externos, que fija el consumidor), por ejemplo con
+`python -c "import secrets; print(secrets.token_hex(32))"`. Un valor que estuvo alguna vez en el
+repositorio se da por comprometido: se rota, no se reutiliza.
+
+| Variable | Qué protege | Quién presenta el valor |
+|---|---|---|
+| `SECRET_KEY` | firma de los JWT y de las cookies; sin ella la app no arranca en producción ni en Railway | (interna) |
+| `BACKUP_SECRET_KEY` | `/api/backup/secret-*` (además hay que ser `admin`) | el admin, en la URL |
+| `CRON_SECRET` | `GET /api/sheets/cron-sync` y `GET /api/closer/followups/cron/send-reminders` | el cron externo: `Authorization: Bearer <valor>` (o, por compatibilidad, `?token=<valor>`) |
+| `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/webhooks/manychat` | ManyChat, en el header `X-ManyChat-Token` |
+| `ACADEMY_INBOUND_API_TOKEN` | `/api/external/academy/*` | la Academia, `Authorization: Bearer <valor>` |
+| `DEV_PLATFORM_INBOUND_API_TOKEN` | `/api/external/dev-platform/*` | la plataforma de gestión de trabajo, `Authorization: Bearer <valor>` |
+
+Para saber si alguna cuenta conserva una contraseña por defecto que el código usó alguna vez (las
+cuentas creadas por una importación, por ejemplo), corre el script de auditoría, que **solo lee** la
+base y nunca imprime claves ni hashes:
+
+```bash
+python scripts/auditar_contrasenas_por_defecto.py --url "$DATABASE_URL"
+```
+
 ### 6. Inicializar Base de Datos y Migraciones
 
 El proyecto usa Flask-Migrate (Alembic) para la base de datos (SQLite en local).
