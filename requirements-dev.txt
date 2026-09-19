@@ -1,0 +1,8 @@
+# Dependencias SOLO de desarrollo y tests. El Dockerfile de Railway instala unicamente
+# requirements.txt, asi que nada de esto llega a produccion.
+#   pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest==9.1.1
+pytest-cov==7.1.0
+freezegun==1.5.5
