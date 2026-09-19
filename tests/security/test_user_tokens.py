@@ -11,7 +11,7 @@ import pytest
 from flask import g, request, session
 
 from app.models import User
-from app.models.user import get_impersonation_state, load_user_from_request
+from app.models.user import get_impersonation_state, load_user, load_user_from_request
 from tests.conftest import ENTORNO_DE_TEST
 
 SECRETO = ENTORNO_DE_TEST['SECRET_KEY']
@@ -171,14 +171,90 @@ def test_los_claims_del_token_quedan_disponibles_para_la_suplantacion(app, db, m
         assert g.token_claims['original_user_id'] == 9
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: is_active no se comprueba al autenticar por token. Flask-Login solo lo mira "
-    "en login_user(), pero la SPA usa Bearer: un usuario desactivado conserva el acceso hasta que "
-    "venza su JWT (24 h) y, ademas, /api/auth/login le entrega un token nuevo."))
+# --- Usuarios desactivados --------------------------------------------------------------------
+# UserMixin.is_authenticated devuelve `is_active`, asi que una cuenta desactivada ya recibia 401 en
+# toda ruta protegida. Lo que fallaba era el resto: los loaders entregaban igual el usuario (y los
+# claims de su token) y el login le daba un JWT de 24 h. Falsy (False o NULL) cuenta como desactivada,
+# igual que para Flask-Login.
+
+def _dejar_is_active_en_null(db, usuario):
+    # Con el ORM, is_active=None dispararia el default (True): hace falta un UPDATE a mano.
+    db.session.execute(db.text('UPDATE users SET is_active = NULL WHERE id = :id'), {'id': usuario.id})
+    db.session.commit()
+    db.session.refresh(usuario)
+    assert usuario.is_active is None
+
+
 def test_un_usuario_desactivado_no_se_autentica_con_su_token(app, db, make_user):
     usuario = make_user(is_active=False)
 
     assert _usuario_de(app, f'Bearer {usuario.get_auth_token()}') is None
+
+
+def test_el_token_de_un_usuario_desactivado_tampoco_deja_claims_de_suplantacion(app, db, make_user):
+    usuario = make_user(is_active=False)
+    token = usuario.get_auth_token(is_impersonating=True, original_user_id=9, original_user_role='admin')
+
+    with app.test_request_context('/api/x', headers={'Authorization': f'Bearer {token}'}):
+        assert load_user_from_request(request) is None
+
+        assert getattr(g, 'token_claims', None) is None
+
+
+def test_reactivar_al_usuario_devuelve_el_acceso_a_su_token(app, db, make_user):
+    # Desactivar no guarda estado en el token: el mismo JWT vuelve a servir al reactivar la cuenta.
+    usuario = make_user(is_active=False)
+    token = usuario.get_auth_token()
+    assert _usuario_de(app, f'Bearer {token}') is None
+
+    usuario.is_active = True
+    db.session.commit()
+
+    assert _usuario_de(app, f'Bearer {token}').id == usuario.id
+
+
+def test_is_active_en_null_cuenta_como_desactivado(app, db, make_user):
+    usuario = make_user()
+    _dejar_is_active_en_null(db, usuario)
+
+    assert _usuario_de(app, f'Bearer {usuario.get_auth_token()}') is None
+
+
+@pytest.mark.parametrize('valor', [True, False, None])
+def test_desactivado_es_exactamente_lo_que_flask_login_no_da_por_autenticado(app, db, make_user, valor):
+    # Un solo criterio para todo el sistema: si los loaders y Flask-Login discreparan, habria cuentas
+    # que se autentican en una capa y no en otra.
+    usuario = make_user()
+    if valor is None:
+        _dejar_is_active_en_null(db, usuario)
+    else:
+        usuario.is_active = valor
+        db.session.commit()
+
+    entregado = _usuario_de(app, f'Bearer {usuario.get_auth_token()}')
+
+    assert (entregado is not None) == bool(usuario.is_authenticated)
+
+
+def test_el_user_loader_de_la_cookie_no_devuelve_a_un_desactivado(app, db, make_user):
+    activo, desactivado = make_user(), make_user(is_active=False)
+
+    with app.test_request_context('/'):
+        assert load_user(str(activo.id)).id == activo.id
+        assert load_user(str(desactivado.id)) is None
+
+
+def test_el_user_loader_no_devuelve_a_un_usuario_con_is_active_null(app, db, make_user):
+    usuario = make_user()
+    _dejar_is_active_en_null(db, usuario)
+
+    with app.test_request_context('/'):
+        assert load_user(str(usuario.id)) is None
+
+
+def test_el_user_loader_de_un_id_inexistente_es_none(app, db):
+    with app.test_request_context('/'):
+        assert load_user('99999') is None
 
 
 # --- get_impersonation_state ------------------------------------------------------------------

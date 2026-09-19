@@ -20,9 +20,18 @@ ROLE_DIRECTOR_MARKETING = 'director_marketing'
 # en app/decorators.py.
 ROLE_HIRING = 'hiring'
 
+def _esta_desactivado(user):
+    """True si la cuenta esta desactivada. Falsy (False o NULL) es "desactivada", igual que para
+    Flask-Login: UserMixin.is_authenticated devuelve `is_active`, asi que una cuenta asi ya recibia 401
+    en toda ruta protegida. Los loaders no la entregan para que nada la trate como usuario (ni siquiera
+    se guardan los claims de su token) y el login lo dice en vez de darle un JWT que no sirve."""
+    return user is not None and not user.is_active
+
+
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    user = User.query.get(int(id))
+    return None if _esta_desactivado(user) else user
 
 @login.request_loader
 def load_user_from_request(request):
@@ -38,6 +47,8 @@ def load_user_from_request(request):
             payload = User.decode_auth_token(token)
             if payload:
                 user = User.query.get(payload.get('id'))
+                if _esta_desactivado(user):
+                    return None
                 if user:
                     # Guardado en g (vida = un solo request) para que get_impersonation_state()
                     # pueda leer is_impersonating/original_user_* de ESTE token en vez de la

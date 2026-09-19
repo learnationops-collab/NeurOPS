@@ -29,6 +29,12 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({"message": "Invalid credentials"}), 401
 
+    # Cuenta desactivada: se avisa DESPUES de acertar la clave, para no revelar que un usuario existe.
+    # login_user() rechaza a un usuario inactivo pero devuelve False, y antes se ignoraba ese
+    # resultado y se entregaba igual un JWT de 24 h que luego daba 401 en todas partes.
+    if not user.is_active:
+        return jsonify({"message": "Tu cuenta está desactivada. Contacta a un administrador."}), 403
+
     # 4. Login Session (Optional / Legacy support)
     login_user(user, remember=True)
 
@@ -111,6 +117,8 @@ def impersonate():
     target_user = User.query.get(target_user_id)
     if not target_user:
         return jsonify({"message": "User not found"}), 404
+    if not target_user.is_active:
+        return jsonify({"message": "User is inactive"}), 400
 
     if not is_impersonating:
         original_id, original_role = current_user.id, current_user.role

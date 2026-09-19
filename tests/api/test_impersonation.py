@@ -78,6 +78,21 @@ def test_falta_el_usuario_a_suplantar(client, auth_headers, equipo):
     assert suplantar(client, admin, 99_999).status_code == 404
 
 
+@pytest.mark.parametrize('extra', [{}, {'isolated': True}])
+def test_no_se_puede_suplantar_a_un_usuario_desactivado(client, db, auth_headers, equipo, extra):
+    # Un JWT de suplantacion a nombre de una cuenta desactivada tampoco autenticaria despues, pero
+    # emitirlo (y abrir la cookie del modo clasico) no tiene sentido.
+    inactivo = equipo['closer_a']
+    inactivo.is_active = False
+    db.session.commit()
+
+    respuesta = suplantar(client, auth_headers(equipo['admin']), inactivo.id, **extra)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'message': 'User is inactive'}
+    assert 'token' not in respuesta.get_json()
+
+
 # --- Modo aislado (una pestana) ---------------------------------------------------------------
 
 def test_el_modo_aislado_emite_un_token_con_el_estado_de_suplantacion(client, auth_headers, equipo):

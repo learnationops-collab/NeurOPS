@@ -136,15 +136,72 @@ def test_una_zona_invalida_se_ignora_y_el_login_sigue_funcionando(client, make_u
     assert usuario.timezone == original
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: login no comprueba is_active. login_user() devuelve False para un usuario "
-    "desactivado pero el endpoint ignora ese resultado y le entrega igual un JWT de 24 h."))
+# --- Usuarios desactivados --------------------------------------------------------------------
+# login_user() devuelve False para un desactivado, pero el endpoint ignoraba ese resultado y le
+# entregaba igual un JWT de 24 h. Con ese token toda ruta protegida le daba 401 (Flask-Login da por
+# no autenticada a una cuenta con is_active falsy), asi que el efecto era un login "exitoso" que
+# rebotaba sin explicacion.
+
 def test_un_usuario_desactivado_no_puede_entrar(client, make_user):
     make_user(username='ana', is_active=False)
 
     respuesta = entrar(client, 'ana')
 
-    assert respuesta.status_code in (401, 403)
+    assert respuesta.status_code == 403
+    assert 'desactivada' in respuesta.get_json()['message']
+    assert 'token' not in respuesta.get_json()
+    assert quien_soy(client).status_code == 401  # y tampoco le abrio la sesion de cookie
+
+
+def test_un_desactivado_tampoco_entra_con_su_email(client, make_user):
+    make_user(username='ana', email='ana@x.com', is_active=False)
+
+    assert entrar(client, 'ana@x.com').status_code == 403
+
+
+def test_con_la_clave_mala_un_desactivado_recibe_lo_mismo_que_cualquiera(client, make_user):
+    # El aviso de cuenta desactivada se da DESPUES de acertar la clave: sin ella no se revela que la
+    # cuenta existe ni en que estado esta.
+    make_user(username='ana', is_active=False)
+
+    respuesta = entrar(client, 'ana', 'incorrecta')
+
+    assert respuesta.status_code == 401
+    assert respuesta.get_json() == {'message': 'Invalid credentials'}
+
+
+def test_desactivar_a_alguien_corta_el_token_que_ya_tenia(client, make_user, db):
+    ana = make_user(username='ana')
+    token = entrar(client, 'ana').get_json()['token']
+    assert quien_soy(client, token).status_code == 200
+
+    ana.is_active = False
+    db.session.commit()
+
+    assert quien_soy(client, token).status_code == 401
+
+
+def test_desactivar_a_alguien_corta_su_sesion_de_cookie(client, make_user, db):
+    ana = make_user(username='ana')
+    entrar(client, 'ana')
+    assert quien_soy(client).status_code == 200  # la cookie de ana sirve
+
+    ana.is_active = False
+    db.session.commit()
+
+    assert quien_soy(client).status_code == 401
+
+
+def test_un_usuario_con_is_active_en_null_tampoco_entra(client, make_user, db):
+    # Flask-Login lo da por no autenticado (is_authenticated devuelve is_active), asi que ya no podia
+    # usar la app: ahora el login lo dice en vez de entregarle un token que rebota.
+    ana = make_user(username='ana')
+    db.session.execute(db.text('UPDATE users SET is_active = NULL WHERE id = :id'), {'id': ana.id})
+    db.session.commit()
+
+    respuesta = entrar(client, 'ana')
+
+    assert respuesta.status_code == 403
     assert 'token' not in respuesta.get_json()
 
 
