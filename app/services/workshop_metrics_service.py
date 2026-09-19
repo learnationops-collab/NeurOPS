@@ -83,9 +83,30 @@ def _contar_aplicaciones(desde, hasta, tz):
     no cuentan. 'No identificado' si es un formulario real completo -- el lead
     respondio todo el cuestionario, solo fallo el tag de que pagina lo origino --
     asi que en vez de perderse cuenta del lado del vivo (12/sep/2026).
+
+    Un cliente entra a la ventana si se CREO en ella o si su formulario se ENVIO
+    en ella (`form_data.submitted_at`). Mirar solo `created_at` dejaba afuera a
+    todo el que ya estaba en la base -- agendo antes o aplico a un taller
+    anterior -- y volvia a llenar el formulario: el endpoint del formulario le
+    actualiza el `form_data` en vez de crearle un cliente nuevo. El 19/sep/2026
+    el panel mostraba 8 aplicaciones con 15 formularios del taller ya enviados.
+
+    Se conservan las dos fechas porque `submitted_at` se pisa en cada envio (solo
+    queda el ULTIMO): usar solo el envio le quitaria al taller viejo a quien se
+    volvio a anotar despues, y `created_at` sigue diciendo en que ventana entro
+    la primera vez. Los formularios anteriores a junio no traen `submitted_at` y
+    cuentan solo por `created_at`.
     """
     inicio, fin = _limites_utc(desde, hasta, tz)
-    clientes = Client.query.filter(Client.created_at >= inicio, Client.created_at <= fin).all()
+    # `submitted_at` es texto ISO en UTC (datetime.utcnow().isoformat()): el orden
+    # alfabetico es el cronologico, asi que el rango se compara como texto.
+    enviado = Client.form_data['submitted_at'].as_string()
+    clientes = Client.query.filter(
+        or_(
+            (Client.created_at >= inicio) & (Client.created_at <= fin),
+            (enviado >= inicio.isoformat()) & (enviado <= fin.isoformat()),
+        )
+    ).all()
 
     conteo = {'vivo': 0, 'landing': 0}
     for c in clientes:
