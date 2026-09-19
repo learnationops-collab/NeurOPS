@@ -12,6 +12,10 @@ class UserService(BaseService):
     @staticmethod
     def create_user(data):
         try:
+            # Sin clave por defecto: antes un usuario creado sin contraseña quedaba con una debil y fija.
+            if not data.get('password'):
+                return UserService.error("La contraseña es obligatoria.")
+
             if User.query.filter((User.email == data.get('email')) | (User.username == data.get('username'))).first():
                 return UserService.error("El email o usuario ya existe.")
 
@@ -21,8 +25,8 @@ class UserService(BaseService):
                 role=data.get('role', 'closer')
             )
             if data.get('timezone'): user.timezone = data.get('timezone')
-            user.set_password(data.get('password') or '12345678')
-            
+            user.set_password(data['password'])
+
             db.session.add(user)
             db.session.commit()
             return UserService.success(message=f"Usuario {user.username} creado exitosamente.", data={'user': user})

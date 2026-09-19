@@ -4,6 +4,7 @@ El JWT firmado con SECRET_KEY es el metodo de autenticacion principal de la SPA:
 el suyo. Un token vencido, adulterado, firmado con otra clave o con otro algoritmo (incluido 'none')
 NUNCA debe autenticar.
 """
+import secrets
 import time
 
 import jwt
@@ -13,6 +14,7 @@ from flask import g, request, session
 from app.models import User
 from app.models.user import get_impersonation_state, load_user, load_user_from_request
 from tests.conftest import ENTORNO_DE_TEST
+from tests.security.claves_por_defecto import CLAVES_POR_DEFECTO
 
 SECRETO = ENTORNO_DE_TEST['SECRET_KEY']
 OTRA_CLAVE = 'otra-clave-de-32-bytes-o-mas-para-hs256'
@@ -63,6 +65,38 @@ def test_la_clave_distingue_mayusculas():
     usuario.set_password('Clave')
 
     assert usuario.check_password('clave') is False
+
+
+def test_una_clave_inutilizable_no_coincide_con_ninguna_conocida(hashes_baratos):
+    usuario = User(username='ana')
+
+    usuario.set_unusable_password()
+
+    assert usuario.password_hash
+    for candidata in (*CLAVES_POR_DEFECTO, '', 'password', 'ana'):
+        assert usuario.check_password(candidata) is False
+
+
+def test_la_clave_inutilizable_es_aleatoria_y_larga(monkeypatch, hashes_baratos):
+    # Cada cuenta recibe un secreto NUEVO (nunca una constante) de 32 bytes de aleatoriedad, y el hash
+    # guardado corresponde a ese secreto.
+    generadas, real = [], secrets.token_urlsafe
+
+    def espia(nbytes):
+        valor = real(nbytes)
+        generadas.append((nbytes, valor))
+        return valor
+
+    monkeypatch.setattr(secrets, 'token_urlsafe', espia)
+    a, b = User(username='a'), User(username='b')
+
+    a.set_unusable_password()
+    b.set_unusable_password()
+
+    assert [nbytes for nbytes, _ in generadas] == [32, 32]
+    assert generadas[0][1] != generadas[1][1]
+    assert a.check_password(generadas[0][1]) and b.check_password(generadas[1][1])
+    assert not a.check_password(generadas[1][1])
 
 
 @pytest.mark.parametrize('hash_guardado', [None, ''])

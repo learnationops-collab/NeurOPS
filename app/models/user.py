@@ -1,4 +1,5 @@
 from datetime import datetime
+import secrets
 import time
 import jwt
 from flask import current_app, g
@@ -137,6 +138,14 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+
+    def set_unusable_password(self):
+        """Clave aleatoria que nadie conoce: la cuenta no puede iniciar sesion hasta que un admin le fije una.
+
+        Para las cuentas que se crean sin que su duena haya elegido clave (la importacion crea closers y
+        setters por su nombre). Antes todas recibian la misma clave escrita en el codigo, y con ella
+        cualquiera que la conociera entraba como cualquiera de ellas."""
+        self.set_password(secrets.token_urlsafe(32))
 
     def check_password(self, password):
         # Un usuario sin clave guardada (importado, creado a medias) no coincide con ninguna: antes

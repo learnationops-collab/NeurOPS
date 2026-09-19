@@ -12,18 +12,15 @@ import re
 from collections import Counter
 from pathlib import Path
 
-import pytest
-
 RAIZ = Path(__file__).resolve().parents[2]
 NOMBRE_SECRETO = re.compile(r'(SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|EXPECTED_KEY)', re.IGNORECASE)
 
-# (archivo, nombre) -> cuantas veces. Todos son hallazgos reales salvo el ultimo. (Ya salieron del
-# codigo la clave de backup/restore, las contrasenas fijas de fix-auth, el valor por defecto de
-# CRON_SECRET de los dos crons y el token del webhook de ManyChat.)
+# (archivo, nombre) -> cuantas veces. Ya salieron del codigo la clave de backup/restore, las contrasenas
+# fijas de fix-auth, el valor por defecto de CRON_SECRET de los dos crons, el token del webhook de
+# ManyChat y las claves por defecto de las cuentas importadas o creadas sin clave. Solo queda el respaldo
+# de DESARROLLO de config.py, que nunca se usa en produccion (ver test_config_secrets).
 CONOCIDOS = {
-    ('app/services/import_service.py', 'set_password'): 3,  # la misma clave por defecto para todo usuario importado
-    ('app/services/user_service.py', 'set_password'): 1,  # clave debil por defecto si se crea un usuario sin clave
-    ('config.py', 'SECRET_KEY'): 1,  # respaldo de DESARROLLO: solo se usa fuera de produccion
+    ('config.py', 'SECRET_KEY'): 1,
 }
 ACEPTABLES = {('config.py', 'SECRET_KEY')}
 
@@ -93,9 +90,6 @@ def test_los_secretos_escritos_en_el_codigo_son_exactamente_los_conocidos():
         f'  ya no estan:     {dict(Counter(CONOCIDOS) - encontrados)}')
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG DE SEGURIDAD: hay secretos escritos en el codigo (las contrasenas por defecto de usuarios "
-    "importados o creados sin clave). Deben dejar de existir: una clave aleatoria que nadie conoce."))
 def test_no_hay_secretos_escritos_en_el_codigo():
     reales = sorted(set(_todos_los_hallazgos()) - ACEPTABLES)
 

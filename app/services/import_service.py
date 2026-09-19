@@ -242,7 +242,7 @@ class ImportService:
         if not closer:
             if res_closer == '__CREATE__':
                 closer = User(username=closer_username, role='closer')
-                closer.set_password('NeurOPS2025!')
+                closer.set_unusable_password()
                 db.session.add(closer)
                 db.session.flush()
             else:
@@ -353,7 +353,7 @@ class ImportService:
         if not closer:
             if res_closer == '__CREATE__':
                 closer = User(username=closer_username, role='closer')
-                closer.set_password('NeurOPS2025!')
+                closer.set_unusable_password()
                 db.session.add(closer)
                 db.session.flush()
             else:
@@ -408,7 +408,7 @@ class ImportService:
         if not setter:
             if res_setter == '__CREATE__':
                 setter = User(username=setter_name, role='setter')
-                setter.set_password('NeurOPS2025!')
+                setter.set_unusable_password()
                 db.session.add(setter)
                 db.session.flush()
             else:

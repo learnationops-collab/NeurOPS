@@ -166,6 +166,18 @@ def make_user(db):
 
 
 @pytest.fixture()
+def hashes_baratos(monkeypatch):
+    """Las claves que el CODIGO guarda (User.set_password) usan pbkdf2 de 1 iteracion y no scrypt.
+
+    Para los tests que hacen que el codigo cree cuentas o compruebe muchas claves: cada scrypt tarda
+    ~0.1 s y son decenas. check_password lee el metodo del propio hash, asi que verifica igual."""
+    from werkzeug.security import generate_password_hash
+
+    monkeypatch.setattr('app.models.user.generate_password_hash',
+                        lambda password: generate_password_hash(password, method='pbkdf2:sha256:1'))
+
+
+@pytest.fixture()
 def auth_headers():
     """auth_headers(user) -> cabecera Bearer con el JWT del usuario."""
     def _cabeceras(user, **claims):
