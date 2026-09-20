@@ -162,10 +162,10 @@ const WorkshopDashboardPage = () => {
         }
     };
 
-    // Sincronizacion en vivo: las agendas y ventas ya se reflejan solas en el
-    // snapshot del backend (workshop_live_sync.py) apenas se crean -- este
-    // polling silencioso es solo para que el panel ya abierto las recoja sin
-    // que el usuario tenga que recargar la pagina o tocar nada.
+    // Sincronizacion en vivo: las agendas, ventas y formularios ya se reflejan
+    // solos en el snapshot del backend (workshop_live_sync.py) apenas llegan --
+    // este polling silencioso es solo para que el panel ya abierto los recoja
+    // sin que el usuario tenga que recargar la pagina o tocar nada.
     useEffect(() => {
         const interval = setInterval(() => fetchEvents(true), 20000);
         return () => clearInterval(interval);
@@ -397,7 +397,7 @@ const WorkshopDashboardPage = () => {
                     <div className="ws-topbar-row">
                         <div className="ws-topbar-title">
                             <h1>Workshop Intelligence</h1>
-                            <span className="live-badge" title="Las agendas y ventas nuevas se reflejan solas en el panel, sin recargar ni sincronizar a mano.">
+                            <span className="live-badge" title="Las agendas, ventas y formularios nuevos se reflejan solos en el panel, sin recargar ni sincronizar a mano.">
                                 <span className="live-dot" /> En vivo
                             </span>
                         </div>

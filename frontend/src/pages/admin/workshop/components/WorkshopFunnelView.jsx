@@ -80,12 +80,12 @@ const WorkshopFunnelView = ({
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                                <button type="button" className="secondary-action" onClick={onResync} disabled={resyncing} title="Forzar un resync manual ahora mismo (las agendas y ventas nuevas ya se sincronizan solas)">
+                                <button type="button" className="secondary-action" onClick={onResync} disabled={resyncing} title="Forzar un resync manual ahora mismo (las agendas, ventas y formularios nuevos ya se sincronizan solos)">
                                     {resyncing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
                                     {resyncing ? 'Sincronizando…' : 'Resync sistema'}
                                 </button>
                                 {syncedLabel && (
-                                    <span className="sync-status" title="Las agendas y ventas nuevas actualizan este evento solas, sin recargar la página">
+                                    <span className="sync-status" title="Las agendas, ventas y formularios nuevos actualizan este evento solos, sin recargar la página">
                                         <span className="live-dot" style={{ width: 5, height: 5 }} /> Sincronizado {syncedLabel}
                                     </span>
                                 )}
