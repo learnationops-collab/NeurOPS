@@ -3,11 +3,14 @@
 Antes, si caia una agenda nueva o se cerraba una venta dentro de la ventana de
 un workshop ya registrado, el snapshot de metricas de ese WorkshopEvent quedaba
 desactualizado hasta que alguien abria el panel y apretaba "Resync sistema".
+Lo mismo pasaba con los formularios: las aplicaciones no se movian hasta que
+llegaba la siguiente agenda o venta.
 
 Como funciona:
 
   1. `before_flush` anota en `session.info` la fecha de cada FinancialAgenda /
-     FinancialSale creada o modificada, y la de cada WorkshopEvent creado o
+     FinancialSale creada o modificada, la del formulario de cada Client cuyo
+     `form_data` se crea o cambia, y la de cada WorkshopEvent creado o
      borrado. Se anota en el flush y no recien en el commit porque el webhook
      de n8n guarda las agendas de a lotes y la consulta anti-duplicados del
      item siguiente ya flushea el anterior: al llegar al commit `session.new`
@@ -23,20 +26,43 @@ Se usa `before_commit` y no `after_commit` a proposito: en `after_commit` la
 sesion ya no admite mas SQL ("session is in 'committed' state"), y correr todo
 antes de commitear deja el ajuste del snapshot atomico con el cambio que lo
 disparo (si algo falla, se revierte junto).
+
+Los formularios cuentan por el dia en que se ENVIARON (`form_data.submitted_at`)
+y no por el del alta del cliente: el endpoint del formulario le actualiza el
+`form_data` a quien ya esta en la base en vez de crearle otro cliente, asi que
+un cliente viejo que vuelve a anotarse mueve las aplicaciones del taller de HOY.
+Solo cuenta un cambio del `form_data`: si el cliente cambia de seguimiento, de
+monto o de contacto no se recalcula nada (seria reescribir el snapshot de
+talleres viejos sin motivo).
 """
 from datetime import datetime, timedelta
 import logging
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect
 
 from app import db
-from app.models import FinancialAgenda, FinancialSale, WorkshopEvent
+from app.models import Client, FinancialAgenda, FinancialSale, WorkshopEvent
 
 logger = logging.getLogger(__name__)
 
 _TRACKED_MODELS = (FinancialAgenda, FinancialSale)
-_KEY_FECHAS = 'workshop_sync_fechas'        # dias (UTC) de agendas/ventas tocadas
+_KEY_FECHAS = 'workshop_sync_fechas'        # dias (UTC) de agendas/ventas/formularios tocados
 _KEY_TALLERES = 'workshop_sync_talleres'    # dias de WorkshopEvent creados/borrados
+
+
+def _formulario_tocado(cliente):
+    """True si este flush crea o cambia el `form_data` del cliente (y no lo deja vacio)."""
+    # El historial va primero porque no emite SQL; leer `form_data` de un cliente expirado si.
+    return inspect(cliente).attrs.form_data.history.has_changes() and bool(cliente.form_data)
+
+
+def _dia_del_formulario(cliente):
+    """Dia (UTC) en que se envio el formulario; sin fecha legible, el del alta del cliente."""
+    datos = cliente.form_data if isinstance(cliente.form_data, dict) else {}
+    try:
+        return datetime.fromisoformat(datos.get('submitted_at')).date()
+    except (TypeError, ValueError):
+        return (cliente.created_at or datetime.utcnow()).date()
 
 
 def _anotar_cambios(session):
@@ -47,6 +73,8 @@ def _anotar_cambios(session):
             # recien al insertar y va a ser "ahora" en UTC.
             ts = getattr(obj, 'created_at', None) or datetime.utcnow()
             session.info.setdefault(_KEY_FECHAS, set()).add(ts.date())
+        elif isinstance(obj, Client) and _formulario_tocado(obj):
+            session.info.setdefault(_KEY_FECHAS, set()).add(_dia_del_formulario(obj))
     for obj in list(session.new) + list(session.deleted):
         if isinstance(obj, WorkshopEvent) and obj.date:
             session.info.setdefault(_KEY_TALLERES, set()).add(obj.date)
