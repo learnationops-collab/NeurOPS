@@ -37,12 +37,17 @@ class UserService(BaseService):
     @staticmethod
     def create_client(data):
         try:
-            if Client.query.filter_by(email=data.get('email')).first():
+            # Sin email no hay con quien chocar: filter_by(email=None) es `email IS NULL` y
+            # empataba con CUALQUIER otro cliente sin email, bloqueando el alta de un segundo lead
+            # sin correo en cuanto ya existiera uno (mismo patron ya corregido en el roadmap del
+            # lead y en quick_create_sale).
+            email = (data.get('email') or '').strip() or None
+            if email and Client.query.filter_by(email=email).first():
                 return UserService.error("El email del cliente ya existe.")
             
             client = Client(
                 full_name=data.get('full_name'),
-                email=data.get('email'),
+                email=email,
                 phone=data.get('phone'),
                 instagram=data.get('instagram')
             )
