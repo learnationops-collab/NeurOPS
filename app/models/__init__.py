@@ -7,6 +7,7 @@ from .payment import Enrollment, PaymentMethod, Payment
 from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, ManychatAdLead, ManychatLead, LeadAnswer, UTMLog, LandingTracking, ConversationalMessage
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
+from .comercial_report import ReporteDirector, ReporteDirectorPersona
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment, LeadEventLog, FeatureToggle
 from .integration import Integration
 from .public_registration import PublicRegistration
@@ -36,7 +37,7 @@ __all__ = [
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'Enrollment', 'PaymentMethod', 'Payment',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
-    'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
+    'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment', 'LeadEventLog', 'FeatureToggle',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
