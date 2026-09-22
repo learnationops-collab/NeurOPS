@@ -53,6 +53,12 @@ def _normalize_phone(phone):
     return digits[-8:] if len(digits) >= 8 else None
 
 
+def _es_email_placeholder(email):
+    """True si es un correo sintetico (nadie lo tecleo): BookingService genera 'no-email-<uuid>@...' y
+    la actualizacion de seguimiento de app/api/public/new_clients.py genera 'no_email_<timestamp>@...'."""
+    return bool(email) and ('no-email-' in email or 'no_email_' in email)
+
+
 class ClientDedupService:
     """Detecta y fusiona clientes duplicados usando los mismos criterios de coincidencia
     que BookingService.create_or_update_client (email exacto, instagram normalizado,
@@ -145,7 +151,13 @@ class ClientDedupService:
 
         # Guardar datos útiles de los duplicados antes de tocar/borrar nada
         fallback_name = next((d.full_name for d in duplicates if d.full_name and not survivor.full_name), None)
-        fallback_email = next((d.email for d in duplicates if d.email and (not survivor.email or 'no-email-' in survivor.email)), None)
+        # Antes solo reconocia el placeholder de BookingService ('no-email-...'): un superviviente con
+        # el de new_clients.py ('no_email_...', guion bajo) se quedaba con ese correo sintetico en vez
+        # de adoptar el real de su duplicado. Tampoco sirve un duplicado cuyo propio email sea otro
+        # placeholder (no seria una mejora).
+        necesita_email = not survivor.email or _es_email_placeholder(survivor.email)
+        fallback_email = next(
+            (d.email for d in duplicates if d.email and not _es_email_placeholder(d.email) and necesita_email), None)
         fallback_phone = next((d.phone for d in duplicates if d.phone and not survivor.phone), None)
         fallback_ig = next((d.instagram for d in duplicates if d.instagram and not survivor.instagram), None)
 
