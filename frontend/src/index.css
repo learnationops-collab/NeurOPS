@@ -14,12 +14,13 @@
     /* Remove mobile/webkit blue tap highlight */
 }
 
-/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *): el Closer Workspace,
-   Workshop Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell") y ahora el Editor de
-   curso (CourseEditorPage.jsx, raíz con class="ce-shell") usan Montserrat, no la fuente de marca
+/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *): el Closer Workspace,
+   Workshop Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell"), el Editor de
+   curso (CourseEditorPage.jsx, raíz con class="ce-shell") y el Dashboard comercial
+   (pages/comercial/DashboardComercial.jsx, raíz con class="dc-shell") usan Montserrat, no la fuente de marca
    del resto de la app — mismo patrón, ver index.html, que carga antes que este archivo y tiene la
    misma exclusión. */
-*:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
+*:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *) {
     font-family: var(--font-body) !important;
 }
 
@@ -29,9 +30,9 @@
     color: inherit;
 }
 
-/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) dentro de cada selector: el rediseño
-   "v6/v7" del Workspace de Closers, el reskin de Workshop Intelligence y el Editor de curso (ver
-   .bg-v6/.ws-shell/.ce-shell) definen sus propios pesos explícitos por clase (700/800/900, sin
+/* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *) dentro de cada selector: el rediseño
+   "v6/v7" del Workspace de Closers, el reskin de Workshop Intelligence, el Editor de curso y el
+   Dashboard comercial (ver .bg-v6/.ws-shell/.ce-shell/.dc-shell) definen sus propios pesos explícitos por clase (700/800/900, sin
    !important, calcados de una referencia visual externa) para que números y títulos se vean
    gruesos/impactantes. Sin esta exclusión, este
    reset global (con !important) les ganaba incondicionalmente pase lo que pase la especificidad —
@@ -39,28 +40,28 @@
    400. Resultado reportado por el usuario: "las letras son un poquito más delgaditas" comparando
    contra el mockup, en TODO el Workspace (números del hero, nombres de tarjetas del Kanban,
    navegación 01-06, etc.) porque casi todos esos elementos son <div>/<span>/<button>/<h3>. */
-h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-.font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-.font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-.font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-[class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
+h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+.font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+.font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+.font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+[class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+[class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+[class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *) {
     font-family: var(--font-header) !important;
     font-weight: var(--weight-semibold) !important;
 }
 
-p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
+p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *) {
     font-weight: var(--weight-regular) !important;
     font-style: normal !important;
 }
@@ -74,8 +75,8 @@ em,
 }
 
 /* Override Tailwind bolds */
-b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *),
-strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *) {
+b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *),
+strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *) {
     font-weight: var(--weight-medium) !important;
 }
 
@@ -361,17 +362,20 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* :not(.bg-v6):not(.bg-v6 *): mismo motivo que el resto de las exclusiones -v6 de este archivo — sin esto,
+/* :not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *): mismo motivo que el resto de las
+   exclusiones -v6 de este archivo — sin esto,
    cualquier <h1>-<h6> dentro del Workspace (ej. el título "Closer Workspace" del header, o
    <h3 className="tsp-name-v6">) heredaba Montserrat de `.bg-v6` pero esta regla se lo pisaba
    igual con la fuente de marca del resto de la app, por más baja especificidad que tenga: una
-   regla explícita sobre el propio elemento siempre le gana a un valor heredado del ancestro. */
-h1:not(.bg-v6):not(.bg-v6 *),
-h2:not(.bg-v6):not(.bg-v6 *),
-h3:not(.bg-v6):not(.bg-v6 *),
-h4:not(.bg-v6):not(.bg-v6 *),
-h5:not(.bg-v6):not(.bg-v6 *),
-h6:not(.bg-v6):not(.bg-v6 *) {
+   regla explícita sobre el propio elemento siempre le gana a un valor heredado del ancestro. En el
+   Dashboard comercial (.dc-shell) pasaba lo mismo y además, con especificidad (0,2,2), le ganaba a
+   `.ln-t-h1` (peso 900) del design system. */
+h1:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *),
+h2:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *),
+h3:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *),
+h4:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *),
+h5:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *),
+h6:not(.bg-v6):not(.bg-v6 *):not(.dc-shell):not(.dc-shell *) {
     font-family: var(--font-header);
     font-weight: var(--weight-light);
     letter-spacing: -0.03em;

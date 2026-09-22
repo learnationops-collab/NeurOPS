@@ -1,0 +1,629 @@
+/* ============================================================================
+   LEARNATION DESIGN SYSTEM (port de @learnation/design-system@2.0.0)
+   Fuente: handoff "Dashboard Comercial" (prototipo/_ds/_ds_bundle.css).
+
+   Diferencias con el original, todas para que el sistema NO se filtre al resto
+   de la app (que tiene su propio tema en index.css con --brand-secondary, etc.
+   definidos en :root y variantes por tema):
+     - Los tokens viven en `.dc-shell`, no en :root.
+     - Las reglas "de página" de base.css (body, a, button, ::selection, foco,
+       movimiento reducido) quedan acotadas a `.dc-shell`.
+     - Las clases .ln-* se copian tal cual (nombres únicos en el repo).
+     - Montserrat ya lo carga frontend/index.html (400/600/700/800/900), así que
+       no se repite el @import de Google Fonts.
+   Todo lo que se renderice en un portal (modales) tiene que ir dentro de un
+   wrapper con class="dc-shell" para heredar los tokens.
+
+   OJO: index.html e index.css fuerzan font-family/weight/letter-spacing con
+   !important en todo elemento salvo dentro de `.dc-shell` (y los otros shells
+   excluidos). Si este sistema se usa fuera de `.dc-shell`, los pesos 700/800/900
+   y el tracking se renderizan como 400/600.
+   ============================================================================ */
+
+/* ===== tokens/tokens.css ===== */
+/* ============================================================================
+   LEARNATION — DESIGN TOKENS
+   Fuente: Manual de Marca v2.0 + Guía UI de producto v1.
+   Copiado tal cual del manual. Ningún valor inventado.
+   Este archivo es la ÚNICA fuente de verdad de color, forma, sombra y foco.
+   Cualquier valor hardcodeado fuera de acá es un error.
+   ============================================================================ */
+
+.dc-shell {
+  /* --- Marca — 4 colores, ningún otro ------------------------------------ */
+  --brand-secondary: #FF3FA4;        /* magenta — acento único, <10% (objetivo real <5%) */
+  --brand-secondary-light: #FF6AD5;  /* sólo fin de gradiente y hover */
+  --brand-primary: #1323C6;          /* azul — sombra de marca Y anillo de foco */
+  --brand-navy: #0A0E3D;
+  --ink: #020617;
+
+  /* --- Capas translúcidas — no hay escala de grises ---------------------- */
+  --bg-surface: rgba(2, 6, 23, .90);          /* header, modales, barras fijas */
+  --bg-element: rgba(255, 255, 255, .08);     /* tarjetas, paneles, contenedores */
+  --bg-element-hover: rgba(255, 255, 255, .12);
+  --bg-input: rgba(0, 0, 0, .30);             /* campos: hunden, no elevan */
+  --border-main: rgba(255, 255, 255, .15);    /* decorativo: paneles, separadores */
+  --border-subtle: rgba(255, 255, 255, .05);
+  /* Borde de CONTROL interactivo (input, select, botón con borde, iconbtn).
+     15% rendía 1,44:1 y el relleno del campo no distingue el control por sí
+     solo (1,01:1 contra la página), así que el borde es lo único que lo
+     identifica: WCAG 1.4.11 exige 3:1. Al 38% da 3,47:1. */
+  --border-control: rgba(255, 255, 255, .38);
+
+  /* Superficies sólidas — antes estaban hardcodeadas en components.css. */
+  --bg-white: #FFFFFF;              /* botón secundario: blanco sólido */
+  --bg-white-hover: #E8E9EE;        /* su hover */
+  --bg-scrim: rgba(2, 6, 23, .70);  /* velo del modal — Ink 70% */
+  --text-on-surface: #FFFFFF;
+  --text-muted: rgba(255, 255, 255, .60);     /* piso: nunca texto informativo por debajo */
+  --text-muted-40: rgba(255, 255, 255, .40);  /* sólo decorativo, nunca informativo */
+
+  /* --- Sistema de 5 estados — semántico, no decorativo -------------------
+     Si hace falta un quinto tono, es porque el dato encaja acá. No inventar. */
+  --success: #2FBF8F;  --success-surface: #071A24;  --success-border: #10413D;
+  --warning: #D9A441;  --warning-surface: #1A171C;  --warning-border: #473924;
+  --error:   #E85C4A;  --error-surface:   #1B0F1D;  --error-border:   #4C2227;
+  --info:    #4E8BD8;  --info-surface:    #0A152C;  --info-border:    #1A3155;
+  --idle:    #7F8CA8;  --idle-surface:    #0E1326;  --idle-border:    #252C42;
+
+  /* Magenta como superficie — mismo patrón que los 5 estados (base/surface/border).
+     Reservado a marca: NUNCA para representar un dato. */
+  --brand-secondary-surface: rgba(255, 63, 164, .10);
+  --brand-secondary-border: rgba(255, 63, 164, .35);
+
+  /* --- Programas --------------------------------------------------------- */
+  --prog-free: #475569;
+  --prog-ace: #3B82F6;
+  --prog-elite-a: #1323C6;
+  --prog-elite-b: #FF3FA4;
+
+  /* --- Forma ------------------------------------------------------------- */
+  --radius-main: 2rem;      /* 32px — paneles y modales, NUNCA inputs */
+  --radius-control: 1rem;   /* 16px — inputs, selects, campos */
+  --radius-pill: 999px;     /* sólo botones, chips y badges */
+
+  /* --- Sombra y foco -----------------------------------------------------
+     El foco es AZUL (lección #1), pero el azul de marca (#1323C6) sobre el
+     gradiente oscuro rendía 1,14:1 — invisible. WCAG 2.4.11/1.4.11 piden 3:1.
+     --focus-blue es el mismo azul aclarado hasta pasar el umbral: 4,24:1 sobre
+     Ink, 3,97:1 sobre Navy, 3,79:1 sobre panel. Sigue siendo azul, nunca magenta.
+     --brand-primary queda intacto para la sombra de marca. ---------------- */
+  --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, .40);
+  --shadow-brand: 0 10px 15px -3px rgba(19, 35, 198, .35);
+  --focus-blue: #5B7CFF;
+  --focus-ring: 0 0 0 3px rgba(91, 124, 255, .85);  /* AZUL — lección #1 */
+
+  /* --- Layout ------------------------------------------------------------ */
+  --container-max: 1152px;
+  --nav-w: 296px;
+
+  /* --- Espaciado — múltiplos de 4px. Cualquier otro valor es un error. --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-32: 128px;
+
+  /* --- Tipografía — una sola familia ------------------------------------- */
+  --font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+
+  /* --- Gradientes oficiales ---------------------------------------------- */
+  --gradient-brand: linear-gradient(135deg, #FF3FA4 0%, #FF6AD5 100%);
+  --gradient-page: linear-gradient(135deg, #020617 0%, #0A0E3D 50%, #05082D 100%);
+}
+
+/* ===== styles/base.css (acotado a .dc-shell) ===== */
+
+.dc-shell {
+  color: var(--text-on-surface);
+  font-family: var(--font-family);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+.dc-shell,
+.dc-shell *,
+.dc-shell *::before,
+.dc-shell *::after { box-sizing: border-box; }
+
+.dc-shell img { max-width: 100%; display: block; }
+.dc-shell button {
+  font-family: inherit;
+  cursor: pointer;
+  /* Saca el retardo de 300ms del doble-tap y el flash gris de Android. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.dc-shell ::selection { background: var(--brand-secondary); color: var(--ink); }
+
+/* Foco visible siempre — AZUL, nunca magenta (lección #1). index.css tiene
+   `* { outline: none !important }`: por eso el foco del sistema es un
+   box-shadow y no un outline. */
+.dc-shell a:focus-visible,
+.dc-shell button:focus-visible,
+.dc-shell input:focus-visible,
+.dc-shell select:focus-visible,
+.dc-shell textarea:focus-visible,
+.dc-shell [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   TIPOGRAFÍA — escala fija de 10 niveles.
+   --------------------------------------------------------------------------- */
+.ln-t-display  { font-size: clamp(40px, 6vw, 72px);   font-weight: 900; letter-spacing: -0.025em; line-height: 1.04; margin: 0; }
+.ln-t-h1       { font-size: clamp(30px, 4.2vw, 48px); font-weight: 900; letter-spacing: -0.025em; line-height: 1.08; margin: 0; }
+.ln-t-h2       { font-size: clamp(24px, 3vw, 30px);   font-weight: 900; letter-spacing: -0.025em; line-height: 1.15; margin: 0; }
+.ln-t-h3       { font-size: 20px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.25; margin: 0; }
+.ln-t-eyebrow  { font-size: 11px; font-weight: 900; letter-spacing: .30em; text-transform: uppercase; margin: 0; }
+.ln-t-body-lg  { font-size: 18px; font-weight: 400; line-height: 1.6;  margin: 0; }
+.ln-t-body     { font-size: 16px; font-weight: 400; line-height: 1.65; margin: 0; }
+.ln-t-body-sm  { font-size: 14px; font-weight: 400; line-height: 1.6;  margin: 0; }
+.ln-t-caption  { font-size: 12px; font-weight: 600; line-height: 1.5;  margin: 0; }
+.ln-t-btn      { font-size: 13px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; margin: 0; }
+
+.ln-mono     { font-variant-numeric: tabular-nums; }
+.ln-w-700    { font-weight: 700; }
+.ln-w-600    { font-weight: 600; }
+.ln-accent   { color: var(--brand-secondary); }
+.ln-muted    { color: var(--text-muted); }
+.ln-muted-40 { color: var(--text-muted-40); }
+
+/* ---------------------------------------------------------------------------
+   LAYOUT
+   --------------------------------------------------------------------------- */
+.ln-section {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 64px 48px;
+  scroll-margin-top: 24px;
+}
+
+.ln-grid   { display: grid; gap: 16px; }
+.ln-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.ln-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.ln-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 900px) {
+  .ln-grid-2, .ln-grid-3, .ln-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .ln-section { padding: 48px 24px; }
+  .ln-grid-2, .ln-grid-3, .ln-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------------------
+   MOVIMIENTO REDUCIDO
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .dc-shell *, .dc-shell *::before, .dc-shell *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ===== styles/components.css ===== */
+/* ============================================================================
+   LEARNATION — COMPONENTES
+   Cada bloque de acá salió del manual, no de una decisión nueva.
+   Depende de tokens/tokens.css y styles/base.css.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   PANEL (glass-panel)
+   Fondo blanco 8%, borde 15%, blur 48px, radio 32px.
+   No usar sobre fondo plano — se ve gris sucio. No anidar vidrio dentro de vidrio.
+   --------------------------------------------------------------------------- */
+.ln-panel {
+  background: var(--bg-element);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  backdrop-filter: blur(48px);
+  padding: var(--space-8);
+}
+.ln-panel--sm { border-radius: var(--radius-control); padding: var(--space-6); }
+.ln-panel--flat { backdrop-filter: none; }
+
+/* ---------------------------------------------------------------------------
+   BOTONES — jerarquía de 6 niveles.
+   Todo botón real (no navegación) va en cápsula, Black, mayúscula, tracking .18em.
+   Un solo CTA primario por pantalla.
+   --------------------------------------------------------------------------- */
+.ln-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  height: 48px; padding: 0 var(--space-6);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-family);
+  font-size: 13px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+/* Tamaño como eje propio, no como efecto secundario del color. */
+.ln-btn--sm { height: 40px; padding: 0 var(--space-4); }
+.ln-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Cargando — el texto se queda; sólo el ícono de la izquierda pasa a spinner. */
+.ln-btn--loading { cursor: progress; }
+.ln-spinner {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radius-pill);
+  animation: ln-spin .6s linear infinite;
+}
+@keyframes ln-spin { to { transform: rotate(360deg); } }
+/* Con movimiento reducido el spinner deja de girar: queda un anillo partido,
+   que sigue comunicando "esperá" sin animación. */
+@media (prefers-reduced-motion: reduce) {
+  .ln-spinner { animation: none; }
+}
+.ln-btn svg { width: 16px; height: 16px; }
+
+/* CTA primario — magenta lleno, texto Ink (nunca blanco: blanco sobre magenta
+   da 3,23:1 y falla AA; Ink da 6,24:1). */
+.ln-btn--cta { background: var(--brand-secondary); color: var(--ink); box-shadow: var(--shadow-brand); }
+.ln-btn--cta:hover:not(:disabled) { background: var(--brand-secondary-light); }
+
+/* Secundario — blanco sólido, texto Ink. Alta al mismo nivel, pero no la principal. */
+.ln-btn--secondary { background: var(--bg-white); color: var(--ink); }
+.ln-btn--secondary:hover:not(:disabled) { background: var(--bg-white-hover); }
+
+/* Terciario — transparente, borde blanco 25%. Acciones alternativas de peso medio. */
+.ln-btn--tertiary { background: transparent; border-color: var(--border-control); color: var(--text-on-surface); }
+.ln-btn--tertiary:hover:not(:disabled) { border-color: var(--text-on-surface); }
+
+/* Ghost — configuración, filtros, barra secundaria. */
+.ln-btn--ghost { background: transparent; border-color: var(--border-control); color: var(--text-muted); }
+.ln-btn--ghost:hover:not(:disabled) { color: var(--text-on-surface); border-color: var(--text-on-surface); }
+
+/* Flow — contorno magenta que se llena al hover. Idéntico en toda pantalla
+   donde exista Flow Sprint. Nunca reestilizar por contexto. */
+.ln-btn--flow { background: transparent; border-color: var(--brand-secondary); color: var(--brand-secondary); }
+.ln-btn--flow:hover:not(:disabled) { background: var(--brand-secondary); color: var(--ink); }
+
+/* Ícono circular — editar, delegar, eliminar. 40×40. */
+.ln-iconbtn {
+  width: 40px; height: 40px; border-radius: var(--radius-pill);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border-control); color: var(--text-muted);
+  cursor: pointer; touch-action: manipulation;
+  transition: border-color .15s ease, color .15s ease;
+}
+.ln-iconbtn svg { width: 17px; height: 17px; }
+.ln-iconbtn:hover:not(:disabled) { color: var(--text-on-surface); border-color: var(--text-on-surface); }
+.ln-iconbtn:disabled { opacity: .45; cursor: not-allowed; }
+
+.ln-btn-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+
+/* ---------------------------------------------------------------------------
+   CAMPOS / INPUTS
+   Radio 16px SIEMPRE. Un campo en cápsula es un error, aunque quede lindo.
+   Foco: borde azul + anillo azul. Nunca magenta.
+   --------------------------------------------------------------------------- */
+.ln-field-wrap { display: flex; flex-direction: column; gap: var(--space-2); }
+.ln-field-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.ln-field-hint { font-size: 12px; color: var(--text-muted); }
+.ln-field-hint--error { color: var(--error); }
+
+.ln-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-control);
+  height: 48px;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: 0 var(--space-4);
+  color: var(--text-on-surface); font-size: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ln-field:focus-within { border-color: var(--focus-blue); box-shadow: var(--focus-ring); }
+.ln-field--invalid { border-color: var(--error-border); }
+.ln-field input,
+.ln-field select,
+.ln-field textarea {
+  background: transparent; border: none; outline: none; color: var(--text-on-surface);
+  font-family: inherit; font-size: 14px; width: 100%; height: 100%;
+  appearance: none;
+}
+/* El placeholder es texto informativo: --text-muted-40 daba 3,74:1 y falla AA. */
+.ln-field input::placeholder { color: var(--text-muted); }
+.ln-field select option { background: var(--brand-navy); color: var(--text-on-surface); }
+/* La unidad vive DENTRO del campo, no como sufijo suelto al lado. */
+.ln-field .ln-unit {
+  font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-muted); white-space: nowrap;
+}
+.ln-field svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------------
+   CHIPS / BADGES — los 5 estados.
+   Siempre cápsula, siempre superficie + borde + texto del mismo tono.
+   Nunca un bloque de color sólido.
+   --------------------------------------------------------------------------- */
+.ln-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  height: 36px; padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid; font-size: 12px; font-weight: 900; letter-spacing: .02em;
+}
+.ln-chip svg { width: 14px; height: 14px; }
+.ln-chip--sm { height: 28px; padding: 0 var(--space-3); font-size: 11px; }
+.ln-chip--success { background: var(--success-surface); border-color: var(--success-border); color: var(--success); }
+.ln-chip--warning { background: var(--warning-surface); border-color: var(--warning-border); color: var(--warning); }
+.ln-chip--error   { background: var(--error-surface);   border-color: var(--error-border);   color: var(--error); }
+.ln-chip--info    { background: var(--info-surface);    border-color: var(--info-border);    color: var(--info); }
+.ln-chip--idle    { background: var(--idle-surface);    border-color: var(--idle-border);    color: var(--idle); }
+/* El 6º estado es la marca. Reservado, nunca para datos. */
+.ln-chip--brand   { background: var(--brand-secondary-surface); border-color: var(--brand-secondary-border); color: var(--brand-secondary); }
+
+/* ---------------------------------------------------------------------------
+   TABLA / LISTADO
+   --cols se define UNA vez y se reusa en header y filas.
+   Colapso a mobile en ~900–980px: header oculto, fila en flex-wrap, título order:-1.
+   --------------------------------------------------------------------------- */
+.ln-table { --cols: 2.2fr 1fr 1fr 0.9fr; --grip-col: 24px; }
+.ln-table-head,
+.ln-table-row { display: grid; grid-template-columns: var(--cols); gap: var(--space-3); align-items: center; }
+
+/* Una fila `draggable` mete la manija como hijo de grilla ANTES de las celdas.
+   Antes, esa manija se comía la primera pista de --cols y TODO el contenido se
+   corría una columna, dejando de alinear con el header.
+   Ahora la pista se agrega sola cuando hay manija, y el header la compensa con
+   un ::before que ocupa esa misma pista. Nadie tiene que declarar una columna
+   extra al usar el componente: la alineación se resuelve estructuralmente. */
+.ln-table:has(.ln-grip) .ln-table-head,
+.ln-table-row:has(> .ln-grip) { grid-template-columns: var(--grip-col) var(--cols); }
+.ln-table:has(.ln-grip) .ln-table-head::before { content: ''; }
+.ln-table-head { padding: 0 var(--space-4) var(--space-2); }
+.ln-table-head span {
+  font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ln-table-row {
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-2);
+  background: var(--bg-element);
+}
+.ln-table-row:hover { background: var(--bg-element-hover); }
+.ln-table-row .ln-cell-label { font-size: 14px; font-weight: 700; }
+.ln-table-row .ln-cell-sublabel { font-size: 12px; color: var(--text-muted); margin-top: var(--space-1); }
+
+@media (max-width: 900px) {
+  .ln-table-head { display: none; }
+  .ln-table-row { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+  .ln-table-row .ln-cell--title { order: -1; width: 100%; }
+}
+
+/* Manija de arrastre — el callejón a 45° del isotipo, no una grilla de puntos.
+   Invisible en reposo, aparece al hover de la fila. */
+/* Antes era `color: transparent` en reposo: un control literalmente invisible
+   (1:1) que sólo existía si pasabas el mouse por la fila. Falla 1.4.11 y es
+   indescubrible sin mouse. Ahora arranca tenue pero visible (3,74:1) y se
+   refuerza al hover. El foco NO es magenta: el magenta es acento, no estado de
+   foco (lección #1); el anillo azul lo pone base.css. */
+.ln-grip {
+  color: var(--text-muted-40);
+  transition: color .15s ease;
+  cursor: grab;
+  background: none; border: none; padding: 0;
+  width: var(--grip-col, 24px); height: var(--grip-col, 24px);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ln-table-row:hover .ln-grip { color: var(--text-muted); }
+.ln-grip:hover { color: var(--text-on-surface); }
+.ln-grip:focus-visible { color: var(--text-on-surface); }
+.ln-grip svg { width: 18px; height: 18px; }
+
+/* ---------------------------------------------------------------------------
+   ESTADO VACÍO — puede ser honesto sobre que todavía no hay datos.
+   No hace falta maquillarlo.
+   --------------------------------------------------------------------------- */
+.ln-empty {
+  text-align: center; padding: var(--space-12) var(--space-6);
+  border: 1px dashed var(--border-main); border-radius: var(--radius-main);
+}
+.ln-empty .ln-empty-ico {
+  width: 48px; height: 48px; margin: 0 auto var(--space-4); border-radius: var(--radius-pill);
+  background: var(--bg-element); border: 1px solid var(--border-main);
+  display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+}
+.ln-empty .ln-empty-ico svg { width: 22px; height: 22px; }
+.ln-empty-title { font-size: 16px; font-weight: 700; margin: 0 0 var(--space-2); }
+.ln-empty-desc { font-size: 14px; color: var(--text-muted); max-width: 380px; margin: 0 auto var(--space-6); }
+
+/* ---------------------------------------------------------------------------
+   PESTAÑAS / NAVEGACIÓN
+   Sentence-case, peso 600. Mayúscula-grito SÓLO en botones reales, eyebrows y logo.
+   --------------------------------------------------------------------------- */
+.ln-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.ln-tab {
+  height: 40px; padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-family); font-size: 14px; font-weight: 600;
+  text-transform: none; letter-spacing: 0;
+  cursor: pointer; touch-action: manipulation;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.ln-tab:hover { color: var(--text-on-surface); background: var(--bg-element); }
+.ln-tab[aria-selected='true'] {
+  color: var(--text-on-surface); background: var(--bg-element); border-color: var(--border-control);
+}
+.ln-tab[aria-selected='true'] .ln-tab-dot { background: var(--brand-secondary); }
+.ln-tab-dot { display: inline-block; width: 6px; height: 6px; border-radius: var(--radius-pill); background: transparent; margin-right: var(--space-2); }
+
+/* ---------------------------------------------------------------------------
+   MODAL
+   --------------------------------------------------------------------------- */
+.ln-modal-scrim {
+  position: fixed; inset: 0; z-index: 60;
+  background: var(--bg-scrim);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-6);
+}
+.ln-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-main);
+  box-shadow: var(--shadow-main);
+  backdrop-filter: blur(48px);
+  width: 100%; max-width: 560px;
+  max-height: calc(100vh - 48px); overflow-y: auto;
+  padding: var(--space-8);
+}
+.ln-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+.ln-modal-foot { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-8); }
+
+/* ---------------------------------------------------------------------------
+   TOOLTIP reusable — data-tip en cualquier elemento.
+   --------------------------------------------------------------------------- */
+[data-tip] { position: relative; }
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-surface); border: 1px solid var(--border-control);
+  color: var(--text-on-surface);
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap; z-index: 5;
+}
+
+/* ---------------------------------------------------------------------------
+   CABECERA DE SECCIÓN — orden fijo: eyebrow → titular → párrafo → acción.
+   Alineado a la izquierda. Nada centrado salvo lockups y pie de página.
+   --------------------------------------------------------------------------- */
+.ln-section-head { margin-bottom: var(--space-8); max-width: 720px; }
+.ln-kicker-row { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.ln-kicker-num {
+  font-size: 11px; font-weight: 900; letter-spacing: .2em;
+  color: var(--ink); background: var(--brand-secondary);
+  padding: var(--space-1) var(--space-2); border-radius: var(--radius-pill);
+}
+
+/* ---------------------------------------------------------------------------
+   ETIQUETA DE PROGRAMA — nombres, no marcas gráficas.
+   --------------------------------------------------------------------------- */
+.ln-program {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 900; letter-spacing: .06em;
+  background: var(--bg-element); border: 1px solid var(--border-main); color: var(--text-on-surface);
+}
+.ln-program-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------------
+   ALERT — feedback en línea. Mismos 5 estados, ningún color nuevo.
+   Superficie + borde + texto del mismo tono, igual que los chips.
+   --------------------------------------------------------------------------- */
+.ln-alert {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid; border-radius: var(--radius-control);
+}
+.ln-alert-ico { flex-shrink: 0; display: flex; margin-top: 1px; }
+.ln-alert-ico svg { width: 18px; height: 18px; }
+.ln-alert-body { flex: 1; min-width: 0; }
+.ln-alert-title { font-size: 14px; font-weight: 700; margin: 0; }
+.ln-alert-desc {
+  font-size: 14px; font-weight: 400; line-height: 1.6;
+  color: var(--text-muted); margin-top: var(--space-1);
+}
+.ln-alert-action { margin-top: var(--space-3); }
+.ln-alert-x {
+  flex-shrink: 0; width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--text-muted); border-radius: var(--radius-pill);
+}
+.ln-alert-x:hover { color: var(--text-on-surface); }
+.ln-alert-x svg { width: 14px; height: 14px; }
+
+.ln-alert--success { background: var(--success-surface); border-color: var(--success-border); color: var(--success); }
+.ln-alert--warning { background: var(--warning-surface); border-color: var(--warning-border); color: var(--warning); }
+.ln-alert--error   { background: var(--error-surface);   border-color: var(--error-border);   color: var(--error); }
+.ln-alert--info    { background: var(--info-surface);    border-color: var(--info-border);    color: var(--info); }
+.ln-alert--idle    { background: var(--idle-surface);    border-color: var(--idle-border);    color: var(--idle); }
+/* El titular va en el tono del estado; el cuerpo vuelve a texto normal para
+   que un párrafo largo no quede teñido y pierda contraste. */
+.ln-alert-desc { color: var(--text-muted); }
+
+/* ---------------------------------------------------------------------------
+   CHECKBOX / SWITCH
+   El input nativo sigue existiendo (teclado, lector de pantalla); lo que se ve
+   es un hermano decorativo. Checkbox en 6px, NUNCA cápsula. Switch sí es riel.
+   --------------------------------------------------------------------------- */
+.ln-choice { position: relative; }
+.ln-choice-input {
+  position: absolute; opacity: 0;
+  width: 20px; height: 20px; margin: 0; top: 0; left: 0;
+  cursor: pointer;
+}
+.ln-choice-label {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  cursor: pointer; padding: var(--space-1) 0;
+}
+.ln-choice-text { display: flex; flex-direction: column; font-size: 14px; line-height: 1.45; }
+.ln-choice-hint { font-size: 12px; color: var(--text-muted); margin-top: var(--space-1); }
+
+.ln-check {
+  flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px;
+  border: 1px solid var(--border-control); border-radius: 6px;
+  background: var(--bg-input);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: transparent;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.ln-check svg { width: 13px; height: 13px; }
+.ln-choice-input:checked + .ln-choice-label .ln-check {
+  background: var(--brand-secondary); border-color: var(--brand-secondary); color: var(--ink);
+}
+.ln-choice-input:focus-visible + .ln-choice-label .ln-check,
+.ln-choice-input:focus-visible + .ln-choice-label .ln-switch {
+  outline: none; box-shadow: var(--focus-ring); border-color: var(--focus-blue);
+}
+.ln-choice-input:disabled + .ln-choice-label { opacity: .45; cursor: not-allowed; }
+
+.ln-switch {
+  flex-shrink: 0; width: 40px; height: 22px; margin-top: 1px;
+  border: 1px solid var(--border-control); border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  display: inline-flex; align-items: center; padding: 2px;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ln-switch-knob {
+  width: 16px; height: 16px; border-radius: var(--radius-pill);
+  background: var(--text-muted);
+  transition: transform .15s ease, background .15s ease;
+}
+.ln-choice-input:checked + .ln-choice-label .ln-switch {
+  background: var(--brand-secondary); border-color: var(--brand-secondary);
+}
+.ln-choice-input:checked + .ln-choice-label .ln-switch-knob {
+  transform: translateX(18px); background: var(--ink);
+}
+
+/* ===== Overrides globales del prototipo (Dashboard Comercial.dc.html) ===== */
+.dc-shell a { color: var(--brand-secondary); text-decoration: none; }
+.dc-shell a:hover { color: var(--brand-secondary-light); }
+/* Se quitó el blur: generaba texto borroso en paneles anidados. */
+.ln-panel, .ln-modal { backdrop-filter: none; -webkit-backdrop-filter: none; }
+@keyframes lnTipIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes lnFlow { to { background-position: -34px 0; } }
+@keyframes lnPulse { 0% { transform: scale(.7); opacity: .45; } 70%, 100% { transform: scale(2.1); opacity: 0; } }
