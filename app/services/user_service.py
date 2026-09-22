@@ -146,27 +146,6 @@ class UserService(BaseService):
 
     @staticmethod
     def get_leads_kpis(filters):
-        def apply_filters(q):
-            search = filters.get('search')
-            program_filter = filters.get('program')
-            closer_id = filters.get('closer_id')
-            start_date = filters.get('start_date')
-            end_date = filters.get('end_date')
-
-            if program_filter:
-                programs = program_filter.split(',')
-                if programs:
-                    # Check if already joined
-                    # SQLAlchemy constructs are smart, but safer to robustly join
-                    # Assuming q is based on Client or joined with it
-                    # We need to act differently based on q source
-                    # For simplicity, assuming q starts with Client
-                    pass # We need robust check inside main logic
-            
-            # Since apply_filters is helper, let's just inline logic or simplify
-            # Re-implementing specific filter block per query type below is safer
-            return q
-
         # Separate logic for complex joins
         base_q = Client.query
         
@@ -220,13 +199,20 @@ class UserService(BaseService):
         cash_collected = gross_collected - (result[1] or 0.0)
         
         # Debt Query? Simple approach: fetch clients and iterate
-        # Optimization: Don't iterate all if too many. 
+        # Optimization: Don't iterate all if too many.
         # But for debt calculation we need all.
         # Let's use base_q.all() if feasible or aggregate in sql
         clients = base_q.all()
         total_debt = 0.0
+        programas_filtrados = set(program_filter.split(',')) if program_filter else None
         for c in clients:
             for enr in c.enrollments:
+                # base_q ya filtro los CLIENTES por programa (basta con que tengan UNA inscripcion en
+                # el programa pedido), pero antes esto sumaba la deuda de TODAS sus inscripciones,
+                # incluidas las de otros programas: filtrando por "AL" la deuda mostraba tambien la de
+                # "RR". El ingreso (pay_q, mas abajo) si respeta el programa; la deuda debe hacer lo mismo.
+                if programas_filtrados is not None and (not enr.program or enr.program.name not in programas_filtrados):
+                    continue
                 debt = (enr.program.price if enr.program else 0.0) - enr.total_paid
                 if debt > 0: total_debt += debt
         
