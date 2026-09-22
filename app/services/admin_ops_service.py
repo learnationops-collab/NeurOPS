@@ -77,8 +77,11 @@ class AdminOperationService:
             completed_appts = [a for a in appts if a.result == 'Terminada']
             if not completed_appts:
                 completed_appts = appts
-                
-            for i in range(min(sale_count, len(completed_appts))):
+
+            # No siempre hay tantas agendas 'Terminada' como ventas pedidas (depende del azar de
+            # arriba): se genera lo que se pueda y se informa lo que de verdad se creo, no lo pedido.
+            sales_generated = min(sale_count, len(completed_appts))
+            for i in range(sales_generated):
                 appt = completed_appts[i]
                 client = appt.client
                 program = random.choice(programs)
@@ -103,7 +106,7 @@ class AdminOperationService:
                 db.session.add(payment)
 
             db.session.commit()
-            return True, f"Se generaron {client_count} leads, {appt_count} agendas y {sale_count} ventas."
+            return True, f"Se generaron {client_count} leads, {appt_count} agendas y {sales_generated} ventas."
         except Exception as e:
             db.session.rollback()
             return False, f"Error al generar datos: {str(e)}"
