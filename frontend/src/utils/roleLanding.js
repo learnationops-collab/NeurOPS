@@ -12,7 +12,11 @@ export const ROLE_LANDING_PATHS = {
     setter: '/setter/deck?step=cualificacion',
     triage: '/triage/deck?step=confirmar',
     closer: '/closer/deck?step=confirmations',
-    director_comercial: '/admin/ventas',
+    // El dashboard comercial, no el hub de Ventas: es la pantalla desde la que el director
+    // trabaja el día (analizar, revisar y el reporte diario). Ventas le queda a un clic en el
+    // dock. Esto también decide dónde cae una simulación desde Equipo: aterrizar en la pantalla
+    // vieja hacía parecer que el dashboard nuevo no se había desplegado.
+    director_comercial: '/admin/comercial',
     director_marketing: '/admin/workshops',
     hiring: '/admin/hiring',
 };
