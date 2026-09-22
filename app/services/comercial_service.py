@@ -199,6 +199,22 @@ class ComercialService:
         return [{'id': u.id, 'nombre': u.username, 'rol': role} for u in usuarios]
 
     @staticmethod
+    def fecha_o_hoy(valor):
+        """Una fecha ISO del request, o hoy. Un valor que no parsea cae a hoy en vez de romper:
+        el peor caso es que el director vea el día equivocado, no un 500."""
+        try:
+            return date.fromisoformat(str(valor)[:10]) if valor else date.today()
+        except (TypeError, ValueError):
+            return date.today()
+
+    @staticmethod
+    def nombre_de(miembro_id):
+        """El username de una persona del equipo, o None. Es con lo que se acotan las ventas y
+        los leads, que se guardan por nombre y no por id."""
+        miembro = User.query.get(miembro_id) if miembro_id else None
+        return miembro.username if miembro else None
+
+    @staticmethod
     def _limites(start, end):
         return datetime.combine(start, time.min), datetime.combine(end, time.max)
 

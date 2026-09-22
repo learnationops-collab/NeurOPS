@@ -103,6 +103,11 @@ def create_app(config_class=Config):
     from app.api.closer_installments import bp as closer_installments_api_bp
     app.register_blueprint(closer_installments_api_bp, url_prefix='/api/closer')
 
+    # Dashboard comercial: la sesion del director comercial y "Mis datos" de closers y setters.
+    # Todas sus rutas exigen sesion y rol en su propio before_request (ver app/api/comercial.py).
+    from app.api.comercial import bp as comercial_api_bp
+    app.register_blueprint(comercial_api_bp, url_prefix='/api/comercial')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
