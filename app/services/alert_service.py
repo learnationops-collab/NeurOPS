@@ -157,7 +157,13 @@ class AlertService:
                     FinancialAgenda.date >= start_dt,
                     FinancialAgenda.date <= end_dt
                 )
-                if scope_type != 'all' and ig_list:
+                # BUG real: con `and ig_list`, un ambito (keyword/campana/anuncio) que hoy no tiene
+                # NINGUN lead matcheado (ig_list vacia) caia a `return query.count()`, es decir el
+                # total de agendas de TODA la empresa en el rango — justo lo opuesto de "acotar por
+                # este anuncio". Sin acotar por `ad_ids` (`scope_value` sin resolver a un Ad real)
+                # tampoco hay ambito que aplicar: ig_list nunca se llena y el resultado es 0, no el
+                # total, para no fingir un "todo" que nadie pidio.
+                if scope_type != 'all':
                     # Filtrar agendas por IG coincidente
                     agendas = query.all()
                     match_count = 0
@@ -167,7 +173,7 @@ class AlertService:
                             match_count += 1
                     return float(match_count)
                 return float(query.count())
-                
+
             # Ventas / Recaudación
             elif metric in ('ventas', 'cash_collect'):
                 query = FinancialSale.query.filter(
@@ -175,7 +181,8 @@ class AlertService:
                     FinancialSale.date <= end_dt,
                     db.or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
                 )
-                if scope_type != 'all' and ig_list:
+                # Mismo bug y misma correccion que en "agendas" (ver el comentario de arriba).
+                if scope_type != 'all':
                     sales = query.all()
                     matched_sales = []
                     for s in sales:
@@ -185,7 +192,7 @@ class AlertService:
                     if metric == 'cash_collect':
                         return sum(float(s.monto or 0.0) for s in matched_sales)
                     return float(len(matched_sales))
-                
+
                 if metric == 'cash_collect':
                     return sum(float(s.monto or 0.0) for s in query.all())
                 return float(query.count())
