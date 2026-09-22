@@ -48,7 +48,11 @@ const useDockNavigation = () => {
                 { id: 'step-1', icon: Layers, label: '1. Agendas del Día', path: '/closer/deck?step=confirmations' },
                 { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/sales/new' },
                 { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/closer/report' },
-                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/closer/dashboard' },
+                // "Mis datos" es el dashboard comercial acotado a este closer: los mismos
+                // paneles que ve la direccion, con sus agendas y sus ventas (ver
+                // pages/comercial/DashboardComercial.jsx). El dashboard viejo
+                // (/closer/dashboard) sigue existiendo por URL.
+                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/closer/mis-datos' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {
@@ -58,7 +62,8 @@ const useDockNavigation = () => {
                 { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
                 { id: 'step-2', icon: CalendarDays, label: '2. Mis Agendas', path: '/setter/agendas' },
                 { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
-                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/setter/statistics' }
+                // Idem para el setter: sus leads entrantes y las agendas que genero.
+                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/mis-datos' }
             ];
         } else if (isTriage) {
             return [
@@ -78,6 +83,7 @@ const useDockNavigation = () => {
             ];
         } else if (user?.role === 'admin') {
             const adminPages = [
+                { id: 'comercial', icon: BarChart3, label: 'Comercial', path: '/admin/comercial' },
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
                 { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' },
@@ -98,6 +104,7 @@ const useDockNavigation = () => {
             // Rol enfocado en ventas: closing (Closers) y setting (Setters), sin
             // acceso al resto del panel de admin.
             return [
+                { id: 'comercial', icon: BarChart3, label: 'Dashboard', path: '/admin/comercial' },
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' }
             ];
         } else if (user?.role === 'director_marketing') {

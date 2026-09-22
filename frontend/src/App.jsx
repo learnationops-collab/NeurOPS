@@ -66,6 +66,7 @@ import BackupPage from './pages/admin/backup/BackupPage';
 import RestorePage from './pages/admin/backup/RestorePage';
 
 
+import DashboardComercial from './pages/comercial/DashboardComercial';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -148,6 +149,41 @@ function App() {
                     <div className="min-h-screen bg-slate-950 text-slate-200">
                       <PublicFinancialSalesPage />
                     </div>
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Dashboard comercial. La MISMA pantalla para tres audiencias: la direccion
+                comercial la ve completa (todo el equipo, switch Closers/Setters y Reportar) y
+                closers y setters la ven como "Mis datos", acotada a ellos. Quien ve que lo
+                decide el backend a partir de la sesion (ver app/api/comercial.py), no la ruta:
+                estas tres solo cambian donde vive la pantalla dentro de cada dock. */}
+            <Route
+              path="/admin/comercial"
+              element={
+                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                  <MainLayout>
+                    <DashboardComercial />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/mis-datos"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <DashboardComercial />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/setter/mis-datos"
+              element={
+                <ProtectedRoute roles={['setter']}>
+                  <MainLayout>
+                    <DashboardComercial />
                   </MainLayout>
                 </ProtectedRoute>
               }
