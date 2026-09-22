@@ -1,0 +1,1448 @@
+/* ============================================================================
+   Dashboard comercial — estilos propios.
+
+   El design system Learnation (components/learnation-ds/learnation-ds.css) trae
+   los tokens y los componentes genéricos (.ln-*). Acá viven SOLO las piezas que
+   el prototipo arma a mano y que el DS no tiene: el dock, las tabs segmentadas,
+   las píldoras del header, los tooltips, el embudo, el ranking y el wizard.
+
+   Todos los valores están calcados del prototipo (`Dashboard Comercial.dc.html`,
+   clase Component): alturas, radios, tiempos y curvas. No inventar valores acá —
+   si hace falta uno nuevo, sale del prototipo o de un token del DS.
+
+   Todo cuelga de `.dc-shell`, que es donde viven los tokens y la única zona de la
+   app exenta del !important de tipografía global (ver index.html).
+   ============================================================================ */
+
+.dc-shell {
+    min-height: 100vh;
+    /* 116px abajo: el dock es fijo y taparía el final del contenido. */
+    padding: 22px 22px 116px;
+    background: var(--gradient-page);
+    color: var(--text-on-surface);
+}
+
+.dc-wrap {
+    max-width: 1340px;
+    margin: 0 auto;
+}
+
+.dc-shell .ln-t-h1 {
+    letter-spacing: -.02em;
+}
+
+/* Todas las cifras del tablero, sin excepción. */
+.dc-num {
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Header ------------------------------------------------------------- */
+
+.dc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.dc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.dc-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.dc-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* --- Píldoras del header (Equipo · Período · VS) ------------------------- */
+
+.dc-pill {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    background: rgba(255, 255, 255, .04);
+    color: var(--text-on-surface);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.dc-pill:hover {
+    border-color: rgba(255, 255, 255, .55);
+    background: rgba(255, 255, 255, .08);
+}
+
+.dc-pop-wrap {
+    position: relative;
+}
+
+.dc-pop {
+    position: absolute;
+    top: 46px;
+    right: 0;
+    z-index: 40;
+    min-width: 230px;
+    padding: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-control);
+    border-radius: 20px;
+    box-shadow: var(--shadow-main);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dc-pop-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.dc-pop-item:hover {
+    background: var(--bg-element);
+    color: var(--text-on-surface);
+}
+
+.dc-pop-item[aria-selected='true'] {
+    background: var(--brand-secondary-surface);
+    color: var(--brand-secondary);
+}
+
+/* --- Tabs segmentadas (blanco sobre oscuro) ------------------------------ */
+/* El mismo patrón se usa en el selector de métrica del ranking y en las
+   sub-pestañas del cierre del reporte. El magenta queda reservado para los
+   filtros activos y el paso activo del wizard. */
+
+.dc-seg {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, .03);
+    flex-wrap: wrap;
+}
+
+.dc-seg-tab {
+    height: 36px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+
+.dc-seg-tab:hover {
+    color: var(--text-on-surface);
+}
+
+.dc-seg-tab[aria-selected='true'] {
+    background: var(--text-on-surface);
+    color: var(--ink);
+    font-weight: 700;
+}
+
+/* --- Dock inferior ------------------------------------------------------ */
+
+.dc-dock {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px;
+    max-width: calc(100vw - 32px);
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-main);
+}
+
+.dc-dock::-webkit-scrollbar {
+    display: none;
+}
+
+.dc-scope {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    margin-right: 4px;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, .04);
+}
+
+.dc-scope-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+
+.dc-scope-btn[aria-selected='true'] {
+    background: var(--text-on-surface);
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.dc-scope-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: currentColor;
+    opacity: .55;
+}
+
+.dc-dock-sep {
+    width: 1px;
+    height: 28px;
+    background: var(--border-main);
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.dc-dock-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 13px;
+    border-radius: var(--radius-pill);
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .22s ease, color .22s ease, border-color .22s ease,
+        box-shadow .22s ease, transform .22s ease;
+}
+
+.dc-dock-item[aria-current='true'] {
+    border-color: var(--brand-secondary-border);
+    background: var(--brand-secondary-surface);
+    color: var(--text-on-surface);
+    box-shadow: 0 10px 30px rgba(255, 63, 164, .18);
+    font-weight: 700;
+    transform: translateY(-1px);
+}
+
+.dc-dock-num {
+    font-size: 10.5px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    min-width: 8px;
+    color: var(--text-muted-40);
+}
+
+.dc-dock-item[aria-current='true'] .dc-dock-num {
+    color: var(--brand-secondary);
+}
+
+.dc-dock-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), color .22s ease;
+}
+
+.dc-dock-item[aria-current='true'] .dc-dock-ico {
+    color: var(--brand-secondary);
+    transform: scale(1.12);
+}
+
+.dc-dock-soon {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-main);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* --- Grillas de sección ------------------------------------------------- */
+
+.dc-grid-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+
+/* Filas 2 y 3 de Analizar: dos columnas que colapsan a una bajo ~900px. */
+.dc-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+    gap: 14px;
+    align-items: stretch;
+    margin-top: 14px;
+}
+
+/* --- Tarjetas y cifras -------------------------------------------------- */
+
+.dc-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.dc-eyebrow {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--text-on-surface);
+}
+
+.dc-big {
+    font-size: clamp(36px, 3.6vw, 44px);
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: var(--radius-pill);
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-delta--up {
+    background: var(--success-surface);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+}
+
+.dc-delta--down {
+    background: var(--error-surface);
+    border: 1px solid var(--error-border);
+    color: var(--error);
+}
+
+/* Barra de progreso de las tarjetas: crece de 0 al valor al montar. */
+.dc-bar {
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-element);
+    overflow: hidden;
+    margin-top: 14px;
+}
+
+.dc-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    width: 0;
+    transition: width .9s cubic-bezier(.22, .7, .2, 1);
+}
+
+/* --- Tooltip de métrica ------------------------------------------------- */
+
+.dc-tip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dc-tip-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    color: var(--text-muted-40);
+    font-size: 9px;
+    font-weight: 800;
+    cursor: help;
+}
+
+.dc-tip {
+    position: absolute;
+    top: 22px;
+    z-index: 50;
+    width: 258px;
+    padding: 10px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-control);
+    border-radius: 14px;
+    box-shadow: var(--shadow-main);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+    text-transform: none;
+    letter-spacing: 0;
+    animation: dcTipIn .16s ease both;
+}
+
+.dc-tip--left {
+    right: 0;
+}
+
+.dc-tip--right {
+    left: 0;
+}
+
+@keyframes dcTipIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Barra segmentada (payment types, programas, señas) ----------------- */
+
+.dc-stack {
+    display: flex;
+    gap: 3px;
+    height: 14px;
+    margin: 12px 0;
+}
+
+.dc-stack--tall {
+    height: 18px;
+}
+
+.dc-stack-seg {
+    border-radius: var(--radius-pill);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    flex-grow: 0;
+    flex-basis: 0;
+    min-width: 3px;
+    transition: flex-grow .9s cubic-bezier(.22, .7, .2, 1), opacity .15s ease;
+}
+
+.dc-stack-seg:hover {
+    opacity: .82;
+}
+
+.dc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 12px;
+}
+
+.dc-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.dc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    flex-shrink: 0;
+}
+
+/* --- Embudo ------------------------------------------------------------- */
+
+.dc-funnel-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 78px;
+    gap: 10px;
+    align-items: center;
+}
+
+.dc-funnel-label {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dc-funnel-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    border-radius: 10px;
+    width: 14%;
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: width .95s cubic-bezier(.22, .7, .2, 1);
+}
+
+/* Cuello trapezoidal entre una barra y la siguiente. */
+.dc-funnel-neck {
+    height: 12px;
+    opacity: .45;
+    transition: clip-path .95s cubic-bezier(.22, .7, .2, 1);
+}
+
+.dc-funnel-pct {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.dc-bottleneck {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 9px;
+    border-radius: var(--radius-pill);
+    background: var(--error-surface);
+    border: 1px solid var(--error-border);
+    color: var(--error);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+/* --- Ranking y mapa del equipo ------------------------------------------ */
+
+.dc-rank-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 150px) 1fr 104px;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+    padding: 10px 6px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: background .16s ease;
+}
+
+.dc-rank-row:hover {
+    background: var(--bg-element);
+}
+
+.dc-rank-pos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-main);
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-rank-pos--first {
+    background: var(--brand-secondary);
+    border-color: var(--brand-secondary);
+    color: var(--ink);
+}
+
+.dc-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+    background: var(--brand-secondary-surface);
+    border: 1px solid var(--brand-secondary-border);
+    color: var(--brand-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.dc-avatar--info {
+    background: var(--info-surface);
+    border-color: var(--info-border);
+    color: var(--info);
+}
+
+.dc-avatar--lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    font-size: 15px;
+}
+
+.dc-rank-track {
+    position: relative;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-element);
+    overflow: visible;
+}
+
+.dc-rank-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    width: 0;
+    transition: width .9s cubic-bezier(.22, .7, .2, 1);
+}
+
+/* Línea blanca vertical: el promedio del equipo. */
+.dc-rank-avg {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 16px;
+    background: var(--text-on-surface);
+    border-radius: 1px;
+    transition: left .9s cubic-bezier(.22, .7, .2, 1);
+}
+
+.dc-map {
+    overflow-x: auto;
+}
+
+.dc-map-grid {
+    min-width: 860px;
+}
+
+.dc-map-cell {
+    width: 100%;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-element);
+    color: var(--text-on-surface);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background .16s ease, border-color .16s ease;
+}
+
+.dc-map-cell--best {
+    background: var(--success-surface);
+    border-color: var(--success-border);
+    color: var(--success);
+}
+
+.dc-map-cell--worst {
+    background: var(--error-surface);
+    border-color: var(--error-border);
+    color: var(--error);
+}
+
+.dc-map-cell--ranked {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45);
+}
+
+.dc-map-head {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-muted-40);
+    text-align: center;
+    padding-bottom: 8px;
+}
+
+.dc-map-head--ranked {
+    color: var(--text-on-surface);
+}
+
+.dc-map-head--info {
+    cursor: help;
+}
+
+/* --- Revisar: filtros y tabla ------------------------------------------- */
+
+.dc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.dc-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-control);
+    background: var(--bg-input);
+    min-width: 220px;
+}
+
+.dc-search input {
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--text-on-surface);
+    font-size: 13px;
+    width: 100%;
+}
+
+.dc-chip-btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.dc-chip-btn:hover {
+    color: var(--text-on-surface);
+}
+
+.dc-chip-btn[aria-pressed='true'] {
+    background: var(--brand-secondary-surface);
+    border-color: var(--brand-secondary-border);
+    color: var(--brand-secondary);
+    font-weight: 700;
+}
+
+.dc-filters-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    background: transparent;
+    color: var(--text-on-surface);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dc-filters-btn[aria-expanded='true'],
+.dc-filters-btn.is-active {
+    border-color: var(--brand-secondary-border);
+    background: var(--brand-secondary-surface);
+}
+
+.dc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    background: var(--brand-secondary);
+    color: var(--ink);
+    font-size: 10.5px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-facet {
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.dc-facet:last-of-type {
+    border-bottom: 0;
+}
+
+.dc-facet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    height: 40px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--text-on-surface);
+    cursor: pointer;
+}
+
+.dc-facet-chevron {
+    transition: transform .18s ease;
+}
+
+.dc-facet-head[aria-expanded='true'] .dc-facet-chevron {
+    transform: rotate(180deg);
+}
+
+.dc-facet-opt {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.dc-facet-opt:hover {
+    background: var(--bg-element);
+    color: var(--text-on-surface);
+}
+
+.dc-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border-control);
+    flex-shrink: 0;
+}
+
+.dc-check[data-on='true'] {
+    background: var(--brand-secondary);
+    border-color: var(--brand-secondary);
+    color: var(--ink);
+}
+
+.dc-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dc-thead,
+.dc-trow {
+    display: grid;
+    gap: 12px;
+    align-items: center;
+}
+
+.dc-thead {
+    padding: 0 14px 6px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted-40);
+}
+
+.dc-trow {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, .03);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.dc-trow:hover {
+    background: var(--bg-element);
+    border-color: var(--border-main);
+}
+
+.dc-cell-main {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.dc-cell-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.dc-retraso {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warning);
+    margin-top: 4px;
+}
+
+/* --- Totales de lo filtrado --------------------------------------------- */
+
+.dc-totales {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-main);
+}
+
+.dc-totales-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.dc-total-card {
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid var(--border-subtle);
+}
+
+.dc-total-label {
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dc-total-value {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin: 4px 0 2px;
+}
+
+.dc-total-hint {
+    font-size: 11.5px;
+    color: var(--text-muted-40);
+}
+
+/* --- Modal del lead ----------------------------------------------------- */
+
+.dc-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-scrim);
+    overflow-y: auto;
+}
+
+.dc-modal {
+    width: min(720px, 96vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-main);
+    box-shadow: var(--shadow-main);
+}
+
+.dc-modal--sm {
+    width: min(640px, 96vw);
+}
+
+.dc-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.dc-avatar-xl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: var(--brand-secondary-surface);
+    border: 1px solid var(--brand-secondary-border);
+    color: var(--brand-secondary);
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.dc-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 18px;
+}
+
+/* Recorrido del lead: 6 pasos. */
+.dc-road {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.dc-road-step {
+    flex: 1 1 0;
+    min-width: 64px;
+    text-align: center;
+}
+
+.dc-road-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--idle-border);
+    background: var(--idle-surface);
+    color: var(--idle);
+    margin-bottom: 6px;
+}
+
+.dc-road-dot--done {
+    border-color: var(--success-border);
+    background: var(--success-surface);
+    color: var(--success);
+}
+
+.dc-road-dot--fail {
+    border-color: var(--error-border);
+    background: var(--error-surface);
+    color: var(--error);
+}
+
+/* Corregir estado: cápsulas con el color de su estado. */
+.dc-fix {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.dc-fix-opt {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dc-fix-opt:hover:not(:disabled) {
+    color: var(--text-on-surface);
+    border-color: var(--border-control);
+}
+
+.dc-fix-opt:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* --- Reportar: stepper y wizard ----------------------------------------- */
+
+.dc-stepper {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    margin-left: auto;
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, .03);
+    flex-wrap: wrap;
+}
+
+.dc-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dc-step[aria-current='true'] {
+    background: rgba(255, 255, 255, .08);
+    color: var(--text-on-surface);
+    font-weight: 700;
+}
+
+.dc-step:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.dc-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-step[aria-current='true'] .dc-step-num {
+    background: var(--brand-secondary);
+    border-color: var(--brand-secondary);
+    color: var(--ink);
+}
+
+.dc-step-num--done {
+    background: var(--success-surface);
+    border-color: var(--success-border);
+    color: var(--success);
+}
+
+.dc-col {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+/* Textarea nativo con UN solo borde: el TextArea del DS genera un doble
+   contorno azul al enfocar (ver 02-cambios.md §4.3). */
+.dc-textarea {
+    width: 100%;
+    min-height: 140px;
+    padding: 14px 16px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-control);
+    background: var(--bg-input);
+    color: var(--text-on-surface);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    outline: none;
+    box-shadow: none;
+    resize: vertical;
+}
+
+.dc-textarea:focus {
+    border-color: var(--brand-primary);
+}
+
+.dc-input {
+    flex: 1;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-control);
+    background: var(--bg-input);
+    color: var(--text-on-surface);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.dc-input:focus {
+    border-color: var(--brand-primary);
+}
+
+.dc-initials-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.dc-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dc-initial[aria-current='true'] {
+    background: var(--brand-secondary);
+    border-color: var(--brand-secondary);
+    color: var(--ink);
+}
+
+.dc-initial[data-answer='si'] {
+    background: var(--success-surface);
+    border-color: var(--success-border);
+    color: var(--success);
+}
+
+.dc-initial[data-answer='no'] {
+    background: var(--idle-surface);
+    border-color: var(--idle-border);
+    color: var(--idle);
+}
+
+.dc-yesno {
+    height: 40px;
+    padding: 0 22px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.dc-yesno[aria-pressed='true'][data-tone='success'] {
+    background: var(--success-surface);
+    border-color: var(--success-border);
+    color: var(--success);
+}
+
+.dc-yesno[aria-pressed='true'][data-tone='idle'] {
+    background: var(--idle-surface);
+    border-color: var(--idle-border);
+    color: var(--idle);
+}
+
+.dc-person-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, .03);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.dc-person-row:hover {
+    background: var(--bg-element);
+}
+
+.dc-go {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-control);
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.dc-go--done {
+    background: var(--success-surface);
+    border-color: var(--success-border);
+    color: var(--success);
+}
+
+.dc-suggest {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    border: 1px dashed var(--border-control);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.dc-suggest:hover {
+    color: var(--text-on-surface);
+    border-color: var(--text-on-surface);
+}
+
+.dc-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+/* --- Historial ---------------------------------------------------------- */
+
+.dc-hist-card {
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, .03);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dc-hist-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 18px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.dc-hist-box {
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, .02);
+}
+
+/* --- Estados vacíos y carga --------------------------------------------- */
+
+.dc-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 240px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.dc-spin {
+    animation: dcSpin 1s linear infinite;
+}
+
+@keyframes dcSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.dc-draft-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border: 1px dashed var(--border-control);
+    border-radius: var(--radius-control);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    margin-bottom: 14px;
+}
+
+@media (max-width: 720px) {
+
+    .dc-thead {
+        display: none;
+    }
+
+    .dc-trow {
+        grid-template-columns: 1fr !important;
+        gap: 6px;
+    }
+
+    .dc-rank-row {
+        grid-template-columns: 22px 1fr 96px;
+    }
+
+    .dc-rank-row .dc-rank-track {
+        display: none;
+    }
+}
