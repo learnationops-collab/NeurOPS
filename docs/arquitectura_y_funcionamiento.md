@@ -11,15 +11,15 @@ El proyecto está diseñado bajo un modelo de **monolito híbrido**: el backend 
 ```mermaid
 graph TD
     subgraph Frontend [Aplicación Cliente - React]
-        UI[Interfaces de Usuario: Admin, Setter, Closer, Triage]
+        UI[Interfaces de Usuario: Admin, Direccion Comercial, Setter, Closer, Triage]
         AC[AuthContext & State]
         UI --> AC
     end
 
     subgraph Backend [Servidor API - Flask]
         init[App Factory: create_app]
-        BP[Blueprints de la API: auth, marketing, closer, setter, workshop...]
-        Serv[Capa de Servicios: booking, closer, marketing, sheets, database...]
+        BP[Blueprints de la API: auth, marketing, closer, setter, comercial, workshop...]
+        Serv[Capa de Servicios: booking, closer, comercial, marketing, sheets, database...]
         init --> BP
         BP --> Serv
     end
