@@ -11,6 +11,18 @@ from datetime import datetime, timedelta
 CLOSER_RATE = 0.10
 SETTER_RATE = 0.08
 
+# Fees de la pasarela que se descuentan para llegar al cash NETO. Los mismos factores viven
+# repetidos en media docena de sitios de app/api/public (finance.py, financial_sales.py); acá se
+# centralizan para lo nuevo, y se usan tambien desde el dashboard comercial.
+FEES_POR_METODO = {'stripe': 0.955, 'hotmart': 0.911}
+
+
+def cash_neto_de(monto, metodo_pago):
+    """Lo que queda de un cobro despues de la fee de la pasarela. Un metodo desconocido (o
+    ninguno) no descuenta nada: es el criterio que ya aplicaba el calculo de comision."""
+    factor = FEES_POR_METODO.get((metodo_pago or '').strip().lower(), 1.0)
+    return float(monto or 0.0) * factor
+
 # Mismos valores que el resto del sistema considera "sin resultado todavía" para una agenda
 # como fuente de un lead — ver `get_commissions_calculated` en app/api/public/finance.py.
 _FUENTE_INVALIDA = {'s/f', 'n/a', ''}
@@ -90,14 +102,7 @@ class CommissionService:
                 if resolved != username:
                     continue
 
-                monto = float(s.monto or 0.0)
-                metodo = (s.metodo_pago or '').strip().lower()
-                if metodo == 'stripe':
-                    cash_neto += monto * 0.955
-                elif metodo == 'hotmart':
-                    cash_neto += monto * 0.911
-                else:
-                    cash_neto += monto
+                cash_neto += cash_neto_de(s.monto, s.metodo_pago)
 
         return {
             'role': 'setter',
