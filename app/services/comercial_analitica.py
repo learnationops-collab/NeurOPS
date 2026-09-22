@@ -95,7 +95,7 @@ def delta(actual, previo, modo):
     return {'valor': round((actual - previo) / previo * 100, 1), 'modo': 'pct'}
 
 
-def senas_de(filas_ventas, hasta):
+def senas_de(filas_ventas):
     """En qué terminó cada seña del período.
 
     Una seña es una reserva, no una venta: lo que importa es si después se completó. No hay
@@ -103,6 +103,9 @@ def senas_de(filas_ventas, hasta):
     posterior de tipo completo o parcial. Las que no aparecen quedan "en espera" mientras sean
     recientes y "caída" pasados `DIAS_SENA_CAIDA` días — es la única señal real de que el lead
     no va a volver (ver la constante).
+
+    La antigüedad se mide contra HOY, no contra el fin del período: una seña de agosto mirada en
+    diciembre lleva cuatro meses sin completarse, sea cual sea el filtro con el que se la mire.
 
     `desbloqueado` es el cash de esas ventas posteriores: la plata que la seña destrabó, que es
     el argumento para seguir pidiéndolas.
@@ -145,7 +148,7 @@ def senas_de(filas_ventas, hasta):
                 if not previa or v.date < previa.date:
                     conversion[clave] = v
 
-    hoy = hasta if isinstance(hasta, date) else date.today()
+    hoy = date.today()
     grupos = {'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0}
     desbloqueado, ya_contadas = 0.0, set()
     for f in senas:
@@ -257,7 +260,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
             {'paso': 'Presentaciones', 'n': presentaciones},
             {'paso': 'Ventas', 'n': tot_v['ventas']},
         ],
-        'senas': senas_de(ventas, end),
+        'senas': senas_de(ventas),
     }
 
 
