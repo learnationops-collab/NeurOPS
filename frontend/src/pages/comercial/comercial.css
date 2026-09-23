@@ -4,9 +4,10 @@
    Portada 1:1 de la referencia visual (artifact autonomo del prototipo), con
    tres adaptaciones obligatorias para vivir dentro de la app:
 
-   1 · SOLO TEMA OSCURO. La referencia traia un tema claro completo
-       (`@media (prefers-color-scheme: light)` y `:root[data-theme="light"]`).
-       No se porta: el producto es oscuro por decision de producto.
+   1 · SOLO TEMA OSCURO. La referencia traia ademas un tema claro entero, con
+       sus propias consultas de esquema de color y su atributo de tema.
+       No se porta ninguna de las dos: el producto es oscuro por decision de
+       producto, y aca no queda ni un selector del tema claro.
 
    2 · LOS TOKENS VIVEN EN `.dc-shell`, NUNCA EN `:root`. El resto de la app
        define varios de estos mismos nombres (`--brand-secondary`,
@@ -1111,3 +1112,184 @@
   font-size:9px;font-weight:900;letter-spacing:.04em;color:var(--text-muted-40)}
 .dc-shell .heat--cab i em{font-style:normal;font-size:9px;font-weight:700;
   color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   16 · RANKING Y MAPA DEL EQUIPO
+   ============================================================ */
+.dc-shell .rk{display:grid;gap:2px}
+.dc-shell .rk-fila{display:grid;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  grid-template-columns:22px minmax(0,150px) minmax(0,1fr) 110px;
+  padding:9px 10px;border-radius:14px;transition:background-color .16s ease}
+.dc-shell .rk-fila:hover{background:var(--mat-1)}
+.dc-shell .rk-pos{width:22px;height:22px;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;
+  border:1px solid var(--border-main);color:var(--text-muted)}
+.dc-shell .rk-fila:first-child .rk-pos{background:var(--brand-secondary);border-color:var(--brand-secondary);
+  color:var(--on-brand)}
+.dc-shell .rk-quien{display:flex;align-items:center;gap:10px;min-width:0}
+.dc-shell .rk-riel{position:relative;height:10px;border-radius:var(--radius-pill);
+  background:var(--hueco);min-width:0}
+.dc-shell .rk-riel > i{display:block;height:100%;border-radius:var(--radius-pill);width:0;
+  transition:width .9s var(--crecer)}
+.dc-shell .rk-prom{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;
+  background:var(--text-on-surface);opacity:.75;left:0;
+  transition:left .9s var(--crecer)}
+.dc-shell .rk-val{display:grid;grid-template-rows:auto auto;gap:5px;justify-items:end;align-content:center}
+.dc-shell .rk-cifra{font-size:16px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dc-shell .rk-delta{display:flex;justify-content:flex-end;min-height:22px}
+@media (max-width:660px){
+  .dc-shell .rk-fila{grid-template-columns:22px minmax(0,1fr) auto;row-gap:8px}
+  .dc-shell .rk-riel{grid-column:1 / -1}
+}
+/* Mapa del equipo: una matriz sobria — encabezados de rotulo, numeros
+   tabulares alineados a la derecha y la columna de nombres siempre fija. */
+.dc-shell .mapa{margin-top:var(--s6);padding-top:var(--s5);border-top:1px solid var(--border-subtle)}
+.dc-shell .mapa-scroll{overflow-x:auto;margin:0 calc(var(--s4) * -1);padding:0 var(--s4)}
+/* El ancho minimo crece con la cantidad de columnas: asi los encabezados
+   de dos lineas nunca se pisan y, si no entran, la tabla scrollea. */
+.dc-shell .mapa-grid{min-width:max(760px,calc(170px + var(--n) * 78px));display:grid}
+.dc-shell .mapa-fila{display:grid;align-items:center;
+  grid-template-columns:minmax(164px,1.3fr) repeat(var(--n),minmax(0,1fr));
+  border-bottom:1px solid var(--border-subtle)}
+.dc-shell .mapa-fila:last-child{border-bottom:0}
+.dc-shell .mapa-fila:not(.mapa-cab):not(.mapa-equipo):hover .mapa-celda{color:var(--text-on-surface)}
+.dc-shell .mapa-cab{border-bottom:1px solid var(--border-main)}
+.dc-shell .mapa-cab > *{min-height:46px;display:flex;align-items:flex-end;justify-content:flex-end;
+  padding:0 10px 9px;text-align:right;white-space:normal;
+  font-size:9.5px;font-weight:900;line-height:1.25;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text-muted-40);transition:color .16s ease}
+.dc-shell .mapa-cab button{font-family:inherit;font-size:9.5px;font-weight:900;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--text-muted-40);cursor:pointer}
+.dc-shell .mapa-cab button:hover{color:var(--text-muted)}
+.dc-shell .mapa-cab .activa{color:var(--text-on-surface)}
+.dc-shell .mapa-celda{height:40px;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+  padding:0 10px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--text-muted);transition:color .16s ease}
+.dc-shell button.mapa-celda{cursor:pointer}
+.dc-shell button.mapa-celda:hover{color:var(--brand-secondary)}
+.dc-shell .mapa-celda.alta{color:var(--success)}
+.dc-shell .mapa-celda.baja{color:var(--error)}
+.dc-shell .mapa-celda.alta,
+.dc-shell .mapa-celda.baja{font-weight:900}
+.dc-shell .mapa-celda::before{content:"";width:4px;height:4px;border-radius:50%;background:transparent;flex-shrink:0;order:-1}
+.dc-shell .mapa-celda.alta::before{background:var(--success)}
+.dc-shell .mapa-celda.baja::before{background:var(--error)}
+.dc-shell .mapa-celda.marcada,
+.dc-shell .mapa-cab .marcada{
+  background:color-mix(in srgb,var(--text-on-surface) 5%,transparent)}
+.dc-shell .mapa-fila:first-child .marcada{border-radius:8px 8px 0 0}
+.dc-shell .mapa-fila:last-child .marcada{border-radius:0 0 8px 8px}
+.dc-shell .mapa-celda.info{cursor:help}
+.dc-shell .mapa-equipo{border-top:1px solid var(--border-main);border-bottom:0}
+.dc-shell .mapa-equipo .mapa-celda{color:var(--text-on-surface);font-weight:900}
+.dc-shell .mapa-quien{display:flex;align-items:center;gap:9px;min-width:0;padding:0 12px 0 4px;
+  justify-content:flex-start !important}
+/* La columna de nombres solo se congela —con su fondo opaco— cuando la
+   tabla no entra y hay scroll horizontal de verdad. */
+@media (max-width:900px){
+  .dc-shell .mapa-quien{position:sticky;left:0;z-index:1;background:var(--bg-flotante);padding-left:10px;
+    box-shadow:1px 0 0 var(--border-subtle),10px 0 14px -10px rgba(0,0,0,.5)}
+}
+.dc-shell .mapa-quien .celda{font-size:13px;font-weight:600}
+.dc-shell .mapa-leyenda{display:flex;align-items:center;gap:var(--s3);margin-top:0}
+.dc-shell .mapa-leyenda span{display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .mapa-leyenda i{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dc-shell .tabs--wrap{flex-wrap:wrap;overflow:visible}
+
+/* ============================================================
+   17 · REPORTE DEL DIA
+   ============================================================ */
+.dc-shell .stepper{display:inline-flex;align-items:center;gap:2px;padding:4px;
+  border-radius:var(--radius-pill);border:1px solid var(--border-main);
+  max-width:100%;overflow-x:auto;scrollbar-width:none}
+.dc-shell .stepper::-webkit-scrollbar{display:none}
+.dc-shell .paso-btn{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;flex-shrink:0;
+  border-radius:var(--radius-pill);font-size:12.5px;font-weight:600;
+  color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .paso-btn:hover:not(:disabled){color:var(--text-on-surface)}
+.dc-shell .paso-btn[aria-current="step"]{background:var(--mat-3);color:var(--text-on-surface);font-weight:700}
+.dc-shell .paso-btn:disabled{opacity:.45;cursor:not-allowed}
+.dc-shell .paso-n{width:24px;height:24px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;border:1px solid var(--border-control);
+  color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .paso-btn[aria-current="step"] .paso-n{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .paso-btn.hecho .paso-n{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .rep-pie{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
+  margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--border-subtle)}
+.dc-shell .panel--fino{padding:var(--s4)}
+.dc-shell .cifras{display:grid;gap:var(--s2)}
+.dc-shell .cifra{display:grid;gap:5px;align-content:start;min-width:0;padding:10px 12px;
+  border-radius:14px;background:var(--mat-0);border:1px solid var(--border-subtle)}
+.dc-shell .cifra-n{font-size:22px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .indiv{display:grid;gap:var(--s4);grid-template-columns:minmax(0,260px) minmax(0,1fr);align-items:stretch}
+.dc-shell .indiv > .panel{align-content:start}
+@media (max-width:760px){.dc-shell .indiv{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .roster{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:8px 10px;border-radius:14px;transition:background-color .16s ease}
+.dc-shell .roster:hover{background:var(--mat-1)}
+.dc-shell .roster.act{background:var(--bg-element)}
+.dc-shell .roster-pt{width:9px;height:9px;flex-shrink:0;border-radius:50%;
+  border:1px solid var(--border-control);background:transparent}
+.dc-shell .roster.act .roster-pt{border-color:transparent}
+.dc-shell .hist-bloque{display:grid;gap:5px;padding:12px 14px;border-radius:14px;
+  background:var(--mat-0);border:1px solid var(--border-subtle)}
+.dc-shell .columna{max-width:720px;margin:0 auto;width:100%}
+.dc-shell .area{width:100%;min-height:140px;padding:14px 16px;border-radius:var(--radius-control);
+  border:1px solid var(--border-control);background:var(--bg-input);
+  color:var(--text-on-surface);font-family:var(--font);font-size:14px;line-height:1.5;
+  outline:none;box-shadow:none;resize:vertical;
+  transition:border-color .16s ease}
+.dc-shell .area:focus{border-color:var(--focus-blue);outline:none;box-shadow:none}
+.dc-shell .area::placeholder{color:var(--text-muted-40)}
+.dc-shell .rep-persona{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .rep-persona:last-child{border-bottom:0}
+.dc-shell .rep-persona:hover{background:var(--mat-1)}
+.dc-shell .rep-ok{width:30px;height:30px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-main);color:var(--text-muted);font-size:13px;font-weight:900}
+.dc-shell .rep-ok.si{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .ruedas{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dc-shell .rueda{width:34px;height:34px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:900;border:1px solid var(--border-main);
+  color:var(--text-muted);background:transparent;
+  transition:background-color .18s ease,color .18s ease,border-color .18s ease}
+.dc-shell .rueda.act{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .rueda.si{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .rueda.no{background:var(--idle-surface);border-color:var(--idle-border);color:var(--idle)}
+.dc-shell .entrada{display:flex;align-items:center;gap:var(--s2);height:44px;padding:0 6px 0 14px;
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);transition:border-color .16s ease}
+.dc-shell .entrada:focus-within{border-color:var(--focus-blue)}
+.dc-shell .entrada input{flex:1;min-width:0;border:0;background:none;outline:none;
+  font-size:14px;font-weight:600}
+.dc-shell .entrada input::placeholder{color:var(--text-muted-40)}
+.dc-shell .hist-dia{border:1px solid var(--border-subtle);border-radius:var(--radius-control);
+  background:var(--mat-0);overflow:hidden}
+.dc-shell .hist-cab{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s4);transition:background-color .16s ease}
+.dc-shell .hist-cab:hover{background:var(--mat-1)}
+.dc-shell .hist-cuerpo{padding:0 var(--s4) var(--s4);display:grid;gap:var(--s4)}
+.dc-shell .aviso{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);
+  background:var(--success-surface);border:1px solid var(--success-border);
+  color:var(--success);font-size:13px;font-weight:600}
+.dc-shell .linea-tiempo{display:grid;gap:var(--s3)}
+.dc-shell .linea-tiempo > div{display:grid;gap:4px;padding-left:var(--s4);
+  border-left:2px solid var(--border-main)}
+
+/* ============================================================
+   18 · VARIABILIDAD — la serie por dia, separada del dato del periodo
+   ============================================================ */
+
+/* La vista entra desde su estado visible, nunca parada en opacity:0 */
+@keyframes dcVista{from{opacity:.4;transform:translateY(8px)}to{opacity:1;transform:none}}
+.dc-shell .vista > *{animation:dcVista .34s var(--spring) both}
+@media (prefers-reduced-motion:reduce){.dc-shell .vista > *{animation:none}}
