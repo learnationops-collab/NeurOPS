@@ -202,6 +202,29 @@ def test_agendas_todas_cuenta_sin_filtrar_por_ningun_lead(db):
     assert AlertService._calculate_metric_value('agendas', date(2026, 9, 1), date(2026, 9, 10), 'all', None) == 2.0
 
 
+def test_una_venta_de_las_23_30_cuenta_para_el_dia_del_negocio_y_no_para_el_siguiente(db):
+    # 2026-09-22 23:30 en America/La_Paz se guarda como 2026-09-23 03:30 UTC. Para el negocio la
+    # venta paso el 22 y tiene que entrar en una ventana que termina el 22; con `datetime.combine`
+    # (que daba por sentado que el servidor vive en la zona del negocio) el borde caia a las
+    # 23:59:59 UTC y la venta quedaba afuera de su propio dia.
+    db.session.add(FinancialSale(monto=100.0, estado='Completada', date=datetime(2026, 9, 23, 3, 30)))
+    db.session.commit()
+
+    valor = AlertService._calculate_metric_value('ventas', date(2026, 9, 16), date(2026, 9, 22), 'all', None)
+
+    assert valor == 1.0
+
+
+def test_una_venta_ya_del_dia_siguiente_del_negocio_queda_fuera_de_la_ventana(db):
+    # 2026-09-23 00:30 en America/La_Paz == 2026-09-23 04:30 UTC: el otro lado del mismo borde.
+    db.session.add(FinancialSale(monto=100.0, estado='Completada', date=datetime(2026, 9, 23, 4, 30)))
+    db.session.commit()
+
+    valor = AlertService._calculate_metric_value('ventas', date(2026, 9, 16), date(2026, 9, 22), 'all', None)
+
+    assert valor == 0.0
+
+
 @pytest.mark.parametrize('estado,cuenta', [
     ('Completada', True), (None, True), ('', True), ('Cancelada', False), ('Pendiente', False),
 ])

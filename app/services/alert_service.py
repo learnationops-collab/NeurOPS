@@ -1,6 +1,7 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from app import db
 from app.models import AlertRule, Alert, Ad, AdSet, Campaign, AdPeriodSpend, LeadAnswer, ManychatLead, FinancialAgenda, FinancialSale, Integration
+from app.services.user_time_service import dia_del_negocio, hoy_del_negocio, limites_rango_utc_del_negocio
 import requests
 import json
 import os
@@ -13,7 +14,11 @@ class AlertService:
         y envía notificaciones a la plataforma y Discord.
         """
         active_rules = AlertRule.query.filter_by(is_active=True).all()
-        today = date.today()
+        # El "hoy" del negocio, no el del servidor: con `date.today()` en una maquina en UTC-4, a
+        # las 20:30 la ventana terminaba el dia anterior mientras las ventas ya se guardaban con
+        # la fecha UTC de manana -- una venta recien cargada quedaba fuera de su propio periodo y
+        # ninguna regla disparaba. En Railway (UTC) daba lo mismo; en cualquier otro despliegue no.
+        today = hoy_del_negocio()
         new_alerts_count = 0
 
         for rule in active_rules:
@@ -94,8 +99,9 @@ class AlertService:
 
     @staticmethod
     def _calculate_metric_value(metric, start_date, end_date, scope_type, scope_value):
-        start_dt = datetime.combine(start_date, datetime.min.time())
-        end_dt = datetime.combine(end_date, datetime.max.time())
+        # `start_date`/`end_date` son dias del calendario del negocio; las columnas son UTC naive.
+        # `datetime.combine` daba por sentado que el servidor vive en la zona del negocio.
+        start_dt, end_dt = limites_rango_utc_del_negocio(start_date, end_date)
         
         # Resolver anuncios (Ads) asociados al ámbito (Scope)
         ads = []
@@ -243,7 +249,7 @@ class AlertService:
             ads_per_campaign[a_set.campaign_id] = ads_per_campaign.get(a_set.campaign_id, 0) + count
             
         total_spend = 0.0
-        today = date.today()
+        today = hoy_del_negocio()
         for ad in ad_list:
             if spend_by_ad.get(ad.id, 0.0) > 0.0:
                 total_spend += spend_by_ad[ad.id]
@@ -254,7 +260,7 @@ class AlertService:
             else:
                 # Fallback prorrateado del spend histórico
                 days_range = (end_date - start_date).days + 1
-                ad_days = (today - (ad.created_at.date() if ad.created_at else today)).days + 1
+                ad_days = (today - (dia_del_negocio(ad.created_at) if ad.created_at else today)).days + 1
                 daily_rate = (ad.total_spend or 0.0) / max(1, ad_days)
                 total_spend += daily_rate * days_range
                 

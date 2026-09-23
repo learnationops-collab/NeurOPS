@@ -6,7 +6,7 @@ Todo lo que evalúa reglas corre con el reloj congelado: `evaluate_rules` arma l
 a partir de "hoy", así que sin `freeze_time` el resultado dependía de la hora a la que alguien
 corriera la suite (y once tests se caían todas las noches, después de las 20:00 en UTC-4).
 """
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -259,6 +259,26 @@ def test_vs_previous_week_sin_ninguna_venta_en_ninguna_semana_es_cero(db):
     AlertService.evaluate_rules()
 
     assert Alert.query.one().current_value == 0.0
+
+
+# --- evaluate_rules: el "hoy" de la ventana es el del negocio ------------------------------------
+
+@freeze_time('2026-09-23 03:30:00')  # 23:30 del 22 en America/La_Paz: para el negocio todavia es el 22
+def test_la_ventana_se_arma_con_el_dia_del_negocio_no_con_el_del_servidor(db):
+    # El bug: `date.today()` daba el dia del SERVIDOR. Con el servidor en UTC (Railway) a las 23:30
+    # de La Paz ya es el 23, asi que la ventana pasaba a terminar el 23 mientras las ventas del 22
+    # seguian siendo del 22 para el negocio.
+    regla(db, metric='ventas', condition='>', value=0.0, period='7_days')
+    rangos = []
+
+    def espia(metric, start_date, end_date, scope_type, scope_value):
+        rangos.append((start_date, end_date))
+        return 1.0
+
+    with patch.object(AlertService, '_calculate_metric_value', staticmethod(espia)):
+        AlertService.evaluate_rules()
+
+    assert rangos[0] == (date(2026, 9, 16), date(2026, 9, 22))
 
 
 # --- _create_alert_record: mensajes especiales -----------------------------------------------
