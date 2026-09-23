@@ -111,6 +111,24 @@ const DashboardComercial = () => {
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
     const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
 
+    /**
+     * Las filas cargadas solo se le pasan a Revisar si son DE ESA tabla.
+     *
+     * Al cambiar de tabla (Ventas → Agendas) o de rol (Closers → Setters), `tablaActual` cambia
+     * en el mismo render y las filas viejas siguen en memoria hasta que vuelve el fetch. Revisar
+     * armaba entonces las columnas y las facetas de la tabla NUEVA contra las filas VIEJAS: una
+     * fila de venta no tiene `pre_call`, una de agenda no tiene `estado`, y leer `.label` sobre
+     * eso tira una excepción que se lleva puesto todo el árbol de React — la pantalla quedaba en
+     * el fondo de la página y había que recargar (reportado por el usuario).
+     *
+     * La respuesta del backend ya viene rotulada con su `tabla` y su `rol`, así que alcanza con
+     * compararlos. Mientras no coincidan, Revisar recibe `null` y muestra su estado de carga, que
+     * es la verdad: esas filas todavía no llegaron.
+     */
+    const datosVigentes = datosTabla && datosTabla.tabla === tablaActual && datosTabla.rol === rol
+        ? datosTabla
+        : null;
+
     // Al cambiar de sección o de rol, la tab vuelve a la primera válida.
     useEffect(() => {
         const primera = seccionActual.tabs[0]?.key;
@@ -263,8 +281,8 @@ const DashboardComercial = () => {
                     <Comparativas datos={comparativas} irAPersona={irAPersona} />
                 )}
                 {seccion === 'revisar' && (
-                    <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosTabla}
-                        cargando={cargandoTabla} rol={rol} basis={basis} setBasis={setBasis}
+                    <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}
+                        cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                         alcance={alcance} filtroInicial={filtroInicial}
                         onAbrirFila={setFilaAbierta} />
                 )}
