@@ -181,6 +181,53 @@ def test_sin_presentaciones_las_tasas_del_panel_cierre_son_none_y_no_cero(db, ma
     assert bloque['presentacion_rate'] is None
 
 
+# --- Panel Estados -----------------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_una_agenda_vencida_sin_reportar_no_se_mezcla_con_una_que_todavia_no_ocurrio(db, marlon):
+    """Las dos son "Pendiente" en la tabla, y en el panel son cosas opuestas: la de mañana es el
+    curso normal de las cosas y la de la semana pasada es un agujero — mientras nadie la cargue,
+    el show up queda medido sobre menos llamadas de las que hubo. Juntarlas en una sola fila
+    hacía que el panel no pudiera decir eso."""
+    agenda(db, marlon, cliente(db, 'Ya paso'), cuando=datetime(2026, 9, 10, 15, 0))
+    agenda(db, marlon, cliente(db, 'Manana'), cuando=datetime(2026, 9, 25, 15, 0))
+
+    estados = {e['key']: e for e in ca.bloque_closers(DESDE, HASTA)['estados']}
+
+    assert estados['sin_reporte']['n'] == 1
+    assert estados['por_ocurrir']['n'] == 1
+    # Las dos siguen llevando al mismo corte de Revisar: la tabla tiene un solo "Pendiente".
+    assert estados['sin_reporte']['filtro'] == estados['por_ocurrir']['filtro'] == 'Pendiente'
+
+
+@freeze_time(HOY)
+def test_los_estados_suman_todas_las_agendas_del_periodo_y_no_solo_las_realizadas(db, marlon):
+    """El panel contesta "qué pasó con cada cita agendada", así que su total son las agendas —no
+    las realizadas, que es el denominador del show up. Si el panel usara ese otro denominador
+    las canceladas y las reagendadas desaparecerían de la pantalla sin dejar rastro."""
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    venta(db, mail='compro@test.local')
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+    agenda(db, marlon, cliente(db, 'Cancelo'), closer_result='Cancelado')
+    agenda(db, marlon, cliente(db, 'Reagendo'), closer_result='Reagendado')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert sum(e['n'] for e in bloque['estados']) == bloque['agendas'] == 4
+    assert bloque['realizadas'] == 2
+
+
+@freeze_time(HOY)
+def test_los_estados_sin_ninguna_agenda_no_aparecen_en_el_panel(db, marlon):
+    """Siete filas en cero esconden las dos que importan."""
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+
+    estados = ca.bloque_closers(DESDE, HASTA)['estados']
+
+    assert [(e['key'], e['n']) for e in estados] == [('no_show', 1)]
+
+
 # --- Señas ---------------------------------------------------------------------------------------
 
 @freeze_time(HOY)

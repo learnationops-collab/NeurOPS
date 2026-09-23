@@ -15,8 +15,8 @@ from sqlalchemy import func
 from app import db
 from app.models import FinancialSale, User
 from app.services.comercial_service import (
-    DIAS_SENA_CAIDA, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService, _limpiar_email,
-    _limpiar_ig, chip, pct,
+    DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
+    _limpiar_email, _limpiar_ig, chip, pct,
 )
 from app.services.commission_service import CLOSER_RATE
 
@@ -180,6 +180,43 @@ def senas_de(filas_ventas):
     }
 
 
+# El panel Estados parte "Pendiente" en dos. En la tabla de Revisar alcanza con un estado —la
+# agenda no tiene resultado, punto—, pero en el panel las dos mitades son cosas opuestas: una
+# llamada de mañana sin reportar es lo normal, y una de la semana pasada sin reportar es un
+# agujero que además ENSUCIA el show up, porque lo deja medido sobre menos llamadas de las que
+# hubo. `retraso_dias` ya distingue las dos (ver `ComercialService.agendas`).
+SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'error'}
+POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
+
+
+def estados_de(filas_agendas):
+    """Desglose de las agendas del período por su resultado, en el orden del vocabulario.
+
+    Cada estado lleva el `filtro` con el que Revisar lo reconoce, que NO siempre es su propia
+    etiqueta: las dos mitades de "Pendiente" comparten el único estado que existe en la tabla.
+    Los estados en cero se omiten — una tabla con siete filas vacías esconde las tres que
+    importan.
+    """
+    conteo = {}
+    for f in filas_agendas:
+        clave = f['post_call']['key']
+        if clave == 'pendiente':
+            clave = SIN_REPORTE['key'] if f['retraso_dias'] > 0 else POR_OCURRIR['key']
+        conteo[clave] = conteo.get(clave, 0) + 1
+
+    pendiente = next(e for e in POST_CALL if e['key'] == 'pendiente')
+    orden = []
+    for estado in POST_CALL:
+        if estado['key'] == 'pendiente':
+            orden += [(SIN_REPORTE, pendiente['label']), (POR_OCURRIR, pendiente['label'])]
+        else:
+            orden.append((estado, estado['label']))
+
+    return [{'key': e['key'], 'label': e['label'], 'tone': e['tone'],
+             'n': conteo[e['key']], 'filtro': filtro}
+            for e, filtro in orden if conteo.get(e['key'])]
+
+
 def _cash_por_dia(filas_ventas, start, end):
     """Serie diaria del cash del período, para el mini gráfico de la tarjeta de Cash collected."""
     por_dia = {}
@@ -247,6 +284,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         'presentaciones': presentaciones,
         'presentacion_rate': pct(presentaciones, tot_a['asistieron']),
         'close_presentacion': pct(tot_a['ventas'], presentaciones),
+        'estados': estados_de(agendas),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
