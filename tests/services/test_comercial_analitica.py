@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client, FinancialSale
+from app.models import Appointment, Client, Enrollment, FinancialSale, Payment, Program
 from app.services import comercial_analitica as ca
 from app.services.comercial_service import ComercialService
 
@@ -179,6 +179,69 @@ def test_sin_presentaciones_las_tasas_del_panel_cierre_son_none_y_no_cero(db, ma
     assert bloque['presentaciones'] == 0
     assert bloque['close_presentacion'] is None
     assert bloque['presentacion_rate'] is None
+
+
+# --- Panel Cash: lo que falta cobrar -----------------------------------------------------------
+
+def inscribir(db, cli, precio, pagado=0.0, programa='Residency Roadmap'):
+    """Inscribe al cliente en un programa y le aplica un pago, que es de donde sale la deuda."""
+    prog = Program.query.filter_by(name=programa).first()
+    if not prog:
+        prog = Program(name=programa, price=precio)
+        db.session.add(prog)
+        db.session.commit()
+    e = Enrollment(client_id=cli.id, program_id=prog.id)
+    db.session.add(e)
+    db.session.commit()
+    if pagado:
+        db.session.add(Payment(enrollment_id=e.id, amount=pagado, status='completed'))
+        db.session.commit()
+    return e
+
+
+@freeze_time(HOY)
+def test_lo_que_falta_cobrar_es_un_saldo_a_hoy_y_no_cambia_con_el_periodo(db, marlon):
+    """La deuda sale de las inscripciones vivas menos lo pagado: no tiene fecha de corte. Pedir
+    el resumen de agosto o de septiembre tiene que devolver el MISMO saldo, porque la pregunta
+    que contesta el panel es "cuánto se debe hoy", no "cuánto se firmó en el período". Por eso
+    tampoco lleva delta — compararlo contra sí mismo daría 0% siempre."""
+    cli = cliente(db, 'Debe')
+    agenda(db, marlon, cli)
+    inscribir(db, cli, precio=1000.0, pagado=400.0)
+
+    septiembre = ca.resumen('closers', DESDE, HASTA, *AGOSTO, miembro_id=marlon.id)
+    agosto = ca.resumen('closers', *AGOSTO, miembro_id=marlon.id)
+
+    assert septiembre['por_cobrar']['total'] == agosto['por_cobrar']['total'] == 600.0
+    assert 'por_cobrar' not in septiembre['deltas']
+
+
+@freeze_time(HOY)
+def test_lo_que_falta_cobrar_respeta_el_precio_negociado_del_cliente(db, marlon):
+    """`Client.total_amount` manda sobre el precio de lista cuando el closer lo cargó: es lo que
+    ESTE cliente negoció. La misma regla que usa el pool de llamadas cerradas desde donde se
+    cobra — si acá se usara el precio de lista, un cliente con un precio más alto aparecería
+    debiendo menos de lo real (caso reportado en producción)."""
+    cli = cliente(db, 'Nego')
+    cli.total_amount = 1000.0
+    db.session.commit()
+    agenda(db, marlon, cli)
+    inscribir(db, cli, precio=500.0, pagado=100.0)
+
+    datos = ca.resumen('closers', DESDE, HASTA, miembro_id=marlon.id)
+
+    assert datos['por_cobrar']['total'] == 900.0
+
+
+@freeze_time(HOY)
+def test_los_setters_no_reciben_lo_que_falta_cobrar(db, make_user):
+    """No es una cifra del setter: la deuda se atribuye al closer dueño de la agenda. Mandarla en
+    el resumen de setters invitaría a ponerla en una pantalla donde no le corresponde a nadie."""
+    setter = make_user(role='setter', username='Ana', email='ana@thelearnation.com')
+
+    datos = ca.resumen('setters', DESDE, HASTA, miembro_id=setter.id)
+
+    assert 'por_cobrar' not in datos
 
 
 # --- Panel Estados -----------------------------------------------------------------------------

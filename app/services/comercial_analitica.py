@@ -18,6 +18,7 @@ from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
     _limpiar_email, _limpiar_ig, chip, pct,
 )
+from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.commission_service import CLOSER_RATE
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
@@ -363,6 +364,30 @@ def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     }
 
 
+def por_cobrar_de(closer_id=None):
+    """Lo que falta cobrar, A HOY. Reusa `CloserDashboardService._pending_collections`, que es de
+    donde sale la misma cifra en el dashboard del closer y en su pool de llamadas cerradas: tener
+    dos definiciones de la deuda ya pasó una vez y la pantalla mostraba $0 mientras el pool del
+    mismo closer listaba 75 clientes debiendo $47.256.
+
+    NO está acotado al período y no puede estarlo sin cambiar de pregunta. La deuda es un SALDO:
+    sale de las inscripciones vivas menos lo pagado, sin fecha de corte. "Cuánto se debe hoy" y
+    "cuánto se firmó del 1 al 30" son dos cosas distintas, y la segunda no es derivable —
+    `FinancialSale` guarda el monto de cada cobro, no el total del contrato. Por eso el panel
+    Cash muestra esta cifra rotulada "a hoy" en vez de un revenue del período que habría que
+    inventar, y por eso `por_cobrar` no lleva delta: comparar el mismo saldo contra sí mismo
+    daría 0% en todos los períodos.
+
+    Se calcula acá, en `resumen`, y no dentro de `bloque_closers`: el bloque se llama una vez por
+    persona y por período comparado desde `comparativas`, y esta consulta recorre todas las
+    inscripciones del sistema.
+    """
+    _, totales = CloserDashboardService._pending_collections(closer_id, limit=0)
+    return {'total': totales['total'], 'vencido': totales['vencido'],
+            'por_vencer': totales['por_vencer'], 'sin_plan': totales['sin_plan'],
+            'clientes': totales['count'], 'clientes_vencido': totales['count_vencido']}
+
+
 def _bloque_de(rol):
     return bloque_setters if rol == ROL_SETTERS else bloque_closers
 
@@ -390,8 +415,12 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
             if d:
                 deltas[clave] = d
 
-    return {'rol': rol, 'actual': actual, 'previo': previo, 'deltas': deltas,
-            'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
+    datos = {'rol': rol, 'actual': actual, 'previo': previo, 'deltas': deltas,
+             'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
+    # Fuera de `actual` a propósito: no es una cifra del período (ver `por_cobrar_de`).
+    if rol == ROL_CLOSERS:
+        datos['por_cobrar'] = por_cobrar_de(miembro_id)
+    return datos
 
 
 def _fila_comparativa(rol, bloque):
