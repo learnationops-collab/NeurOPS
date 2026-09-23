@@ -14,9 +14,10 @@ from sqlalchemy import func
 
 from app import db
 from app.models import FinancialSale, User
+from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.comercial_service import (
-    DIAS_SENA_CAIDA, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService, _limpiar_email,
-    _limpiar_ig, chip, pct,
+    DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
+    _limpiar_email, _limpiar_ig, chip, pct,
 )
 from app.services.commission_service import CLOSER_RATE
 
@@ -180,6 +181,43 @@ def senas_de(filas_ventas):
     }
 
 
+# El panel Estados parte "Pendiente" en dos. En la tabla de Revisar alcanza con un estado —la
+# agenda no tiene resultado, punto—, pero en el panel las dos mitades son cosas opuestas: una
+# llamada de mañana sin reportar es lo normal, y una de la semana pasada sin reportar es un
+# agujero que además ENSUCIA el show up, porque lo deja medido sobre menos llamadas de las que
+# hubo. `retraso_dias` ya distingue las dos (ver `ComercialService.agendas`).
+SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'error'}
+POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
+
+
+def estados_de(filas_agendas):
+    """Desglose de las agendas del período por su resultado, en el orden del vocabulario.
+
+    Cada estado lleva el `filtro` con el que Revisar lo reconoce, que NO siempre es su propia
+    etiqueta: las dos mitades de "Pendiente" comparten el único estado que existe en la tabla.
+    Los estados en cero se omiten — una tabla con siete filas vacías esconde las tres que
+    importan.
+    """
+    conteo = {}
+    for f in filas_agendas:
+        clave = f['post_call']['key']
+        if clave == 'pendiente':
+            clave = SIN_REPORTE['key'] if f['retraso_dias'] > 0 else POR_OCURRIR['key']
+        conteo[clave] = conteo.get(clave, 0) + 1
+
+    pendiente = next(e for e in POST_CALL if e['key'] == 'pendiente')
+    orden = []
+    for estado in POST_CALL:
+        if estado['key'] == 'pendiente':
+            orden += [(SIN_REPORTE, pendiente['label']), (POR_OCURRIR, pendiente['label'])]
+        else:
+            orden.append((estado, estado['label']))
+
+    return [{'key': e['key'], 'label': e['label'], 'tone': e['tone'],
+             'n': conteo[e['key']], 'filtro': filtro}
+            for e, filtro in orden if conteo.get(e['key'])]
+
+
 def _cash_por_dia(filas_ventas, start, end):
     """Serie diaria del cash del período, para el mini gráfico de la tarjeta de Cash collected."""
     por_dia = {}
@@ -239,6 +277,15 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         # que no pase.
         'cerradas': tot_a['ventas'],
         'close_rate': tot_a['close_rate'],
+        # Las presentaciones ya se contaban para el embudo; salen acá también porque el panel
+        # Cierre necesita las DOS tasas de cierre para que la diferencia entre ellas se pueda
+        # leer: `close_rate` mide sobre todas las llamadas con show up y `close_presentacion`
+        # solo sobre las que además llegaron a mostrar la oferta. La brecha entre las dos es
+        # cuánto se pierde ANTES de presentar, que es un problema distinto de no cerrar.
+        'presentaciones': presentaciones,
+        'presentacion_rate': pct(presentaciones, tot_a['asistieron']),
+        'close_presentacion': pct(tot_a['ventas'], presentaciones),
+        'estados': estados_de(agendas),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
@@ -317,6 +364,30 @@ def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     }
 
 
+def por_cobrar_de(closer_id=None):
+    """Lo que falta cobrar, A HOY. Reusa `CloserDashboardService._pending_collections`, que es de
+    donde sale la misma cifra en el dashboard del closer y en su pool de llamadas cerradas: tener
+    dos definiciones de la deuda ya pasó una vez y la pantalla mostraba $0 mientras el pool del
+    mismo closer listaba 75 clientes debiendo $47.256.
+
+    NO está acotado al período y no puede estarlo sin cambiar de pregunta. La deuda es un SALDO:
+    sale de las inscripciones vivas menos lo pagado, sin fecha de corte. "Cuánto se debe hoy" y
+    "cuánto se firmó del 1 al 30" son dos cosas distintas, y la segunda no es derivable —
+    `FinancialSale` guarda el monto de cada cobro, no el total del contrato. Por eso el panel
+    Cash muestra esta cifra rotulada "a hoy" en vez de un revenue del período que habría que
+    inventar, y por eso `por_cobrar` no lleva delta: comparar el mismo saldo contra sí mismo
+    daría 0% en todos los períodos.
+
+    Se llama desde `resumen` y no desde `bloque_closers`: el bloque se ejecuta una vez por persona
+    y por período comparado cuando lo pide `comparativas`, y esta consulta recorre todas las
+    inscripciones del sistema.
+    """
+    _, totales = CloserDashboardService._pending_collections(closer_id, limit=0)
+    return {'total': totales['total'], 'vencido': totales['vencido'],
+            'por_vencer': totales['por_vencer'], 'sin_plan': totales['sin_plan'],
+            'clientes': totales['count'], 'clientes_vencido': totales['count_vencido']}
+
+
 def _bloque_de(rol):
     return bloque_setters if rol == ROL_SETTERS else bloque_closers
 
@@ -344,8 +415,12 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
             if d:
                 deltas[clave] = d
 
-    return {'rol': rol, 'actual': actual, 'previo': previo, 'deltas': deltas,
-            'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
+    datos = {'rol': rol, 'actual': actual, 'previo': previo, 'deltas': deltas,
+             'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
+    # Fuera de `actual` a propósito: no es una cifra del período (ver `por_cobrar_de`).
+    if rol == ROL_CLOSERS:
+        datos['por_cobrar'] = por_cobrar_de(miembro_id)
+    return datos
 
 
 def _fila_comparativa(rol, bloque):

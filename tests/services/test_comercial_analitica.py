@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client, FinancialSale
+from app.models import Appointment, Client, Enrollment, FinancialSale, Payment, Program
 from app.services import comercial_analitica as ca
 from app.services.comercial_service import ComercialService
 
@@ -139,6 +139,156 @@ def test_el_close_rate_de_la_tarjeta_es_el_mismo_que_el_de_los_totales(db, marlo
 
     assert bloque['close_rate'] == totales['close_rate'] == 50.0
     assert bloque['cerradas'] == totales['ventas'] == 1
+
+
+# --- Panel Cierre: las dos tasas de cierre ------------------------------------------------------
+
+@freeze_time(HOY)
+def test_las_dos_tasas_de_cierre_se_miden_sobre_denominadores_distintos(db, marlon):
+    """El panel Cierre muestra las MISMAS ventas contra dos puntos: todas las llamadas con show
+    up, y solo las que además llegaron a presentar la oferta. Si las dos usaran el mismo
+    denominador el panel no diría nada, y la brecha entre ellas —cuánto se pierde antes de
+    mostrar el precio— es justamente lo que se quiere ver."""
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    venta(db, mail='compro@test.local')
+    # Escuchó la oferta y no cerró: entra en los dos denominadores.
+    agenda(db, marlon, cliente(db, 'Escucho'), closer_result='Show up', offer_presented=True)
+    # Asistió, quedó un seguimiento abierto y nadie tildó la oferta: la llamada ocurrió pero no
+    # llegó al precio. Entra en el denominador de close_rate y NO en el de close_presentacion —
+    # es la única razón de que los dos números no coincidan.
+    agenda(db, marlon, cliente(db, 'Se corto'), closer_result='Show up', offer_presented=None,
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20))
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert (bloque['asistieron'], bloque['presentaciones'], bloque['cerradas']) == (3, 2, 1)
+    assert bloque['close_rate'] == 33.3        # 1 de 3 llamadas con show up
+    assert bloque['close_presentacion'] == 50.0  # 1 de 2 presentaciones
+    assert bloque['presentacion_rate'] == 66.7   # 2 de 3 llegaron a la oferta
+
+
+@freeze_time(HOY)
+def test_sin_presentaciones_las_tasas_del_panel_cierre_son_none_y_no_cero(db, marlon):
+    """Un 0% sobre cero presentaciones afirma que se presentó y no se cerró, que es falso. El
+    panel tiene que poder mostrar "—", así que el denominador vacío devuelve None."""
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert bloque['presentaciones'] == 0
+    assert bloque['close_presentacion'] is None
+    assert bloque['presentacion_rate'] is None
+
+
+# --- Panel Cash: lo que falta cobrar -----------------------------------------------------------
+
+def inscribir(db, cli, precio, pagado=0.0, programa='Residency Roadmap'):
+    """Inscribe al cliente en un programa y le aplica un pago, que es de donde sale la deuda."""
+    prog = Program.query.filter_by(name=programa).first()
+    if not prog:
+        prog = Program(name=programa, price=precio)
+        db.session.add(prog)
+        db.session.commit()
+    e = Enrollment(client_id=cli.id, program_id=prog.id)
+    db.session.add(e)
+    db.session.commit()
+    if pagado:
+        db.session.add(Payment(enrollment_id=e.id, amount=pagado, status='completed'))
+        db.session.commit()
+    return e
+
+
+@freeze_time(HOY)
+def test_lo_que_falta_cobrar_es_un_saldo_a_hoy_y_no_cambia_con_el_periodo(db, marlon):
+    """La deuda sale de las inscripciones vivas menos lo pagado: no tiene fecha de corte. Pedir
+    el resumen de agosto o de septiembre tiene que devolver el MISMO saldo, porque la pregunta
+    que contesta el panel es "cuánto se debe hoy", no "cuánto se firmó en el período". Por eso
+    tampoco lleva delta — compararlo contra sí mismo daría 0% siempre."""
+    cli = cliente(db, 'Debe')
+    agenda(db, marlon, cli)
+    inscribir(db, cli, precio=1000.0, pagado=400.0)
+
+    septiembre = ca.resumen('closers', DESDE, HASTA, *AGOSTO, miembro_id=marlon.id)
+    agosto = ca.resumen('closers', *AGOSTO, miembro_id=marlon.id)
+
+    assert septiembre['por_cobrar']['total'] == agosto['por_cobrar']['total'] == 600.0
+    assert 'por_cobrar' not in septiembre['deltas']
+
+
+@freeze_time(HOY)
+def test_lo_que_falta_cobrar_respeta_el_precio_negociado_del_cliente(db, marlon):
+    """`Client.total_amount` manda sobre el precio de lista cuando el closer lo cargó: es lo que
+    ESTE cliente negoció. La misma regla que usa el pool de llamadas cerradas desde donde se
+    cobra — si acá se usara el precio de lista, un cliente con un precio más alto aparecería
+    debiendo menos de lo real (caso reportado en producción)."""
+    cli = cliente(db, 'Nego')
+    cli.total_amount = 1000.0
+    db.session.commit()
+    agenda(db, marlon, cli)
+    inscribir(db, cli, precio=500.0, pagado=100.0)
+
+    datos = ca.resumen('closers', DESDE, HASTA, miembro_id=marlon.id)
+
+    assert datos['por_cobrar']['total'] == 900.0
+
+
+@freeze_time(HOY)
+def test_los_setters_no_reciben_lo_que_falta_cobrar(db, make_user):
+    """No es una cifra del setter: la deuda se atribuye al closer dueño de la agenda. Mandarla en
+    el resumen de setters invitaría a ponerla en una pantalla donde no le corresponde a nadie."""
+    setter = make_user(role='setter', username='Ana', email='ana@thelearnation.com')
+
+    datos = ca.resumen('setters', DESDE, HASTA, miembro_id=setter.id)
+
+    assert 'por_cobrar' not in datos
+
+
+# --- Panel Estados -----------------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_una_agenda_vencida_sin_reportar_no_se_mezcla_con_una_que_todavia_no_ocurrio(db, marlon):
+    """Las dos son "Pendiente" en la tabla, y en el panel son cosas opuestas: la de mañana es el
+    curso normal de las cosas y la de la semana pasada es un agujero — mientras nadie la cargue,
+    el show up queda medido sobre menos llamadas de las que hubo. Juntarlas en una sola fila
+    hacía que el panel no pudiera decir eso."""
+    agenda(db, marlon, cliente(db, 'Ya paso'), cuando=datetime(2026, 9, 10, 15, 0))
+    agenda(db, marlon, cliente(db, 'Manana'), cuando=datetime(2026, 9, 25, 15, 0))
+
+    estados = {e['key']: e for e in ca.bloque_closers(DESDE, HASTA)['estados']}
+
+    assert estados['sin_reporte']['n'] == 1
+    assert estados['por_ocurrir']['n'] == 1
+    # Las dos siguen llevando al mismo corte de Revisar: la tabla tiene un solo "Pendiente".
+    assert estados['sin_reporte']['filtro'] == estados['por_ocurrir']['filtro'] == 'Pendiente'
+
+
+@freeze_time(HOY)
+def test_los_estados_suman_todas_las_agendas_del_periodo_y_no_solo_las_realizadas(db, marlon):
+    """El panel contesta "qué pasó con cada cita agendada", así que su total son las agendas —no
+    las realizadas, que es el denominador del show up. Si el panel usara ese otro denominador
+    las canceladas y las reagendadas desaparecerían de la pantalla sin dejar rastro."""
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    venta(db, mail='compro@test.local')
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+    agenda(db, marlon, cliente(db, 'Cancelo'), closer_result='Cancelado')
+    agenda(db, marlon, cliente(db, 'Reagendo'), closer_result='Reagendado')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert sum(e['n'] for e in bloque['estados']) == bloque['agendas'] == 4
+    assert bloque['realizadas'] == 2
+
+
+@freeze_time(HOY)
+def test_los_estados_sin_ninguna_agenda_no_aparecen_en_el_panel(db, marlon):
+    """Siete filas en cero esconden las dos que importan."""
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+
+    estados = ca.bloque_closers(DESDE, HASTA)['estados']
+
+    assert [(e['key'], e['n']) for e in estados] == [('no_show', 1)]
 
 
 # --- Señas ---------------------------------------------------------------------------------------
