@@ -894,7 +894,10 @@ const EMBUDO_SETTER = {
     Cualificados: { ayuda: 'Cumplen el perfil del programa. Ojo: se mide sobre los que respondieron.' },
     Agendaron: {
         ayuda: 'Reservaron horario en el calendario de un closer.',
-        ir: ['generadas', {}],
+        // Los LEADS que agendaron, no la tabla de agendas generadas: el paso cuenta leads del
+        // período que llegaron a reservar (45), y esa otra tabla son las citas del período mirándolo
+        // al revés (169). El clic mostraba 169 filas debajo de un 45.
+        ir: ['leads', { estado: 'Agendó' }],
     },
 };
 
@@ -996,13 +999,17 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                     humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                     sub={`${bloque.respondieron} de ${fmt.plural(bloque.leads, 'entrante', 'entrantes')}`}
                     baja="p-cualificacion" />
+                {/* Este tile y el panel Conversión abren los LEADS que agendaron y no la tabla
+                    "Agendas generadas": el número cuenta leads del período que llegaron a reservar
+                    (45) y esa tabla son las citas del período, que es la misma historia contada al
+                    revés (169). El clic mostraba 169 filas debajo de un 45. */}
                 <Tile label="Agendas" valor={fmt.num(bloque.agendas)} color={v('brand-secondary')}
                     help={'Citas que el equipo de setting dejó reservadas en el calendario de un '
                         + 'closer. Es el resultado del trabajo del setter.'}
                     delta={deltas.agendas}
                     humo={[v('brand-secondary'), v('brand-secondary-light'), v('brand-primary'), v('brand-navy')]}
                     sub={`${fmt.pct(bloque.conversion)} de los entrantes`}
-                    ver={() => irA('generadas', {})} baja="p-conversion" />
+                    ver={() => irA('leads', { estado: 'Agendó' })} baja="p-conversion" />
             </div>
 
             <div className="grid-2">
@@ -1040,7 +1047,7 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                             help={'Conversión final. De todo lo que entró por marketing, cuánto '
                                 + 'terminó en el calendario.'}
                             pct={fmt.pct(bloque.conversion)} tone="warning" w={bloque.conversion}
-                            ir={() => irA('generadas', {})} />
+                            ir={() => irA('leads', { estado: 'Agendó' })} />
                         <Gruesa i={1} label="De respuesta a cita" cuenta={`sobre ${bloque.respondieron}`}
                             help="De cada 100 conversaciones abiertas, cuántas llegan a cita."
                             pct={fmt.pct(convOpen)} tone="info" w={convOpen} />
