@@ -1113,6 +1113,12 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
 
 const Analizar = ({ datos, rol, irA }) => {
     if (!datos) return <Cargando />;
+    // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
+    // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
+    // setters no muestra números raros — revienta el árbol entero y deja la pantalla en blanco,
+    // el mismo modo de falla que ya pasó con las tablas de Revisar. El payload dice de qué rol
+    // es, así que se espera al que corresponde.
+    if (datos.rol !== rol) return <Cargando />;
     const { actual, deltas } = datos;
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} irA={irA} />
