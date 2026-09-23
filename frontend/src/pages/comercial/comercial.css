@@ -1003,3 +1003,111 @@
   .dc-shell .rank-nom{width:auto;flex:1}
   .dc-shell .rank-riel{flex-basis:100%;order:3}
 }
+
+/* ============================================================
+   12 · CONFIGURAR — un solo boton abre todos los filtros.
+   Se abre ancho, no alto: cada faceta es una columna.
+   ============================================================ */
+.dc-shell .config-envoltura{position:relative}
+/* Se ancla al borde IZQUIERDO de su boton: el panel es ancho y el boton
+   vive a la izquierda de la barra, asi que alinearlo a la derecha lo sacaba
+   de la pantalla. Debajo de 900px deja de flotar y se despliega en su fila. */
+.dc-shell .config-panel{position:absolute;top:46px;left:0;right:auto;z-index:75;
+  width:min(680px,calc(100vw - 32px));
+  max-height:calc(100vh - 150px);overflow-y:auto;overscroll-behavior:contain;
+  padding:var(--s4);background:var(--bg-flotante);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  border-radius:24px;box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  animation:dcTipIn .2s var(--spring) both}
+/* En pantalla chica el panel deja de flotar y se despliega en su lugar:
+   ocupa la fila entera y empuja la tabla, sin anclajes que se salgan. */
+@media (max-width:900px){
+  .dc-shell .config-envoltura{flex:1 1 100%}
+  .dc-shell .config-panel{position:static;width:auto;margin-top:var(--s3);
+    max-height:none;overflow:visible;animation:none}
+  .dc-shell .config-lista{max-height:none}
+}
+.dc-shell .config-cab{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
+.dc-shell .config-grid{display:grid;gap:var(--s4) var(--s3);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,138px),1fr))}
+.dc-shell .config-col{display:grid;gap:var(--s2);align-content:start;min-width:0}
+.dc-shell .config-lista{display:grid;gap:2px;max-height:186px;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;margin:-2px;padding:2px}
+.dc-shell .config-op{display:flex;align-items:center;gap:9px;width:100%;min-width:0;text-align:left;
+  padding:7px 9px;border-radius:10px;font-size:12.5px;font-weight:600;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
+.dc-shell .config-op:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .config-op[aria-checked="true"],
+.dc-shell .config-op[aria-pressed="true"]{
+  background:var(--bg-element);color:var(--text-on-surface);font-weight:700}
+.dc-shell .config-op .trunc{flex:1}
+.dc-shell .config-op .cuenta{font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .config-caja{width:15px;height:15px;flex-shrink:0;border-radius:5px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-control);color:var(--on-brand);
+  font-size:9px;font-weight:900;transition:background-color .15s ease,border-color .15s ease}
+.dc-shell .config-op[aria-checked="true"] .config-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .config-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+  margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+.dc-shell .cuenta-burbuja{display:inline-flex;align-items:center;justify-content:center;
+  min-width:19px;height:19px;padding:0 6px;border-radius:var(--radius-pill);
+  background:var(--brand-secondary);color:var(--on-brand);
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   13 · PERFIL
+   ============================================================ */
+.dc-shell .perfil-mira{position:relative;width:96px;height:96px;flex-shrink:0;border-radius:28px;
+  display:grid;place-items:center;overflow:hidden;cursor:pointer;
+  background:var(--brand-secondary-surface);border:1px dashed var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:30px;font-weight:900;
+  transition:border-color .18s ease,background-color .18s ease}
+.dc-shell .perfil-mira:hover{background:var(--bg-element-hover);border-color:var(--brand-secondary)}
+.dc-shell .perfil-mira img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.dc-shell .perfil-mira input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dc-shell .perfil-pista{position:absolute;left:0;right:0;bottom:0;padding:5px 0;
+  background:var(--bg-scrim);color:var(--text-on-surface);text-align:center;
+  font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.dc-shell .campo{display:grid;gap:6px;min-width:0}
+.dc-shell .campo input{height:42px;padding:0 14px;border-radius:var(--radius-control);
+  background:var(--bg-input);border:1px solid var(--border-subtle);outline:none;
+  font-size:14px;font-weight:600;transition:border-color .16s ease;min-width:0}
+.dc-shell .campo input:focus{border-color:var(--border-control)}
+.dc-shell .avatar-foto{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.dc-shell button.avatar{cursor:pointer;overflow:hidden;padding:0;
+  transition:border-color .18s ease,transform .18s var(--spring)}
+.dc-shell button.avatar:hover{border-color:var(--brand-secondary)}
+.dc-shell button.avatar:active{transform:scale(.93)}
+
+/* ============================================================
+   14 · PRONTO Y ESTADO VACIO
+   ============================================================ */
+.dc-shell .vacio-grande{display:grid;gap:var(--s4);justify-items:center;text-align:center;
+  padding:var(--s16) var(--s4);max-width:46ch;margin:0 auto}
+.dc-shell .vacio-icono{width:58px;height:58px;border-radius:20px;display:grid;place-items:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary)}
+.dc-shell .vacio-icono svg{width:24px;height:24px}
+.dc-shell .borrador-aviso{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
+  padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  border:1px dashed var(--border-control);background:var(--mat-0);
+  font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-muted)}
+
+/* ============================================================
+   15 · TOTALES DE LO FILTRADO — una tira de verificacion, no un panel
+   ============================================================ */
+.dc-shell .tot-tira{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s3) var(--s6);
+  padding:10px 14px;margin-bottom:var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .tot-item{font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.dc-shell .tot-item b{margin-right:5px;font-size:15px;font-weight:900;letter-spacing:-.02em;
+  color:var(--text-on-surface);font-variant-numeric:tabular-nums}
+.dc-shell .barra-tabla{flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3);align-items:center}
+.dc-shell .busca--sm{flex:0 1 190px;height:38px}
+.dc-shell .heat--cab{align-items:flex-end}
+.dc-shell .heat--cab i{display:flex;flex-direction:column;align-items:center;gap:1px;height:auto;
+  background:none !important;border:0 !important;opacity:1;
+  font-size:9px;font-weight:900;letter-spacing:.04em;color:var(--text-muted-40)}
+.dc-shell .heat--cab i em{font-style:normal;font-size:9px;font-weight:700;
+  color:var(--text-muted-40);font-variant-numeric:tabular-nums}
