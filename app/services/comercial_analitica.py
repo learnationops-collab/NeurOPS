@@ -241,7 +241,12 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
 
-    confirmadas = sum(1 for f in agendas if f['pre_call']['key'] == 'confirmada')
+    # Una llamada a la que el lead ASISTIO estaba confirmada, por definicion: el embudo es una
+    # cadena de subconjuntos y sin esto mostraba mas asistencias que confirmadas — en produccion,
+    # 15 asistieron sobre 7 confirmadas, o sea un 214.3% imposible en la fila siguiente. El
+    # mismo criterio que ya aplica `CloserService.mark_sale_appointment_as_show_up`, que fuerza
+    # `result='Confirmado'` al registrar una venta justamente por este motivo.
+    confirmadas = sum(1 for f in agendas if f['pre_call']['key'] == 'confirmada' or f['asistio'])
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
     # que presentaciones, que es imposible.

@@ -141,6 +141,30 @@ def test_el_close_rate_de_la_tarjeta_es_el_mismo_que_el_de_los_totales(db, marlo
     assert bloque['cerradas'] == totales['ventas'] == 1
 
 
+@freeze_time(HOY)
+def test_una_llamada_a_la_que_asistieron_cuenta_como_confirmada(db, marlon):
+    """El embudo es una cadena de subconjuntos: ningun paso puede superar al anterior.
+
+    Bug real visto en el servidor de prueba: 15 asistieron sobre 7 confirmadas, o sea un 214.3%
+    en la fila siguiente. Pasa porque `result='Confirmado'` lo escribe el flujo de confirmacion y
+    asistir no lo exige — pero una llamada a la que el lead se presento estaba confirmada, por
+    definicion. Es el mismo criterio que ya aplica `mark_sale_appointment_as_show_up`, que fuerza
+    `result='Confirmado'` al registrar una venta justamente por esto.
+    """
+    # Asistio sin haber pasado por el flujo de confirmacion.
+    agenda(db, marlon, cliente(db, 'Vino igual'), result='Pendiente', closer_result='Show up')
+    agenda(db, marlon, cliente(db, 'Confirmo y vino'), result='Confirmado', closer_result='Show up')
+    agenda(db, marlon, cliente(db, 'Solo confirmo'), result='Confirmado')
+
+    pasos = {p['paso']: p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']}
+
+    assert pasos['Confirmadas'] == 3
+    assert pasos['Asistieron'] == 2
+    # El invariante que importa, por encima de los numeros puntuales.
+    orden = [p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']]
+    assert orden == sorted(orden, reverse=True), f'el embudo no decrece: {orden}'
+
+
 # --- Panel Cierre: las dos tasas de cierre ------------------------------------------------------
 
 @freeze_time(HOY)
