@@ -49,7 +49,11 @@ from app.models import (
     TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving,
     AlertRule, Alert, ClientMergeLog, CloserAlias, CommentNotification,
     FeatureToggle, InstallmentPlan, LandingSession, WorkshopEvent, WorkshopLead,
-    JobApplication, JobApplicationVote, ClarityWeight
+    JobApplication, JobApplicationVote, ClarityWeight,
+    AssistantApplication, AssistantClarityWeight, BugReport, BugReportMessage,
+    PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion,
+    PlaybookOption, PlaybookLessonProgress, PlaybookCompletion,
+    ReporteDirector, ReporteDirectorPersona, WorkshopGoals, WorkshopAction
 )
 
 def safe(text):
@@ -176,27 +180,33 @@ def actualizar(target='local'):
             PaymentMethod, ManychatAdLead,
             TeamMember, MonthlyPaymentMethodBalance, MonthlySaving, AlertRule,
             WorkshopEvent, JobApplication, ClarityWeight,
+            AssistantClarityWeight, PlaybookRoadmap, WorkshopGoals,
 
             # Dependencia Nivel 1
             Event, WorkshopButton, PipelineStage, Client, AdSet,
             MarketingBudget, PublicRegistration, GoogleCalendarToken, UTMLog,
             Availability, WeeklyAvailability, Alert, CloserAlias, FeatureToggle,
             JobApplicationVote,
+            AssistantApplication, BugReport, PlaybookModule, WorkshopAction,
+            ReporteDirector,
 
             # Dependencia Nivel 2
             Lead, Ad, WorkshopTemplateSent, UserViewSetting,
             SurveyQuestion, ClientComment, MonthlyPayroll,
             ClientMergeLog, WorkshopLead,
-            
+            BugReportMessage, PlaybookLesson, ReporteDirectorPersona,
+
             # Dependencia Nivel 3
-            Appointment, Enrollment, AdPeriodSpend, LeadAnswer, 
+            Appointment, Enrollment, AdPeriodSpend, LeadAnswer,
             WorkshopInteraction, SetterDailyStats, CloserDailyStats,
             CloserDailyReport, TriageDailyReport, TriageTrackerReport,
             FinancialSale, FinancialAgenda, LeadEventLog, LandingSession,
-            
+            PlaybookQuestion, PlaybookLessonProgress, PlaybookCompletion,
+
             # Dependencia Nivel 4
             Payment, SurveyAnswer, Notification, Comment, DailyReportAnswer,
-            InstallmentPlan, CommentNotification
+            InstallmentPlan, CommentNotification,
+            PlaybookOption
         ]
 
         # Solo se toca lo que se va a poder copiar. La limpieza y la copia eran dos pasos
