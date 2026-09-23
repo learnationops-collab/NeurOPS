@@ -14,11 +14,11 @@ from sqlalchemy import func
 
 from app import db
 from app.models import FinancialSale, User
+from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
     _limpiar_email, _limpiar_ig, chip, pct,
 )
-from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.commission_service import CLOSER_RATE
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
@@ -378,8 +378,8 @@ def por_cobrar_de(closer_id=None):
     inventar, y por eso `por_cobrar` no lleva delta: comparar el mismo saldo contra sí mismo
     daría 0% en todos los períodos.
 
-    Se calcula acá, en `resumen`, y no dentro de `bloque_closers`: el bloque se llama una vez por
-    persona y por período comparado desde `comparativas`, y esta consulta recorre todas las
+    Se llama desde `resumen` y no desde `bloque_closers`: el bloque se ejecuta una vez por persona
+    y por período comparado cuando lo pide `comparativas`, y esta consulta recorre todas las
     inscripciones del sistema.
     """
     _, totales = CloserDashboardService._pending_collections(closer_id, limit=0)
