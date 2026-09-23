@@ -30,6 +30,8 @@ export const fmt = {
         return `${dias[f.getDay()]} ${f.getDate()} de ${meses[f.getMonth()]}`;
     },
     iniciales: (nombre) => (nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase(),
+    /** "1 venta" / "2 ventas": el plural a mano se notaba en cuanto un closer cerraba una sola. */
+    plural: (n, singular, plural) => `${fmt.num(n)} ${n === 1 ? singular : plural}`,
 };
 
 export const tono = (t) => `var(--${t === 'brand' ? 'brand-secondary' : t})`;
