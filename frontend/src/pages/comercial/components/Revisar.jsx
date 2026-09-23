@@ -1,31 +1,51 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Filter, Search } from 'lucide-react';
-import { Cargando, Chip, fmt } from './Shared';
+import { ArrowRight, ChevronDown, Filter, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Cargando, fmt } from './Shared';
 
 /**
- * Revisar: el libro de registros con un buscador, un único botón de "Filtros" y los totales de
- * lo filtrado al pie.
+ * Revisar: el libro de registros con un buscador, un filtro rápido, UN botón que abre todas las
+ * facetas y la tira de totales de lo filtrado arriba de la tabla.
  *
- * Todo el filtrado (búsqueda, chips rápidos y facetas) pasa por `aplicarFiltros` y se hace en el
+ * Todo el filtrado (búsqueda, facetas y filtro rápido) pasa por `aplicarFiltros` y se hace en el
  * cliente sobre las filas del período, que ya vienen del backend. Eso es lo que permite que los
- * contadores de los chips, el "mostrando X de Y" y los totales se recalculen juntos con el mismo
- * conjunto de filas: si cada uno consultara por su cuenta, podrían discrepar.
+ * contadores del filtro rápido, el "mostrando X de Y" y los totales se recalculen juntos con el
+ * mismo conjunto de filas: si cada uno consultara por su cuenta, podrían discrepar.
  *
- * Los totales del pie ignoran el chip rápido a propósito (es un atajo de lectura, no un filtro
- * del alcance), pero sí respetan el período, la búsqueda y las facetas.
+ * Los totales ignoran el filtro rápido a propósito (es un atajo de lectura, no un filtro del
+ * alcance), pero sí respetan el período, la búsqueda y las facetas.
+ *
+ * `datos` puede llegar en `null` mientras el backend todavía no devolvió las filas de la tabla
+ * pedida (ver el fix de DashboardComercial): las filas que llegan acá SON siempre de la tabla
+ * que se pidió, así que los accesores no llevan guardas.
  */
 
-// Definición de cada tabla: columnas, facetas y chips rápidos. Una sola fuente para las cuatro.
+/** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
+export const ChipTono = ({ chip }) => (chip
+    ? <span className="chip" style={{ '--c': `var(--${chip.tone})` }}>{chip.label}</span>
+    : null);
+
+/** Ícono "i" con la explicación de lo que se está mirando. Se abre y cierra por CSS. */
+const Ayuda = ({ titulo, texto }) => (
+    <span className="tip" tabIndex={0} role="note" aria-label={`${titulo}: ${texto}`}>
+        <span className="tip-dot" aria-hidden="true">i</span>
+        <span className="tip-burbuja" aria-hidden="true"><b>{titulo}</b>{texto}</span>
+    </span>
+);
+
+// Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cuatro.
 const TABLAS = {
     agendas: {
         label: 'Agendas',
+        ayuda: 'Todas las llamadas agendadas del período. Tocá una fila para abrir el recorrido '
+            + 'del lead y, si hace falta, corregir su estado.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
-            { key: 'cliente', header: 'Cliente', width: '1.9fr' },
-            { key: 'fuente', header: 'Fuente', width: '1.1fr' },
-            { key: 'closer', header: 'Closer', width: '0.9fr' },
+            { key: 'cliente', header: 'Cliente', width: '1.8fr' },
+            { key: 'fuente', header: 'Fuente', width: '1fr' },
+            { key: 'closer', header: 'Closer', width: '0.8fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
-            { key: 'post_call', header: 'Post call', width: '1.2fr' },
+            { key: 'post_call', header: 'Post call', width: '1.4fr' },
+            { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
@@ -42,6 +62,7 @@ const TABLAS = {
     },
     ventas: {
         label: 'Ventas',
+        ayuda: 'Las ventas cobradas en el período, con su programa, forma de pago y medio de cobro.',
         cols: [
             { key: 'fecha', header: 'Venta', width: '0.8fr' },
             { key: 'cliente', header: 'Cliente', width: '1.9fr' },
@@ -49,6 +70,7 @@ const TABLAS = {
             { key: 'tipo_pago', header: 'Pago', width: '1.1fr' },
             { key: 'monto', header: 'Monto', width: '1fr' },
             { key: 'closer', header: 'Closer', width: '0.9fr' },
+            { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
@@ -64,13 +86,15 @@ const TABLAS = {
     },
     leads: {
         label: 'Leads entrantes',
+        ayuda: 'Los leads nuevos que entraron al inbox en el período, con su estado de conversación.',
         cols: [
             { key: 'fecha', header: 'Llegó', width: '0.9fr' },
-            { key: 'cliente', header: 'Cliente', width: '2fr' },
+            { key: 'cliente', header: 'Lead', width: '1.9fr' },
             { key: 'fuente', header: 'Fuente', width: '1fr' },
-            { key: 'setter', header: 'Setter', width: '1fr' },
-            { key: 'estado', header: 'Estado', width: '1.2fr' },
-            { key: 'mensajes', header: 'Mensajes', width: '0.7fr' },
+            { key: 'setter', header: 'Setter', width: '0.9fr' },
+            { key: 'estado', header: 'Estado', width: '1.1fr' },
+            { key: 'mensajes', header: 'Mensajes', width: '0.9fr' },
+            { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
@@ -84,13 +108,16 @@ const TABLAS = {
     },
     generadas: {
         label: 'Agendas generadas',
+        ayuda: 'Las agendas que generó el equipo de setting, con el closer asignado y cómo '
+            + 'terminó la llamada.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
-            { key: 'cliente', header: 'Cliente', width: '1.9fr' },
-            { key: 'setter', header: 'Setter', width: '1fr' },
+            { key: 'cliente', header: 'Lead', width: '1.8fr' },
+            { key: 'setter', header: 'Setter', width: '0.9fr' },
             { key: 'closer', header: 'Closer', width: '0.9fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
-            { key: 'post_call', header: 'Post call', width: '1.2fr' },
+            { key: 'post_call', header: 'Post call', width: '1.4fr' },
+            { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
             { key: 'setter', label: 'Setter', de: (f) => f.setter },
@@ -111,10 +138,13 @@ export const TABLAS_POR_ROL = {
     setters: ['leads', 'generadas'],
 };
 
+/** Las dos tablas de agendas comparten totales, columna de post call y el selector de fecha. */
+const esTablaDeAgendas = (tabla) => tabla === 'agendas' || tabla === 'generadas';
+
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.closer, fila.setter, fila.fuente,
     fila.programa].filter(Boolean).join(' ').toLowerCase();
 
-/** Búsqueda + facetas. El chip rápido se aplica aparte, para que los totales lo ignoren. */
+/** Búsqueda + facetas. El filtro rápido se aplica aparte, para que los totales lo ignoren. */
 const aplicarFiltros = (filas, def, query, facetas, modo) => {
     const q = query.trim().toLowerCase();
     return filas.filter(f => {
@@ -126,17 +156,18 @@ const aplicarFiltros = (filas, def, query, facetas, modo) => {
     });
 };
 
-const PanelFiltros = ({ def, filas, facetas, setFacetas, modo, setModo, onCerrar }) => {
-    const [abierta, setAbierta] = useState(null);
-    const ref = useRef(null);
-
-    useEffect(() => {
-        const fuera = (e) => { if (ref.current && !ref.current.contains(e.target)) onCerrar(); };
-        document.addEventListener('mousedown', fuera);
-        return () => document.removeEventListener('mousedown', fuera);
-    }, [onCerrar]);
-
+/**
+ * Panel de Configurar: un solo botón abre TODAS las facetas, cada una en su columna.
+ *
+ * Se ancla al borde IZQUIERDO de su botón (`.config-panel`): el panel es ancho (680px) y el botón
+ * vive a la izquierda de la barra, así que alinearlo a la derecha lo sacaba de la pantalla. Debajo
+ * de 900px el CSS lo saca del flujo flotante y lo despliega en su propia fila, empujando la tabla.
+ */
+const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
+    onLimpiar, onCerrar }) => {
     const opcionesDe = (faceta) => {
+        // Las opciones se cuentan sobre TODAS las filas del período, no sobre lo ya filtrado: si
+        // se contaran sobre lo filtrado, tildar un valor haría desaparecer a sus vecinos.
         const conteo = new Map();
         filas.forEach(f => {
             const v = faceta.de(f);
@@ -155,161 +186,102 @@ const PanelFiltros = ({ def, filas, facetas, setFacetas, modo, setModo, onCerrar
         });
     };
 
-    const resumen = (faceta) => {
-        const sel = facetas[faceta.key] || [];
-        if (sel.length === 0) return 'Todas';
-        return sel.length === 1 ? sel[0] : `${sel.length} activas`;
-    };
-
-    // Sin nada seleccionado, "Limpiar todo" no tiene nada que limpiar.
     const seleccionados = def.facetas.reduce((a, fa) => a + (facetas[fa.key]?.length || 0), 0);
 
     return (
-        <div className="dc-pop" ref={ref} style={{ width: 'min(340px, 86vw)', minWidth: 'min(340px, 86vw)' }}>
-            {def.facetas.map(faceta => {
-                const sel = facetas[faceta.key] || [];
-                return (
-                    <div key={faceta.key} className="dc-facet">
-                        <button type="button" className="dc-facet-head" aria-expanded={abierta === faceta.key}
-                            onClick={() => setAbierta(a => (a === faceta.key ? null : faceta.key))}>
-                            <span className="dc-total-label">{faceta.label}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span className="ln-t-caption" style={{ color: sel.length ? 'var(--brand-secondary)' : 'var(--text-muted-40)' }}>
-                                    {resumen(faceta)}
-                                </span>
-                                <ChevronDown size={14} className="dc-facet-chevron" />
-                            </span>
-                        </button>
-                        {abierta === faceta.key && (
-                            <div style={{ paddingBottom: 8 }}>
-                                {opcionesDe(faceta).map(([valor, n]) => (
-                                    <button key={valor} type="button" className="dc-facet-opt"
-                                        onClick={() => alternar(faceta, valor)}>
-                                        <span className="dc-check" data-on={sel.includes(valor)}>
-                                            {sel.includes(valor) && <Check size={11} />}
-                                        </span>
-                                        <span style={{ flex: 1 }}>{valor}</span>
-                                        <span className="ln-muted-40 dc-num">{n}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 10 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="ln-t-caption ln-muted">Cumplir</span>
-                    {['todas', 'alguna'].map(m => (
-                        <button key={m} type="button" className="dc-chip-btn" aria-pressed={modo === m}
-                            style={{ height: 26, fontSize: 11.5 }} onClick={() => setModo(m)}>
-                            {m === 'todas' ? 'Todas' : 'Alguna'}
+        <div className="config-panel" role="dialog" aria-label="Filtro completo">
+            <div className="config-cab">
+                <p className="t-h3" style={{ fontSize: 16 }}>Filtro completo</p>
+                {seleccionados > 0 && <span className="cuenta-burbuja">{seleccionados}</span>}
+                <button type="button" className="ibtn ibtn--sm" style={{ marginLeft: 'auto' }}
+                    onClick={onCerrar} aria-label="Cerrar">
+                    <X size={15} />
+                </button>
+            </div>
+
+            <div className="fila" style={{ gap: 'var(--s3)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }}>
+                {esTablaDeAgendas(tabla) && (
+                    <>
+                        <span className="t-rotulo">Fecha</span>
+                        <div className="seg">
+                            {[['meet', 'Fecha meet'], ['creacion', 'F. creación']].map(([k, label]) => (
+                                <button key={k} type="button" aria-pressed={basis === k}
+                                    onClick={() => setBasis(k)}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
+                <span className="t-rotulo">Cumple</span>
+                <div className="seg">
+                    {[['todas', 'Todas'], ['alguna', 'Alguna']].map(([k, label]) => (
+                        <button key={k} type="button" aria-pressed={modo === k}
+                            onClick={() => setModo(k)}>
+                            {label}
                         </button>
                     ))}
+                </div>
+            </div>
+
+            <div className="config-grid">
+                {def.facetas.map(faceta => {
+                    const sel = facetas[faceta.key] || [];
+                    return (
+                        <div key={faceta.key} className="config-col">
+                            <p className="t-rotulo">
+                                {faceta.label}{sel.length > 0 ? ` · ${sel.length}` : ''}
+                            </p>
+                            <div className="config-lista">
+                                {opcionesDe(faceta).map(([valor, n]) => {
+                                    const on = sel.includes(valor);
+                                    return (
+                                        <button key={valor} type="button" className="config-op"
+                                            role="checkbox" aria-checked={on}
+                                            onClick={() => alternar(faceta, valor)}>
+                                            <span className="config-caja">{on ? '✓' : ''}</span>
+                                            <span className="trunc">{valor}</span>
+                                            <span className="cuenta">{n}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="config-pie">
+                <span className="t-cap mut40">
+                    {seleccionados === 0
+                        ? 'Sin condiciones: se ve todo el período.'
+                        : `${seleccionados} ${seleccionados === 1 ? 'condición' : 'condiciones'} sobre ${def.facetas.length} facetas.`}
                 </span>
-                <button type="button" className="dc-textbtn" disabled={seleccionados === 0}
-                    onClick={() => setFacetas({})}>
-                    Limpiar todo
+                <button type="button" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
+                    disabled={seleccionados === 0} onClick={onLimpiar}>
+                    <RotateCcw size={13} />
+                    Limpiar
                 </button>
             </div>
         </div>
     );
 };
 
-const TotalesAgendas = ({ totales, alcance }) => {
-    const tarjetas = [
-        { label: 'Agendas', valor: fmt.num(totales.agendas), color: 'var(--text-on-surface)',
-            hint: `${totales.realizadas} ya realizadas` },
-        { label: 'Show up', valor: fmt.pct(totales.show_up), color: 'var(--success)',
-            hint: `${totales.asistieron} de ${totales.realizadas} asistieron` },
-        { label: 'Close rate', valor: fmt.pct(totales.close_rate), color: 'var(--brand-secondary)',
-            hint: `${totales.ventas} de ${totales.asistieron} cerraron` },
-        { label: 'Seguimiento', valor: fmt.num(totales.seguimiento), color: 'var(--warning)',
-            hint: 'asistieron sin cerrar' },
-        { label: 'No show', valor: fmt.num(totales.no_show), color: 'var(--error)',
-            hint: `${fmt.pct(totales.no_show_pct)} de las realizadas` },
-        { label: 'Pendientes', valor: fmt.num(totales.pendientes),
-            color: totales.pendientes_con_retraso ? 'var(--warning)' : 'var(--idle)',
-            hint: totales.pendientes_con_retraso ? `${totales.pendientes_con_retraso} con retraso` : 'al día' },
-    ];
-    return (
-        <div className="dc-totales">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <span className="dc-total-label">Totales de lo filtrado</span>
-                <span className="ln-t-caption ln-muted-40">{alcance}</span>
-            </div>
-            <div className="dc-totales-grid">
-                {tarjetas.map(t => (
-                    <div key={t.label} className="dc-total-card">
-                        <div className="dc-total-label">{t.label}</div>
-                        <div className="dc-total-value" style={{ color: t.color }}>{t.valor}</div>
-                        <div className="dc-total-hint">{t.hint}</div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const TotalesVentas = ({ totales, alcance }) => (
-    <div className="dc-totales">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <span className="dc-total-label">Totales de lo filtrado</span>
-            <span className="ln-t-caption ln-muted-40">{alcance}</span>
-        </div>
-        <div className="dc-totales-grid">
-            <div className="dc-total-card">
-                <div className="dc-total-label">Cash</div>
-                <div className="dc-total-value">{fmt.money(totales.cash)}</div>
-                <div className="dc-total-hint">{totales.filas} cobros</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Ventas</div>
-                <div className="dc-total-value" style={{ color: 'var(--brand-secondary)' }}>{totales.ventas}</div>
-                <div className="dc-total-hint">completo o split</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Ticket</div>
-                <div className="dc-total-value">{fmt.money(totales.ticket)}</div>
-                <div className="dc-total-hint">cash / ventas</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Cash neto</div>
-                <div className="dc-total-value" style={{ color: 'var(--success)' }}>{fmt.money(totales.cash_neto)}</div>
-                <div className="dc-total-hint">sin fees de pasarela</div>
-            </div>
-        </div>
-    </div>
-);
-
-const TotalesLeads = ({ totales, alcance }) => (
-    <div className="dc-totales">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <span className="dc-total-label">Totales de lo filtrado</span>
-            <span className="ln-t-caption ln-muted-40">{alcance}</span>
-        </div>
-        <div className="dc-totales-grid">
-            <div className="dc-total-card">
-                <div className="dc-total-label">Leads</div>
-                <div className="dc-total-value">{totales.leads}</div>
-                <div className="dc-total-hint">{totales.mensajes} mensajes</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Respuesta</div>
-                <div className="dc-total-value" style={{ color: 'var(--info)' }}>{fmt.pct(totales.respuesta)}</div>
-                <div className="dc-total-hint">{totales.respondieron} respondieron</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Cualificación</div>
-                <div className="dc-total-value" style={{ color: 'var(--success)' }}>{fmt.pct(totales.cualificacion)}</div>
-                <div className="dc-total-hint">{totales.cualificados} cualificados</div>
-            </div>
-            <div className="dc-total-card">
-                <div className="dc-total-label">Conversión</div>
-                <div className="dc-total-value" style={{ color: 'var(--brand-secondary)' }}>{fmt.pct(totales.conversion)}</div>
-                <div className="dc-total-hint">{totales.agendas} agendaron</div>
-            </div>
-        </div>
+/**
+ * Totales de lo filtrado: una tira de verificación, no un panel de tarjetas. Son los mismos
+ * números de antes (con su bajada, que es lo que los hace verificables: "18 de 22 asistieron"),
+ * con mucho menos peso visual.
+ */
+const TotalesTira = ({ items, alcance }) => (
+    <div className="tot-tira">
+        {items.map(t => (
+            <span key={t.label} className="tot-item">
+                <b style={{ color: t.color }}>{t.valor}</b>
+                {t.label}
+                {t.hint && <span className="mut40"> · {t.hint}</span>}
+            </span>
+        ))}
+        <span className="t-cap mut40" style={{ marginLeft: 'auto' }}>{alcance}</span>
     </div>
 );
 
@@ -317,62 +289,71 @@ const Celda = ({ fila, col }) => {
     switch (col.key) {
         case 'fecha':
             return (
-                <span>
-                    <span className="dc-cell-main dc-num">{fmt.fecha(fila.fecha)}</span>
-                    <span className="dc-cell-sub dc-num">{fmt.hora(fila.fecha)}</span>
+                <span className="celda num">
+                    {fmt.fecha(fila.fecha)}
+                    {fmt.hora(fila.fecha) && <span className="celda-sub num">{fmt.hora(fila.fecha)}</span>}
                 </span>
             );
         case 'cliente':
             return (
-                <span style={{ minWidth: 0 }}>
-                    <span className="dc-cell-main" style={{ display: 'block' }}>{fila.cliente}</span>
-                    {fila.ig && <span className="dc-cell-sub">{fila.ig}</span>}
+                <span className="celda">
+                    {fila.cliente}
+                    {fila.ig && <span className="celda-sub">{fila.ig}</span>}
                 </span>
             );
         case 'pre_call':
-            return <Chip chip={fila.pre_call} sm />;
+            return <ChipTono chip={fila.pre_call} />;
         case 'post_call':
+            // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
+            // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.
             return (
-                <span>
-                    <Chip chip={fila.post_call} sm />
+                <>
+                    <ChipTono chip={fila.post_call} />
                     {fila.retraso_dias > 0 && (
-                        <span className="dc-retraso">{fila.retraso_dias} días sin reportar</span>
+                        <span className="celda-sub num"
+                            style={{ color: 'var(--error)', fontWeight: 700 }}>
+                            {fila.retraso_dias} {fila.retraso_dias === 1 ? 'día' : 'días'} sin reportar
+                        </span>
                     )}
-                </span>
+                </>
             );
         case 'estado':
-            return <Chip chip={fila.estado} sm />;
+            return <ChipTono chip={fila.estado} />;
         case 'tipo_pago':
             return (
-                <span>
-                    <Chip chip={fila.tipo_pago} sm />
-                    <span className="dc-cell-sub">{fila.metodo}</span>
-                </span>
+                <>
+                    <ChipTono chip={fila.tipo_pago} />
+                    {fila.metodo && <span className="celda-sub">{fila.metodo}</span>}
+                </>
             );
         case 'monto':
-            return <span className="dc-cell-main dc-num">{fmt.money(fila.monto)}</span>;
+            return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
         case 'programa':
             return (
-                <span className="ln-program">
-                    <span className="ln-program-dot" style={{
-                        background: fila.programa === 'Residency Roadmap' ? 'var(--prog-elite-b)' : 'var(--prog-ace)',
-                    }} />
+                <span className="chip" style={{
+                    '--c': fila.programa === 'Residency Roadmap'
+                        ? 'var(--prog-elite-b)' : 'var(--prog-ace)',
+                }}>
                     {fila.programa}
                 </span>
             );
         case 'mensajes':
-            return <span className="dc-cell-main dc-num">{fila.mensajes}</span>;
+            return <span className="celda celda--num">{fmt.num(fila.mensajes)}</span>;
+        case 'ver':
+            return <span className="celda-ver"><ArrowRight size={14} /></span>;
         default:
-            return <span className="ln-t-body-sm ln-muted">{fila[col.key] || '—'}</span>;
+            return <span className="celda">{fila[col.key] || '—'}</span>;
     }
 };
 
-const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila, filtroInicial }) => {
+const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
+    filtroInicial }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
     const [chip, setChip] = useState(null);
-    const [panelAbierto, setPanelAbierto] = useState(false);
+    const [menu, setMenu] = useState(null);
+    const barra = useRef(null);
 
     const def = TABLAS[tabla];
 
@@ -386,7 +367,15 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     }, [filtroInicial]);
 
     // Al cambiar de tabla, los filtros de la anterior no tienen sentido.
-    useEffect(() => { setFacetas({}); setChip(null); setQuery(''); }, [tabla]);
+    useEffect(() => { setFacetas({}); setChip(null); setQuery(''); setMenu(null); }, [tabla]);
+
+    // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
+    useEffect(() => {
+        if (!menu) return undefined;
+        const fuera = (e) => { if (barra.current && !barra.current.contains(e.target)) setMenu(null); };
+        document.addEventListener('mousedown', fuera);
+        return () => document.removeEventListener('mousedown', fuera);
+    }, [menu]);
 
     const filas = datos?.filas || [];
     const filtradas = useMemo(
@@ -394,158 +383,219 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         [filas, def, query, facetas, modo]);
 
     const chipActivo = chip || def.chips[0].key;
-    const visibles = useMemo(
-        () => filtradas.filter(def.chips.find(c => c.key === chipActivo)?.filtro || (() => true)),
-        [filtradas, def, chipActivo]);
+    const rapido = def.chips.find(c => c.key === chipActivo) || def.chips[0];
+    const visibles = useMemo(() => filtradas.filter(rapido.filtro), [filtradas, rapido]);
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
-    const grid = def.cols.map(c => c.width).join(' ');
+    const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
 
-    // Los totales se recalculan sobre lo filtrado, pero en el cliente no se puede: el backend ya
-    // mandó los del período completo. Se recalculan con las mismas reglas usando las filas
-    // visibles, para que el pie cierre con la tabla (ver el docstring del módulo).
+    const limpiar = () => { setFacetas({}); setChip(null); setQuery(''); };
+
+    /**
+     * Los seis números de la tira, recalculados sobre lo filtrado con las mismas reglas del
+     * backend. Se recalculan acá y no se leen de `datos.totales` porque los del backend son del
+     * período completo: el pie tiene que cerrar con lo que se ve arriba.
+     */
     const totales = useMemo(() => {
+        const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
+
         if (tabla === 'ventas') {
             const cash = filtradas.reduce((a, f) => a + f.monto, 0);
             const ventas = filtradas.filter(f => f.es_venta).length;
-            return {
-                filas: filtradas.length, ventas, cash: Math.round(cash * 100) / 100,
-                cash_neto: Math.round(filtradas.reduce((a, f) => a + f.monto_neto, 0) * 100) / 100,
-                ticket: ventas ? Math.round((cash / ventas) * 100) / 100 : null,
-            };
+            const neto = filtradas.reduce((a, f) => a + f.monto_neto, 0);
+            return [
+                { label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
+                    color: 'var(--text-on-surface)', hint: fmt.plural(filtradas.length, 'cobro', 'cobros') },
+                { label: 'ventas', valor: fmt.num(ventas), color: 'var(--brand-secondary)',
+                    hint: 'completo o split' },
+                { label: 'ticket', valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
+                    color: 'var(--text-on-surface)', hint: 'cash / ventas' },
+                { label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
+                    color: 'var(--success)', hint: 'sin fees de pasarela' },
+            ];
         }
+
         if (tabla === 'leads') {
             const respondieron = filtradas.filter(f => f.respondio).length;
             const cualificados = filtradas.filter(f => f.cualificado).length;
             const agendaron = filtradas.filter(f => f.agendo).length;
-            const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
-            return {
-                leads: filtradas.length, respondieron, respuesta: pct(respondieron, filtradas.length),
-                cualificados, cualificacion: pct(cualificados, respondieron),
-                agendas: agendaron, conversion: pct(agendaron, filtradas.length),
-                mensajes: filtradas.reduce((a, f) => a + f.mensajes, 0),
-            };
+            return [
+                { label: 'leads', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
+                    hint: `${fmt.num(filtradas.reduce((a, f) => a + f.mensajes, 0))} mensajes` },
+                { label: 'respuesta', valor: fmt.pct(pct(respondieron, filtradas.length)),
+                    color: 'var(--info)', hint: `${respondieron} de ${filtradas.length}` },
+                { label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
+                    color: 'var(--success)', hint: `${cualificados} de ${respondieron}` },
+                { label: 'conversión', valor: fmt.pct(pct(agendaron, filtradas.length)),
+                    color: 'var(--brand-secondary)', hint: `${agendaron} agendaron` },
+            ];
         }
+
         const realizadas = filtradas.filter(f => f.realizada).length;
         const asistieron = filtradas.filter(f => f.asistio).length;
         const ventas = filtradas.filter(f => f.post_call.key === 'venta').length;
         const noShow = filtradas.filter(f => f.post_call.key === 'no_show').length;
         const pendientes = filtradas.filter(f => f.post_call.key === 'pendiente');
-        const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
-        return {
-            agendas: filtradas.length, realizadas, asistieron, show_up: pct(asistieron, realizadas),
-            ventas, close_rate: pct(ventas, asistieron),
-            seguimiento: filtradas.filter(f => ['seguimiento', 'presento_no_cerro'].includes(f.post_call.key)).length,
-            no_show: noShow, no_show_pct: pct(noShow, realizadas),
-            pendientes: pendientes.length,
-            pendientes_con_retraso: pendientes.filter(f => f.retraso_dias > 0).length,
-        };
+        const conRetraso = pendientes.filter(f => f.retraso_dias > 0).length;
+        const seguimiento = filtradas.filter(
+            f => ['seguimiento', 'presento_no_cerro'].includes(f.post_call.key)).length;
+        return [
+            { label: 'agendas', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
+                hint: `${realizadas} ya realizadas` },
+            { label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)), color: 'var(--success)',
+                hint: `${asistieron} de ${realizadas} asistieron` },
+            { label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
+                color: 'var(--brand-secondary)', hint: `${ventas} de ${asistieron} cerraron` },
+            { label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
+                hint: 'asistieron sin cerrar' },
+            { label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
+                hint: `${fmt.pct(pct(noShow, realizadas))} de las realizadas` },
+            { label: 'pendientes', valor: fmt.num(pendientes.length),
+                color: conRetraso ? 'var(--warning)' : 'var(--idle)',
+                hint: conRetraso ? `${conRetraso} con retraso` : 'al día' },
+        ];
     }, [filtradas, tabla]);
 
     const alcanceTexto = [alcance, query ? `"${query}"` : null].filter(Boolean).join(' · ');
 
     return (
-        <div className="ln-panel">
-            <div style={{ marginBottom: 16 }}>
-                <div className="dc-seg" role="tablist" aria-label="Tabla">
-                    {TABLAS_POR_ROL[rol].map(k => (
-                        <button key={k} type="button" role="tab" aria-selected={tabla === k}
-                            className="dc-seg-tab" onClick={() => setTabla(k)}>
-                            {TABLAS[k].label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="dc-toolbar">
-                <span className="dc-search">
-                    <Search size={14} className="ln-muted" />
-                    <input value={query} onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Buscar cliente, @ig, persona…" />
-                </span>
-
-                {(tabla === 'agendas' || tabla === 'generadas') && (
-                    <div className="dc-seg" style={{ padding: 3 }}>
-                        {[['meet', 'Fecha meet'], ['creacion', 'F. creación']].map(([k, label]) => (
-                            <button key={k} type="button" className="dc-seg-tab" aria-selected={basis === k}
-                                style={{ height: 28, padding: '0 12px', fontSize: 12 }}
-                                onClick={() => setBasis(k)}>
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {def.chips.map(c => (
-                    <button key={c.key} type="button" className="dc-chip-btn" aria-pressed={chipActivo === c.key}
-                        onClick={() => setChip(c.key)}>
-                        {c.label} · {filtradas.filter(c.filtro).length}
+        <section className="panel">
+            <div className="tabs" role="tablist" aria-label="Tabla"
+                style={{ marginBottom: 'var(--s4)' }}>
+                {TABLAS_POR_ROL[rol].map(k => (
+                    <button key={k} type="button" role="tab" aria-selected={tabla === k}
+                        className="tab" onClick={() => setTabla(k)}>
+                        {TABLAS[k].label}
                     </button>
                 ))}
+            </div>
 
-                <div className="dc-pop-wrap" style={{ marginLeft: 'auto' }}>
-                    <button type="button" className={`dc-filters-btn${activas ? ' is-active' : ''}`}
-                        aria-expanded={panelAbierto} onClick={() => setPanelAbierto(a => !a)}>
-                        <Filter size={14} />
-                        Filtros
-                        {activas > 0 && <span className="dc-badge">{activas}</span>}
+            {/* Todo el control en una línea: rápido, completo, búsqueda y la cuenta de lo visible. */}
+            <div className="fila barra-tabla" ref={barra}>
+                <div style={{ position: 'relative' }}>
+                    <button type="button"
+                        className={`pastilla${chipActivo !== def.chips[0].key ? ' pastilla--on' : ''}`}
+                        aria-expanded={menu === 'rapido'} aria-haspopup="menu"
+                        onClick={() => setMenu(m => (m === 'rapido' ? null : 'rapido'))}>
+                        <Filter size={15} />
+                        {rapido.label}
+                        <span className="mut40 num" style={{ fontSize: 11.5 }}>{visibles.length}</span>
                         <ChevronDown size={14} />
                     </button>
-                    {panelAbierto && (
-                        <PanelFiltros def={def} filas={filas} facetas={facetas} setFacetas={setFacetas}
-                            modo={modo} setModo={setModo} onCerrar={() => setPanelAbierto(false)} />
+                    {menu === 'rapido' && (
+                        <div className="menu" role="menu" aria-label="Filtro rápido">
+                            {def.chips.map(c => (
+                                <button key={c.key} type="button" className="menu-item"
+                                    role="menuitemradio" aria-checked={chipActivo === c.key}
+                                    onClick={() => { setChip(c.key); setMenu(null); }}>
+                                    <span className="trunc">{c.label}</span>
+                                    <span className="cuenta">{filtradas.filter(c.filtro).length}</span>
+                                </button>
+                            ))}
+                        </div>
                     )}
                 </div>
+
+                <div className="config-envoltura">
+                    <button type="button" className={`pastilla${activas ? ' pastilla--on' : ''}`}
+                        aria-expanded={menu === 'config'} aria-haspopup="dialog"
+                        onClick={() => setMenu(m => (m === 'config' ? null : 'config'))}>
+                        <SlidersHorizontal size={15} />
+                        Filtro completo
+                        {activas > 0 && <span className="cuenta-burbuja">{activas}</span>}
+                        <ChevronDown size={14} />
+                    </button>
+                    {menu === 'config' && (
+                        <PanelConfigurar def={def} filas={filas} facetas={facetas} setFacetas={setFacetas}
+                            modo={modo} setModo={setModo} tabla={tabla} basis={basis} setBasis={setBasis}
+                            onLimpiar={() => setFacetas({})} onCerrar={() => setMenu(null)} />
+                    )}
+                </div>
+
+                <label className="busca busca--sm">
+                    <span className="mut40" style={{ display: 'flex' }}><Search size={14} /></span>
+                    <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Buscar cliente, @ig, persona…" aria-label="Buscar" />
+                </label>
+
+                <span className="t-cap mut40 num" style={{ marginLeft: 'auto' }}>
+                    mostrando {visibles.length} de {filtradas.length}
+                </span>
+                <Ayuda titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
             {activas > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                    <span className="ln-t-caption ln-muted-40">
-                        Cumple {modo === 'alguna' ? 'ALGUNA' : 'TODAS'}:
+                <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)', marginBottom: 'var(--s3)' }}>
+                    <span className="t-rotulo">
+                        {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
                     </span>
                     {def.facetas.flatMap(fa => (facetas[fa.key] || []).map(v => (
-                        <button key={`${fa.key}-${v}`} type="button" className="dc-chip-btn" aria-pressed
-                            style={{ height: 26, fontSize: 11.5 }}
-                            onClick={() => setFacetas({ ...facetas, [fa.key]: facetas[fa.key].filter(x => x !== v) })}>
-                            {v} ×
+                        <button key={`${fa.key}-${v}`} type="button" className="chip"
+                            style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
+                                letterSpacing: 0, fontWeight: 700 }}
+                            aria-label={`Quitar ${v}`}
+                            onClick={() => setFacetas({
+                                ...facetas, [fa.key]: facetas[fa.key].filter(x => x !== v),
+                            })}>
+                            {v}
+                            <X size={12} />
                         </button>
                     )))}
+                    <button type="button" className="btn btn--linea btn--sm" onClick={limpiar}>
+                        <RotateCcw size={13} />
+                        Limpiar
+                    </button>
                 </div>
             )}
 
             {cargando ? <Cargando /> : (
                 <>
-                    <div className="dc-table">
-                        <div className="dc-thead" style={{ gridTemplateColumns: grid }}>
-                            {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
-                        </div>
-                        {visibles.length === 0 && (
-                            <div className="ln-empty">
-                                <p className="ln-empty-title">Nada que revisar acá</p>
-                                <p className="ln-empty-desc">
-                                    Con este período y estos filtros no queda ninguna fila.
+                    <TotalesTira items={totales} alcance={alcanceTexto} />
+
+                    {visibles.length === 0 ? (
+                        <div className="tabla">
+                            <div className="vacio">
+                                <p className="t-h3">Ningún registro entra por este filtro</p>
+                                <p className="t-sm mut">
+                                    Con este período, esta búsqueda y estas facetas no queda ninguna
+                                    fila. Sacá una condición para volver a ver el listado.
                                 </p>
+                                <button type="button" className="btn btn--linea btn--sm" onClick={limpiar}>
+                                    <RotateCcw size={14} />
+                                    Limpiar todo
+                                </button>
                             </div>
-                        )}
-                        {visibles.map(fila => (
-                            <button key={`${fila.tipo}-${fila.id}`} type="button" className="dc-trow"
-                                style={{ gridTemplateColumns: grid }} onClick={() => onAbrirFila(fila)}>
-                                {def.cols.map(c => <Celda key={c.key} fila={fila} col={c} />)}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="ln-t-caption ln-muted-40 dc-num" style={{ marginTop: 12 }}>
-                        mostrando {visibles.length} de {filtradas.length}
-                    </div>
-
-                    {tabla === 'ventas' && <TotalesVentas totales={totales} alcance={alcanceTexto} />}
-                    {tabla === 'leads' && <TotalesLeads totales={totales} alcance={alcanceTexto} />}
-                    {(tabla === 'agendas' || tabla === 'generadas') &&
-                        <TotalesAgendas totales={totales} alcance={alcanceTexto} />}
+                        </div>
+                    ) : (
+                        <div className="tabla">
+                            <div className="tabla-cab" style={{ '--cols': plantilla }}>
+                                {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
+                            </div>
+                            {visibles.map(fila => (
+                                <div key={`${fila.tipo}-${fila.id}`} className="tabla-fila"
+                                    role="button" tabIndex={0} style={{ '--cols': plantilla }}
+                                    aria-label={`Abrir ${fila.cliente}`}
+                                    onClick={() => onAbrirFila(fila)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            onAbrirFila(fila);
+                                        }
+                                    }}>
+                                    {def.cols.map(c => (
+                                        // `data-h` es el rótulo que el CSS pinta a la izquierda de
+                                        // cada dato cuando la tabla se apila en móvil.
+                                        <div key={c.key} data-h={c.header}>
+                                            <Celda fila={fila} col={c} />
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </>
             )}
-        </div>
+        </section>
     );
 };
 
