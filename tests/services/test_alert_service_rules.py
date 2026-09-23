@@ -1,14 +1,21 @@
 """AlertService: el motor que decide cuándo disparar una alerta (evaluate_rules), cómo arma el mensaje
 (`_create_alert_record`) y cómo lo manda a Discord (`_send_to_discord`, con la llamada HTTP simulada:
 ver test_alert_service_metrics.py para cómo se calcula el valor de cada métrica).
+
+Todo lo que evalúa reglas corre con el reloj congelado: `evaluate_rules` arma la ventana del período
+a partir de "hoy", así que sin `freeze_time` el resultado dependía de la hora a la que alguien
+corriera la suite (y once tests se caían todas las noches, después de las 20:00 en UTC-4).
 """
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+from freezegun import freeze_time
 
 from app.models import Alert, AlertRule, FinancialSale, Integration
 from app.services.alert_service import AlertService
+
+HOY = '2026-09-22 15:00:00'  # 11:00 en America/La_Paz (UTC-4): sin ambiguedad de dia calendario
 
 
 def regla(db, metric='ventas', condition='>', value=1.0, period='7_days', scope_type='all', scope_value=None,
@@ -39,6 +46,7 @@ def sin_discord():
 
 # --- evaluate_rules: condicion y creacion de la alerta --------------------------------------------
 
+@freeze_time(HOY)
 def test_una_regla_desactivada_no_se_evalua(db):
     regla(db, condition='>', value=0.0, is_active=False)
     venta_completada(db)
@@ -47,6 +55,7 @@ def test_una_regla_desactivada_no_se_evalua(db):
     assert Alert.query.count() == 0
 
 
+@freeze_time(HOY)
 def test_condicion_mayor_dispara_cuando_el_valor_supera_el_limite(db):
     regla(db, metric='ventas', condition='>', value=1.0)
     venta_completada(db)
@@ -56,6 +65,7 @@ def test_condicion_mayor_dispara_cuando_el_valor_supera_el_limite(db):
     assert Alert.query.count() == 1
 
 
+@freeze_time(HOY)
 def test_condicion_mayor_no_dispara_si_no_supera_el_limite(db):
     regla(db, metric='ventas', condition='>', value=5.0)
     venta_completada(db)
@@ -64,6 +74,7 @@ def test_condicion_mayor_no_dispara_si_no_supera_el_limite(db):
     assert Alert.query.count() == 0
 
 
+@freeze_time(HOY)
 def test_condicion_menor_dispara_cuando_el_valor_cae_por_debajo(db):
     regla(db, metric='ventas', condition='<', value=5.0)
     venta_completada(db)  # 1 venta < 5
@@ -71,6 +82,7 @@ def test_condicion_menor_dispara_cuando_el_valor_cae_por_debajo(db):
     assert AlertService.evaluate_rules() == 1
 
 
+@freeze_time(HOY)
 def test_condicion_menor_no_dispara_si_no_cae_por_debajo(db):
     regla(db, metric='ventas', condition='<', value=1.0)
     venta_completada(db)
@@ -78,6 +90,7 @@ def test_condicion_menor_no_dispara_si_no_cae_por_debajo(db):
     assert AlertService.evaluate_rules() == 0
 
 
+@freeze_time(HOY)
 def test_la_alerta_creada_lleva_los_datos_de_la_regla(db):
     r = regla(db, metric='ventas', condition='>', value=0.0, severity='critical')
     venta_completada(db, monto=100.0)
@@ -92,6 +105,7 @@ def test_la_alerta_creada_lleva_los_datos_de_la_regla(db):
 
 # --- evaluate_rules: no duplicar la misma alerta en 24 horas --------------------------------------
 
+@freeze_time(HOY)
 def test_no_crea_una_alerta_duplicada_dentro_de_las_24_horas(db):
     r = regla(db, metric='ventas', condition='>', value=0.0)
     venta_completada(db)
@@ -104,6 +118,7 @@ def test_no_crea_una_alerta_duplicada_dentro_de_las_24_horas(db):
     assert Alert.query.count() == 1
 
 
+@freeze_time(HOY)
 def test_una_alerta_de_hace_mas_de_24_horas_no_impide_una_nueva(db):
     r = regla(db, metric='ventas', condition='>', value=0.0)
     venta_completada(db)
@@ -117,6 +132,7 @@ def test_una_alerta_de_hace_mas_de_24_horas_no_impide_una_nueva(db):
     assert Alert.query.count() == 2
 
 
+@freeze_time(HOY)
 def test_una_alerta_ya_resuelta_no_impide_una_nueva_aunque_sea_reciente(db):
     r = regla(db, metric='ventas', condition='>', value=0.0)
     venta_completada(db)
@@ -127,6 +143,7 @@ def test_una_alerta_ya_resuelta_no_impide_una_nueva_aunque_sea_reciente(db):
     assert AlertService.evaluate_rules() == 1
 
 
+@freeze_time(HOY)
 def test_una_alerta_activa_de_otra_regla_no_bloquea_esta(db):
     otra = regla(db, metric='ventas', condition='>', value=999.0, name='Otra regla')
     db.session.add(Alert(rule_id=otra.id, title='de otra regla', metric='ventas', severity='warning',
@@ -140,6 +157,7 @@ def test_una_alerta_activa_de_otra_regla_no_bloquea_esta(db):
 
 # --- evaluate_rules: notificar a Discord solo cuando corresponde ----------------------------------
 
+@freeze_time(HOY)
 def test_notify_discord_true_dispara_el_envio(db, sin_discord):
     regla(db, metric='ventas', condition='>', value=0.0, notify_discord=True)
     venta_completada(db)
@@ -150,6 +168,7 @@ def test_notify_discord_true_dispara_el_envio(db, sin_discord):
     assert sin_discord.call_args[0][0].id == Alert.query.one().id
 
 
+@freeze_time(HOY)
 def test_notify_discord_false_no_envia_nada(db, sin_discord):
     regla(db, metric='ventas', condition='>', value=0.0, notify_discord=False)
     venta_completada(db)
@@ -159,6 +178,7 @@ def test_notify_discord_false_no_envia_nada(db, sin_discord):
     sin_discord.assert_not_called()
 
 
+@freeze_time(HOY)
 def test_una_alerta_que_no_se_dispara_no_intenta_avisar_a_discord(db, sin_discord):
     regla(db, metric='ventas', condition='>', value=999.0, notify_discord=True)
     venta_completada(db)
@@ -170,6 +190,7 @@ def test_una_alerta_que_no_se_dispara_no_intenta_avisar_a_discord(db, sin_discor
 
 # --- evaluate_rules: una regla que revienta no frena a las demas ----------------------------------
 
+@freeze_time(HOY)
 def test_una_metrica_desconocida_da_0_sin_romper_la_evaluacion_de_las_demas(db):
     regla(db, metric='metrica-que-no-existe', condition='>', value=1.0, name='Metrica rara')
     regla(db, metric='ventas', condition='>', value=0.0, name='Sana')
@@ -183,6 +204,7 @@ def test_una_metrica_desconocida_da_0_sin_romper_la_evaluacion_de_las_demas(db):
     assert Alert.query.one().metric == 'ventas'
 
 
+@freeze_time(HOY)
 def test_una_excepcion_al_evaluar_una_regla_no_frena_a_las_demas(db):
     regla(db, metric='ventas', condition='>', value=-1.0, name='Va a reventar')
     regla(db, metric='ventas', condition='>', value=0.0, name='Sana')
@@ -206,6 +228,7 @@ def test_una_excepcion_al_evaluar_una_regla_no_frena_a_las_demas(db):
 
 # --- evaluate_rules: vs_previous_week ---------------------------------------------------------
 
+@freeze_time(HOY)
 def test_vs_previous_week_compara_el_porcentaje_de_cambio_contra_la_semana_anterior(db):
     regla(db, metric='ventas', condition='>', value=50.0, period='vs_previous_week')
     # Semana anterior (dias 8-14 antes de hoy): 1 venta. Semana actual (7 dias): 3 ventas.
@@ -220,6 +243,7 @@ def test_vs_previous_week_compara_el_porcentaje_de_cambio_contra_la_semana_anter
     assert Alert.query.one().current_value == pytest.approx(200.0)
 
 
+@freeze_time(HOY)
 def test_vs_previous_week_sin_ninguna_venta_la_semana_anterior_es_100_por_ciento_si_hay_algo_ahora(db):
     regla(db, metric='ventas', condition='>', value=50.0, period='vs_previous_week')
     venta_completada(db, fecha=datetime.utcnow())
@@ -228,6 +252,7 @@ def test_vs_previous_week_sin_ninguna_venta_la_semana_anterior_es_100_por_ciento
     assert Alert.query.one().current_value == 100.0
 
 
+@freeze_time(HOY)
 def test_vs_previous_week_sin_ninguna_venta_en_ninguna_semana_es_cero(db):
     regla(db, metric='ventas', condition='>', value=-1.0, period='vs_previous_week')
 

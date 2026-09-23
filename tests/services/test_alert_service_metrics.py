@@ -5,12 +5,15 @@ inversión, agendas, ventas o cash collect en un rango de fechas. `_calculate_sp
 gasto declarado por período entre los anuncios que corresponden. Ver test_alert_service_rules.py para el
 motor que decide cuándo disparar una alerta.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 import pytest
+from freezegun import freeze_time
 
 from app.models import Ad, AdPeriodSpend, AdSet, Campaign, FinancialAgenda, FinancialSale, LeadAnswer, ManychatLead
 from app.services.alert_service import AlertService
+
+HOY = '2026-09-22 15:00:00'  # 11:00 en America/La_Paz (UTC-4): sin ambiguedad de dia calendario
 
 
 @pytest.fixture()
@@ -319,16 +322,16 @@ def test_spend_de_la_campana_se_reparte_entre_todos_sus_anuncios(db, campana):
     assert AlertService._calculate_spend_for_ads([ad1], date(2026, 9, 1), date(2026, 9, 7)) == 50.0
 
 
+@freeze_time(HOY)
 def test_sin_ningun_ad_period_spend_cae_al_prorrateo_historico(db, campana):
     _, adset = campana
-    ad = crear_ad(db, adset, total_spend=100.0, creado=datetime.utcnow() - timedelta(days=9))
+    # Creado el 13 a las 11:00 del negocio: 10 dias de vida contando el 22, que es hoy.
+    ad = crear_ad(db, adset, total_spend=100.0, creado=datetime(2026, 9, 13, 15, 0))
 
-    total = AlertService._calculate_spend_for_ads([ad], date.today() - timedelta(days=6), date.today())
+    total = AlertService._calculate_spend_for_ads([ad], date(2026, 9, 16), date(2026, 9, 22))
 
-    # tasa diaria = 100 / dias_de_vida; * 7 dias pedidos (rango de 7 dias inclusive)
-    dias_de_vida = (date.today() - (date.today() - timedelta(days=9))).days + 1
-    esperado = (100.0 / dias_de_vida) * 7
-    assert total == pytest.approx(esperado)
+    # tasa diaria = 100 / 10 dias de vida; * 7 dias pedidos (rango de 7 dias inclusive)
+    assert total == pytest.approx((100.0 / 10) * 7)
 
 
 def test_una_lista_vacia_de_ads_da_gasto_cero(db):
