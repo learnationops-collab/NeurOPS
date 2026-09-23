@@ -113,6 +113,40 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    /* Misma entrada que el tooltip de las métricas (`dcTipIn`): los menús del header y el panel
+       de Filtros son la misma familia de superficie flotante, y apareciendo de golpe se sentían
+       como un salto. 160ms, dentro del rango de 150–180ms que el diseño fija para los hovers. */
+    animation: dcPopIn .16s ease both;
+    transform-origin: top right;
+}
+
+@keyframes dcPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Movimiento reducido: la entrada se limita a la opacidad. */
+@media (prefers-reduced-motion: reduce) {
+    .dc-pop {
+        animation-name: dcPopFade;
+    }
+
+    @keyframes dcPopFade {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
 }
 
 .dc-pop-item {
@@ -914,10 +948,12 @@
     cursor: pointer;
     transition: background .15s ease, color .15s ease;
 }
+
 .dc-textbtn:hover {
     background: var(--bg-element);
     color: var(--text-on-surface);
 }
+
 .dc-textbtn:disabled {
     opacity: .45;
     cursor: not-allowed;
