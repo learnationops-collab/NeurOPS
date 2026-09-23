@@ -230,3 +230,165 @@
 
 .dc-shell .secciones{display:grid;gap:var(--s4)}
 .dc-shell .vista{display:grid;gap:var(--s4);min-width:0}
+
+/* ============================================================
+   6 · SUPERFICIES
+   ============================================================ */
+.dc-shell .panel{background:var(--mat-1);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-main);padding:var(--s6);min-width:0}
+.dc-shell .panel-cab{display:flex;align-items:flex-start;gap:var(--s3);margin-bottom:var(--s4);flex-wrap:wrap}
+.dc-shell .panel-cab .t-h3{min-width:0}
+.dc-shell .panel-cab-der{margin-left:auto;display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .tarjeta{background:var(--bg-element);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-control);padding:var(--s4);min-width:0}
+.dc-shell .hundido{background:var(--hundido);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-control)}
+.dc-shell .grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.dc-shell .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1000px){.dc-shell .grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .grid-2{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
+.dc-shell .grid-2 > *{min-width:0}
+.dc-shell .fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .sep{height:1px;background:var(--border-subtle);border:0;margin:var(--s4) 0}
+
+/* ============================================================
+   7 · CONTROLES
+   ============================================================ */
+.dc-shell .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  height:44px;padding:0 var(--s4);border-radius:var(--radius-pill);
+  font-size:13px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid transparent;white-space:nowrap;color:var(--text-muted);
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease,
+             transform .18s var(--spring)}
+.dc-shell .btn svg{width:16px;height:16px}
+.dc-shell .btn:active:not(:disabled){transform:scale(.97)}
+.dc-shell .btn:disabled{opacity:.4;cursor:not-allowed}
+.dc-shell .btn--cta{background:var(--brand-secondary);color:var(--on-brand);box-shadow:var(--shadow-brand)}
+.dc-shell .btn--linea{border-color:var(--border-control);color:var(--text-muted)}
+.dc-shell .btn--linea:hover{color:var(--text-on-surface);border-color:var(--text-muted)}
+.dc-shell .btn--sm{height:34px;padding:0 var(--s3);font-size:11px;letter-spacing:.12em}
+
+.dc-shell .ibtn{width:40px;height:40px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);
+  background:var(--bg-input);border:1px solid var(--border-subtle);
+  transition:color .18s ease,border-color .18s ease,transform .18s var(--spring)}
+.dc-shell .ibtn svg{width:17px;height:17px}
+.dc-shell .ibtn:hover{color:var(--text-on-surface);border-color:var(--border-control)}
+.dc-shell .ibtn:active{transform:scale(.93)}
+.dc-shell .ibtn--sm{width:32px;height:32px}
+.dc-shell .ibtn--sm svg{width:15px;height:15px}
+
+.dc-shell .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;
+  border-radius:var(--radius-pill);font-size:11px;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;max-width:100%;
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  color:var(--c);font-variant-numeric:tabular-nums}
+.dc-shell .chip svg{width:14px;height:14px}
+.dc-shell button.chip{transition:background-color .16s ease,border-color .16s ease}
+.dc-shell button.chip:hover{background:color-mix(in srgb,var(--c) 24%,transparent);
+  border-color:color-mix(in srgb,var(--c) 54%,transparent)}
+
+.dc-shell .pastilla{display:inline-flex;align-items:center;gap:var(--s2);height:38px;padding:0 14px;
+  border-radius:var(--radius-pill);border:1px solid var(--border-control);
+  background:var(--mat-1);color:var(--text-on-surface);
+  font-size:13px;font-weight:600;white-space:nowrap;
+  transition:background-color .16s ease,border-color .16s ease}
+.dc-shell .pastilla:hover{border-color:var(--text-muted);background:var(--bg-element)}
+.dc-shell .pastilla svg{width:15px;height:15px;color:var(--text-muted)}
+.dc-shell .pastilla[aria-expanded="true"]{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--on{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--sm{height:34px;padding:0 13px;font-size:12.5px}
+
+.dc-shell .tabs{display:inline-flex;align-items:center;gap:var(--s1);padding:5px;border-radius:var(--radius-pill);
+  background:var(--mat-0);border:1px solid var(--border-main);max-width:100%;
+  overflow-x:auto;scrollbar-width:none}
+.dc-shell .tabs::-webkit-scrollbar{display:none}
+.dc-shell .tab{height:36px;padding:0 18px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:13.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .tab svg{width:15px;height:15px}
+.dc-shell .tab:hover{color:var(--text-on-surface)}
+.dc-shell .tab[aria-selected="true"],
+.dc-shell .tab[aria-pressed="true"]{
+  background:var(--text-on-surface);color:var(--on-inverso);font-weight:700}
+.dc-shell .tab--sm{height:32px;padding:0 16px;font-size:12.5px;gap:7px}
+.dc-shell .tab--sm svg{width:13px;height:13px}
+.dc-shell .tab .punto{width:7px;height:7px;border-radius:var(--radius-pill);display:inline-block}
+.dc-shell .tab .cuenta{font-size:11px;font-weight:900;opacity:.6;font-variant-numeric:tabular-nums}
+
+.dc-shell .seg{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:var(--radius-pill);
+  background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .seg button{height:28px;padding:0 12px;border-radius:var(--radius-pill);
+  font-size:11.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .seg button[aria-pressed="true"]{background:var(--mat-3);color:var(--text-on-surface);font-weight:700}
+
+/* Menu desplegable */
+.dc-shell .menu{position:absolute;top:46px;z-index:70;min-width:214px;max-width:min(300px,calc(100vw - 32px));
+  padding:var(--s2);background:var(--bg-flotante);
+  border:1px solid var(--border-control);border-radius:20px;box-shadow:var(--shadow-main)}
+.dc-shell .menu--der{right:0}
+.dc-shell .menu-item{display:flex;align-items:baseline;gap:var(--s2);width:100%;text-align:left;
+  padding:10px 14px;border-radius:12px;border:1px solid transparent;
+  font-size:13px;font-weight:600;color:var(--text-muted);
+  transition:background-color .15s ease,color .15s ease}
+.dc-shell .menu-item:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .menu-item[aria-checked="true"]{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .menu-item .rango{margin-left:auto;font-size:11.5px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .menu-caja{width:16px;height:16px;flex-shrink:0;border-radius:5px;
+  display:inline-flex;align-items:center;justify-content:center;align-self:center;
+  border:1px solid var(--border-control);color:var(--on-brand);
+  font-size:10px;font-weight:900;transition:background-color .15s ease,border-color .15s ease}
+.dc-shell .menu-item[aria-checked="true"] .menu-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .menu-item .cuenta{margin-left:auto;font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+
+/* Input */
+.dc-shell .busca{display:flex;align-items:center;gap:var(--s2);height:40px;padding:0 14px;
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);flex:1 1 220px;min-width:0;
+  transition:border-color .16s ease}
+.dc-shell .busca:focus-within{border-color:var(--focus-blue)}
+.dc-shell .busca input:focus-visible,
+.dc-shell .entrada input:focus-visible,
+.dc-shell .campo input:focus-visible,
+.dc-shell .area:focus-visible{box-shadow:none;outline:none}
+.dc-shell .busca svg{width:15px;height:15px;color:var(--text-muted-40)}
+.dc-shell .busca input{flex:1;min-width:0;border:0;background:none;outline:none;
+  font-size:13.5px;font-weight:600}
+.dc-shell .busca input::placeholder{color:var(--text-muted-40);font-weight:600}
+
+.dc-shell .slider{width:100%;height:18px;accent-color:var(--brand-secondary);cursor:pointer;
+  background:none;margin:0}
+.dc-shell .slider:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--radius-pill)}
+
+/* Tooltip */
+.dc-shell .tip{position:relative;display:inline-flex;align-items:center}
+.dc-shell .tip-dot{width:18px;height:18px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-subtle);background:var(--bg-input);
+  color:var(--text-muted-40);font-size:10px;font-weight:900;cursor:help;
+  transition:color .16s ease,border-color .16s ease,background-color .16s ease}
+.dc-shell .tip:hover .tip-dot,
+.dc-shell .tip:focus-within .tip-dot{color:var(--text-on-surface);
+  border-color:var(--border-control);background:var(--bg-element)}
+.dc-shell .tip-burbuja{position:absolute;top:28px;left:-10px;z-index:80;
+  width:max-content;max-width:min(288px,calc(100vw - 32px));
+  padding:var(--s3) 14px;background:var(--bg-flotante);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);border-radius:16px;
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.2);color:var(--text-on-surface);
+  font-size:12.5px;font-weight:400;line-height:1.5;letter-spacing:0;
+  text-transform:none;text-align:left;pointer-events:none;white-space:normal;
+  display:none}
+.dc-shell .tip-burbuja b{display:block;margin-bottom:5px;font-size:10px;font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--brand-secondary)}
+.dc-shell .tip-burbuja::before{content:"";position:absolute;top:-5px;left:14px;
+  width:9px;height:9px;transform:rotate(45deg);
+  background:var(--bg-flotante);border-left:1px solid var(--sheen);border-top:1px solid var(--sheen)}
+.dc-shell .tip--der .tip-burbuja{left:auto;right:-10px}
+.dc-shell .tip--der .tip-burbuja::before{left:auto;right:14px}
+.dc-shell .tip:hover .tip-burbuja,
+.dc-shell .tip:focus-within .tip-burbuja{display:block;animation:dcTipIn .16s ease-out both}
