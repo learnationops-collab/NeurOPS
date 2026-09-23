@@ -1,580 +1,798 @@
 /* ============================================================================
-   Dashboard comercial — estilos propios.
+   DASHBOARD COMERCIAL — hoja de estilo unica del tablero.
 
-   El design system Learnation (components/learnation-ds/learnation-ds.css) trae
-   los tokens y los componentes genéricos (.ln-*). Acá viven SOLO las piezas que
-   el prototipo arma a mano y que el DS no tiene: el dock, las tabs segmentadas,
-   las píldoras del header, los tooltips, el embudo, el ranking y el wizard.
+   Portada 1:1 de la referencia visual (artifact autonomo del prototipo), con
+   tres adaptaciones obligatorias para vivir dentro de la app:
 
-   Todos los valores están calcados del prototipo (`Dashboard Comercial.dc.html`,
-   clase Component): alturas, radios, tiempos y curvas. No inventar valores acá —
-   si hace falta uno nuevo, sale del prototipo o de un token del DS.
+   1 · SOLO TEMA OSCURO. La referencia traia ademas un tema claro entero, con
+       sus propias consultas de esquema de color y su atributo de tema.
+       No se porta ninguna de las dos: el producto es oscuro por decision de
+       producto, y aca no queda ni un selector del tema claro.
 
-   Todo cuelga de `.dc-shell`, que es donde viven los tokens y la única zona de la
-   app exenta del !important de tipografía global (ver index.html).
+   2 · LOS TOKENS VIVEN EN `.dc-shell`, NUNCA EN `:root`. El resto de la app
+       define varios de estos mismos nombres (`--brand-secondary`,
+       `--text-muted`, ...) en `:root` con otros valores; declararlos ahi le
+       pisaria el tema a toda la aplicacion.
+
+   3 · LAS REGLAS "DE PAGINA" DE LA REFERENCIA VAN ACOTADAS A `.dc-shell`.
+       La referencia usaba selectores desnudos (`html,body`, `button`, `p`,
+       `svg`, `:focus-visible`, `*`). Un `button{background:none;border:0}`
+       global rompe los botones de todo el panel, asi que cada uno de esos
+       selectores quedo colgado de `.dc-shell`.
+
+   `.dc-shell` es, ademas, la unica zona de la app exenta del `!important` de
+   tipografia global que imponen `frontend/index.html` y `frontend/src/index.css`
+   (ambos excluyen `.dc-shell` y `.dc-shell *` selector por selector). Por eso
+   —y solo aca dentro— los pesos 700/800/900 y el `letter-spacing` de esta hoja
+   se renderizan de verdad. No hace falta tocar esos dos archivos.
+
+   Todo lo que sigue cuelga de `.dc-shell`: los nombres de clase son los de la
+   referencia (`.panel`, `.kpi`, `.fun`, `.dock`, `.tdatos`, `.rk-*`, `.mapa-*`,
+   `.config-*`, ...) y varios de ellos —`.panel`, `.grid`, `.chip`, `.btn`,
+   `.modal`, `.avatar`, `.area`— ya existen en el resto del panel: el prefijo
+   del shell es lo que evita la colision.
    ============================================================================ */
 
-.dc-shell {
-    min-height: 100vh;
-    /* 116px abajo: el dock es fijo y taparía el final del contenido. */
-    padding: 22px 22px 116px;
-    background: var(--gradient-page);
-    color: var(--text-on-surface);
+/* ============================================================
+   1 · TOKENS — el producto es oscuro por conviccion.
+   Se dobla la clase (`.dc-shell.dc-shell`) a proposito:
+   `learnation-ds/learnation-ds.css` se importa DESPUES de este archivo y
+   define varios de estos mismos tokens sobre `.dc-shell`. Con la misma
+   especificidad ganaria el DS y la paleta de la referencia (rampas de
+   programa, anillo de foco) quedaria a medias.
+   ============================================================ */
+.dc-shell.dc-shell{
+  color-scheme: dark;
+
+  --brand-secondary:#FF3FA4;
+  --brand-secondary-light:#FF6AD5;
+  --brand-secondary-surface:rgba(255,63,164,.10);
+  --brand-secondary-border:rgba(255,63,164,.35);
+  --brand-primary:#1323C6;
+  --brand-navy:#0A0E3D;
+  --ink:#020617;
+  --on-brand:#020617;
+  --on-state:#020617;
+  --on-inverso:#020617;
+
+  --mat-0:rgba(255,255,255,.02);
+  --mat-1:rgba(255,255,255,.04);
+  --mat-3:rgba(255,255,255,.12);
+  --hundido:rgba(0,0,0,.34);
+  --bg-surface:rgba(2,6,23,.90);
+  --bg-flotante:#0B1030;
+  --bg-element:rgba(255,255,255,.08);
+  --bg-element-hover:rgba(255,255,255,.12);
+  --bg-input:rgba(0,0,0,.30);
+  --bg-scrim:rgba(2,6,23,.70);
+  --border-main:rgba(255,255,255,.15);
+  --border-subtle:rgba(255,255,255,.05);
+  --border-control:rgba(255,255,255,.38);
+  --sheen:rgba(255,255,255,.10);
+  --hueco:rgba(255,255,255,.12);
+
+  --text-on-surface:#FFFFFF;
+  --text-muted:rgba(255,255,255,.60);
+  --text-muted-40:rgba(255,255,255,.40);
+
+  --success:#2FBF8F; --success-surface:#071A24; --success-border:#10413D;
+  --warning:#D9A441; --warning-surface:#1A171C; --warning-border:#473924;
+  --error:#E85C4A;   --error-surface:#1B0F1D;   --error-border:#4C2227;
+  --info:#4E8BD8;    --info-surface:#0A152C;    --info-border:#1A3155;
+  --idle:#7F8CA8;    --idle-surface:#0E1326;    --idle-border:#252C42;
+
+  --prog-ace:#60A5FA; --prog-elite-a:#E86FB3; --prog-elite-b:#FF6AD5; --prog-free:#94A3B8;
+
+  /* Categorica de formas de pago: identidad, no estado.
+     Validada con el script de dataviz: banda de luminosidad, croma,
+     separacion CVD y contraste contra la superficie del tema. */
+  --cat-1:#3B9555; --cat-2:#317DE9; --cat-3:#C06F0A; --cat-4:#D6459B;
+  --on-cat:#FFFFFF;
+
+  /* Rampa secuencial del embudo: azul de marca -> magenta, luminosidad monotona */
+  --ramp-a:#4C63E8; --ramp-b:#FF6AD5;
+
+  --radius-main:32px;
+  --radius-control:16px;
+  --radius-pill:999px;
+  --shadow-main:0 8px 32px 0 rgba(0,0,0,.40);
+  --shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
+  --focus-blue:#5B7CFF; --focus-ring:0 0 0 3px rgba(91,124,255,.55);
+
+  /* --s5 no existia en la referencia y `.mapa` lo usa: sin el, ese
+     `padding-top` se caia entero. Sigue la escala de 4px. */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px;
+  --s12:48px; --s16:64px; --s20:80px;
+
+  --font:'Montserrat','Helvetica Neue',Arial,sans-serif;
+  --gradient-page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --gradient-brand:linear-gradient(135deg,#FF3FA4 0%,#FF6AD5 100%);
+  --spring:cubic-bezier(.32,.72,0,1);
+  --crecer:cubic-bezier(.22,.7,.2,1);
+
+  --humo-blend:screen; --humo-op:.42; --humo-i-op:.62;
 }
 
-.dc-wrap {
-    max-width: 1340px;
-    margin: 0 auto;
+/* ============================================================
+   2 · BASE — lo que la referencia ponia en `html,body` y en selectores
+   de elemento, acotado al tablero.
+   ============================================================ */
+.dc-shell,
+.dc-shell *,
+.dc-shell *::before,
+.dc-shell *::after{box-sizing:border-box}
+
+.dc-shell{
+  background:var(--gradient-page) fixed,#020617;
+  background-attachment:fixed;
+  color:var(--text-on-surface);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  /* El dock es `position:fixed`: sin este colchon tapa el final del contenido.
+     La referencia lo ponia en `.wrap` (ahi `.wrap` ERA la pagina); aca el hueco
+     vive una sola vez y vive en el shell, que es el contenedor de scroll. */
+  padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
 }
 
-.dc-shell .ln-t-h1 {
-    letter-spacing: -.02em;
+.dc-shell p{margin:0}
+.dc-shell button,
+.dc-shell input,
+.dc-shell select,
+.dc-shell textarea{font:inherit;color:inherit}
+.dc-shell button{background:none;border:0;padding:0;cursor:pointer}
+.dc-shell :focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.dc-shell svg{display:block;flex-shrink:0}
+.dc-shell [hidden]{display:none!important}
+
+/* ============================================================
+   3 · TIPOGRAFIA — pesos 900 y tracking reales: `.dc-shell` esta exento
+   del !important global (ver cabecera).
+   ============================================================ */
+.dc-shell .t-h1{font-size:clamp(34px,4.6vw,48px);font-weight:900;letter-spacing:-.025em;line-height:1;margin:0}
+.dc-shell .t-h2{font-size:clamp(24px,2.6vw,30px);font-weight:900;letter-spacing:-.025em;line-height:1.1;margin:0}
+.dc-shell .t-h3{font-size:20px;font-weight:900;letter-spacing:-.025em;line-height:1.2;margin:0}
+.dc-shell .t-eyebrow{font-size:11px;font-weight:900;letter-spacing:.28em;text-transform:uppercase;color:var(--text-muted);margin:0}
+.dc-shell .t-rotulo{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin:0}
+.dc-shell .t-body{font-size:16px;line-height:1.55;margin:0}
+.dc-shell .t-sm{font-size:14px;line-height:1.5;margin:0}
+.dc-shell .t-cap{font-size:12px;line-height:1.45;margin:0}
+.dc-shell .num{font-variant-numeric:tabular-nums}
+.dc-shell .mut{color:var(--text-muted)}
+.dc-shell .mut40{color:var(--text-muted-40)}
+.dc-shell .trunc{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ============================================================
+   4 · EL HUMO
+   ============================================================ */
+.dc-shell .caja{position:relative;isolation:isolate}
+.dc-shell .humo{position:absolute;inset:0;z-index:-1;border-radius:inherit;overflow:hidden;
+  opacity:var(--humo-op);pointer-events:none}
+.dc-shell .humo i{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;
+  filter:blur(30px);mix-blend-mode:var(--humo-blend);opacity:var(--humo-i-op)}
+.dc-shell .humo i:nth-child(1){left:-14%;top:-24%;background:var(--h1,var(--brand-secondary));animation:dcAura1 21s ease-in-out infinite}
+.dc-shell .humo i:nth-child(2){left:24%;top:34%;background:var(--h2,var(--brand-primary));animation:dcAura2 25s ease-in-out infinite}
+.dc-shell .humo i:nth-child(3){left:58%;top:-34%;background:var(--h3,var(--brand-secondary-light));animation:dcAura3 29s ease-in-out infinite}
+.dc-shell .humo i:nth-child(4){left:82%;top:22%;background:var(--h4,var(--brand-navy));animation:dcAura2 31s ease-in-out infinite reverse}
+.dc-shell .kpi > .humo i,
+.dc-shell .humo--tarjeta i{filter:blur(56px)}
+.dc-shell .humo--modal{opacity:calc(var(--humo-op) * .72)}
+.dc-shell .humo--barra i{filter:blur(16px)}
+.dc-shell .humo--barra i:nth-child(1){animation-duration:13s}
+.dc-shell .humo--barra i:nth-child(2){animation-duration:17s}
+.dc-shell .humo--barra i:nth-child(3){animation-duration:19s}
+.dc-shell .humo--barra i:nth-child(4){animation-duration:23s}
+.dc-shell .humo--modal i{filter:blur(56px)}
+.dc-shell .humo--hero i{filter:blur(64px)}
+.dc-shell .humo--hero i:nth-child(1){animation-duration:19s}
+.dc-shell .humo--hero i:nth-child(2){animation-duration:26s}
+.dc-shell .humo--hero i:nth-child(3){animation-duration:31s}
+.dc-shell .humo--hero i:nth-child(4){animation-duration:35s}
+
+/* Los nombres de @keyframes son globales aunque las reglas esten acotadas:
+   por eso van con prefijo `dc`, para no cruzarse con animaciones de la app. */
+@keyframes dcAura1{0%,100%{transform:translate(0,0) scale(1);opacity:.5}
+  33%{transform:translate(90%,28%) scale(1.3);opacity:.8}
+  66%{transform:translate(38%,-24%) scale(.85);opacity:.4}}
+@keyframes dcAura2{0%,100%{transform:translate(0,0) scale(1.1);opacity:.45}
+  40%{transform:translate(-70%,24%) scale(.82);opacity:.75}
+  75%{transform:translate(52%,-18%) scale(1.28);opacity:.55}}
+@keyframes dcAura3{0%,100%{transform:translate(0,0) scale(.9);opacity:.4}
+  30%{transform:translate(-44%,32%) scale(1.22);opacity:.7}
+  70%{transform:translate(-92%,-14%) scale(1);opacity:.45}}
+@keyframes dcTipIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes dcModalIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .humo i{animation:none}
+  .dc-shell,
+  .dc-shell *{transition-duration:.01ms!important}
 }
 
-/* Todas las cifras del tablero, sin excepción. */
-.dc-num {
-    font-variant-numeric: tabular-nums;
+/* ============================================================
+   5 · LAYOUT
+   ============================================================ */
+/* El hueco inferior para el dock lo pone `.dc-shell` (seccion 2): aca seria
+   el segundo y quedaria el doble de aire al final del tablero. */
+.dc-shell .wrap{max-width:1340px;margin:0 auto;padding-inline:clamp(16px,3vw,22px);
+  padding-block:var(--s6) 0}
+.dc-shell .tope{display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s6);flex-wrap:wrap}
+.dc-shell .tope-id{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .tope h1{letter-spacing:-.025em}
+.dc-shell .tope-meta{margin-left:auto;text-align:right;min-width:0}
+
+.dc-shell .barra{display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+  justify-content:space-between;margin-bottom:var(--s6)}
+.dc-shell .barra > *{min-width:0;max-width:100%}
+.dc-shell #tabs-slot > .fila{min-width:0;max-width:100%}
+.dc-shell .barra-der{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);position:relative}
+
+.dc-shell .secciones{display:grid;gap:var(--s4)}
+.dc-shell .vista{display:grid;gap:var(--s4);min-width:0}
+
+/* ============================================================
+   6 · SUPERFICIES
+   ============================================================ */
+.dc-shell .panel{background:var(--mat-1);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-main);padding:var(--s6);min-width:0}
+.dc-shell .panel-cab{display:flex;align-items:flex-start;gap:var(--s3);margin-bottom:var(--s4);flex-wrap:wrap}
+.dc-shell .panel-cab .t-h3{min-width:0}
+.dc-shell .panel-cab-der{margin-left:auto;display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .tarjeta{background:var(--bg-element);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-control);padding:var(--s4);min-width:0}
+.dc-shell .hundido{background:var(--hundido);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-control)}
+.dc-shell .grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.dc-shell .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1000px){.dc-shell .grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .grid-2{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
+.dc-shell .grid-2 > *{min-width:0}
+.dc-shell .fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .sep{height:1px;background:var(--border-subtle);border:0;margin:var(--s4) 0}
+
+/* ============================================================
+   7 · CONTROLES
+   ============================================================ */
+.dc-shell .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  height:44px;padding:0 var(--s4);border-radius:var(--radius-pill);
+  font-size:13px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid transparent;white-space:nowrap;color:var(--text-muted);
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease,
+             transform .18s var(--spring)}
+.dc-shell .btn svg{width:16px;height:16px}
+.dc-shell .btn:active:not(:disabled){transform:scale(.97)}
+.dc-shell .btn:disabled{opacity:.4;cursor:not-allowed}
+.dc-shell .btn--cta{background:var(--brand-secondary);color:var(--on-brand);box-shadow:var(--shadow-brand)}
+.dc-shell .btn--linea{border-color:var(--border-control);color:var(--text-muted)}
+.dc-shell .btn--linea:hover{color:var(--text-on-surface);border-color:var(--text-muted)}
+.dc-shell .btn--sm{height:34px;padding:0 var(--s3);font-size:11px;letter-spacing:.12em}
+
+.dc-shell .ibtn{width:40px;height:40px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);
+  background:var(--bg-input);border:1px solid var(--border-subtle);
+  transition:color .18s ease,border-color .18s ease,transform .18s var(--spring)}
+.dc-shell .ibtn svg{width:17px;height:17px}
+.dc-shell .ibtn:hover{color:var(--text-on-surface);border-color:var(--border-control)}
+.dc-shell .ibtn:active{transform:scale(.93)}
+.dc-shell .ibtn--sm{width:32px;height:32px}
+.dc-shell .ibtn--sm svg{width:15px;height:15px}
+
+.dc-shell .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;
+  border-radius:var(--radius-pill);font-size:11px;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;max-width:100%;
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  color:var(--c);font-variant-numeric:tabular-nums}
+.dc-shell .chip svg{width:14px;height:14px}
+.dc-shell button.chip{transition:background-color .16s ease,border-color .16s ease}
+.dc-shell button.chip:hover{background:color-mix(in srgb,var(--c) 24%,transparent);
+  border-color:color-mix(in srgb,var(--c) 54%,transparent)}
+
+.dc-shell .pastilla{display:inline-flex;align-items:center;gap:var(--s2);height:38px;padding:0 14px;
+  border-radius:var(--radius-pill);border:1px solid var(--border-control);
+  background:var(--mat-1);color:var(--text-on-surface);
+  font-size:13px;font-weight:600;white-space:nowrap;
+  transition:background-color .16s ease,border-color .16s ease}
+.dc-shell .pastilla:hover{border-color:var(--text-muted);background:var(--bg-element)}
+.dc-shell .pastilla svg{width:15px;height:15px;color:var(--text-muted)}
+.dc-shell .pastilla[aria-expanded="true"]{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--on{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--sm{height:34px;padding:0 13px;font-size:12.5px}
+
+.dc-shell .tabs{display:inline-flex;align-items:center;gap:var(--s1);padding:5px;border-radius:var(--radius-pill);
+  background:var(--mat-0);border:1px solid var(--border-main);max-width:100%;
+  overflow-x:auto;scrollbar-width:none}
+.dc-shell .tabs::-webkit-scrollbar{display:none}
+.dc-shell .tab{height:36px;padding:0 18px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:13.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .tab svg{width:15px;height:15px}
+.dc-shell .tab:hover{color:var(--text-on-surface)}
+.dc-shell .tab[aria-selected="true"],
+.dc-shell .tab[aria-pressed="true"]{
+  background:var(--text-on-surface);color:var(--on-inverso);font-weight:700}
+.dc-shell .tab--sm{height:32px;padding:0 16px;font-size:12.5px;gap:7px}
+.dc-shell .tab--sm svg{width:13px;height:13px}
+.dc-shell .tab .punto{width:7px;height:7px;border-radius:var(--radius-pill);display:inline-block}
+.dc-shell .tab .cuenta{font-size:11px;font-weight:900;opacity:.6;font-variant-numeric:tabular-nums}
+
+.dc-shell .seg{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:var(--radius-pill);
+  background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .seg button{height:28px;padding:0 12px;border-radius:var(--radius-pill);
+  font-size:11.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .seg button[aria-pressed="true"]{background:var(--mat-3);color:var(--text-on-surface);font-weight:700}
+
+/* Menu desplegable */
+.dc-shell .menu{position:absolute;top:46px;z-index:70;min-width:214px;max-width:min(300px,calc(100vw - 32px));
+  padding:var(--s2);background:var(--bg-flotante);
+  border:1px solid var(--border-control);border-radius:20px;box-shadow:var(--shadow-main)}
+.dc-shell .menu--der{right:0}
+.dc-shell .menu-item{display:flex;align-items:baseline;gap:var(--s2);width:100%;text-align:left;
+  padding:10px 14px;border-radius:12px;border:1px solid transparent;
+  font-size:13px;font-weight:600;color:var(--text-muted);
+  transition:background-color .15s ease,color .15s ease}
+.dc-shell .menu-item:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .menu-item[aria-checked="true"]{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .menu-item .rango{margin-left:auto;font-size:11.5px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .menu-caja{width:16px;height:16px;flex-shrink:0;border-radius:5px;
+  display:inline-flex;align-items:center;justify-content:center;align-self:center;
+  border:1px solid var(--border-control);color:var(--on-brand);
+  font-size:10px;font-weight:900;transition:background-color .15s ease,border-color .15s ease}
+.dc-shell .menu-item[aria-checked="true"] .menu-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .menu-item .cuenta{margin-left:auto;font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+
+/* Input */
+.dc-shell .busca{display:flex;align-items:center;gap:var(--s2);height:40px;padding:0 14px;
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);flex:1 1 220px;min-width:0;
+  transition:border-color .16s ease}
+.dc-shell .busca:focus-within{border-color:var(--focus-blue)}
+.dc-shell .busca input:focus-visible,
+.dc-shell .entrada input:focus-visible,
+.dc-shell .campo input:focus-visible,
+.dc-shell .area:focus-visible{box-shadow:none;outline:none}
+.dc-shell .busca svg{width:15px;height:15px;color:var(--text-muted-40)}
+.dc-shell .busca input{flex:1;min-width:0;border:0;background:none;outline:none;
+  font-size:13.5px;font-weight:600}
+.dc-shell .busca input::placeholder{color:var(--text-muted-40);font-weight:600}
+
+.dc-shell .slider{width:100%;height:18px;accent-color:var(--brand-secondary);cursor:pointer;
+  background:none;margin:0}
+.dc-shell .slider:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--radius-pill)}
+
+/* Tooltip */
+.dc-shell .tip{position:relative;display:inline-flex;align-items:center}
+.dc-shell .tip-dot{width:18px;height:18px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-subtle);background:var(--bg-input);
+  color:var(--text-muted-40);font-size:10px;font-weight:900;cursor:help;
+  transition:color .16s ease,border-color .16s ease,background-color .16s ease}
+.dc-shell .tip:hover .tip-dot,
+.dc-shell .tip:focus-within .tip-dot{color:var(--text-on-surface);
+  border-color:var(--border-control);background:var(--bg-element)}
+.dc-shell .tip-burbuja{position:absolute;top:28px;left:-10px;z-index:80;
+  width:max-content;max-width:min(288px,calc(100vw - 32px));
+  padding:var(--s3) 14px;background:var(--bg-flotante);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);border-radius:16px;
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.2);color:var(--text-on-surface);
+  font-size:12.5px;font-weight:400;line-height:1.5;letter-spacing:0;
+  text-transform:none;text-align:left;pointer-events:none;white-space:normal;
+  display:none}
+.dc-shell .tip-burbuja b{display:block;margin-bottom:5px;font-size:10px;font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--brand-secondary)}
+.dc-shell .tip-burbuja::before{content:"";position:absolute;top:-5px;left:14px;
+  width:9px;height:9px;transform:rotate(45deg);
+  background:var(--bg-flotante);border-left:1px solid var(--sheen);border-top:1px solid var(--sheen)}
+.dc-shell .tip--der .tip-burbuja{left:auto;right:-10px}
+.dc-shell .tip--der .tip-burbuja::before{left:auto;right:14px}
+.dc-shell .tip:hover .tip-burbuja,
+.dc-shell .tip:focus-within .tip-burbuja{display:block;animation:dcTipIn .16s ease-out both}
+
+/* ============================================================
+   8 · EL DOCK
+   ============================================================ */
+.dc-shell .dock{position:fixed;left:0;right:0;width:max-content;margin-inline:auto;
+  bottom:calc(var(--s6) + env(safe-area-inset-bottom,0px));z-index:60;
+  display:flex;align-items:center;gap:var(--s1);padding:7px;border-radius:24px;
+  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  /* El `BugReportWidget` global flota fijo abajo a la derecha (bottom-8 right-24)
+     por encima de todo y se come unos 168px de ancho util: sin esta restriccion
+     tapaba los ultimos items del dock. Como el dock va centrado (`width:max-content`
+     + `margin-inline:auto`), reservarle ese hueco a la derecha obliga a reservar
+     el mismo a la izquierda: de ahi el 336. El piso de 320px evita que en
+     pantallas angostas la resta lo deje en nada — ahi el dock scrollea, que es
+     justo lo que el diseno preve cuando no entra. */
+  max-width:min(calc(100vw - var(--s4) * 2),max(320px,calc(100vw - 336px)));
+  isolation:isolate;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+.dc-shell .dock::-webkit-scrollbar{display:none}
+.dc-shell .dock .humo{opacity:calc(var(--humo-op) * .8)}
+.dc-shell .dock .humo i{width:56%;filter:blur(26px)}
+.dc-shell .dock-sep{width:1px;height:28px;flex-shrink:0;background:var(--border-main);margin:0 var(--s1)}
+.dc-shell .dock-nav{position:relative;display:flex;align-items:center;gap:var(--s1)}
+.dc-shell .dock-item{position:relative;z-index:1;flex-shrink:0;display:flex;align-items:center;gap:10px;
+  height:56px;padding:0 20px;border-radius:17px;color:var(--text-muted-40);
+  font-size:15px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;
+  transition:color .22s ease,transform .26s var(--spring)}
+.dc-shell .dock-item svg{width:20px;height:20px;transition:transform .32s var(--spring)}
+.dc-shell .dock-item:hover{color:var(--text-on-surface)}
+.dc-shell .dock-item:hover svg{transform:scale(1.14) rotate(-4deg)}
+.dc-shell .dock-item:active{transform:scale(.95)}
+.dc-shell .dock-item[aria-current="page"]{color:var(--text-on-surface)}
+.dc-shell .dock-num{position:absolute;top:9px;left:20px;font-size:9px;font-weight:900;
+  letter-spacing:.18em;color:var(--text-muted-40);transition:color .22s ease}
+.dc-shell .dock-item[aria-current="page"] .dock-num{color:var(--brand-secondary)}
+.dc-shell .dock-label{margin-top:9px}
+.dc-shell .dock-pronto{margin-top:9px;display:inline-flex;align-items:center;height:14px;padding:0 5px;
+  border-radius:5px;background:var(--mat-3);
+  font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .dock-ind{position:absolute;top:0;height:100%;border-radius:17px;
+  background:var(--mat-3);border-top:1px solid var(--sheen);
+  box-shadow:0 2px 12px rgba(0,0,0,.28);
+  left:0;width:var(--w,0);transform:translateX(var(--x,0));
+  transition:transform .42s var(--spring),width .42s var(--spring);pointer-events:none}
+.dc-shell .dock-rol{position:relative;isolation:isolate;overflow:hidden;
+  display:inline-flex;align-items:center;gap:2px;padding:4px;flex-shrink:0;
+  border-radius:var(--radius-pill);background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .dock-rol .humo{opacity:calc(var(--humo-op) * 1.25)}
+.dc-shell .dock-rol .humo i{width:70%;filter:blur(14px)}
+.dc-shell .dock-rol button{position:relative;z-index:1}
+.dc-shell .dock-rol button{display:flex;align-items:center;gap:7px;height:38px;padding:0 13px;
+  border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--text-muted);
+  white-space:nowrap;transition:background-color .18s ease,color .18s ease}
+.dc-shell .dock-rol button[aria-pressed="true"]{background:var(--brand-secondary);color:var(--on-brand);
+  font-weight:700;box-shadow:var(--shadow-brand)}
+.dc-shell .dock-rol .punto{width:6px;height:6px;border-radius:var(--radius-pill);
+  background:var(--text-muted-40);transition:background-color .18s ease}
+.dc-shell .dock-rol button[aria-pressed="true"] .punto{background:var(--on-brand)}
+@media (max-width:1120px){
+  .dc-shell .dock-item{padding:0 15px}
+  .dc-shell .dock-num{left:15px}
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-label,
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-pronto{display:none}
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
 }
 
-/* --- Header ------------------------------------------------------------- */
+/* ============================================================
+   9 · DATA VIZ
+   ============================================================ */
+.dc-shell .riel{position:relative;height:8px;border-radius:var(--radius-pill);
+  background:var(--hueco);overflow:hidden}
+.dc-shell .riel--fino{height:6px}
+.dc-shell .riel > i{display:block;height:100%;border-radius:var(--radius-pill);width:0;
+  transition:width 1s var(--crecer)}
 
-.dc-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+/* Barra gruesa: etiqueta, conteo dentro, porcentaje a la derecha */
+.dc-shell .gruesa{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell button.gruesa{border-radius:var(--radius-pill);transition:opacity .16s ease}
+.dc-shell button.gruesa:hover{opacity:.84}
+.dc-shell .gruesa-pista{position:relative;flex:1;min-width:0;height:34px;display:flex;align-items:center;
+  border-radius:var(--radius-pill);background:var(--hueco);overflow:hidden}
+.dc-shell .gruesa-pista > i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:var(--radius-pill);
+  transition:width 1.1s var(--crecer)}
+.dc-shell .gruesa-txt{position:relative;z-index:1;display:inline-flex;align-items:baseline;gap:4px;
+  flex-shrink:0;white-space:nowrap;font-size:13.5px;font-weight:700;
+  font-variant-numeric:tabular-nums}
+.dc-shell .gruesa-txt em{font-style:normal;font-size:11.5px;font-weight:600}
+.dc-shell .gruesa-pct{min-width:56px;flex-shrink:0;text-align:right;white-space:nowrap;
+  font-size:22px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .gruesa-pct--larga{font-size:18px}
+.dc-shell .gruesa--sm .gruesa-pista{height:30px}
+.dc-shell .gruesa--sm .gruesa-pct{width:62px;font-size:19px}
+.dc-shell .ir-btn{width:30px;height:30px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  background:color-mix(in srgb,var(--c) 13%,transparent);color:var(--c);
+  transition:transform .22s var(--spring),background-color .18s ease}
+.dc-shell .ir-btn svg{width:14px;height:14px}
+.dc-shell .ir-btn:hover{transform:translateX(2px);background:color-mix(in srgb,var(--c) 24%,transparent)}
+.dc-shell .gruesa-fila{display:grid;gap:6px;min-width:0}
+.dc-shell .gruesa-cab{display:flex;align-items:center;gap:var(--s2);min-width:0}
+
+/* Embudo: una sola figura continua por paso (la banda mas su caida hacia la
+   siguiente), dibujada en SVG. Asi no quedan puntas ni costuras entre bandas. */
+.dc-shell .fun{display:grid;gap:10px;min-width:0;align-items:start;
+  grid-template-columns:minmax(74px,120px) minmax(0,1fr) 18px}
+.dc-shell .fun-col{display:grid;grid-auto-rows:var(--fila);align-items:center;min-width:0}
+.dc-shell .fun-nom{min-width:0;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.dc-shell .fun-nom--cuello{color:var(--error)}
+.dc-shell button.fun-nom{display:flex;align-items:center;gap:5px;cursor:pointer;transition:color .16s ease}
+.dc-shell button.fun-nom:hover{color:var(--brand-secondary)}
+.dc-shell button.fun-nom svg{width:11px;height:11px;flex-shrink:0}
+.dc-shell .fun-lienzo{position:relative;min-width:0;height:calc(var(--filas) * var(--fila))}
+.dc-shell .fun-lienzo svg{display:block;width:100%;height:100%}
+.dc-shell .fun-lienzo path{transform:scaleX(0);transform-box:fill-box;transform-origin:center;
+  transition:transform .95s var(--crecer)}
+.dc-shell .fun-num{position:absolute;left:50%;transform:translate(-50%,-50%);pointer-events:none;
+  font-size:13.5px;font-weight:900;letter-spacing:-.01em;color:var(--on-state);
+  font-variant-numeric:tabular-nums;opacity:0;transition:opacity .45s ease}
+.dc-shell .fun-num.viva{opacity:1}
+@media (max-width:480px){
+  .dc-shell .fun{grid-template-columns:minmax(58px,92px) minmax(0,1fr) 18px;gap:7px}
+  .dc-shell .fun-nom{font-size:9px;letter-spacing:.02em}
 }
 
-.dc-header-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-width: 0;
+/* Senas: cantidad y porcentaje, sin cajas de color. */
+.dc-shell .sena-celda{display:grid;gap:6px;min-width:0;padding-top:10px;border-top:2px solid var(--c)}
+.dc-shell .sena-n{display:flex;align-items:baseline;gap:8px}
+.dc-shell .sena-n b{font-size:26px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .sena-n span{font-size:12px;font-weight:700;color:var(--text-muted-40);
+  font-variant-numeric:tabular-nums}
+
+/* Grafico de unidades: una figura por sena. 7 cosas se cuentan, no se estiman. */
+.dc-shell .unidades{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+.dc-shell .unidades i{width:clamp(26px,5vw,34px);aspect-ratio:1;border-radius:11px;flex-shrink:0;
+  opacity:0;transform:scale(.4);
+  transition:opacity .34s ease,transform .46s var(--spring)}
+.dc-shell .unidades.viva i{opacity:1;transform:none}
+
+/* Leyenda con el dato al lado del color: nada de numeros metidos en la barra */
+.dc-shell .datos{display:grid;gap:2px;min-width:0}
+.dc-shell .dato{display:flex;align-items:center;gap:var(--s3);min-width:0;width:100%;text-align:left;
+  padding:9px 10px;border-radius:12px;transition:background-color .16s ease}
+.dc-shell button.dato:hover{background:var(--mat-1)}
+.dc-shell .dato-punto{width:10px;height:10px;flex-shrink:0;border-radius:4px}
+.dc-shell .dato-nom{flex:1;min-width:0;font-size:13px;font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .dato-v{flex-shrink:0;font-size:15px;font-weight:900;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .dato-sub{width:96px;flex-shrink:0;text-align:right;font-size:11px;font-weight:600;
+  color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.dc-shell .dato-sub{display:none}}
+
+/* Barra segmentada */
+.dc-shell .segmentada{display:flex;gap:2px;height:20px;min-width:0}
+.dc-shell .segmentada > *{display:flex;align-items:center;justify-content:center;min-width:0;
+  border-radius:3px;overflow:hidden;color:var(--on-state);
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;
+  width:0;transition:width .95s var(--crecer),filter .18s ease}
+.dc-shell .segmentada button:hover{filter:brightness(1.12)}
+.dc-shell .leyenda{display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s3)}
+.dc-shell .leyenda span{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .leyenda i{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+/* Sparkline de dias */
+/* Vista de curva: la linea no se deforma porque el trazo no escala. */
+.dc-shell .curva{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s2);--h:118px}
+.dc-shell .curva-eje{display:grid;justify-items:end;align-content:space-between;height:var(--h);
+  font-size:9px;font-weight:700;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .curva-lienzo{position:relative;height:var(--h);min-width:0}
+.dc-shell .curva-lienzo svg{display:block;width:100%;height:100%;overflow:visible}
+.dc-shell .curva-linea{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;
+  vector-effect:non-scaling-stroke}
+.dc-shell .curva-grilla{stroke:var(--hueco);stroke-width:1;vector-effect:non-scaling-stroke}
+.dc-shell .curva-punto{position:absolute;width:9px;height:9px;border-radius:50%;
+  transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--bg-element)}
+.dc-shell .curva-pico{position:absolute;transform:translate(-50%,-190%);white-space:nowrap;
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* Vista de mapa: un dia por celda, la intensidad es el valor. */
+.dc-shell .mapa-dias{display:grid;gap:5px;grid-template-columns:repeat(auto-fit,minmax(min(100%,40px),1fr))}
+.dc-shell .mapa-dia{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;min-width:0;
+  border:1px solid var(--border-subtle);
+  font-size:10px;font-weight:900;font-variant-numeric:tabular-nums;
+  transition:transform .18s var(--spring)}
+.dc-shell .mapa-dia:hover{transform:scale(1.08)}
+.dc-shell .serie{display:flex;align-items:flex-end;gap:3px;height:118px;min-width:0}
+.dc-shell .serie > i{flex:1 1 0;min-width:0;border-radius:4px 4px 2px 2px;height:2px;
+  transition:height .8s var(--crecer),filter .16s ease}
+.dc-shell .serie > i:hover{filter:brightness(1.25)}
+.dc-shell .serie-eje{display:flex;gap:3px;margin-top:6px;min-width:0}
+.dc-shell .serie-eje > span{flex:1 1 0;min-width:0;text-align:center;
+  font-size:9px;font-weight:700;color:var(--text-muted-40);
+  font-variant-numeric:tabular-nums;overflow:hidden}
+.dc-shell .dias{display:flex;align-items:flex-end;gap:2px;height:64px;min-width:0}
+.dc-shell .dias > i{flex:1 1 0;min-width:0;border-radius:2px;height:6%;
+  transition:height .8s var(--crecer)}
+.dc-shell .dias--proj{gap:2px;height:64px}
+
+/* Tiles de KPI */
+.dc-shell .kpi{position:relative;isolation:isolate;display:flex;flex-direction:column;gap:10px;
+  background:var(--bg-element);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-main);padding:var(--s4);min-width:0;overflow:hidden}
+.dc-shell .kpi-cab{display:flex;align-items:center;gap:var(--s2);min-width:0}
+.dc-shell .kpi-cifra{display:grid;gap:6px;align-content:start;min-width:0}
+.dc-shell .kpi-n{font-size:clamp(28px,3vw,36px);line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .kpi-sub{font-size:11px;font-weight:600;color:var(--text-muted-40);min-width:0}
+.dc-shell .kpi-barras{display:grid;gap:var(--s3);margin-top:var(--s2)}
+.dc-shell .kpi-acciones{display:flex;align-items:center;gap:var(--s2);margin-top:auto;padding-top:var(--s2)}
+.dc-shell .kpi-acc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;
+  border-radius:var(--radius-pill);border:1px solid var(--border-subtle);
+  background:var(--bg-input);color:var(--text-muted);
+  font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  transition:color .16s ease,border-color .16s ease,background-color .16s ease}
+.dc-shell .kpi-acc svg{width:14px;height:14px}
+.dc-shell .kpi-acc:hover{color:var(--text-on-surface);border-color:var(--border-control);background:var(--bg-element)}
+.dc-shell .kpi-acc--solo{width:30px;padding:0;justify-content:center}
+
+/* Un panel al que se llega desde un tile parpadea una vez para ubicarte. */
+@keyframes dcDestacar{0%{box-shadow:0 0 0 0 var(--brand-secondary-border)}
+  40%{box-shadow:0 0 0 3px var(--brand-secondary-border)}
+  100%{box-shadow:0 0 0 0 transparent}}
+.dc-shell .destacado{animation:dcDestacar 1.2s ease-out}
+
+/* Torta: el reparto de un total, con el total al medio. Al pasar por un
+   arco el resto se apaga, asi se lee un segmento por vez. */
+.dc-shell .torta{display:flex;align-items:center;gap:var(--s6);flex-wrap:wrap;min-width:0}
+.dc-shell .torta-svg{position:relative;width:170px;height:170px;flex-shrink:0;margin-inline:auto}
+.dc-shell .torta-svg svg{width:100%;height:100%;transform:rotate(-90deg);display:block;overflow:visible}
+.dc-shell .torta-hueco{pointer-events:none}
+.dc-shell .torta-seg{transition:stroke-dasharray .9s var(--crecer),stroke-width .2s ease,opacity .2s ease}
+.dc-shell .torta-svg:hover .torta-seg{opacity:.35}
+.dc-shell .torta-svg .torta-seg:hover{opacity:1;stroke-width:7.6}
+.dc-shell .torta-centro{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;
+  gap:3px;text-align:center;pointer-events:none;padding:0 28px}
+.dc-shell .torta-centro b{font-size:22px;line-height:1.05;font-weight:900;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .torta-leyenda{flex:1 1 210px;min-width:0;display:grid;gap:1px}
+.dc-shell .tl-fila{display:grid;grid-template-columns:auto minmax(0,1fr) auto 54px;align-items:center;
+  gap:9px;width:100%;text-align:left;padding:8px;border-radius:11px;
+  border-bottom:1px solid var(--border-subtle);transition:background-color .16s ease}
+.dc-shell .tl-fila:last-child{border-bottom:0}
+.dc-shell button.tl-fila:hover{background:var(--mat-1)}
+.dc-shell .tl-nom{font-size:13px;font-weight:600;min-width:0}
+.dc-shell .tl-v{font-size:13.5px;font-weight:900;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+.dc-shell .tl-p{text-align:right;font-size:12px;font-weight:700;color:var(--text-muted-40);
+  font-variant-numeric:tabular-nums}
+
+/* Tablas de cuatro columnas: nombre, cantidad, porcentaje y ayuda. */
+.dc-shell .tdatos--tasas .tdatos-cab,
+.dc-shell .tdatos--tasas .tdatos-fila{grid-template-columns:minmax(0,1fr) 64px 72px 18px}
+.dc-shell .tdatos--montos .tdatos-cab,
+.dc-shell .tdatos--montos .tdatos-fila{grid-template-columns:minmax(0,1fr) 92px 62px 18px}
+@media (max-width:560px){
+  .dc-shell .tdatos--tasas .tdatos-cab,
+  .dc-shell .tdatos--tasas .tdatos-fila{
+    grid-template-columns:minmax(0,1fr) 50px 58px 16px;gap:var(--s2);padding:0 2px}
+  .dc-shell .tdatos--montos .tdatos-cab,
+  .dc-shell .tdatos--montos .tdatos-fila{
+    grid-template-columns:minmax(0,1fr) 78px 50px 16px;gap:var(--s2);padding:0 2px}
 }
 
-.dc-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+/* Collected: programa, ventas, ticket y cash. */
+.dc-shell .tdatos--prog .tdatos-cab,
+.dc-shell .tdatos--prog .tdatos-fila{
+  grid-template-columns:minmax(0,1.6fr) 58px 76px 92px;gap:var(--s3);padding:0 4px}
+.dc-shell .tdatos--prog .tdatos-fila{min-height:48px}
+@media (max-width:560px){
+  .dc-shell .tdatos--prog .tdatos-cab,
+  .dc-shell .tdatos--prog .tdatos-fila{
+    grid-template-columns:minmax(0,1fr) 46px 62px 74px;gap:var(--s2);padding:0 2px}
+  .dc-shell .solo-ancho{display:none}
 }
 
-.dc-controls-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+/* Payments: una fila por programa, una columna por forma de pago. */
+.dc-shell .tdatos--pagos .tdatos-cab,
+.dc-shell .tdatos--pagos .tdatos-fila{
+  grid-template-columns:minmax(0,1.7fr) repeat(4,minmax(0,1fr));gap:var(--s3);padding:0 4px}
+.dc-shell .tdatos--pagos .tdatos-fila{min-height:54px}
+.dc-shell .tdatos--pagos .tdatos-cab span{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.dc-shell .tdatos--pagos .tdatos-cab span:first-child{justify-content:flex-start;padding-left:14px}
+.dc-shell .cab-punto{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* El nombre del programa lleva su marca de color y pesa como los numeros. */
+.dc-shell .tdatos-nom--fuerte{font-size:14px;font-weight:700;color:var(--text-on-surface);gap:10px}
+/* Barrita de color del programa: altura fija, porque el nombre es una
+   linea de texto y `stretch` la dejaba del alto de la linea. */
+.dc-shell .prog-marca{width:5px;height:24px;align-self:center;border-radius:var(--radius-pill);flex-shrink:0}
+.dc-shell .cel-pago{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;
+  min-width:0;text-align:right;border-radius:10px;transition:background-color .16s ease}
+.dc-shell .cel-pago b{font-size:14.5px;font-weight:900;letter-spacing:-.025em;font-variant-numeric:tabular-nums;
+  color:var(--text-on-surface);line-height:1.1}
+.dc-shell .cel-vacia{color:var(--text-muted-40) !important}
+.dc-shell .cel-cuenta{font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--text-muted-40);
+  white-space:nowrap}
+.dc-shell button.cel-pago{cursor:pointer;margin:-5px -8px;padding:5px 8px}
+.dc-shell button.cel-pago:hover{background:var(--mat-1)}
+.dc-shell .tdatos-total{border-top:1px solid var(--border-main);border-bottom:0;min-height:52px}
+.dc-shell .tdatos-total .tdatos-nom{font-size:10px;font-weight:900;color:var(--text-muted-40);
+  letter-spacing:.1em;text-transform:uppercase;padding-left:14px}
+.dc-shell .tdatos-total .cel-pago b{color:var(--text-muted)}
+@media (max-width:560px){
+  .dc-shell .tdatos--pagos .tdatos-cab,
+  .dc-shell .tdatos--pagos .tdatos-fila{
+    grid-template-columns:minmax(0,1.3fr) repeat(4,minmax(0,1fr));gap:var(--s2);padding:0 2px}
+  .dc-shell .tdatos--pagos .tdatos-cab span{font-size:8.5px;letter-spacing:.04em}
+  .dc-shell .cel-pago b{font-size:12.5px}
+  .dc-shell .cel-cuenta{font-size:9.5px}
+  .dc-shell .tdatos-nom--fuerte{font-size:12.5px;gap:7px}
 }
 
-/* --- Píldoras del header (Equipo · Período · VS) ------------------------- */
-
-.dc-pill {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    height: 38px;
-    padding: 0 16px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    background: rgba(255, 255, 255, .04);
-    color: var(--text-on-surface);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: border-color .15s ease, background .15s ease;
+/* Aperturas por etapa: la tabla aprovecha el ancho con un riel que
+   dibuja la tasa, en la misma rampa del embudo. */
+.dc-shell .tdatos--aper .tdatos-cab,
+.dc-shell .tdatos--aper .tdatos-fila{
+  grid-template-columns:minmax(0,1.1fr) 82px 104px minmax(140px,1.4fr) 64px 18px;gap:var(--s4)}
+.dc-shell .tdatos--aper .tdatos-cab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .tdatos--aper .tdatos-cab span:nth-child(4){text-align:left}
+.dc-shell .cab-corto{display:none}
+.dc-shell .tasa-riel{position:relative;height:8px;border-radius:var(--radius-pill);
+  background:var(--hueco);min-width:0;overflow:hidden}
+.dc-shell .tasa-riel > i{display:block;height:100%;width:0;border-radius:var(--radius-pill);
+  transition:width .9s var(--crecer)}
+@media (max-width:820px){
+  .dc-shell .tdatos--aper .tdatos-cab,
+  .dc-shell .tdatos--aper .tdatos-fila{
+    grid-template-columns:minmax(0,1fr) 46px 52px 58px 16px;gap:var(--s2);padding:0 2px}
+  /* sin riel, la cabecera pierde su columna para no desalinear la grilla */
+  .dc-shell .tdatos--aper .tasa-riel,
+  .dc-shell .tdatos--aper .tdatos-cab span:nth-child(4){display:none}
+  .dc-shell .tdatos--aper .cab-largo{display:none}
+  .dc-shell .tdatos--aper .cab-corto{display:inline}
 }
 
-.dc-pill:hover {
-    border-color: rgba(255, 255, 255, .55);
-    background: rgba(255, 255, 255, .08);
-}
+/* Tabla de datos: una fila por item, el total una sola vez en la cabecera. */
+.dc-shell .tdatos{display:grid;min-width:0}
+.dc-shell .tdatos-cab,
+.dc-shell .tdatos-fila{display:grid;gap:var(--s3);align-items:center;
+  grid-template-columns:minmax(0,1fr) 62px 62px;padding:0 10px}
+.dc-shell .tdatos-cab{height:30px;border-bottom:1px solid var(--border-main)}
+.dc-shell .tdatos-cab span{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted-40);text-align:right}
+.dc-shell .tdatos-cab span:first-child{text-align:left}
+.dc-shell .tdatos-fila{min-height:42px;width:100%;text-align:left;border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .tdatos-fila:last-child{border-bottom:0}
+.dc-shell button.tdatos-fila:hover{background:var(--mat-1)}
+.dc-shell .tdatos-nom{display:flex;align-items:center;gap:9px;min-width:0;font-size:13px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .tdatos-n{text-align:right;font-size:15px;font-weight:900;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .tdatos-p{text-align:right;font-size:12px;font-weight:700;color:var(--text-muted-40);
+  font-variant-numeric:tabular-nums}
+.dc-shell .kpi-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+  font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .delta{display:inline-flex;align-items:center;height:22px;padding:0 9px;
+  border-radius:var(--radius-pill);font-size:11px;font-weight:700;white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);color:var(--c)}
+.dc-shell .delta--g{height:30px;padding:0 14px;font-size:14px}
+.dc-shell .mini{display:grid;gap:var(--s2);padding:var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle);min-width:0}
 
-.dc-pop-wrap {
-    position: relative;
-}
+/* Tile de estado (tono por dato) */
+.dc-shell .ficha{display:grid;gap:var(--s2);text-align:left;padding:var(--s4);min-width:0;
+  border-radius:var(--radius-control);
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  transition:background-color .2s ease,transform .2s var(--spring)}
+.dc-shell button.ficha:hover{background:color-mix(in srgb,var(--c) 24%,transparent)}
+.dc-shell button.ficha:active{transform:scale(.985)}
+.dc-shell .ficha-n{font-size:23px;line-height:1;font-weight:900;letter-spacing:-.025em;color:var(--c);
+  font-variant-numeric:tabular-nums}
+.dc-shell .ficha-lbl{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted)}
 
-.dc-pop {
-    position: absolute;
-    top: 46px;
-    right: 0;
-    z-index: 40;
-    min-width: 230px;
-    padding: 8px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-control);
-    border-radius: 20px;
-    box-shadow: var(--shadow-main);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    /* Misma entrada que el tooltip de las métricas (`dcTipIn`): los menús del header y el panel
-       de Filtros son la misma familia de superficie flotante, y apareciendo de golpe se sentían
-       como un salto. 160ms, dentro del rango de 150–180ms que el diseño fija para los hovers. */
-    animation: dcPopIn .16s ease both;
-    transform-origin: top right;
-}
+/* Heat map de reportes */
+.dc-shell .heat{display:flex;gap:3px;flex:1;min-width:0}
+.dc-shell .heat > i{flex:1 1 0;min-width:9px;height:22px;border-radius:3px;opacity:0;
+  transition:opacity .4s ease}
 
-@keyframes dcPopIn {
-    from {
-        opacity: 0;
-        transform: translateY(-6px) scale(.985);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-/* Movimiento reducido: la entrada se limita a la opacidad. */
-@media (prefers-reduced-motion: reduce) {
-    .dc-pop {
-        animation-name: dcPopFade;
-    }
-
-    @keyframes dcPopFade {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-}
-
-.dc-pop-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    height: 34px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    transition: background .15s ease, color .15s ease;
-}
-
-.dc-pop-item:hover {
-    background: var(--bg-element);
-    color: var(--text-on-surface);
-}
-
-.dc-pop-item[aria-selected='true'] {
-    background: var(--brand-secondary-surface);
-    color: var(--brand-secondary);
-}
-
-/* --- Tabs segmentadas (blanco sobre oscuro) ------------------------------ */
-/* El mismo patrón se usa en el selector de métrica del ranking y en las
-   sub-pestañas del cierre del reporte. El magenta queda reservado para los
-   filtros activos y el paso activo del wizard. */
-
-.dc-seg {
-    /* inline-flex, no flex: la cápsula tiene que ABRAZAR sus tabs. Como `flex` es de nivel
-       bloque, dentro de un contenedor normal (el panel de Revisar, la columna del cierre del
-       reporte) se estiraba a todo el ancho y dejaba un vacío enorme a la derecha de
-       "Agendas · Ventas" — medido: 790px de cápsula para 180px de tabs. En el header no se
-       notaba porque ahí es hijo de un flex, que ya la encoge al contenido; un hijo de flex
-       ignora `inline-flex` (se blockifica), así que ese caso no cambia. */
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px;
-    border: 1px solid var(--border-main);
-    border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, .03);
-    flex-wrap: wrap;
-    max-width: 100%;
-}
-
-.dc-seg-tab {
-    height: 36px;
-    padding: 0 18px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background .18s ease, color .18s ease, transform .12s ease;
-}
-
-.dc-seg-tab:hover {
-    color: var(--text-on-surface);
-}
-
-/* Acuse de recibo al toque: la pestaña se hunde apenas mientras se la aprieta. */
-.dc-seg-tab:active {
-    transform: scale(.97);
-}
-
-.dc-seg-tab[aria-selected='true'] {
-    background: var(--text-on-surface);
-    color: var(--ink);
-    font-weight: 700;
-}
-
-/* --- Dock inferior ------------------------------------------------------ */
-
-.dc-dock {
-    position: fixed;
-    left: 50%;
-    bottom: 20px;
-    transform: translateX(-50%);
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px;
-    /* El `BugReportWidget` global flota fijo abajo a la derecha (bottom-8 right-24) por encima
-       de todo y ocupa unos 168px de ancho útil. Como el dock va centrado, dejarle ese hueco a
-       la derecha obliga a dejar el mismo a la izquierda: de ahí el 336. El piso de 320px evita
-       que en pantallas angostas la resta lo deje en nada — ahí el dock scrollea, que es
-       justamente lo que el diseño prevé cuando no entra. */
-    max-width: min(calc(100vw - 32px), max(320px, calc(100vw - 336px)));
-    overflow-x: auto;
-    scrollbar-width: none;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-main);
-    border-radius: var(--radius-pill);
-    box-shadow: var(--shadow-main);
-}
-
-.dc-dock::-webkit-scrollbar {
-    display: none;
-}
-
-.dc-scope {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px;
-    margin-right: 4px;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, .04);
-}
-
-.dc-scope-btn {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    height: 32px;
-    padding: 0 14px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background .18s ease, color .18s ease;
-}
-
-.dc-scope-btn[aria-selected='true'] {
-    background: var(--text-on-surface);
-    color: var(--ink);
-    font-weight: 700;
-}
-
-.dc-scope-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: var(--radius-pill);
-    background: currentColor;
-    opacity: .55;
-}
-
-.dc-dock-sep {
-    width: 1px;
-    height: 28px;
-    background: var(--border-main);
-    margin-right: 4px;
-    flex-shrink: 0;
-}
-
-.dc-dock-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 48px;
-    padding: 0 13px;
-    border-radius: var(--radius-pill);
-    flex-shrink: 0;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background .22s ease, color .22s ease, border-color .22s ease,
-        box-shadow .22s ease, transform .22s ease;
-}
-
-.dc-dock-item[aria-current='true'] {
-    border-color: var(--brand-secondary-border);
-    background: var(--brand-secondary-surface);
-    color: var(--text-on-surface);
-    box-shadow: 0 10px 30px rgba(255, 63, 164, .18);
-    font-weight: 700;
-    transform: translateY(-1px);
-}
-
-.dc-dock-num {
-    font-size: 10.5px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    min-width: 8px;
-    color: var(--text-muted-40);
-}
-
-.dc-dock-item[aria-current='true'] .dc-dock-num {
-    color: var(--brand-secondary);
-}
-
-.dc-dock-ico {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), color .22s ease;
-}
-
-.dc-dock-item[aria-current='true'] .dc-dock-ico {
-    color: var(--brand-secondary);
-    transform: scale(1.12);
-}
-
-.dc-dock-soon {
-    display: inline-flex;
-    align-items: center;
-    height: 18px;
-    padding: 0 7px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-main);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-/* --- Grillas de sección ------------------------------------------------- */
-
-.dc-grid-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-    gap: 14px;
-    align-items: stretch;
-}
-
-/* Filas 2 y 3 de Analizar: dos columnas que colapsan a una bajo ~900px. */
-.dc-grid-2 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
-    gap: 14px;
-    align-items: stretch;
-    margin-top: 14px;
-}
-
-/* --- Tarjetas y cifras -------------------------------------------------- */
-
-.dc-card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.dc-eyebrow {
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--text-on-surface);
-}
-
-.dc-big {
-    font-size: clamp(36px, 3.6vw, 44px);
-    line-height: 1;
-    font-weight: 700;
-    letter-spacing: -.02em;
-    font-variant-numeric: tabular-nums;
-}
-
-.dc-delta {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    height: 22px;
-    padding: 0 9px;
-    border-radius: var(--radius-pill);
-    font-size: 11.5px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-
-.dc-delta--up {
-    background: var(--success-surface);
-    border: 1px solid var(--success-border);
-    color: var(--success);
-}
-
-.dc-delta--down {
-    background: var(--error-surface);
-    border: 1px solid var(--error-border);
-    color: var(--error);
-}
-
-/* Barra de progreso de las tarjetas: crece de 0 al valor al montar. */
-.dc-bar {
-    height: 8px;
-    border-radius: var(--radius-pill);
-    background: var(--bg-element);
-    overflow: hidden;
-    margin-top: 14px;
-}
-
-.dc-bar-fill {
-    height: 100%;
-    border-radius: var(--radius-pill);
-    width: 0;
-    transition: width .9s cubic-bezier(.22, .7, .2, 1);
-}
-
-/* --- Tooltip de métrica ------------------------------------------------- */
-
-.dc-tip-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-.dc-tip-dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    color: var(--text-muted-40);
-    font-size: 9px;
-    font-weight: 800;
-    cursor: help;
-}
-
-.dc-tip {
-    position: absolute;
-    top: 22px;
-    z-index: 50;
-    width: 258px;
-    padding: 10px 12px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-control);
-    border-radius: 14px;
-    box-shadow: var(--shadow-main);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.45;
-    text-transform: none;
-    letter-spacing: 0;
-    animation: dcTipIn .16s ease both;
-}
-
-.dc-tip--left {
-    right: 0;
-}
-
-.dc-tip--right {
-    left: 0;
-}
-
-@keyframes dcTipIn {
-    from {
-        opacity: 0;
-        transform: translateY(-4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* --- Barra segmentada (payment types, programas, señas) ----------------- */
-
-.dc-stack {
-    display: flex;
-    gap: 3px;
-    height: 14px;
-    margin: 12px 0;
-}
-
-.dc-stack--tall {
-    height: 18px;
-}
-
-.dc-stack-seg {
-    border-radius: var(--radius-pill);
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    flex-grow: 0;
-    flex-basis: 0;
-    min-width: 3px;
-    transition: flex-grow .9s cubic-bezier(.22, .7, .2, 1), opacity .15s ease;
-}
-
-.dc-stack-seg:hover {
-    opacity: .82;
-}
-
-.dc-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-subtle);
-    margin-top: 12px;
-}
-
-.dc-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11.5px;
-    color: var(--text-muted);
-}
-
-.dc-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-pill);
-    flex-shrink: 0;
-}
-
-/* --- Embudo ------------------------------------------------------------- */
-
+/* ============================================================
+   9b · EL EMBUDO QUE YA ESTABA — no se rediseña.
+   El usuario rechazo explicitamente el embudo nuevo y se quedo este:
+   barras centradas con cuello trapezoidal entre paso y paso. Las clases
+   `.dc-funnel-*` / `.dc-bottleneck` son las que estan en uso y conservan
+   sus valores tal cual; las `.fun-*` de la seccion 9 quedan disponibles
+   pero nadie las usa todavia.
+   Van sin prefijo `.dc-shell` a proposito: el nombre `dc-` ya es propio del
+   tablero y asi el embudo sigue funcionando exactamente igual que hoy,
+   tambien si su componente termina renderizado fuera del shell.
+   ============================================================ */
 .dc-funnel-row {
     display: grid;
     grid-template-columns: 96px 1fr 78px;
@@ -633,852 +851,459 @@
     text-transform: uppercase;
 }
 
-/* --- Ranking y mapa del equipo ------------------------------------------ */
-
-.dc-rank-row {
-    display: grid;
-    grid-template-columns: 22px minmax(0, 150px) 1fr 104px;
-    gap: 14px;
-    align-items: center;
-    width: 100%;
-    padding: 10px 6px;
-    border: 0;
-    border-radius: 14px;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
-    transition: background .16s ease;
-}
-
-.dc-rank-row:hover {
-    background: var(--bg-element);
-}
-
-.dc-rank-pos {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-main);
-    font-size: 11px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-}
-
-.dc-rank-pos--first {
-    background: var(--brand-secondary);
-    border-color: var(--brand-secondary);
-    color: var(--ink);
-}
-
-.dc-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 11px;
-    background: var(--brand-secondary-surface);
-    border: 1px solid var(--brand-secondary-border);
-    color: var(--brand-secondary);
-    font-size: 12px;
-    font-weight: 800;
-    flex-shrink: 0;
-}
-
-.dc-avatar--info {
-    background: var(--info-surface);
-    border-color: var(--info-border);
-    color: var(--info);
-}
-
-.dc-avatar--lg {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    font-size: 15px;
-}
-
-.dc-rank-track {
-    position: relative;
-    height: 10px;
-    border-radius: var(--radius-pill);
-    background: var(--bg-element);
-    overflow: visible;
-}
-
-.dc-rank-fill {
-    height: 100%;
-    border-radius: var(--radius-pill);
-    width: 0;
-    transition: width .9s cubic-bezier(.22, .7, .2, 1);
-}
-
-/* Línea blanca vertical: el promedio del equipo. */
-.dc-rank-avg {
-    position: absolute;
-    top: -3px;
-    width: 2px;
-    height: 16px;
-    background: var(--text-on-surface);
-    border-radius: 1px;
-    transition: left .9s cubic-bezier(.22, .7, .2, 1);
-}
-
-.dc-map {
-    overflow-x: auto;
-}
-
-.dc-map-grid {
-    min-width: 860px;
-}
-
-.dc-map-cell {
-    width: 100%;
-    height: 44px;
-    border-radius: 12px;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-element);
-    color: var(--text-on-surface);
-    font-size: 13px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
-    transition: background .16s ease, border-color .16s ease;
-}
-
-.dc-map-cell--best {
-    background: var(--success-surface);
-    border-color: var(--success-border);
-    color: var(--success);
-}
-
-.dc-map-cell--worst {
-    background: var(--error-surface);
-    border-color: var(--error-border);
-    color: var(--error);
-}
-
-.dc-map-cell--ranked {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45);
-}
-
-.dc-map-head {
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--text-muted-40);
-    text-align: center;
-    padding-bottom: 8px;
-}
-
-.dc-map-head--ranked {
-    color: var(--text-on-surface);
-}
-
-.dc-map-head--info {
-    cursor: help;
-}
-
-/* --- Revisar: filtros y tabla ------------------------------------------- */
-
-.dc-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-}
-
-.dc-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 34px;
-    padding: 0 14px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-control);
-    background: var(--bg-input);
-    min-width: 220px;
-}
-
-.dc-search input {
-    border: 0;
-    outline: none;
-    background: transparent;
-    color: var(--text-on-surface);
-    font-size: 13px;
-    width: 100%;
-}
-
-.dc-chip-btn {
-    height: 32px;
-    padding: 0 14px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-
-.dc-chip-btn:hover {
-    color: var(--text-on-surface);
-}
-
-.dc-chip-btn[aria-pressed='true'] {
-    background: var(--brand-secondary-surface);
-    border-color: var(--brand-secondary-border);
-    color: var(--brand-secondary);
-    font-weight: 700;
-}
-
-.dc-filters-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 34px;
-    padding: 0 14px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    background: transparent;
-    color: var(--text-on-surface);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.dc-filters-btn[aria-expanded='true'],
-.dc-filters-btn.is-active {
-    border-color: var(--brand-secondary-border);
-    background: var(--brand-secondary-surface);
-}
-
-.dc-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: var(--radius-pill);
-    background: var(--brand-secondary);
-    color: var(--ink);
-    font-size: 10.5px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-}
-
-.dc-facet {
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.dc-facet:last-of-type {
-    border-bottom: 0;
-}
-
-.dc-facet-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    height: 40px;
-    padding: 0 10px;
-    border: 0;
-    background: transparent;
-    color: var(--text-on-surface);
-    cursor: pointer;
-}
-
-.dc-facet-chevron {
-    transition: transform .18s ease;
-}
-
-.dc-facet-head[aria-expanded='true'] .dc-facet-chevron {
-    transform: rotate(180deg);
-}
-
-.dc-facet-opt {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    width: 100%;
-    height: 32px;
-    padding: 0 10px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12.5px;
-    cursor: pointer;
-    text-align: left;
-}
-
-.dc-facet-opt:hover {
-    background: var(--bg-element);
-    color: var(--text-on-surface);
-}
-
-/* Acción discreta al pie de un panel ("Limpiar todo"). NO es un `.ln-btn`: el botón del design
-   system son 13px en mayúscula con .18em de tracking sobre 48px de alto (40 en `--sm`), y
-   forzarlo a 30px metía "LIMPIAR TODO" —168px de texto— pegado a los bordes de la cápsula y le
-   daba más peso visual que a los propios filtros. Acá el texto manda menos que lo que se está
-   filtrando, así que va en minúscula, sin tracking y sin borde. */
-.dc-textbtn {
-    height: 28px;
-    padding: 0 10px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background .15s ease, color .15s ease;
-}
-
-.dc-textbtn:hover {
-    background: var(--bg-element);
-    color: var(--text-on-surface);
-}
-
-.dc-textbtn:disabled {
-    opacity: .45;
-    cursor: not-allowed;
-}
-
-.dc-check {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 5px;
-    border: 1px solid var(--border-control);
-    flex-shrink: 0;
-}
-
-.dc-check[data-on='true'] {
-    background: var(--brand-secondary);
-    border-color: var(--brand-secondary);
-    color: var(--ink);
-}
-
-.dc-table {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.dc-thead,
-.dc-trow {
-    display: grid;
-    gap: 12px;
-    align-items: center;
-}
-
-.dc-thead {
-    padding: 0 14px 6px;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--text-muted-40);
-}
-
-.dc-trow {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-subtle);
-    background: rgba(255, 255, 255, .03);
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: background .15s ease, border-color .15s ease;
-}
-
-.dc-trow:hover {
-    background: var(--bg-element);
-    border-color: var(--border-main);
-}
-
-.dc-cell-main {
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.dc-cell-sub {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-
-.dc-retraso {
-    /* En bloque: dentro de la celda va DEBAJO del chip de resultado, no pegado a su derecha. */
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--warning);
-    margin-top: 4px;
-}
-
-/* --- Totales de lo filtrado --------------------------------------------- */
-
-.dc-totales {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-main);
-}
-
-.dc-totales-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.dc-total-card {
-    padding: 12px 14px;
-    border-radius: var(--radius-control);
-    background: rgba(255, 255, 255, .03);
-    border: 1px solid var(--border-subtle);
-}
-
-.dc-total-label {
-    font-size: 9.5px;
-    font-weight: 900;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.dc-total-value {
-    font-size: 24px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    margin: 4px 0 2px;
-}
-
-.dc-total-hint {
-    font-size: 11.5px;
-    color: var(--text-muted-40);
-}
-
-/* --- Modal del lead ----------------------------------------------------- */
-
-.dc-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 80;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: var(--bg-scrim);
-    overflow-y: auto;
-}
-
-.dc-modal {
-    width: min(720px, 96vw);
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 26px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-main);
-    border-radius: var(--radius-main);
-    box-shadow: var(--shadow-main);
-}
-
-.dc-modal--sm {
-    width: min(640px, 96vw);
-}
-
-.dc-modal-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.dc-avatar-xl {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 54px;
-    height: 54px;
-    border-radius: 18px;
-    background: var(--brand-secondary-surface);
-    border: 1px solid var(--brand-secondary-border);
-    color: var(--brand-secondary);
-    font-size: 18px;
-    font-weight: 800;
-    flex-shrink: 0;
-}
-
-.dc-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    padding: 14px 0;
-    border-top: 1px solid var(--border-subtle);
-    border-bottom: 1px solid var(--border-subtle);
-    margin-bottom: 18px;
-}
-
-/* Recorrido del lead: 6 pasos. */
-.dc-road {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-}
-
-.dc-road-step {
-    flex: 1 1 0;
-    min-width: 64px;
-    text-align: center;
-}
-
-.dc-road-dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--idle-border);
-    background: var(--idle-surface);
-    color: var(--idle);
-    margin-bottom: 6px;
-}
-
-.dc-road-dot--done {
-    border-color: var(--success-border);
-    background: var(--success-surface);
-    color: var(--success);
-}
-
-.dc-road-dot--fail {
-    border-color: var(--error-border);
-    background: var(--error-surface);
-    color: var(--error);
-}
-
-/* Corregir estado: cápsulas con el color de su estado. */
-.dc-fix {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-.dc-fix-opt {
-    height: 28px;
-    padding: 0 12px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, color .15s ease;
-}
-
-.dc-fix-opt:hover:not(:disabled) {
-    color: var(--text-on-surface);
-    border-color: var(--border-control);
-}
-
-.dc-fix-opt:disabled {
-    opacity: .45;
-    cursor: not-allowed;
-}
-
-/* --- Reportar: stepper y wizard ----------------------------------------- */
-
-.dc-stepper {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 4px;
-    margin-left: auto;
-    border: 1px solid var(--border-main);
-    border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, .03);
-    flex-wrap: wrap;
-}
-
-.dc-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 36px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.dc-step[aria-current='true'] {
-    background: rgba(255, 255, 255, .08);
-    color: var(--text-on-surface);
-    font-weight: 700;
-}
-
-.dc-step:disabled {
-    opacity: .45;
-    cursor: not-allowed;
-}
-
-.dc-step-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    font-size: 11px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-}
-
-.dc-step[aria-current='true'] .dc-step-num {
-    background: var(--brand-secondary);
-    border-color: var(--brand-secondary);
-    color: var(--ink);
-}
-
-.dc-step-num--done {
-    background: var(--success-surface);
-    border-color: var(--success-border);
-    color: var(--success);
-}
-
-.dc-col {
-    max-width: 720px;
-    margin: 0 auto;
-}
-
-/* Textarea nativo con UN solo borde: el TextArea del DS genera un doble
-   contorno azul al enfocar (ver 02-cambios.md §4.3). */
-.dc-textarea {
-    width: 100%;
-    min-height: 140px;
-    padding: 14px 16px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-control);
-    background: var(--bg-input);
-    color: var(--text-on-surface);
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.5;
-    outline: none;
-    box-shadow: none;
-    resize: vertical;
-}
-
-.dc-textarea:focus {
-    border-color: var(--brand-primary);
-}
-
-.dc-input {
-    flex: 1;
-    height: 44px;
-    padding: 0 16px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-control);
-    background: var(--bg-input);
-    color: var(--text-on-surface);
-    font-family: inherit;
-    font-size: 14px;
-    outline: none;
-}
-
-.dc-input:focus {
-    border-color: var(--brand-primary);
-}
-
-.dc-initials-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-}
-
-.dc-initial {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, color .15s ease;
-}
-
-.dc-initial[aria-current='true'] {
-    background: var(--brand-secondary);
-    border-color: var(--brand-secondary);
-    color: var(--ink);
-}
-
-.dc-initial[data-answer='si'] {
-    background: var(--success-surface);
-    border-color: var(--success-border);
-    color: var(--success);
-}
-
-.dc-initial[data-answer='no'] {
-    background: var(--idle-surface);
-    border-color: var(--idle-border);
-    color: var(--idle);
-}
-
-.dc-yesno {
-    height: 40px;
-    padding: 0 22px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13.5px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.dc-yesno[aria-pressed='true'][data-tone='success'] {
-    background: var(--success-surface);
-    border-color: var(--success-border);
-    color: var(--success);
-}
-
-.dc-yesno[aria-pressed='true'][data-tone='idle'] {
-    background: var(--idle-surface);
-    border-color: var(--idle-border);
-    color: var(--idle);
-}
-
-.dc-person-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-subtle);
-    background: rgba(255, 255, 255, .03);
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: background .15s ease;
-}
-
-.dc-person-row:hover {
-    background: var(--bg-element);
-}
-
-.dc-go {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--border-control);
-    color: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.dc-go--done {
-    background: var(--success-surface);
-    border-color: var(--success-border);
-    color: var(--success);
-}
-
-.dc-suggest {
-    height: 28px;
-    padding: 0 12px;
-    border-radius: var(--radius-pill);
-    border: 1px dashed var(--border-control);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.dc-suggest:hover {
-    color: var(--text-on-surface);
-    border-color: var(--text-on-surface);
-}
-
-.dc-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 24px;
-    flex-wrap: wrap;
-}
-
-/* --- Historial ---------------------------------------------------------- */
-
-.dc-hist-card {
-    width: 100%;
-    padding: 16px 18px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-subtle);
-    background: rgba(255, 255, 255, .03);
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.dc-hist-cols {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    gap: 18px;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-subtle);
-}
-
-.dc-hist-box {
-    padding: 12px 14px;
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border-subtle);
-    background: rgba(255, 255, 255, .02);
-}
-
-/* --- Estados vacíos y carga --------------------------------------------- */
-
+/* ============================================================
+   10 · TABLAS
+   ============================================================ */
+.dc-shell .tabla{border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle);overflow:hidden}
+.dc-shell .tabla-cab,
+.dc-shell .tabla-fila{display:grid;gap:var(--s3);align-items:center;
+  grid-template-columns:var(--cols);padding:0 var(--s4)}
+.dc-shell .tabla-cab{height:38px;border-bottom:1px solid var(--border-subtle)}
+.dc-shell .tabla-cab > span{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted-40);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .tabla-fila{min-height:52px;width:100%;text-align:left;border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .tabla-fila:last-child{border-bottom:0}
+.dc-shell .tabla-fila[role="button"]{cursor:pointer}
+.dc-shell .tabla-fila[role="button"]:hover{background:var(--mat-1)}
+.dc-shell .tabla-fila > *{min-width:0}
+.dc-shell .celda{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .celda--num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.dc-shell .celda-sub{display:block;font-size:11px;font-weight:600;color:var(--text-muted-40);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .celda-ver{display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:var(--radius-pill);
+  border:1px solid var(--brand-secondary-border);background:var(--brand-secondary-surface);
+  color:var(--brand-secondary);transition:transform .22s var(--spring)}
+.dc-shell .celda-ver svg{width:14px;height:14px}
+.dc-shell .tabla-fila[role="button"]:hover .celda-ver{transform:translateX(2px)}
+.dc-shell .vacio{display:grid;gap:var(--s3);justify-items:start;padding:var(--s8) var(--s4)}
+
+/* Abajo de 900px la tabla se vuelve una lista: cada celda lleva su rotulo
+   en `data-h` y la cabecera desaparece. */
+@media (max-width:900px){
+  .dc-shell .tabla-cab{display:none}
+  .dc-shell .tabla-fila{grid-template-columns:1fr;gap:var(--s2);padding:var(--s4);
+    min-height:0;align-items:start}
+  .dc-shell .tabla-fila > *{display:flex;align-items:baseline;gap:var(--s3);justify-content:space-between;
+    width:100%;text-align:right}
+  .dc-shell .tabla-fila > *[data-h]::before{content:attr(data-h);flex-shrink:0;text-align:left;
+    font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text-muted-40)}
+  .dc-shell .tabla-fila .celda{white-space:normal;overflow:visible;text-align:right}
+  .dc-shell .tabla-fila .celda-sub{text-align:right}
+  .dc-shell .tabla-fila > *[data-h=""]{justify-content:flex-end}
+}
+
+/* Comparativa: fila con avatar y barras */
+.dc-shell .cmp-fila{display:grid;gap:var(--s3);align-items:center;grid-template-columns:var(--cols);
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);min-width:0}
+.dc-shell .cmp-fila:last-child{border-bottom:0}
+.dc-shell .avatar{width:34px;height:34px;flex-shrink:0;border-radius:12px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:12px;font-weight:900}
+.dc-shell .cmp-celda{display:grid;gap:5px;min-width:0}
+.dc-shell .cmp-n{display:flex;align-items:baseline;gap:var(--s2);font-size:15px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dc-shell .cmp-equipo{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);
+  padding:var(--s3) var(--s4);border-top:1px solid var(--border-main);
+  background:var(--mat-1);font-size:12px;font-weight:700;color:var(--text-muted)}
+.dc-shell .cmp-scroll{overflow-x:auto}
+.dc-shell .cmp-scroll > *{min-width:760px}
+
+/* ============================================================
+   11 · MODAL — el velo tambien acepta llevar la clase del shell encima
+   (`class="dc-shell scrim"`), por si el modal termina montado en un portal
+   fuera del tablero: sin el shell no tendria ni tokens ni estilo.
+   ============================================================ */
+.dc-shell .scrim,
+.dc-shell.scrim{position:fixed;inset:0;z-index:90;background:var(--bg-scrim);
+  backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;
+  padding:var(--s4)}
+@media (min-width:720px){
+  .dc-shell .scrim,
+  .dc-shell.scrim{align-items:center}
+}
+.dc-shell .modal{position:relative;isolation:isolate;width:min(760px,100%);
+  max-height:min(86vh,860px);overflow:auto;overscroll-behavior:contain;
+  background:var(--bg-surface);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  border-radius:var(--radius-main);box-shadow:var(--shadow-main);
+  padding:var(--s6);animation:dcModalIn .3s var(--spring) both}
+.dc-shell .modal-cab{display:flex;align-items:flex-start;gap:var(--s4);margin-bottom:var(--s6)}
+.dc-shell .modal-avatar{width:54px;height:54px;flex-shrink:0;border-radius:18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:18px;font-weight:900}
+.dc-shell .modal-meta{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));
+  padding:var(--s4);border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle);margin-bottom:var(--s4)}
+.dc-shell .modal-meta > div{display:grid;gap:4px;min-width:0}
+
+/* Recorrido */
+.dc-shell .ruta{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fit,minmax(min(100%,96px),1fr))}
+.dc-shell .ruta-paso{display:grid;gap:6px;justify-items:center;text-align:center;min-width:0}
+.dc-shell .ruta-punto{width:34px;height:34px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);color:var(--c)}
+.dc-shell .ruta-punto svg{width:16px;height:16px}
+.dc-shell .ruta-lbl{font-size:12px;font-weight:700}
+.dc-shell .ruta-est{font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+
+/* Notas */
+.dc-shell .hilo{display:grid;gap:var(--s2)}
+.dc-shell .nota{display:grid;gap:4px;padding:10px 12px;border-radius:14px;
+  background:var(--mat-1);border:1px solid var(--border-subtle)}
+.dc-shell .nota--mia{background:var(--brand-secondary-surface);border-color:var(--brand-secondary-border)}
+.dc-shell .nota-cab{display:flex;align-items:baseline;gap:var(--s2);font-size:11px;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .nota-cab .cuando{margin-left:auto;color:var(--text-muted-40);letter-spacing:.04em}
+.dc-shell .redactar{display:flex;align-items:flex-end;gap:var(--s2);padding:var(--s3);
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);transition:border-color .16s ease}
+.dc-shell .redactar:focus-within{border-color:var(--border-control)}
+.dc-shell .redactar textarea{flex:1;min-width:0;border:0;background:none;outline:none;resize:none;
+  font-size:13.5px;font-weight:600;line-height:1.45;max-height:120px}
+.dc-shell .redactar textarea::placeholder{color:var(--text-muted-40)}
+
+/* Reporte */
+.dc-shell .rep-fila{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .rep-fila:last-child{border-bottom:0}
+.dc-shell .rep-fila:hover{background:var(--mat-1)}
+.dc-shell .rep-nom{width:130px;flex-shrink:0;font-size:13.5px;font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .rep-tasa{width:54px;flex-shrink:0;text-align:right;font-size:16px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--c)}
+@media (max-width:640px){
+  .dc-shell .rep-fila{flex-wrap:wrap}
+  .dc-shell .rep-nom{width:auto;flex:1}
+  .dc-shell .heat{flex-basis:100%;order:3}
+}
+
+/* Simulador / proyeccion */
+.dc-shell .palanca{display:grid;gap:var(--s2);padding:var(--s4);min-width:0;
+  border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle)}
+.dc-shell .palanca-cab{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .palanca-v{font-size:19px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;margin-left:auto}
+.dc-shell .palanca-v[data-cambiada="1"]{color:var(--brand-secondary)}
+.dc-shell .rank{display:grid;gap:var(--s3)}
+.dc-shell .rank-fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .rank-nom{width:150px;flex-shrink:0;min-width:0}
+.dc-shell .rank-riel{flex:1;min-width:0;height:8px;border-radius:3px;background:var(--hueco);overflow:hidden}
+.dc-shell .rank-riel > i{display:block;height:100%;border-radius:3px;width:0;transition:width .6s var(--crecer)}
+.dc-shell .rank-g{width:96px;flex-shrink:0;text-align:right;font-size:15px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+@media (max-width:560px){
+  .dc-shell .rank-fila{flex-wrap:wrap}
+  .dc-shell .rank-nom{width:auto;flex:1}
+  .dc-shell .rank-riel{flex-basis:100%;order:3}
+}
+
+/* ============================================================
+   12 · CONFIGURAR — un solo boton abre todos los filtros.
+   Se abre ancho, no alto: cada faceta es una columna.
+   ============================================================ */
+.dc-shell .config-envoltura{position:relative}
+/* Se ancla al borde IZQUIERDO de su boton: el panel es ancho y el boton
+   vive a la izquierda de la barra, asi que alinearlo a la derecha lo sacaba
+   de la pantalla. Debajo de 900px deja de flotar y se despliega en su fila. */
+.dc-shell .config-panel{position:absolute;top:46px;left:0;right:auto;z-index:75;
+  width:min(680px,calc(100vw - 32px));
+  max-height:calc(100vh - 150px);overflow-y:auto;overscroll-behavior:contain;
+  padding:var(--s4);background:var(--bg-flotante);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  border-radius:24px;box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  animation:dcTipIn .2s var(--spring) both}
+/* En pantalla chica el panel deja de flotar y se despliega en su lugar:
+   ocupa la fila entera y empuja la tabla, sin anclajes que se salgan. */
+@media (max-width:900px){
+  .dc-shell .config-envoltura{flex:1 1 100%}
+  .dc-shell .config-panel{position:static;width:auto;margin-top:var(--s3);
+    max-height:none;overflow:visible;animation:none}
+  .dc-shell .config-lista{max-height:none}
+}
+.dc-shell .config-cab{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
+.dc-shell .config-grid{display:grid;gap:var(--s4) var(--s3);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,138px),1fr))}
+.dc-shell .config-col{display:grid;gap:var(--s2);align-content:start;min-width:0}
+.dc-shell .config-lista{display:grid;gap:2px;max-height:186px;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;margin:-2px;padding:2px}
+.dc-shell .config-op{display:flex;align-items:center;gap:9px;width:100%;min-width:0;text-align:left;
+  padding:7px 9px;border-radius:10px;font-size:12.5px;font-weight:600;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
+.dc-shell .config-op:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .config-op[aria-checked="true"],
+.dc-shell .config-op[aria-pressed="true"]{
+  background:var(--bg-element);color:var(--text-on-surface);font-weight:700}
+.dc-shell .config-op .trunc{flex:1}
+.dc-shell .config-op .cuenta{font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .config-caja{width:15px;height:15px;flex-shrink:0;border-radius:5px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-control);color:var(--on-brand);
+  font-size:9px;font-weight:900;transition:background-color .15s ease,border-color .15s ease}
+.dc-shell .config-op[aria-checked="true"] .config-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .config-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+  margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+.dc-shell .cuenta-burbuja{display:inline-flex;align-items:center;justify-content:center;
+  min-width:19px;height:19px;padding:0 6px;border-radius:var(--radius-pill);
+  background:var(--brand-secondary);color:var(--on-brand);
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   13 · PERFIL
+   ============================================================ */
+.dc-shell .perfil-mira{position:relative;width:96px;height:96px;flex-shrink:0;border-radius:28px;
+  display:grid;place-items:center;overflow:hidden;cursor:pointer;
+  background:var(--brand-secondary-surface);border:1px dashed var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:30px;font-weight:900;
+  transition:border-color .18s ease,background-color .18s ease}
+.dc-shell .perfil-mira:hover{background:var(--bg-element-hover);border-color:var(--brand-secondary)}
+.dc-shell .perfil-mira img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.dc-shell .perfil-mira input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dc-shell .perfil-pista{position:absolute;left:0;right:0;bottom:0;padding:5px 0;
+  background:var(--bg-scrim);color:var(--text-on-surface);text-align:center;
+  font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.dc-shell .campo{display:grid;gap:6px;min-width:0}
+.dc-shell .campo input{height:42px;padding:0 14px;border-radius:var(--radius-control);
+  background:var(--bg-input);border:1px solid var(--border-subtle);outline:none;
+  font-size:14px;font-weight:600;transition:border-color .16s ease;min-width:0}
+.dc-shell .campo input:focus{border-color:var(--border-control)}
+.dc-shell .avatar-foto{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.dc-shell button.avatar{cursor:pointer;overflow:hidden;padding:0;
+  transition:border-color .18s ease,transform .18s var(--spring)}
+.dc-shell button.avatar:hover{border-color:var(--brand-secondary)}
+.dc-shell button.avatar:active{transform:scale(.93)}
+
+/* ============================================================
+   14 · PRONTO Y ESTADO VACIO
+   ============================================================ */
+.dc-shell .vacio-grande{display:grid;gap:var(--s4);justify-items:center;text-align:center;
+  padding:var(--s16) var(--s4);max-width:46ch;margin:0 auto}
+.dc-shell .vacio-icono{width:58px;height:58px;border-radius:20px;display:grid;place-items:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary)}
+.dc-shell .vacio-icono svg{width:24px;height:24px}
+.dc-shell .borrador-aviso{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
+  padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  border:1px dashed var(--border-control);background:var(--mat-0);
+  font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-muted)}
+
+/* ============================================================
+   15 · TOTALES DE LO FILTRADO — una tira de verificacion, no un panel
+   ============================================================ */
+.dc-shell .tot-tira{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s3) var(--s6);
+  padding:10px 14px;margin-bottom:var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .tot-item{font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.dc-shell .tot-item b{margin-right:5px;font-size:15px;font-weight:900;letter-spacing:-.02em;
+  color:var(--text-on-surface);font-variant-numeric:tabular-nums}
+.dc-shell .barra-tabla{flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3);align-items:center}
+.dc-shell .busca--sm{flex:0 1 190px;height:38px}
+.dc-shell .heat--cab{align-items:flex-end}
+.dc-shell .heat--cab i{display:flex;flex-direction:column;align-items:center;gap:1px;height:auto;
+  background:none !important;border:0 !important;opacity:1;
+  font-size:9px;font-weight:900;letter-spacing:.04em;color:var(--text-muted-40)}
+.dc-shell .heat--cab i em{font-style:normal;font-size:9px;font-weight:700;
+  color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   16 · RANKING Y MAPA DEL EQUIPO
+   ============================================================ */
+.dc-shell .rk{display:grid;gap:2px}
+.dc-shell .rk-fila{display:grid;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  grid-template-columns:22px minmax(0,150px) minmax(0,1fr) 110px;
+  padding:9px 10px;border-radius:14px;transition:background-color .16s ease}
+.dc-shell .rk-fila:hover{background:var(--mat-1)}
+.dc-shell .rk-pos{width:22px;height:22px;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;
+  border:1px solid var(--border-main);color:var(--text-muted)}
+.dc-shell .rk-fila:first-child .rk-pos{background:var(--brand-secondary);border-color:var(--brand-secondary);
+  color:var(--on-brand)}
+.dc-shell .rk-quien{display:flex;align-items:center;gap:10px;min-width:0}
+.dc-shell .rk-riel{position:relative;height:10px;border-radius:var(--radius-pill);
+  background:var(--hueco);min-width:0}
+.dc-shell .rk-riel > i{display:block;height:100%;border-radius:var(--radius-pill);width:0;
+  transition:width .9s var(--crecer)}
+.dc-shell .rk-prom{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;
+  background:var(--text-on-surface);opacity:.75;left:0;
+  transition:left .9s var(--crecer)}
+.dc-shell .rk-val{display:grid;grid-template-rows:auto auto;gap:5px;justify-items:end;align-content:center}
+.dc-shell .rk-cifra{font-size:16px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dc-shell .rk-delta{display:flex;justify-content:flex-end;min-height:22px}
+@media (max-width:660px){
+  .dc-shell .rk-fila{grid-template-columns:22px minmax(0,1fr) auto;row-gap:8px}
+  .dc-shell .rk-riel{grid-column:1 / -1}
+}
+/* Mapa del equipo: una matriz sobria — encabezados de rotulo, numeros
+   tabulares alineados a la derecha y la columna de nombres siempre fija. */
+.dc-shell .mapa{margin-top:var(--s6);padding-top:var(--s5);border-top:1px solid var(--border-subtle)}
+.dc-shell .mapa-scroll{overflow-x:auto;margin:0 calc(var(--s4) * -1);padding:0 var(--s4)}
+/* El ancho minimo crece con la cantidad de columnas: asi los encabezados
+   de dos lineas nunca se pisan y, si no entran, la tabla scrollea. */
+.dc-shell .mapa-grid{min-width:max(760px,calc(170px + var(--n) * 78px));display:grid}
+.dc-shell .mapa-fila{display:grid;align-items:center;
+  grid-template-columns:minmax(164px,1.3fr) repeat(var(--n),minmax(0,1fr));
+  border-bottom:1px solid var(--border-subtle)}
+.dc-shell .mapa-fila:last-child{border-bottom:0}
+.dc-shell .mapa-fila:not(.mapa-cab):not(.mapa-equipo):hover .mapa-celda{color:var(--text-on-surface)}
+.dc-shell .mapa-cab{border-bottom:1px solid var(--border-main)}
+.dc-shell .mapa-cab > *{min-height:46px;display:flex;align-items:flex-end;justify-content:flex-end;
+  padding:0 10px 9px;text-align:right;white-space:normal;
+  font-size:9.5px;font-weight:900;line-height:1.25;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text-muted-40);transition:color .16s ease}
+.dc-shell .mapa-cab button{font-family:inherit;font-size:9.5px;font-weight:900;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--text-muted-40);cursor:pointer}
+.dc-shell .mapa-cab button:hover{color:var(--text-muted)}
+.dc-shell .mapa-cab .activa{color:var(--text-on-surface)}
+.dc-shell .mapa-celda{height:40px;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+  padding:0 10px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--text-muted);transition:color .16s ease}
+.dc-shell button.mapa-celda{cursor:pointer}
+.dc-shell button.mapa-celda:hover{color:var(--brand-secondary)}
+.dc-shell .mapa-celda.alta{color:var(--success)}
+.dc-shell .mapa-celda.baja{color:var(--error)}
+.dc-shell .mapa-celda.alta,
+.dc-shell .mapa-celda.baja{font-weight:900}
+.dc-shell .mapa-celda::before{content:"";width:4px;height:4px;border-radius:50%;background:transparent;flex-shrink:0;order:-1}
+.dc-shell .mapa-celda.alta::before{background:var(--success)}
+.dc-shell .mapa-celda.baja::before{background:var(--error)}
+.dc-shell .mapa-celda.marcada,
+.dc-shell .mapa-cab .marcada{
+  background:color-mix(in srgb,var(--text-on-surface) 5%,transparent)}
+.dc-shell .mapa-fila:first-child .marcada{border-radius:8px 8px 0 0}
+.dc-shell .mapa-fila:last-child .marcada{border-radius:0 0 8px 8px}
+.dc-shell .mapa-celda.info{cursor:help}
+.dc-shell .mapa-equipo{border-top:1px solid var(--border-main);border-bottom:0}
+.dc-shell .mapa-equipo .mapa-celda{color:var(--text-on-surface);font-weight:900}
+.dc-shell .mapa-quien{display:flex;align-items:center;gap:9px;min-width:0;padding:0 12px 0 4px;
+  justify-content:flex-start !important}
+/* La columna de nombres solo se congela —con su fondo opaco— cuando la
+   tabla no entra y hay scroll horizontal de verdad. */
+@media (max-width:900px){
+  .dc-shell .mapa-quien{position:sticky;left:0;z-index:1;background:var(--bg-flotante);padding-left:10px;
+    box-shadow:1px 0 0 var(--border-subtle),10px 0 14px -10px rgba(0,0,0,.5)}
+}
+.dc-shell .mapa-quien .celda{font-size:13px;font-weight:600}
+.dc-shell .mapa-leyenda{display:flex;align-items:center;gap:var(--s3);margin-top:0}
+.dc-shell .mapa-leyenda span{display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .mapa-leyenda i{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dc-shell .tabs--wrap{flex-wrap:wrap;overflow:visible}
+
+/* ============================================================
+   17 · REPORTE DEL DIA
+   ============================================================ */
+.dc-shell .stepper{display:inline-flex;align-items:center;gap:2px;padding:4px;
+  border-radius:var(--radius-pill);border:1px solid var(--border-main);
+  max-width:100%;overflow-x:auto;scrollbar-width:none}
+.dc-shell .stepper::-webkit-scrollbar{display:none}
+.dc-shell .paso-btn{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;flex-shrink:0;
+  border-radius:var(--radius-pill);font-size:12.5px;font-weight:600;
+  color:var(--text-muted);white-space:nowrap;
+  transition:background-color .18s ease,color .18s ease}
+.dc-shell .paso-btn:hover:not(:disabled){color:var(--text-on-surface)}
+.dc-shell .paso-btn[aria-current="step"]{background:var(--mat-3);color:var(--text-on-surface);font-weight:700}
+.dc-shell .paso-btn:disabled{opacity:.45;cursor:not-allowed}
+.dc-shell .paso-n{width:24px;height:24px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;border:1px solid var(--border-control);
+  color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .paso-btn[aria-current="step"] .paso-n{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .paso-btn.hecho .paso-n{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .rep-pie{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
+  margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--border-subtle)}
+.dc-shell .panel--fino{padding:var(--s4)}
+.dc-shell .cifras{display:grid;gap:var(--s2)}
+.dc-shell .cifra{display:grid;gap:5px;align-content:start;min-width:0;padding:10px 12px;
+  border-radius:14px;background:var(--mat-0);border:1px solid var(--border-subtle)}
+.dc-shell .cifra-n{font-size:22px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .indiv{display:grid;gap:var(--s4);grid-template-columns:minmax(0,260px) minmax(0,1fr);align-items:stretch}
+.dc-shell .indiv > .panel{align-content:start}
+@media (max-width:760px){.dc-shell .indiv{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .roster{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:8px 10px;border-radius:14px;transition:background-color .16s ease}
+.dc-shell .roster:hover{background:var(--mat-1)}
+.dc-shell .roster.act{background:var(--bg-element)}
+.dc-shell .roster-pt{width:9px;height:9px;flex-shrink:0;border-radius:50%;
+  border:1px solid var(--border-control);background:transparent}
+.dc-shell .roster.act .roster-pt{border-color:transparent}
+.dc-shell .hist-bloque{display:grid;gap:5px;padding:12px 14px;border-radius:14px;
+  background:var(--mat-0);border:1px solid var(--border-subtle)}
+.dc-shell .columna{max-width:720px;margin:0 auto;width:100%}
+.dc-shell .area{width:100%;min-height:140px;padding:14px 16px;border-radius:var(--radius-control);
+  border:1px solid var(--border-control);background:var(--bg-input);
+  color:var(--text-on-surface);font-family:var(--font);font-size:14px;line-height:1.5;
+  outline:none;box-shadow:none;resize:vertical;
+  transition:border-color .16s ease}
+.dc-shell .area:focus{border-color:var(--focus-blue);outline:none;box-shadow:none}
+.dc-shell .area::placeholder{color:var(--text-muted-40)}
+.dc-shell .rep-persona{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .rep-persona:last-child{border-bottom:0}
+.dc-shell .rep-persona:hover{background:var(--mat-1)}
+.dc-shell .rep-ok{width:30px;height:30px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-main);color:var(--text-muted);font-size:13px;font-weight:900}
+.dc-shell .rep-ok.si{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .ruedas{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dc-shell .rueda{width:34px;height:34px;border-radius:var(--radius-pill);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:900;border:1px solid var(--border-main);
+  color:var(--text-muted);background:transparent;
+  transition:background-color .18s ease,color .18s ease,border-color .18s ease}
+.dc-shell .rueda.act{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .rueda.si{background:var(--success-surface);border-color:var(--success-border);color:var(--success)}
+.dc-shell .rueda.no{background:var(--idle-surface);border-color:var(--idle-border);color:var(--idle)}
+.dc-shell .entrada{display:flex;align-items:center;gap:var(--s2);height:44px;padding:0 6px 0 14px;
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);transition:border-color .16s ease}
+.dc-shell .entrada:focus-within{border-color:var(--focus-blue)}
+.dc-shell .entrada input{flex:1;min-width:0;border:0;background:none;outline:none;
+  font-size:14px;font-weight:600}
+.dc-shell .entrada input::placeholder{color:var(--text-muted-40)}
+.dc-shell .hist-dia{border:1px solid var(--border-subtle);border-radius:var(--radius-control);
+  background:var(--mat-0);overflow:hidden}
+.dc-shell .hist-cab{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s4);transition:background-color .16s ease}
+.dc-shell .hist-cab:hover{background:var(--mat-1)}
+.dc-shell .hist-cuerpo{padding:0 var(--s4) var(--s4);display:grid;gap:var(--s4)}
+.dc-shell .aviso{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);
+  background:var(--success-surface);border:1px solid var(--success-border);
+  color:var(--success);font-size:13px;font-weight:600}
+.dc-shell .linea-tiempo{display:grid;gap:var(--s3)}
+.dc-shell .linea-tiempo > div{display:grid;gap:4px;padding-left:var(--s4);
+  border-left:2px solid var(--border-main)}
+
+/* ============================================================
+   18 · VARIABILIDAD — la serie por dia, separada del dato del periodo
+   ============================================================ */
+
+/* La vista entra desde su estado visible, nunca parada en opacity:0 */
+@keyframes dcVista{from{opacity:.4;transform:translateY(8px)}to{opacity:1;transform:none}}
+.dc-shell .vista > *{animation:dcVista .34s var(--spring) both}
+@media (prefers-reduced-motion:reduce){.dc-shell .vista > *{animation:none}}
+
+/* ============================================================
+   19 · LO QUE LA REFERENCIA NO TIENE — piezas `.dc-*` que hoy estan en uso
+   y que no tienen equivalente (o lo tienen con otro nombre) en la
+   referencia. Se conservan con sus valores actuales para no romper lo que
+   ya funciona; los duplicados se resuelven al integrar.
+   ============================================================ */
+
+/* El spinner de carga (componente `Cargando`) no existe en la referencia.
+   Va sin prefijo de shell, como estaba, porque se renderiza tambien antes
+   de que el tablero exista. */
 .dc-loading {
     display: flex;
     align-items: center;
@@ -1499,36 +1324,8 @@
     }
 }
 
-.dc-draft-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 10px 14px;
-    border: 1px dashed var(--border-control);
-    border-radius: var(--radius-control);
-    color: var(--text-muted);
-    font-size: 12.5px;
-    margin-bottom: 14px;
-}
-
-@media (max-width: 720px) {
-
-    .dc-thead {
-        display: none;
-    }
-
-    .dc-trow {
-        grid-template-columns: 1fr !important;
-        gap: 6px;
-    }
-
-    .dc-rank-row {
-        grid-template-columns: 22px 1fr 96px;
-    }
-
-    .dc-rank-row .dc-rank-track {
-        display: none;
-    }
-}
+/* Alias de los dos nombres que el marcado viejo usa y la referencia
+   renombro: `.dc-wrap` es `.wrap` y `.dc-num` es `.num`. */
+.dc-shell .dc-wrap{max-width:1340px;margin:0 auto;padding-inline:clamp(16px,3vw,22px);
+  padding-block:var(--s6) 0}
+.dc-shell .dc-num{font-variant-numeric:tabular-nums}
