@@ -3,6 +3,7 @@ import { ArrowRight, Check, ChevronRight, Plus, Trophy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Cargando, fmt } from './Shared';
 import { getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
+import api from '../../../services/api';
 
 /**
  * Reportar: el reporte diario del director comercial, en cuatro pasos, más el historial.
@@ -176,6 +177,160 @@ const BarraPasos = ({ paso, sub, hechos, bloqueos, faltan, dias, diaSel, guardan
     );
 };
 
+/* Constancia de carga. Va acá y no en comercialApi.js porque ese archivo lo está tocando otra
+   tarea en paralelo; al integrar, esta llamada se muda con las demás. */
+const getConstancia = (dias) =>
+    api.get('/comercial/reporte/constancia', { params: { dias } }).then(r => r.data);
+
+const RANGOS = [[7, '7 días'], [14, '14 días'], [30, '30 días']];
+const TODOS = 'todos';
+
+/* El hueco no es rojo: un día libre o un día sin nada que cargar no es una deuda. */
+const HUECO = { background: 'transparent', border: '1px solid var(--border-subtle)' };
+const CELDA = {
+    completo: { background: 'var(--success)' },
+    incompleto: { background: 'var(--warning)' },
+    sin_cargar: { background: 'var(--error-surface)', border: '1px solid var(--error-border)' },
+    libre: HUECO,
+    sin_actividad: HUECO,
+};
+
+const tonoTasa = (tasa) => {
+    if (tasa === null || tasa === undefined) return 'text-muted-40';
+    return tasa >= 85 ? 'success' : tasa >= 65 ? 'warning' : 'error';
+};
+
+/**
+ * Constancia de carga: una fila por persona y una celda por día.
+ *
+ * El chip del paso 1 dice si alguien cargó su día HOY; esto dice si es un descuido o una
+ * costumbre. La tasa de la derecha es sobre los días en que la persona tenía algo que cargar, así
+ * que un fin de semana no la castiga; sin esos días viene "—" y no 0%.
+ */
+const PanelConstancia = () => {
+    const [rango, setRango] = useState(14);
+    const [quien, setQuien] = useState(TODOS);
+    const [datos, setDatos] = useState(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        let vivo = true;
+        setDatos(null);
+        setVisible(false);
+        getConstancia(rango)
+            .then(d => { if (vivo) setDatos(d); })
+            .catch(() => { if (vivo) setDatos({ dias: [], personas: [] }); });
+        return () => { vivo = false; };
+    }, [rango]);
+
+    /* Las celdas entran de a poco, como en el diseño: el CSS las deja en opacity 0 y acá se
+       encienden una vez que los datos ya están en el DOM. */
+    useEffect(() => {
+        if (!datos) return undefined;
+        const id = requestAnimationFrame(() => setVisible(true));
+        return () => cancelAnimationFrame(id);
+    }, [datos]);
+
+    const ayuda = 'Quién dejó cargado el resultado de su día, día por día. Verde es el día completo, '
+        + 'ámbar es cargado pero con llamadas sin resultado y el rojo es un día con trabajo sin cargar. '
+        + 'El hueco es un día libre o sin nada que cargar, y no cuenta para la tasa.';
+
+    const personas = datos
+        ? datos.personas.filter(p => quien === TODOS || String(p.id) === quien)
+        : [];
+    const nombreDeDia = datos
+        ? datos.dias.reduce((acc, d) => ({ ...acc, [d.fecha]: d.dia }), {})
+        : {};
+
+    return (
+        <section className="panel" style={{ marginTop: 'var(--s4)' }}>
+            <div className="panel-cab">
+                <h2 className="t-h3">Reportado</h2>
+                <Tip titulo="Reportado" texto={ayuda} />
+                <div className="panel-cab-der">
+                    <div className="leyenda" style={{ marginTop: 0 }}>
+                        <span><i style={{ background: 'var(--success)' }} />completo</span>
+                        <span><i style={{ background: 'var(--warning)' }} />incompleto</span>
+                        <span><i style={CELDA.sin_cargar} />sin cargar</span>
+                        <span><i style={HUECO} />sin actividad</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="fila barra-tabla">
+                <span className="t-rotulo">Rango</span>
+                <div className="tabs" role="tablist" aria-label="Rango">
+                    {RANGOS.map(([valor, label]) => (
+                        <button key={valor} type="button" role="tab" className="tab tab--sm"
+                            aria-selected={rango === valor} onClick={() => setRango(valor)}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                {datos && datos.personas.length > 1 && (
+                    <>
+                        <span className="t-rotulo" style={{ marginLeft: 'var(--s3)' }}>Quién</span>
+                        <div className="tabs tabs--wrap" role="tablist" aria-label="Persona">
+                            <button type="button" role="tab" className="tab tab--sm"
+                                aria-selected={quien === TODOS} onClick={() => setQuien(TODOS)}>
+                                Todos
+                            </button>
+                            {datos.personas.map(p => (
+                                <button key={p.id} type="button" role="tab" className="tab tab--sm"
+                                    aria-selected={quien === String(p.id)}
+                                    onClick={() => setQuien(String(p.id))}>
+                                    {p.nombre}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {!datos ? <Cargando texto="Cargando la constancia…" /> : (
+                <div className="hundido" style={{ padding: 'var(--s3) var(--s4)' }}>
+                    <div className="rep-fila"
+                        style={{ cursor: 'default', paddingLeft: 0, paddingRight: 0 }}>
+                        <span className="rep-nom" />
+                        <span style={{ width: 96, flexShrink: 0 }} />
+                        <span className="heat heat--cab">
+                            {datos.dias.map(d => <i key={d.fecha}>{d.dia}<em>{d.n}</em></i>)}
+                        </span>
+                        <span className="rep-tasa"
+                            style={{ '--c': 'var(--text-muted-40)', fontSize: 10 }}>tasa</span>
+                    </div>
+                    {personas.map((p, pi) => (
+                        <button key={p.id} type="button" className="rep-fila"
+                            style={{ paddingLeft: 0, paddingRight: 0 }}
+                            aria-label={`Ver solo la constancia de ${p.nombre}`}
+                            onClick={() => setQuien(quien === String(p.id) ? TODOS : String(p.id))}>
+                            <span className="rep-nom">{p.nombre}</span>
+                            <span className="delta"
+                                style={{ '--c': `var(--${p.sin_cargar === 0 ? 'success' : 'warning'})` }}>
+                                {p.sin_cargar === 0
+                                    ? 'al día'
+                                    : fmt.plural(p.sin_cargar, 'día sin cargar', 'días sin cargar')}
+                            </span>
+                            <span className="heat">
+                                {p.celdas.map((c, i) => (
+                                    <i key={c.fecha} style={{
+                                        ...CELDA[c.estado],
+                                        opacity: visible ? 1 : 0,
+                                        transitionDelay: `${pi * 60 + i * 18}ms`,
+                                    }} title={`${nombreDeDia[c.fecha] || ''} ${fmt.fecha(c.fecha)} · ${c.label}`} />
+                                ))}
+                            </span>
+                            <span className="rep-tasa" style={{ '--c': `var(--${tonoTasa(p.tasa)})` }}>
+                                {fmt.pct(p.tasa)}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+};
+
 /**
  * Paso 1 · El día: los números del grupo y una fila por persona.
  *
@@ -283,6 +438,8 @@ const PasoDia = ({ dia, revisadas, onRevisar, irAPersona }) => {
                     </div>
                 )}
             </section>
+
+            <PanelConstancia />
 
             {persona && (
                 <div className="scrim" onClick={(e) => { if (e.target === e.currentTarget) setAbierta(null); }}>
