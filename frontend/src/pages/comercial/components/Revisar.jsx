@@ -32,6 +32,19 @@ const Ayuda = ({ titulo, texto }) => (
     </span>
 );
 
+/**
+ * El estado con el que el panel Estados cuenta cada agenda.
+ *
+ * "Pendiente" es un solo valor en la tabla pero dos cosas distintas para leer: una llamada que ya
+ * pasó y nadie reportó, y una que todavía no ocurrió. El panel las separa, así que la faceta
+ * tiene que separarlas igual — si no, clic en "Sin reporte · 62" aterriza en las 71 pendientes.
+ * La derivación es la MISMA que hace `estados_de` en el backend, sobre el mismo campo.
+ */
+export const estadoDeAgenda = (fila) => {
+    if (fila.post_call?.key !== 'pendiente') return fila.post_call?.label;
+    return fila.retraso_dias > 0 ? 'Sin reporte' : 'Aún no ocurrió';
+};
+
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cuatro.
 const TABLAS = {
     agendas: {
@@ -48,6 +61,7 @@ const TABLAS = {
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
+            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
@@ -120,6 +134,7 @@ const TABLAS = {
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
+            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
             { key: 'setter', label: 'Setter', de: (f) => f.setter },
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },

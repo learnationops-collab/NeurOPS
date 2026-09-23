@@ -401,7 +401,7 @@ const PanelEstados = ({ bloque, irA }) => {
                     <Reparto vista={vista} total={total} centro="agendas"
                         items={bloque.estados.map(e => ({
                             label: e.label, n: e.n, tone: e.tone,
-                            ir: () => irA('agendas', { post_call: e.filtro }),
+                            ir: () => irA('agendas', { estado: e.filtro }),
                         }))} />
                     {sinReporte && (
                         <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>

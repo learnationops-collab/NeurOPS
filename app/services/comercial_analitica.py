@@ -193,8 +193,11 @@ POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'
 def estados_de(filas_agendas):
     """Desglose de las agendas del período por su resultado, en el orden del vocabulario.
 
-    Cada estado lleva el `filtro` con el que Revisar lo reconoce, que NO siempre es su propia
-    etiqueta: las dos mitades de "Pendiente" comparten el único estado que existe en la tabla.
+    Cada estado lleva el `filtro` con el que Revisar lo reconoce, que es su PROPIA etiqueta:
+    Revisar deriva el mismo estado fila por fila (ver `estadoDeAgenda`), así que las dos mitades
+    de "Pendiente" se pueden filtrar por separado. Antes las dos mandaban 'Pendiente' y el clic
+    en "Sin reporte · 62" aterrizaba en las 71 pendientes.
+
     Los estados en cero se omiten — una tabla con siete filas vacías esconde las tres que
     importan.
     """
@@ -205,17 +208,16 @@ def estados_de(filas_agendas):
             clave = SIN_REPORTE['key'] if f['retraso_dias'] > 0 else POR_OCURRIR['key']
         conteo[clave] = conteo.get(clave, 0) + 1
 
-    pendiente = next(e for e in POST_CALL if e['key'] == 'pendiente')
     orden = []
     for estado in POST_CALL:
         if estado['key'] == 'pendiente':
-            orden += [(SIN_REPORTE, pendiente['label']), (POR_OCURRIR, pendiente['label'])]
+            orden += [SIN_REPORTE, POR_OCURRIR]
         else:
-            orden.append((estado, estado['label']))
+            orden.append(estado)
 
     return [{'key': e['key'], 'label': e['label'], 'tone': e['tone'],
-             'n': conteo[e['key']], 'filtro': filtro}
-            for e, filtro in orden if conteo.get(e['key'])]
+             'n': conteo[e['key']], 'filtro': e['label']}
+            for e in orden if conteo.get(e['key'])]
 
 
 def _cash_por_dia(filas_ventas, start, end):

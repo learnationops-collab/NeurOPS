@@ -283,8 +283,11 @@ def test_una_agenda_vencida_sin_reportar_no_se_mezcla_con_una_que_todavia_no_ocu
 
     assert estados['sin_reporte']['n'] == 1
     assert estados['por_ocurrir']['n'] == 1
-    # Las dos siguen llevando al mismo corte de Revisar: la tabla tiene un solo "Pendiente".
-    assert estados['sin_reporte']['filtro'] == estados['por_ocurrir']['filtro'] == 'Pendiente'
+    # Y cada una lleva a SU corte de Revisar, que deriva el estado fila por fila igual que acá
+    # (`estadoDeAgenda`). Mientras las dos mandaron 'Pendiente', el clic en "Sin reporte" abría
+    # la tabla con las dos mitades juntas.
+    assert estados['sin_reporte']['filtro'] == 'Sin reporte'
+    assert estados['por_ocurrir']['filtro'] == 'Aún no ocurrió'
 
 
 @freeze_time(HOY)
