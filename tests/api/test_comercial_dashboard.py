@@ -14,7 +14,9 @@ from datetime import date, datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client, FinancialSale, LeadEventLog, ReporteDirector
+from app.models import (
+    Appointment, Client, CloserDailyReport, FinancialSale, LeadEventLog, ReporteDirector,
+)
 
 HOY = '2026-09-17 21:30:00'
 CONTEXTO = '/api/comercial/contexto'
@@ -23,6 +25,7 @@ TABLA = '/api/comercial/tabla'
 REPORTE_HOY = '/api/comercial/reporte/hoy'
 REPORTE = '/api/comercial/reporte'
 REPORTES = '/api/comercial/reportes'
+CONSTANCIA = '/api/comercial/reporte/constancia'
 
 _emails = itertools.count(1)
 
@@ -255,6 +258,7 @@ def test_reportar_es_solo_de_la_direccion(client, db, equipo, auth_headers, quie
     assert client.get(REPORTE_HOY, headers=headers).status_code == 403
     assert client.post(REPORTE, headers=headers, json={}).status_code == 403
     assert client.get(REPORTES, headers=headers).status_code == 403
+    assert client.get(CONSTANCIA, headers=headers).status_code == 403
 
 
 @freeze_time(HOY)
@@ -270,6 +274,57 @@ def test_el_paso_uno_trae_una_fila_por_persona_con_su_estado_de_reporte(client, 
     assert por_nombre['Marlon']['estado']['key'] == 'sin_reportar'
     assert por_nombre['Marlon']['actividad'][0]['cliente'] == 'De hoy'
     assert datos['closers']['agendas'] == 1
+
+
+@freeze_time(HOY)
+def test_la_constancia_separa_el_dia_sin_cargar_del_dia_sin_actividad(client, db, equipo, auth_headers):
+    marlon = equipo['closer_a']
+    # Dos días con llamadas: uno con su reporte diario cargado y otro sin él. El resto del rango,
+    # sin una sola llamada agendada.
+    agenda(db, marlon, cliente(db, 'Del 15'), cuando=datetime(2026, 9, 15, 15, 0), closer_result='Show up')
+    agenda(db, marlon, cliente(db, 'Del 16'), cuando=datetime(2026, 9, 16, 15, 0), closer_result='Show up')
+    db.session.add(CloserDailyReport(closer_id=marlon.id, date=date(2026, 9, 15)))
+    db.session.commit()
+
+    datos = client.get(CONSTANCIA, headers=auth_headers(equipo['director']),
+                       query_string={'dias': 14}).get_json()
+
+    fila = next(p for p in datos['personas'] if p['nombre'] == 'Marlon')
+    por_fecha = {c['fecha']: c['estado'] for c in fila['celdas']}
+    assert len(fila['celdas']) == len(datos['dias']) == 14
+    assert datos['desde'] == '2026-09-04' and datos['hasta'] == '2026-09-17'
+    assert por_fecha['2026-09-15'] == 'completo'
+    assert por_fecha['2026-09-16'] == 'sin_cargar'
+    assert por_fecha['2026-09-10'] == 'sin_actividad'
+    # La tasa sale sobre los días que tenía algo que cargar, no sobre los 14 del rango.
+    assert (fila['reportados'], fila['esperados'], fila['tasa']) == (1, 2, 50)
+
+
+@freeze_time(HOY)
+def test_reportar_con_llamadas_sin_resultado_queda_incompleto(client, db, equipo, auth_headers):
+    marlon = equipo['closer_a']
+    agenda(db, marlon, cliente(db, 'Sin resultado'), cuando=datetime(2026, 9, 16, 15, 0),
+           closer_result='Pendiente')
+    db.session.add(CloserDailyReport(closer_id=marlon.id, date=date(2026, 9, 16)))
+    db.session.commit()
+
+    datos = client.get(CONSTANCIA, headers=auth_headers(equipo['director'])).get_json()
+
+    fila = next(p for p in datos['personas'] if p['nombre'] == 'Marlon')
+    por_fecha = {c['fecha']: c['estado'] for c in fila['celdas']}
+    assert por_fecha['2026-09-16'] == 'incompleto'
+    # Cargó el día, así que cuenta como reportado igual: incompleto no es lo mismo que no cargar.
+    assert (fila['reportados'], fila['esperados'], fila['sin_cargar']) == (1, 1, 0)
+
+
+@freeze_time(HOY)
+def test_sin_dias_que_cargar_la_tasa_de_constancia_es_nula_y_no_cero(client, db, equipo, auth_headers):
+    datos = client.get(CONSTANCIA, headers=auth_headers(equipo['director'])).get_json()
+
+    fila = next(p for p in datos['personas'] if p['nombre'] == 'Nerina')
+    assert fila['esperados'] == 0
+    # Un 0% sobre cero días de trabajo sería una afirmación falsa, no un dato.
+    assert fila['tasa'] is None
 
 
 @freeze_time(HOY)

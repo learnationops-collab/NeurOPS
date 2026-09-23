@@ -238,6 +238,19 @@ def reporte_hoy():
     return jsonify(reporte.dia_del_equipo(fecha)), 200
 
 
+@bp.route('/reporte/constancia', methods=['GET'])
+def reporte_constancia():
+    """Constancia de carga: una fila por persona y una celda por día de los últimos N."""
+    if not _solo_direccion():
+        return jsonify({'message': 'Forbidden'}), 403
+    fecha = ComercialService.fecha_o_hoy(request.args.get('fecha'))
+    try:
+        dias = int(request.args.get('dias') or 14)
+    except (TypeError, ValueError):
+        dias = 14
+    return jsonify(reporte.constancia(fecha, dias)), 200
+
+
 @bp.route('/reporte', methods=['POST'])
 def guardar_reporte():
     """Guarda el reporte del día. Volver a guardar el mismo día lo actualiza."""
