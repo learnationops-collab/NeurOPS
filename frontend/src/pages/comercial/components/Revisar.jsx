@@ -161,6 +161,9 @@ const PanelFiltros = ({ def, filas, facetas, setFacetas, modo, setModo, onCerrar
         return sel.length === 1 ? sel[0] : `${sel.length} activas`;
     };
 
+    // Sin nada seleccionado, "Limpiar todo" no tiene nada que limpiar.
+    const seleccionados = def.facetas.reduce((a, fa) => a + (facetas[fa.key]?.length || 0), 0);
+
     return (
         <div className="dc-pop" ref={ref} style={{ width: 'min(340px, 86vw)', minWidth: 'min(340px, 86vw)' }}>
             {def.facetas.map(faceta => {
@@ -204,7 +207,7 @@ const PanelFiltros = ({ def, filas, facetas, setFacetas, modo, setModo, onCerrar
                         </button>
                     ))}
                 </span>
-                <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" style={{ height: 30 }}
+                <button type="button" className="dc-textbtn" disabled={seleccionados === 0}
                     onClick={() => setFacetas({})}>
                     Limpiar todo
                 </button>

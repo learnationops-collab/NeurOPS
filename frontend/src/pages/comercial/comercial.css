@@ -893,6 +893,36 @@
     color: var(--text-on-surface);
 }
 
+/* Acción discreta al pie de un panel ("Limpiar todo"). NO es un `.ln-btn`: el botón del design
+   system son 13px en mayúscula con .18em de tracking sobre 48px de alto (40 en `--sm`), y
+   forzarlo a 30px metía "LIMPIAR TODO" —168px de texto— pegado a los bordes de la cápsula y le
+   daba más peso visual que a los propios filtros. Acá el texto manda menos que lo que se está
+   filtrando, así que va en minúscula, sin tracking y sin borde. */
+.dc-textbtn {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+.dc-textbtn:hover {
+    background: var(--bg-element);
+    color: var(--text-on-surface);
+}
+.dc-textbtn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
 .dc-check {
     display: inline-flex;
     align-items: center;
