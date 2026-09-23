@@ -195,7 +195,12 @@
     align-items: center;
     gap: 6px;
     padding: 9px;
-    max-width: calc(100vw - 32px);
+    /* El `BugReportWidget` global flota fijo abajo a la derecha (bottom-8 right-24) por encima
+       de todo y ocupa unos 168px de ancho útil. Como el dock va centrado, dejarle ese hueco a
+       la derecha obliga a dejar el mismo a la izquierda: de ahí el 336. El piso de 320px evita
+       que en pantallas angostas la resta lo deje en nada — ahí el dock scrollea, que es
+       justamente lo que el diseño prevé cuando no entra. */
+    max-width: min(calc(100vw - 32px), max(320px, calc(100vw - 336px)));
     overflow-x: auto;
     scrollbar-width: none;
     background: var(--bg-surface);
@@ -943,6 +948,8 @@
 }
 
 .dc-retraso {
+    /* En bloque: dentro de la celda va DEBAJO del chip de resultado, no pegado a su derecha. */
+    display: block;
     font-size: 11px;
     font-weight: 700;
     color: var(--warning);
