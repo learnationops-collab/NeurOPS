@@ -7,7 +7,11 @@ Dos cosas distintas viven acá:
      registro real (`ComercialService`), no de lo que alguien escriba en el wizard: el director
      revisa datos, no los carga.
 
-  2. Guardar y consultar el registro de gestión (`ReporteDirector`).
+  2. `constancia`: la misma pregunta del paso 1 ("¿dejó cargado su día?") mirada en el tiempo —
+     una fila por persona y una celda por día de los últimos N. Es lo único que contesta si un
+     "sin reportar" de hoy es un descuido o una costumbre.
+
+  3. Guardar y consultar el registro de gestión (`ReporteDirector`).
 
 Sobre "reportó / no reportó": para un closer se sabe la HORA, porque `CloserDailyReport` guarda
 cuándo se envió. Para un setter solo se sabe si cargó o no (`SetterDailyStats` no tiene marca de
@@ -17,7 +21,7 @@ tiempo), así que su chip dice "Reportó" sin hora en vez de inventar una.
 quedan llamadas del día, ya pasadas, sin resultado. Es exactamente el mismo criterio de
 "pendiente con retraso" de la tabla de Revisar, para que las dos pantallas digan lo mismo.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app import db
 from app.models import CloserDailyReport, ReporteDirector, ReporteDirectorPersona, SetterDailyStats, User
@@ -33,6 +37,18 @@ def _estado_reporte(reporto_a_las, reporto, tiene_pendientes_vencidas):
     if tiene_pendientes_vencidas:
         return {'key': 'incompleto', 'label': '{} · incompleto'.format(etiqueta), 'tone': 'warning'}
     return {'key': 'reporto', 'label': etiqueta, 'tone': 'success'}
+
+
+def _sin_resultado_vencidas(agendas):
+    """Las agendas de la lista que ya pasaron y siguen sin resultado.
+
+    Es el criterio de "pendiente con retraso" de la tabla de Revisar, para que las dos
+    pantallas digan lo mismo sobre la misma llamada.
+    """
+    ahora = datetime.utcnow()
+    return [f for f in agendas if f['retraso_dias'] > 0 or
+            (f['post_call']['key'] == 'pendiente' and f['fecha'] and
+             datetime.fromisoformat(f['fecha']) < ahora)]
 
 
 def _actividad_de_closer(agendas):
@@ -73,9 +89,7 @@ def dia_del_equipo(fecha=None):
     personas = []
     for c in closers:
         suyas = [f for f in agendas if f['closer_id'] == c['id']]
-        vencidas = [f for f in suyas if f['retraso_dias'] > 0 or
-                    (f['post_call']['key'] == 'pendiente' and f['fecha'] and
-                     datetime.fromisoformat(f['fecha']) < datetime.utcnow())]
+        vencidas = _sin_resultado_vencidas(suyas)
         resumen = ComercialService.totales_agendas(suyas)
         reporte = reportes_closer.get(c['id'])
         personas.append({
@@ -124,6 +138,103 @@ def _sugerencias(agendas, ventas, personas):
     proximos = ['Seguimiento de {}'.format(f['cliente']) for f in agendas
                 if f['post_call']['key'] == 'seguimiento'][:2]
     return {'victorias': victorias, 'mejoras': mejoras, 'proximos': proximos}
+
+
+DIAS_ES = ('Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do')
+RANGOS_CONSTANCIA = (7, 14, 30)
+
+# Lo que puede pasarle a un día de una persona. Solo los dos primeros y `sin_cargar` entran en la
+# tasa: un día libre o un día en el que no tenía nada que cargar no es ni mérito ni deuda, así que
+# sale del denominador en vez de contar como incumplimiento.
+_ESTADOS_CELDA = {
+    'completo': 'cargado y completo',
+    'incompleto': 'cargado, con llamadas sin resultado',
+    'sin_cargar': 'sin cargar',
+    'libre': 'día libre',
+    'sin_actividad': 'sin actividad para cargar',
+}
+
+
+def _celda(estado):
+    return {'estado': estado, 'label': _ESTADOS_CELDA[estado]}
+
+
+def _tasa(reportados, esperados):
+    """La tasa del rango, o None si no hubo días que cargar.
+
+    Sin denominador NO hay 0%: "0% de constancia sobre cero días de trabajo" es una afirmación
+    falsa, no un dato. El frontend muestra "—".
+    """
+    return round(reportados / esperados * 100) if esperados else None
+
+
+def constancia(hasta=None, dias=14):
+    """Una fila por persona y una celda por día: quién viene dejando su día cargado.
+
+    Los datos son los mismos que el paso 1 lee para hoy, pero sobre un rango: la existencia del
+    reporte diario (`CloserDailyReport` / `SetterDailyStats`) contra la actividad real de ese día.
+    """
+    fin = hasta or date.today()
+    largo = dias if dias in RANGOS_CONSTANCIA else 14
+    inicio = fin - timedelta(days=largo - 1)
+    fechas = [inicio + timedelta(days=i) for i in range(largo)]
+
+    agendas = ComercialService.agendas(inicio, fin)
+    leads = ComercialService.leads(inicio, fin)
+
+    reportes_closer = {(r.closer_id, r.date): r for r in CloserDailyReport.query.filter(
+        CloserDailyReport.date >= inicio, CloserDailyReport.date <= fin).all()}
+    reportes_setter = {(s.setter_id, s.date): s for s in SetterDailyStats.query.filter(
+        SetterDailyStats.date >= inicio, SetterDailyStats.date <= fin).all()}
+
+    personas = []
+    for miembro in ComercialService.miembros(ROL_CLOSERS):
+        por_dia = {}
+        for f in agendas:
+            if f['closer_id'] == miembro['id'] and f['fecha']:
+                por_dia.setdefault(f['fecha'][:10], []).append(f)
+        # Un closer "tenía algo que cargar" ese día si tuvo llamadas agendadas.
+        incompletos = {clave for clave, filas in por_dia.items() if _sin_resultado_vencidas(filas)}
+        personas.append(_fila_constancia(
+            miembro, ROL_CLOSERS, fechas, reportes_closer, set(por_dia), incompletos))
+
+    for miembro in ComercialService.miembros(ROL_SETTERS):
+        # Un setter no deja rastro de trabajo fuera de su propio reporte, así que lo más cerca de
+        # "tenía algo que cargar" que hay es haber recibido leads ese día.
+        nombre = miembro['nombre'].strip().lower()
+        con_leads = {f['fecha'][:10] for f in leads
+                     if f['fecha'] and f['setter'] and f['setter'].strip().lower() == nombre}
+        personas.append(_fila_constancia(
+            miembro, ROL_SETTERS, fechas, reportes_setter, con_leads, set()))
+
+    return {
+        'desde': inicio.isoformat(), 'hasta': fin.isoformat(), 'rangos': list(RANGOS_CONSTANCIA),
+        'dias': [{'fecha': d.isoformat(), 'dia': DIAS_ES[d.weekday()], 'n': d.day} for d in fechas],
+        'personas': personas,
+    }
+
+
+def _fila_constancia(miembro, grupo, fechas, reportes, dias_con_actividad, dias_incompletos):
+    """La fila de una persona: su celda por día, sus días sin cargar y su tasa del rango."""
+    celdas, reportados, esperados, sin_cargar = [], 0, 0, 0
+    for dia in fechas:
+        reporte = reportes.get((miembro['id'], dia))
+        clave = dia.isoformat()
+        if reporte is not None and getattr(reporte, 'is_non_working_day', False):
+            estado = 'libre'
+        elif reporte is not None:
+            estado = 'incompleto' if clave in dias_incompletos else 'completo'
+            reportados += 1
+            esperados += 1
+        elif clave in dias_con_actividad:
+            estado = 'sin_cargar'
+            esperados += 1
+            sin_cargar += 1
+        else:
+            estado = 'sin_actividad'
+        celdas.append({'fecha': clave, **_celda(estado)})
+    return {**miembro, 'grupo': grupo, 'celdas': celdas, 'reportados': reportados,
+            'esperados': esperados, 'sin_cargar': sin_cargar, 'tasa': _tasa(reportados, esperados)}
 
 
 def _lista_de_textos(valor):
