@@ -1,27 +1,41 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Plus, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Check, ChevronRight, Plus, Trophy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Cargando, Chip, fmt, Segmented } from './Shared';
+import { Cargando, fmt } from './Shared';
 import { getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
 
 /**
  * Reportar: el reporte diario del director comercial, en cuatro pasos, más el historial.
  *
- * Una cosa a la vez: el paso 3 pregunta por UNA persona y avanza sola; el paso 4 trabaja una
- * lista por vez. El único CTA de la pantalla es "Guardar reporte".
+ * Una cosa a la vez. Cada paso tiene sus propias pantallas (`SUBPASOS`) y nunca se ve más de una:
+ * el grupal pregunta por un equipo por vez, el individual por UNA persona ("No" avanza sola, sin
+ * pedir respuesta) y el cierre por una lista por vez. El único CTA de la pantalla es "Guardar
+ * reporte", y hasta que no esté no hay nada más que apretar.
  *
- * El borrador vive en localStorage por fecha (incluida la marca de "revisada" del paso 1, que es
- * una lista de control del propio director dentro de una sentada, no un dato del negocio). Si se
- * recarga la página a mitad del reporte, no se pierde nada.
+ * El paso 1 no es un formulario: es la lista de control del director sobre datos que ya existen.
+ * Por eso bloquea el resto del reporte hasta que las N personas estén revisadas, y por eso la
+ * marca de "revisada" NO tiene tabla — vive en el borrador de `localStorage`, junto con el resto
+ * de lo escrito, con clave por fecha. Las escrituras van en `try/catch`: en modo privado el
+ * reporte sigue funcionando, solo no se guarda el borrador.
+ *
+ * El stepper, el día que se revisa y la navegación se pintan en la barra del header (`onStepper`),
+ * no dentro del contenido: el cuerpo es la pregunta y nada más.
  */
+
+const PASOS = ['El día', 'Grupal', 'Individual', 'Cierre'];
+/** Cuántas pantallas tiene cada paso. Es lo que hace que "Siguiente" no salte de tema. */
+const SUBPASOS = [1, 2, 1, 3];
+
+const GRUPOS = [
+    { key: 'setters', label: 'Setters', pregunta: '¿Qué trabajaste hoy con todos los setters?' },
+    { key: 'closers', label: 'Closers', pregunta: '¿Qué trabajaste hoy con todos los closers?' },
+];
 
 const LISTAS = [
     { key: 'victorias', label: 'Victorias del día', tono: 'success', pregunta: '¿Qué salió bien hoy?' },
     { key: 'mejoras', label: 'A mejorar', tono: 'warning', pregunta: '¿Qué hay que mejorar?' },
     { key: 'proximos', label: 'Próximos días', tono: 'info', pregunta: '¿Qué querés trabajar en los próximos días?' },
 ];
-
-const PASOS = ['El día', 'Grupal', 'Individual', 'Cierre'];
 
 const claveBorrador = (fecha) => `neurops.reporte-director.${fecha}`;
 
@@ -41,128 +55,282 @@ const leerBorrador = (fecha) => {
     }
 };
 
-const Stepper = ({ paso, setPaso, completos, bloqueado }) => (
-    <div className="dc-stepper">
-        {PASOS.map((label, i) => {
-            const hecho = completos[i];
-            const deshabilitado = i === 3 && bloqueado;
-            return (
-                <button key={label} type="button" className="dc-step" aria-current={paso === i}
-                    disabled={deshabilitado} onClick={() => !deshabilitado && setPaso(i)}>
-                    <span className={`dc-step-num${hecho && paso !== i ? ' dc-step-num--done' : ''}`}>
-                        {hecho && paso !== i ? <Check size={12} /> : i + 1}
-                    </span>
-                    <span>{label}</span>
-                </button>
-            );
-        })}
+/** El día anterior a una fecha ISO. Al mediodía, para que ningún huso corra el día. */
+const diaAnterior = (iso) => {
+    const f = new Date(`${iso.slice(0, 10)}T12:00:00`);
+    f.setDate(f.getDate() - 1);
+    return f.toISOString().slice(0, 10);
+};
+
+const rolDe = (persona) => (persona.grupo === 'setters' ? 'Setter' : 'Closer');
+
+/** El avatar del diseño, con el tono del rol: los setters van en azul informativo. */
+const avatarEstilo = (grupo, px, radio) => ({
+    width: px,
+    height: px,
+    borderRadius: radio,
+    fontSize: px > 38 ? 14 : 11.5,
+    ...(grupo === 'setters'
+        ? { background: 'var(--info-surface)', borderColor: 'var(--info-border)', color: 'var(--info)' }
+        : {}),
+});
+
+/** Chip de estado con el tono que manda el backend (nunca uno elegido acá). */
+const Chip = ({ tono, children }) => (
+    <span className="chip" style={{ '--c': `var(--${tono})` }}>{children}</span>
+);
+
+/** El "i" con la explicación. Es CSS puro: abre con hover y con foco de teclado. */
+const Tip = ({ titulo, texto }) => (
+    <span className="tip" tabIndex={0} role="note" aria-label={`${titulo ? `${titulo}: ` : ''}${texto}`}>
+        <span className="tip-dot" aria-hidden="true">i</span>
+        <span className="tip-burbuja" aria-hidden="true">
+            {titulo && <b>{titulo}</b>}
+            {texto}
+        </span>
+    </span>
+);
+
+/** Cifras del día, todas en la misma caja: mismo alto, mismo padding, número tabular. */
+const Cifras = ({ items, min = 104 }) => (
+    <div className="cifras"
+        style={{ gridTemplateColumns: `repeat(auto-fit,minmax(min(100%,${min}px),1fr))` }}>
+        {items.map(([label, valor, color]) => (
+            <div key={label} className="cifra">
+                <span className="ficha-lbl">{label}</span>
+                <span className="cifra-n" style={{ color: color || 'var(--text-on-surface)' }}>{valor}</span>
+            </div>
+        ))}
     </div>
 );
 
-/** Paso 1: los números del día y una fila por persona, que abre su modal. */
-const PasoDia = ({ dia, revisadas, onRevisar, irAPersona }) => {
-    const [abierta, setAbierta] = useState(null);
-    const persona = dia.personas.find(p => p.id === abierta);
-    const revisados = dia.personas.filter(p => revisadas[p.id]).length;
+/** Encabezado de una pantalla del paso: de qué se trata y en cuál de sus pantallas está. */
+const Cabecera = ({ rotulo, sub, total }) => (
+    <div className="fila" style={{ gap: 'var(--s2)' }}>
+        <span className="t-rotulo">{rotulo}</span>
+        {total > 1 && (
+            <span className="t-cap mut40 num" style={{ marginLeft: 'auto' }}>{sub + 1} de {total}</span>
+        )}
+    </div>
+);
+
+/**
+ * La barra del header: los cuatro pasos, el día que se revisa y la navegación.
+ *
+ * Son tres bloques hermanos (van dentro de la fila de controles del dashboard, no en una caja
+ * propia). Las acciones llegan por una ref para que un click use siempre el estado de ahora y no
+ * el del render en el que se creó el nodo.
+ */
+const BarraPasos = ({ paso, sub, hechos, bloqueos, faltan, dias, diaSel, guardando, acciones }) => {
+    const ultimo = paso === PASOS.length - 1 && sub === SUBPASOS[paso] - 1;
+    const bloqueado = bloqueos[paso];
 
     return (
         <>
-            <div className="dc-grid-2" style={{ marginTop: 0 }}>
-                <div className="ln-panel ln-panel--sm">
-                    <div className="dc-eyebrow" style={{ marginBottom: 14 }}>Closers</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 12 }}>
-                        {[['Agendas', dia.closers.agendas, null], ['Asistieron', dia.closers.asistieron, 'var(--success)'],
-                        ['Ventas', dia.closers.ventas, 'var(--brand-secondary)'], ['Cash', fmt.money(dia.closers.cash), null]]
-                            .map(([label, valor, color]) => (
-                                <div key={label}>
-                                    <div className="dc-total-label">{label}</div>
-                                    <div className="dc-total-value" style={{ color }}>{valor}</div>
-                                </div>
-                            ))}
-                    </div>
-                </div>
-                <div className="ln-panel ln-panel--sm">
-                    <div className="dc-eyebrow" style={{ marginBottom: 14 }}>Setters</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 12 }}>
-                        {[['Leads', dia.setters.leads, null], ['Mensajes', dia.setters.mensajes, 'var(--info)'],
-                        ['Respuesta', fmt.pct(dia.setters.respuesta), null],
-                        ['Agendas', dia.setters.agendas, 'var(--success)']].map(([label, valor, color]) => (
-                            <div key={label}>
-                                <div className="dc-total-label">{label}</div>
-                                <div className="dc-total-value" style={{ color }}>{valor}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <div className="stepper" role="tablist" aria-label="Pasos del reporte">
+                {PASOS.map((label, i) => {
+                    const hecho = hechos[i];
+                    const bloq = (i === 3 && bloqueos[2]) || (i > 0 && bloqueos[0]);
+                    return (
+                        <button key={label} type="button" role="tab" className={`paso-btn${hecho ? ' hecho' : ''}`}
+                            aria-current={paso === i ? 'step' : undefined} disabled={bloq}
+                            onClick={() => acciones.current.irAPaso(i)}>
+                            <span className="paso-n">
+                                {hecho && paso !== i ? <Check size={12} /> : i + 1}
+                            </span>
+                            {label}
+                        </button>
+                    );
+                })}
             </div>
 
-            <div className="ln-panel" style={{ marginTop: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                    <span className="dc-eyebrow">Equipo</span>
-                    <span className="ln-t-caption ln-muted dc-num">
-                        {revisados} de {dia.personas.length} revisados
-                    </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {dia.personas.map(p => (
-                        <button key={p.id} type="button" className="dc-person-row" onClick={() => setAbierta(p.id)}>
-                            <span className={`dc-avatar${p.grupo === 'setters' ? ' dc-avatar--info' : ''}`}>
-                                {fmt.iniciales(p.nombre)}
-                            </span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                                <span className="dc-cell-main" style={{ display: 'block' }}>{p.nombre}</span>
-                                <span className="dc-cell-sub dc-num">{p.resumen}</span>
-                            </span>
-                            <Chip chip={p.estado} sm />
-                            <span className={`dc-go${revisadas[p.id] ? ' dc-go--done' : ''}`}>
-                                {revisadas[p.id] ? <Check size={14} /> : <ArrowRight size={14} />}
-                            </span>
+            {paso === 0 && dias.length > 1 && (
+                <div className="tabs" role="tablist" aria-label="Día a revisar">
+                    {dias.map(d => (
+                        <button key={d.label} type="button" role="tab" className="tab tab--sm"
+                            aria-selected={diaSel === d.valor}
+                            onClick={() => acciones.current.verDia(d.valor)}>
+                            {d.label}
                         </button>
                     ))}
                 </div>
+            )}
+
+            <div className="fila" style={{ gap: 'var(--s2)', marginLeft: 'auto' }}>
+                {bloqueado && <span className="t-cap mut40">Faltan {faltan}</span>}
+                {(paso > 0 || sub > 0) && (
+                    <button type="button" className="btn btn--linea btn--sm"
+                        onClick={() => acciones.current.atras()}>Atrás</button>
+                )}
+                {ultimo ? (
+                    <button type="button" className="btn btn--cta btn--sm" disabled={guardando}
+                        onClick={() => acciones.current.guardar()}>
+                        {guardando ? 'Guardando…' : 'Guardar reporte'}
+                    </button>
+                ) : (
+                    <button type="button" className="btn btn--linea btn--sm" disabled={bloqueado}
+                        onClick={() => acciones.current.siguiente()}>Siguiente</button>
+                )}
+            </div>
+        </>
+    );
+};
+
+/**
+ * Paso 1 · El día: los números del grupo y una fila por persona.
+ *
+ * Un click NO navega: abre el modal con la actividad de esa persona y un "Aceptar" que la marca
+ * revisada y encadena con la siguiente sin volver a la lista.
+ */
+const PasoDia = ({ dia, revisadas, onRevisar, irAPersona }) => {
+    const [abierta, setAbierta] = useState(null);
+    const personas = dia.personas;
+    const persona = personas.find(p => p.id === abierta) || null;
+    const revisados = personas.filter(p => revisadas[p.id]).length;
+
+    const proximaSinRevisar = (desde, hechas = revisadas) => {
+        for (let i = 0; i < personas.length; i += 1) {
+            const p = personas[(desde + i) % personas.length];
+            if (!hechas[p.id]) return p.id;
+        }
+        return null;
+    };
+
+    /* Aceptar encadena con la próxima sin revisar. La marca recién puesta se pasa a mano porque
+       el borrador todavía no se actualizó: sin eso volvería a abrir a la misma persona. */
+    const aceptar = () => {
+        const idx = personas.findIndex(p => p.id === abierta);
+        onRevisar(abierta);
+        setAbierta(proximaSinRevisar(idx + 1, { ...revisadas, [abierta]: true }));
+    };
+
+    useEffect(() => {
+        if (!persona) return undefined;
+        const cerrarConEsc = (e) => { if (e.key === 'Escape') setAbierta(null); };
+        document.addEventListener('keydown', cerrarConEsc);
+        return () => document.removeEventListener('keydown', cerrarConEsc);
+    }, [persona]);
+
+    return (
+        <>
+            <div className="grid-2" style={{ marginBottom: 'var(--s4)' }}>
+                <section className="panel panel--fino">
+                    <p className="t-rotulo" style={{ marginBottom: 'var(--s3)' }}>Closers</p>
+                    <Cifras min={88} items={[
+                        ['Agendas', fmt.num(dia.closers.agendas)],
+                        ['Show up', fmt.num(dia.closers.asistieron), 'var(--success)'],
+                        ['Ventas', fmt.num(dia.closers.ventas), 'var(--brand-secondary)'],
+                        ['Cash', fmt.money(dia.closers.cash)],
+                    ]} />
+                </section>
+                <section className="panel panel--fino">
+                    <p className="t-rotulo" style={{ marginBottom: 'var(--s3)' }}>Setters</p>
+                    <Cifras min={88} items={[
+                        ['Leads', fmt.num(dia.setters.leads)],
+                        ['Mensajes', fmt.num(dia.setters.mensajes), 'var(--info)'],
+                        ['Respuesta', fmt.pct(dia.setters.respuesta)],
+                        ['Agendas', fmt.num(dia.setters.agendas), 'var(--success)'],
+                    ]} />
+                </section>
             </div>
 
-            {persona && (
-                <div className="dc-scrim" onClick={(e) => { if (e.target === e.currentTarget) setAbierta(null); }}>
-                    <div className="dc-modal dc-modal--sm" role="dialog" aria-modal="true">
-                        <div className="dc-modal-head">
-                            <div style={{ display: 'flex', gap: 14 }}>
-                                <span className={`dc-avatar dc-avatar--lg${persona.grupo === 'setters' ? ' dc-avatar--info' : ''}`}>
-                                    {fmt.iniciales(persona.nombre)}
+            <section className="panel">
+                <div className="panel-cab">
+                    <h2 className="t-h3">Equipo</h2>
+                    <Tip titulo="Equipo"
+                        texto={'Abrí a la primera persona y aceptá: el reporte encadena solo hasta la última. '
+                            + 'Hasta que no estén todas, no avanza.'} />
+                    <div className="panel-cab-der">
+                        {revisados < personas.length ? (
+                            <button type="button" className="btn btn--linea btn--sm"
+                                onClick={() => setAbierta(proximaSinRevisar(0))}>
+                                {revisados ? 'Seguir revisando' : 'Empezar a revisar'}
+                            </button>
+                        ) : (
+                            <Chip tono="success"><Check size={12} /> equipo revisado</Chip>
+                        )}
+                        <span className="t-cap num"
+                            style={{ color: revisados === personas.length && personas.length
+                                ? 'var(--success)' : 'var(--text-muted-40)' }}>
+                            {revisados} de {personas.length}
+                        </span>
+                    </div>
+                </div>
+
+                {personas.length === 0 ? (
+                    <div className="vacio">
+                        <p className="t-h3">No hay nadie activo en el equipo</p>
+                        <p className="t-sm mut">Sin closers ni setters activos no hay día que revisar.</p>
+                    </div>
+                ) : (
+                    <div className="hundido">
+                        {personas.map(p => (
+                            <button key={p.id} type="button" className="rep-persona"
+                                onClick={() => setAbierta(p.id)}>
+                                <span className="avatar" style={avatarEstilo(p.grupo, 34, 12)}>
+                                    {fmt.iniciales(p.nombre)}
                                 </span>
-                                <div>
-                                    <h3 className="ln-t-h3">{persona.nombre}</h3>
-                                    <p className="ln-t-caption ln-muted dc-num" style={{ marginTop: 4 }}>
-                                        {persona.grupo === 'setters' ? 'Setter' : 'Closer'} · {persona.resumen}
-                                    </p>
-                                </div>
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    <span className="celda" style={{ display: 'block' }}>{p.nombre}</span>
+                                    <span className="celda-sub">{rolDe(p)} · {p.resumen}</span>
+                                </span>
+                                <Chip tono={p.estado.tone}>{p.estado.label}</Chip>
+                                <span className={`rep-ok${revisadas[p.id] ? ' si' : ''}`}>
+                                    {revisadas[p.id] ? <Check size={14} /> : <ArrowRight size={14} />}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {persona && (
+                <div className="scrim" onClick={(e) => { if (e.target === e.currentTarget) setAbierta(null); }}>
+                    <div className="modal caja" style={{ width: 'min(640px,100%)' }}
+                        role="dialog" aria-modal="true" aria-label={`Día de ${persona.nombre}`}>
+                        <div className="modal-cab" style={{ marginBottom: 'var(--s4)' }}>
+                            <span className="avatar" style={avatarEstilo(persona.grupo, 44, 14)}>
+                                {fmt.iniciales(persona.nombre)}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <h2 className="t-h3">{persona.nombre}</h2>
+                                <p className="t-cap mut40" style={{ marginTop: 4 }}>
+                                    {rolDe(persona)} · {fmt.fechaLarga(dia.fecha)}
+                                </p>
                             </div>
-                            <Chip chip={persona.estado} />
+                            <Chip tono={persona.estado.tone}>{persona.estado.label}</Chip>
+                            <button type="button" className="ibtn" aria-label="Cerrar"
+                                onClick={() => setAbierta(null)}><X size={17} /></button>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {persona.actividad.length === 0 && (
-                                <p className="ln-t-body-sm ln-muted-40">Sin actividad registrada hoy.</p>
-                            )}
-                            {persona.actividad.map((a, i) => (
-                                <div key={i} className="dc-person-row" style={{ cursor: 'default' }}>
-                                    <span className="dc-num ln-muted" style={{ width: 44 }}>{a.hora}</span>
-                                    <span style={{ flex: 1, minWidth: 0 }}>
-                                        <span className="dc-cell-main" style={{ display: 'block' }}>{a.cliente}</span>
-                                        <span className="dc-cell-sub">{a.detalle}</span>
+                        <div className="hundido">
+                            {persona.actividad.length === 0 ? (
+                                <p className="t-sm mut40" style={{ padding: 'var(--s6)' }}>
+                                    Sin actividad registrada.
+                                </p>
+                            ) : persona.actividad.map((a, i) => (
+                                <div key={`${a.hora}-${a.cliente}-${i}`} className="rep-persona"
+                                    style={{ cursor: 'default' }}>
+                                    <span className="num"
+                                        style={{ width: 46, flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
+                                        {a.hora}
                                     </span>
-                                    <Chip chip={a.chip} sm />
+                                    <span style={{ flex: 1, minWidth: 0 }}>
+                                        <span className="celda" style={{ display: 'block' }}>{a.cliente}</span>
+                                        <span className="celda-sub">{a.detalle}</span>
+                                    </span>
+                                    <Chip tono={a.chip.tone}>{a.chip.label}</Chip>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="dc-foot">
-                            <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm"
+                        <div className="rep-pie">
+                            <button type="button" className="btn btn--linea btn--sm"
                                 onClick={() => { setAbierta(null); irAPersona(persona); }}>
                                 Ver en Revisar
                             </button>
-                            <button type="button" className="ln-btn ln-btn--secondary ln-btn--sm"
-                                onClick={() => { onRevisar(persona.id); setAbierta(null); }}>
+                            <button type="button" className="btn btn--cta btn--sm"
+                                style={{ marginLeft: 'auto' }} onClick={aceptar}>
                                 Aceptar
                             </button>
                         </div>
@@ -173,325 +341,477 @@ const PasoDia = ({ dia, revisadas, onRevisar, irAPersona }) => {
     );
 };
 
-/** Paso 2: un textarea por grupo. Sin chips de temas ni textos de ayuda. */
-const PasoGrupal = ({ borrador, setBorrador }) => (
-    <div className="dc-grid-2" style={{ marginTop: 0 }}>
-        {[['closers', 'Closers', '¿Qué trabajaste hoy con todos los closers?'],
-        ['setters', 'Setters', '¿Qué trabajaste hoy con todos los setters?']].map(([key, titulo, placeholder]) => (
-            <div key={key} className="ln-panel ln-panel--sm">
-                <div className="dc-eyebrow" style={{ marginBottom: 12 }}>{titulo}</div>
-                <textarea className="dc-textarea" placeholder={placeholder} value={borrador.grupal[key]}
-                    onChange={(e) => setBorrador({ ...borrador, grupal: { ...borrador.grupal, [key]: e.target.value } })} />
-            </div>
-        ))}
-    </div>
-);
+/** Paso 2 · Grupal: un equipo por vez, setters primero. Una pregunta, un textarea, nada más. */
+const PasoGrupal = ({ sub, borrador, setBorrador }) => {
+    const g = GRUPOS[Math.min(sub, GRUPOS.length - 1)];
+    return (
+        <div className="columna" style={{ display: 'grid', gap: 'var(--s3)' }}>
+            <Cabecera rotulo="Trabajo grupal" sub={sub} total={GRUPOS.length} />
+            <section className="panel">
+                <div className="panel-cab"><h2 className="t-h3">{g.label}</h2></div>
+                <textarea className="area" placeholder={g.pregunta} aria-label={g.pregunta}
+                    value={borrador.grupal[g.key]}
+                    onChange={(e) => setBorrador({
+                        ...borrador, grupal: { ...borrador.grupal, [g.key]: e.target.value },
+                    })} />
+            </section>
+        </div>
+    );
+};
 
-/** Paso 3: de a una persona. "No" avanza sola; "Sí" abre el textarea. */
+/**
+ * Paso 3 · Individual: UNA persona por vez, con el equipo al costado para corregir.
+ *
+ * "No" no necesita respuesta, así que salta sola a la próxima sin responder. Cuando están todas,
+ * el lado derecho deja de preguntar y lo dice.
+ */
 const PasoIndividual = ({ dia, borrador, setBorrador, indice, setIndice }) => {
     const personas = dia.personas;
-    const persona = personas[indice] || personas[0];
-    if (!persona) return <p className="ln-t-body-sm ln-muted">No hay nadie activo en el equipo.</p>;
+    if (personas.length === 0) {
+        return <p className="t-sm mut">No hay nadie activo en el equipo.</p>;
+    }
 
+    const idx = Math.min(indice, personas.length - 1);
+    const persona = personas[idx];
     const respuesta = borrador.individual[persona.id];
     const respondidas = personas.filter(p => borrador.individual[p.id] !== undefined).length;
+    const listo = respondidas === personas.length;
+
+    const proximaSinResponder = (desde, respuestas) => {
+        for (let i = 1; i <= personas.length; i += 1) {
+            const j = (desde + i) % personas.length;
+            if (respuestas[personas[j].id] === undefined) return j;
+        }
+        return -1;
+    };
 
     const responder = (trabajo) => {
-        const siguiente = { ...borrador.individual, [persona.id]: { trabajo, texto: trabajo ? (respuesta?.texto || '') : '' } };
-        setBorrador({ ...borrador, individual: siguiente });
+        const individual = {
+            ...borrador.individual,
+            [persona.id]: { trabajo, texto: trabajo ? (respuesta?.texto || '') : '' },
+        };
+        setBorrador({ ...borrador, individual });
         if (!trabajo) {
-            const proxima = personas.findIndex((p, i) => i > indice && siguiente[p.id] === undefined);
-            setIndice(proxima >= 0 ? proxima : indice);
+            const sig = proximaSinResponder(idx, individual);
+            if (sig >= 0) setIndice(sig);
         }
     };
 
     const avanzar = () => {
-        const proxima = personas.findIndex((p, i) => i > indice && borrador.individual[p.id] === undefined);
-        if (proxima >= 0) setIndice(proxima);
-        else {
-            const cualquiera = personas.findIndex(p => borrador.individual[p.id] === undefined);
-            if (cualquiera >= 0) setIndice(cualquiera);
-        }
+        const sig = proximaSinResponder(idx, borrador.individual);
+        if (sig >= 0) setIndice(sig);
+    };
+
+    const botonSiNo = (etiqueta, valor, tono) => {
+        const activo = respuesta?.trabajo === valor;
+        return (
+            <button type="button" className="chip" aria-pressed={activo}
+                onClick={() => responder(valor)}
+                style={{
+                    '--c': `var(--${activo ? tono : 'idle'})`,
+                    height: 40, padding: '0 26px', fontSize: 13, textTransform: 'none', letterSpacing: 0,
+                    ...(activo ? {} : {
+                        background: 'transparent',
+                        borderColor: 'var(--border-control)',
+                        color: 'var(--text-muted)',
+                    }),
+                }}>
+                {etiqueta}
+            </button>
+        );
     };
 
     return (
-        <div className="dc-col">
-            <div className="dc-initials-row">
-                {personas.map((p, i) => {
-                    const r = borrador.individual[p.id];
+        <div className="indiv">
+            <section className="panel" style={{ padding: 'var(--s3)' }}>
+                <div className="fila" style={{ padding: '0 var(--s2) var(--s2)' }}>
+                    <span className="t-rotulo">Equipo</span>
+                    <span className="t-cap num"
+                        style={{ marginLeft: 'auto', color: listo ? 'var(--success)' : 'var(--text-muted-40)' }}>
+                        {respondidas} de {personas.length}
+                    </span>
+                </div>
+                {personas.map((q, i) => {
+                    const r = borrador.individual[q.id];
+                    const tono = r === undefined ? null : (r.trabajo ? 'success' : 'error');
                     return (
-                        <button key={p.id} type="button" className="dc-initial" aria-current={i === indice}
-                            data-answer={r === undefined ? undefined : r.trabajo ? 'si' : 'no'}
+                        <button key={q.id} type="button"
+                            className={`roster${!listo && i === idx ? ' act' : ''}`}
+                            aria-current={!listo && i === idx ? 'true' : undefined}
                             onClick={() => setIndice(i)}>
-                            {fmt.iniciales(p.nombre)}
+                            <span className="avatar" style={avatarEstilo(q.grupo, 28, 10)}>
+                                {fmt.iniciales(q.nombre)}
+                            </span>
+                            <span className="trunc"
+                                style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600 }}>
+                                {q.nombre}
+                            </span>
+                            <span className="roster-pt"
+                                style={tono ? { background: `var(--${tono})`, borderColor: 'transparent' } : undefined} />
                         </button>
                     );
                 })}
-                <span className="ln-t-caption ln-muted dc-num" style={{ marginLeft: 'auto' }}>
-                    {respondidas} de {personas.length}
-                </span>
-            </div>
+            </section>
 
-            <div className="ln-panel">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-                    <span className={`dc-avatar dc-avatar--lg${persona.grupo === 'setters' ? ' dc-avatar--info' : ''}`}>
-                        {fmt.iniciales(persona.nombre)}
+            {listo ? (
+                <section className="panel caja"
+                    style={{ display: 'grid', placeItems: 'center', textAlign: 'center',
+                        gap: 'var(--s3)', padding: 'var(--s12) var(--s6)' }}>
+                    <span className="vacio-icono"
+                        style={{ background: 'var(--success-surface)', borderColor: 'var(--success-border)',
+                            color: 'var(--success)' }}>
+                        <Check size={24} />
                     </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="ln-t-h3">{persona.nombre}</h3>
-                        <p className="ln-t-caption ln-muted dc-num" style={{ marginTop: 4 }}>
-                            {persona.grupo === 'setters' ? 'Setter' : 'Closer'} · {persona.resumen}
-                        </p>
+                    <h2 className="t-h2">Terminaste el individual</h2>
+                    <p className="t-sm mut">
+                        Las {personas.length} personas quedaron registradas. Podés tocar a cualquiera de la
+                        izquierda para corregir, o seguir al cierre del día.
+                    </p>
+                </section>
+            ) : (
+                <section className="panel">
+                    <div className="fila" style={{ gap: 'var(--s3)', marginBottom: 'var(--s4)' }}>
+                        <span className="avatar" style={avatarEstilo(persona.grupo, 44, 14)}>
+                            {fmt.iniciales(persona.nombre)}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                            <span className="t-h3" style={{ display: 'block' }}>{persona.nombre}</span>
+                            <span className="celda-sub">{rolDe(persona)} · {persona.resumen}</span>
+                        </span>
+                        <Chip tono={persona.estado.tone}>{persona.estado.label}</Chip>
                     </div>
-                    <Chip chip={persona.estado} sm />
-                </div>
 
-                <p className="ln-t-body" style={{ marginBottom: 14 }}>
-                    ¿Trabajaste algo específico con {persona.nombre}?
-                </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <button type="button" className="dc-yesno" data-tone="success"
-                        aria-pressed={respuesta?.trabajo === true} onClick={() => responder(true)}>Sí</button>
-                    <button type="button" className="dc-yesno" data-tone="idle"
-                        aria-pressed={respuesta?.trabajo === false} onClick={() => responder(false)}>No</button>
-                </div>
+                    <p className="t-body" style={{ marginBottom: 'var(--s3)' }}>
+                        ¿Trabajaste algo específico con {persona.nombre.split(' ')[0]}?
+                    </p>
+                    <div className="fila" style={{ gap: 'var(--s2)', flexWrap: 'wrap' }}>
+                        {botonSiNo('Sí', true, 'success')}
+                        {botonSiNo('No', false, 'error')}
+                    </div>
 
-                {respuesta?.trabajo && (
-                    <>
-                        <textarea className="dc-textarea" style={{ marginTop: 16 }} placeholder="¿Qué trabajaron?"
-                            value={respuesta.texto}
-                            onChange={(e) => setBorrador({
-                                ...borrador,
-                                individual: { ...borrador.individual, [persona.id]: { trabajo: true, texto: e.target.value } },
-                            })} />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-                            <button type="button" className="ln-btn ln-btn--tertiary ln-btn--sm" onClick={avanzar}>
-                                {respondidas === personas.length ? 'Listo' : 'Siguiente persona'}
+                    {respuesta?.trabajo === true && (
+                        <div style={{ display: 'grid', gap: 'var(--s3)', marginTop: 'var(--s4)' }}>
+                            <textarea className="area" placeholder="¿Qué trabajaron?"
+                                aria-label={`Qué trabajaron con ${persona.nombre}`} value={respuesta.texto}
+                                onChange={(e) => setBorrador({
+                                    ...borrador,
+                                    individual: {
+                                        ...borrador.individual,
+                                        [persona.id]: { trabajo: true, texto: e.target.value },
+                                    },
+                                })} />
+                            <button type="button" className="btn btn--linea btn--sm"
+                                style={{ justifySelf: 'start' }} onClick={avanzar}>
+                                Listo, siguiente
                             </button>
                         </div>
-                    </>
-                )}
-            </div>
+                    )}
+                </section>
+            )}
         </div>
     );
 };
 
-/** Paso 4: una lista por vez, con hasta dos sugerencias sacadas de los datos del día. */
-const PasoCierre = ({ dia, borrador, setBorrador, lista, setLista }) => {
+/**
+ * Paso 4 · Cierre: una lista por vez.
+ *
+ * Las sugerencias salen de los datos del día y son como máximo dos: si no pasó nada que sugerir,
+ * no hay chips en vez de rellenar con frases hechas.
+ */
+const PasoCierre = ({ dia, sub, borrador, setBorrador }) => {
     const [drafts, setDrafts] = useState({});
-    const actual = LISTAS[lista];
-    const items = borrador.listas[actual.key];
-    const sugerencias = (dia.sugerencias[actual.key] || []).filter(s => !items.includes(s));
+    const L = LISTAS[Math.min(sub, LISTAS.length - 1)];
+    const items = borrador.listas[L.key];
+    const sugerencias = (dia.sugerencias[L.key] || []).filter(s => !items.includes(s)).slice(0, 2);
 
     const agregar = (texto) => {
         const limpio = (texto || '').trim();
         if (!limpio || items.includes(limpio)) return;
-        setBorrador({ ...borrador, listas: { ...borrador.listas, [actual.key]: [...items, limpio] } });
-        setDrafts({ ...drafts, [actual.key]: '' });
+        setBorrador({ ...borrador, listas: { ...borrador.listas, [L.key]: [...items, limpio] } });
+        setDrafts({ ...drafts, [L.key]: '' });
     };
 
     const quitar = (texto) => setBorrador({
         ...borrador,
-        listas: { ...borrador.listas, [actual.key]: items.filter(i => i !== texto) },
+        listas: { ...borrador.listas, [L.key]: items.filter(i => i !== texto) },
     });
 
     return (
-        <div className="dc-col">
-            <Segmented ariaLabel="Lista del cierre" valor={actual.key}
-                opciones={LISTAS.map((l, i) => ({
-                    key: l.key,
-                    label: `${l.label}${borrador.listas[l.key].length ? ` · ${borrador.listas[l.key].length}` : ''}`,
-                    idx: i,
-                }))}
-                onChange={(k) => setLista(LISTAS.findIndex(l => l.key === k))} />
-
-            <div className="ln-panel" style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-                    {items.length === 0 && (
-                        <p className="ln-t-body-sm ln-muted-40">Todavía no anotaste nada acá.</p>
-                    )}
-                    {items.map(item => (
-                        <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span className="dc-dot" style={{ background: `var(--${actual.tono})` }} />
-                            <span className="ln-t-body-sm" style={{ flex: 1 }}>{item}</span>
-                            <button type="button" className="ln-iconbtn" style={{ width: 28, height: 28 }}
-                                onClick={() => quitar(item)} aria-label="Quitar">
-                                <X size={13} />
-                            </button>
+        <div className="columna" style={{ display: 'grid', gap: 'var(--s3)' }}>
+            <Cabecera rotulo="Cierre del día" sub={sub} total={LISTAS.length} />
+            <section className="panel">
+                <div className="panel-cab">
+                    <span className="dato-punto"
+                        style={{ background: `var(--${L.tono})`, marginTop: 6, marginRight: 2 }} />
+                    <h2 className="t-h3">{L.label}</h2>
+                    {items.length > 0 && (
+                        <div className="panel-cab-der">
+                            <span className="t-cap mut40 num">{fmt.num(items.length)}</span>
                         </div>
-                    ))}
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <input className="dc-input" placeholder={actual.pregunta} value={drafts[actual.key] || ''}
-                        onChange={(e) => setDrafts({ ...drafts, [actual.key]: e.target.value })}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregar(drafts[actual.key]); } }} />
-                    <button type="button" className="ln-btn ln-btn--tertiary" style={{ height: 44 }}
-                        onClick={() => agregar(drafts[actual.key])} aria-label="Agregar">
-                        <Plus size={16} />
-                    </button>
+                {items.length === 0 ? (
+                    <p className="t-sm mut40" style={{ marginBottom: 'var(--s4)' }}>
+                        Todavía no anotaste nada acá.
+                    </p>
+                ) : (
+                    <div className="hundido" style={{ marginBottom: 'var(--s4)' }}>
+                        {items.map(item => (
+                            <div key={item} className="rep-persona" style={{ cursor: 'default' }}>
+                                <span className="dato-punto" style={{ background: `var(--${L.tono})` }} />
+                                <span className="t-sm" style={{ flex: 1, minWidth: 0 }}>{item}</span>
+                                <button type="button" className="ibtn ibtn--sm" aria-label={`Quitar ${item}`}
+                                    onClick={() => quitar(item)}><X size={15} /></button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="entrada">
+                    <input value={drafts[L.key] || ''} placeholder={L.pregunta} aria-label={L.pregunta}
+                        onChange={(e) => setDrafts({ ...drafts, [L.key]: e.target.value })}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); agregar(drafts[L.key]); }
+                        }} />
+                    <button type="button" className="ibtn ibtn--sm" aria-label="Agregar"
+                        onClick={() => agregar(drafts[L.key])}><Plus size={15} /></button>
                 </div>
 
                 {sugerencias.length > 0 && (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                        {sugerencias.slice(0, 2).map(s => (
-                            <button key={s} type="button" className="dc-suggest" onClick={() => agregar(s)}>
-                                + {s}
+                    <div className="fila" style={{ gap: 'var(--s2)', flexWrap: 'wrap', marginTop: 'var(--s3)' }}>
+                        {sugerencias.map(s => (
+                            <button key={s} type="button" className="chip" onClick={() => agregar(s)}
+                                style={{ '--c': `var(--${L.tono})`, textTransform: 'none', letterSpacing: 0,
+                                    fontSize: 12, fontWeight: 600, height: 30 }}>
+                                <Plus size={13} /> {s}
                             </button>
                         ))}
                     </div>
                 )}
-            </div>
+            </section>
         </div>
     );
 };
 
-const Historial = ({ miembros, nuevoId }) => {
-    const [quien, setQuien] = useState('todo');
+const TODO = 'todo';
+const GRUPAL = { 'grupal-closers': 'closers', 'grupal-setters': 'setters' };
+
+/**
+ * Historial: solo los reportes del director.
+ *
+ * Dos vistas. "Todo" es una tarjeta por día que se despliega; con una persona (o un grupo) elegido
+ * pasa a ser el registro de trabajo: los días en los que hubo una respuesta, sea "trabajamos" o
+ * "no hizo falta".
+ */
+const Historial = ({ miembros, nuevoId, aviso, onCerrarAviso }) => {
+    const [filtro, setFiltro] = useState(TODO);
     const [datos, setDatos] = useState(null);
-    const [abierto, setAbierto] = useState(nuevoId || null);
+    const [abiertos, setAbiertos] = useState(() => (nuevoId ? { [nuevoId]: true } : {}));
+
+    const miembroId = filtro === TODO || GRUPAL[filtro] ? null : filtro;
 
     useEffect(() => {
         let vivo = true;
         setDatos(null);
-        getReportes(quien === 'todo' ? null : quien)
+        getReportes(miembroId)
             .then(d => { if (vivo) setDatos(d); })
             .catch(() => { if (vivo) setDatos({ reportes: [] }); });
         return () => { vivo = false; };
-    }, [quien]);
+    }, [miembroId]);
 
-    const opciones = [{ id: 'todo', nombre: 'Todo' }, ...miembros];
+    const opciones = [
+        { key: TODO, label: 'Todo' },
+        { key: 'grupal-setters', label: 'Grupal setters' },
+        { key: 'grupal-closers', label: 'Grupal closers' },
+        ...miembros.map(m => ({ key: String(m.id), label: m.nombre })),
+    ];
+    const elegida = opciones.find(o => o.key === filtro);
+
+    const banda = (
+        <>
+            {aviso && (
+                <div className="aviso" style={{ marginBottom: 'var(--s4)' }}>
+                    <Trophy size={16} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                        Completaste tu reporte. Quedó en tu historial y en el registro de cada persona.
+                    </span>
+                    <button type="button" className="ibtn ibtn--sm" aria-label="Descartar"
+                        onClick={onCerrarAviso}><X size={15} /></button>
+                </div>
+            )}
+            <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)', marginBottom: 'var(--s4)' }}>
+                <span className="t-rotulo">Ver registro de</span>
+                {opciones.map(o => (
+                    <button key={o.key} type="button" aria-pressed={filtro === o.key}
+                        className={`pastilla pastilla--sm${filtro === o.key ? ' pastilla--on' : ''}`}
+                        onClick={() => setFiltro(o.key)}>
+                        {o.label}
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+
+    if (!datos) return <>{banda}<Cargando texto="Cargando el historial…" /></>;
+
+    if (datos.reportes.length === 0 && filtro === TODO) {
+        return (
+            <>
+                {banda}
+                <section className="panel">
+                    <div className="vacio">
+                        <p className="t-h3">Todavía no hay reportes</p>
+                        <p className="t-sm mut">El primero que guardes aparece acá.</p>
+                    </div>
+                </section>
+            </>
+        );
+    }
+
+    /* Registro de una persona o de un grupo: la línea de tiempo de lo trabajado, día por día. */
+    if (filtro !== TODO) {
+        const gk = GRUPAL[filtro];
+        const dias = gk
+            ? datos.reportes.map(r => ({
+                fecha: r.fecha, trabajo: Boolean(r.grupal[gk].trim()), texto: r.grupal[gk],
+            }))
+            : (datos.dias || []);
+        const conTrabajo = dias.filter(d => d.trabajo).length;
+        return (
+            <>
+                {banda}
+                <section className="panel">
+                    <div className="panel-cab">
+                        <h2 className="t-h3">Registro de trabajo · {elegida?.label}</h2>
+                        <Tip titulo="Registro de trabajo"
+                            texto={'Los días en los que hubo una respuesta, sacados de tus reportes guardados. '
+                                + '"No hizo falta" también es una respuesta.'} />
+                        <div className="panel-cab-der">
+                            <span className="t-cap mut40 num">
+                                {conTrabajo} de {fmt.plural(dias.length, 'día', 'días')}
+                            </span>
+                        </div>
+                    </div>
+                    {dias.length === 0 ? (
+                        <p className="t-sm mut40">Todavía no hay un día con respuesta para {elegida?.label}.</p>
+                    ) : (
+                        <div className="linea-tiempo">
+                            {dias.map(d => (
+                                <div key={d.fecha}>
+                                    <span className="fila" style={{ gap: 'var(--s2)', flexWrap: 'wrap' }}>
+                                        <span className="t-cap" style={{ fontWeight: 700 }}>
+                                            {fmt.fechaLarga(d.fecha)}
+                                        </span>
+                                        <span className="t-cap"
+                                            style={{ fontWeight: 700,
+                                                color: `var(--${d.trabajo ? 'success' : 'text-muted-40'})` }}>
+                                            {d.trabajo ? 'Trabajaron' : 'No hizo falta'}
+                                        </span>
+                                    </span>
+                                    {d.trabajo && d.texto && <span className="t-sm">{d.texto}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </>
+        );
+    }
 
     return (
         <>
-            <div style={{ marginBottom: 16 }}>
-                <div className="dc-total-label" style={{ marginBottom: 8 }}>Ver registro de</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {opciones.map(o => (
-                        <button key={o.id} type="button" className="dc-chip-btn" aria-pressed={quien === o.id}
-                            onClick={() => setQuien(o.id)}>
-                            {o.nombre}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {!datos ? <Cargando /> : datos.reportes.length === 0 ? (
-                <div className="ln-empty">
-                    <p className="ln-empty-title">Todavía no hay reportes</p>
-                    <p className="ln-empty-desc">El primero que guardes aparece acá.</p>
-                </div>
-            ) : quien !== 'todo' ? (
-                <div className="ln-panel">
-                    <h3 className="ln-t-h3">Registro de trabajo · {opciones.find(o => o.id === quien)?.nombre}</h3>
-                    <p className="ln-t-caption ln-muted" style={{ marginTop: 6 }}>
-                        Trabajo individual en {datos.trabajados} de {datos.total} días reportados
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
-                        {datos.dias.map(d => (
-                            <div key={d.fecha} className="dc-hist-box">
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                                    <span className="dc-cell-main">{fmt.fechaLarga(d.fecha)}</span>
-                                    <span className={`ln-chip ln-chip--sm ln-chip--${d.trabajo ? 'success' : 'idle'}`}>
-                                        {d.trabajo ? 'Trabajaron' : 'No hizo falta'}
+            {banda}
+            <div style={{ display: 'grid', gap: 'var(--s2)' }}>
+                {datos.reportes.map(r => {
+                    const trabajadas = r.individual.filter(p => p.trabajo && (p.texto || '').trim());
+                    const abierto = Boolean(abiertos[r.id]);
+                    return (
+                        <div key={r.id} className="hist-dia">
+                            <button type="button" className="hist-cab" aria-expanded={abierto}
+                                onClick={() => setAbiertos({ ...abiertos, [r.id]: !abierto })}>
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    <span className="celda" style={{ display: 'block' }}>
+                                        {fmt.fechaLarga(r.fecha)}
                                     </span>
-                                </div>
-                                {d.texto && <p className="ln-t-body-sm ln-muted" style={{ marginTop: 8 }}>{d.texto}</p>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {datos.reportes.map(r => {
-                        const individuales = r.individual.filter(p => p.trabajo).length;
-                        const desplegado = abierto === r.id;
-                        return (
-                            <div key={r.id} className="ln-panel ln-panel--sm">
-                                <button type="button" className="dc-hist-card" style={{ padding: 0, border: 0, background: 'none' }}
-                                    onClick={() => setAbierto(desplegado ? null : r.id)}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                                        <span>
-                                            <span className="dc-cell-main">{fmt.fechaLarga(r.fecha)}</span>
-                                            {r.id === nuevoId && <span className="ln-chip ln-chip--sm ln-chip--info" style={{ marginLeft: 8 }}>Nuevo</span>}
-                                            <span className="dc-cell-sub dc-num">
-                                                {individuales} individuales · {r.listas.victorias.length} victorias
-                                                · {r.listas.mejoras.length} a mejorar
-                                            </span>
-                                        </span>
-                                        <span className="ln-t-caption ln-accent">{desplegado ? 'Ocultar' : 'Ver'}</span>
-                                    </div>
-                                </button>
+                                    <span className="celda-sub num">
+                                        {fmt.plural(r.individual.length, 'respuesta', 'respuestas')}
+                                        {' · '}{fmt.plural(trabajadas.length, 'individual', 'individuales')}
+                                    </span>
+                                </span>
+                                {r.id === nuevoId && <Chip tono="info">Nuevo</Chip>}
+                                <span style={{ color: 'var(--text-muted-40)', transition: 'transform .2s ease',
+                                    transform: `rotate(${abierto ? 90 : 0}deg)` }}>
+                                    <ChevronRight size={16} />
+                                </span>
+                            </button>
 
-                                {desplegado && (
-                                    <>
-                                        <div className="dc-hist-cols">
-                                            <div>
-                                                <div className="dc-total-label" style={{ marginBottom: 10 }}>Grupal</div>
-                                                {[['Equipo de closers', r.grupal.closers], ['Equipo de setters', r.grupal.setters]]
-                                                    .map(([t, texto]) => (
-                                                        <div key={t} style={{ marginBottom: 12 }}>
-                                                            <div className="ln-t-caption ln-accent">{t}</div>
-                                                            <p className="ln-t-body-sm ln-muted" style={{ marginTop: 4 }}>
-                                                                {texto || '—'}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                            <div>
-                                                <div className="dc-total-label" style={{ marginBottom: 10 }}>Individual</div>
-                                                {r.individual.map(p => (
-                                                    <div key={p.miembro_id} style={{ marginBottom: 10 }}>
-                                                        <div className="ln-t-caption ln-accent">{p.nombre}</div>
-                                                        <p className={`ln-t-body-sm ${p.trabajo ? 'ln-muted' : 'ln-muted-40'}`}
-                                                            style={{ marginTop: 4 }}>
-                                                            {p.trabajo ? p.texto : 'No hizo falta'}
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
+                            {abierto && (
+                                <div className="hist-cuerpo">
+                                    {GRUPOS.filter(g => r.grupal[g.key]).map(g => (
+                                        <div key={g.key} className="hist-bloque">
+                                            <span className="t-rotulo">Grupal · {g.label.toLowerCase()}</span>
+                                            <p className="t-sm">{r.grupal[g.key]}</p>
                                         </div>
-                                        <div className="dc-hist-cols">
-                                            {LISTAS.map(l => (
-                                                <div key={l.key} className="dc-hist-box">
-                                                    <div className="dc-total-label" style={{ color: `var(--${l.tono})` }}>
-                                                        {l.label}
-                                                    </div>
-                                                    {r.listas[l.key].length === 0 && (
-                                                        <p className="ln-t-caption ln-muted-40" style={{ marginTop: 6 }}>—</p>
-                                                    )}
-                                                    {r.listas[l.key].map(i => (
-                                                        <p key={i} className="ln-t-body-sm ln-muted" style={{ marginTop: 6 }}>• {i}</p>
-                                                    ))}
-                                                </div>
+                                    ))}
+                                    {trabajadas.map(p => (
+                                        <div key={p.miembro_id} className="hist-bloque">
+                                            <span className="t-rotulo">{p.nombre}</span>
+                                            <p className="t-sm">{p.texto}</p>
+                                        </div>
+                                    ))}
+                                    {LISTAS.filter(L => r.listas[L.key].length).map(L => (
+                                        <div key={L.key} className="hist-bloque">
+                                            <span className="t-rotulo fila" style={{ gap: 6 }}>
+                                                <span className="dato-punto"
+                                                    style={{ background: `var(--${L.tono})` }} />
+                                                {L.label}
+                                            </span>
+                                            {r.listas[L.key].map(i => (
+                                                <p key={i} className="t-sm">· {i}</p>
                                             ))}
                                         </div>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                                    ))}
+                                    {!r.grupal.closers && !r.grupal.setters && trabajadas.length === 0
+                                        && LISTAS.every(L => !r.listas[L.key].length) && (
+                                        <p className="t-sm mut40">Ese día quedó sin nada escrito.</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
         </>
     );
 };
 
 const Reportar = ({ tab, setTab, miembros, irAPersona, onStepper }) => {
     const [dia, setDia] = useState(null);
+    const [fechaPedida, setFechaPedida] = useState(null);
     const [paso, setPaso] = useState(0);
+    const [sub, setSub] = useState(0);
     const [indice, setIndice] = useState(0);
-    const [lista, setLista] = useState(0);
     const [borrador, setBorrador] = useState(borradorVacio);
     const [guardando, setGuardando] = useState(false);
     const [nuevoId, setNuevoId] = useState(null);
+    const [aviso, setAviso] = useState(false);
+    // La primera respuesta es la de hoy: con eso se sabe qué día es "ayer" sin preguntárselo al
+    // reloj del navegador, que puede estar en otro huso que el del backend.
+    const [hoy, setHoy] = useState(null);
 
     useEffect(() => {
-        getReporteHoy().then(d => {
+        let vivo = true;
+        setDia(null);
+        getReporteHoy(fechaPedida).then(d => {
+            if (!vivo) return;
+            if (!fechaPedida) setHoy(d.fecha);
             setDia(d);
             setBorrador(leerBorrador(d.fecha));
-        }).catch(() => toast.error('No se pudo cargar el día del equipo'));
-    }, []);
+            setIndice(0);
+        }).catch(() => { if (vivo) toast.error('No se pudo cargar el día del equipo'); });
+        return () => { vivo = false; };
+    }, [fechaPedida]);
 
     useEffect(() => {
         if (!dia) return;
@@ -503,98 +823,102 @@ const Reportar = ({ tab, setTab, miembros, irAPersona, onStepper }) => {
     }, [borrador, dia]);
 
     const personas = dia?.personas || [];
-    const faltan = personas.filter(p => borrador.individual[p.id] === undefined).length;
+    const faltanRevisar = personas.filter(p => !borrador.revisadas[p.id]).length;
+    const faltanResponder = personas.filter(p => borrador.individual[p.id] === undefined).length;
 
-    const completos = useMemo(() => [
-        personas.length > 0 && personas.every(p => borrador.revisadas[p.id]),
-        Boolean(borrador.grupal.closers.trim() || borrador.grupal.setters.trim()),
-        personas.length > 0 && faltan === 0,
+    /* Un paso "hecho" es un tilde, no un permiso: lo que bloquea está en `bloqueos`. */
+    const hechos = useMemo(() => [
+        personas.length > 0 && faltanRevisar === 0,
+        GRUPOS.every(g => borrador.grupal[g.key].trim()),
+        personas.length > 0 && faltanResponder === 0,
         false,
-    ], [personas, borrador, faltan]);
+    ], [personas.length, faltanRevisar, faltanResponder, borrador.grupal]);
 
-    useEffect(() => {
-        if (onStepper) {
-            onStepper(tab === 'reporte' && dia
-                ? <Stepper paso={paso} setPaso={setPaso} completos={completos} bloqueado={faltan > 0} />
-                : null);
-        }
-    }, [tab, dia, paso, completos, faltan, onStepper]);
+    /* Sin equipo activo no hay nada que revisar ni que responder, así que tampoco hay bloqueo. */
+    const bloqueos = useMemo(
+        () => [faltanRevisar > 0, false, faltanResponder > 0, false],
+        [faltanRevisar, faltanResponder]);
 
-    const guardar = async () => {
+    const guardar = useCallback(async () => {
+        if (!dia) return;
         setGuardando(true);
         try {
-            const datos = {
+            const guardado = await guardarReporte({
                 fecha: dia.fecha,
                 grupal: borrador.grupal,
                 individual: personas
                     .filter(p => borrador.individual[p.id] !== undefined)
                     .map(p => ({ miembro_id: p.id, ...borrador.individual[p.id] })),
                 listas: borrador.listas,
-            };
-            const guardado = await guardarReporte(datos);
+            });
             setNuevoId(guardado.id);
             try { localStorage.removeItem(claveBorrador(dia.fecha)); } catch { /* ver arriba */ }
             setBorrador(borradorVacio());
             setPaso(0);
+            setSub(0);
+            setIndice(0);
+            setAviso(true);
             setTab('historial');
-            toast.success(`Reporte del ${fmt.fechaLarga(dia.fecha)} guardado`);
         } catch {
             toast.error('No se pudo guardar el reporte');
         } finally {
             setGuardando(false);
         }
+    }, [dia, borrador, personas, setTab]);
+
+    /* Las acciones de la barra viven en una ref: el nodo del stepper se crea en un render y se
+       aprieta en otro, y con un closure viejo se guardaría un borrador viejo. */
+    const acciones = useRef({});
+    acciones.current = {
+        irAPaso: (i) => { setPaso(i); setSub(0); },
+        verDia: (valor) => setFechaPedida(valor),
+        siguiente: () => {
+            if (sub < SUBPASOS[paso] - 1) setSub(sub + 1);
+            else if (paso < PASOS.length - 1) { setPaso(paso + 1); setSub(0); }
+        },
+        atras: () => {
+            if (sub > 0) setSub(sub - 1);
+            else if (paso > 0) { setPaso(paso - 1); setSub(SUBPASOS[paso - 1] - 1); }
+        },
+        guardar,
     };
 
-    if (tab === 'historial') return <Historial miembros={miembros} nuevoId={nuevoId} />;
+    const dias = useMemo(() => (hoy
+        ? [{ valor: null, label: 'Hoy' }, { valor: diaAnterior(hoy), label: 'Ayer' }]
+        : []), [hoy]);
+
+    useEffect(() => {
+        if (!onStepper) return;
+        onStepper(tab === 'reporte' && dia
+            ? <BarraPasos paso={paso} sub={sub} hechos={hechos} bloqueos={bloqueos}
+                faltan={paso === 0 ? faltanRevisar : faltanResponder} dias={dias} diaSel={fechaPedida}
+                guardando={guardando} acciones={acciones} />
+            : null);
+    }, [tab, dia, paso, sub, hechos, bloqueos, faltanRevisar, faltanResponder, dias, fechaPedida,
+        guardando, onStepper]);
+
+    if (tab === 'historial') {
+        return <Historial miembros={miembros} nuevoId={nuevoId} aviso={aviso}
+            onCerrarAviso={() => setAviso(false)} />;
+    }
     if (!dia) return <Cargando texto="Cargando el día del equipo…" />;
-
-    const atras = () => {
-        if (paso === 3 && lista > 0) setLista(lista - 1);
-        else setPaso(Math.max(0, paso - 1));
-    };
-    const siguiente = () => {
-        if (paso === 3 && lista < LISTAS.length - 1) setLista(lista + 1);
-        else if (paso < 3) setPaso(paso + 1);
-    };
-    const esUltimo = paso === 3 && lista === LISTAS.length - 1;
-    const bloqueado = paso === 2 && faltan > 0;
 
     return (
         <>
             {paso === 0 && (
                 <PasoDia dia={dia} revisadas={borrador.revisadas} irAPersona={irAPersona}
-                    onRevisar={(id) => setBorrador({ ...borrador, revisadas: { ...borrador.revisadas, [id]: true } })} />
+                    onRevisar={(id) => setBorrador({
+                        ...borrador, revisadas: { ...borrador.revisadas, [id]: true },
+                    })} />
             )}
-            {paso === 1 && <PasoGrupal borrador={borrador} setBorrador={setBorrador} />}
+            {paso === 1 && <PasoGrupal sub={sub} borrador={borrador} setBorrador={setBorrador} />}
             {paso === 2 && (
                 <PasoIndividual dia={dia} borrador={borrador} setBorrador={setBorrador}
                     indice={indice} setIndice={setIndice} />
             )}
             {paso === 3 && (
-                <PasoCierre dia={dia} borrador={borrador} setBorrador={setBorrador}
-                    lista={lista} setLista={setLista} />
+                <PasoCierre dia={dia} sub={sub} borrador={borrador} setBorrador={setBorrador} />
             )}
-
-            <div className="dc-foot">
-                <button type="button" className="ln-btn ln-btn--tertiary ln-btn--sm" disabled={paso === 0 && true}
-                    style={paso === 0 ? { visibility: 'hidden' } : undefined} onClick={atras}>
-                    Atrás
-                </button>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {bloqueado && <span className="ln-t-caption ln-muted-40">Faltan {faltan}</span>}
-                    {esUltimo ? (
-                        <button type="button" className="ln-btn ln-btn--cta ln-btn--sm" disabled={guardando}
-                            onClick={guardar}>
-                            {guardando ? 'Guardando…' : 'Guardar reporte'}
-                        </button>
-                    ) : (
-                        <button type="button" className="ln-btn ln-btn--secondary ln-btn--sm" disabled={bloqueado}
-                            onClick={siguiente}>
-                            Siguiente
-                        </button>
-                    )}
-                </span>
-            </div>
         </>
     );
 };
