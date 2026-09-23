@@ -77,58 +77,98 @@ def _columnas(conn, tabla):
         return [r[0] for r in cur.fetchall()]
 
 
-def copiar_tabla_postgres(origen_url, destino_url, tabla):
-    """Copia una tabla entre dos PostgreSQL con COPY, y devuelve cuántas filas quedaron.
+class CopiadorPostgres:
+    """Copia tablas entre dos PostgreSQL con COPY, reusando una conexión por punta.
 
     El camino por ORM (`query(Model).all()`) materializa la tabla entera en memoria del lado del
     cliente. Sobre el proxy público de Railway eso revienta con `server closed the connection
     unexpectedly` en cuanto la tabla es grande: el 23/09/2026 murió en landing_trackings (31k),
     manychat_leads (14k), lead_answers (15k) y financial_sales. COPY manda las filas por el
-    socket sin materializarlas y no tuvo un solo reintento con las mismas tablas.
+    socket sin materializarlas y con las mismas tablas no falló una sola vez.
+
+    Las conexiones se abren una vez y se reusan. La primera versión abría un par por tabla: con
+    85 tablas son 170 aperturas seguidas contra el proxy, que a mitad de camino empezó a
+    rechazarlas con `timeout expired` y tumbó 9 tablas de la corrida.
     """
-    import psycopg2
 
-    origen = psycopg2.connect(origen_url, **_KEEPALIVE)
-    origen.set_session(readonly=True)
-    destino = psycopg2.connect(destino_url, **_KEEPALIVE)
-    try:
-        cols_origen = _columnas(origen, tabla)
-        cols_destino = _columnas(destino, tabla)
-        # Intersección en el orden del destino: una columna que existe de un solo lado (migración
-        # sin desplegar) no debe romper la copia de toda la tabla.
-        cols = [c for c in cols_destino if c in cols_origen]
-        if not cols:
-            raise RuntimeError(f"{tabla}: sin columnas en común entre origen y destino")
-        lista = ', '.join(f'"{c}"' for c in cols)
+    def __init__(self, origen_url, destino_url):
+        self.origen_url = origen_url
+        self.destino_url = destino_url
+        self.origen = None
+        self.destino = None
 
-        with tempfile.TemporaryFile() as buf:
-            with origen.cursor() as cur:
-                cur.copy_expert(
-                    f'COPY (SELECT {lista} FROM "{tabla}") TO STDOUT WITH (FORMAT csv)', buf)
-            buf.seek(0)
+    def _conectar(self):
+        import psycopg2
+        if self.origen is None or self.origen.closed:
+            self.origen = psycopg2.connect(self.origen_url, **_KEEPALIVE)
+            self.origen.set_session(readonly=True)
+        if self.destino is None or self.destino.closed:
+            self.destino = psycopg2.connect(self.destino_url, **_KEEPALIVE)
+        return self.origen, self.destino
+
+    def cerrar(self):
+        for conn in (self.origen, self.destino):
+            try:
+                if conn is not None and not conn.closed:
+                    conn.close()
+            except Exception:
+                pass
+        self.origen = self.destino = None
+
+    def copiar(self, tabla):
+        """Devuelve cuántas filas quedaron en la tabla de destino."""
+        import psycopg2
+        # Que una conexión se haya caído entre tabla y tabla recién se descubre al usarla, así
+        # que vale un reintento con conexiones nuevas antes de dar la tabla por perdida.
+        for intento in (1, 2):
+            try:
+                return self._copiar(tabla)
+            except psycopg2.Error:
+                self.cerrar()
+                if intento == 2:
+                    raise
+
+    def _copiar(self, tabla):
+        import psycopg2
+        origen, destino = self._conectar()
+        try:
+            cols_origen = _columnas(origen, tabla)
+            cols_destino = _columnas(destino, tabla)
+            # Intersección en el orden del destino: una columna que existe de un solo lado
+            # (migración sin desplegar) no debe romper la copia de toda la tabla.
+            cols = [c for c in cols_destino if c in cols_origen]
+            if not cols:
+                raise RuntimeError(f"{tabla}: sin columnas en común entre origen y destino")
+            lista = ', '.join(f'"{c}"' for c in cols)
+
+            with tempfile.TemporaryFile() as buf:
+                with origen.cursor() as cur:
+                    cur.copy_expert(
+                        f'COPY (SELECT {lista} FROM "{tabla}") TO STDOUT WITH (FORMAT csv)', buf)
+                buf.seek(0)
+                with destino.cursor() as cur:
+                    # Apaga los triggers de FK durante la carga, así el orden entre tablas deja
+                    # de importar. El rol `postgres` de Railway puede; si no, se sigue igual y el
+                    # orden de `modelos` (ya ordenado por dependencias) alcanza.
+                    try:
+                        cur.execute("SET session_replication_role = replica")
+                    except psycopg2.Error:
+                        destino.rollback()
+                    # El borrado va en la misma transacción que la carga: si la copia falla, el
+                    # rollback devuelve la tabla a como estaba en vez de dejarla vacía.
+                    cur.execute(f'DELETE FROM "{tabla}"')
+                    cur.copy_expert(f'COPY "{tabla}" ({lista}) FROM STDIN WITH (FORMAT csv)', buf)
+                destino.commit()
+
             with destino.cursor() as cur:
-                # Apaga los triggers de FK durante la carga, así el orden entre tablas deja de
-                # importar. El rol `postgres` de Railway puede; si no, se sigue igual y el orden
-                # de `modelos` (que ya está ordenado por dependencias) alcanza.
-                try:
-                    cur.execute("SET session_replication_role = replica")
-                except psycopg2.Error:
-                    destino.rollback()
-                # El borrado va en la misma transacción que la carga: si la copia falla, el
-                # rollback devuelve la tabla a como estaba en vez de dejarla vacía.
-                cur.execute(f'DELETE FROM "{tabla}"')
-                cur.copy_expert(f'COPY "{tabla}" ({lista}) FROM STDIN WITH (FORMAT csv)', buf)
-            destino.commit()
-
-        with destino.cursor() as cur:
-            cur.execute(f'SELECT COUNT(*) FROM "{tabla}"')
-            return cur.fetchone()[0]
-    except Exception:
-        destino.rollback()
-        raise
-    finally:
-        origen.close()
-        destino.close()
+                cur.execute(f'SELECT COUNT(*) FROM "{tabla}"')
+                return cur.fetchone()[0]
+        except Exception:
+            try:
+                destino.rollback()
+            except Exception:
+                pass
+            raise
 
 
 def actualizar(target='local'):
@@ -223,7 +263,8 @@ def actualizar(target='local'):
         # limpieza global previa sobra — y además es justo la que deja tablas vacías cuando la
         # copia posterior falla.
         usar_copy = db.engine.dialect.name == 'postgresql'
-        dest_url_real = db.engine.url.render_as_string(hide_password=False)
+        copiador = CopiadorPostgres(
+            prod_url, db.engine.url.render_as_string(hide_password=False)) if usar_copy else None
 
         # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
         if not usar_copy:
@@ -258,8 +299,7 @@ def actualizar(target='local'):
                 tabla = model.__tablename__
                 print(f"Sincronizando {tabla}...", end=" ", flush=True)
                 try:
-                    n = copiar_tabla_postgres(prod_url, dest_url_real, tabla)
-                    print(f"Ok ({n} registros)")
+                    print(f"Ok ({copiador.copiar(tabla)} registros)")
                 except Exception as e:
                     fallos.append((tabla, safe(e)))
                     print(safe(f"Error: {e}"))
@@ -311,8 +351,7 @@ def actualizar(target='local'):
         try:
             print("Sincronizando event_closers...", end=" ", flush=True)
             if usar_copy:
-                n = copiar_tabla_postgres(prod_url, dest_url_real, 'event_closers')
-                print(f"Ok ({n} registros)")
+                print(f"Ok ({copiador.copiar('event_closers')} registros)")
             else:
                 items_prod = prod_session.execute(event_closers.select()).fetchall()
                 if items_prod:
@@ -350,6 +389,8 @@ def actualizar(target='local'):
                 print(f"  {tabla}: {n_dest} de {n_prod} (faltan {n_prod - n_dest}, deriva en vivo)")
 
         prod_session.close()
+        if copiador is not None:
+            copiador.cerrar()
         
         # 3. Normalización post-sincronización de closers y alias
         try:
