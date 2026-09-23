@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, make_transient
 from dotenv import load_dotenv
@@ -57,6 +58,73 @@ def safe(text):
     el propio `print` del except revienta con UnicodeEncodeError y tapa el error original."""
     enc = (sys.stdout.encoding or 'utf-8')
     return str(text).encode(enc, errors='replace').decode(enc, errors='replace')
+
+
+# Sin keepalives el proxy público de Railway corta las conexiones que tardan.
+_KEEPALIVE = dict(keepalives=1, keepalives_idle=30, keepalives_interval=10,
+                  keepalives_count=5, connect_timeout=30)
+
+
+def _columnas(conn, tabla):
+    with conn.cursor() as cur:
+        cur.execute("SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema='public' AND table_name=%s ORDER BY ordinal_position",
+                    (tabla,))
+        return [r[0] for r in cur.fetchall()]
+
+
+def copiar_tabla_postgres(origen_url, destino_url, tabla):
+    """Copia una tabla entre dos PostgreSQL con COPY, y devuelve cuántas filas quedaron.
+
+    El camino por ORM (`query(Model).all()`) materializa la tabla entera en memoria del lado del
+    cliente. Sobre el proxy público de Railway eso revienta con `server closed the connection
+    unexpectedly` en cuanto la tabla es grande: el 23/09/2026 murió en landing_trackings (31k),
+    manychat_leads (14k), lead_answers (15k) y financial_sales. COPY manda las filas por el
+    socket sin materializarlas y no tuvo un solo reintento con las mismas tablas.
+    """
+    import psycopg2
+
+    origen = psycopg2.connect(origen_url, **_KEEPALIVE)
+    origen.set_session(readonly=True)
+    destino = psycopg2.connect(destino_url, **_KEEPALIVE)
+    try:
+        cols_origen = _columnas(origen, tabla)
+        cols_destino = _columnas(destino, tabla)
+        # Intersección en el orden del destino: una columna que existe de un solo lado (migración
+        # sin desplegar) no debe romper la copia de toda la tabla.
+        cols = [c for c in cols_destino if c in cols_origen]
+        if not cols:
+            raise RuntimeError(f"{tabla}: sin columnas en común entre origen y destino")
+        lista = ', '.join(f'"{c}"' for c in cols)
+
+        with tempfile.TemporaryFile() as buf:
+            with origen.cursor() as cur:
+                cur.copy_expert(
+                    f'COPY (SELECT {lista} FROM "{tabla}") TO STDOUT WITH (FORMAT csv)', buf)
+            buf.seek(0)
+            with destino.cursor() as cur:
+                # Apaga los triggers de FK durante la carga, así el orden entre tablas deja de
+                # importar. El rol `postgres` de Railway puede; si no, se sigue igual y el orden
+                # de `modelos` (que ya está ordenado por dependencias) alcanza.
+                try:
+                    cur.execute("SET session_replication_role = replica")
+                except psycopg2.Error:
+                    destino.rollback()
+                # El borrado va en la misma transacción que la carga: si la copia falla, el
+                # rollback devuelve la tabla a como estaba en vez de dejarla vacía.
+                cur.execute(f'DELETE FROM "{tabla}"')
+                cur.copy_expert(f'COPY "{tabla}" ({lista}) FROM STDIN WITH (FORMAT csv)', buf)
+            destino.commit()
+
+        with destino.cursor() as cur:
+            cur.execute(f'SELECT COUNT(*) FROM "{tabla}"')
+            return cur.fetchone()[0]
+    except Exception:
+        destino.rollback()
+        raise
+    finally:
+        origen.close()
+        destino.close()
 
 
 def actualizar(target='local'):
@@ -141,34 +209,53 @@ def actualizar(target='local'):
             print(f"Omitidas (no existen en producción, se dejan intactas): {', '.join(ausentes)}")
             modelos = [m for m in modelos if m.__tablename__ in tablas_prod]
 
-        # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
-        print("Limpiando base de datos destino para evitar colisiones UNIQUE...")
-        
-        # Primero limpiar tabla de asociación Many-to-Many
-        try:
-            db.session.execute(event_closers.delete())
-            db.session.commit()
-            print("Limpiada tabla event_closers.")
-        except Exception as e:
-            db.session.rollback()
-            print(safe(f"Advertencia al limpiar event_closers: {e}"))
+        # Con COPY, cada tabla se borra y se recarga dentro de una sola transacción, así que la
+        # limpieza global previa sobra — y además es justo la que deja tablas vacías cuando la
+        # copia posterior falla.
+        usar_copy = db.engine.dialect.name == 'postgresql'
+        dest_url_real = db.engine.url.render_as_string(hide_password=False)
 
-        # Limpiar el resto de modelos. Se hace commit por modelo, no uno solo al final: el
-        # `rollback()` del except deshacía TODOS los borrados acumulados en la transacción, no
-        # solo el que falló. Con una tabla inexistente en local (una migración sin aplicar, por
-        # ejemplo) el borrado quedaba a medias y la copia posterior moría con UNIQUE constraint
-        # sobre tablas que ya se creían vacías.
-        for model in reversed(modelos):
+        # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
+        if not usar_copy:
+            print("Limpiando base de datos destino para evitar colisiones UNIQUE...")
+
+            # Primero limpiar tabla de asociación Many-to-Many
             try:
-                db.session.query(model).delete()
+                db.session.execute(event_closers.delete())
                 db.session.commit()
+                print("Limpiada tabla event_closers.")
             except Exception as e:
                 db.session.rollback()
-                print(safe(f"Advertencia al limpiar {model.__tablename__}: {e}"))
-        print("Limpieza de modelos completada.")
+                print(safe(f"Advertencia al limpiar event_closers: {e}"))
 
-        # 2. Copiar todos los registros desde producción
-        for model in modelos:
+            # Limpiar el resto de modelos. Se hace commit por modelo, no uno solo al final: el
+            # `rollback()` del except deshacía TODOS los borrados acumulados en la transacción, no
+            # solo el que falló. Con una tabla inexistente en local (una migración sin aplicar,
+            # por ejemplo) el borrado quedaba a medias y la copia posterior moría con UNIQUE
+            # constraint sobre tablas que ya se creían vacías.
+            for model in reversed(modelos):
+                try:
+                    db.session.query(model).delete()
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    print(safe(f"Advertencia al limpiar {model.__tablename__}: {e}"))
+            print("Limpieza de modelos completada.")
+
+        # 2a. Destino PostgreSQL: COPY por tabla, cada una en su propia transacción.
+        if usar_copy:
+            for model in modelos:
+                tabla = model.__tablename__
+                print(f"Sincronizando {tabla}...", end=" ", flush=True)
+                try:
+                    n = copiar_tabla_postgres(prod_url, dest_url_real, tabla)
+                    print(f"Ok ({n} registros)")
+                except Exception as e:
+                    fallos.append((tabla, safe(e)))
+                    print(safe(f"Error: {e}"))
+
+        # 2b. Destino SQLite: no hay COPY, se copia por ORM.
+        for model in (() if usar_copy else modelos):
             try:
                 table_name = model.__tablename__
                 print(f"Sincronizando {table_name}...", end=" ", flush=True)
@@ -210,17 +297,21 @@ def actualizar(target='local'):
                 fallos.append((model.__tablename__, safe(e)))
                 print(safe(f"Error: {e}"))
 
-        # Sincronizar event_closers (tabla de asociación Many-to-Many)
+        # Sincronizar event_closers (tabla de asociación Many-to-Many, no tiene modelo propio)
         try:
             print("Sincronizando event_closers...", end=" ", flush=True)
-            items_prod = prod_session.execute(event_closers.select()).fetchall()
-            if items_prod:
-                insert_data = [dict(row._mapping) for row in items_prod]
-                db.session.execute(event_closers.insert(), insert_data)
-                db.session.commit()
-                print(f"Ok ({len(items_prod)} registros)")
+            if usar_copy:
+                n = copiar_tabla_postgres(prod_url, dest_url_real, 'event_closers')
+                print(f"Ok ({n} registros)")
             else:
-                print("Ok (vacía)")
+                items_prod = prod_session.execute(event_closers.select()).fetchall()
+                if items_prod:
+                    insert_data = [dict(row._mapping) for row in items_prod]
+                    db.session.execute(event_closers.insert(), insert_data)
+                    db.session.commit()
+                    print(f"Ok ({len(items_prod)} registros)")
+                else:
+                    print("Ok (vacía)")
         except Exception as e:
             db.session.rollback()
             fallos.append(('event_closers', safe(e)))
