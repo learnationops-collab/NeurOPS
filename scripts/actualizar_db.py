@@ -65,17 +65,24 @@ def actualizar(target='local'):
     
     if not prod_url or "usuario:password" in prod_url:
         print("Error: DATABASE_PRODUCTION no está configurada correctamente en el archivo .env")
-        return
+        return False
 
     if target in ('staging', 'testing'):
         dest_url = os.getenv('DATABASE_STAGING') or os.getenv('DATABASE_TESTING')
         if not dest_url:
             print("Error: Configura DATABASE_STAGING en tu archivo .env con la URL de Postgres de Railway Testing.")
-            return
+            return False
         os.environ['DATABASE_URL'] = dest_url
         target_name = "Railway Staging (PostgreSQL)"
     else:
         target_name = "Local (SQLite)"
+
+    # Cada tabla que no se pudo copiar. El script solía terminar SIEMPRE con "finalizado con
+    # éxito" aunque el bucle de copia hubiera impreso un `Error:` por tabla, así que una corrida
+    # que dejó siete tablas vacías se leía igual que una corrida perfecta (pasó el 23/09/2026
+    # contra staging). Ahora los fallos se juntan acá, se listan al final y el proceso sale con
+    # código distinto de cero.
+    fallos = []
 
     app = create_app()
     with app.app_context():
@@ -190,6 +197,7 @@ def actualizar(target='local'):
                     prod_session.rollback()
                 except Exception:
                     pass
+                fallos.append((model.__tablename__, safe(e)))
                 print(safe(f"Error: {e}"))
 
         # Sincronizar event_closers (tabla de asociación Many-to-Many)
@@ -205,7 +213,30 @@ def actualizar(target='local'):
                 print("Ok (vacía)")
         except Exception as e:
             db.session.rollback()
+            fallos.append(('event_closers', safe(e)))
             print(f"Error al sincronizar event_closers: {e}")
+
+        # Contraste final contra producción: el log por tabla puede mentir por omisión (una tabla
+        # que se limpió y después falló al copiar imprime su error, pero es fácil no leerlo entre
+        # ochenta líneas). Acá se compara fila a fila y se marca como fallo toda tabla que quedó
+        # vacía teniendo datos en producción.
+        print("Verificando la copia contra producción...")
+        for model in modelos:
+            tabla = model.__tablename__
+            try:
+                n_prod = prod_session.query(model).count()
+                n_dest = db.session.query(model).count()
+            except Exception as e:
+                prod_session.rollback()
+                db.session.rollback()
+                fallos.append((tabla, f"no se pudo verificar: {safe(e)}"))
+                continue
+            if n_prod and not n_dest:
+                fallos.append((tabla, f"quedó VACÍA (producción tiene {n_prod})"))
+            elif n_dest < n_prod:
+                # Producción sigue recibiendo datos mientras corre la copia, así que un faltante
+                # de unas pocas filas es deriva normal, no un fallo.
+                print(f"  {tabla}: {n_dest} de {n_prod} (faltan {n_prod - n_dest}, deriva en vivo)")
 
         prod_session.close()
         
@@ -230,12 +261,20 @@ def actualizar(target='local'):
                     db.session.rollback()
             print("Secuencias de PostgreSQL sincronizadas.")
 
+        if fallos:
+            print(f"--- Proceso finalizado CON {len(fallos)} ERROR(ES) ---")
+            for tabla, err in fallos:
+                print(f"  {tabla}: {err}")
+            print("La base de destino NO es una copia fiel de producción. Revisá las tablas de arriba.")
+            return False
+
         print("--- Proceso finalizado con éxito ---")
+        return True
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Actualizar base de datos desde Producción hacia Local o Staging.")
-    parser.add_argument('--target', choices=['local', 'staging', 'testing'], default='local', 
+    parser.add_argument('--target', choices=['local', 'staging', 'testing'], default='local',
                         help="Destino de la copia: 'local' (por defecto) o 'staging' (Railway Testing)")
     args = parser.parse_args()
-    actualizar(target=args.target)
+    sys.exit(0 if actualizar(target=args.target) else 1)
