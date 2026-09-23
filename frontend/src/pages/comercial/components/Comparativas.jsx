@@ -13,8 +13,17 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
     const montado = useMontado();
     const valores = filas.map(f => f[metrica.key]).filter(v => v !== null && v !== undefined);
     const maximo = Math.max(...valores, 0);
-    const promedio = datos.equipo[metrica.key];
     const tope = maximo * 1.08 || 1;
+
+    // El valor del equipo y la referencia con la que se compara a cada persona NO son lo mismo
+    // en las métricas que se suman: el equipo junta $7,033 de cash, pero la vara de cada closer
+    // es el promedio por persona ($1,758). Compararlo contra el total marcaba a todos por debajo
+    // y decía "lidera Fulano · $5,183 sobre el promedio" cuando en realidad estaba por debajo.
+    // En las tasas, el valor del equipo ya ES la referencia.
+    const valorEquipo = datos.equipo[metrica.key];
+    const promedio = metrica.suma && filas.length && valorEquipo !== null && valorEquipo !== undefined
+        ? valorEquipo / filas.length
+        : valorEquipo;
 
     const bajada = (fila) => {
         if (metrica.key === 'show_up') return `${fila.agendas ?? fila.generadas ?? 0} agendas`;
@@ -36,11 +45,11 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
                 <div style={{ textAlign: 'right' }}>
                     <div className="dc-total-label">Equipo</div>
                     <div className="dc-num" style={{ fontSize: 24, fontWeight: 700 }}>
-                        {fmt.porFormato(promedio, metrica.formato)}
+                        {fmt.porFormato(valorEquipo, metrica.formato)}
                     </div>
                     <div className="dc-total-hint">
                         {metrica.suma && filas.length
-                            ? `total · ${fmt.porFormato(promedio / filas.length, metrica.formato)} por persona`
+                            ? `total · ${fmt.porFormato(promedio, metrica.formato)} por persona`
                             : 'promedio del equipo'}
                     </div>
                 </div>
@@ -97,8 +106,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
                 <div className="dc-legend" style={{ justifyContent: 'space-between' }}>
                     <span className="ln-t-caption ln-muted">
                         Lidera {filas[0].nombre}
-                        {promedio ? ` · ${metrica.formato === 'pct' ? '+' : ''}`
-                            + `${fmt.porFormato(Math.abs((filas[0][metrica.key] || 0) - promedio), metrica.formato)}`
+                        {promedio ? ` · +${fmt.porFormato((filas[0][metrica.key] || 0) - promedio, metrica.formato)}`
                             + `${metrica.formato === 'pct' ? ' pts' : ''} sobre el promedio` : ''}
                     </span>
                     <span className="ln-t-caption ln-muted-40 dc-num">
