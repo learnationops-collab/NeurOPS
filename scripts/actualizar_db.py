@@ -1,6 +1,6 @@
 import os
 import sys
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, make_transient
 from dotenv import load_dotenv
 
@@ -130,6 +130,16 @@ def actualizar(target='local'):
             Payment, SurveyAnswer, Notification, Comment, DailyReportAnswer,
             InstallmentPlan, CommentNotification
         ]
+
+        # Solo se toca lo que se va a poder copiar. La limpieza y la copia eran dos pasos
+        # independientes, así que una tabla que existe en el destino pero todavía no en
+        # producción (una migración desplegada acá y no allá) se vaciaba en el paso 1 y en el
+        # paso 2 fallaba con "no existe": la tabla quedaba vacía y nadie la volvía a llenar.
+        tablas_prod = set(inspect(prod_engine).get_table_names())
+        ausentes = [m.__tablename__ for m in modelos if m.__tablename__ not in tablas_prod]
+        if ausentes:
+            print(f"Omitidas (no existen en producción, se dejan intactas): {', '.join(ausentes)}")
+            modelos = [m for m in modelos if m.__tablename__ in tablas_prod]
 
         # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
         print("Limpiando base de datos destino para evitar colisiones UNIQUE...")
