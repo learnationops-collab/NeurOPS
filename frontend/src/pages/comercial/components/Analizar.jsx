@@ -781,10 +781,10 @@ const PanelProgramas = ({ bloque, irA }) => {
  */
 const PanelSenas = ({ senas, irA }) => {
     const estados = [
-        { label: 'Pago completo', n: senas.completo, tone: CAT[0], filtro: 'Pago completo' },
-        { label: 'Pago parcial', n: senas.parcial, tone: CAT[1], filtro: 'Split Pay' },
-        { label: 'En espera', n: senas.espera, tone: CAT[2], filtro: null },
-        { label: 'Caída', n: senas.caida, tone: CAT[3], filtro: null },
+        { label: 'Pago completo', n: senas.completo, tone: CAT[0] },
+        { label: 'Pago parcial', n: senas.parcial, tone: CAT[1] },
+        { label: 'En espera', n: senas.espera, tone: CAT[2] },
+        { label: 'Caída', n: senas.caida, tone: CAT[3] },
     ];
     const cifras = [
         {
@@ -822,30 +822,21 @@ const PanelSenas = ({ senas, irA }) => {
             {senas.total === 0 ? <Vacio texto="Sin señas en el período." /> : (
                 <>
                     <div className="grid-sm">
-                        {estados.map(e => {
-                            const cuerpo = (
-                                <>
-                                    <span className="ficha-lbl" style={{ lineHeight: 1.3 }}>{e.label}</span>
-                                    <span className="sena-n">
-                                        <Cifra tag="b" valor={String(e.n)} />
-                                        <span>{`${Math.round((e.n / senas.total) * 100)}%`}</span>
-                                    </span>
-                                </>
-                            );
-                            return e.filtro
-                                ? (
-                                    <button key={e.label} type="button" className="sena-celda"
-                                        style={{ '--c': v(e.tone), textAlign: 'left' }}
-                                        onClick={() => irA('ventas', { tipo_pago: e.filtro })}>
-                                        {cuerpo}
-                                    </button>
-                                )
-                                : (
-                                    <div key={e.label} className="sena-celda" style={{ '--c': v(e.tone) }}>
-                                        {cuerpo}
-                                    </div>
-                                );
-                        })}
+                        {/* Sin drill-down, a diferencia del resto del tablero: estas celdas
+                            cuentan SEÑAS según en qué terminaron después, y el único corte que la
+                            tabla sabe hacer sobre las ventas es por tipo de pago. El clic en
+                            "Pago completo" llevaba a las ventas de pago completo del período,
+                            que son otras filas — el número de arriba y el de abajo nunca iban a
+                            coincidir. El total sí es clickeable: son exactamente los depósitos. */}
+                        {estados.map(e => (
+                            <div key={e.label} className="sena-celda" style={{ '--c': v(e.tone) }}>
+                                <span className="ficha-lbl" style={{ lineHeight: 1.3 }}>{e.label}</span>
+                                <span className="sena-n">
+                                    <Cifra tag="b" valor={String(e.n)} />
+                                    <span>{`${Math.round((e.n / senas.total) * 100)}%`}</span>
+                                </span>
+                            </div>
+                        ))}
                     </div>
                     <hr className="sep" />
                     <div className="grid-sm">
