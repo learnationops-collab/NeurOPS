@@ -849,3 +849,157 @@
     letter-spacing: .08em;
     text-transform: uppercase;
 }
+
+/* ============================================================
+   10 · TABLAS
+   ============================================================ */
+.dc-shell .tabla{border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle);overflow:hidden}
+.dc-shell .tabla-cab,
+.dc-shell .tabla-fila{display:grid;gap:var(--s3);align-items:center;
+  grid-template-columns:var(--cols);padding:0 var(--s4)}
+.dc-shell .tabla-cab{height:38px;border-bottom:1px solid var(--border-subtle)}
+.dc-shell .tabla-cab > span{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted-40);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .tabla-fila{min-height:52px;width:100%;text-align:left;border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .tabla-fila:last-child{border-bottom:0}
+.dc-shell .tabla-fila[role="button"]{cursor:pointer}
+.dc-shell .tabla-fila[role="button"]:hover{background:var(--mat-1)}
+.dc-shell .tabla-fila > *{min-width:0}
+.dc-shell .celda{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .celda--num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.dc-shell .celda-sub{display:block;font-size:11px;font-weight:600;color:var(--text-muted-40);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .celda-ver{display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:var(--radius-pill);
+  border:1px solid var(--brand-secondary-border);background:var(--brand-secondary-surface);
+  color:var(--brand-secondary);transition:transform .22s var(--spring)}
+.dc-shell .celda-ver svg{width:14px;height:14px}
+.dc-shell .tabla-fila[role="button"]:hover .celda-ver{transform:translateX(2px)}
+.dc-shell .vacio{display:grid;gap:var(--s3);justify-items:start;padding:var(--s8) var(--s4)}
+
+/* Abajo de 900px la tabla se vuelve una lista: cada celda lleva su rotulo
+   en `data-h` y la cabecera desaparece. */
+@media (max-width:900px){
+  .dc-shell .tabla-cab{display:none}
+  .dc-shell .tabla-fila{grid-template-columns:1fr;gap:var(--s2);padding:var(--s4);
+    min-height:0;align-items:start}
+  .dc-shell .tabla-fila > *{display:flex;align-items:baseline;gap:var(--s3);justify-content:space-between;
+    width:100%;text-align:right}
+  .dc-shell .tabla-fila > *[data-h]::before{content:attr(data-h);flex-shrink:0;text-align:left;
+    font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text-muted-40)}
+  .dc-shell .tabla-fila .celda{white-space:normal;overflow:visible;text-align:right}
+  .dc-shell .tabla-fila .celda-sub{text-align:right}
+  .dc-shell .tabla-fila > *[data-h=""]{justify-content:flex-end}
+}
+
+/* Comparativa: fila con avatar y barras */
+.dc-shell .cmp-fila{display:grid;gap:var(--s3);align-items:center;grid-template-columns:var(--cols);
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);min-width:0}
+.dc-shell .cmp-fila:last-child{border-bottom:0}
+.dc-shell .avatar{width:34px;height:34px;flex-shrink:0;border-radius:12px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:12px;font-weight:900}
+.dc-shell .cmp-celda{display:grid;gap:5px;min-width:0}
+.dc-shell .cmp-n{display:flex;align-items:baseline;gap:var(--s2);font-size:15px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dc-shell .cmp-equipo{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);
+  padding:var(--s3) var(--s4);border-top:1px solid var(--border-main);
+  background:var(--mat-1);font-size:12px;font-weight:700;color:var(--text-muted)}
+.dc-shell .cmp-scroll{overflow-x:auto}
+.dc-shell .cmp-scroll > *{min-width:760px}
+
+/* ============================================================
+   11 · MODAL — el velo tambien acepta llevar la clase del shell encima
+   (`class="dc-shell scrim"`), por si el modal termina montado en un portal
+   fuera del tablero: sin el shell no tendria ni tokens ni estilo.
+   ============================================================ */
+.dc-shell .scrim,
+.dc-shell.scrim{position:fixed;inset:0;z-index:90;background:var(--bg-scrim);
+  backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;
+  padding:var(--s4)}
+@media (min-width:720px){
+  .dc-shell .scrim,
+  .dc-shell.scrim{align-items:center}
+}
+.dc-shell .modal{position:relative;isolation:isolate;width:min(760px,100%);
+  max-height:min(86vh,860px);overflow:auto;overscroll-behavior:contain;
+  background:var(--bg-surface);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  border-radius:var(--radius-main);box-shadow:var(--shadow-main);
+  padding:var(--s6);animation:dcModalIn .3s var(--spring) both}
+.dc-shell .modal-cab{display:flex;align-items:flex-start;gap:var(--s4);margin-bottom:var(--s6)}
+.dc-shell .modal-avatar{width:54px;height:54px;flex-shrink:0;border-radius:18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
+  color:var(--brand-secondary);font-size:18px;font-weight:900}
+.dc-shell .modal-meta{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));
+  padding:var(--s4);border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle);margin-bottom:var(--s4)}
+.dc-shell .modal-meta > div{display:grid;gap:4px;min-width:0}
+
+/* Recorrido */
+.dc-shell .ruta{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fit,minmax(min(100%,96px),1fr))}
+.dc-shell .ruta-paso{display:grid;gap:6px;justify-items:center;text-align:center;min-width:0}
+.dc-shell .ruta-punto{width:34px;height:34px;flex-shrink:0;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--c) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);color:var(--c)}
+.dc-shell .ruta-punto svg{width:16px;height:16px}
+.dc-shell .ruta-lbl{font-size:12px;font-weight:700}
+.dc-shell .ruta-est{font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+
+/* Notas */
+.dc-shell .hilo{display:grid;gap:var(--s2)}
+.dc-shell .nota{display:grid;gap:4px;padding:10px 12px;border-radius:14px;
+  background:var(--mat-1);border:1px solid var(--border-subtle)}
+.dc-shell .nota--mia{background:var(--brand-secondary-surface);border-color:var(--brand-secondary-border)}
+.dc-shell .nota-cab{display:flex;align-items:baseline;gap:var(--s2);font-size:11px;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .nota-cab .cuando{margin-left:auto;color:var(--text-muted-40);letter-spacing:.04em}
+.dc-shell .redactar{display:flex;align-items:flex-end;gap:var(--s2);padding:var(--s3);
+  border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);transition:border-color .16s ease}
+.dc-shell .redactar:focus-within{border-color:var(--border-control)}
+.dc-shell .redactar textarea{flex:1;min-width:0;border:0;background:none;outline:none;resize:none;
+  font-size:13.5px;font-weight:600;line-height:1.45;max-height:120px}
+.dc-shell .redactar textarea::placeholder{color:var(--text-muted-40)}
+
+/* Reporte */
+.dc-shell .rep-fila{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);
+  transition:background-color .16s ease}
+.dc-shell .rep-fila:last-child{border-bottom:0}
+.dc-shell .rep-fila:hover{background:var(--mat-1)}
+.dc-shell .rep-nom{width:130px;flex-shrink:0;font-size:13.5px;font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .rep-tasa{width:54px;flex-shrink:0;text-align:right;font-size:16px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--c)}
+@media (max-width:640px){
+  .dc-shell .rep-fila{flex-wrap:wrap}
+  .dc-shell .rep-nom{width:auto;flex:1}
+  .dc-shell .heat{flex-basis:100%;order:3}
+}
+
+/* Simulador / proyeccion */
+.dc-shell .palanca{display:grid;gap:var(--s2);padding:var(--s4);min-width:0;
+  border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle)}
+.dc-shell .palanca-cab{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .palanca-v{font-size:19px;line-height:1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;margin-left:auto}
+.dc-shell .palanca-v[data-cambiada="1"]{color:var(--brand-secondary)}
+.dc-shell .rank{display:grid;gap:var(--s3)}
+.dc-shell .rank-fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .rank-nom{width:150px;flex-shrink:0;min-width:0}
+.dc-shell .rank-riel{flex:1;min-width:0;height:8px;border-radius:3px;background:var(--hueco);overflow:hidden}
+.dc-shell .rank-riel > i{display:block;height:100%;border-radius:3px;width:0;transition:width .6s var(--crecer)}
+.dc-shell .rank-g{width:96px;flex-shrink:0;text-align:right;font-size:15px;font-weight:900;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+@media (max-width:560px){
+  .dc-shell .rank-fila{flex-wrap:wrap}
+  .dc-shell .rank-nom{width:auto;flex:1}
+  .dc-shell .rank-riel{flex-basis:100%;order:3}
+}
