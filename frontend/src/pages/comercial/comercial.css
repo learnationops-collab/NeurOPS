@@ -793,14 +793,19 @@
    tablero y asi el embudo sigue funcionando exactamente igual que hoy,
    tambien si su componente termina renderizado fuera del shell.
    ============================================================ */
-.dc-funnel-row {
+/* Prefijadas con `.dc-shell` como todo el resto del archivo, y no por consistencia: la etiqueta
+   de cada paso es un `<button>` cuando lleva drill-down, y `.dc-shell button {font-size:inherit;
+   font-weight:inherit}` (especificidad 0,1,1) le ganaba a `.dc-funnel-label` (0,1,0). El texto
+   salia a 16px/400 en vez de 10px/900 — solo sobrevivia el `letter-spacing`, porque nada mas lo
+   declaraba. */
+.dc-shell .dc-funnel-row {
     display: grid;
     grid-template-columns: 96px 1fr 78px;
     gap: 10px;
     align-items: center;
 }
 
-.dc-funnel-label {
+.dc-shell .dc-funnel-label {
     font-size: 10px;
     font-weight: 900;
     letter-spacing: .14em;
@@ -808,7 +813,7 @@
     color: var(--text-muted);
 }
 
-.dc-funnel-bar {
+.dc-shell .dc-funnel-bar {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -823,20 +828,20 @@
 }
 
 /* Cuello trapezoidal entre una barra y la siguiente. */
-.dc-funnel-neck {
+.dc-shell .dc-funnel-neck {
     height: 12px;
     opacity: .45;
     transition: clip-path .95s cubic-bezier(.22, .7, .2, 1);
 }
 
-.dc-funnel-pct {
+.dc-shell .dc-funnel-pct {
     font-size: 14px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
 
-.dc-bottleneck {
+.dc-shell .dc-bottleneck {
     display: inline-flex;
     align-items: center;
     height: 20px;
