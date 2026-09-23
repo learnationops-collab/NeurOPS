@@ -1,4 +1,5 @@
 import React from 'react';
+import { FunnelChart, FunnelChartPlot, FunnelChartSummary } from '@/components/charts/funnel-chart';
 import { Barra, CardHead, Cargando, Delta, fmt, useMontado } from './Shared';
 
 /**
@@ -154,18 +155,22 @@ const Programas = ({ bloque, irA }) => {
 };
 
 /**
- * Embudo del doc 03: barras centradas con cuello trapezoidal entre una y la siguiente, color en
- * degradado de info a magenta, y el paso de menor conversión marcado en error.
+ * Embudo.
+ *
+ * Usa el gráfico de beui.dev (`components/charts/funnel-chart`), que el usuario pidió para los
+ * dashboards: una sola figura continua por paso, con las fronteras curvas unidas, el número
+ * dentro de cada banda y el detalle por paso en el globo (conversión contra el paso anterior,
+ * cuántos se perdieron y qué parte del total inicial queda).
+ *
+ * Lo que el gráfico no trae y este panel sí necesita, porque es lo que el diseño pide leer de un
+ * vistazo: el paso donde se cae más gente. Va como cápsula en la cabecera y pinta esa banda en
+ * `--error`, por encima de la rampa de marca.
  */
-const Embudo = ({ pasos, irA }) => {
-    const montado = useMontado();
-    const primero = pasos[0]?.n || 0;
-    const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
-
-    // Cuello de botella: el salto de menor conversión a partir del SEGUNDO (i >= 2). El primer
-    // salto queda fuera a propósito: "de agendas a confirmadas" es casi siempre el más flojo
-    // —confirmar depende de que el lead conteste, no de cómo se llevó la llamada— y si compite
-    // se lleva la etiqueta todas las veces, tapando el cuello real del embudo.
+const cuelloDeBotella = (pasos) => {
+    // El salto de menor conversión a partir del SEGUNDO (i >= 2). El primero queda fuera a
+    // propósito: "de agendas a confirmadas" es casi siempre el más flojo —confirmar depende de
+    // que el lead conteste, no de cómo se llevó la llamada— y si compite se lleva la etiqueta
+    // siempre, tapando el cuello real.
     let cuello = null;
     let peor = Infinity;
     pasos.forEach((p, i) => {
@@ -175,13 +180,26 @@ const Embudo = ({ pasos, irA }) => {
         const tasa = (p.n / previo) * 100;
         if (tasa < peor) { peor = tasa; cuello = i; }
     });
+    return cuello;
+};
 
-    const color = (i) => {
-        if (i === cuello) return 'var(--error)';
+const Embudo = ({ pasos, irA }) => {
+    const cuello = cuelloDeBotella(pasos);
+
+    // Rampa de marca del azul al magenta, con la banda del cuello en error. `color-mix` en oklch
+    // mantiene la luminosidad pareja entre pasos, así que ninguna banda queda más oscura que sus
+    // vecinas por el camino que toma la interpolación.
+    const stages = pasos.map((p, i) => {
         const mezcla = pasos.length > 1 ? Math.round((i / (pasos.length - 1)) * 100) : 100;
-        return `color-mix(in oklch, var(--brand-secondary) ${mezcla}%, var(--info))`;
-    };
-    const final = primero ? ((pasos[pasos.length - 1].n / primero) * 100).toFixed(1) : '0.0';
+        return {
+            id: p.paso,
+            label: p.paso,
+            value: p.n,
+            color: i === cuello
+                ? 'var(--error)'
+                : `color-mix(in oklch, var(--brand-secondary) ${mezcla}%, var(--info))`,
+        };
+    });
 
     return (
         <div className="ln-panel ln-panel--sm">
@@ -190,51 +208,20 @@ const Embudo = ({ pasos, irA }) => {
                     <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
                 )}
             </CardHead>
-            {pasos.map((p, i) => {
-                const pct = i === 0 ? null : pasos[i - 1].n ? ((p.n / pasos[i - 1].n) * 100).toFixed(1) : null;
-                const anchoAqui = montado ? ancho(p.n) : 14;
-                const anchoSig = i < pasos.length - 1 ? (montado ? ancho(pasos[i + 1].n) : 14) : null;
-                return (
-                    <div key={p.paso}>
-                        <div className="dc-funnel-row">
-                            <span className="dc-funnel-label" style={i === cuello ? { color: 'var(--error)' } : undefined}>
-                                {p.paso}
-                            </span>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <div className="dc-funnel-bar"
-                                    style={{ width: `${anchoAqui}%`, background: color(i), transitionDelay: `${120 + i * 90}ms` }}>
-                                    {p.n}
-                                </div>
-                            </div>
-                            <span className="dc-funnel-pct" style={i === cuello ? { color: 'var(--error)' } : undefined}>
-                                {pct === null ? '' : `${pct}%`}
-                            </span>
-                        </div>
-                        {anchoSig !== null && (
-                            <div className="dc-funnel-row">
-                                <span />
-                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <div className="dc-funnel-neck" style={{
-                                        width: '100%', background: color(i),
-                                        transitionDelay: `${120 + i * 90}ms`,
-                                        clipPath: `polygon(${(100 - anchoAqui) / 2}% 0, ${100 - (100 - anchoAqui) / 2}% 0, `
-                                            + `${100 - (100 - anchoSig) / 2}% 100%, ${(100 - anchoSig) / 2}% 100%)`,
-                                    }} />
-                                </div>
-                                <span />
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-            <div className="dc-legend" style={{ justifyContent: 'space-between' }}>
-                <span className="ln-t-caption ln-muted dc-num">
-                    de {primero} {pasos[0]?.paso.toLowerCase()} a {pasos[pasos.length - 1]?.n} {pasos[pasos.length - 1]?.paso.toLowerCase()}
-                </span>
+            <FunnelChart
+                stages={stages}
+                unit={pasos[0]?.paso.toLowerCase() || 'pasos'}
+                label="Embudo del período"
+                formatValue={(v) => fmt.num(v)}
+            >
+                <FunnelChartPlot />
+                <FunnelChartSummary />
+            </FunnelChart>
+            <div className="dc-legend" style={{ justifyContent: 'flex-end', marginTop: 0 }}>
                 <button type="button" className="ln-t-caption ln-accent dc-num"
                     style={{ background: 'none', border: 0, cursor: 'pointer' }}
                     onClick={() => irA('agendas', {})}>
-                    {final}% final
+                    Ver las filas
                 </button>
             </div>
         </div>
