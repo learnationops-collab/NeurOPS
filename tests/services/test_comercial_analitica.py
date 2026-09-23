@@ -16,6 +16,7 @@ from freezegun import freeze_time
 
 from app.models import Appointment, Client, FinancialSale
 from app.services import comercial_analitica as ca
+from app.services.comercial_service import ComercialService
 
 HOY = '2026-09-17 21:30:00'
 DESDE = datetime(2026, 9, 1).date()
@@ -77,6 +78,24 @@ def test_el_embudo_encadena_los_cinco_pasos(db, marlon):
 
 
 @freeze_time(HOY)
+def test_el_ultimo_paso_del_embudo_cuenta_agendas_y_no_filas_de_venta(db, marlon):
+    # Dos cobros del mismo lead en el período (un pago completo y una cuota) salen de UNA sola
+    # llamada: el embudo tiene que decir 1 venta, no 2. Contar filas de venta mezclaba llamadas
+    # con cobros y el salto "presentaciones -> ventas" dejaba de significar algo.
+    cli = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, cli, closer_result='Show up')
+    venta(db, mail='compro@test.local', monto=990.0, tipo='AL - Completo')
+    venta(db, mail='compro@test.local', monto=250.0, tipo='AL - Cuota')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+    pasos = {p['paso']: p['n'] for p in bloque['funnel']}
+
+    assert pasos['Ventas'] == pasos['Asistieron'] == 1
+    # Programas y Payment types SÍ cuentan cobros: son otra pregunta, sobre la plata.
+    assert bloque['cash'] == 1240.0
+
+
+@freeze_time(HOY)
 def test_una_venta_cuenta_como_presentacion_aunque_nadie_haya_tildado_la_oferta(db, marlon):
     # `offer_presented` queda en None muy seguido. Sin esta regla el embudo mostraría 1 venta
     # sobre 0 presentaciones, que es imposible.
@@ -96,6 +115,30 @@ def test_asistio_con_la_oferta_tildada_cuenta_como_presentacion_sin_venta(db, ma
     pasos = {p['paso']: p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']}
 
     assert (pasos['Presentaciones'], pasos['Ventas']) == (1, 0)
+
+
+@freeze_time(HOY)
+def test_el_close_rate_de_la_tarjeta_es_el_mismo_que_el_de_los_totales(db, marlon):
+    """La tarjeta de Analizar y "Totales de lo filtrado" tienen que dar el MISMO close rate.
+
+    Bug real encontrado mirando la pantalla con datos de producción: la tarjeta lo calculaba con
+    las filas de venta del período (7) y los totales con las agendas que terminaron en venta
+    (12), así que la misma pantalla mostraba 20.6% arriba y 35.3% abajo. Son dos preguntas
+    distintas —una venta del período puede no tener agenda en él, y una llamada de estos días
+    puede cerrar más tarde— y la que corresponde al close rate es la de las llamadas.
+    """
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    # La venta de este lead quedó registrada en otro período: el close rate de ESTAS llamadas
+    # no puede depender de en qué mes se contabilizó el cobro.
+    venta(db, mail='compro@test.local', fecha=datetime(2026, 8, 20))
+    agenda(db, marlon, cliente(db, 'No compro'), closer_result='Show up')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+    totales = ComercialService.totales_agendas(ComercialService.agendas(DESDE, HASTA))
+
+    assert bloque['close_rate'] == totales['close_rate'] == 50.0
+    assert bloque['cerradas'] == totales['ventas'] == 1
 
 
 # --- Señas ---------------------------------------------------------------------------------------
@@ -166,6 +209,23 @@ def test_cada_programa_trae_su_desglose_por_tipo_de_pago(db, marlon):
     assert programas['Ace Learners']['ventas'] == 2
     assert {t['key']: t['cash'] for t in programas['Ace Learners']['por_tipo']} == {
         'completo': 990.0, 'parcial': 500.0}
+
+
+@freeze_time(HOY)
+def test_un_programa_con_solo_cuotas_no_declara_ventas_que_no_existen(db, marlon):
+    # Antes `ventas` caía a la cantidad de FILAS cuando no había ninguna venta real, así que un
+    # programa con solo cuotas decía "2 ventas" y en el mapa del equipo salía un "Residency 200%"
+    # (2 sobre 1 venta real del período). Reportado mirando producción.
+    venta(db, mail='a@test.local', monto=990.0, tipo='AL - Completo')
+    venta(db, mail='b@test.local', monto=250.0, tipo='RR - Cuota')
+    venta(db, mail='c@test.local', monto=250.0, tipo='RR - Cuota')
+
+    programas = {p['programa']: p for p in ca.bloque_closers(DESDE, HASTA)['programas']}
+    fila = ca.comparativas('closers', DESDE, HASTA)['filas'][0]
+
+    assert (programas['Residency Roadmap']['ventas'], programas['Residency Roadmap']['cobros']) == (0, 2)
+    assert programas['Residency Roadmap']['cash'] == 500.0  # el cash sí se cuenta
+    assert fila['residency_pct'] == 0.0
 
 
 @freeze_time(HOY)

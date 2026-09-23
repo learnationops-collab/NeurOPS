@@ -13,7 +13,7 @@ import { Barra, CardHead, Cargando, Delta, fmt, useMontado } from './Shared';
 
 const TIPS = {
     showUp: 'De las llamadas que ya tuvieron un resultado (asistió o no show), cuántas asistieron. Las canceladas y las reagendadas no entran: esa llamada no ocurrió.',
-    closeRate: 'De los que asistieron a la llamada, cuántos terminaron comprando.',
+    closeRate: 'De los que asistieron a la llamada, cuántos terminaron comprando. Se cuenta sobre las llamadas, no sobre las ventas del período: una venta puede no tener agenda en estos días, y una llamada de estos días puede haber cerrado más tarde.',
     cash: 'Todo lo cobrado en el período: ventas nuevas, cuotas de ventas anteriores y señas.',
     payment: 'Cómo se cobró: de una sola vez, en dos pagos (Split Pay), como cuota de un plan ya abierto, o como seña.',
     programas: 'Cuánto aportó cada programa y con qué mezcla de tipos de pago.',
@@ -89,7 +89,7 @@ const PaymentTypes = ({ bloque, irA }) => {
     return (
         <div className="ln-panel ln-panel--sm">
             <CardHead titulo="Payment types" tip={TIPS.payment}>
-                <span className="ln-t-caption ln-muted dc-num">{total} cobros</span>
+                <span className="ln-t-caption ln-muted dc-num">{fmt.plural(total, 'cobro', 'cobros')}</span>
             </CardHead>
             <Apilada segmentos={bloque.payment_types.map(t => ({
                 key: t.key, valor: t.ventas, color: COLOR_TIPO[t.key], label: t.label, titulo: `${t.ventas}`,
@@ -114,7 +114,9 @@ const Programas = ({ bloque, irA }) => {
     return (
         <div className="ln-panel ln-panel--sm">
             <CardHead titulo="Programas" tip={TIPS.programas}>
-                <span className="ln-t-caption ln-muted dc-num">{ventas} ventas · {fmt.money(cash)}</span>
+                <span className="ln-t-caption ln-muted dc-num">
+                    {fmt.plural(ventas, 'venta', 'ventas')} · {fmt.money(cash)}
+                </span>
             </CardHead>
             {bloque.programas.length === 0 && <p className="ln-t-body-sm ln-muted-40">Sin ventas en el período.</p>}
             {bloque.programas.map(p => (
@@ -128,7 +130,8 @@ const Programas = ({ bloque, irA }) => {
                                 {p.programa}
                             </span>
                             <span className="ln-t-caption ln-muted-40 dc-num">
-                                {p.ventas} ventas · ticket {fmt.money(p.ticket)}
+                                {fmt.plural(p.ventas, 'venta', 'ventas')} · ticket {fmt.money(p.ticket)}
+                                {p.cobros !== p.ventas && ` · ${fmt.plural(p.cobros, 'cobro', 'cobros')}`}
                             </span>
                         </span>
                         <span className="dc-num" style={{ fontSize: 19, fontWeight: 700 }}>{fmt.money(p.cash)}</span>
@@ -255,7 +258,9 @@ const Senas = ({ senas, delta, irA }) => {
         <div className="ln-panel ln-panel--sm">
             <CardHead titulo="Señas" tip={TIPS.senas}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="ln-t-caption ln-muted dc-num">{senas.total} señas</span>
+                    <span className="ln-t-caption ln-muted dc-num">
+                        {fmt.plural(senas.total, 'seña', 'señas')}
+                    </span>
                     <Delta delta={delta} />
                 </span>
             </CardHead>
@@ -305,8 +310,9 @@ const DashboardClosers = ({ bloque, deltas, irA }) => (
                 bajada={`${bloque.asistieron} de ${bloque.realizadas} realizadas`} barra={bloque.show_up || 0}
                 delta={deltas.show_up} onClick={() => irA('agendas', { post_call: 'asistio' })} />
             <Tile titulo="Close rate" tip={TIPS.closeRate} valor={fmt.pct(bloque.close_rate)} color="var(--brand-secondary)"
-                bajada={`${bloque.ventas} de ${bloque.asistieron} asistieron`} barra={bloque.close_rate || 0}
-                delta={deltas.close_rate} onClick={() => irA('ventas', {})} />
+                bajada={`${bloque.cerradas} de ${bloque.asistieron} asistieron`} barra={bloque.close_rate || 0}
+                delta={deltas.close_rate}
+                onClick={() => irA('agendas', { post_call: 'Venta' })} />
             <div className="ln-panel ln-panel--sm">
                 <CardHead titulo="Cash collected" tip={TIPS.cash}><Delta delta={deltas.cash} /></CardHead>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', minHeight: 54 }}>

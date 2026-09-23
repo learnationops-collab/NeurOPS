@@ -230,7 +230,15 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         'realizadas': tot_a['realizadas'],
         'asistieron': tot_a['asistieron'],
         'show_up': tot_a['show_up'],
-        'close_rate': pct(tot_v['ventas'], tot_a['asistieron']),
+        # El close rate se mide sobre las AGENDAS, no sobre las filas de venta del período: la
+        # pregunta es "de los que asistieron, cuántos compraron", y eso solo lo puede contestar
+        # el conjunto de llamadas. Las dos cifras no son la misma — una venta del período puede
+        # no tener agenda en él (una cuota vieja, un cliente que volvió), y una llamada de este
+        # mes puede haber cerrado en otro. Usar las filas de venta acá daba 20.6% en la tarjeta
+        # contra 35.3% en "Totales de lo filtrado", que es exactamente lo que el diseño pide
+        # que no pase.
+        'cerradas': tot_a['ventas'],
+        'close_rate': tot_a['close_rate'],
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
@@ -245,20 +253,29 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
             for t in TIPOS_PAGO
         ],
         'programas': sorted((
+            # `ventas` son ventas de verdad (completo/parcial) y `cobros` todas las filas, cuotas
+            # y señas incluidas. Antes `ventas` caía a `filas` cuando no había ninguna venta real,
+            # y un programa con solo cuotas declaraba más "ventas" que el total del período: en
+            # producción eso daba un "Residency 200%" en el mapa del equipo.
             {'programa': nombre,
-             'ventas': datos['ventas'] or datos['filas'],
+             'ventas': datos['ventas'],
+             'cobros': datos['filas'],
              'cash': round(datos['cash'], 2),
              'ticket': round(datos['cash'] / datos['ventas'], 2) if datos['ventas'] else None,
              'por_tipo': [{**chip('tipo_pago', k), 'ventas': v['ventas'], 'cash': round(v['cash'], 2)}
                           for k, v in datos['por_tipo'].items()]}
             for nombre, datos in programas.items()
         ), key=lambda p: p['cash'], reverse=True),
+        # Los cinco pasos cuentan AGENDAS, incluido el último: un embudo cuyo último escalón
+        # cambiara de unidad (filas de venta del período) no se puede leer — "de 29
+        # presentaciones a 7 ventas" mezclaría llamadas con cobros y daría un porcentaje que no
+        # significa nada.
         'funnel': [
             {'paso': 'Agendas', 'n': tot_a['agendas']},
             {'paso': 'Confirmadas', 'n': confirmadas},
             {'paso': 'Asistieron', 'n': tot_a['asistieron']},
             {'paso': 'Presentaciones', 'n': presentaciones},
-            {'paso': 'Ventas', 'n': tot_v['ventas']},
+            {'paso': 'Ventas', 'n': tot_a['ventas']},
         ],
         'senas': senas_de(ventas),
     }
