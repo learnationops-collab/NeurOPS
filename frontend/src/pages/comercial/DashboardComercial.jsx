@@ -321,24 +321,29 @@ const DashboardComercial = () => {
                     </div>
                 </div>
 
-                {seccion === 'analizar' && tab === 'dashboard' && (
-                    <Analizar datos={resumen} rol={rol} irA={irA} />
-                )}
-                {seccion === 'analizar' && tab === 'comparativas' && (
-                    <Comparativas datos={comparativas} irAPersona={irAPersona} />
-                )}
-                {seccion === 'revisar' && (
-                    <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}
-                        cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
-                        alcance={alcance} filtroInicial={filtroInicial}
-                        onAbrirFila={setFilaAbierta} />
-                )}
-                {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
-                {seccion === 'reportar' && contexto.puede_reportar && (
-                    <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
-                        onStepper={setStepper}
-                        irAPersona={(persona) => set({ s: 'revisar', m: persona.id, p: 'hoy' })} />
-                )}
+                {/* `.vista` es lo que separa las filas de paneles: sin el, cada seccion
+                    renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
+                    entre todas). Ademas trae la animacion de entrada de la referencia. */}
+                <div className="vista">
+                    {seccion === 'analizar' && tab === 'dashboard' && (
+                        <Analizar datos={resumen} rol={rol} irA={irA} />
+                    )}
+                    {seccion === 'analizar' && tab === 'comparativas' && (
+                        <Comparativas datos={comparativas} irAPersona={irAPersona} />
+                    )}
+                    {seccion === 'revisar' && (
+                        <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}
+                            cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
+                            alcance={alcance} filtroInicial={filtroInicial}
+                            onAbrirFila={setFilaAbierta} />
+                    )}
+                    {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
+                    {seccion === 'reportar' && contexto.puede_reportar && (
+                        <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
+                            onStepper={setStepper}
+                            irAPersona={(persona) => set({ s: 'revisar', m: persona.id, p: 'hoy' })} />
+                    )}
+                </div>
 
                 <LeadModal fila={filaAbierta} estados={contexto.estados}
                     puedeCorregir={puedeCorregirFila(filaAbierta)}
