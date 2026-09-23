@@ -150,7 +150,13 @@
    filtros activos y el paso activo del wizard. */
 
 .dc-seg {
-    display: flex;
+    /* inline-flex, no flex: la cápsula tiene que ABRAZAR sus tabs. Como `flex` es de nivel
+       bloque, dentro de un contenedor normal (el panel de Revisar, la columna del cierre del
+       reporte) se estiraba a todo el ancho y dejaba un vacío enorme a la derecha de
+       "Agendas · Ventas" — medido: 790px de cápsula para 180px de tabs. En el header no se
+       notaba porque ahí es hijo de un flex, que ya la encoge al contenido; un hijo de flex
+       ignora `inline-flex` (se blockifica), así que ese caso no cambia. */
+    display: inline-flex;
     align-items: center;
     gap: 4px;
     padding: 4px;
@@ -158,6 +164,7 @@
     border-radius: var(--radius-pill);
     background: rgba(255, 255, 255, .03);
     flex-wrap: wrap;
+    max-width: 100%;
 }
 
 .dc-seg-tab {
@@ -170,11 +177,17 @@
     font-size: 13.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: background .18s ease, color .18s ease;
+    white-space: nowrap;
+    transition: background .18s ease, color .18s ease, transform .12s ease;
 }
 
 .dc-seg-tab:hover {
     color: var(--text-on-surface);
+}
+
+/* Acuse de recibo al toque: la pestaña se hunde apenas mientras se la aprieta. */
+.dc-seg-tab:active {
+    transform: scale(.97);
 }
 
 .dc-seg-tab[aria-selected='true'] {
