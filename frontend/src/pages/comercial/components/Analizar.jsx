@@ -162,12 +162,14 @@ const Embudo = ({ pasos, irA }) => {
     const primero = pasos[0]?.n || 0;
     const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
 
-    // Cuello de botella: el salto de menor conversión, sin contar el primero (que no tiene
-    // paso anterior contra el cual medirse).
+    // Cuello de botella: el salto de menor conversión a partir del SEGUNDO (i >= 2). El primer
+    // salto queda fuera a propósito: "de agendas a confirmadas" es casi siempre el más flojo
+    // —confirmar depende de que el lead conteste, no de cómo se llevó la llamada— y si compite
+    // se lleva la etiqueta todas las veces, tapando el cuello real del embudo.
     let cuello = null;
-    let peor = 101;
+    let peor = Infinity;
     pasos.forEach((p, i) => {
-        if (i === 0) return;
+        if (i < 2) return;
         const previo = pasos[i - 1].n;
         if (!previo) return;
         const tasa = (p.n / previo) * 100;
