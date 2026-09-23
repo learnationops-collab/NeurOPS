@@ -373,33 +373,37 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const def = TABLAS[tabla];
 
     /**
-     * UN solo efecto decide el estado de los filtros, y por una razón:
+     * Los filtros se ajustan DURANTE el render y no en un efecto, que es el patrón de React para
+     * "recalcular estado cuando cambia una prop". Dos intentos previos fallaron:
      *
-     * antes eran dos —uno aplicaba el filtro del drill-down y el otro limpiaba al cambiar de
-     * tabla— y en un drill-down las dos cosas cambian en el MISMO render. Los efectos corren en
-     * orden de declaración, así que el segundo borraba lo que acababa de poner el primero: clic
-     * en "Split Pay · 5 cobros" aterrizaba en Ventas con las 24 filas del período y ninguna
-     * faceta activa. Reportado por el usuario.
+     *  1. Dos efectos —uno aplicaba el filtro del drill-down, el otro limpiaba al cambiar de
+     *     tabla— y en un drill-down las dos cosas cambian en el MISMO render. Corren en orden de
+     *     declaración, así que el segundo borraba lo que acababa de poner el primero: clic en
+     *     "Split Pay · 5 cobros" aterrizaba en Ventas con las 24 filas del período.
+     *  2. Un solo efecto con un ref que marcaba el token como consumido. StrictMode invoca los
+     *     efectos DOS veces al montar: la segunda ve el token ya consumido y limpia igual. El
+     *     síntoma era idéntico, y en producción no aparecía — justo lo que StrictMode existe
+     *     para destapar.
      *
-     * El token `__t` distingue "llegó un drill-down" de "el usuario cambió de tabla a mano": sin
-     * él, tocar la pestaña Ventas volvería a aplicar el último drill-down consumido.
+     * Acá no hay nada que "consumir": el token viaja en el estado, así que repetir el render
+     * da el mismo resultado. El token distingue además "llegó un drill-down" de "el usuario
+     * cambió de pestaña a mano", que tiene que limpiar.
      */
-    const consumido = useRef(null);
-    useEffect(() => {
-        const token = filtroInicial?.__t ?? null;
-        const esDrillDown = token !== null && token !== consumido.current;
+    const token = filtroInicial?.__t ?? null;
+    const [origen, setOrigen] = useState({ tabla, token: null });
+    if (origen.tabla !== tabla || origen.token !== token) {
         const nuevas = {};
-        if (esDrillDown) {
+        if (token !== null && token !== origen.token) {
             Object.entries(filtroInicial).forEach(([k, valor]) => {
                 if (k !== '__t') nuevas[k] = [valor];
             });
-            consumido.current = token;
         }
+        setOrigen({ tabla, token });
         setFacetas(nuevas);
         setChip(null);
         setQuery('');
         setMenu(null);
-    }, [tabla, filtroInicial]);
+    }
 
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
     useEffect(() => {
