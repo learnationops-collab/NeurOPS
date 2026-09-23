@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, CheckCircle2, Ghost, Inbox, Search, Target, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -53,14 +53,43 @@ const PRONTO = {
     simulador: 'Vas a poder mover cada palanca del embudo y ver cuánto cambia el resultado. Estamos puliendo el modelo.',
 };
 
+/** Isotipo de Learnation, con el degradado de marca. */
+const Isotipo = () => (
+    <svg width="36" height="36" viewBox="0 0 100 100" role="img" aria-label="Learnation">
+        <defs>
+            <linearGradient id="lnGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--brand-secondary)" />
+                <stop offset="100%" stopColor="var(--brand-secondary-light)" />
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" rx="26" fill="url(#lnGrad)" />
+        <g fill="#FFFFFF" stroke="#FFFFFF">
+            <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" strokeWidth="5" strokeLinejoin="round" />
+            <path d="M23 18 L42 18 L23 37 Z" strokeWidth="5" strokeLinejoin="round" />
+        </g>
+    </svg>
+);
+
+/**
+ * El "humo": cuatro auras desenfocadas que se mueven despacio detrás de una superficie. Va
+ * dentro de un elemento con `.caja` (que crea el contexto de apilamiento) y se apaga solo con
+ * `prefers-reduced-motion`.
+ */
+const Humo = ({ colores = [], clase }) => (
+    <span className={`humo${clase ? ` ${clase}` : ''}`} aria-hidden="true"
+        style={colores.reduce((a, c, i) => ({ ...a, [`--h${i + 1}`]: c }), {})}>
+        <i /><i /><i /><i />
+    </span>
+);
+
 const ProntoSection = ({ seccion }) => (
-    <div className="ln-panel">
-        <div className="ln-empty">
-            <span className="ln-empty-ico"><seccion.Icono size={22} /></span>
-            <p className="ln-empty-title">{seccion.label} llega pronto</p>
-            <p className="ln-empty-desc">{PRONTO[seccion.id]}</p>
+    <section className="panel">
+        <div className="vacio-grande">
+            <span className="vacio-icono"><seccion.Icono size={24} /></span>
+            <h2 className="t-h2">{seccion.label} llega pronto</h2>
+            <p className="t-sm mut">{PRONTO[seccion.id]}</p>
         </div>
-    </div>
+    </section>
 );
 
 const DashboardComercial = () => {
@@ -85,6 +114,23 @@ const DashboardComercial = () => {
     const [filaAbierta, setFilaAbierta] = useState(null);
     const [filtroInicial, setFiltroInicial] = useState(null);
     const [stepper, setStepper] = useState(null);
+
+    // El indicador del dock se mide del DOM porque su ancho es el del botón activo, y eso
+    // depende del texto de cada sección y de si el label está visible (bajo 1120px se esconde
+    // el de los inactivos). Se remide al cambiar de sección, de rol y al redimensionar.
+    const navRef = useRef(null);
+    const [indicador, setIndicador] = useState({ '--w': '0px', '--x': '0px' });
+    useEffect(() => {
+        const medir = () => {
+            const nav = navRef.current;
+            const activo = nav?.querySelector('[aria-current="page"]');
+            if (!nav || !activo) return;
+            setIndicador({ '--w': `${activo.offsetWidth}px`, '--x': `${activo.offsetLeft}px` });
+        };
+        const id = requestAnimationFrame(medir);
+        window.addEventListener('resize', medir);
+        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
+    }, [seccion, rol, contexto]);
 
     const set = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
@@ -186,7 +232,7 @@ const DashboardComercial = () => {
     }, [filtros, tablaActual, basis]);
 
     if (!contexto) {
-        return <div className="dc-shell"><div className="dc-wrap"><Cargando texto="Abriendo el dashboard…" /></div></div>;
+        return <div className="dc-shell"><div className="wrap"><Cargando texto="Abriendo el dashboard…" /></div></div>;
     }
 
     const secciones = SECCIONES.filter(s => !s.soloDireccion || contexto.puede_reportar);
@@ -209,14 +255,15 @@ const DashboardComercial = () => {
 
     return (
         <div className="dc-shell">
-            <div className="dc-wrap">
-                <header className="dc-header">
-                    <div className="dc-header-left">
-                        <h1 className="ln-t-h1">{titulo}</h1>
+            <div className="wrap">
+                <header className="tope">
+                    <div className="tope-id">
+                        <Isotipo />
+                        <h1 className="t-h1">{titulo}</h1>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="tope-meta" style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
                         {user?.is_impersonating ? (
-                            <button type="button" className="ln-btn ln-btn--tertiary ln-btn--sm" disabled={saliendo}
+                            <button type="button" className="btn btn--linea btn--sm" disabled={saliendo}
                                 title="Volver a tu sesión original"
                                 onClick={async () => {
                                     setSaliendo(true);
@@ -231,7 +278,7 @@ const DashboardComercial = () => {
                                 {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
                             </button>
                         ) : salida && (
-                            <Link to={salida.to} className="ln-btn ln-btn--tertiary ln-btn--sm">
+                            <Link to={salida.to} className="btn btn--linea btn--sm">
                                 <ArrowLeft size={15} />
                                 {salida.label}
                             </Link>
@@ -239,7 +286,7 @@ const DashboardComercial = () => {
                     </div>
                 </header>
 
-                <div className="dc-controls">
+                <div className="barra">
                     {seccionActual.tabs.length > 0 && (
                         <Segmented opciones={seccionActual.tabs} valor={tab} onChange={setTab}
                             ariaLabel={`Vistas de ${seccionActual.label}`} />
@@ -247,7 +294,7 @@ const DashboardComercial = () => {
 
                     {seccion === 'reportar' && stepper}
 
-                    <div className="dc-controls-right">
+                    <div className="barra-der">
                         {contexto.puede_elegir_equipo && seccion === 'analizar' && (
                             <PillMenu icono={<Users size={14} />}
                                 texto={miembroNombre || 'Todo el equipo'}
@@ -297,28 +344,38 @@ const DashboardComercial = () => {
                     puedeCorregir={puedeCorregirFila(filaAbierta)}
                     onCorregir={corregir} onCerrar={() => setFilaAbierta(null)} />
 
-                <nav className="dc-dock" aria-label="Secciones del dashboard comercial">
+                <nav className="dock caja" aria-label="Secciones del dashboard comercial">
+                    <Humo colores={['var(--brand-secondary)', 'var(--brand-primary)',
+                        'var(--brand-secondary-light)', 'var(--brand-navy)']} />
                     {contexto.puede_elegir_equipo && (
-                        <div className="dc-scope">
+                        <div className="dock-rol caja">
+                            <Humo colores={['var(--brand-secondary)', 'var(--brand-primary)',
+                                'var(--brand-secondary-light)', 'var(--brand-navy)']} />
                             {[['closers', 'Closers'], ['setters', 'Setters']].map(([k, label]) => (
-                                <button key={k} type="button" className="dc-scope-btn" aria-selected={rol === k}
+                                <button key={k} type="button" aria-pressed={rol === k}
                                     onClick={() => set({ rol: k, t: null, m: null })}>
-                                    <span className="dc-scope-dot" />
+                                    <span className="punto" />
                                     <span>{label}</span>
                                 </button>
                             ))}
                         </div>
                     )}
-                    {contexto.puede_elegir_equipo && <span className="dc-dock-sep" />}
-                    {secciones.map((s, i) => (
-                        <button key={s.id} type="button" className="dc-dock-item" aria-current={seccion === s.id}
-                            aria-label={s.label} onClick={() => set({ s: s.id })}>
-                            <span className="dc-dock-num">{i + 1}</span>
-                            <span className="dc-dock-ico"><s.Icono size={20} /></span>
-                            <span>{s.label}</span>
-                            {s.pronto && <span className="dc-dock-soon">Pronto</span>}
-                        </button>
-                    ))}
+                    {contexto.puede_elegir_equipo && <span className="dock-sep" />}
+                    <div className="dock-nav" ref={navRef}>
+                        {/* Indicador que se desliza hasta el item activo, en vez de que cada uno
+                            pinte su propio fondo: el movimiento dice de dónde a dónde se fue. */}
+                        <span className="dock-ind" style={indicador} aria-hidden="true" />
+                        {secciones.map((s_, i) => (
+                            <button key={s_.id} type="button" className="dock-item"
+                                aria-current={seccion === s_.id ? 'page' : undefined}
+                                aria-label={s_.label} onClick={() => set({ s: s_.id })}>
+                                <span className="dock-num">{i + 1}</span>
+                                <s_.Icono size={20} />
+                                <span className="dock-label">{s_.label}</span>
+                                {s_.pronto && <span className="dock-pronto">Pronto</span>}
+                            </button>
+                        ))}
+                    </div>
                 </nav>
             </div>
         </div>
