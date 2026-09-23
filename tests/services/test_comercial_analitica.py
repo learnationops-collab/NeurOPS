@@ -141,6 +141,46 @@ def test_el_close_rate_de_la_tarjeta_es_el_mismo_que_el_de_los_totales(db, marlo
     assert bloque['cerradas'] == totales['ventas'] == 1
 
 
+# --- Panel Cierre: las dos tasas de cierre ------------------------------------------------------
+
+@freeze_time(HOY)
+def test_las_dos_tasas_de_cierre_se_miden_sobre_denominadores_distintos(db, marlon):
+    """El panel Cierre muestra las MISMAS ventas contra dos puntos: todas las llamadas con show
+    up, y solo las que además llegaron a presentar la oferta. Si las dos usaran el mismo
+    denominador el panel no diría nada, y la brecha entre ellas —cuánto se pierde antes de
+    mostrar el precio— es justamente lo que se quiere ver."""
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    venta(db, mail='compro@test.local')
+    # Escuchó la oferta y no cerró: entra en los dos denominadores.
+    agenda(db, marlon, cliente(db, 'Escucho'), closer_result='Show up', offer_presented=True)
+    # Asistió, quedó un seguimiento abierto y nadie tildó la oferta: la llamada ocurrió pero no
+    # llegó al precio. Entra en el denominador de close_rate y NO en el de close_presentacion —
+    # es la única razón de que los dos números no coincidan.
+    agenda(db, marlon, cliente(db, 'Se corto'), closer_result='Show up', offer_presented=None,
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20))
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert (bloque['asistieron'], bloque['presentaciones'], bloque['cerradas']) == (3, 2, 1)
+    assert bloque['close_rate'] == 33.3        # 1 de 3 llamadas con show up
+    assert bloque['close_presentacion'] == 50.0  # 1 de 2 presentaciones
+    assert bloque['presentacion_rate'] == 66.7   # 2 de 3 llegaron a la oferta
+
+
+@freeze_time(HOY)
+def test_sin_presentaciones_las_tasas_del_panel_cierre_son_none_y_no_cero(db, marlon):
+    """Un 0% sobre cero presentaciones afirma que se presentó y no se cerró, que es falso. El
+    panel tiene que poder mostrar "—", así que el denominador vacío devuelve None."""
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert bloque['presentaciones'] == 0
+    assert bloque['close_presentacion'] is None
+    assert bloque['presentacion_rate'] is None
+
+
 # --- Señas ---------------------------------------------------------------------------------------
 
 @freeze_time(HOY)

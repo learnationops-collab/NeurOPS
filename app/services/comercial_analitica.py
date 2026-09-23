@@ -239,6 +239,14 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         # que no pase.
         'cerradas': tot_a['ventas'],
         'close_rate': tot_a['close_rate'],
+        # Las presentaciones ya se contaban para el embudo; salen acá también porque el panel
+        # Cierre necesita las DOS tasas de cierre para que la diferencia entre ellas se pueda
+        # leer: `close_rate` mide sobre todas las llamadas con show up y `close_presentacion`
+        # solo sobre las que además llegaron a mostrar la oferta. La brecha entre las dos es
+        # cuánto se pierde ANTES de presentar, que es un problema distinto de no cerrar.
+        'presentaciones': presentaciones,
+        'presentacion_rate': pct(presentaciones, tot_a['asistieron']),
+        'close_presentacion': pct(tot_a['ventas'], presentaciones),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
