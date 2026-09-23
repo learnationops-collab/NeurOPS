@@ -392,3 +392,71 @@
 .dc-shell .tip--der .tip-burbuja::before{left:auto;right:14px}
 .dc-shell .tip:hover .tip-burbuja,
 .dc-shell .tip:focus-within .tip-burbuja{display:block;animation:dcTipIn .16s ease-out both}
+
+/* ============================================================
+   8 · EL DOCK
+   ============================================================ */
+.dc-shell .dock{position:fixed;left:0;right:0;width:max-content;margin-inline:auto;
+  bottom:calc(var(--s6) + env(safe-area-inset-bottom,0px));z-index:60;
+  display:flex;align-items:center;gap:var(--s1);padding:7px;border-radius:24px;
+  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  /* El `BugReportWidget` global flota fijo abajo a la derecha (bottom-8 right-24)
+     por encima de todo y se come unos 168px de ancho util: sin esta restriccion
+     tapaba los ultimos items del dock. Como el dock va centrado (`width:max-content`
+     + `margin-inline:auto`), reservarle ese hueco a la derecha obliga a reservar
+     el mismo a la izquierda: de ahi el 336. El piso de 320px evita que en
+     pantallas angostas la resta lo deje en nada — ahi el dock scrollea, que es
+     justo lo que el diseno preve cuando no entra. */
+  max-width:min(calc(100vw - var(--s4) * 2),max(320px,calc(100vw - 336px)));
+  isolation:isolate;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+.dc-shell .dock::-webkit-scrollbar{display:none}
+.dc-shell .dock .humo{opacity:calc(var(--humo-op) * .8)}
+.dc-shell .dock .humo i{width:56%;filter:blur(26px)}
+.dc-shell .dock-sep{width:1px;height:28px;flex-shrink:0;background:var(--border-main);margin:0 var(--s1)}
+.dc-shell .dock-nav{position:relative;display:flex;align-items:center;gap:var(--s1)}
+.dc-shell .dock-item{position:relative;z-index:1;flex-shrink:0;display:flex;align-items:center;gap:10px;
+  height:56px;padding:0 20px;border-radius:17px;color:var(--text-muted-40);
+  font-size:15px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;
+  transition:color .22s ease,transform .26s var(--spring)}
+.dc-shell .dock-item svg{width:20px;height:20px;transition:transform .32s var(--spring)}
+.dc-shell .dock-item:hover{color:var(--text-on-surface)}
+.dc-shell .dock-item:hover svg{transform:scale(1.14) rotate(-4deg)}
+.dc-shell .dock-item:active{transform:scale(.95)}
+.dc-shell .dock-item[aria-current="page"]{color:var(--text-on-surface)}
+.dc-shell .dock-num{position:absolute;top:9px;left:20px;font-size:9px;font-weight:900;
+  letter-spacing:.18em;color:var(--text-muted-40);transition:color .22s ease}
+.dc-shell .dock-item[aria-current="page"] .dock-num{color:var(--brand-secondary)}
+.dc-shell .dock-label{margin-top:9px}
+.dc-shell .dock-pronto{margin-top:9px;display:inline-flex;align-items:center;height:14px;padding:0 5px;
+  border-radius:5px;background:var(--mat-3);
+  font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .dock-ind{position:absolute;top:0;height:100%;border-radius:17px;
+  background:var(--mat-3);border-top:1px solid var(--sheen);
+  box-shadow:0 2px 12px rgba(0,0,0,.28);
+  left:0;width:var(--w,0);transform:translateX(var(--x,0));
+  transition:transform .42s var(--spring),width .42s var(--spring);pointer-events:none}
+.dc-shell .dock-rol{position:relative;isolation:isolate;overflow:hidden;
+  display:inline-flex;align-items:center;gap:2px;padding:4px;flex-shrink:0;
+  border-radius:var(--radius-pill);background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .dock-rol .humo{opacity:calc(var(--humo-op) * 1.25)}
+.dc-shell .dock-rol .humo i{width:70%;filter:blur(14px)}
+.dc-shell .dock-rol button{position:relative;z-index:1}
+.dc-shell .dock-rol button{display:flex;align-items:center;gap:7px;height:38px;padding:0 13px;
+  border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--text-muted);
+  white-space:nowrap;transition:background-color .18s ease,color .18s ease}
+.dc-shell .dock-rol button[aria-pressed="true"]{background:var(--brand-secondary);color:var(--on-brand);
+  font-weight:700;box-shadow:var(--shadow-brand)}
+.dc-shell .dock-rol .punto{width:6px;height:6px;border-radius:var(--radius-pill);
+  background:var(--text-muted-40);transition:background-color .18s ease}
+.dc-shell .dock-rol button[aria-pressed="true"] .punto{background:var(--on-brand)}
+@media (max-width:1120px){
+  .dc-shell .dock-item{padding:0 15px}
+  .dc-shell .dock-num{left:15px}
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-label,
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-pronto{display:none}
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
+}
