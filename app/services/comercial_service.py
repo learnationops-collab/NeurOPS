@@ -55,6 +55,10 @@ ROLES = (ROL_CLOSERS, ROL_SETTERS)
 # `archive_stale_backlog` da por muerto un lead sin actividad.
 DIAS_SENA_CAIDA = 30
 
+# Valores de `LeadAnswer.qualification` que significan "el lead todavía no contestó". Misma lista
+# que usa la bandeja del setter (`get_cualificacion_stats` en app/api/setter.py).
+SIN_RESPUESTA = ('', 'null', 'none', 'undefined')
+
 # --- Vocabulario de estados que muestra el dashboard ------------------------------------------
 # `tone` es uno de los 5 estados del design system (success/warning/error/info/idle): el frontend
 # no elige colores, los toma de acá.
@@ -366,13 +370,22 @@ class ComercialService:
             return []
 
         ids = [l.id for l in leads]
-        # Respuestas por lead: cuántas preguntas contestó y si alguna lo cualificó (o lo descartó).
+        # Respuestas por lead: cuántas interacciones tiene, si contestó alguna de verdad, y si
+        # alguna lo cualificó (o lo descartó).
+        #
+        # "Respondió" NO es "tiene una interacción registrada": todo lead de ManyChat nace con
+        # una, así que con ese criterio la tasa de respuesta daba 100% siempre y no informaba
+        # nada. Se usa el mismo que la bandeja del setter (`get_cualificacion_stats`): una
+        # cualificación vacía —'null', '' o 'undefined'— es justamente un lead que no contestó.
         respuestas = {}
         for lead_id, qualification in db.session.query(LeadAnswer.lead_id, LeadAnswer.qualification) \
                 .filter(LeadAnswer.lead_id.in_(ids)).all():
-            datos = respuestas.setdefault(lead_id, {'total': 0, 'cualificado': False, 'descartado': False})
+            datos = respuestas.setdefault(
+                lead_id, {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False})
             datos['total'] += 1
             valor = (qualification or '').strip().lower()
+            if valor not in SIN_RESPUESTA:
+                datos['respondio'] = True
             if valor in ('yes', 'true'):
                 datos['cualificado'] = True
             elif valor in ('no', 'false'):
@@ -390,15 +403,16 @@ class ComercialService:
             agendados = {fila[0] for fila in filas_agenda}
 
         salida = []
+        vacio = {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False}
         for l in leads:
             ig = _limpiar_ig(l.ig)
-            datos = respuestas.get(l.id, {'total': 0, 'cualificado': False, 'descartado': False})
+            datos = respuestas.get(l.id, vacio)
             agendo = ig in agendados
             if agendo:
                 estado = 'agendo'
             elif datos['descartado']:
                 estado = 'descartado'
-            elif datos['total'] > 0:
+            elif datos['respondio']:
                 estado = 'en_conversacion'
             else:
                 estado = 'sin_respuesta'
@@ -415,7 +429,7 @@ class ComercialService:
                 'setter': l.setter or 'Sin asignar',
                 'estado': chip('estado', estado),
                 'mensajes': datos['total'],
-                'respondio': datos['total'] > 0,
+                'respondio': datos['respondio'],
                 'cualificado': datos['cualificado'],
                 'agendo': agendo,
                 'ultimo': l.updated_at.isoformat() if l.updated_at else None,

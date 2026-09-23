@@ -295,8 +295,9 @@ def respuesta(db, lead_, qualification='null'):
 @freeze_time(HOY)
 def test_el_estado_del_lead_se_deriva_de_lo_que_hizo(db, marlon, elias):
     sin_respuesta = lead(db, 'Callado', '@callado')
+    # Contestó y cualificó, pero todavía no agendó: eso es estar en conversación.
     conversando = lead(db, 'Charlando', '@charlando')
-    respuesta(db, conversando)
+    respuesta(db, conversando, qualification='true')
     descartado = lead(db, 'Descartado', '@descartado')
     respuesta(db, descartado, qualification='false')
     agendo = lead(db, 'Agendo', '@agendo')
@@ -332,11 +333,25 @@ def test_los_leads_se_acotan_por_las_variantes_reales_del_nombre_del_setter(db, 
 
 
 @freeze_time(HOY)
+def test_una_interaccion_registrada_sin_respuesta_no_cuenta_como_respondida(db, elias):
+    """Todo lead de ManyChat nace con una fila en `LeadAnswer`, así que contar filas daba 100%
+    de tasa de respuesta para todo el mundo — un KPI que no informa nada. Lo que cuenta es que
+    la cualificación tenga un valor real, el mismo criterio de la bandeja del setter."""
+    for i, valor in enumerate(['null', '', 'undefined']):
+        respuesta(db, lead(db, f'Callado{i}', f'@callado{i}'), qualification=valor)
+    respuesta(db, lead(db, 'Contesto', '@contesto'), qualification='true')
+
+    totales = ComercialService.totales_leads(ComercialService.leads(DESDE, HASTA))
+
+    assert (totales['leads'], totales['respondieron'], totales['respuesta']) == (4, 1, 25.0)
+
+
+@freeze_time(HOY)
 def test_totales_de_leads_encadenan_los_denominadores_del_embudo(db, marlon, elias):
     respondio = lead(db, 'Respondio', '@respondio')
     respuesta(db, respondio, qualification='true')
     otro = lead(db, 'Otro', '@otro')
-    respuesta(db, otro)
+    respuesta(db, otro, qualification='false')
     lead(db, 'Callado', '@callado')
     lead(db, 'Callado2', '@callado2')
 
