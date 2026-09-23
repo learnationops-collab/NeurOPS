@@ -1,5 +1,8 @@
-import React from 'react';
-import { CardHead, Tip, useMontado } from './Shared';
+import React, { useState } from 'react';
+import { CardHead, Segmented, Tip, useMontado } from './Shared';
+
+/** Qué número lleva la banda. Nunca los dos a la vez: se elige qué se está leyendo. */
+const VISTAS = [{ key: 'n', label: 'Cantidad' }, { key: 'pct', label: 'Tasa' }];
 
 /**
  * Embudo del doc 03: barras centradas con cuello trapezoidal entre una y la siguiente, color en
@@ -16,9 +19,14 @@ import { CardHead, Tip, useMontado } from './Shared';
  *   un callback genérico porque cada paso lleva a un filtro distinto de Revisar, y quién decide
  *   ese destino es la vista que arma los pasos, no el embudo.
  * - `sinCuello` apaga el cuello de botella para los embudos donde la etiqueta no aporta.
+ *
+ * El selector Cantidad/Tasa es estado local: no lo levanta nadie porque es cómo se está mirando
+ * este embudo, no un filtro del período. En Tasa la banda pasa a mostrar el porcentaje contra el
+ * paso anterior y la columna de la derecha se vacía: el número que se lee es uno solo.
  */
 const Embudo = ({ pasos, sinCuello = false }) => {
     const montado = useMontado();
+    const [vista, setVista] = useState('n');
     const primero = pasos[0]?.n || 0;
     const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
 
@@ -50,9 +58,13 @@ const Embudo = ({ pasos, sinCuello = false }) => {
         <div className="ln-panel ln-panel--sm">
             <CardHead titulo="Embudo"
                 tip="De agendas a ventas, paso por paso. El porcentaje de cada fila es contra el paso anterior.">
-                {cuello !== null && (
-                    <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
-                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {cuello !== null && (
+                        <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
+                    )}
+                    <Segmented opciones={VISTAS} valor={vista} onChange={setVista}
+                        ariaLabel="Qué mostrar en el embudo" />
+                </span>
             </CardHead>
             {pasos.map((p, i) => {
                 const pct = i === 0 ? null : pasos[i - 1].n ? ((p.n / pasos[i - 1].n) * 100).toFixed(1) : null;
@@ -78,11 +90,11 @@ const Embudo = ({ pasos, sinCuello = false }) => {
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                                 <div className="dc-funnel-bar"
                                     style={{ width: `${anchoAqui}%`, background: color(i), transitionDelay: `${120 + i * 90}ms` }}>
-                                    {p.n}
+                                    {vista === 'pct' ? (i === 0 ? '100%' : `${pct ?? '0.0'}%`) : p.n}
                                 </div>
                             </div>
                             <span className="dc-funnel-pct" style={estiloCuello}>
-                                {pct === null ? '' : `${pct}%`}
+                                {vista === 'pct' || pct === null ? '' : `${pct}%`}
                             </span>
                         </div>
                         {anchoSig !== null && (
