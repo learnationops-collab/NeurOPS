@@ -115,23 +115,6 @@ const DashboardComercial = () => {
     const [filtroInicial, setFiltroInicial] = useState(null);
     const [stepper, setStepper] = useState(null);
 
-    // El indicador del dock se mide del DOM porque su ancho es el del botón activo, y eso
-    // depende del texto de cada sección y de si el label está visible (bajo 1120px se esconde
-    // el de los inactivos). Se remide al cambiar de sección, de rol y al redimensionar.
-    const navRef = useRef(null);
-    const [indicador, setIndicador] = useState({ '--w': '0px', '--x': '0px' });
-    useEffect(() => {
-        const medir = () => {
-            const nav = navRef.current;
-            const activo = nav?.querySelector('[aria-current="page"]');
-            if (!nav || !activo) return;
-            setIndicador({ '--w': `${activo.offsetWidth}px`, '--x': `${activo.offsetLeft}px` });
-        };
-        const id = requestAnimationFrame(medir);
-        window.addEventListener('resize', medir);
-        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
-    }, [seccion, rol, contexto]);
-
     const set = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
         Object.entries(cambios).forEach(([k, v]) => {
@@ -153,6 +136,23 @@ const DashboardComercial = () => {
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId }),
         [period, compare, rol, miembroId]);
+
+    // El indicador del dock se mide del DOM porque su ancho es el del botón activo, y eso
+    // depende del texto de cada sección y de si el label está visible (bajo 1120px se esconde
+    // el de los inactivos). Se remide al cambiar de sección, de rol y al redimensionar.
+    const navRef = useRef(null);
+    const [indicador, setIndicador] = useState({ '--w': '0px', '--x': '0px' });
+    useEffect(() => {
+        const medir = () => {
+            const nav = navRef.current;
+            const activo = nav?.querySelector('[aria-current="page"]');
+            if (!nav || !activo) return;
+            setIndicador({ '--w': `${activo.offsetWidth}px`, '--x': `${activo.offsetLeft}px` });
+        };
+        const id = requestAnimationFrame(medir);
+        window.addEventListener('resize', medir);
+        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
+    }, [seccion, rol, contexto]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
     const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
