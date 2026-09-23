@@ -47,3 +47,8 @@ export const guardarReporte = (datos) => api.post('/comercial/reporte', datos).t
 export const getReportes = (miembroId) =>
     api.get('/comercial/reportes', { params: miembroId ? { miembro_id: miembroId } : {} })
         .then(r => r.data);
+
+/** Constancia de carga de los últimos N días: por persona y por día, con su tasa. */
+export const getConstancia = (dias, fecha) =>
+    api.get('/comercial/reporte/constancia', { params: { dias, ...(fecha ? { fecha } : {}) } })
+        .then(r => r.data);

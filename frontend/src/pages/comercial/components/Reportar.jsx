@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, ChevronRight, Plus, Trophy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Cargando, fmt } from './Shared';
-import { getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
-import api from '../../../services/api';
+import { getConstancia, getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
 
 /**
  * Reportar: el reporte diario del director comercial, en cuatro pasos, más el historial.
@@ -179,9 +178,6 @@ const BarraPasos = ({ paso, sub, hechos, bloqueos, faltan, dias, diaSel, guardan
 
 /* Constancia de carga. Va acá y no en comercialApi.js porque ese archivo lo está tocando otra
    tarea en paralelo; al integrar, esta llamada se muda con las demás. */
-const getConstancia = (dias) =>
-    api.get('/comercial/reporte/constancia', { params: { dias } }).then(r => r.data);
-
 const RANGOS = [[7, '7 días'], [14, '14 días'], [30, '30 días']];
 const TODOS = 'todos';
 

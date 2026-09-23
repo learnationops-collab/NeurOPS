@@ -55,14 +55,14 @@ const Embudo = ({ pasos, sinCuello = false }) => {
     const irFinal = pasos[0]?.ir;
 
     return (
-        <div className="ln-panel ln-panel--sm">
+        <div className="panel">
             <CardHead titulo="Embudo"
                 tip="De agendas a ventas, paso por paso. El porcentaje de cada fila es contra el paso anterior.">
                 <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {cuello !== null && (
                         <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
                     )}
-                    <Segmented opciones={VISTAS} valor={vista} onChange={setVista}
+                    <Segmented chico opciones={VISTAS} valor={vista} onChange={setVista}
                         ariaLabel="Qué mostrar en el embudo" />
                 </span>
             </CardHead>
@@ -114,18 +114,18 @@ const Embudo = ({ pasos, sinCuello = false }) => {
                     </div>
                 );
             })}
-            <div className="dc-legend" style={{ justifyContent: 'space-between' }}>
-                <span className="ln-t-caption ln-muted dc-num">
+            <div className="leyenda" style={{ justifyContent: 'space-between' }}>
+                <span className="t-cap mut num">
                     de {primero} {pasos[0]?.paso.toLowerCase()} a {pasos[pasos.length - 1]?.n} {pasos[pasos.length - 1]?.paso.toLowerCase()}
                 </span>
                 {irFinal ? (
-                    <button type="button" className="ln-t-caption ln-accent dc-num"
+                    <button type="button" className="t-cap num"
                         style={{ background: 'none', border: 0, cursor: 'pointer' }}
                         onClick={irFinal}>
                         {final}% final
                     </button>
                 ) : (
-                    <span className="ln-t-caption ln-accent dc-num">{final}% final</span>
+                    <span className="t-cap num">{final}% final</span>
                 )}
             </div>
         </div>
