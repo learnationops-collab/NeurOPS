@@ -919,6 +919,10 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                 sub={`${bloque.asistieron} de ${fmt.plural(bloque.realizadas, 'realizada', 'realizadas')}`}
                 ver={() => irA('agendas', {})} baja="p-estados" />
+            {/* Los dos tiles de tasa abren Revisar SIN filtrar: la tira de totales repite sus
+                cifras tal cual ("28.1% close rate · 16 de 57 cerraron"). Filtrando Close rate por
+                Venta se veían las 16 cerradas, pero arriba la tasa pasaba a 100% y contradecía al
+                tile del que se venía; para ver solo esas 16 está el panel Estados. */}
             <Tile label="Close rate" valor={fmt.pct(bloque.close_rate)} color={v('error')}
                 help={'Ventas sobre las llamadas a las que el cliente se presentó. Se cuenta sobre las '
                     + 'llamadas y no sobre las ventas del período: una venta puede no tener agenda en '
@@ -926,7 +930,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 delta={deltas.close_rate}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 sub={`${bloque.cerradas} de ${fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}`}
-                ver={() => irA('agendas', { post_call: 'Venta' })} baja="p-cierre" />
+                ver={() => irA('agendas', {})} baja="p-cierre" />
             <Tile label="Cash collected" valor={fmt.money(bloque.cash)}
                 help={'Dinero que entró en el período: pagos completos, primeras cuotas, cuotas de '
                     + 'ventas anteriores y señas.'}
