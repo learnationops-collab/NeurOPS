@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Calendar, CheckCircle2, Inbox, Search, Target, Users } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, CheckCircle2, Ghost, Inbox, Search, Target, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
+import { revertImpersonation } from '../../utils/impersonation';
 import './comercial.css';
 import '../../components/learnation-ds/learnation-ds.css';
 import { Cargando, PillMenu, Segmented } from './components/Shared';
@@ -22,7 +24,21 @@ import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla } fr
  *
  * El período y la sección viven en la query string, para poder compartir una vista tal como se
  * está mirando.
+ *
+ * Va montada SIN `MainLayout` (mismo patrón que el mazo del closer y el panel de contratación):
+ * tiene su propio dock fijo abajo y el de la app quedaba encima, superpuesto pixel a pixel. A
+ * cambio, la salida la ofrece esta pantalla: "Volver a mi sesión" si es una simulación (ver
+ * `revertImpersonation`, que existe justamente para las sub-apps sin MainLayout) y, si no, la
+ * vuelta al lugar de trabajo de cada rol.
  */
+
+/** A dónde vuelve cada rol cuando sale del dashboard. */
+const SALIDA = {
+    closer: { to: '/closer/deck?step=confirmations', label: 'Volver al mazo' },
+    setter: { to: '/setter/deck?step=cualificacion', label: 'Volver al mazo' },
+    director_comercial: { to: '/admin/ventas', label: 'Ir a Ventas' },
+    admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
+};
 
 const SECCIONES = [
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' }, { key: 'comparativas', label: 'Comparativas' }] },
@@ -50,6 +66,8 @@ const ProntoSection = ({ seccion }) => (
 const DashboardComercial = () => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
+    const { user } = useAuth();
+    const [saliendo, setSaliendo] = useState(false);
 
     const seccion = params.get('s') || 'analizar';
     const period = params.get('p') || 'mes';
@@ -155,6 +173,7 @@ const DashboardComercial = () => {
 
     const secciones = SECCIONES.filter(s => !s.soloDireccion || contexto.puede_reportar);
     const titulo = contexto.puede_elegir_equipo ? seccionActual.label : `${seccionActual.label} · mis datos`;
+    const salida = SALIDA[contexto.yo.rol];
 
     const miembroNombre = miembroId
         ? contexto.miembros.find(m => String(m.id) === String(miembroId))?.nombre
@@ -176,6 +195,29 @@ const DashboardComercial = () => {
                 <header className="dc-header">
                     <div className="dc-header-left">
                         <h1 className="ln-t-h1">{titulo}</h1>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {user?.is_impersonating ? (
+                            <button type="button" className="ln-btn ln-btn--tertiary ln-btn--sm" disabled={saliendo}
+                                title="Volver a tu sesión original"
+                                onClick={async () => {
+                                    setSaliendo(true);
+                                    try {
+                                        await revertImpersonation();
+                                    } catch (error) {
+                                        toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
+                                        setSaliendo(false);
+                                    }
+                                }}>
+                                <Ghost size={15} />
+                                {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
+                            </button>
+                        ) : salida && (
+                            <Link to={salida.to} className="ln-btn ln-btn--tertiary ln-btn--sm">
+                                <ArrowLeft size={15} />
+                                {salida.label}
+                            </Link>
+                        )}
                     </div>
                 </header>
 

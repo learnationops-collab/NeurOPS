@@ -157,14 +157,17 @@ function App() {
                 comercial la ve completa (todo el equipo, switch Closers/Setters y Reportar) y
                 closers y setters la ven como "Mis datos", acotada a ellos. Quien ve que lo
                 decide el backend a partir de la sesion (ver app/api/comercial.py), no la ruta:
-                estas tres solo cambian donde vive la pantalla dentro de cada dock. */}
+                estas tres solo cambian donde vive la pantalla dentro de cada dock.
+
+                SIN MainLayout, como /closer/deck y /admin/hiring: la pantalla trae su propio
+                dock fijo abajo y el de la app le quedaba encima, superpuesto pixel a pixel. La
+                salida (volver al mazo, o volver a tu sesion si es una simulacion) la ofrece la
+                propia pantalla en su header. */}
             <Route
               path="/admin/comercial"
               element={
                 <ProtectedRoute roles={['admin', 'director_comercial']}>
-                  <MainLayout>
-                    <DashboardComercial />
-                  </MainLayout>
+                  <DashboardComercial />
                 </ProtectedRoute>
               }
             />
@@ -172,9 +175,7 @@ function App() {
               path="/closer/mis-datos"
               element={
                 <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <DashboardComercial />
-                  </MainLayout>
+                  <DashboardComercial />
                 </ProtectedRoute>
               }
             />
@@ -182,9 +183,7 @@ function App() {
               path="/setter/mis-datos"
               element={
                 <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <DashboardComercial />
-                  </MainLayout>
+                  <DashboardComercial />
                 </ProtectedRoute>
               }
             />
