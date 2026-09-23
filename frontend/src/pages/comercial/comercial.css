@@ -1293,3 +1293,39 @@
 @keyframes dcVista{from{opacity:.4;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dc-shell .vista > *{animation:dcVista .34s var(--spring) both}
 @media (prefers-reduced-motion:reduce){.dc-shell .vista > *{animation:none}}
+
+/* ============================================================
+   19 · LO QUE LA REFERENCIA NO TIENE — piezas `.dc-*` que hoy estan en uso
+   y que no tienen equivalente (o lo tienen con otro nombre) en la
+   referencia. Se conservan con sus valores actuales para no romper lo que
+   ya funciona; los duplicados se resuelven al integrar.
+   ============================================================ */
+
+/* El spinner de carga (componente `Cargando`) no existe en la referencia.
+   Va sin prefijo de shell, como estaba, porque se renderiza tambien antes
+   de que el tablero exista. */
+.dc-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 240px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.dc-spin {
+    animation: dcSpin 1s linear infinite;
+}
+
+@keyframes dcSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Alias de los dos nombres que el marcado viejo usa y la referencia
+   renombro: `.dc-wrap` es `.wrap` y `.dc-num` es `.num`. */
+.dc-shell .dc-wrap{max-width:1340px;margin:0 auto;padding-inline:clamp(16px,3vw,22px);
+  padding-block:var(--s6) 0}
+.dc-shell .dc-num{font-variant-numeric:tabular-nums}
