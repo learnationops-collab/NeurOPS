@@ -113,6 +113,7 @@ const DashboardComercial = () => {
     const [cargandoTabla, setCargandoTabla] = useState(false);
     const [filaAbierta, setFilaAbierta] = useState(null);
     const [filtroInicial, setFiltroInicial] = useState(null);
+    const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
     const set = useCallback((cambios) => {
@@ -202,9 +203,16 @@ const DashboardComercial = () => {
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
     useEffect(() => { if (seccion === 'revisar') cargarTabla(); }, [seccion, cargarTabla]);
 
-    /** Drill-down desde Analizar: abre Revisar en la tabla pedida, ya filtrada. */
+    /**
+     * Drill-down desde Analizar: abre Revisar en la tabla pedida, ya filtrada.
+     *
+     * `__t` es un contador y no `Date.now()`: dos clics dentro del mismo milisegundo daban el
+     * mismo token y Revisar tomaba el segundo por un filtro ya consumido, así que ignoraba el
+     * drill-down y mostraba el período entero. También distingue dos clics idénticos seguidos,
+     * que como objeto serían iguales.
+     */
     const irA = useCallback((cual, filtro) => {
-        setFiltroInicial({ ...filtro, __t: Date.now() });
+        setFiltroInicial({ ...filtro, __t: ++drillDown.current });
         set({ s: 'revisar', t: cual });
     }, [set]);
 

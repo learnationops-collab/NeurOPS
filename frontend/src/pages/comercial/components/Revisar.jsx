@@ -357,17 +357,34 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     const def = TABLAS[tabla];
 
-    // Un drill-down desde Analizar llega con una faceta ya elegida.
+    /**
+     * UN solo efecto decide el estado de los filtros, y por una razón:
+     *
+     * antes eran dos —uno aplicaba el filtro del drill-down y el otro limpiaba al cambiar de
+     * tabla— y en un drill-down las dos cosas cambian en el MISMO render. Los efectos corren en
+     * orden de declaración, así que el segundo borraba lo que acababa de poner el primero: clic
+     * en "Split Pay · 5 cobros" aterrizaba en Ventas con las 24 filas del período y ninguna
+     * faceta activa. Reportado por el usuario.
+     *
+     * El token `__t` distingue "llegó un drill-down" de "el usuario cambió de tabla a mano": sin
+     * él, tocar la pestaña Ventas volvería a aplicar el último drill-down consumido.
+     */
+    const consumido = useRef(null);
     useEffect(() => {
-        if (!filtroInicial) return;
+        const token = filtroInicial?.__t ?? null;
+        const esDrillDown = token !== null && token !== consumido.current;
         const nuevas = {};
-        Object.entries(filtroInicial).forEach(([k, v]) => { nuevas[k] = [v]; });
+        if (esDrillDown) {
+            Object.entries(filtroInicial).forEach(([k, valor]) => {
+                if (k !== '__t') nuevas[k] = [valor];
+            });
+            consumido.current = token;
+        }
         setFacetas(nuevas);
         setChip(null);
-    }, [filtroInicial]);
-
-    // Al cambiar de tabla, los filtros de la anterior no tienen sentido.
-    useEffect(() => { setFacetas({}); setChip(null); setQuery(''); setMenu(null); }, [tabla]);
+        setQuery('');
+        setMenu(null);
+    }, [tabla, filtroInicial]);
 
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
     useEffect(() => {
