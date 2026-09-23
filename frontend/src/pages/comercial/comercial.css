@@ -780,3 +780,72 @@
 .dc-shell .heat{display:flex;gap:3px;flex:1;min-width:0}
 .dc-shell .heat > i{flex:1 1 0;min-width:9px;height:22px;border-radius:3px;opacity:0;
   transition:opacity .4s ease}
+
+/* ============================================================
+   9b · EL EMBUDO QUE YA ESTABA — no se rediseña.
+   El usuario rechazo explicitamente el embudo nuevo y se quedo este:
+   barras centradas con cuello trapezoidal entre paso y paso. Las clases
+   `.dc-funnel-*` / `.dc-bottleneck` son las que estan en uso y conservan
+   sus valores tal cual; las `.fun-*` de la seccion 9 quedan disponibles
+   pero nadie las usa todavia.
+   Van sin prefijo `.dc-shell` a proposito: el nombre `dc-` ya es propio del
+   tablero y asi el embudo sigue funcionando exactamente igual que hoy,
+   tambien si su componente termina renderizado fuera del shell.
+   ============================================================ */
+.dc-funnel-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 78px;
+    gap: 10px;
+    align-items: center;
+}
+
+.dc-funnel-label {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dc-funnel-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    border-radius: 10px;
+    width: 14%;
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: width .95s cubic-bezier(.22, .7, .2, 1);
+}
+
+/* Cuello trapezoidal entre una barra y la siguiente. */
+.dc-funnel-neck {
+    height: 12px;
+    opacity: .45;
+    transition: clip-path .95s cubic-bezier(.22, .7, .2, 1);
+}
+
+.dc-funnel-pct {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.dc-bottleneck {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 9px;
+    border-radius: var(--radius-pill);
+    background: var(--error-surface);
+    border: 1px solid var(--error-border);
+    color: var(--error);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
