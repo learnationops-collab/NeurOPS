@@ -3639,7 +3639,7 @@ const CloserWorkflowPage = () => {
                     >
                         <Sparkles size={13} className="text-blue-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Learnito</span>
-                        <span className="text-[8px] font-black uppercase tracking-wider text-blue-400/60">Pronto</span>
+                        <span className="hidden xl:inline text-[8px] font-black uppercase tracking-wider text-blue-400/60">Pronto</span>
                     </button>
 
                     {counts.seguimientos > 0 && (
@@ -3649,25 +3649,33 @@ const CloserWorkflowPage = () => {
                             className="shrink-0 flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 transition-all px-4 py-2 cursor-pointer"
                             title="Ver cuánto valdría hacer unos seguimientos ahora"
                         >
-                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Quiero procrastinar</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">
+                                <span className="hidden xl:inline">Quiero procrastinar</span>
+                                <span className="xl:hidden">Procrastinar</span>
+                            </span>
                         </button>
                     )}
 
-                    <div className="who-v6">
-                        <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
-                        <div className="av-v6">
-                            {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
+                    {/* Quién sos y cómo salir van juntos y pegados a la derecha: son un grupo,
+                        y cuando la fila envuelve tienen que bajar los dos o ninguno. Sueltos, el
+                        botón de cerrar sesión terminaba solo en el renglón de abajo. */}
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                        <div className="who-v6">
+                            <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
+                            <div className="av-v6">
+                                {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
+                            </div>
                         </div>
-                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => { if (window.confirm('¿Cerrar sesión?')) logout(); }}
-                        title="Cerrar sesión"
-                        className="ml-2 w-9 h-9 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
-                    >
-                        <LogOut size={16} />
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => { if (window.confirm('¿Cerrar sesión?')) logout(); }}
+                            title="Cerrar sesión"
+                            className="w-9 h-9 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
+                        >
+                            <LogOut size={16} />
+                        </button>
+                    </div>
                 </div>
             </header>
 
