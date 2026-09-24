@@ -6,7 +6,7 @@ import {
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, DollarSign, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Trash2, Pencil, Plus,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
     Compass, Sparkles
 } from 'lucide-react';
 import api from '../../services/api';
@@ -25,6 +25,7 @@ import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { MissingFieldsHint, AvisoSeguimientoWhatsApp } from './components/FormHints';
+import InlineConfirm from '../../components/ui/InlineConfirm';
 import CobroCockpit from './components/cobro/CobroCockpit';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
@@ -831,8 +832,11 @@ const CloserWorkflowPage = () => {
     };
 
     // Eliminar Lead (Modal v7)
-    const handleDeleteLead = async (leadId, leadName) => {
-        if (!window.confirm(`¿Eliminar definitivamente a ${leadName || 'este prospecto'}?`)) return;
+    // La confirmación la hace el propio botón (InlineConfirm), que además difiere el borrado
+    // durante su ventana de deshacer: acá ya no se pregunta nada. Antes preguntaba con
+    // `window.confirm`, un diálogo que dibuja el navegador y que, cuando no aparece, deja al
+    // botón haciendo nada sin ninguna señal.
+    const handleDeleteLead = async (leadId) => {
         setProcessingId(leadId);
         try {
             await api.delete(`/closer/deck/${leadId}`);
@@ -4303,14 +4307,22 @@ const CloserWorkflowPage = () => {
                                         <Pencil size={16} />
                                     </button>
                                 )}
+                                {/* Borrar un lead de prueba tiene que ser obvio y reversible: era un
+                                    ícono de papelera sin etiqueta que abría un confirm del navegador.
+                                    El botón pregunta en su propio lugar y deja 5 s para deshacer —
+                                    que es la única forma de ofrecer deshacer, porque no hay endpoint
+                                    para restaurar un lead borrado. */}
                                 {selectedLead.can_edit !== false && (
-                                    <button
-                                        className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all cursor-pointer border border-rose-500/30 mr-2"
-                                        title="Eliminar lead"
-                                        onClick={() => handleDeleteLead(selectedLead.id, selectedLead.lead_name)}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div className="mr-2">
+                                        <InlineConfirm
+                                            label="Eliminar lead"
+                                            question="¿Seguro?"
+                                            doneLabel="Eliminado"
+                                            corner={16}
+                                            title={`Eliminar a ${selectedLead.lead_name || 'este prospecto'}`}
+                                            onConfirm={() => handleDeleteLead(selectedLead.id)}
+                                        />
+                                    </div>
                                 )}
                                 <button className="x" onClick={() => setSelectedLead(null)}>
                                     ×
