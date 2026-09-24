@@ -176,10 +176,8 @@ const BarraPasos = ({ paso, sub, hechos, bloqueos, faltan, dias, diaSel, guardan
     );
 };
 
-/* Constancia de carga. Va acá y no en comercialApi.js porque ese archivo lo está tocando otra
-   tarea en paralelo; al integrar, esta llamada se muda con las demás. */
+/* Constancia de carga: los rangos que ofrece el panel. */
 const RANGOS = [[7, '7 días'], [14, '14 días'], [30, '30 días']];
-const TODOS = 'todos';
 
 /* El hueco no es rojo: un día libre o un día sin nada que cargar no es una deuda. */
 const HUECO = { background: 'transparent', border: '1px solid var(--border-subtle)' };
@@ -205,7 +203,6 @@ const tonoTasa = (tasa) => {
  */
 const PanelConstancia = () => {
     const [rango, setRango] = useState(14);
-    const [quien, setQuien] = useState(TODOS);
     const [datos, setDatos] = useState(null);
     const [visible, setVisible] = useState(false);
 
@@ -231,9 +228,10 @@ const PanelConstancia = () => {
         + 'ámbar es cargado pero con llamadas sin resultado y el rojo es un día con trabajo sin cargar. '
         + 'El hueco es un día libre o sin nada que cargar, y no cuenta para la tasa.';
 
-    const personas = datos
-        ? datos.personas.filter(p => quien === TODOS || String(p.id) === quien)
-        : [];
+    // Todas las personas, sin filtro: el panel contesta "quién está al día y quién no", y eso se
+    // lee comparando las filas entre sí. Hubo un filtro "Quién" que dejaba una sola fila en
+    // pantalla y con eso no se compara nada. Lo sacó el usuario.
+    const personas = datos ? datos.personas : [];
     const nombreDeDia = datos
         ? datos.dias.reduce((acc, d) => ({ ...acc, [d.fecha]: d.dia }), {})
         : {};
@@ -263,24 +261,6 @@ const PanelConstancia = () => {
                         </button>
                     ))}
                 </div>
-                {datos && datos.personas.length > 1 && (
-                    <>
-                        <span className="t-rotulo" style={{ marginLeft: 'var(--s3)' }}>Quién</span>
-                        <div className="tabs tabs--wrap" role="tablist" aria-label="Persona">
-                            <button type="button" role="tab" className="tab tab--sm"
-                                aria-selected={quien === TODOS} onClick={() => setQuien(TODOS)}>
-                                Todos
-                            </button>
-                            {datos.personas.map(p => (
-                                <button key={p.id} type="button" role="tab" className="tab tab--sm"
-                                    aria-selected={quien === String(p.id)}
-                                    onClick={() => setQuien(String(p.id))}>
-                                    {p.nombre}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
             </div>
 
             {!datos ? <Cargando texto="Cargando la constancia…" /> : (
@@ -296,10 +276,8 @@ const PanelConstancia = () => {
                             style={{ '--c': 'var(--text-muted-40)', fontSize: 10 }}>tasa</span>
                     </div>
                     {personas.map((p, pi) => (
-                        <button key={p.id} type="button" className="rep-fila"
-                            style={{ paddingLeft: 0, paddingRight: 0 }}
-                            aria-label={`Ver solo la constancia de ${p.nombre}`}
-                            onClick={() => setQuien(quien === String(p.id) ? TODOS : String(p.id))}>
+                        <div key={p.id} className="rep-fila"
+                            style={{ cursor: 'default', paddingLeft: 0, paddingRight: 0 }}>
                             <span className="rep-nom">{p.nombre}</span>
                             <span className="delta"
                                 style={{ '--c': `var(--${p.sin_cargar === 0 ? 'success' : 'warning'})` }}>
@@ -319,7 +297,7 @@ const PanelConstancia = () => {
                             <span className="rep-tasa" style={{ '--c': `var(--${tonoTasa(p.tasa)})` }}>
                                 {fmt.pct(p.tasa)}
                             </span>
-                        </button>
+                        </div>
                     ))}
                 </div>
             )}
