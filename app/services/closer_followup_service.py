@@ -331,12 +331,47 @@ class CloserFollowUpService:
             'closer_name': a.closer.username if a.closer else None
         }
         if include_debt:
-            data['deuda'] = CloserFollowUpService._client_debt(a.client_id)
+            deuda_val = CloserFollowUpService._client_debt(a.client_id)
+            data['deuda'] = deuda_val
             data['programa_code'] = CloserFollowUpService._client_program_code(a.client_id)
             data['programa_nombre'] = PROGRAM_CODE_NAMES.get(data['programa_code'])
             enrollment_dt = CloserFollowUpService._client_enrollment_date(a.client_id)
             data['enrollment_date'] = enrollment_dt.isoformat() if enrollment_dt else None
+            # La próxima cuota no viajaba en este endpoint aunque sí la deuda, así que la fila de
+            # la cola de cobro mostraba a la vez "Debe $500" y "Al día": el chip de cuota caía en
+            # su caso por defecto al no encontrar nada que cobrar. Caso real visto en la pantalla
+            # del closer (Fabricio Fuentes, 24/sep/2026).
+            data['proxima_cuota'] = CloserFollowUpService._proxima_cuota(a.client_id, deuda_val)
+            data['etapa_cobro'] = resolver_etapa(deuda_val, data['proxima_cuota'], enrollment_dt)
         return data
+
+    @staticmethod
+    def _proxima_cuota(client_id, deuda_val):
+        """La cuota pendiente más próxima a vencer, o el pseudo-objeto `sin_plan` cuando el
+        cliente debe pero nunca se le armó un cronograma (ventas históricas declaradas sin pasar
+        por el armador de cuotas). None cuando no hay nada que cobrar.
+
+        Vivía copiada en `_build_cartera_item` y en `get_client_lead_stage`, y faltaba en
+        `_serialize` — que es justamente de donde sale la lista que el closer mira todos los días."""
+        from app.models import InstallmentPlan
+
+        if not client_id:
+            return None
+        cuota = InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
+            .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+        if cuota:
+            return {
+                'id': cuota.id,
+                'numero_cuota': cuota.numero_cuota,
+                'monto': cuota.monto,
+                'fecha_vencimiento': cuota.fecha_vencimiento.isoformat(),
+                'vencida': cuota.fecha_vencimiento < date.today(),
+                'sin_plan': False
+            }
+        if (deuda_val or 0) > 0.01:
+            return {'id': None, 'numero_cuota': None, 'monto': deuda_val,
+                    'fecha_vencimiento': None, 'vencida': False, 'sin_plan': True}
+        return None
 
     @staticmethod
     def get_today_grouped(closer_id, selected_date_str):
@@ -518,7 +553,6 @@ class CloserFollowUpService:
         desglose por tipo — compartido por `_cerrada_pool_items` y `_cartera_items`. `appt` es
         solo para los campos de display (origen, examen, fecha de la última llamada); ninguno de
         los dos casos de uso decide "es mío" a partir de ella acá adentro."""
-        from app.models import InstallmentPlan
         from app.services.sheets_service import SheetsService
 
         days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
@@ -526,34 +560,13 @@ class CloserFollowUpService:
         # El recordatorio de cobro vive acá: la próxima cuota pendiente de este cliente (la
         # más próxima a vencer primero), para que el closer sepa exactamente qué y cuándo
         # cobrar sin tener que abrir el historial completo del cliente.
-        next_cuota = InstallmentPlan.query.filter_by(client_id=cid, estado='pendiente') \
-            .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
         deuda_val = CloserFollowUpService._client_debt(cid)
         enrollment_dt = CloserFollowUpService._client_enrollment_date(cid)
-        proxima_cuota = None
-        if next_cuota:
-            proxima_cuota = {
-                'id': next_cuota.id,
-                'numero_cuota': next_cuota.numero_cuota,
-                'monto': next_cuota.monto,
-                'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
-                'vencida': next_cuota.fecha_vencimiento < date.today(),
-                'sin_plan': False
-            }
-        elif deuda_val > 0.01:
-            # Debe dinero pero nunca se le armó un plan de cuotas (InstallmentPlan) — pasa
-            # cuando el Parcial se declaró sin pasar por el armador de cronograma, algo muy
-            # común en ventas históricas. Reportado por el usuario: "todos los que deben
-            # dinero [deberían] tener cuotas pendientes" — sin esto, esos clientes se veían
-            # como "sin cuotas pendientes" pese a deber, invisibles para el recordatorio.
-            proxima_cuota = {
-                'id': None,
-                'numero_cuota': None,
-                'monto': deuda_val,
-                'fecha_vencimiento': None,
-                'vencida': False,
-                'sin_plan': True
-            }
+        # Incluye el caso "debe pero nunca se le armó el plan de cuotas" (`sin_plan`), muy común
+        # en ventas históricas declaradas sin pasar por el armador de cronograma. Reportado por
+        # el usuario: "todos los que deben dinero [deberían] tener cuotas pendientes" — sin esto
+        # esos clientes se veían como "sin cuotas pendientes" pese a deber.
+        proxima_cuota = CloserFollowUpService._proxima_cuota(cid, deuda_val)
 
         # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
         # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
@@ -721,7 +734,7 @@ class CloserFollowUpService:
         sin confirmar), 'call' (la fecha de la cita ya pasó y el closer no reportó qué pasó),
         'seg' (llamada tomada/no tomada con seguimiento pendiente) o 'none' (sin nada accionable
         — cliente sin citas locales). Devuelve None si el client_id no existe."""
-        from app.models import Client, InstallmentPlan
+        from app.models import Client
 
         client = Client.query.get(client_id)
         if not client:
@@ -734,20 +747,7 @@ class CloserFollowUpService:
             appt = CloserFollowUpService._ensure_appointment_for_client(client)
             enrollment_dt = CloserFollowUpService._client_enrollment_date(client_id)
             deuda_val = CloserFollowUpService._client_debt(client_id)
-            next_cuota = InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
-                .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
-            proxima_cuota = None
-            if next_cuota:
-                proxima_cuota = {
-                    'id': next_cuota.id,
-                    'numero_cuota': next_cuota.numero_cuota,
-                    'monto': next_cuota.monto,
-                    'fecha_vencimiento': next_cuota.fecha_vencimiento.isoformat(),
-                    'vencida': next_cuota.fecha_vencimiento < date.today(),
-                    'sin_plan': False
-                }
-            elif deuda_val > 0.01:
-                proxima_cuota = {'id': None, 'numero_cuota': None, 'monto': deuda_val, 'fecha_vencimiento': None, 'vencida': False, 'sin_plan': True}
+            proxima_cuota = CloserFollowUpService._proxima_cuota(client_id, deuda_val)
             programa_code = CloserFollowUpService._client_program_code(client_id)
             return {
                 'stage': 'cerrada',
