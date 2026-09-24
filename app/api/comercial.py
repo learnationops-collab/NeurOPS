@@ -196,6 +196,26 @@ def tabla():
                     'dates': _fechas(start, end, None, None)}), 200
 
 
+@bp.route('/clientes/<int:client_id>', methods=['GET'])
+def cliente(client_id):
+    """La ficha de cobro de un cliente: en qué momento del cobro está, su plan de cuotas y sus
+    pagos. Solo lectura.
+
+    Vive acá y no en el blueprint del closer porque quien la necesita es el setter (¿en qué
+    terminó el lead que agendé?) y la dirección comercial (¿en qué anda esta cartera?), y los
+    endpoints del closer piden rol closer — además de ser los que escriben. Acá no se modifica
+    nada, así que un rol que solo mira no necesita permisos de cobro para mirar.
+
+    El alcance es el mismo que el de la tabla Clientes: a un closer solo se le deja abrir un
+    cliente al que él le vendió (ver `ComercialService.cliente`).
+    """
+    rol, miembro_id, _ = _alcance()
+    ficha = ComercialService.cliente(client_id, closer_id=miembro_id if rol == ROL_CLOSERS else None)
+    if not ficha:
+        return jsonify({'message': 'Cliente no encontrado'}), 404
+    return jsonify(ficha), 200
+
+
 def _puede_corregir(appt):
     """Quién puede corregir el estado de esta agenda: la dirección, el closer que la atiende y
     el setter que la generó. Nadie toca las filas de otro."""

@@ -516,6 +516,46 @@ class ComercialService:
         return de_quien if pedido is None else pedido
 
     @staticmethod
+    def cliente(client_id, closer_id=None):
+        """La ficha de cobro de UN cliente: lo mismo que su fila en la tabla Clientes, más su
+        plan de cuotas completo y su historial de pagos.
+
+        Existe para que el setter y la dirección comercial puedan ver en qué momento del cobro
+        está un cliente sin pasar por los endpoints del closer, que además de exigir rol closer
+        son los que además lo modifican. Acá no se escribe nada.
+
+        La atribución es la misma que la de la tabla (ver `clientes`): a un closer solo se le
+        deja abrir un cliente al que él le vendió. Devuelve None si el cliente no existe, no
+        compró nada, o no es de quien pregunta."""
+        from app.models import InstallmentPlan
+        from app.services.closer_followup_service import CloserFollowUpService
+
+        de_quien, pedido = ComercialService._atribucion_de_ventas(closer_id)
+        permitidos = ComercialService._vendedores_permitidos(de_quien, pedido)
+
+        ventas_por_cliente = CloserFollowUpService._resolve_sales_and_clients()
+        ventas = ventas_por_cliente.get(client_id)
+        if not ventas:
+            return None
+        if not [v for v in ventas if (v.email_vendedor or '').strip().lower() in permitidos]:
+            return None
+
+        cliente = Client.query.get(client_id)
+        if not cliente:
+            return None
+        appt = (Appointment.query.filter_by(client_id=client_id)
+                .order_by(Appointment.start_time.desc()).first())
+        if not appt:
+            appt = CloserFollowUpService._ensure_appointment_for_client(cliente)
+        if not appt:
+            return None
+
+        item = CloserFollowUpService._build_cartera_item(client_id, cliente, appt, ventas_por_cliente)
+        cuotas = (InstallmentPlan.query.filter_by(client_id=client_id)
+                  .order_by(InstallmentPlan.fecha_vencimiento.asc()).all())
+        return {'cliente': item, 'cuotas': [c.to_dict() for c in cuotas]}
+
+    @staticmethod
     def clientes(closer_id=None):
         """Filas de la tabla "Clientes": todo cliente que el equipo ya vendió, con su programa,
         lo pagado, lo que debe y su próxima cuota.
