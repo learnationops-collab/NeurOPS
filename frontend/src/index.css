@@ -999,6 +999,14 @@ header.top-v6 {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Cuánto queda de la ventana de deshacer en InlineConfirm: la barra que se consume ES el plazo
+   (el borrado recién se ejecuta cuando llega a cero). Vive acá y no inline porque un keyframe no
+   se puede declarar en un style de React. */
+@keyframes inlineConfirmBurn {
+  from { width: 100%; }
+  to { width: 0; }
+}
 .kcard-v6 {
   position: relative;
   background: rgba(255,255,255,.045);
