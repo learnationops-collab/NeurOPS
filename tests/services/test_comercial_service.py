@@ -361,3 +361,72 @@ def test_totales_de_leads_encadenan_los_denominadores_del_embudo(db, marlon, eli
     assert (totales['respondieron'], totales['respuesta']) == (2, 50.0)
     # La cualificación se mide sobre los que respondieron, no sobre todos los entrantes.
     assert (totales['cualificados'], totales['cualificacion']) == (1, 50.0)
+
+# --- Clientes (cartera) -------------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_la_cartera_es_de_quien_vendio_y_no_de_quien_tiene_hoy_la_agenda(db, marlon, make_user):
+    """La misma regla que "Mi cartera" del closer, y por el mismo motivo: si se atribuyera por el
+    dueño actual de la cita, un cliente vendido por otro aparecería en la cartera de quien
+    después lo atendió — el bug que `_cartera_items` arregló."""
+    otro = make_user(role='closer', username='Nerina', email='nerina@thelearnation.com')
+    mio = cliente(db, 'Cliente de Marlon', email='mio@test.local')
+    ajeno = cliente(db, 'Cliente de Nerina', email='ajeno@test.local')
+    # Las dos citas las tiene MARLON hoy; lo que cambia es quién facturó.
+    agenda(db, marlon, mio, closer_result='show_up')
+    agenda(db, marlon, ajeno, closer_result='show_up')
+    venta(db, mail='mio@test.local', vendedor='marlon@thelearnation.com')
+    venta(db, mail='ajeno@test.local', vendedor='nerina@thelearnation.com')
+
+    del otro  # existe solo para que el email del vendedor resuelva a un closer del sistema
+
+    nombres = [f['cliente'] for f in ComercialService.clientes(closer_id=marlon.id)]
+    assert nombres == ['Cliente de Marlon']
+
+    # Sin acotar por persona entran las dos, cada una atribuida a quien la vendió.
+    equipo = {f['cliente']: f['closer'] for f in ComercialService.clientes()}
+    assert equipo == {'Cliente de Marlon': 'Marlon', 'Cliente de Nerina': 'Nerina'}
+
+
+@freeze_time(HOY)
+def test_la_cartera_no_se_acota_al_periodo(db, marlon):
+    """Es un saldo a hoy, no un flujo: acotarla al mes dejaría afuera justamente a los clientes
+    que arrastran deuda de antes, que son los que hay que ir a cobrar."""
+    viejo = cliente(db, 'Compro en marzo', email='marzo@test.local')
+    agenda(db, marlon, viejo, cuando=datetime(2026, 3, 4, 15, 0), closer_result='show_up')
+    venta(db, mail='marzo@test.local', vendedor='marlon@thelearnation.com',
+          fecha=datetime(2026, 3, 4))
+
+    filas = ComercialService.clientes(closer_id=marlon.id)
+
+    assert [f['cliente'] for f in filas] == ['Compro en marzo']
+
+
+@pytest.mark.parametrize('cuota,esperado', [
+    (None, 'al_dia'),
+    ({'sin_plan': True, 'vencida': False}, 'sin_plan'),
+    ({'sin_plan': False, 'vencida': True}, 'vencida'),
+    ({'sin_plan': False, 'vencida': False}, 'por_vencer'),
+])
+def test_estado_de_cartera_sigue_el_orden_de_urgencia(cuota, esperado):
+    """El mismo orden con el que `_sort_by_urgency` ordena la cartera del closer. "Debe, sin plan"
+    existe porque una venta parcial declarada sin armar el cronograma deja deuda sin cuotas, y sin
+    ese estado esos clientes se leían como "al día" pese a deber."""
+    assert ComercialService._estado_cartera({'proxima_cuota': cuota}) == esperado
+
+
+def test_totales_de_la_cartera_separan_el_saldo_del_vencido():
+    filas = [
+        {'deuda': 500.0, 'pagado': 1000.0, 'cuota_vencida': True, 'cuota_monto': 250.0},
+        {'deuda': 300.0, 'pagado': 700.0, 'cuota_vencida': False, 'cuota_monto': 300.0},
+        {'deuda': 0.0, 'pagado': 990.0, 'cuota_vencida': False, 'cuota_monto': None},
+    ]
+
+    totales = ComercialService.totales_clientes(filas)
+
+    assert (totales['clientes'], totales['con_deuda'], totales['al_dia']) == (3, 2, 1)
+    assert totales['deuda'] == 800.0
+    # El vencido es la CUOTA vencida, no la deuda entera de ese cliente: es lo que hay que cobrar
+    # ya, y confundirlos hacía parecer vencido un saldo que todavía no lo está.
+    assert (totales['vencidas'], totales['deuda_vencida']) == (1, 250.0)
+    assert totales['pagado'] == 2690.0

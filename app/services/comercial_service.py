@@ -97,6 +97,16 @@ ESTADO_LEAD = [
     {'key': 'descartado', 'label': 'Descartado', 'tone': 'error'},
 ]
 
+# Estado de un cliente de la cartera. No sale de una columna: se deriva de la deuda y de la
+# proxima cuota, con el mismo orden de urgencia con el que `_sort_by_urgency` ordena la cartera
+# del closer (vencida primero, despues por vencer, despues deuda sin plan armado, despues al dia).
+ESTADO_CARTERA = [
+    {'key': 'vencida', 'label': 'Cuota vencida', 'tone': 'error'},
+    {'key': 'por_vencer', 'label': 'Cuota por vencer', 'tone': 'warning'},
+    {'key': 'sin_plan', 'label': 'Debe, sin plan', 'tone': 'warning'},
+    {'key': 'al_dia', 'label': 'Al día', 'tone': 'success'},
+]
+
 TIPOS_PAGO = [
     {'key': 'completo', 'label': 'Pago completo', 'tone': 'success'},
     {'key': 'parcial', 'label': 'Split Pay', 'tone': 'info'},
@@ -107,6 +117,7 @@ TIPOS_PAGO = [
 _LABELS = {'pre_call': {e['key']: e for e in PRE_CALL},
            'post_call': {e['key']: e for e in POST_CALL},
            'estado': {e['key']: e for e in ESTADO_LEAD},
+           'estado_cartera': {e['key']: e for e in ESTADO_CARTERA},
            'tipo_pago': {e['key']: e for e in TIPOS_PAGO}}
 
 # Estado del libro de agendas -> estado post call de este tablero, para los que no dependen de si
@@ -464,6 +475,115 @@ class ComercialService:
             'pendientes': len(pendientes),
             'pendientes_con_retraso': len(con_retraso),
             'retraso_max': max((f['retraso_dias'] for f in con_retraso), default=0),
+        }
+
+    # --- Clientes (cartera) -------------------------------------------------------------------
+
+    @staticmethod
+    def clientes(closer_id=None):
+        """Filas de la tabla "Clientes": todo cliente que el equipo ya vendió, con su programa,
+        lo pagado, lo que debe y su próxima cuota.
+
+        NO está acotada al período, y no puede estarlo sin cambiar de pregunta — es el mismo caso
+        que `por_cobrar_de`: la cartera es un SALDO, no un flujo. "A quién le vendí" y "qué cobré
+        del 1 al 30" son dos cosas distintas, y acotar la primera al período dejaría afuera
+        justamente a los clientes que arrastran deuda de meses anteriores, que son los que hay que
+        ir a cobrar. La tabla lo dice en su ayuda y los totales van rotulados "a hoy".
+
+        La atribución es por QUIÉN VENDIÓ (`FinancialSale.email_vendedor`), no por quién tiene hoy
+        la cita más reciente del cliente: es la misma regla que "Mi cartera" del closer, y existe
+        porque la otra producía que closers activos vieran clientes de closers dados de baja
+        (ver `CloserFollowUpService._cartera_items`, que arregló ese bug). Se reusan sus piezas en
+        vez de rearmar el cálculo: la deuda, la próxima cuota y el desglose de pagos de un cliente
+        tienen que dar lo mismo en las dos pantallas.
+        """
+        from app.models.user import ROLE_CLOSER
+        from app.services.closer_followup_service import CloserFollowUpService
+        from app.services.closer_service import CloserService
+
+        # email del vendedor -> nombre del closer, para poder atribuir cada venta sin volver a
+        # consultar por cada fila. Un email que no sea de ningún closer del sistema queda fuera:
+        # sin dñueno la fila no se puede filtrar ni sumar a nadie.
+        de_quien = {}
+        for usuario in User.query.filter(User.role == ROLE_CLOSER).all():
+            for identificador in CloserService._resolve_sale_identifiers(usuario):
+                de_quien[identificador.lower()] = usuario.username
+
+        pedido = None
+        if closer_id:
+            usuario = User.query.get(closer_id)
+            if not usuario:
+                return []
+            pedido = {e.lower() for e in CloserService._resolve_sale_identifiers(usuario)}
+
+        ventas_por_cliente = CloserFollowUpService._resolve_sales_and_clients()
+
+        filas = []
+        for cid, ventas in ventas_por_cliente.items():
+            propias = [v for v in ventas
+                       if (v.email_vendedor or '').strip().lower() in (pedido or de_quien)]
+            if not propias:
+                continue
+            cliente = Client.query.get(cid)
+            if not cliente:
+                continue
+            # `appt` es solo para los campos de display; cualquier cita del cliente sirve.
+            appt = (Appointment.query.filter_by(client_id=cid)
+                    .order_by(Appointment.start_time.desc()).first())
+            if not appt:
+                appt = CloserFollowUpService._ensure_appointment_for_client(cliente)
+            item = CloserFollowUpService._build_cartera_item(cid, cliente, appt, ventas_por_cliente)
+
+            propias.sort(key=lambda v: v.date or v.created_at or datetime.min)
+            vendedor = de_quien.get((propias[0].email_vendedor or '').strip().lower())
+            cuota = item['proxima_cuota']
+            filas.append({
+                'id': item['client_id'],
+                'tipo': 'cliente',
+                'client_id': item['client_id'],
+                'cliente': item['lead_name'],
+                'ig': item['instagram'],
+                'email': cliente.email or '',
+                'telefono': item['phone'],
+                'fecha': item['enrollment_date'],
+                'closer': vendedor or 'Sin closer',
+                'programa': item['programa_nombre'] or 'Sin programa',
+                'pagado': round(sum(pago['monto'] for pago in item['pagos']), 2),
+                'deuda': round(item['deuda'], 2),
+                'cobros': len(item['pagos']),
+                'estado': chip('estado_cartera', ComercialService._estado_cartera(item)),
+                'cuota_monto': cuota['monto'] if cuota else None,
+                'cuota_fecha': cuota['fecha_vencimiento'] if cuota else None,
+                'cuota_vencida': bool(cuota and cuota['vencida']),
+                'cuota_numero': cuota['numero_cuota'] if cuota else None,
+            })
+
+        filas.sort(key=lambda f: (-f['deuda'], f['cliente'].lower()))
+        return filas
+
+    @staticmethod
+    def _estado_cartera(item):
+        cuota = item['proxima_cuota']
+        if not cuota:
+            return 'al_dia'
+        if cuota['sin_plan']:
+            return 'sin_plan'
+        return 'vencida' if cuota['vencida'] else 'por_vencer'
+
+    @staticmethod
+    def totales_clientes(filas):
+        """Los totales van rotulados "a hoy" en la pantalla: son un saldo, no un flujo del
+        período (ver `clientes`)."""
+        con_deuda = [f for f in filas if f['deuda'] > 0.01]
+        vencidas = [f for f in filas if f['cuota_vencida']]
+        return {
+            'clientes': len(filas),
+            'al_dia': len(filas) - len(con_deuda),
+            'con_deuda': len(con_deuda),
+            'deuda': round(sum(f['deuda'] for f in filas), 2),
+            'vencidas': len(vencidas),
+            'deuda_vencida': round(sum(f['cuota_monto'] or 0 for f in vencidas), 2),
+            'pagado': round(sum(f['pagado'] for f in filas), 2),
         }
 
     @staticmethod

@@ -42,7 +42,7 @@ COMPARACIONES = [
     {'key': 'prev', 'label': 'Período anterior'}, {'key': 'month', 'label': 'Mismo período mes pasado'},
     {'key': 'year', 'label': 'Mismo período año pasado'}, {'key': 'none', 'label': 'Sin comparar'},
 ]
-TABLAS = ('agendas', 'ventas', 'leads', 'generadas')
+TABLAS = ('agendas', 'ventas', 'leads', 'generadas', 'clientes')
 
 
 def alcance_de(usuario, rol_pedido, miembro_pedido):
@@ -149,7 +149,13 @@ def tabla():
         cual = 'agendas'
     basis = 'creacion' if request.args.get('basis') == 'creacion' else 'meet'
 
-    if cual == 'ventas':
+    if cual == 'clientes':
+        # La cartera NO se acota al periodo: es un saldo a hoy, no un flujo (ver
+        # `ComercialService.clientes`). Y se atribuye por quien vendio, asi que con rol setters
+        # no se acota por persona: pedirla por un setter daria una lista vacia, no la suya.
+        filas = ComercialService.clientes(closer_id=miembro_id if rol == ROL_CLOSERS else None)
+        totales = ComercialService.totales_clientes(filas)
+    elif cual == 'ventas':
         # Las ventas se atribuyen al closer que las firmó: pedirlas acotadas por un setter daría
         # una lista vacía, no la suya. Con rol setters se devuelven sin acotar por persona.
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None)
