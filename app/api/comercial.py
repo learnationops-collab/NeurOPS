@@ -134,6 +134,19 @@ def comparativas():
     return jsonify({**datos, 'yo': miembro_id, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
+@bp.route('/variabilidad', methods=['GET'])
+def variabilidad():
+    """Analizar → Variabilidad: la serie por día de cada métrica.
+
+    Endpoint aparte y no un bloque de `/resumen` porque se pide solo cuando se abre la pestaña:
+    son seis series diarias y no hacen falta para ver el dashboard.
+    """
+    rol, miembro_id, _ = _alcance()
+    start, end, _prev_start, _prev_end = _rangos()
+    datos = analitica.variabilidad(rol, start, end, miembro_id)
+    return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+
+
 @bp.route('/tabla', methods=['GET'])
 def tabla():
     """Revisar: las filas de una tabla y los totales de lo filtrado.

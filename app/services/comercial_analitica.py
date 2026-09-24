@@ -371,6 +371,194 @@ def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     }
 
 
+# ================================================================================================
+# VARIABILIDAD — la serie por día de cada métrica, separada del dato del período
+# ================================================================================================
+#
+# Es la tercera pestaña de Analizar. El dashboard contesta "cuánto dio el período" y esto contesta
+# "cómo se movió": con 7 ventas en 17 días, un día bueno mueve el promedio del mes y desde el
+# número agregado eso es invisible.
+#
+# Dos decisiones que atraviesan todas las series:
+#
+#   · **Los días sin actividad van en cero, no se omiten.** El eje es el calendario del período,
+#     así que un fin de semana se ve como un hueco y no desaparece comprimiendo la serie.
+#   · **Una tasa de un día sin denominador es 0, no None.** Se marca aparte con `activos` (la
+#     cuenta de días con movimiento) y el encabezado de una tasa promedia SOLO esos días: con los
+#     ceros adentro, el show up de un equipo que no trabaja el domingo caía sin que nadie hubiera
+#     faltado a una llamada. Es el mismo criterio con el que `realizadas` excluye las canceladas.
+
+
+def _dias_del(start, end):
+    """El calendario del período, para que toda serie tenga el mismo eje."""
+    dias, cursor = [], start
+    while cursor <= end:
+        dias.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return dias
+
+
+def _serie(dias, filas, fecha_de, valor_de=None, filtro=None):
+    """Una serie diaria: suma `valor_de` (o cuenta filas) por día, sobre el eje de `dias`."""
+    por_dia = {}
+    for f in filas:
+        if filtro and not filtro(f):
+            continue
+        clave = fecha_de(f)
+        if not clave:
+            continue
+        por_dia[clave] = por_dia.get(clave, 0.0) + (valor_de(f) if valor_de else 1)
+    return [round(por_dia.get(d, 0), 2) for d in dias]
+
+
+def _tasa_diaria(dias, filas, fecha_de, numerador, denominador):
+    """Serie de una tasa, día por día. Un día sin denominador da 0 y se cuenta como día sin
+    movimiento (ver el encabezado del módulo): no es un 0% de rendimiento, es un día sin llamadas."""
+    num = _serie(dias, filas, fecha_de, filtro=numerador)
+    den = _serie(dias, filas, fecha_de, filtro=denominador)
+    return [round(n / d * 100, 1) if d else 0 for n, d in zip(num, den)]
+
+
+def _dia_de_agenda(fila):
+    return fila['fecha'][:10] if fila['fecha'] else None
+
+
+def _dia_de_venta(fila):
+    return fila['fecha'][:10] if fila['fecha'] else None
+
+
+def _dia_de_lead(fila):
+    return fila['creada'][:10] if fila.get('creada') else None
+
+
+def _sub(label, tone, vals):
+    return {'label': label, 'tone': tone, 'vals': vals}
+
+
+def _por_categoria(dias, filas, fecha_de, categoria_de, valor_de=None, tonos=(), maximo=4):
+    """Sub-series de una serie abierta por categoría (forma de pago, programa, fuente).
+
+    Las categorías salen de los DATOS y no de una lista fija: el prototipo traía "Ads IG /
+    Orgánico / Workshop / DM directo" de sus mocks, y una lista fija esconde cualquier fuente
+    nueva y muestra vacías las que no existen. Se ordenan por volumen y se quedan las primeras
+    `maximo`, porque una tira de quince pestañas no se lee.
+    """
+    totales = {}
+    for f in filas:
+        cat = categoria_de(f)
+        if cat:
+            totales[cat] = totales.get(cat, 0.0) + (valor_de(f) if valor_de else 1)
+    # Con una sola categoría no hay nada que aislar: una tira de una pestaña sola es ruido.
+    if len(totales) < 2:
+        return []
+    top = [c for c, _ in sorted(totales.items(), key=lambda kv: kv[1], reverse=True)[:maximo]]
+    return [_sub(cat, tonos[i % len(tonos)] if tonos else 'info',
+                 _serie(dias, filas, fecha_de, valor_de, lambda f, c=cat: categoria_de(f) == c))
+            for i, cat in enumerate(top)]
+
+
+CAT_TONOS = ('cat-1', 'cat-2', 'cat-3', 'cat-4')
+
+
+def variabilidad(rol, start, end, miembro_id=None):
+    """Las series por día de la pestaña Variabilidad, para el rol pedido.
+
+    Se arma sobre las MISMAS filas que el dashboard y la tabla (`ComercialService.agendas` /
+    `.ventas` / `.leads`), no con otra consulta: el total de una serie tiene que dar el número que
+    muestra el tile de arriba, y con dos fuentes eso no se sostiene.
+    """
+    dias = _dias_del(start, end)
+    nombre = ComercialService.nombre_de(miembro_id)
+
+    if rol == ROL_SETTERS:
+        series = _series_setters(dias, start, end, miembro_id, nombre)
+    else:
+        series = _series_closers(dias, start, end, miembro_id, nombre)
+    return {'dias': dias, 'series': series}
+
+
+def _series_closers(dias, start, end, closer_id, closer_nombre):
+    agendas = ComercialService.agendas(start, end, closer_id=closer_id)
+    ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    monto = lambda f: f['monto']  # noqa: E731
+
+    es_venta = lambda f: f['es_venta']  # noqa: E731
+    es_cuota = lambda f: f['tipo_pago']['key'] == 'cuota'  # noqa: E731
+    es_sena = lambda f: f['tipo_pago']['key'] == 'seña'  # noqa: E731
+    # Todo lo que no es venta nueva, cuota ni seña. Existe para que las partes SUMEN el total:
+    # el vocabulario tiene cuatro tipos canónicos, pero en la base hay filas con otros (medido:
+    # $300 de "renovacion" en septiembre), y sin este cajon "Ventas nuevas + Cuotas + Señas"
+    # daba menos que "Todo" — un panel donde las partes no cierran con el total.
+    es_otro = lambda f: not (es_venta(f) or es_cuota(f) or es_sena(f))  # noqa: E731
+    otros = _serie(dias, ventas, _dia_de_venta, monto, es_otro)
+
+    return [
+        {'key': 'cash', 'label': 'Cash cobrado', 'unidad': '$', 'tone': 'brand-secondary',
+         'help': 'Lo cobrado cada día. Los días en cero son días sin cobranza, no días sin '
+                 'trabajo. Aislá por tipo para ver de dónde viene cada pico.',
+         'series': [
+             _sub('Todo', 'brand-secondary', _serie(dias, ventas, _dia_de_venta, monto)),
+             _sub('Ventas nuevas', 'cat-1', _serie(dias, ventas, _dia_de_venta, monto, es_venta)),
+             _sub('Cuotas', 'cat-3', _serie(dias, ventas, _dia_de_venta, monto, es_cuota)),
+             _sub('Señas', 'cat-4', _serie(dias, ventas, _dia_de_venta, monto, es_sena)),
+         ] + ([_sub('Otros', 'idle', otros)] if sum(otros) else [])},
+        {'key': 'agendas', 'label': 'Agendas', 'unidad': '', 'tone': 'info',
+         'help': 'Llamadas agendadas cada día, por la fecha de la reunión.',
+         'vals': _serie(dias, agendas, _dia_de_agenda)},
+        {'key': 'ventas', 'label': 'Ventas', 'unidad': '', 'tone': 'success',
+         'help': 'Cierres por día. Con pocas ventas en el mes, un día bueno se nota mucho en el '
+                 'promedio — que es justamente lo que esta pestaña deja ver.',
+         'series': [_sub('Todas', 'success', _serie(dias, ventas, _dia_de_venta, None, es_venta))]
+                   + _por_categoria(dias, [f for f in ventas if f['es_venta']], _dia_de_venta,
+                                    lambda f: f['tipo_pago']['label'], None, CAT_TONOS)},
+        {'key': 'showup', 'label': 'Show up', 'unidad': '%', 'tone': 'success', 'tipo': 'tasa',
+         'help': 'Qué porcentaje se presentó cada día, sobre las llamadas que ya tuvieron '
+                 'resultado. Los días en cero son días sin llamadas, no días con show up cero.',
+         'vals': _tasa_diaria(dias, agendas, _dia_de_agenda,
+                              lambda f: f['asistio'], lambda f: f['realizada'])},
+        {'key': 'senas', 'label': 'Señas', 'unidad': '', 'tone': 'warning',
+         'help': 'Reservas tomadas cada día. Una seña bloquea un cupo hasta que se completa el pago.',
+         'vals': _serie(dias, ventas, _dia_de_venta, None, es_sena)},
+        {'key': 'programas', 'label': 'Programas', 'unidad': '$', 'tone': 'cat-2',
+         'help': 'Cash cobrado por día, abierto por programa. Aislá uno para ver su ritmo propio.',
+         'series': [_sub('Todos', 'brand-secondary', _serie(dias, ventas, _dia_de_venta, monto))]
+                   + _por_categoria(dias, ventas, _dia_de_venta, lambda f: f['programa'],
+                                    monto, CAT_TONOS)},
+    ]
+
+
+def _series_setters(dias, start, end, setter_id, setter_nombre):
+    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
+    generadas = ComercialService.agendas(start, end, setter_id=setter_id)
+
+    return [
+        {'key': 'entrantes', 'label': 'Entrantes', 'unidad': '', 'tone': 'info',
+         'help': 'Leads nuevos que entraron al inbox cada día. Depende de la pauta y del '
+                 'contenido, no del setter. Se abre por setter y NO por fuente: en las filas de '
+                 'lead la fuente es siempre "ManyChat" (ver `ComercialService.leads`), así que '
+                 'abrirla por ahí daría una sola serie repetida.',
+         'series': [_sub('Todos', 'info', _serie(dias, leads, _dia_de_lead))]
+                   + _por_categoria(dias, leads, _dia_de_lead, lambda f: f['setter'],
+                                    None, CAT_TONOS)},
+        {'key': 'respuestas', 'label': 'Respuestas', 'unidad': '', 'tone': 'success',
+         'help': 'Leads que contestaron cada día. Seguir la forma de la curva de entrantes es '
+                 'buena señal.',
+         'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['respondio'])},
+        {'key': 'cualificados', 'label': 'Cualificados', 'unidad': '', 'tone': 'cat-1',
+         'help': 'Leads que cumplieron el perfil cada día.',
+         'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['cualificado'])},
+        {'key': 'agendas', 'label': 'Agendas generadas', 'unidad': '', 'tone': 'brand-secondary',
+         'help': 'Citas reservadas cada día, por la fecha de la reunión. Es la salida del trabajo '
+                 'de setting.',
+         'vals': _serie(dias, generadas, _dia_de_agenda)},
+        {'key': 'tasa_resp', 'label': 'Tasa de respuesta', 'unidad': '%', 'tone': 'success',
+         'tipo': 'tasa',
+         'help': 'Qué porcentaje de los entrantes de ese día contestó. Los días en cero son días '
+                 'sin leads nuevos.',
+         'vals': _tasa_diaria(dias, leads, _dia_de_lead,
+                              lambda f: f['respondio'], lambda f: True)},
+    ]
+
 def por_cobrar_de(closer_id=None):
     """Lo que falta cobrar, A HOY. Reusa `CloserDashboardService._pending_collections`, que es de
     donde sale la misma cifra en el dashboard del closer y en su pool de llamadas cerradas: tener

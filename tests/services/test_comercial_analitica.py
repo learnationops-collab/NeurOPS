@@ -521,3 +521,77 @@ def test_cada_fila_del_ranking_trae_su_delta_por_metrica(db, marlon):
     fila = ca.comparativas('closers', DESDE, HASTA, *AGOSTO)['filas'][0]
 
     assert fila['deltas']['cash'] == {'valor': 100.0, 'modo': 'pct'}
+
+# --- Variabilidad (series por día) --------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_las_series_van_sobre_el_calendario_del_periodo_y_no_solo_los_dias_con_datos(db, marlon):
+    """El eje es el período completo: un día sin actividad va en cero y no se omite. Comprimiendo
+    la serie a los días con datos, un fin de semana desaparece y la forma de la curva miente —
+    dos picos separados por cuatro días muertos se verían pegados."""
+    agenda(db, marlon, cliente(db, 'Uno'), cuando=datetime(2026, 9, 2, 15, 0))
+    agenda(db, marlon, cliente(db, 'Dos'), cuando=datetime(2026, 9, 2, 17, 0))
+    agenda(db, marlon, cliente(db, 'Tres'), cuando=datetime(2026, 9, 5, 15, 0))
+
+    datos = ca.variabilidad('closers', datetime(2026, 9, 1).date(), datetime(2026, 9, 5).date())
+
+    assert datos['dias'] == ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05']
+    serie = next(s for s in datos['series'] if s['key'] == 'agendas')
+    assert serie['vals'] == [0, 2, 0, 0, 1]
+
+
+@freeze_time(HOY)
+def test_una_tasa_diaria_sin_denominador_da_cero_y_no_divide_por_cero(db, marlon):
+    """Un día sin llamadas con resultado no tiene show up. Va en cero para que el eje no se
+    rompa, y el panel lo cuenta como "día sin movimiento" en vez de como un 0% de rendimiento
+    (que es el mismo criterio con el que `realizadas` excluye las canceladas)."""
+    asistio = cliente(db, 'Asistio')
+    falto = cliente(db, 'Falto')
+    agenda(db, marlon, asistio, cuando=datetime(2026, 9, 2, 15, 0), closer_result='Show up')
+    agenda(db, marlon, falto, cuando=datetime(2026, 9, 2, 17, 0), closer_result='No Show')
+
+    datos = ca.variabilidad('closers', datetime(2026, 9, 1).date(), datetime(2026, 9, 3).date())
+    serie = next(s for s in datos['series'] if s['key'] == 'showup')
+
+    # 1 de 2 el día 2; los otros dos días no tuvieron ninguna llamada con resultado.
+    assert serie['vals'] == [0, 50.0, 0]
+
+
+@freeze_time(HOY)
+def test_una_serie_con_una_sola_categoria_no_trae_sub_series(db, marlon):
+    """Las sub-series son un filtro: con una sola categoría no hay nada que aislar y la tira de
+    pestañas sería una sola pestaña, que no filtra nada. También evita la lista fija del
+    prototipo, que mostraba categorías vacías y esconde cualquier valor nuevo."""
+    venta(db, mail='unica@test.local', tipo='AL - Completo', fecha=datetime(2026, 9, 2))
+
+    datos = ca.variabilidad('closers', datetime(2026, 9, 1).date(), datetime(2026, 9, 3).date())
+    programas = next(s for s in datos['series'] if s['key'] == 'programas')
+
+    # Solo queda "Todos": un único programa no abre sub-series propias.
+    assert [sub['label'] for sub in programas['series']] == ['Todos']
+
+
+@freeze_time(HOY)
+def test_el_cash_por_dia_se_abre_por_tipo_de_cobro_y_las_partes_cierran_con_el_total(db, marlon):
+    """Es la propiedad que hace verificable el panel: la serie "Todo" tiene que ser la suma de las
+    otras, día por día.
+
+    La renovación es la que obliga a tener un cajón "Otros": el vocabulario del tablero tiene
+    cuatro tipos canónicos, pero en la base hay filas con otros (medido: $300 de renovación en
+    septiembre de 2026), y sin el cajón las tres partes daban menos que el total."""
+    venta(db, mail='completa@test.local', tipo='AL - Completo', monto=990, fecha=datetime(2026, 9, 2))
+    venta(db, mail='cuota@test.local', tipo='AL - Cuota 2', monto=200, fecha=datetime(2026, 9, 2))
+    venta(db, mail='sena@test.local', tipo='AL - Seña', monto=100, fecha=datetime(2026, 9, 3))
+    venta(db, mail='renov@test.local', tipo='AL - Renovacion', monto=300, fecha=datetime(2026, 9, 3))
+
+    datos = ca.variabilidad('closers', datetime(2026, 9, 1).date(), datetime(2026, 9, 3).date())
+    cash = next(s for s in datos['series'] if s['key'] == 'cash')
+    por_label = {sub['label']: sub['vals'] for sub in cash['series']}
+
+    assert por_label['Todo'] == [0, 1190.0, 400.0]
+    assert por_label['Ventas nuevas'] == [0, 990.0, 0]
+    assert por_label['Cuotas'] == [0, 200.0, 0]
+    assert por_label['Señas'] == [0, 0, 100.0]
+    assert por_label['Otros'] == [0, 0, 300.0]
+    partes = [v for k, v in por_label.items() if k != 'Todo']
+    assert [sum(dia) for dia in zip(*partes)] == por_label['Todo']
