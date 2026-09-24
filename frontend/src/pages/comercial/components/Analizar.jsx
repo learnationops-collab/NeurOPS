@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
-import { Cargando, fmt, useMontado } from './Shared';
+import { Cargando, Humo, fmt, useMontado } from './Shared';
 
 /**
  * Analizar → Dashboard.
@@ -58,14 +58,6 @@ const Delta = ({ delta, actual }) => {
         </span>
     );
 };
-
-/** Aura de color del fondo de una tarjeta. Decorativa: cuatro manchas, ningún dato adentro. */
-const Humo = ({ clase, colores }) => (
-    <span className={`humo${clase ? ` ${clase}` : ''}`} aria-hidden="true"
-        style={Object.fromEntries((colores || []).map((c, i) => [`--h${i + 1}`, c]))}>
-        <i /><i /><i /><i />
-    </span>
-);
 
 /** Barra fina. Crece de 0 al montar, que es la animación que define el CSS (`.riel > i`). */
 const Riel = ({ pct, color, fino, delay }) => {

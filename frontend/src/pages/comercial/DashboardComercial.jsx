@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import './comercial.css';
 import '../../components/learnation-ds/learnation-ds.css';
-import { Cargando, PillMenu, Segmented } from './components/Shared';
+import { Cargando, Humo, PillMenu, Segmented } from './components/Shared';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Revisar, { TABLAS_POR_ROL } from './components/Revisar';
@@ -80,18 +80,6 @@ const Isotipo = () => (
             <path d="M23 18 L42 18 L23 37 Z" strokeWidth="5" strokeLinejoin="round" />
         </g>
     </svg>
-);
-
-/**
- * El "humo": cuatro auras desenfocadas que se mueven despacio detrás de una superficie. Va
- * dentro de un elemento con `.caja` (que crea el contexto de apilamiento) y se apaga solo con
- * `prefers-reduced-motion`.
- */
-const Humo = ({ colores = [], clase }) => (
-    <span className={`humo${clase ? ` ${clase}` : ''}`} aria-hidden="true"
-        style={colores.reduce((a, c, i) => ({ ...a, [`--h${i + 1}`]: c }), {})}>
-        <i /><i /><i /><i />
-    </span>
 );
 
 const ProntoSection = ({ seccion }) => (

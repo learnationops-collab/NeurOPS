@@ -44,6 +44,25 @@ export const fmt = {
     plural: (n, singular, plural) => `${fmt.num(n)} ${n === 1 ? singular : plural}`,
 };
 
+/**
+ * El "humo": cuatro auras desenfocadas que se mueven despacio detrás de una superficie. Es
+ * decorativo — ningún dato adentro — y se apaga solo con `prefers-reduced-motion`.
+ *
+ * Va dentro de un elemento con `.caja`, que es lo que crea el contexto de apilamiento; sin esa
+ * clase el humo se dibuja por encima del contenido. `tarjeta` usa el desenfoque grande de la
+ * referencia (`.humo--tarjeta`), para cuando el fondo es una tarjeta y no una barra.
+ *
+ * Vive acá y no en cada sección porque estaba copiado en `DashboardComercial` y en `Analizar`
+ * con dos implementaciones distintas del mismo `style`, y Variabilidad iba a ser la tercera.
+ */
+export const Humo = ({ colores = [], clase, tarjeta }) => (
+    <span className={`humo${tarjeta ? ' humo--tarjeta' : ''}${clase ? ` ${clase}` : ''}`}
+        aria-hidden="true"
+        style={Object.fromEntries(colores.map((c, i) => [`--h${i + 1}`, c]))}>
+        <i /><i /><i /><i />
+    </span>
+);
+
 /** Badge de variación vs el período comparado. Las tasas van en puntos y los montos en %. */
 export const Delta = ({ delta, grande }) => {
     if (!delta) return null;
