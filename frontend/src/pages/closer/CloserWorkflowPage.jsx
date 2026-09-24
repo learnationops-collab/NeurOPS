@@ -18,10 +18,9 @@ import CommentsSection from '../../components/shared/CommentsSection';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
 import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
-import CloserDashboard from './dashboard/CloserDashboard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
-import CarteraPane from './components/CarteraPane';
+import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
@@ -4398,20 +4397,17 @@ const CloserWorkflowPage = () => {
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : activeView === 'cartera' ? (
-                    <CarteraPane onOpenLead={handleSelectLead} />
+                    /* "Mi cartera" es la seccion Revisar del director comercial, acotada a este
+                       closer POR EL BACKEND (ver `alcance_de` en app/api/comercial.py): sus
+                       agendas y sus ventas, con la tira de totales de lo filtrado arriba. Pedido
+                       del usuario, que ademas hizo sacar los 4 KPIs que tenia la cartera vieja. */
+                    <DashboardComercial embebido seccionFija="revisar" />
                 ) : (
-                    <CloserDashboard
-                        embedded
-                        onNavigate={(view, opts) => {
-                            // El dashboard puede pedir un día concreto ("te falta el reporte del 5"),
-                            // así que la pestaña se abre ya posicionada en esa fecha.
-                            if (opts?.date) setReportDate(opts.date);
-                            // …o un paso concreto del mazo ("tenés 8 llamadas sin reportar"), para
-                            // caer directo en la pestaña que resuelve ese pendiente.
-                            if (opts?.step) setSearchParams({ step: opts.step, selected_date: selectedDate });
-                            setActiveView(view);
-                        }}
-                    />
+                    /* Y "Ver mis datos" es la seccion Analizar de esa misma pantalla, sin el
+                       selector de persona (el backend no se lo ofrece a un closer). El drill-down
+                       de un dato cambia a "Mi cartera", que es donde vive la tabla. */
+                    <DashboardComercial embebido seccionFija="analizar"
+                        onIrASeccion={() => setActiveView('cartera')} />
                 )}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
