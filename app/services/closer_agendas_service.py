@@ -176,6 +176,79 @@ def derivar_estado(appt, now_utc):
     return 'reportada_sin_resultado' if appt.closer_processed else 'sin_reportar'
 
 
+# Ventana para considerar dos citas del mismo cliente "la misma agenda cargada dos veces". Seis
+# horas: una sincronizacion repetida crea la copia con el mismo horario o a minutos de distancia,
+# y dos llamadas REALES al mismo lead el mismo dia se agendan mas separadas que esto.
+VENTANA_DUPLICADO = timedelta(hours=6)
+
+
+def hermana_duplicada(appt):
+    """La otra cita del mismo cliente y del mismo closer a menos de `VENTANA_DUPLICADO`, si hay.
+
+    Es la condicion que hace de una agenda una duplicada: sola, una cita sin resultado no dice
+    nada, y sin la hermana no habria a donde mover el historial.
+    """
+    if not appt.client_id or not appt.start_time:
+        return None
+    return Appointment.query.filter(
+        Appointment.client_id == appt.client_id,
+        Appointment.closer_id == appt.closer_id,
+        Appointment.id != appt.id,
+        Appointment.start_time >= appt.start_time - VENTANA_DUPLICADO,
+        Appointment.start_time <= appt.start_time + VENTANA_DUPLICADO,
+    ).first()
+
+
+def marcar_duplicada(appt):
+    """Cancela una agenda por ser una copia de otra. Devuelve (ok, mensaje, id_conservado).
+
+    Nacio como caso real (Nerina con la lead "Mia Sky", 10/sep/2026): dos citas identicas —mismo
+    cliente, mismo horario— de una sincronizacion procesada dos veces; una quedo "Show up" con la
+    llamada real y la otra huerfana sin reportar, inflando el total de agendas.
+
+    Dos guardas que son la razon de que esta accion sea segura:
+
+      · **Solo cancela la copia todavia SIN resultado.** Nunca la que ya tiene uno real, asi que
+        no puede borrar el historial de una llamada que si ocurrio.
+      · **Exige una hermana cercana.** Sin otra cita del mismo cliente a menos de seis horas no
+        es una duplicada, es una agenda sin reportar — y esas se resuelven reportandolas.
+
+    Reusa `CloserService.process_agenda` (el mismo camino que "Cancelo" desde el mazo) para que
+    quede el mismo rastro de auditoria: el comentario en el cliente y el borrado del evento de
+    Google Calendar.
+
+    Vive en el servicio y no en la vista porque la piden dos pantallas — el modal del lead del
+    dashboard comercial y, mientras exista, la ruta del mazo — y las dos tienen que aplicar las
+    mismas dos guardas. Quien puede hacerlo lo decide cada ruta, que es lo unico que cambia entre
+    las dos (un closer solo sobre sus agendas; la direccion comercial sobre cualquiera).
+    """
+    from app.services.closer_service import CloserService
+
+    if not appt.client_id or not appt.start_time:
+        return False, 'Esta agenda no tiene cliente u hora validos', None
+
+    estado = derivar_estado(appt, datetime.utcnow())
+    if estado not in ESTADOS_SIN_RESULTADO:
+        return False, 'Esta agenda ya tiene un resultado reportado — no se puede marcar como duplicada.', None
+
+    hermana = hermana_duplicada(appt)
+    if not hermana:
+        return False, 'No se encontro otra agenda cercana de este cliente — no parece una duplicada.', None
+
+    CloserService.process_agenda(
+        closer_id=appt.closer_id,
+        appt_id=appt.id,
+        data={
+            'status': 'Cancelado',
+            'role': 'closer',
+            'note': f'Agenda duplicada — se conserva la cita #{hermana.id} del mismo cliente.',
+        },
+        is_admin=True,
+    )
+    db.session.commit()
+    return True, 'Agenda marcada como duplicada y cancelada', hermana.id
+
+
 class CloserAgendasService:
 
     @staticmethod
