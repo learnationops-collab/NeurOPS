@@ -21,7 +21,6 @@ import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
-import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
@@ -325,13 +324,15 @@ function App() {
 
 
             {/* Protected Role-Specific Routes */}
+            {/* El dashboard del setter es el comercial, acotado a el por el backend: los mismos
+                paneles que ve la direccion (embudo de entrante a cita, cualificacion, tenacidad
+                del seguimiento) en vez del tablero viejo de KPIs. Sin MainLayout, como
+                /setter/mis-datos, porque la pantalla trae su propio dock. Pedido del usuario. */}
             <Route
               path="/setter/dashboard"
               element={
                 <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <SetterDashboard />
-                  </MainLayout>
+                  <DashboardComercial />
                 </ProtectedRoute>
               }
             />
