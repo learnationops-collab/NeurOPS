@@ -122,12 +122,19 @@ def resumen():
 
 @bp.route('/comparativas', methods=['GET'])
 def comparativas():
-    """Analizar → Comparativas: ranking por métrica y mapa del equipo.
+    """Analizar → Comparativas: ranking por métrica y mapa del equipo. **Solo la dirección.**
 
-    Un closer o un setter ve el ranking completo con los nombres de sus compañeros. Es una
-    decisión deliberada y no un descuido: el ranking ya se comparte hoy en el reporte diario del
-    equipo, y la mitad del valor de la pantalla es saber contra qué se está comparando uno.
+    Es la única pantalla del tablero que muestra los números de OTRAS personas con nombre y
+    apellido; todo lo demás está acotado a quien pregunta. Un closer y un setter ven sus propios
+    datos, y nada más — decisión del usuario, 24/sep/2026, que revierte la anterior (se les
+    mostraba el ranking completo con el argumento de que ya se comparte en el reporte diario).
+
+    El 403 es lo que la hace cumplir: la pestaña escondida en el frontend no alcanza, porque el
+    endpoint se puede pedir igual. Mismo criterio que `alcance_de`, que decide el alcance en un
+    solo lugar para que ninguna vista pueda olvidarse de filtrar.
     """
+    if not _solo_direccion():
+        return jsonify({'message': 'Forbidden'}), 403
     rol, miembro_id, _ = _alcance()
     start, end, prev_start, prev_end = _rangos()
     datos = analitica.comparativas(rol, start, end, prev_start, prev_end)

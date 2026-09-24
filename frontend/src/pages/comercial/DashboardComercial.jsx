@@ -54,8 +54,12 @@ const SALIDA = {
 };
 
 const SECCIONES = [
+    // `soloDireccion` en una tab: igual que en una sección, pero por pestaña. Comparativas es la
+    // única vista que muestra los números de OTRAS personas con nombre y apellido, así que un
+    // closer o un setter no la ve — su tablero es el suyo y nada más.
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
-        { key: 'comparativas', label: 'Comparativas' }, { key: 'variabilidad', label: 'Variabilidad' }] },
+        { key: 'comparativas', label: 'Comparativas', soloDireccion: true },
+        { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
     { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
     { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], pronto: true },
@@ -159,6 +163,15 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, [seccion, rol, contexto]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
+
+    /**
+     * Las pestañas que esta persona puede ver. Se filtra acá y no al pintarlas porque el efecto
+     * que elige la pestaña activa tiene que mirar la MISMA lista: si no, para un closer el
+     * `tab` podría quedar en una pestaña que no está en pantalla y la sección se vería vacía.
+     */
+    const tabsVisibles = useMemo(
+        () => seccionActual.tabs.filter(t => !t.soloDireccion || contexto?.puede_elegir_equipo),
+        [seccionActual, contexto]);
     const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
 
     /**
@@ -181,14 +194,14 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     // Al cambiar de sección o de rol, la tab vuelve a la primera válida.
     useEffect(() => {
-        const primera = seccionActual.tabs[0]?.key;
-        if (primera && !seccionActual.tabs.some(t => t.key === tab)) setTab(primera);
-    }, [seccionActual, tab]);
+        const primera = tabsVisibles[0]?.key;
+        if (primera && !tabsVisibles.some(t => t.key === tab)) setTab(primera);
+    }, [tabsVisibles, tab]);
 
     const cargarAnalizar = useCallback(() => {
         if (!rol) return;
         getResumen(filtros).then(setResumen).catch(() => toast.error('No se pudieron cargar los KPIs'));
-        if (tab === 'comparativas') {
+        if (tab === 'comparativas' && contexto?.puede_elegir_equipo) {
             getComparativas(filtros).then(setComparativas)
                 .catch(() => toast.error('No se pudieron cargar las comparativas'));
         }
@@ -199,7 +212,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             getVariabilidad(filtros).then(setVariabilidad)
                 .catch(() => toast.error('No se pudieron cargar las series por dia'));
         }
-    }, [filtros, rol, tab]);
+    }, [filtros, rol, tab, contexto]);
 
     const cargarTabla = useCallback(() => {
         if (!rol || !tablaActual) return;
@@ -340,8 +353,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 )}
 
                 <div className="barra">
-                    {seccionActual.tabs.length > 0 && (
-                        <Segmented opciones={seccionActual.tabs} valor={tab} onChange={setTab}
+                    {tabsVisibles.length > 0 && (
+                        <Segmented opciones={tabsVisibles} valor={tab} onChange={setTab}
                             ariaLabel={`Vistas de ${seccionActual.label}`} />
                     )}
 
@@ -381,7 +394,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irA} />
                     )}
-                    {seccion === 'analizar' && tab === 'comparativas' && (
+                    {seccion === 'analizar' && tab === 'comparativas' && contexto.puede_elegir_equipo && (
                         <Comparativas datos={comparativas} irAPersona={irAPersona} />
                     )}
                     {seccion === 'analizar' && tab === 'variabilidad' && (
