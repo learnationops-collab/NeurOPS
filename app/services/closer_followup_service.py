@@ -3,6 +3,7 @@ import os
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
+from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
 
 logger = logging.getLogger(__name__)
@@ -602,6 +603,11 @@ class CloserFollowUpService:
             'programa_code': CloserFollowUpService._client_program_code(cid),
             'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
             'proxima_cuota': proxima_cuota,
+            # En qué momento del cobro está: el modal del cliente abre el paso correspondiente
+            # y la lista pinta el chip con el mismo texto, sin volver a deducirlo cada una por
+            # su cuenta (que es como terminaron desalineados el chip de la lista y la pantalla
+            # que se abría al tocarlo).
+            'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt),
             'pagos': pagos,
             'desglose_pagos': desglose
         }
@@ -759,7 +765,8 @@ class CloserFollowUpService:
                 'deuda': deuda_val,
                 'programa_code': programa_code,
                 'programa_nombre': PROGRAM_CODE_NAMES.get(programa_code),
-                'proxima_cuota': proxima_cuota
+                'proxima_cuota': proxima_cuota,
+                'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt)
             }
 
         appts = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
