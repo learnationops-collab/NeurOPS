@@ -25,6 +25,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import CommentsSection from '../shared/CommentsSection';
+import EstadoCobroCliente from '../cobro/EstadoCobroCliente';
 
 const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'closer' }) => {
     const [status, setStatus] = useState('');
@@ -499,6 +500,16 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                                         <span>{clientData.instagram || 'Sin instagram'}</span>
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            {/* En qué terminó este lead. Para el setter es el
+                                                cierre del círculo de su trabajo —agendó, y de
+                                                acá sale si compró y cómo va pagando— y no lo
+                                                tenía en ningún lado. Solo lectura: cobrar es
+                                                del closer. */}
+                                            <div className="bg-main border border-base rounded-3xl p-6 space-y-3">
+                                                <label className="text-[9px] font-black text-muted tracking-widest">ESTADO DEL CLIENTE</label>
+                                                <EstadoCobroCliente clientId={clientData.id} compacto />
                                             </div>
 
                                             <div className="space-y-3">
