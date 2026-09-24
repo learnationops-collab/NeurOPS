@@ -866,18 +866,27 @@ const PanelSenas = ({ senas, irA }) => {
 
 /**
  * El embudo se arma acá y se dibuja en `Embudo`: `ayuda` es el tooltip de la fila y `ir` el
- * drill-down, que solo existe donde Revisar tiene de verdad ese corte. "Confirmadas",
- * "Asistieron" y "Presentaciones" no lo tienen —no hay una faceta que los aísle— y antes se
- * mandaba igual un filtro que no filtraba nada.
+ * drill-down. Los tres pasos del medio se cortan con las facetas de sí/no de Revisar, que
+ * repiten el criterio con el que el backend cuenta cada paso (ver `fueConfirmada`, `asistio` y
+ * `presento` en Revisar.jsx): no hay ninguna columna que los diga, son condiciones sobre la fila.
  */
 const EMBUDO_CLOSER = {
     Agendas: {
         ayuda: 'Llamadas agendadas en el período, sin importar la fuente.',
         ir: ['agendas', {}],
     },
-    Confirmadas: { ayuda: 'Confirmaron asistencia antes de la llamada.' },
-    Asistieron: { ayuda: 'La llamada ocurrió y el lead estaba del otro lado.' },
-    Presentaciones: { ayuda: 'Llamadas donde además se llegó a presentar la oferta.' },
+    Confirmadas: {
+        ayuda: 'Confirmaron asistencia antes de la llamada.',
+        ir: ['agendas', { confirmada: 'Sí' }],
+    },
+    Asistieron: {
+        ayuda: 'La llamada ocurrió y el lead estaba del otro lado.',
+        ir: ['agendas', { asistio: 'Sí' }],
+    },
+    Presentaciones: {
+        ayuda: 'Llamadas donde además se llegó a presentar la oferta.',
+        ir: ['agendas', { presento: 'Sí' }],
+    },
     Ventas: {
         ayuda: 'Cierres del período. Cuenta agendas y no cobros: dos cuotas del mismo lead salen '
             + 'de una sola llamada.',
@@ -890,8 +899,14 @@ const EMBUDO_SETTER = {
         ayuda: 'Leads nuevos que entraron al inbox en el período. Es el denominador de todo lo demás.',
         ir: ['leads', {}],
     },
-    Respondieron: { ayuda: 'Contestaron al menos un mensaje.' },
-    Cualificados: { ayuda: 'Cumplen el perfil del programa. Ojo: se mide sobre los que respondieron.' },
+    Respondieron: {
+        ayuda: 'Contestaron al menos un mensaje.',
+        ir: ['leads', { respondio: 'Sí' }],
+    },
+    Cualificados: {
+        ayuda: 'Cumplen el perfil del programa. Ojo: se mide sobre los que respondieron.',
+        ir: ['leads', { cualificado: 'Sí' }],
+    },
     Agendaron: {
         ayuda: 'Reservaron horario en el calendario de un closer.',
         // Los LEADS que agendaron, no la tabla de agendas generadas: el paso cuenta leads del

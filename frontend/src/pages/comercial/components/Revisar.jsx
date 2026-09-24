@@ -45,6 +45,29 @@ export const estadoDeAgenda = (fila) => {
     return fila.retraso_dias > 0 ? 'Sin reporte' : 'Aún no ocurrió';
 };
 
+/**
+ * Las facetas de sí/no de los pasos del embudo.
+ *
+ * Los cinco pasos intermedios —Confirmadas, Asistieron, Presentaciones del embudo de closers, y
+ * Respondieron y Cualificados del de setters— no eran clickeables porque ninguna faceta los
+ * aislaba: el corte no es un valor de una columna sino una condición sobre la fila. Cada una
+ * repite EXACTAMENTE el criterio con el que el backend cuenta ese paso, así que el clic abre
+ * tantas filas como dice el número.
+ */
+const SI = 'Sí';
+const NO = 'No';
+const siNo = (condicion) => (fila) => (condicion(fila) ? SI : NO);
+
+// Una llamada a la que el lead asistió estaba confirmada, por definición: el mismo criterio de
+// `bloque_closers`, que existe porque el embudo es una cadena de subconjuntos.
+export const fueConfirmada = siNo((f) => f.pre_call?.key === 'confirmada' || f.asistio);
+export const asistio = siNo((f) => f.asistio);
+// Presentar requiere haber asistido: sin eso el embudo mostraría más presentaciones que
+// asistencias, que es imposible.
+export const presento = siNo((f) => f.asistio && f.presento);
+export const respondio = siNo((f) => f.respondio);
+export const cualificado = siNo((f) => f.cualificado);
+
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cuatro.
 const TABLAS = {
     agendas: {
@@ -66,6 +89,9 @@ const TABLAS = {
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
+            { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
+            { key: 'asistio', label: 'Asistió', de: asistio },
+            { key: 'presento', label: 'Presentó', de: presento },
         ],
         chips: [
             { key: 'todas', label: 'Todas', filtro: () => true },
@@ -113,6 +139,8 @@ const TABLAS = {
         facetas: [
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
             { key: 'setter', label: 'Setter', de: (f) => f.setter },
+            { key: 'respondio', label: 'Respondió', de: respondio },
+            { key: 'cualificado', label: 'Cualificado', de: cualificado },
         ],
         chips: [
             { key: 'todos', label: 'Todos', filtro: () => true },
@@ -139,6 +167,9 @@ const TABLAS = {
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
+            { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
+            { key: 'asistio', label: 'Asistió', de: asistio },
+            { key: 'presento', label: 'Presentó', de: presento },
         ],
         chips: [
             { key: 'todas', label: 'Todas', filtro: () => true },
