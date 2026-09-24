@@ -18,7 +18,8 @@ import {
     Layers,
     DollarSign,
     UserCheck,
-    GraduationCap
+    GraduationCap,
+    History
 } from 'lucide-react';
 
 /**
@@ -63,7 +64,12 @@ const useDockNavigation = () => {
                 { id: 'step-2', icon: CalendarDays, label: '2. Mis Agendas', path: '/setter/agendas' },
                 { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
                 // Idem para el setter: sus leads entrantes y las agendas que genero.
-                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/mis-datos' }
+                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/mis-datos' },
+                // El historial de sus reportes diarios (y las estadisticas conversacionales).
+                // La ruta existia desde antes pero NO estaba en el dock: solo se llegaba
+                // escribiendo la URL, y desde que se borro el tablero viejo del setter es el
+                // unico lugar donde puede ver, editar o borrar un reporte ya enviado.
+                { id: 'estadisticas', icon: History, label: 'Mis Reportes', path: '/setter/statistics' }
             ];
         } else if (isTriage) {
             return [
