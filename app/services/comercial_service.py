@@ -480,6 +480,42 @@ class ComercialService:
     # --- Clientes (cartera) -------------------------------------------------------------------
 
     @staticmethod
+    def _atribucion_de_ventas(closer_id=None):
+        """(de_quien, pedido) para atribuir cada venta a un closer.
+
+        `de_quien` mapea email del vendedor -> nombre del closer, para no volver a consultar por
+        cada fila; un email que no sea de ningún closer del sistema queda fuera, porque sin dueño
+        la fila no se puede filtrar ni sumar a nadie.
+
+        `pedido` es None cuando NO se acota a nadie, y un conjunto —posiblemente vacío— cuando sí.
+        La distinción importa: un closer sin ninguna venta reconocible se acota a un conjunto
+        vacío, no a "todas". Escrito como `pedido or de_quien`, un conjunto vacío es falsy y caía
+        en la cartera completa del equipo, así que un closer recién entrado veía los clientes de
+        todos con nombre y deuda.
+
+        Vive aparte porque la tabla Clientes y el detalle de un cliente tienen que atribuir con
+        exactamente la misma regla: si divergen, un closer podría abrir la ficha de un cliente
+        que su propia tabla no le muestra."""
+        from app.models.user import ROLE_CLOSER
+        from app.services.closer_service import CloserService
+
+        de_quien = {}
+        for usuario in User.query.filter(User.role == ROLE_CLOSER).all():
+            for identificador in CloserService._resolve_sale_identifiers(usuario):
+                de_quien[identificador.lower()] = usuario.username
+
+        pedido = None
+        if closer_id:
+            usuario = User.query.get(closer_id)
+            pedido = {e.lower() for e in CloserService._resolve_sale_identifiers(usuario)} if usuario else set()
+        return de_quien, pedido
+
+    @staticmethod
+    def _vendedores_permitidos(de_quien, pedido):
+        """Contra qué conjunto de emails se decide si una venta es "de quien pregunta"."""
+        return de_quien if pedido is None else pedido
+
+    @staticmethod
     def clientes(closer_id=None):
         """Filas de la tabla "Clientes": todo cliente que el equipo ya vendió, con su programa,
         lo pagado, lo que debe y su próxima cuota.
@@ -497,31 +533,17 @@ class ComercialService:
         vez de rearmar el cálculo: la deuda, la próxima cuota y el desglose de pagos de un cliente
         tienen que dar lo mismo en las dos pantallas.
         """
-        from app.models.user import ROLE_CLOSER
         from app.services.closer_followup_service import CloserFollowUpService
-        from app.services.closer_service import CloserService
 
-        # email del vendedor -> nombre del closer, para poder atribuir cada venta sin volver a
-        # consultar por cada fila. Un email que no sea de ningún closer del sistema queda fuera:
-        # sin dñueno la fila no se puede filtrar ni sumar a nadie.
-        de_quien = {}
-        for usuario in User.query.filter(User.role == ROLE_CLOSER).all():
-            for identificador in CloserService._resolve_sale_identifiers(usuario):
-                de_quien[identificador.lower()] = usuario.username
-
-        pedido = None
-        if closer_id:
-            usuario = User.query.get(closer_id)
-            if not usuario:
-                return []
-            pedido = {e.lower() for e in CloserService._resolve_sale_identifiers(usuario)}
+        de_quien, pedido = ComercialService._atribucion_de_ventas(closer_id)
+        permitidos = ComercialService._vendedores_permitidos(de_quien, pedido)
 
         ventas_por_cliente = CloserFollowUpService._resolve_sales_and_clients()
 
         filas = []
         for cid, ventas in ventas_por_cliente.items():
             propias = [v for v in ventas
-                       if (v.email_vendedor or '').strip().lower() in (pedido or de_quien)]
+                       if (v.email_vendedor or '').strip().lower() in permitidos]
             if not propias:
                 continue
             cliente = Client.query.get(cid)
