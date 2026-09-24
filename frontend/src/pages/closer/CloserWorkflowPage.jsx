@@ -3627,8 +3627,14 @@ const CloserWorkflowPage = () => {
                         y cuando la fila envuelve tienen que bajar los dos o ninguno. Sueltos, el
                         botón de cerrar sesión terminaba solo en el renglón de abajo. */}
                     <div className="flex items-center gap-2 shrink-0 ml-auto">
-                        <div className="who-v6">
-                            <span className="lbl-v6">{user?.name || user?.username || 'Closer'}</span>
+                        {/* Solo el nombre de pila: "Gabriel Hernandez" costaba 209px de header
+                            —mayúscula con .16em de tracking— y era el hijo fijo más caro de la
+                            fila. El nombre completo queda en el tooltip y el avatar sigue
+                            llevando sus dos iniciales. */}
+                        <div className="who-v6" title={user?.name || user?.username || 'Closer'}>
+                            <span className="lbl-v6">
+                                {(user?.name || user?.username || 'Closer').trim().split(/\s+/)[0]}
+                            </span>
                             <div className="av-v6">
                                 {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
                             </div>

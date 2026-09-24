@@ -711,7 +711,14 @@ header.top-v6 {
   margin-top: 1px;
 }
 .search-v6 {
-  flex: 1 1 220px;
+  /* `flex-basis: 0` y no 220px: con `flex-wrap`, el navegador decide DONDE CORTAR la linea
+     usando el tamano BASE de cada item, no el que tendria despues de encogerse. Con una base de
+     220px el buscador forzaba el salto de linea antes de intentar achicarse, y el grupo de
+     identidad + cerrar sesion se iba abajo apenas aparecia el boton de "Quiero procrastinar"
+     (que llega con los contadores, despues de la carga: de ahi el "al recargar se ve bien y
+     despues se descoloca" que reporto el usuario). Con base 0 el buscador solo ocupa lo que
+     sobra, y la fila corta unicamente si los anchos fijos no entran. */
+  flex: 1 1 0;
   min-width: 0;
   max-width: 560px;
   margin: 0 auto;
