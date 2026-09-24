@@ -91,50 +91,6 @@ class CloserService:
         return query.paginate(page=page, per_page=per_page, error_out=False)
 
     @staticmethod
-    def get_customers_pagination(closer_id, page=1, per_page=50, filters=None):
-        filters = filters or {}
-        search = filters.get('search')
-        program_filter = filters.get('program')
-        sort_by = filters.get('sort_by', 'newest')
-
-        # Solo clientes que tienen inscripciones (enrollments)
-        query = Client.query.join(Enrollment)
-        
-        from flask_login import current_user
-        if current_user.role != 'admin':
-            query = query.filter(Enrollment.closer_id == closer_id)
-        
-        if program_filter:
-            if isinstance(program_filter, str):
-                programs = program_filter.split(',')
-                query = query.filter(Enrollment.program_id.in_(programs))
-            else:
-                query = query.filter(Enrollment.program_id == program_filter)
-
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(or_(
-                Client.full_name.ilike(search_term), 
-                Client.email.ilike(search_term),
-                Client.phone.ilike(search_term),
-                Client.instagram.ilike(search_term)
-            ))
-
-        # Agrupar por cliente para evitar duplicados si tienen múltiples enrollments
-        query = query.group_by(Client.id)
-
-        if sort_by == 'oldest':
-            query = query.order_by(Client.created_at.asc())
-        elif sort_by == 'a-z':
-            query = query.order_by(Client.full_name.asc())
-        elif sort_by == 'z-a':
-            query = query.order_by(Client.full_name.desc())
-        else:
-            query = query.order_by(Client.created_at.desc())
-
-        return query.paginate(page=page, per_page=per_page, error_out=False)
-
-    @staticmethod
     def get_leads_kpis(closer_id, filters=None):
         filters = filters or {}
         search = filters.get('search')

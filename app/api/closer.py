@@ -340,52 +340,6 @@ def get_appointment_by_instagram():
     else:
         return jsonify({"error": "No se encontró ninguna agenda para este usuario de Instagram"}), 404
 
-@bp.route('/customers', methods=['GET'])
-@login_required
-def get_customers():
-    if current_user.role not in ['closer', 'admin', 'operator']:
-        return jsonify({"message": "Forbidden"}), 403
-        
-    filters = {
-        'search': request.args.get('search', ''),
-        'program': request.args.get('program'),
-        'sort_by': request.args.get('sort_by', 'newest')
-    }
-    page = request.args.get('page', 1, type=int)
-    
-    pagination = CloserService.get_customers_pagination(current_user.id, page=page, filters=filters)
-    
-    customers = []
-    for c in pagination.items:
-        # Resumen de pagos/inscripciones
-        enrollments = []
-        for e in c.enrollments:
-            if current_user.role != 'admin' and e.closer_id != current_user.id:
-                continue
-            enrollments.append({
-                "id": e.id,
-                "program_name": e.program.name if e.program else "N/A",
-                "total_paid": e.total_paid,
-                "program_price": e.program.price if e.program else 0,
-                "status": "completed" if e.total_paid >= (e.program.price if e.program else 0) else "pending"
-            })
-            
-        customers.append({
-            "id": c.id,
-            "full_name": c.full_name,
-            "email": c.email,
-            "phone": c.phone,
-            "instagram": c.instagram,
-            "created_at": c.created_at.isoformat(),
-            "enrollments": enrollments
-        })
-        
-    return jsonify({
-        "data": customers,
-        "total": pagination.total,
-        "pages": pagination.pages
-    }), 200
-
 @bp.route('/customers/<int:id>', methods=['PATCH'])
 @login_required
 def update_customer(id):
