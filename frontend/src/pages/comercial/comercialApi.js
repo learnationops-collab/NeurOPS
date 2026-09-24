@@ -43,6 +43,10 @@ export const getTabla = (filtros, tabla, basis) =>
 export const corregirAgenda = (id, campo, valor) =>
     api.patch(`/comercial/agendas/${id}`, { campo, valor }).then(r => r.data);
 
+/** Cancela una agenda por ser una copia de otra. Devuelve el id de la que se conserva. */
+export const marcarAgendaDuplicada = (id) =>
+    api.post(`/comercial/agendas/${id}/duplicada`).then(r => r.data);
+
 export const getReporteHoy = (fecha) =>
     api.get('/comercial/reporte/hoy', { params: fecha ? { fecha } : {} }).then(r => r.data);
 

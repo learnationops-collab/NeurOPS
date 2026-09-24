@@ -240,6 +240,38 @@ def corregir_agenda(agenda_id):
     return jsonify({'id': appt.id, 'campo': campo, 'valor': valor, 'anterior': anterior}), 200
 
 
+@bp.route('/agendas/<int:agenda_id>/duplicada', methods=['POST'])
+def marcar_duplicada_agenda(agenda_id):
+    """Cancela una agenda por ser una copia de otra, desde el modal del lead.
+
+    La accion existia solo en la pestana "Agendas" de Mi cartera del closer, que el dashboard
+    comercial reemplazo; se movio aca para no perderla. Las dos guardas que la hacen segura
+    (solo la copia todavia SIN resultado, y solo si hay otra cita del mismo cliente a menos de
+    seis horas) y el rastro de auditoria viven en el servicio, compartidos con la ruta del mazo.
+
+    Usa `_puede_corregir`, el mismo permiso que corregir un estado: la direccion sobre cualquier
+    agenda y el closer solo sobre las suyas. La ruta del mazo no servia para esto — pide rol
+    closer o admin, asi que al director comercial le respondia 403.
+    """
+    from app.services.closer_agendas_service import marcar_duplicada
+
+    appt = db.session.get(Appointment, agenda_id)
+    if not appt:
+        return jsonify({'message': 'No existe esa agenda'}), 404
+    if not _puede_corregir(appt):
+        return jsonify({'message': 'Forbidden'}), 403
+
+    ok, mensaje, conservada = marcar_duplicada(appt)
+    if not ok:
+        return jsonify({'message': mensaje}), 400
+
+    BookingService.log_lead_event(
+        appt.id, current_user.id, 'status_changed',
+        '{} marco la agenda como duplicada desde el dashboard comercial: se conserva la #{}.'.format(
+            current_user.username, conservada))
+    return jsonify({'id': appt.id, 'conservada': conservada, 'message': mensaje}), 200
+
+
 # --- Reportar: el reporte diario de la direccion comercial ------------------------------------
 # Solo la direccion. Para un closer o un setter la seccion ni siquiera aparece en el dock, pero
 # el permiso se comprueba igual acá: esconder el boton no es proteger la ruta.

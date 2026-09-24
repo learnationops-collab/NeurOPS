@@ -10,10 +10,10 @@ import { Cargando, Humo, PillMenu, Segmented } from './components/Shared';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
-import Revisar, { TABLAS_POR_ROL } from './components/Revisar';
+import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
 import Reportar from './components/Reportar';
-import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, getVariabilidad } from './comercialApi';
+import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 
 /**
  * Dashboard comercial.
@@ -237,6 +237,27 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
      * Corrige un estado y vuelve a pedir TODO lo que depende de él. Es el requisito del diseño:
      * la tabla, los chips rápidos, los totales y los KPIs se recalculan sin recargar la página.
      */
+    /**
+     * Agendas que parecen una copia de otra, sobre las filas cargadas. Se calcula acá y no en
+     * Revisar porque el modal del lead — que es donde vive la acción — lo monta este componente.
+     */
+    const duplicadas = useMemo(() => duplicadasDe(datosVigentes?.filas), [datosVigentes]);
+
+    /** Cancela una agenda duplicada y vuelve a pedir la tabla y los KPIs, como una corrección. */
+    const marcarDuplicada = useCallback(async (fila) => {
+        try {
+            await marcarAgendaDuplicada(fila.id);
+            const datos = await getTabla(filtros, tablaActual, basis);
+            setDatosTabla(datos);
+            setFilaAbierta(null);
+            toast.success('Agenda marcada como duplicada y cancelada');
+            getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudo marcar la agenda como duplicada');
+            throw error;
+        }
+    }, [filtros, tablaActual, basis]);
+
     const corregir = useCallback(async (fila, campo, valor) => {
         try {
             await corregirAgenda(fila.id, campo, valor);
@@ -382,7 +403,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                 <LeadModal fila={filaAbierta} estados={contexto.estados}
                     puedeCorregir={puedeCorregirFila(filaAbierta)}
-                    onCorregir={corregir} onCerrar={() => setFilaAbierta(null)} />
+                    duplicadaDe={filaAbierta ? duplicadas[filaAbierta.id] : null}
+                    onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
+                    onCerrar={() => setFilaAbierta(null)} />
 
                 {!embebido && (
                 <nav className="dock caja" aria-label="Secciones del dashboard comercial">

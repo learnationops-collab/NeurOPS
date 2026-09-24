@@ -68,6 +68,40 @@ export const presento = siNo((f) => f.asistio && f.presento);
 export const respondio = siNo((f) => f.respondio);
 export const cualificado = siNo((f) => f.cualificado);
 
+/**
+ * Las agendas que parecen una copia de otra: {id de la copia -> la hermana que se conserva}.
+ *
+ * Una misma cita cargada dos veces (visto en producción: Nerina con la lead "Mia Sky",
+ * 10/sep/2026, una sincronización procesada dos veces). Una queda con la llamada real y la otra
+ * huérfana sin reportar, inflando el total de agendas.
+ *
+ * Dos condiciones, las MISMAS que valida el backend en `marcar_duplicada` — si divergen, la
+ * pantalla ofrece una acción que el backend va a rechazar:
+ *
+ *   · la copia todavía no tiene resultado (`post_call` pendiente: es el equivalente exacto de
+ *     `ESTADOS_SIN_RESULTADO`, porque todos esos estados derivan a "pendiente" acá);
+ *   · hay otra cita del mismo cliente a menos de seis horas.
+ *
+ * Se calcula sobre las filas del período cargado, así que una hermana fuera del período no se
+ * detecta — la misma limitación que tenía la pestaña del mazo, y por el mismo motivo.
+ */
+const VENTANA_DUPLICADO_MS = 6 * 60 * 60 * 1000;
+
+export const duplicadasDe = (filas) => {
+    const mapa = {};
+    (filas || []).forEach(a => {
+        if (a.tipo !== 'agenda' || !a.client_id || a.post_call?.key !== 'pendiente' || !a.fecha) return;
+        const tA = new Date(a.fecha).getTime();
+        if (!tA) return;
+        const hermana = filas.find(b => (
+            b.id !== a.id && b.client_id === a.client_id && b.fecha
+            && Math.abs(new Date(b.fecha).getTime() - tA) <= VENTANA_DUPLICADO_MS
+        ));
+        if (hermana) mapa[a.id] = hermana;
+    });
+    return mapa;
+};
+
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cuatro.
 const TABLAS = {
     agendas: {

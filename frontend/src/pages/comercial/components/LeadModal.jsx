@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Check, CheckCircle2, Clock, Inbox, Mail, Pencil, Phone, Target, X } from 'lucide-react';
+import { Calendar, Check, CheckCircle2, Clock, CopyX, Inbox, Mail, Pencil, Phone, Target, X } from 'lucide-react';
 import { ChipTono } from './Revisar';
 import { fmt } from './Shared';
 
@@ -50,9 +50,10 @@ const Meta = ({ label, valor, color }) => (
     </div>
 );
 
-const LeadModal = ({ fila, estados, puedeCorregir, onCorregir, onCerrar }) => {
+const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMarcarDuplicada, onCerrar }) => {
     const [guardado, setGuardado] = useState(null);
     const [guardando, setGuardando] = useState(null);
+    const [resolviendo, setResolviendo] = useState(false);
 
     // El aviso de "Guardado" es de ESTA fila: al abrir otra no tiene por qué seguir ahí.
     useEffect(() => { setGuardado(null); }, [fila?.id]);
@@ -83,6 +84,23 @@ const LeadModal = ({ fila, estados, puedeCorregir, onCorregir, onCerrar }) => {
             setGuardado('Guardado · se actualizó en la tabla y en los totales');
         } finally {
             setGuardando(null);
+        }
+    };
+
+    const marcarDuplicada = async () => {
+        if (resolviendo) return;
+        // Cancela una agenda: se confirma antes, con la hora de la que se conserva, para que
+        // quede claro cuál de las dos sobrevive.
+        const cuando = duplicadaDe ? `${fmt.fecha(duplicadaDe.fecha)} ${fmt.hora(duplicadaDe.fecha)}` : '';
+        if (!window.confirm(
+            `¿Marcar esta agenda de ${fila.cliente} como duplicada y cancelarla?\n\n`
+            + `Se conserva la otra cita de este cliente${cuando ? ` (${cuando})` : ''}.`)) return;
+        setResolviendo(true);
+        try {
+            await onMarcarDuplicada(fila);
+            setGuardado('Marcada como duplicada y cancelada');
+        } finally {
+            setResolviendo(false);
         }
     };
 
@@ -218,6 +236,30 @@ const LeadModal = ({ fila, estados, puedeCorregir, onCorregir, onCerrar }) => {
                                         venta cruzada con este contacto, o un seguimiento abierto. Se
                                         corrige donde se genera.
                                     </p>
+                                )}
+
+                                {/* Solo cuando ESTA fila parece una copia de otra: la acción no se
+                                    ofrece sobre una agenda sin reportar suelta — esas se resuelven
+                                    reportándolas, no cancelándolas. El backend revalida las dos
+                                    condiciones, así que un falso positivo de acá no puede cancelar
+                                    una llamada que sí ocurrió. */}
+                                {duplicadaDe && (
+                                    <div style={{ display: 'grid', gap: 'var(--s2)',
+                                        borderTop: '1px solid var(--border-subtle)',
+                                        paddingTop: 'var(--s3)' }}>
+                                        <span className="t-cap" style={{ color: 'var(--warning)' }}>
+                                            <CopyX size={12} style={{ display: 'inline', marginRight: 5,
+                                                verticalAlign: '-2px' }} />
+                                            Posible duplicado de la cita de {fmt.fecha(duplicadaDe.fecha)}
+                                            {' '}{fmt.hora(duplicadaDe.fecha)} — esta no tiene resultado.
+                                        </span>
+                                        <button type="button" className="btn btn--linea btn--sm"
+                                            style={{ justifySelf: 'start' }}
+                                            disabled={resolviendo} onClick={marcarDuplicada}>
+                                            <CopyX size={13} />
+                                            {resolviendo ? 'Cancelando…' : 'Marcar como duplicada'}
+                                        </button>
+                                    </div>
                                 )}
                             </>
                         )}
