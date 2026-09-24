@@ -9,10 +9,11 @@ import '../../components/learnation-ds/learnation-ds.css';
 import { Cargando, Humo, PillMenu, Segmented } from './components/Shared';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
+import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL } from './components/Revisar';
 import LeadModal from './components/LeadModal';
 import Reportar from './components/Reportar';
-import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla } from './comercialApi';
+import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, getVariabilidad } from './comercialApi';
 
 /**
  * Dashboard comercial.
@@ -53,7 +54,8 @@ const SALIDA = {
 };
 
 const SECCIONES = [
-    { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' }, { key: 'comparativas', label: 'Comparativas' }] },
+    { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
+        { key: 'comparativas', label: 'Comparativas' }, { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
     { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
     { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], pronto: true },
@@ -109,6 +111,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const [basis, setBasis] = useState('meet');
     const [resumen, setResumen] = useState(null);
     const [comparativas, setComparativas] = useState(null);
+    const [variabilidad, setVariabilidad] = useState(null);
     const [datosTabla, setDatosTabla] = useState(null);
     const [cargandoTabla, setCargandoTabla] = useState(false);
     const [filaAbierta, setFilaAbierta] = useState(null);
@@ -188,6 +191,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         if (tab === 'comparativas') {
             getComparativas(filtros).then(setComparativas)
                 .catch(() => toast.error('No se pudieron cargar las comparativas'));
+        }
+        // Las series por dia se piden solo al abrir su pestania: son seis y no hacen falta para
+        // ver el dashboard. Se limpian antes de pedirlas para no mostrar las del rol anterior.
+        if (tab === 'variabilidad') {
+            setVariabilidad(null);
+            getVariabilidad(filtros).then(setVariabilidad)
+                .catch(() => toast.error('No se pudieron cargar las series por dia'));
         }
     }, [filtros, rol, tab]);
 
@@ -352,6 +362,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                     {seccion === 'analizar' && tab === 'comparativas' && (
                         <Comparativas datos={comparativas} irAPersona={irAPersona} />
+                    )}
+                    {seccion === 'analizar' && tab === 'variabilidad' && (
+                        <Variabilidad datos={variabilidad} />
                     )}
                     {seccion === 'revisar' && (
                         <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}

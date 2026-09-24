@@ -31,6 +31,10 @@ export const getResumen = (filtros) =>
 export const getComparativas = (filtros) =>
     api.get('/comercial/comparativas', { params: filtrosQuery(filtros) }).then(r => r.data);
 
+/** Series por día de Variabilidad. Endpoint aparte: se pide solo al abrir la pestaña. */
+export const getVariabilidad = (filtros) =>
+    api.get('/comercial/variabilidad', { params: filtrosQuery(filtros) }).then(r => r.data);
+
 export const getTabla = (filtros, tabla, basis) =>
     api.get('/comercial/tabla', { params: { ...filtrosQuery(filtros), tabla, basis } }).then(r => r.data);
 
