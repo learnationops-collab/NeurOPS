@@ -4220,7 +4220,15 @@ const CloserWorkflowPage = () => {
                        closer POR EL BACKEND (ver `alcance_de` en app/api/comercial.py): sus
                        agendas y sus ventas, con la tira de totales de lo filtrado arriba. Pedido
                        del usuario, que ademas hizo sacar los 4 KPIs que tenia la cartera vieja. */
-                    <DashboardComercial embebido seccionFija="revisar" />
+                    /* `onAbrirCliente`: en la tabla Clientes, tocar una fila abre la gestión de
+                       cobro de ese cliente —el mismo modal que la cola de cobro, resuelto por su
+                       etapa real— en vez del modal de corrección de agendas, que sobre un cliente
+                       no sirve para nada. Se resuelve con `handleSelectSearchResult` porque es la
+                       misma pregunta que hace el buscador global: "¿en qué etapa está este
+                       cliente?". Así registrar el pago sigue saliendo por el wizard de venta de
+                       esta pantalla, sin duplicar el camino que alimenta cash collected. */
+                    <DashboardComercial embebido seccionFija="revisar"
+                        onAbrirCliente={(clientId) => handleSelectSearchResult({ id: clientId })} />
                 ) : (
                     /* Y "Ver mis datos" es la seccion Analizar de esa misma pantalla, sin el
                        selector de persona (el backend no se lo ofrece a un closer). El drill-down

@@ -43,6 +43,13 @@ import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, get
  *
  * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
  * resuelve `onIrASeccion`, con el que el host cambia su propia pestaña.
+ *
+ * `onAbrirCliente` es la otra salida al host: en la tabla Clientes, una fila NO es una agenda que
+ * corregir sino un cliente al que hay que cobrarle, y el modal de corrección de esta pantalla no
+ * sirve para eso. Cuando el host sabe abrir la gestión del cliente (el mazo del closer, que tiene
+ * el cockpit de cobro y el wizard de venta), le pasa el `client_id` y esta pantalla no abre nada.
+ * Sin esa prop —la dirección comercial, que mira pero no cobra— se sigue abriendo el modal de
+ * siempre, que es además lo único que sus permisos le permiten hacer.
  */
 
 /** A dónde vuelve cada rol cuando sale del dashboard. */
@@ -98,7 +105,7 @@ const ProntoSection = ({ seccion }) => (
     </section>
 );
 
-const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null }) => {
+const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user } = useAuth();
@@ -120,6 +127,17 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const [cargandoTabla, setCargandoTabla] = useState(false);
     const [filaAbierta, setFilaAbierta] = useState(null);
     const [filtroInicial, setFiltroInicial] = useState(null);
+
+    // Una fila de la tabla Clientes no es una agenda que corregir: es alguien a quien hay que
+    // cobrarle. Si el host sabe abrir la gestión del cliente (ver el docstring de arriba), se la
+    // pasa; si no, cae en el modal de corrección de siempre.
+    const abrirFila = useCallback((fila) => {
+        if (fila?.tipo === 'cliente' && fila.client_id && onAbrirCliente) {
+            onAbrirCliente(fila.client_id, fila);
+            return;
+        }
+        setFilaAbierta(fila);
+    }, [onAbrirCliente]);
     const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
@@ -404,7 +422,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}
                             cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
-                            onAbrirFila={setFilaAbierta} />
+                            onAbrirFila={abrirFila} />
                     )}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
