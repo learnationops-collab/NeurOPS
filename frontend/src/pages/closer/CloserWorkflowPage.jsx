@@ -667,6 +667,7 @@ const CloserWorkflowPage = () => {
                     programa_nombre: stage.programa_nombre,
                     programa_code: stage.programa_code,
                     proxima_cuota: stage.proxima_cuota,
+                    etapa_cobro: stage.etapa_cobro,
                     fase: 'seg',
                     tipo: 'cerrada'
                 });

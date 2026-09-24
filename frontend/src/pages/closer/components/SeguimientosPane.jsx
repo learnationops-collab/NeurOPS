@@ -51,6 +51,15 @@ const TIME_BOX_STYLE = {
     'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
 };
 
+// Tono de la etapa de cobro que manda el backend (lead_cobro_service) → color del chip, con la
+// misma paleta que TIME_BOX_STYLE para que la urgencia se lea igual en toda la fila.
+const TONO_CHIP = {
+    error: { background: 'rgba(232,92,74,.16)', color: '#F5A99C' },
+    warning: { background: 'rgba(217,164,65,.16)', color: '#F3D08A' },
+    primary: { background: 'rgba(78,139,216,.16)', color: '#BFD3FF' },
+    success: { background: 'rgba(52,168,120,.16)', color: '#9AE6C0' },
+};
+
 // Resultado real de la llamada (`closer_result`) → chip de color, mismo idioma de colores que el
 // resto del mazo (ok=verde, w=ámbar, d=rojo, i=azul). Cubre las grafías reales que usa el sistema
 // (ver CloserWorkflowPage: 'Show up', 'No show', 'Cancelado'/'Cancelada', 'Reagendado'/
@@ -108,8 +117,14 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
     const potential = estimateEarning(item, tipo, earnings);
 
     let footer;
+    let footerStyle = { color: '#fff', background: 'rgba(255,255,255,.1)' };
     if (tipo === 'cerrada') {
-        if (pc) {
+        if (item.etapa_cobro) {
+            // Mismo texto que el encabezado del modal: el chip y la pantalla que se abre al
+            // tocarlo salen del mismo cálculo del backend, así no pueden decir cosas distintas.
+            footer = item.etapa_cobro.titulo;
+            footerStyle = TONO_CHIP[item.etapa_cobro.tono] || footerStyle;
+        } else if (pc) {
             footer = pc.sin_plan
                 ? `Debe ${money(pc.monto)} · sin plan de cuotas`
                 : `${pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} ${cuotaDateLabel(pc.fecha_vencimiento)} · ${money(pc.monto)}`;
@@ -149,7 +164,7 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
                     {item.owner_closer_name && (
                         <span className="chip-v6 w">De {item.owner_closer_name} (baja)</span>
                     )}
-                    <span className="chip-v6" style={{ color: '#fff', background: 'rgba(255,255,255,.1)' }}>{footer}</span>
+                    <span className="chip-v6" style={footerStyle}>{footer}</span>
                 </div>
             </div>
             <div
@@ -187,7 +202,10 @@ const buildLeadPayload = (item, tipo) => ({
     deuda: item.deuda,
     programa_nombre: item.programa_nombre,
     programa_code: item.programa_code,
-    proxima_cuota: item.proxima_cuota
+    proxima_cuota: item.proxima_cuota,
+    // Sin esto el modal no sabía en qué momento del cobro está el cliente y abría siempre el
+    // formulario de contacto, aunque la fila que acabás de tocar dijera "no tiene plan de cuotas".
+    etapa_cobro: item.etapa_cobro
 });
 
 // `refreshKey` sube desde CloserWorkflowPage cada vez que una acción toca el mazo (resolver un
