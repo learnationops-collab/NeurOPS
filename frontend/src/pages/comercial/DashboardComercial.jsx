@@ -269,8 +269,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const miembroNombre = miembroId
         ? contexto.miembros.find(m => String(m.id) === String(miembroId))?.nombre
         : null;
+    // La cartera no se acota al periodo (es un saldo a hoy, ver `ComercialService.clientes`), asi
+    // que su linea de alcance no puede decir "este mes": diria algo que no es.
     const alcance = [miembroNombre || (contexto.puede_elegir_equipo ? 'Todo el equipo' : contexto.yo.nombre),
-        contexto.periodos.find(p => p.key === period)?.label.toLowerCase()].filter(Boolean).join(' · ');
+        tablaActual === 'clientes'
+            ? 'toda la cartera'
+            : contexto.periodos.find(p => p.key === period)?.label.toLowerCase(),
+    ].filter(Boolean).join(' · ');
 
     const puedeCorregirFila = (fila) => {
         if (!fila || fila.tipo !== 'agenda') return false;

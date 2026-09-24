@@ -27,7 +27,8 @@ const recorridoDe = (fila) => {
         const hasta = fila.agendo ? 3 : fila.cualificado ? 2 : fila.respondio ? 1 : 0;
         return { hasta, fallo: null };
     }
-    if (fila.tipo === 'venta') return { hasta: 5, fallo: null };
+    // Una venta y un cliente de la cartera están, por definición, al final del recorrido.
+    if (fila.tipo === 'venta' || fila.tipo === 'cliente') return { hasta: 5, fallo: null };
     const post = fila.post_call?.key;
     if (post === 'venta') return { hasta: 5, fallo: null };
     if (post === 'no_show') return { hasta: 3, fallo: 4 };

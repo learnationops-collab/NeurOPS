@@ -148,6 +148,35 @@ const TABLAS = {
             { key: 'sin_respuesta', label: 'Sin respuesta', filtro: (f) => !f.respondio },
         ],
     },
+    clientes: {
+        label: 'Clientes',
+        ayuda: 'Cada cliente que el equipo ya vendió, con lo que pagó, lo que debe y su próxima '
+            + 'cuota. NO depende del período: la cartera es un saldo a hoy, no un flujo — acotarla '
+            + 'al mes dejaría afuera justamente a los que arrastran deuda de antes. La atribución '
+            + 'es por quién VENDIÓ, así que su deuda no es la misma cifra que el "por cobrar" del '
+            + 'panel Cash, que cuenta por quién tiene hoy la agenda del cliente — y que además '
+            + 'incluye saldos de clientes que nadie del equipo actual vendió.',
+        cols: [
+            { key: 'cliente', header: 'Cliente', width: '1.7fr' },
+            { key: 'programa', header: 'Programa', width: '1.2fr' },
+            { key: 'closer', header: 'Vendió', width: '0.8fr' },
+            { key: 'pagado', header: 'Pagado', width: '0.8fr' },
+            { key: 'deuda', header: 'Debe', width: '0.8fr' },
+            { key: 'cuota', header: 'Próxima cuota', width: '1.3fr' },
+            { key: 'ver', header: '', width: '0.4fr' },
+        ],
+        facetas: [
+            { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
+            { key: 'programa', label: 'Programa', de: (f) => f.programa },
+            { key: 'closer', label: 'Vendió', de: (f) => f.closer },
+        ],
+        chips: [
+            { key: 'todos', label: 'Todos', filtro: () => true },
+            { key: 'con_deuda', label: 'Con deuda', filtro: (f) => f.deuda > 0.01 },
+            { key: 'vencida', label: 'Cuota vencida', filtro: (f) => f.cuota_vencida },
+            { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 },
+        ],
+    },
     generadas: {
         label: 'Agendas generadas',
         ayuda: 'Las agendas que generó el equipo de setting, con el closer asignado y cómo '
@@ -180,15 +209,18 @@ const TABLAS = {
 };
 
 export const TABLAS_POR_ROL = {
-    closers: ['agendas', 'ventas'],
+    // "Clientes" es la cartera: a quién le vendió y cómo va con los pagos. Es la única de las
+    // cinco que NO se acota al período (ver `ComercialService.clientes`), y va tercera porque se
+    // consulta cuando hay que cobrar, no cuando se revisa el día.
+    closers: ['agendas', 'ventas', 'clientes'],
     setters: ['leads', 'generadas'],
 };
 
 /** Las dos tablas de agendas comparten totales, columna de post call y el selector de fecha. */
 const esTablaDeAgendas = (tabla) => tabla === 'agendas' || tabla === 'generadas';
 
-const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.closer, fila.setter, fila.fuente,
-    fila.programa].filter(Boolean).join(' ').toLowerCase();
+const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
+    fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
 
 /** Búsqueda + facetas. El filtro rápido se aplica aparte, para que los totales lo ignoren. */
 const aplicarFiltros = (filas, def, query, facetas, modo) => {
@@ -374,6 +406,37 @@ const Celda = ({ fila, col }) => {
             );
         case 'monto':
             return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+        case 'pagado':
+            return (
+                <span className="celda celda--num">
+                    {fmt.money(fila.pagado)}
+                    <span className="celda-sub num">{fmt.plural(fila.cobros, 'cobro', 'cobros')}</span>
+                </span>
+            );
+        case 'deuda':
+            // Cero no se escribe "$0": un cliente que no debe nada es una fila que no hay que
+            // mirar, y el guión la saca del camino.
+            return (
+                <span className="celda celda--num"
+                    style={fila.deuda > 0.01 ? { color: 'var(--error)', fontWeight: 800 } : undefined}>
+                    {fila.deuda > 0.01 ? fmt.money(fila.deuda) : '—'}
+                </span>
+            );
+        case 'cuota':
+            // El chip dice en qué situación está y la bajada dice qué y cuándo cobrar, que es lo
+            // que se viene a buscar acá.
+            return (
+                <>
+                    <ChipTono chip={fila.estado} />
+                    {fila.cuota_monto != null && (
+                        <span className="celda-sub num"
+                            style={fila.cuota_vencida ? { color: 'var(--error)', fontWeight: 700 } : undefined}>
+                            {fmt.money(fila.cuota_monto)}
+                            {fila.cuota_fecha ? ` · ${fmt.fecha(fila.cuota_fecha)}` : ' · sin plan'}
+                        </span>
+                    )}
+                </>
+            );
         case 'programa':
             return (
                 <span className="chip" style={{
@@ -479,6 +542,30 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     color: 'var(--text-on-surface)', hint: 'cash / ventas' },
                 { label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', hint: 'sin fees de pasarela' },
+            ];
+        }
+
+        if (tabla === 'clientes') {
+            const deuda = filtradas.reduce((a, f) => a + f.deuda, 0);
+            const conDeuda = filtradas.filter(f => f.deuda > 0.01).length;
+            const vencidas = filtradas.filter(f => f.cuota_vencida);
+            const vencido = vencidas.reduce((a, f) => a + (f.cuota_monto || 0), 0);
+            const pagado = filtradas.reduce((a, f) => a + f.pagado, 0);
+            return [
+                { label: 'clientes', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
+                    hint: `${filtradas.length - conDeuda} al día` },
+                // "de esta cartera" y no "a hoy" a secas: el panel Cash de Analizar muestra
+                // otro "por cobrar", atribuido por quién tiene HOY la agenda del cliente y sobre
+                // todos los saldos del sistema. Los dos son correctos y dan distinto; el rótulo
+                // es lo que evita que parezca que uno de los dos está mal.
+                { label: 'deuda · de esta cartera', valor: fmt.money(Math.round(deuda * 100) / 100),
+                    color: conDeuda ? 'var(--error)' : 'var(--success)',
+                    hint: `${conDeuda} con saldo` },
+                { label: 'vencido', valor: fmt.money(Math.round(vencido * 100) / 100),
+                    color: 'var(--warning)',
+                    hint: `${vencidas.length} ${vencidas.length === 1 ? 'cuota' : 'cuotas'}` },
+                { label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
+                    color: 'var(--success)', hint: 'desde siempre' },
             ];
         }
 
