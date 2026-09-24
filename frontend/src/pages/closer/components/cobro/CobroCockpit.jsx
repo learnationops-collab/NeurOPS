@@ -87,14 +87,19 @@ const CobroCockpit = ({
 
     const cuotasPendientes = cuotas.filter(c => c.estado !== 'pagado');
 
-    // --- Paso: reportar el contacto (la cadencia de cobro) ---
+    // --- Paso: reportar el contacto ---
+    // Con deuda es una cobranza; sin deuda el contacto es de acompañamiento, y preguntarle
+    // "¿pagó?" o darle "no va a pagar" a alguien que no debe nada no significa nada.
+    const enCobro = (etapa.deuda || 0) > 0.01;
     const isPago = sessionForm.result === 'pago';
     const necesitaFecha = sessionForm.result === 'no_resp' || sessionForm.result === 'contesto';
     const largoNotas = (sessionForm.notes || '').trim().length;
     const faltantes = [];
-    if (!sessionForm.result) faltantes.push('Elegí qué pasó con el cobro');
+    if (!sessionForm.result) faltantes.push(enCobro ? 'Elegí qué pasó con el cobro' : 'Elegí qué pasó con el contacto');
     if (largoNotas < 10) faltantes.push(`Contá qué le dijiste y qué respondió (mínimo 10 caracteres, llevás ${largoNotas})`);
-    if (necesitaFecha && !sessionForm.fecha_seguimiento_cobro_next) faltantes.push('Elegí la fecha del próximo intento de cobro');
+    if (necesitaFecha && !sessionForm.fecha_seguimiento_cobro_next) {
+        faltantes.push(enCobro ? 'Elegí la fecha del próximo intento de cobro' : 'Elegí cuándo volvés a escribirle');
+    }
     const puedeCompletar = faltantes.length === 0;
 
     const elegirResultado = (result, extra = {}) =>
@@ -201,20 +206,28 @@ const CobroCockpit = ({
         return (
             <div className="space-y-4">
                 <div className="q req space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">¿Qué pasó con el cobro?</h4>
-                    <div className="grid grid-cols-4 gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">
+                        {enCobro ? '¿Qué pasó con el cobro?' : '¿Cómo viene con el programa?'}
+                    </h4>
+                    <div className={`grid gap-2 ${enCobro ? 'grid-cols-4' : 'grid-cols-3'}`}>
                         <Opcion onClick={() => elegirResultado('no_resp')} tipo="no" label="No respondió" seleccionada={sessionForm.result === 'no_resp'} />
                         <Opcion onClick={() => elegirResultado('contesto')} tipo="info" label="Estamos conversando" seleccionada={sessionForm.result === 'contesto'} />
-                        <Opcion onClick={() => elegirResultado('pago')} tipo="ok" label="Pagó" seleccionada={sessionForm.result === 'pago'} />
-                        {/* "No va a pagar": pedido del usuario (loom, 27/ago/2026) para poder sacar de la cola
-                            de cobros a un cliente que ya avisó que no va a pagar, en vez de seguir programando
-                            intentos indefinidamente. Reusa el mecanismo de "Cerrar Seguimiento" del paso normal
-                            de seguimientos (sig_action 'close'), sin endpoint nuevo. */}
-                        <Opcion
-                            onClick={() => elegirResultado('no_paga', { sig_action: 'close', cierre_motivo: 'No va a pagar' })}
-                            tipo="bad" label="No va a pagar" sub="Sale de la cola"
-                            seleccionada={sessionForm.result === 'no_paga'}
-                        />
+                        {enCobro ? (
+                            <>
+                                <Opcion onClick={() => elegirResultado('pago')} tipo="ok" label="Pagó" seleccionada={sessionForm.result === 'pago'} />
+                                {/* "No va a pagar": pedido del usuario (loom, 27/ago/2026) para poder sacar de la
+                                    cola de cobros a un cliente que ya avisó que no va a pagar, en vez de seguir
+                                    programando intentos indefinidamente. Reusa el mecanismo de "Cerrar
+                                    Seguimiento" del paso normal de seguimientos (sig_action 'close'). */}
+                                <Opcion
+                                    onClick={() => elegirResultado('no_paga', { sig_action: 'close', cierre_motivo: 'No va a pagar' })}
+                                    tipo="bad" label="No va a pagar" sub="Sale de la cola"
+                                    seleccionada={sessionForm.result === 'no_paga'}
+                                />
+                            </>
+                        ) : (
+                            <Opcion onClick={() => setPaso('registrar_renovacion')} tipo="ok" label="Quiere renovar" sub="Renovación o upsell" />
+                        )}
                     </div>
                     {isPago && (
                         <p className="text-xs text-slate-400 font-medium">
@@ -226,7 +239,7 @@ const CobroCockpit = ({
                 {necesitaFecha && (
                     <div className="space-y-1.5 text-left">
                         <label className="text-xs text-slate-300 font-bold uppercase tracking-wide block">
-                            ¿Cuándo es el siguiente seguimiento de cobro? <span className="rq text-pink-500">*</span>
+                            {enCobro ? '¿Cuándo es el siguiente seguimiento de cobro?' : '¿Cuándo volvés a escribirle?'} <span className="rq text-pink-500">*</span>
                         </label>
                         <input
                             type="date"
@@ -258,7 +271,9 @@ const CobroCockpit = ({
                         rows={3}
                         value={sessionForm.notes}
                         onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Le recordé la cuota de este mes. Dijo que cobra el viernes y transfiere a primera hora del lunes..."
+                        placeholder={enCobro
+                            ? 'Le recordé la cuota de este mes. Dijo que cobra el viernes y transfiere a primera hora del lunes...'
+                            : 'Le pregunté cómo va con el programa. Va por el módulo 3 y quiere sumar la mentoría...'}
                         className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
                     />
                     {menciones}
@@ -273,7 +288,7 @@ const CobroCockpit = ({
                         disabled={!puedeCompletar || procesando}
                         className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wide rounded-xl transition-all cursor-pointer"
                     >
-                        {procesando ? <Loader2 size={12} className="animate-spin" /> : (isPago ? 'Continuar al registro de cobro →' : 'Completar Cobro')}
+                        {procesando ? <Loader2 size={12} className="animate-spin" /> : (isPago ? 'Continuar al registro de cobro →' : (enCobro ? 'Completar Cobro' : 'Completar seguimiento'))}
                     </motion.button>
                 </div>
             </div>
