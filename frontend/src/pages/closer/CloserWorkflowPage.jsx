@@ -25,6 +25,7 @@ import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { MissingFieldsHint, AvisoSeguimientoWhatsApp } from './components/FormHints';
+import CobroCockpit from './components/cobro/CobroCockpit';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 
@@ -2007,7 +2008,10 @@ const CloserWorkflowPage = () => {
     // para no aterrizar en una pantalla de tipo de pago vacía cuando ya se sabe qué se está
     // cobrando. El monto viene precargado con lo que dice la cuota pero queda editable: el
     // cliente puede pagar más o menos, esa decisión es del closer, no del dato guardado.
-    const openSaleModalForLead = (lead, isCierreVenta, presetCuota) => {
+    // `opciones.renovacion` lo manda la pantalla de cobro cuando el cliente al día cierra una
+    // renovación o un upsell: es una venta nueva sobre un cliente que ya no debe nada, así que
+    // no puede entrar como "parcial" (el tipo por defecto de quien todavía tiene saldo).
+    const openSaleModalForLead = (lead, isCierreVenta, presetCuota, opciones = {}) => {
         setSalePrompt({ apptId: lead.id });
         setSaleForm({
             lead_id: lead.id,
@@ -2017,7 +2021,7 @@ const CloserWorkflowPage = () => {
             telefono: lead.phone || '',
             mail_cliente: lead.email || '',
             programa: isCierreVenta ? 'RR' : (lead.programa_code || 'RR'),
-            tipo_pago_simple: presetCuota ? 'Cuota' : (isCierreVenta ? 'completo' : 'parcial'),
+            tipo_pago_simple: opciones.renovacion ? 'renovacion' : (presetCuota ? 'Cuota' : (isCierreVenta ? 'completo' : 'parcial')),
             monto: presetCuota ? String(presetCuota.monto) : '',
             segundo_pago: '',
             fecha_cobro: '',
@@ -3259,149 +3263,32 @@ const CloserWorkflowPage = () => {
         if (modalStep === 'segventa') {
             if (sessionForm.showRefsStep) return renderRefsStep();
 
-            const isPago = sessionForm.result === 'pago';
-            const needsCobroDate = sessionForm.result === 'no_resp' || sessionForm.result === 'contesto';
-            // Mismo criterio que el paso de seguimiento: la lista de faltantes es la fuente de
-            // verdad y el botón se deriva de ella, para que nunca quede gris sin explicación.
-            const notasLenCobro = (sessionForm.notes || '').trim().length;
-            const faltantesCobro = [];
-            if (!sessionForm.result) faltantesCobro.push('Elegí qué pasó con el cobro');
-            if (notasLenCobro < 10) faltantesCobro.push(`Contá qué le dijiste y qué respondió (mínimo 10 caracteres, llevás ${notasLenCobro})`);
-            if (needsCobroDate && !sessionForm.fecha_seguimiento_cobro_next) faltantesCobro.push('Elegí la fecha del próximo intento de cobro');
-            const canComplete = faltantesCobro.length === 0;
-            const btnLabel = isPago ? 'Continuar al registro de cobro →' : 'Completar Cobro';
-            const needsRefs = ['contesto', 'pago'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
-
+            // Cliente que ya compro: la pantalla la arma CobroCockpit segun `etapa_cobro`
+            // (debe sin plan / cuota vencida / cuota por vencer / al dia), en vez de mostrarle
+            // siempre el mismo formulario de cobranza a los cuatro casos.
             return (
-                <div className="space-y-4">
-                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-xs font-bold uppercase tracking-wide text-emerald-400 text-center">
-                        ▸ Seguimiento de Cliente. Ya cerró la venta: el foco es cobrar la deuda.
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-950/20 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-300">
-                        <div><span className="text-slate-400 text-[11px] font-semibold block">Programa</span><b>{selectedLead.programa_nombre || 'Sin datos'}</b></div>
-                        <div>
-                            <span className="text-slate-400 text-[11px] font-semibold block">Deuda pendiente</span>
-                            <b className={typeof selectedLead.deuda === 'number' && selectedLead.deuda > 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                                {typeof selectedLead.deuda === 'number' ? `$${Math.round(selectedLead.deuda).toLocaleString('en-US')}` : 'Sin datos'}
-                            </b>
-                        </div>
-                    </div>
-
-                    {loadingCuotas ? (
-                        <div className="flex justify-center py-4"><Loader2 className="animate-spin text-violet-500" size={18} /></div>
-                    ) : cuotasPlan.length > 0 && (
-                        <div className="space-y-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">Plan de cuotas</h4>
-                            <div className="rounded-xl border border-slate-800 overflow-hidden">
-                                <table className="w-full text-xs">
-                                    <tbody>
-                                        {cuotasPlan.map(c => (
-                                            <tr key={c.id} className="border-t border-slate-800 first:border-t-0">
-                                                <td className="px-3 py-2 font-bold text-white">Cuota {c.numero_cuota}</td>
-                                                <td className="px-3 py-2 font-bold text-slate-300">${Math.round(c.monto).toLocaleString('en-US')}</td>
-                                                <td className="px-3 py-2 font-bold text-slate-300">{c.fecha_vencimiento}</td>
-                                                <td className="px-3 py-2">
-                                                    <span className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase border ${
-                                                        c.estado === 'pagado' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' :
-                                                        c.estado === 'vencido' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' :
-                                                        'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                                                    }`}>
-                                                        {c.estado}
-                                                    </span>
-                                                </td>
-                                                <td className="px-3 py-2 text-right">
-                                                    {c.estado !== 'pagado' && (
-                                                        <button
-                                                            onClick={() => { openSaleModalForLead(selectedLead, false, c); setSelectedLead(null); }}
-                                                            className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold uppercase rounded-lg transition-all cursor-pointer"
-                                                        >
-                                                            Reportar pago
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="q req space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">¿Qué pasó con el cobro?</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_resp', sig_action: null, cierre_motivo: null })), 'no', 'No respondió', null, sessionForm.result === 'no_resp')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'contesto', sig_action: null, cierre_motivo: null })), 'info', 'Estamos conversando', null, sessionForm.result === 'contesto')}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'pago', sig_action: null, cierre_motivo: null })), 'ok', 'Pagó', null, sessionForm.result === 'pago')}
-                            {/* "No va a pagar": pedido del usuario (loom, 27/ago/2026) para poder sacar de
-                                la cola de cobros a un cliente que ya avisó que no va a pagar, en vez de
-                                seguir programando intentos indefinidamente. Reusa el mecanismo de "Cerrar
-                                Seguimiento" que ya existe en el paso normal de seguimientos (sig_action:
-                                'close' -> seguimiento_realizado:true, fecha_seguimiento:null, ver
-                                saveSeguimientoReport) — no hace falta un endpoint nuevo. */}
-                            {option(() => setSessionForm(prev => ({ ...prev, result: 'no_paga', sig_action: 'close', cierre_motivo: 'No va a pagar' })), 'bad', 'No va a pagar', 'Sale de la cola', sessionForm.result === 'no_paga')}
-                        </div>
-                        {isPago && (
-                            <p className="text-xs text-slate-400 font-medium">Al continuar se abre el registro de cobro con el historial de pagos y el plan de cuotas ya cargados.</p>
-                        )}
-                    </div>
-
-                    {needsCobroDate && (
-                        <div className="space-y-1.5 text-left">
-                            <label className="text-xs text-slate-300 font-bold uppercase tracking-wide block">¿Cuándo es el siguiente seguimiento de cobro? <span className="rq text-pink-500">*</span></label>
-                            <input
-                                type="date"
-                                value={sessionForm.fecha_seguimiento_cobro_next}
-                                onChange={(e) => setSessionForm(prev => ({ ...prev, fecha_seguimiento_cobro_next: e.target.value }))}
-                                className="w-full max-w-[220px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200"
-                            />
-                            <p className="text-xs text-slate-400 font-medium">Puede ser hoy mismo si quedaste en volver a escribirle más tarde.</p>
-                            {sessionForm.fecha_seguimiento_cobro_next && (
-                                <AvisoSeguimientoWhatsApp
-                                    enabled={sessionForm.followup_reminder_enabled}
-                                    time={sessionForm.followup_reminder_time}
-                                    fecha={sessionForm.fecha_seguimiento_cobro_next}
-                                    onChange={({ enabled, time }) => setSessionForm(prev => ({
-                                        ...prev, followup_reminder_enabled: enabled, followup_reminder_time: time
-                                    }))}
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    <div className="space-y-1.5 text-left">
-                        <label className="text-xs text-slate-300 font-bold uppercase tracking-wide block">Qué sucedió exactamente (Requerido)</label>
-                        <textarea
-                            rows={3}
-                            value={sessionForm.notes}
-                            onChange={(e) => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
-                            placeholder="Le recordé la cuota de este mes. Dijo que cobra el viernes y transfiere a primera hora del lunes..."
-                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
-                        />
-                        {mencionesChips}
-                    </div>
-
-                    {faltantesCobro.length > 0 && <MissingFieldsHint items={faltantesCobro} />}
-
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-                        <div />
-                        <button
-                            onClick={() => {
-                                if (needsRefs) {
-                                    setSessionForm(prev => ({ ...prev, showRefsStep: true }));
-                                } else {
-                                    saveSeguimientoReport();
-                                }
-                            }}
-                            disabled={!canComplete || processingId === selectedLead.id}
-                            className="h-9 px-5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wide rounded-xl transition-all cursor-pointer"
-                        >
-                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : btnLabel}
-                        </button>
-                    </div>
-                </div>
+                <CobroCockpit
+                    lead={selectedLead}
+                    cuotas={cuotasPlan}
+                    cargandoCuotas={loadingCuotas}
+                    onCuotasChanged={(nuevas) => setCuotasPlan(nuevas)}
+                    sessionForm={sessionForm}
+                    setSessionForm={setSessionForm}
+                    procesando={processingId === selectedLead.id}
+                    onReportarPago={(cuota, opciones) => {
+                        openSaleModalForLead(selectedLead, false, cuota, opciones);
+                        setSelectedLead(null);
+                    }}
+                    onGuardar={() => {
+                        const needsRefs = ['contesto', 'pago'].includes(sessionForm.result) && sessionForm.refs_ask === undefined;
+                        if (needsRefs) setSessionForm(prev => ({ ...prev, showRefsStep: true }));
+                        else saveSeguimientoReport();
+                    }}
+                    menciones={mencionesChips}
+                />
             );
         }
+
 
         return null;
     };
