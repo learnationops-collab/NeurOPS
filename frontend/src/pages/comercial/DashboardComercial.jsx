@@ -30,6 +30,18 @@ import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla } fr
  * cambio, la salida la ofrece esta pantalla: "Volver a mi sesión" si es una simulación (ver
  * `revertImpersonation`, que existe justamente para las sub-apps sin MainLayout) y, si no, la
  * vuelta al lugar de trabajo de cada rol.
+ *
+ * ## Modo embebido
+ *
+ * Con `embebido` la pantalla renderiza UNA sección —la que diga `seccionFija`— sin su header ni
+ * su dock, para vivir dentro del mazo del closer y del setter: ahí "Ver mis datos" y "Mi cartera"
+ * son esta misma pantalla, no una copia. Se eligió reusar el componente en vez de extraer los
+ * paneles a una tercera pieza porque la carga de datos, el drill-down, la corrección de estados y
+ * el modal del lead son todos el mismo comportamiento; duplicarlos garantizaba que las dos
+ * versiones se fueran separando.
+ *
+ * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
+ * resuelve `onIrASeccion`, con el que el host cambia su propia pestaña.
  */
 
 /** A dónde vuelve cada rol cuando sale del dashboard. */
@@ -92,13 +104,13 @@ const ProntoSection = ({ seccion }) => (
     </section>
 );
 
-const DashboardComercial = () => {
+const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user } = useAuth();
     const [saliendo, setSaliendo] = useState(false);
 
-    const seccion = params.get('s') || 'analizar';
+    const seccion = seccionFija || params.get('s') || 'analizar';
     const period = params.get('p') || 'mes';
     const compare = params.get('vs') || 'prev';
     const rolPedido = params.get('rol');
@@ -213,8 +225,11 @@ const DashboardComercial = () => {
      */
     const irA = useCallback((cual, filtro) => {
         setFiltroInicial({ ...filtro, __t: ++drillDown.current });
-        set({ s: 'revisar', t: cual });
-    }, [set]);
+        set(embebido ? { t: cual } : { s: 'revisar', t: cual });
+        // Embebido la sección no está en la query string, la elige el host: sin este aviso el
+        // filtro se aplicaba a una tabla que seguía fuera de pantalla.
+        if (embebido) onIrASeccion?.('revisar');
+    }, [set, embebido, onIrASeccion]);
 
     const irAPersona = useCallback((id) => {
         if (contexto?.puede_elegir_equipo) set({ s: 'revisar', m: id });
@@ -240,7 +255,11 @@ const DashboardComercial = () => {
     }, [filtros, tablaActual, basis]);
 
     if (!contexto) {
-        return <div className="dc-shell"><div className="wrap"><Cargando texto="Abriendo el dashboard…" /></div></div>;
+        return (
+            <div className={embebido ? 'dc-shell dc-shell--embebido' : 'dc-shell'}>
+                <div className="wrap"><Cargando texto="Abriendo el dashboard…" /></div>
+            </div>
+        );
     }
 
     const secciones = SECCIONES.filter(s => !s.soloDireccion || contexto.puede_reportar);
@@ -262,8 +281,9 @@ const DashboardComercial = () => {
     };
 
     return (
-        <div className="dc-shell">
+        <div className={embebido ? 'dc-shell dc-shell--embebido' : 'dc-shell'}>
             <div className="wrap">
+                {!embebido && (
                 <header className="tope">
                     <div className="tope-id">
                         <Isotipo />
@@ -293,6 +313,7 @@ const DashboardComercial = () => {
                         )}
                     </div>
                 </header>
+                )}
 
                 <div className="barra">
                     {seccionActual.tabs.length > 0 && (
@@ -357,6 +378,7 @@ const DashboardComercial = () => {
                     puedeCorregir={puedeCorregirFila(filaAbierta)}
                     onCorregir={corregir} onCerrar={() => setFilaAbierta(null)} />
 
+                {!embebido && (
                 <nav className="dock caja" aria-label="Secciones del dashboard comercial">
                     <Humo colores={['var(--brand-secondary)', 'var(--brand-primary)',
                         'var(--brand-secondary-light)', 'var(--brand-navy)']} />
@@ -390,6 +412,7 @@ const DashboardComercial = () => {
                         ))}
                     </div>
                 </nav>
+                )}
             </div>
         </div>
     );

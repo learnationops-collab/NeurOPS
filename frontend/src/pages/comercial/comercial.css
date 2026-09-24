@@ -1334,3 +1334,20 @@
 .dc-shell .dc-wrap{max-width:1340px;margin:0 auto;padding-inline:clamp(16px,3vw,22px);
   padding-block:var(--s6) 0}
 .dc-shell .dc-num{font-variant-numeric:tabular-nums}
+
+/* --- Modo embebido -------------------------------------------------------------------------
+   La misma pantalla dentro del mazo del closer y del setter: sin alto mínimo de pantalla, sin el
+   hueco que deja el dock fijo abajo (no hay dock) y sin el ancho máximo del wrap, porque acá el
+   ancho ya lo pone el contenedor del mazo. El fondo también se saca: el del mazo ya está puesto y
+   dos fondos apilados cambiaban el tono. */
+.dc-shell.dc-shell--embebido {
+    min-height: 0;
+    background: none;
+    padding-bottom: 0;
+}
+
+.dc-shell.dc-shell--embebido > .wrap {
+    max-width: none;
+    padding-inline: 0;
+    padding-block: 0;
+}
