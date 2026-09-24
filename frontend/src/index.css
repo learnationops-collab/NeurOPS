@@ -760,31 +760,6 @@ header.top-v6 {
   color: var(--v6-tx3);
   opacity: 1;
 }
-.sinner-v6 select {
-  background-color: rgba(255,255,255,.05) !important;
-  border: none !important;
-  border-left: 1px solid var(--v6-bd) !important;
-  border-radius: 0 !important;
-  width: auto !important;
-  min-width: 126px !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  letter-spacing: .07em !important;
-  text-transform: uppercase !important;
-  color: var(--v6-tx2) !important;
-  padding: 11px 32px 11px 13px !important;
-  appearance: none !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: right 12px center !important;
-  background-size: 16px !important;
-  /* El select medía 39px dentro de una pildora de 45px, asi que su borde izquierdo (el separador
-     entre buscador y alcance) quedaba flotando sin llegar a los bordes. Estirado ocupa el alto
-     completo y el separador se lee como una division real. */
-  align-self: stretch !important;
-  height: auto !important;
-  cursor: pointer !important;
-}
 .sresults-v6 {
   position: absolute;
   top: calc(100% + 8px);

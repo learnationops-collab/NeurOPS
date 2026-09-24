@@ -384,7 +384,6 @@ const CloserWorkflowPage = () => {
     const [loadingCuotas, setLoadingCuotas] = useState(false);
 
     // Búsqueda global (v6)
-    const [searchScope, setSearchScope] = useState('all');
     const [searchResults, setSearchResults] = useState([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searching, setSearching] = useState(false);
@@ -631,34 +630,12 @@ const CloserWorkflowPage = () => {
             setSearching(true);
             try {
                 const res = await api.get(`/closer/leads/search?q=${encodeURIComponent(searchQuery)}`);
-                let data = res.data || [];
-                
-                // Filtrar según el ámbito (searchScope)
-                if (searchScope !== 'all') {
-                    data = data.filter(l => {
-                        const appt = l.appointment;
-                        const result = appt ? appt.result || "" : "";
-                        const closerResult = appt ? appt.closer_result || "" : "";
-                        
-                        let fase = 'confirm'; // Por defecto
-                        if (appt) {
-                            const resClean = result.toLowerCase();
-                            const closerResClean = closerResult.toLowerCase();
-                            
-                            if (closerResClean === 'show up' || closerResClean === 'cerrada' || closerResClean === 'cerrado') {
-                                fase = 'done';
-                            } else if (appt.fecha_seguimiento || closerResClean === 'no show' || closerResClean === 'cancelado' || closerResClean === 'reagendado') {
-                                fase = 'seg';
-                            } else if (resClean === 'confirmado') {
-                                fase = 'call';
-                            } else {
-                                fase = 'confirm';
-                            }
-                        }
-                        return fase === searchScope;
-                    });
-                }
-                setSearchResults(data);
+                // Sin filtro por fase: el buscador busca en TODO. Tenia un selector de
+                // alcance (Confirmaciones / Llamadas / Seguimientos / Resueltos) que ocupaba
+                // 126px fijos en el header y empujaba el resto de los botones fuera de la
+                // linea. Cada resultado ya trae su fase como etiqueta de color, que es lo que
+                // se venia a buscar: en que anda ese lead. Lo saco el usuario.
+                setSearchResults(res.data || []);
                 setShowSearchResults(true);
             } catch (err) {
                 console.error("Error al buscar leads:", err);
@@ -668,7 +645,7 @@ const CloserWorkflowPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchQuery, searchScope]);
+    }, [searchQuery]);
 
     // Cerrar buscador global al hacer clic fuera
     useEffect(() => {
@@ -3504,17 +3481,6 @@ const CloserWorkflowPage = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
                             />
-                            <select 
-                                id="qscope"
-                                value={searchScope}
-                                onChange={(e) => setSearchScope(e.target.value)}
-                            >
-                                <option value="all">Todo</option>
-                                <option value="confirm">Confirmaciones</option>
-                                <option value="call">Llamadas</option>
-                                <option value="seg">Seguimientos</option>
-                                <option value="done">Resueltos</option>
-                            </select>
                         </div>
                         {showSearchResults && (
                             <div id="qres" className="sresults-v6">
@@ -3631,15 +3597,16 @@ const CloserWorkflowPage = () => {
                             </span>
                         )}
                     </button>
+                    {/* "Pronto" vive en el tooltip y no en la pastilla: era una tercera palabra en
+                        un botón que todavía no hace nada, y el header necesita ese ancho. */}
                     <button
                         type="button"
                         onClick={() => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' })}
                         className="shrink-0 flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all px-4 py-2 cursor-pointer"
-                        title="Próximamente"
+                        title="Learnito — buscador con IA sobre el Playbook. Próximamente."
                     >
                         <Sparkles size={13} className="text-blue-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Learnito</span>
-                        <span className="hidden xl:inline text-[8px] font-black uppercase tracking-wider text-blue-400/60">Pronto</span>
                     </button>
 
                     {counts.seguimientos > 0 && (
