@@ -12,6 +12,7 @@ import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
+import ClienteModal from './components/ClienteModal';
 import Reportar from './components/Reportar';
 import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 
@@ -432,11 +433,18 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                 </div>
 
-                <LeadModal fila={filaAbierta} estados={contexto.estados}
-                    puedeCorregir={puedeCorregirFila(filaAbierta)}
-                    duplicadaDe={filaAbierta ? duplicadas[filaAbierta.id] : null}
-                    onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
-                    onCerrar={() => setFilaAbierta(null)} />
+                {/* Una fila de Clientes no es una agenda: no tiene pre call ni post call que
+                    corregir, tiene una cartera que mirar. Abre su ficha de cobro en vez del
+                    modal de corrección, que sobre un cliente quedaba sin una sola acción. */}
+                {filaAbierta?.tipo === 'cliente' ? (
+                    <ClienteModal fila={filaAbierta} onCerrar={() => setFilaAbierta(null)} />
+                ) : (
+                    <LeadModal fila={filaAbierta} estados={contexto.estados}
+                        puedeCorregir={puedeCorregirFila(filaAbierta)}
+                        duplicadaDe={filaAbierta ? duplicadas[filaAbierta.id] : null}
+                        onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
+                        onCerrar={() => setFilaAbierta(null)} />
+                )}
 
                 {!embebido && (
                 <nav className="dock caja" aria-label="Secciones del dashboard comercial">
