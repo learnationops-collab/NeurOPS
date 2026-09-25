@@ -4,7 +4,22 @@ import { Loader2, RotateCcw, Trash2 } from 'lucide-react';
 // Anchos de cada fase: el ancho ES la animación (el botón se convierte en su propio diálogo en
 // vez de abrir uno encima). Valores y curva del bloque original de bencho.dev, MIT.
 const ANCHOS = { idle: 148, asking: 218, done: 206 };
+// En una fila de tabla no entra un botón de 148px: en reposo queda solo el ícono y se ensancha
+// al preguntar, que es cuando de verdad necesita lugar.
+const ANCHOS_COMPACTO = { idle: 34, asking: 172, done: 158 };
 const TRANSICION_ANCHO = 'width 340ms cubic-bezier(0.24, 1.34, 0.38, 1)';
+
+// Dos paletas: `oscuro` para los modales del mazo del closer, que son oscuros pase lo que pase
+// con el tema, y `tema` para las pantallas que sí siguen el tema claro/oscuro del usuario.
+const PALETAS = {
+    oscuro: { borde: 'rgba(255,255,255,.14)', fondo: 'rgba(255,255,255,.04)',
+              texto: '#fff', apagado: 'rgba(255,255,255,.55)', hecho: 'rgba(255,255,255,.65)' },
+    tema: { borde: 'var(--border-color)', fondo: 'transparent',
+            texto: 'var(--text-main)', apagado: 'var(--text-muted)', hecho: 'var(--text-muted)' },
+};
+
+const PELIGRO = '#E85C4A';
+const PELIGRO_SUAVE = '#F5A99C';
 
 /**
  * Botón destructivo que pregunta en su propio lugar.
@@ -33,7 +48,11 @@ const InlineConfirm = ({
     corner = 16,
     disabled = false,
     title,
+    compacto = false,
+    tema = 'oscuro',
 }) => {
+    const paleta = PALETAS[tema] || PALETAS.oscuro;
+    const anchos = compacto ? ANCHOS_COMPACTO : ANCHOS;
     const [fase, setFase] = useState('idle');
     const [corriendo, setCorriendo] = useState(false);
     const temporizador = useRef(null);
@@ -91,11 +110,11 @@ const InlineConfirm = ({
         display: 'inline-flex',
         alignItems: 'center',
         height: 38,
-        width: ANCHOS[fase],
+        width: anchos[fase],
         transition: TRANSICION_ANCHO,
         borderRadius: corner,
-        border: '1px solid rgba(255,255,255,.14)',
-        background: 'rgba(255,255,255,.04)',
+        border: `1px solid ${paleta.borde}`,
+        background: paleta.fondo,
         overflow: 'hidden',
         flexShrink: 0,
     };
@@ -122,11 +141,13 @@ const InlineConfirm = ({
                     disabled={disabled}
                     onClick={() => setFase('asking')}
                     style={{ ...textoBoton, width: '100%', justifyContent: 'center',
-                             color: disabled ? 'rgba(255,255,255,.3)' : '#F5A99C',
+                             padding: compacto ? 0 : textoBoton.padding,
+                             opacity: disabled ? 0.4 : 1,
+                             color: PELIGRO_SUAVE,
                              cursor: disabled ? 'not-allowed' : 'pointer' }}
                 >
                     <Trash2 size={14} />
-                    {label}
+                    {!compacto && label}
                 </button>
             </div>
         );
@@ -135,16 +156,16 @@ const InlineConfirm = ({
     if (fase === 'asking') {
         return (
             <div style={{ ...base, borderColor: 'rgba(232,92,74,.4)', background: 'rgba(232,92,74,.08)' }}>
-                <small style={{ flex: 1, paddingLeft: 12, fontSize: 10, fontWeight: 900,
-                                letterSpacing: '.06em', textTransform: 'uppercase', color: '#F5A99C' }}>
+                <small style={{ flex: 1, paddingLeft: compacto ? 8 : 12, fontSize: 10, fontWeight: 900,
+                                letterSpacing: '.06em', textTransform: 'uppercase', color: PELIGRO_SUAVE }}>
                     {question}
                 </small>
                 <button type="button" onClick={() => setFase('idle')}
-                        style={{ ...textoBoton, color: 'rgba(255,255,255,.55)' }}>
+                        style={{ ...textoBoton, color: paleta.apagado }}>
                     {cancelLabel}
                 </button>
                 <button type="button" onClick={confirmar}
-                        style={{ ...textoBoton, color: '#fff', background: '#E85C4A',
+                        style={{ ...textoBoton, color: '#fff', background: PELIGRO,
                                  borderTopRightRadius: corner, borderBottomRightRadius: corner }}>
                     {confirmLabel}
                 </button>
@@ -153,19 +174,19 @@ const InlineConfirm = ({
     }
 
     return (
-        <div style={{ ...base, borderColor: 'rgba(255,255,255,.16)' }}>
-            <small style={{ flex: 1, paddingLeft: 12, fontSize: 10, fontWeight: 900,
+        <div style={{ ...base }}>
+            <small style={{ flex: 1, paddingLeft: compacto ? 8 : 12, fontSize: 10, fontWeight: 900,
                             letterSpacing: '.06em', textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,.65)' }}>
+                            color: paleta.hecho }}>
                 {corriendo ? '' : doneLabel}
             </small>
             {corriendo ? (
-                <span style={{ ...textoBoton, color: 'rgba(255,255,255,.65)' }}>
+                <span style={{ ...textoBoton, color: paleta.hecho }}>
                     <Loader2 size={13} className="animate-spin" />
                 </span>
             ) : (
                 <button type="button" onClick={deshacer}
-                        style={{ ...textoBoton, color: '#fff' }}>
+                        style={{ ...textoBoton, color: paleta.texto }}>
                     <RotateCcw size={13} />
                     {undoLabel}
                 </button>
@@ -175,7 +196,7 @@ const InlineConfirm = ({
                 <span
                     aria-hidden="true"
                     style={{ position: 'absolute', left: 0, bottom: 0, height: 2,
-                             background: '#E85C4A',
+                             background: PELIGRO,
                              animation: `inlineConfirmBurn ${undoMs}ms linear forwards` }}
                 />
             )}
