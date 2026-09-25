@@ -7,7 +7,6 @@ import {
     Calendar,
     ClipboardCheck,
     Plus,
-    Trash2,
     Loader2,
     DollarSign,
     Phone,
@@ -21,6 +20,8 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import { parseUtcIso } from '../../utils/datetime';
+import toast from 'react-hot-toast';
+import InlineConfirm from '../ui/InlineConfirm';
 
 const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [activeTab, setActiveTab] = useState('profile');
@@ -84,20 +85,19 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             fetchDetails();
             if (onSuccess) onSuccess();
         } catch (err) {
-            alert("Error al añadir pago");
+            toast.error("Error al añadir pago");
         } finally {
             setSubmittingPayment(false);
         }
     };
 
     const handleDeletePayment = async (paymentId) => {
-        if (!confirm("¿Estás seguro de eliminar este pago?")) return;
         try {
             await api.delete(`/closer/payments/${paymentId}`);
             fetchDetails();
             if (onSuccess) onSuccess();
         } catch (err) {
-            alert("Error al eliminar pago");
+            toast.error("Error al eliminar pago");
         }
     };
 
@@ -110,7 +110,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             }));
             if (onSuccess) onSuccess();
         } catch (err) {
-            alert("Error al actualizar fecha");
+            toast.error("Error al actualizar fecha");
         }
     };
 
@@ -125,7 +125,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             fetchDetails(); // Refresh to update totals
             if (onSuccess) onSuccess();
         } catch (err) {
-            alert("Error al actualizar estado");
+            toast.error("Error al actualizar estado");
         }
     };
 
@@ -137,21 +137,20 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             setIsEditingProfile(false);
             if (onSuccess) onSuccess();
         } catch (err) {
-            alert("Error al actualizar perfil");
+            toast.error("Error al actualizar perfil");
         } finally {
             setSubmittingProfile(false);
         }
     };
 
     const handleDeleteEnrollment = async () => {
-        if (!confirm("¿ESTÁS TOTALMENTE SEGURO? Esta acción eliminará la venta y todos sus pagos asociados permanentemente.")) return;
         setDeleting(true);
         try {
             await api.delete(`/closer/enrollments/${enrollmentId}`);
             if (onSuccess) onSuccess();
             onClose();
         } catch (err) {
-            alert("Error al eliminar la venta");
+            toast.error("Error al eliminar la venta");
         } finally {
             setDeleting(false);
         }
@@ -182,14 +181,19 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleDeleteEnrollment}
+                        {/* Borra la venta Y todos sus pagos: la ventana de deshacer es más larga
+                            porque es lo más caro que se puede tocar en esta pantalla. */}
+                        <InlineConfirm
+                            tema="tema"
+                            label="Eliminar venta"
+                            question="¿Con sus pagos?"
+                            confirmLabel="Sí"
+                            doneLabel="Eliminada"
+                            undoMs={8000}
                             disabled={deleting}
-                            className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
-                            title="Eliminar Venta"
-                        >
-                            {deleting ? <Loader2 size={24} className="animate-spin" /> : <Trash2 size={24} />}
-                        </button>
+                            title="Eliminar la venta y todos sus pagos"
+                            onConfirm={handleDeleteEnrollment}
+                        />
                         <button onClick={onClose} className="p-3 bg-main border border-base rounded-2xl text-muted hover:text-base transition-all">
                             <X size={24} />
                         </button>
@@ -480,12 +484,18 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                                     </td>
                                                                     <td className="px-6 py-5 text-sm font-black text-secondary">${p.amount.toLocaleString()}</td>
                                                                     <td className="px-6 py-5 text-right">
-                                                                        <button
-                                                                            onClick={() => handleDeletePayment(p.id)}
-                                                                            className="p-2 text-muted hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                                                                        >
-                                                                            <Trash2 size={16} />
-                                                                        </button>
+                                                                        {/* Ya no se esconde con `opacity-0` hasta el hover: una acción
+                                                                            que solo aparece si pasás el mouse por encima es una acción
+                                                                            que, para quien la busca, no existe. */}
+                                                                        <InlineConfirm
+                                                                            compacto
+                                                                            tema="tema"
+                                                                            corner={12}
+                                                                            question="¿Borrar?"
+                                                                            doneLabel="Borrado"
+                                                                            title="Eliminar este pago"
+                                                                            onConfirm={() => handleDeletePayment(p.id)}
+                                                                        />
                                                                     </td>
                                                                 </tr>
                                                             ))}
