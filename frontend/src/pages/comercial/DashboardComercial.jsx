@@ -14,7 +14,7 @@ import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
 import ClienteModal from './components/ClienteModal';
 import Reportar from './components/Reportar';
-import { corregirAgenda, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
+import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 
 /**
  * Dashboard comercial.
@@ -290,6 +290,22 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     }, [filtros, tablaActual, basis]);
 
+    // `puede_reportar` es exactamente "es dirección" en el backend (ver /comercial/contexto), que
+    // es el mismo permiso con el que la ruta DELETE responde 403 al resto. Un solo criterio.
+    const eliminarAgenda = useCallback(async (fila) => {
+        try {
+            await eliminarAgendaApi(fila.id);
+            const datos = await getTabla(filtros, tablaActual, basis);
+            setDatosTabla(datos);
+            setFilaAbierta(null);
+            toast.success('Agenda eliminada');
+            getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudo eliminar la agenda');
+            throw error;
+        }
+    }, [filtros, tablaActual, basis]);
+
     const corregir = useCallback(async (fila, campo, valor) => {
         try {
             await corregirAgenda(fila.id, campo, valor);
@@ -443,6 +459,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         puedeCorregir={puedeCorregirFila(filaAbierta)}
                         duplicadaDe={filaAbierta ? duplicadas[filaAbierta.id] : null}
                         onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
+                        onEliminar={contexto.puede_reportar ? eliminarAgenda : null}
                         onCerrar={() => setFilaAbierta(null)} />
                 )}
 

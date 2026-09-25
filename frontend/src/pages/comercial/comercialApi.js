@@ -47,6 +47,10 @@ export const corregirAgenda = (id, campo, valor) =>
 export const marcarAgendaDuplicada = (id) =>
     api.post(`/comercial/agendas/${id}/duplicada`).then(r => r.data);
 
+/** Borra una agenda. Solo la direccion: la ruta responde 403 al resto (ver comercial.py). */
+export const eliminarAgenda = (id) =>
+    api.delete(`/comercial/agendas/${id}`).then(r => r.data);
+
 export const getReporteHoy = (fecha) =>
     api.get('/comercial/reporte/hoy', { params: fecha ? { fecha } : {} }).then(r => r.data);
 

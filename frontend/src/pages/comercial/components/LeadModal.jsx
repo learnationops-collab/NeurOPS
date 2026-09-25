@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Check, CheckCircle2, Clock, CopyX, Inbox, Mail, Pencil, Phone, Target, X } from 'lucide-react';
+import InlineConfirm from '../../../components/ui/InlineConfirm';
 import { ChipTono } from './Revisar';
 import { fmt } from './Shared';
 
@@ -50,7 +51,7 @@ const Meta = ({ label, valor, color }) => (
     </div>
 );
 
-const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMarcarDuplicada, onCerrar }) => {
+const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMarcarDuplicada, onEliminar, onCerrar }) => {
     const [guardado, setGuardado] = useState(null);
     const [guardando, setGuardando] = useState(null);
     const [resolviendo, setResolviendo] = useState(false);
@@ -259,6 +260,28 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                             <CopyX size={13} />
                                             {resolviendo ? 'Cancelando…' : 'Marcar como duplicada'}
                                         </button>
+                                    </div>
+                                )}
+
+                                {/* Borrar la agenda. La dirección no tenía dónde hacerlo: el
+                                    borrado del mazo pide rol closer y además que la agenda sea
+                                    suya, así que ni siquiera podía limpiar las de prueba que
+                                    crea ella misma. Va con ventana de deshacer, como el del
+                                    mazo, porque la fila no se puede recuperar. */}
+                                {onEliminar && (
+                                    <div style={{ display: 'grid', gap: 'var(--s2)',
+                                        borderTop: '1px solid var(--border-subtle)',
+                                        paddingTop: 'var(--s3)', justifyItems: 'start' }}>
+                                        <span className="t-cap mut40">
+                                            Borra la agenda y la saca del libro. No se puede recuperar.
+                                        </span>
+                                        <InlineConfirm
+                                            tema="tema"
+                                            label="Eliminar agenda"
+                                            doneLabel="Eliminada"
+                                            title={`Eliminar la agenda de ${fila.cliente}`}
+                                            onConfirm={() => onEliminar(fila)}
+                                        />
                                     </div>
                                 )}
                             </>
