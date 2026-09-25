@@ -2212,24 +2212,11 @@ def delete_deck_appointment(appt_id):
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
 
-    try:
-        # Liberar respuestas de encuesta asociadas (se conserva el historial del cliente,
-        # solo se desvincula de la cita que se está borrando; no tiene cascade de borrado).
-        SurveyAnswer.query.filter_by(appointment_id=appt.id).update({'appointment_id': None})
-
-        if appt.google_event_id:
-            try:
-                from app.services.google_service import GoogleService
-                GoogleService.delete_event(appt.closer_id, appt.google_event_id)
-            except Exception as gcal_err:
-                print(f"[GCal Delete Error] {gcal_err}")
-
-        db.session.delete(appt)
-        db.session.commit()
-        return jsonify({"message": "Agenda eliminada correctamente"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+    from app.services.booking_service import BookingService
+    ok, error = BookingService.eliminar_agenda(appt)
+    if not ok:
+        return jsonify({"error": error}), 400
+    return jsonify({"message": "Agenda eliminada correctamente"}), 200
 
 
 @bp.route('/team-members', methods=['GET'])

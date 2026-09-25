@@ -246,6 +246,36 @@ class BookingService:
         return appt
 
     @staticmethod
+    def eliminar_agenda(appt):
+        """Borra una agenda y lo que cuelga de ella. Devuelve (ok, error).
+
+        Vive acá porque la borran dos superficies con permisos distintos —el mazo del closer
+        (`DELETE /closer/deck/<id>`) y el libro de la dirección comercial
+        (`DELETE /comercial/agendas/<id>`)— y las dos tienen que hacer exactamente lo mismo: si
+        una se olvidara de desvincular las respuestas de la encuesta, el borrado fallaría por la
+        foreign key en una pantalla y no en la otra.
+
+        Las respuestas de la encuesta se DESVINCULAN, no se borran: son del cliente y valen
+        aunque la cita desaparezca. El evento de Google Calendar se borra en el mejor esfuerzo:
+        que la agenda del closer quede con un hueco de más no puede impedir borrar la fila."""
+        try:
+            SurveyAnswer.query.filter_by(appointment_id=appt.id).update({'appointment_id': None})
+
+            if appt.google_event_id:
+                try:
+                    from app.services.google_service import GoogleService
+                    GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                except Exception as gcal_err:
+                    print(f"[GCal Delete Error] {gcal_err}")
+
+            db.session.delete(appt)
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            return False, str(e)
+
+    @staticmethod
     def save_survey_answers(client_id, answers_data, appointment_id=None):
         for item in answers_data:
             q_id = item['question_id']
