@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Trash2, Pencil, CreditCard, AlertTriangle, History, GraduationCap
+    X, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Check, Plus, Pencil, CreditCard, AlertTriangle, History, GraduationCap
 } from 'lucide-react';
+import InlineConfirm from '../ui/InlineConfirm';
 
 // --- Helpers de fecha (mismo criterio que InstallmentService._add_months: clampea al último
 // día del mes si el día elegido no existe en ese mes) ---
@@ -150,8 +151,10 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
         }
     };
 
+    // La confirmación y la ventana de deshacer las hace el propio botón (InlineConfirm): acá ya
+    // no se pregunta. Antes preguntaba con `confirm`, el diálogo del navegador, que además decía
+    // "no se puede deshacer" — ahora sí se puede, durante 5 segundos.
     const deleteCuota = async (id) => {
-        if (!confirm('¿Borrar esta cuota del plan? No se puede deshacer.')) return;
         setSavingId(id);
         try {
             await api.delete(`/closer/installments/cuota/${id}`);
@@ -258,17 +261,16 @@ function PlanEditor({ apptId, programaCode, cuotas, loading, selectable, selecte
                                             <option value="pagado" className="text-black">Pagada</option>
                                         </select>
                                     </td>
-                                    <td className="px-2 py-2 text-right">
-                                        <button
-                                            type="button"
+                                    <td className="px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                                        <InlineConfirm
+                                            compacto
+                                            corner={12}
                                             disabled={busy}
-                                            onClick={(e) => { e.stopPropagation(); deleteCuota(c.id); }}
-                                            className="p-1 transition-all"
-                                            style={{ color: '#8C99E0' }}
+                                            question={`Cuota ${c.numero_cuota}`}
+                                            doneLabel="Borrada"
                                             title="Borrar cuota"
-                                        >
-                                            {busy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                                        </button>
+                                            onConfirm={() => deleteCuota(c.id)}
+                                        />
                                     </td>
                                 </tr>
                             );
