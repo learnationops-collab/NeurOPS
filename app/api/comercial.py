@@ -216,6 +216,30 @@ def cliente(client_id):
     return jsonify(ficha), 200
 
 
+@bp.route('/agendas/<int:agenda_id>', methods=['DELETE'])
+def eliminar_agenda(agenda_id):
+    """Borra una agenda desde el libro de la dirección comercial.
+
+    Existe porque el borrado del mazo (`DELETE /closer/deck/<id>`) pide rol closer y además
+    exige que la agenda sea del closer que pregunta: a la dirección le responde 403, así que
+    desde este tablero no había forma de borrar nada — ni siquiera las agendas de prueba que
+    uno mismo crea.
+
+    Se limita a la dirección a propósito. Podría haberse usado `_puede_corregir`, que también
+    habilita al closer dueño y al setter que la generó, pero eso le daría al setter un poder de
+    borrado que hoy no tiene en ninguna pantalla; corregir un estado y borrar la fila no son la
+    misma responsabilidad. El closer sigue borrando por su propia ruta.
+    """
+    if current_user.role not in ROLES_DIRECCION:
+        return jsonify({'message': 'Forbidden'}), 403
+
+    appt = Appointment.query.get_or_404(agenda_id)
+    ok, error = BookingService.eliminar_agenda(appt)
+    if not ok:
+        return jsonify({'error': error}), 400
+    return jsonify({'message': 'Agenda eliminada'}), 200
+
+
 def _puede_corregir(appt):
     """Quién puede corregir el estado de esta agenda: la dirección, el closer que la atiende y
     el setter que la generó. Nadie toca las filas de otro."""
