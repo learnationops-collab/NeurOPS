@@ -1,7 +1,7 @@
 from flask import request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import db, FinancialAgenda, User, Client
-from datetime import datetime
+from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, and_, func
 
@@ -24,6 +24,37 @@ def parse_date_robustly(val):
         return parser.parse(val_str)
     except:
         return datetime.utcnow()
+
+# Estados en los que la agenda sigue ABIERTA: la llamada todavia no ocurrio y el lead
+# sigue esperando. Todo lo demas (Show Up, No Show, Lead Perdido, conversando, cierres)
+# describe una cita que ya paso, y volver a agendar despues de eso es una segunda cita,
+# no una reprogramacion de la primera.
+ESTADOS_AGENDA_ABIERTA = {
+    '', 'pendiente', 'confirmado', 'por_confirmar', 'por confirmar',
+    'reagendada', 'reagendado', 'reprogramada', 'reprogramado',
+}
+
+_SEPARADORES_TELEFONO = (' ', '-', '(', ')', '+', '.')
+
+
+def _whatsapp_solo_digitos():
+    """Expresion SQL con el whatsapp sin separadores, para comparar numeros y no textos."""
+    columna = FinancialAgenda.whatsapp
+    for sep in _SEPARADORES_TELEFONO:
+        columna = func.replace(columna, sep, '')
+    return columna
+
+
+def _cola_telefono(valor, largo=9):
+    """Ultimos `largo` digitos de un telefono, o None si no llega a tener esos digitos.
+
+    Se compara la cola y no el numero entero porque el prefijo de pais aparece de forma
+    intermitente segun como lo escriba el lead ('+51 996 526 031', '996526031'), y con
+    el numero completo esas dos formas del MISMO telefono no se reconocen.
+    """
+    digitos = ''.join(c for c in str(valor or '') if c.isdigit())
+    return digitos[-largo:] if len(digitos) >= largo else None
+
 
 def _split_multi(raw_value):
     # Los filtros del tablero envian una o varias opciones separadas por coma
@@ -240,8 +271,13 @@ def receive_financial_agendas():
             client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
         if mail_val and mail_val != 'n/a' and '@' in mail_val:
             client_filters.append(func.lower(FinancialAgenda.mail) == mail_val)
-        if phone_val and phone_val != 'n/a':
-            client_filters.append(FinancialAgenda.whatsapp.like(f"%{phone_val}%"))
+        cola_telefono = _cola_telefono(phone_val)
+        if cola_telefono:
+            # Se comparan solo los digitos y solo los ultimos: el mismo numero llega
+            # escrito '+51 996 526 031' una vez y '+51996526031' la otra, y con el LIKE
+            # sobre el texto crudo esas dos no matcheaban -- el lead se duplicaba aunque
+            # fuera la misma persona el mismo dia (26/09/2026).
+            client_filters.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
 
         if client_filters and agenda_date:
             # "El mismo dia" es el dia local de la fuente, no el dia UTC: con las fechas ya
@@ -253,6 +289,28 @@ def receive_financial_agendas():
                 FinancialAgenda.date >= start_day,
                 FinancialAgenda.date <= end_day
             ).first()
+
+            if not existing:
+                # Reprogramacion a OTRO dia. La regla de arriba solo reconoce el duplicado
+                # si la reunion cae el mismo dia, asi que mover la cita del jueves al
+                # viernes entraba como agenda nueva y el lead quedaba dos veces en el libro
+                # (y con dos llamadas en la bandeja de su closer).
+                #
+                # Solo se toma como reprogramacion si la agenda anterior sigue ABIERTA y su
+                # llamada todavia no paso: una que ya se resolvio (Show Up, No Show, Lead
+                # Perdido) es una llamada que de verdad ocurrio, y quien vuelve a agendar
+                # despues de eso esta sacando una segunda cita, no moviendo la primera.
+                existing = FinancialAgenda.query.filter(
+                    or_(*client_filters),
+                    FinancialAgenda.date >= datetime.utcnow() - timedelta(hours=2),
+                    func.lower(func.coalesce(FinancialAgenda.estado, '')).in_(ESTADOS_AGENDA_ABIERTA)
+                ).order_by(FinancialAgenda.date).first()
+                if existing:
+                    current_app.logger.info(
+                        f"[AGENDA REPROGRAMADA] '{lead_val}': la agenda #{existing.id} del "
+                        f"{existing.date} se mueve a {agenda_date} en vez de crear una fila nueva")
+                    item = dict(item)
+                    item['reprogramada_desde'] = existing.date.isoformat() if existing.date else None
 
         # Extraer encargado de triage de forma robusta
         encargado_triage_val = None
