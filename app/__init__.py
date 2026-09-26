@@ -108,6 +108,11 @@ def create_app(config_class=Config):
     from app.api.comercial import bp as comercial_api_bp
     app.register_blueprint(comercial_api_bp, url_prefix='/api/comercial')
 
+    # Ficha unificada del lead: la unica superficie que sirve al closer y a la direccion comercial
+    # a la vez. Su guardia (sesion + 5 roles) vive en su propio before_request (ver app/api/ficha).
+    from app.api.ficha import bp as ficha_api_bp
+    app.register_blueprint(ficha_api_bp, url_prefix='/api/ficha')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
