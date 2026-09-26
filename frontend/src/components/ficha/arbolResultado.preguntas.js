@@ -191,7 +191,10 @@ export const PREGUNTAS = [
     campos: [
       { campo: 'selectedCuotaId', label: 'Cuota del plan que se está cobrando', tipo: 'cuota' },
       { campo: 'num_cuotas', label: 'Cantidad de cuotas', tipo: 'entero', minimo: 1 },
-      { campo: 'installmentMode', label: 'Fechas', tipo: 'opcion', opciones: ['monthly', 'custom'] },
+      {
+        campo: 'installmentMode', label: 'Fechas', tipo: 'opcion', opciones: ['monthly', 'custom'],
+        etiquetas: { monthly: 'Mensual', custom: 'A mano' },
+      },
       { campo: 'dia_de_pago', label: 'Día de pago mensual', tipo: 'entero' },
       { campo: 'cuotaFechas', label: 'Fechas por cuota', tipo: 'mapa' },
       { campo: 'cuotaMontos', label: 'Montos por cuota', tipo: 'mapa' },

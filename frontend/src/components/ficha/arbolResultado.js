@@ -156,8 +156,11 @@ export function hitos(respuestas = {}, contexto = {}) {
   const cerro = r.cierre === undefined || r.cierre === null
     ? (r.contacto_result === 'cerro' ? true : null) : r.cierre;
 
+  // En la cadencia de seguimiento la llamada ya se reportó: el hito «Resultado» muestra en qué
+  // intento va, no «Sin reportar».
+  const enCadencia = contexto.modo === 'seguimiento' || !!r.contacto_result;
   const subResultado = () => {
-    if (r.contacto_result) return `Seguimiento ${contexto.intento || 1} de 4`;
+    if (enCadencia) return `Seguimiento ${contexto.intento || 1} de 4`;
     if (!r.res) return 'Sin reportar';
     return `${ETIQUETA_RES[r.res] || r.res}${conDecisor}`;
   };
@@ -172,7 +175,7 @@ export function hitos(respuestas = {}, contexto = {}) {
 
   const definicion = [
     { clave: 'confirmado', label: 'Confirmado', sub: 'Agenda confirmada', alcanzado: true, malo: false },
-    { clave: 'resultado', label: 'Resultado', sub: subResultado(), alcanzado: arrancado(r), malo: !!r.res && r.res !== 'asistio' },
+    { clave: 'resultado', label: 'Resultado', sub: subResultado(), alcanzado: arrancado(r) || enCadencia, malo: (!!r.res && r.res !== 'asistio') || contexto.seguimientoTipo === 'no_tomada' },
     // «Sin oferta» cuenta como hito alcanzado-pero-malo: es un desenlace definitivo de la
     // llamada, no un paso que todavía falte dar (el mockup lo dejaba en gris).
     { clave: 'cierre', label: 'Cierre', sub: subCierre(), alcanzado: cerro !== null || r.offer_presented === false, malo: cerro === false || r.offer_presented === false },

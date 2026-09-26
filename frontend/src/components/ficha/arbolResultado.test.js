@@ -459,6 +459,13 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
     expect(preguntaActual(estadoInicial(), ctx).clave).toBe('contacto_result');
   });
 
+  it('el hito de resultado dice en qué intento va, no «Sin reportar»', () => {
+    const h = hitos(estadoInicial(), ctx);
+    expect(h[1]).toMatchObject({ sub: 'Seguimiento 2 de 4', estado: 'hecho' });
+    // un seguimiento de recuperación arranca de un desenlace malo: va en ámbar
+    expect(hitos(estadoInicial(), { ...ctx, seguimientoTipo: 'no_tomada' })[1].estado).toBe('alerta');
+  });
+
   it('exige modalidad y una nota de al menos 10 caracteres', () => {
     let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'no_resp' });
     expect(preguntaActual(r, ctx).clave).toBe('contacto_detalle');
