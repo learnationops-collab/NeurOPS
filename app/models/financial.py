@@ -85,6 +85,28 @@ class FinancialAgenda(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de la cita oficial
 
+    # Gestión de duplicados (26/09/2026). El mismo lead entra dos veces cuando
+    # reprograma a otro día o cuando el webhook no lo reconoce (teléfono escrito
+    # distinto, dos requests de n8n en paralelo). La fila repetida se MARCA, no se
+    # borra: borrar es irreversible y pierde lo que Calendly mandó de verdad.
+    # `duplicada_de_id` apunta a la fila que se conservó.
+    duplicada_de_id = db.Column(
+        db.Integer, db.ForeignKey('financial_agendas.id', ondelete='SET NULL'), nullable=True, index=True)
+    descartada_at = db.Column(db.DateTime, nullable=True)
+    descartada_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    descartada_motivo = db.Column(db.String(255), nullable=True)
+
+    # La relación no es decorativa: sin ella SQLAlchemy no sabe que la tabla se apunta a
+    # sí misma y no ordena los INSERT, así que el sync prod -> local
+    # (scripts/actualizar_db.py) copia las agendas en un solo flush de orden arbitrario y
+    # revienta si una fila descartada entra antes que la conservada a la que apunta.
+    duplicadas = db.relationship(
+        'FinancialAgenda', backref=db.backref('conservada', remote_side=[id]), lazy='dynamic')
+
+    @property
+    def es_duplicada(self):
+        return self.duplicada_de_id is not None
+
     def to_dict(self, sales_count=None):
         if sales_count is None:
             # Fallback optimizado sin funciones de base de datos sobre las columnas para permitir uso de indices
@@ -195,6 +217,10 @@ class FinancialAgenda(db.Model):
             "date": self.date.isoformat() if self.date else None,
             "sales_count": sales_count,
             "has_sale": sales_count > 0,
+            # Gestion de duplicados: la fila descartada sigue existiendo, marcada
+            "duplicada_de_id": self.duplicada_de_id,
+            "descartada_at": self.descartada_at.isoformat() if self.descartada_at else None,
+            "descartada_motivo": self.descartada_motivo,
             # Campos enriquecidos para Call Confirmer / Triage
             "client_id": client_id,
             "survey_answers": survey_answers,
