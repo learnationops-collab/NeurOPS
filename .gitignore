@@ -184,7 +184,8 @@ marimo/_lsp/
 
 # Local Development Scripts
 my_scripts
-test
+# Solo la carpeta `test` de la raiz: en bare, el patron tambien tapaba frontend/src/test.
+/test
 
 # React Frontend
 frontend/node_modules/
