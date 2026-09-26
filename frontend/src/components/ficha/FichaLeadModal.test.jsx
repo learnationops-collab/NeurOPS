@@ -57,13 +57,15 @@ describe('lectura', () => {
             .toEqual(['Confirmación', 'Resultado', 'Historial', 'Formulario', 'Comunicación']);
     });
 
-    it('sobrevive a que la pestaña del otro agente no exista todavía', async () => {
-        // `fichaConDeuda` abre en Acciones, que la escribe otro agente en su worktree.
-        // La ficha tiene que seguir funcionando con las pestañas que sí están.
+    it('una venta con deuda abre en Acciones con las cuatro acciones de cobro', async () => {
+        // Antes este test fijaba el andamio del trabajo en paralelo: que la ficha
+        // sobreviviera a que Acciones todavía no existiera. Ya existe, así que ahora
+        // fija lo que de verdad importa — que la pestaña que el backend eligió carga.
         await abrir(fichaConDeuda);
         expect(activa()).toBe('Acciones');
-        expect(await screen.findByText(/todavía no está disponible/)).toBeInTheDocument();
-        // Y las propias siguen andando.
+        expect(await screen.findByText('Armar plan de cuotas')).toBeInTheDocument();
+        expect(screen.getByText('Registrar pago')).toBeInTheDocument();
+        // Y las demás siguen andando.
         await userEvent.click(screen.getByRole('tab', { name: 'Historial' }));
         expect(screen.getByText('Pagos')).toBeInTheDocument();
     });
