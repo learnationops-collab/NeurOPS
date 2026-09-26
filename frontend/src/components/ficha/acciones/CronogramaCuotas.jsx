@@ -27,7 +27,7 @@ export default function CronogramaCuotas({
       {filas.map((fila, i) => {
         const ultima = i === filas.length - 1;
         return (
-          // eslint-disable-next-line react/no-array-index-key
+          // La cuota se identifica por su posicion en el cronograma.
           <div className="ln-table-row" key={i}>
             <span className="ln-cell-label">{i + 1}</span>
             <span className="ln-field">

@@ -82,7 +82,7 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
       <div className="ln-field-wrap">
         <Rotulo id={idRotulo}>{campo.label}</Rotulo>
         {filas.map((fila, i) => (
-          // eslint-disable-next-line react/no-array-index-key
+          // La fila no tiene identidad propia: es su posicion en la lista.
           <div key={i} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
             {campo.columnas.map((col) => (
               <span key={col} className="ln-field" style={{ flex: 1 }}>
