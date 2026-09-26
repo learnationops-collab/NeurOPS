@@ -39,7 +39,9 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
     const pasarA = (closer) => {
         cerrar();
         if (closer.nombre === closerActual) return;
-        onAccion?.('reasignar_closer', { closer_id: closer.id, closer: closer.nombre });
+        // El error lo muestra el cascarón en su aviso: acá solo hay que no dejar
+        // un rechazo sin manejar.
+        onAccion?.('reasignar_closer', { closer_id: closer.id, closer: closer.nombre })?.catch?.(() => {});
     };
 
     return (

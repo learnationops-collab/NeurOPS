@@ -49,11 +49,20 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
         estado: cerrada || i < indice ? 'hecho' : i === indice ? 'actual' : 'pendiente',
     })), [etapas, indice, cerrada]);
 
+    /* Guardado al vuelo (stepper, desplegables, nota): el cascarón ya muestra el error
+       en un aviso, pero relanza para que las sub-vistas puedan reaccionar. Acá no hay
+       nada que reaccione, así que se traga la promesa — sin esto queda un rechazo sin
+       manejar cada vez que el backend dice no. */
+    const disparar = (nombre, payload) => { onAccion(nombre, payload).catch(() => {}); };
+
     const correr = async (nombre, payload) => {
         setGuardando(true);
         try {
             await onAccion(nombre, payload);
             setModo('menu');
+        } catch {
+            // El aviso de error lo pone el cascarón; la sub-vista se queda abierta con
+            // lo que el usuario cargó para que pueda corregirlo sin volver a escribirlo.
         } finally {
             setGuardando(false);
         }
@@ -72,7 +81,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     if (modo === 'elim') {
         return <SubEliminar ficha={ficha}
             onVolver={() => setModo('menu')}
-            onConfirmar={() => onAccion('eliminar', {})} />;
+            onConfirmar={() => onAccion('eliminar', {}).catch(() => {})} />;
     }
 
     return (
@@ -88,7 +97,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                 ayuda={cerrada ? 'Confirmación completa' : 'Tocá la etapa a la que llegó · se guarda solo'}
                 pasos={pasos}
                 deshabilitado={bloqueado || guardando}
-                onPaso={bloqueado ? null : (clave) => onAccion('etapa_confirmacion', { etapa: clave })} />
+                onPaso={bloqueado ? null : (clave) => disparar('etapa_confirmacion', { etapa: clave })} />
 
             <div className="grid-2">
                 <DesplegableAgrupado
@@ -99,8 +108,8 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     grupos={grupos(ficha, 'como_viene')}
                     valor={conf.como_viene ?? null}
                     deshabilitado={bloqueado}
-                    onChange={(v) => onAccion('como_viene', { como_viene: v })}
-                    onAgregar={({ label }) => onAccion('como_viene', { como_viene: label, nueva_opcion: label })} />
+                    onChange={(v) => disparar('como_viene', { como_viene: v })}
+                    onAgregar={({ label }) => disparar('como_viene', { como_viene: label, nueva_opcion: label })} />
 
                 {/* Los dolores venían del mazo del closer como chips sueltos: acá entran
                     al mismo desplegable agrupado que «Cómo viene» y además aceptan
@@ -115,8 +124,8 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     grupos={grupos(ficha, 'dolores')}
                     valor={conf.dolores || []}
                     deshabilitado={bloqueado}
-                    onChange={(v) => onAccion('dolores', { dolores: v })}
-                    onAgregar={({ label }) => onAccion('dolores', { dolores: [...(conf.dolores || []), label], nueva_opcion: label })} />
+                    onChange={(v) => disparar('dolores', { dolores: v })}
+                    onAgregar={({ label }) => disparar('dolores', { dolores: [...(conf.dolores || []), label], nueva_opcion: label })} />
             </div>
 
             {/* El recordatorio previo solo aplica antes del primer contacto: después de
@@ -128,7 +137,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                             style={{ width: 16, height: 16, accentColor: 'var(--brand-secondary)' }}
                             onChange={(e) => {
                                 setAvisoActivo(e.target.checked);
-                                onAccion('recordatorio_previo', {
+                                disparar('recordatorio_previo', {
                                     recordatorio_previo: { activo: e.target.checked, cuando: avisoCuando || null },
                                 });
                             }} />
@@ -139,7 +148,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                             <input type="datetime-local" value={avisoCuando} disabled={bloqueado}
                                 aria-label="Cuándo recordarme"
                                 onChange={(e) => setAvisoCuando(e.target.value)}
-                                onBlur={() => onAccion('recordatorio_previo', {
+                                onBlur={() => disparar('recordatorio_previo', {
                                     recordatorio_previo: { activo: true, cuando: avisoCuando || null },
                                 })} />
                         </div>
@@ -153,7 +162,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     style={{ minHeight: 104 }}
                     placeholder="Ej: pidió que lo llamemos después de las 20 h. Trabaja de guardia."
                     onChange={(e) => setNota(e.target.value)}
-                    onBlur={() => { if (!bloqueado && nota !== (conf.nota || '')) onAccion('nota_llamada', { nota }); }} />
+                    onBlur={() => { if (!bloqueado && nota !== (conf.nota || '')) disparar('nota_llamada', { nota }); }} />
             </div>
 
             <div className="fi-pie">

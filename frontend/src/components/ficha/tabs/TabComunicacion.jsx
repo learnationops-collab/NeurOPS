@@ -30,6 +30,9 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
             await onAccion('enviar_nota', { texto: limpio, notificar });
             setTexto('');
             setNotificar([]);
+        } catch {
+            // El error lo muestra el cascarón; la nota se queda escrita en el campo para
+            // que no haya que volver a tipearla.
         } finally {
             setEnviando(false);
         }
