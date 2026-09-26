@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
+import { soloDia } from './piezas/fecha';
 import { opciones } from './estadoFicha';
 
 /**
@@ -53,7 +54,7 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
                 <h2 className="t-h2 trunc" style={{ flexShrink: 0 }}>{id.nombre || 'Lead sin nombre'}</h2>
                 <div className="fi-cab-datos">
                     <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : id.examen} />
-                    <Dato rotulo={esCliente ? 'Ingresó' : 'Llamada'} valor={esCliente ? id.ingreso : llamada} />
+                    <Dato rotulo={esCliente ? 'Ingresó' : 'Llamada'} valor={esCliente ? soloDia(id.ingreso) : llamada} />
 
                     <div className="fi-dato" ref={caja} style={{ position: 'relative' }}>
                         <small className="t-rotulo">Closer</small>

@@ -1,7 +1,8 @@
 import React from 'react';
-import { SeccionColapsable } from '../piezas';
+import { fechaLegible as fecha, SeccionColapsable } from '../piezas';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
+
 
 const TONO_CUOTA = { pagada: 'success', vencida: 'error', pendiente: 'idle' };
 
@@ -45,9 +46,11 @@ const TabHistorial = ({ ficha, irA }) => {
     const eventos = hist.eventos || [];
 
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
+    // `como_viene` llega como {clave, label}; la clave es la que busca en el vocabulario.
+    const claveComoViene = conf.como_viene?.clave ?? conf.como_viene;
     const comoViene = (ficha?.vocabulario?.como_viene || [])
         .flatMap(g => g.opciones || [])
-        .find(o => o.clave === conf.como_viene);
+        .find(o => o.clave === claveComoViene);
     const etapaLabel = etapas.find(e => e.clave === conf.etapa)?.label;
 
     const cuenta = (estado) => cuotas.filter(c => (c.estado || '').toLowerCase() === estado).length;
@@ -78,10 +81,10 @@ const TabHistorial = ({ ficha, irA }) => {
             <SeccionColapsable titulo="Agendas"
                 resumen={agendas.length
                     ? `${agendas.length} ${agendas.length === 1 ? 'agenda' : 'agendas'}`
-                        + (agendas[0]?.fecha ? ` · próxima ${agendas[0].fecha}` : '')
+                        + (agendas[0]?.fecha ? ` · próxima ${fecha(agendas[0].fecha)}` : '')
                     : 'Sin agendas'}>
                 {agendas.length
-                    ? agendas.map((a, i) => <Fila key={`${a.fecha}-${i}`} a={a.fecha} b={a.detalle} chip={a.chip} />)
+                    ? agendas.map((a, i) => <Fila key={`${a.fecha}-${i}`} a={fecha(a.fecha)} b={a.detalle} chip={a.chip} />)
                     : <Vacio texto="Este lead todavía no tiene ninguna agenda." />}
             </SeccionColapsable>
 
@@ -89,7 +92,7 @@ const TabHistorial = ({ ficha, irA }) => {
                 {cuotas.length ? (
                     <>
                         {cuotas.map((c, i) => (
-                            <Fila key={c.id ?? i} a={c.fecha} b={`Cuota ${c.numero ?? i + 1}`}
+                            <Fila key={c.id ?? i} a={fecha(c.fecha)} b={`Cuota ${c.numero ?? i + 1}`}
                                 c={plata(c.monto)}
                                 chip={{ label: c.estado || 'Pendiente',
                                     tone: TONO_CUOTA[(c.estado || '').toLowerCase()] || 'idle' }} />
@@ -106,10 +109,10 @@ const TabHistorial = ({ ficha, irA }) => {
             <SeccionColapsable titulo="Seguimientos"
                 resumen={seguimientos.length
                     ? `${seguimientos.length} ${seguimientos.length === 1 ? 'registrado' : 'registrados'}`
-                        + (seguimientos[0]?.fecha ? ` · último ${seguimientos[0].fecha}` : '')
+                        + (seguimientos[0]?.fecha ? ` · último ${fecha(seguimientos[0].fecha)}` : '')
                     : 'Sin seguimientos'}>
                 {seguimientos.length
-                    ? seguimientos.map((s, i) => <Fila key={`${s.fecha}-${i}`} a={s.fecha} b={s.nota} c={s.canal} />)
+                    ? seguimientos.map((s, i) => <Fila key={`${s.fecha}-${i}`} a={fecha(s.fecha)} b={s.nota} c={s.canal} />)
                     : <Vacio texto="No se registró ningún seguimiento." />}
             </SeccionColapsable>
 
@@ -118,7 +121,7 @@ const TabHistorial = ({ ficha, irA }) => {
                     ? `${pagos.length} ${pagos.length === 1 ? 'pago' : 'pagos'} · ${plata(totalPagado)} en total`
                     : 'Sin pagos'}>
                 {pagos.length
-                    ? pagos.map((p, i) => <Fila key={`${p.fecha}-${i}`} a={p.fecha} b={p.medio} c={plata(p.monto)} />)
+                    ? pagos.map((p, i) => <Fila key={`${p.fecha}-${i}`} a={fecha(p.fecha)} b={p.medio} c={plata(p.monto)} />)
                     : <Vacio texto="Todavía no entró ningún pago." />}
             </SeccionColapsable>
 
@@ -128,7 +131,7 @@ const TabHistorial = ({ ficha, irA }) => {
                 <SeccionColapsable titulo="Registro de eventos"
                     resumen={`${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`}>
                     {eventos.map((e, i) => (
-                        <Fila key={e.id ?? i} a={e.fecha || e.created_at} b={e.detalle || e.evento || e.tipo} />
+                        <Fila key={e.id ?? i} a={fecha(e.fecha || e.created_at)} b={e.detalle || e.evento || e.tipo} />
                     ))}
                 </SeccionColapsable>
             )}

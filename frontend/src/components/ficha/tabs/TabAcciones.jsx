@@ -8,6 +8,7 @@ import {
   CalendarDays, CheckCircle2, Clock, XCircle, AlertTriangle, X,
 } from 'lucide-react';
 import { TarjetaAccion } from '../acciones/piezas';
+import { soloDia } from '../piezas/fecha';
 import SubVistaPlanCuotas from '../acciones/SubVistaPlanCuotas';
 import { SubVistaPago, SubVistaSeguimiento, SubVistaBaja } from '../acciones/SubVistasCobro';
 import { moneda } from '../acciones/planCuotas';
@@ -127,7 +128,7 @@ function TarjetaDeuda({ cobro }) {
         </span>
         <span>
           <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Último pago</small>
-          <b className="ln-t-body">{cobro?.ultimo_pago || '—'}</b>
+          <b className="ln-t-body">{soloDia(cobro?.ultimo_pago) || '—'}</b>
         </span>
       </div>
     </div>

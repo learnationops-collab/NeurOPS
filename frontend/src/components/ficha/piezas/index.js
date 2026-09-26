@@ -3,6 +3,7 @@
 // a sus consumidores.
 export { default as Aviso } from './Aviso';
 export { default as DesplegableAgrupado } from './DesplegableAgrupado';
+export { default as fechaLegible, soloDia } from './fecha';
 export { default as SeccionColapsable } from './SeccionColapsable';
 export { default as SelectorFecha, construirMes } from './SelectorFecha';
 export { default as StepperFicha } from './StepperFicha';
