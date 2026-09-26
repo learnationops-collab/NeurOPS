@@ -826,14 +826,28 @@ class BookingService:
             fuente = (appt.origin or '').strip() or fuente_actual or 'Sin asignar'
 
         if not agenda:
-            # Crear nueva agenda financiera si no existe
+            # Fecha de alta de la agenda espejo: la de la CITA, no la de ahora.
+            #
+            # Esta funcion corre cuando un closer o un confirmer toca una cita que
+            # todavia no tenia fila en `financial_agendas`, y eso puede pasar semanas
+            # despues. Con `utcnow()` la agenda quedaba "registrada hoy" y el embudo
+            # del workshop -- que atribuye cada agenda al taller cuya ventana contiene
+            # su fecha de alta -- se la sumaba al taller que estuviera abierto: el del
+            # 26/09/2026 mostraba una agenda exitosa que en realidad era una cita del
+            # 2 de septiembre. Ademas `registro` es hora LOCAL de America/La_Paz en
+            # todo el resto del sistema (ver app/api/public/financial_agendas.py) y
+            # aca se guardaba UTC, o sea corrida 4 horas (26/09/2026).
+            alta_utc = appt.created_at or appt.start_time or datetime.utcnow()
+            registro_local = pytz.UTC.localize(alta_utc).astimezone(
+                pytz.timezone('America/La_Paz')).replace(tzinfo=None).isoformat()
             agenda = FinancialAgenda(
                 nombre=fuente,
                 lead=client.full_name or 'Desconocido',
                 closer=closer_name,
                 fecha_meet=appt.start_time.isoformat(),
                 date=appt.start_time,
-                registro=datetime.utcnow().isoformat(),
+                created_at=alta_utc,
+                registro=registro_local,
                 instagram=client.instagram or 'N/A',
                 whatsapp=client.phone or 'N/A',
                 mail=client.email or 'N/A',
