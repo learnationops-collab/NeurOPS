@@ -162,7 +162,8 @@ export const TABLAS = {
             // El estado de la seña lo agrega el backend a la fila (`sena_estado`): en qué terminó
             // esa reserva. Sin ese campo la faceta no lista ninguna opción y no molesta, pero el
             // panel Señas no puede cortar por estado hasta que llegue.
-            { key: 'sena_estado', label: 'Estado de la seña', de: (f) => f.sena_estado || null },
+            { key: 'sena_estado', label: 'Estado de la seña',
+                de: (f) => f.sena_estado?.label ?? f.sena_estado ?? null },
             { key: 'dia', label: 'Día del cobro', de: (f) => diaDe(f.fecha), oculta: true },
         ],
         chips: [

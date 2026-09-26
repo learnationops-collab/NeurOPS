@@ -33,6 +33,23 @@ import './drill.css';
  * Sin `destino` o sin `irA` devuelve el contenido pelado, para que quien lo usa no tenga que
  * duplicar el marcado cuando una métrica no se puede cortar igual que como se calculó.
  */
+/**
+ * La carga que viaja al drill-down: las condiciones más los metadatos que la lista necesita para
+ * decir de dónde vino el filtro. Las claves `__` no son facetas, Revisar las separa al absorberlas.
+ */
+export const cargaDe = (destino) => ({
+    ...destino.filtro, __de: destino.de, __aviso: destino.aviso || null,
+});
+
+/**
+ * El `onClick` de un destino, para las piezas que ya traen su propio botón (la flecha de una barra
+ * gruesa, una celda del mapa del equipo). Devuelve `undefined` sin destino, así el botón
+ * desaparece solo en vez de quedar apretable sin efecto.
+ */
+export const abrir = (irA, destino) => (destino && irA
+    ? () => irA(destino.tabla, cargaDe(destino))
+    : undefined);
+
 const MetricaClicable = ({
     irA, destino, detalle, vacio = false, className, style, envoltura: Envoltura = 'span',
     subrayar = true, children,
@@ -56,7 +73,7 @@ const MetricaClicable = ({
                 // (las celdas del mapa del equipo, las filas del ranking): sin esto el clic
                 // disparaba las dos acciones y la última ganaba.
                 e.stopPropagation();
-                irA(destino.tabla, { ...destino.filtro, __de: nombre, __aviso: destino.aviso || null });
+                irA(destino.tabla, cargaDe({ ...destino, de: nombre }));
             }}>
             {subrayar ? <span className="metrica-clic-txt">{children}</span> : children}
         </button>
