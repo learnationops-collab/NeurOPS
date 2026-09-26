@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ChevronDown, Filter, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
+    SlidersHorizontal, X } from 'lucide-react';
 import { Cargando, fmt } from './Shared';
-import { TABLAS, TABLAS_POR_ROL, esTablaDeAgendas } from './tablasDef';
+import { TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import PanelDetalle from '../../../components/dashboard/PanelDetalle';
+import PanelConfigurar from './PanelConfigurar';
+import RevisarLista from './RevisarLista';
+import { useModoVista } from '../../../components/listas/useModoVista';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
 // importaban otros archivos por este camino, para no mover los imports de media pantalla.
 export { TABLAS_POR_ROL, duplicadasDe, estadoDeAgenda, fueConfirmada, asistio, presento, respondio,
     cualificado } from './tablasDef';
+// `ChipTono` se fue con la celda a `RevisarLista.jsx`; se re-exporta porque `LeadModal` la pide
+// por este camino.
+export { ChipTono } from './RevisarLista';
 
 /**
  * Revisar: el libro de registros con un buscador, un filtro rápido, UN botón que abre todas las
@@ -25,11 +32,6 @@ export { TABLAS_POR_ROL, duplicadasDe, estadoDeAgenda, fueConfirmada, asistio, p
  * pedida (ver el fix de DashboardComercial): las filas que llegan acá SON siempre de la tabla
  * que se pidió, así que los accesores no llevan guardas.
  */
-
-/** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
-export const ChipTono = ({ chip }) => (chip
-    ? <span className="chip" style={{ '--c': `var(--${chip.tone})` }}>{chip.label}</span>
-    : null);
 
 /** Ícono "i" con la explicación de lo que se está mirando. Se abre y cierra por CSS. */
 const Ayuda = ({ titulo, texto }) => (
@@ -55,120 +57,6 @@ const aplicarFiltros = (filas, def, query, facetas, modo) => {
 };
 
 /**
- * Panel de Configurar: un solo botón abre TODAS las facetas, cada una en su columna.
- *
- * Se ancla al borde IZQUIERDO de su botón (`.config-panel`): el panel es ancho (680px) y el botón
- * vive a la izquierda de la barra, así que alinearlo a la derecha lo sacaba de la pantalla. Debajo
- * de 900px el CSS lo saca del flujo flotante y lo despliega en su propia fila, empujando la tabla.
- */
-const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
-    onLimpiar, onCerrar }) => {
-    const opcionesDe = (faceta) => {
-        // Las opciones se cuentan sobre TODAS las filas del período, no sobre lo ya filtrado: si
-        // se contaran sobre lo filtrado, tildar un valor haría desaparecer a sus vecinos.
-        const conteo = new Map();
-        filas.forEach(f => {
-            const v = faceta.de(f);
-            if (v) conteo.set(v, (conteo.get(v) || 0) + 1);
-        });
-        return [...conteo.entries()].sort((a, b) => b[1] - a[1]);
-    };
-
-    const alternar = (faceta, valor) => {
-        const actuales = facetas[faceta.key] || [];
-        setFacetas({
-            ...facetas,
-            [faceta.key]: actuales.includes(valor)
-                ? actuales.filter(v => v !== valor)
-                : [...actuales, valor],
-        });
-    };
-
-    const seleccionados = def.facetas.reduce((a, fa) => a + (facetas[fa.key]?.length || 0), 0);
-    // Una faceta `oculta` (el día, con una opción por fecha del período) se aplica igual pero no
-    // ocupa una columna del panel: existe para que un dato de Variabilidad tenga a dónde llevar.
-    const visibles = def.facetas.filter(fa => !fa.oculta);
-
-    return (
-        <div className="config-panel" role="dialog" aria-label="Filtro completo">
-            <div className="config-cab">
-                <p className="t-h3" style={{ fontSize: 16 }}>Filtro completo</p>
-                {seleccionados > 0 && <span className="cuenta-burbuja">{seleccionados}</span>}
-                <button type="button" className="ibtn ibtn--sm" style={{ marginLeft: 'auto' }}
-                    onClick={onCerrar} aria-label="Cerrar">
-                    <X size={15} />
-                </button>
-            </div>
-
-            <div className="fila" style={{ gap: 'var(--s3)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }}>
-                {esTablaDeAgendas(tabla) && (
-                    <>
-                        <span className="t-rotulo">Fecha</span>
-                        <div className="seg">
-                            {[['meet', 'Fecha meet'], ['creacion', 'F. creación']].map(([k, label]) => (
-                                <button key={k} type="button" aria-pressed={basis === k}
-                                    onClick={() => setBasis(k)}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
-                <span className="t-rotulo">Cumple</span>
-                <div className="seg">
-                    {[['todas', 'Todas'], ['alguna', 'Alguna']].map(([k, label]) => (
-                        <button key={k} type="button" aria-pressed={modo === k}
-                            onClick={() => setModo(k)}>
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="config-grid">
-                {visibles.map(faceta => {
-                    const sel = facetas[faceta.key] || [];
-                    return (
-                        <div key={faceta.key} className="config-col">
-                            <p className="t-rotulo">
-                                {faceta.label}{sel.length > 0 ? ` · ${sel.length}` : ''}
-                            </p>
-                            <div className="config-lista">
-                                {opcionesDe(faceta).map(([valor, n]) => {
-                                    const on = sel.includes(valor);
-                                    return (
-                                        <button key={valor} type="button" className="config-op"
-                                            role="checkbox" aria-checked={on}
-                                            onClick={() => alternar(faceta, valor)}>
-                                            <span className="config-caja">{on ? '✓' : ''}</span>
-                                            <span className="trunc">{valor}</span>
-                                            <span className="cuenta">{n}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div className="config-pie">
-                <span className="t-cap mut40">
-                    {seleccionados === 0
-                        ? 'Sin condiciones: se ve todo el período.'
-                        : `${seleccionados} ${seleccionados === 1 ? 'condición' : 'condiciones'} sobre ${visibles.length} facetas.`}
-                </span>
-                <button type="button" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
-                    disabled={seleccionados === 0} onClick={onLimpiar}>
-                    <RotateCcw size={13} />
-                    Limpiar
-                </button>
-            </div>
-        </div>
-    );
-};
-
-/**
  * Totales de lo filtrado: una tira de verificación, no un panel de tarjetas. Son los mismos
  * números de antes (con su bajada, que es lo que los hace verificables: "18 de 22 asistieron"),
  * con mucho menos peso visual.
@@ -186,98 +74,6 @@ const TotalesTira = ({ items, alcance }) => (
     </div>
 );
 
-const Celda = ({ fila, col }) => {
-    switch (col.key) {
-        case 'fecha':
-            return (
-                <span className="celda num">
-                    {fmt.fecha(fila.fecha)}
-                    {fmt.hora(fila.fecha) && <span className="celda-sub num">{fmt.hora(fila.fecha)}</span>}
-                </span>
-            );
-        case 'cliente':
-            return (
-                <span className="celda">
-                    {fila.cliente}
-                    {fila.ig && <span className="celda-sub">{fila.ig}</span>}
-                </span>
-            );
-        case 'pre_call':
-            return <ChipTono chip={fila.pre_call} />;
-        case 'post_call':
-            // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
-            // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.
-            return (
-                <>
-                    <ChipTono chip={fila.post_call} />
-                    {fila.retraso_dias > 0 && (
-                        <span className="celda-sub num"
-                            style={{ color: 'var(--error)', fontWeight: 700 }}>
-                            {fila.retraso_dias} {fila.retraso_dias === 1 ? 'día' : 'días'} sin reportar
-                        </span>
-                    )}
-                </>
-            );
-        case 'estado':
-            return <ChipTono chip={fila.estado} />;
-        case 'tipo_pago':
-            return (
-                <>
-                    <ChipTono chip={fila.tipo_pago} />
-                    {fila.metodo && <span className="celda-sub">{fila.metodo}</span>}
-                </>
-            );
-        case 'monto':
-            return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
-        case 'pagado':
-            return (
-                <span className="celda celda--num">
-                    {fmt.money(fila.pagado)}
-                    <span className="celda-sub num">{fmt.plural(fila.cobros, 'cobro', 'cobros')}</span>
-                </span>
-            );
-        case 'deuda':
-            // Cero no se escribe "$0": un cliente que no debe nada es una fila que no hay que
-            // mirar, y el guión la saca del camino.
-            return (
-                <span className="celda celda--num"
-                    style={fila.deuda > 0.01 ? { color: 'var(--error)', fontWeight: 800 } : undefined}>
-                    {fila.deuda > 0.01 ? fmt.money(fila.deuda) : '—'}
-                </span>
-            );
-        case 'cuota':
-            // El chip dice en qué situación está y la bajada dice qué y cuándo cobrar, que es lo
-            // que se viene a buscar acá.
-            return (
-                <>
-                    <ChipTono chip={fila.estado} />
-                    {fila.cuota_monto != null && (
-                        <span className="celda-sub num"
-                            style={fila.cuota_vencida ? { color: 'var(--error)', fontWeight: 700 } : undefined}>
-                            {fmt.money(fila.cuota_monto)}
-                            {fila.cuota_fecha ? ` · ${fmt.fecha(fila.cuota_fecha)}` : ' · sin plan'}
-                        </span>
-                    )}
-                </>
-            );
-        case 'programa':
-            return (
-                <span className="chip" style={{
-                    '--c': fila.programa === 'Residency Roadmap'
-                        ? 'var(--prog-elite-b)' : 'var(--prog-ace)',
-                }}>
-                    {fila.programa}
-                </span>
-            );
-        case 'mensajes':
-            return <span className="celda celda--num">{fmt.num(fila.mensajes)}</span>;
-        case 'ver':
-            return <span className="celda-ver"><ArrowRight size={14} /></span>;
-        default:
-            return <span className="celda">{fila[col.key] || '—'}</span>;
-    }
-};
-
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro }) => {
     const [query, setQuery] = useState('');
@@ -285,7 +81,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [modo, setModo] = useState('todas');
     const [chip, setChip] = useState(null);
     const [menu, setMenu] = useState(null);
+    const [agrupacion, setAgrupacion] = useState(null);
     const barra = useRef(null);
+
+    // Lista o tarjetas, con la elección recordada. La clave es por tabla: mirar las agendas como
+    // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
+    const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
     const def = TABLAS[tabla];
 
@@ -327,6 +128,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         setChip(null);
         setQuery('');
         setMenu(null);
+        // La agrupación también se reinicia: las dimensiones son por tabla y la de Ventas no
+        // existe en Leads.
+        setAgrupacion(null);
     }
 
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
@@ -348,6 +152,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
     const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
+    const dimension = (def.agrupables || []).find(d => d.key === agrupacion) || null;
 
     const limpiar = () => {
         setFacetas({});
@@ -514,6 +319,54 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     )}
                 </div>
 
+                {/* Agrupar por: la dimensión sale de `def.agrupables`, así que cada tabla ofrece
+                    las suyas y agregar un criterio nuevo es una línea en `tablasDef.js`. */}
+                {(def.agrupables || []).length > 0 && (
+                    <div style={{ position: 'relative' }}>
+                        <button type="button"
+                            className={`pastilla${dimension ? ' pastilla--on' : ''}`}
+                            aria-expanded={menu === 'agrupar'} aria-haspopup="menu"
+                            onClick={() => setMenu(m => (m === 'agrupar' ? null : 'agrupar'))}>
+                            <Rows size={15} />
+                            {dimension ? `Por ${dimension.label.toLowerCase()}` : 'Sin agrupar'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {menu === 'agrupar' && (
+                            <div className="menu" role="menu" aria-label="Agrupar por">
+                                <button type="button" className="menu-item" role="menuitemradio"
+                                    aria-checked={!agrupacion}
+                                    onClick={() => { setAgrupacion(null); setMenu(null); }}>
+                                    <span className="trunc">Sin agrupar</span>
+                                </button>
+                                {def.agrupables.map(d => (
+                                    <button key={d.key} type="button" className="menu-item"
+                                        role="menuitemradio" aria-checked={agrupacion === d.key}
+                                        onClick={() => { setAgrupacion(d.key); setMenu(null); }}>
+                                        <span className="trunc">{d.label}</span>
+                                        <span className="cuenta">
+                                            {new Set(visibles.map(f => d.de(f) || '—')).size}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Lista o tarjetas. Dos posiciones, no un menú: es una sola decisión. */}
+                <div className="seg" role="group" aria-label="Forma de ver la lista">
+                    <button type="button" aria-pressed={modoVista === 'lista'}
+                        title="Ver como lista" aria-label="Ver como lista"
+                        onClick={() => setModoVista('lista')}>
+                        <List size={14} />
+                    </button>
+                    <button type="button" aria-pressed={modoVista === 'tarjetas'}
+                        title="Ver como tarjetas" aria-label="Ver como tarjetas"
+                        onClick={() => setModoVista('tarjetas')}>
+                        <LayoutGrid size={14} />
+                    </button>
+                </div>
+
                 <label className="busca busca--sm">
                     <span className="mut40" style={{ display: 'flex' }}><Search size={14} /></span>
                     <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
@@ -573,31 +426,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             </div>
                         </div>
                     ) : (
-                        <div className="tabla">
-                            <div className="tabla-cab" style={{ '--cols': plantilla }}>
-                                {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
-                            </div>
-                            {visibles.map(fila => (
-                                <div key={`${fila.tipo}-${fila.id}`} className="tabla-fila"
-                                    role="button" tabIndex={0} style={{ '--cols': plantilla }}
-                                    aria-label={`Abrir ${fila.cliente}`}
-                                    onClick={() => onAbrirFila(fila)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            onAbrirFila(fila);
-                                        }
-                                    }}>
-                                    {def.cols.map(c => (
-                                        // `data-h` es el rótulo que el CSS pinta a la izquierda de
-                                        // cada dato cuando la tabla se apila en móvil.
-                                        <div key={c.key} data-h={c.header}>
-                                            <Celda fila={fila} col={c} />
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+                        <RevisarLista def={def} visibles={visibles} plantilla={plantilla}
+                            onAbrirFila={onAbrirFila} Celda={Celda} dimension={dimension}
+                            modo={modoVista} />
                     )}
                 </>
             )}

@@ -1,0 +1,144 @@
+/* Vistas agrupada y de tarjetas del libro de registros.
+ *
+ * Todo con los tokens que ya existen (`--mat-1`, `--bg-element`, `--border-subtle`, `--s2..--s6`,
+ * `--radius-control`) y el color de un dato por la custom property `--c`, que es la convención de
+ * la referencia visual. No hay ni un color nuevo acá.
+ *
+ * Scoped a `.dc-shell` como el resto del tablero: estas vistas viven dentro de Revisar.
+ */
+
+/* --- Encabezado de grupo ------------------------------------------------------------------- */
+
+.dc-shell .grupo-cab {
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    width: 100%;
+    padding: var(--s3) var(--s4);
+    background: var(--mat-1);
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    transition: background-color .16s ease;
+}
+
+.dc-shell .grupo-cab:hover { background: var(--bg-element); }
+.dc-shell .grupo-cab:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: -2px; }
+
+/* La flecha gira: dice si el grupo está abierto sin necesitar dos íconos distintos. */
+.dc-shell .grupo-flecha {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--text-muted-40);
+    transition: transform .2s var(--spring);
+}
+.dc-shell .grupo-cab[aria-expanded="false"] .grupo-flecha { transform: rotate(-90deg); }
+
+.dc-shell .grupo-nombre {
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* El subtotal a la derecha, en tabular-nums como toda cifra del tablero. */
+.dc-shell .grupo-sub {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s4);
+    margin-left: auto;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+.dc-shell .grupo-sub b { font-size: 13px; font-weight: 900; letter-spacing: -.015em; }
+.dc-shell .grupo-sub span { font-size: 11px; color: var(--text-muted-40); font-weight: 700; }
+
+.dc-shell .grupo-cuerpo { animation: grupoAbre .22s ease-out; }
+
+@keyframes grupoAbre {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* --- Tarjetas ------------------------------------------------------------------------------ */
+
+.dc-shell .tarjetas {
+    display: grid;
+    gap: var(--s3);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+
+.dc-shell .reg-tarjeta {
+    display: grid;
+    gap: var(--s3);
+    align-content: start;
+    padding: var(--s4);
+    min-width: 0;
+    text-align: left;
+    background: var(--bg-element);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-main);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color .16s ease, transform .16s var(--spring);
+}
+
+.dc-shell .reg-tarjeta:hover {
+    border-color: var(--border-control);
+    transform: translateY(-2px);
+}
+.dc-shell .reg-tarjeta:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: 2px; }
+
+.dc-shell .reg-tarjeta-cab { display: flex; align-items: flex-start; gap: var(--s3); min-width: 0; }
+.dc-shell .reg-tarjeta-nom { display: grid; gap: 2px; min-width: 0; }
+.dc-shell .reg-tarjeta-nom b {
+    font-size: 14px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dc-shell .reg-tarjeta-chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
+
+/* Los pares rótulo/valor: dos columnas, el valor a la derecha, en tabular-nums. */
+.dc-shell .reg-tarjeta-datos {
+    display: grid;
+    gap: var(--s2);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--s3);
+}
+.dc-shell .reg-dato {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s3);
+    justify-content: space-between;
+    min-width: 0;
+}
+.dc-shell .reg-dato > small {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-muted-40);
+}
+.dc-shell .reg-dato > span {
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dc-shell .grupo-cuerpo { animation: none; }
+    .dc-shell .reg-tarjeta:hover { transform: none; }
+}
