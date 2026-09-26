@@ -6,7 +6,12 @@
  * y lo único que se declara acá es el foco, el hover y el marco del aviso de procedencia.
  */
 
-.metrica-clic {
+/* El reset va en `:where()` —especificidad cero— a propósito. Un `<button>` trae padding, borde,
+   tipografía y color del navegador, y basta cualquier regla de autor para pisarlos; con
+   especificidad cero, las clases que le pase quien lo usa (las utilidades de Tailwind del
+   dashboard del closer, por ejemplo `pl-3` o `text-rose-400`) siempre ganan sin depender del orden
+   en que se junten las hojas de estilo. */
+:where(.metrica-clic) {
     appearance: none;
     background: none;
     border: 0;
@@ -15,8 +20,11 @@
     font: inherit;
     color: inherit;
     text-align: inherit;
-    cursor: pointer;
     border-radius: 8px;
+}
+
+.metrica-clic {
+    cursor: pointer;
     min-width: 0;
     transition: opacity .16s ease, box-shadow .16s ease;
 }
