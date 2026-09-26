@@ -102,8 +102,12 @@ ESTADO_LEAD = [
 # del closer (vencida primero, despues por vencer, despues deuda sin plan armado, despues al dia).
 ESTADO_CARTERA = [
     {'key': 'vencida', 'label': 'Cuota vencida', 'tone': 'error'},
-    {'key': 'por_vencer', 'label': 'Cuota por vencer', 'tone': 'warning'},
-    {'key': 'sin_plan', 'label': 'Debe, sin plan', 'tone': 'warning'},
+    {'key': 'por_vencer', 'label': 'Con deuda', 'tone': 'warning'},
+    # "Sin cronograma" y no "Debe, sin plan": es el mismo nombre con el que ya aparece en el panel
+    # de cuotas (`Analizar.jsx`) y en el dashboard del closer, y es un estado distinto de "Con
+    # deuda" — el que debe y tiene cuotas hay que cobrarlo, el que debe y no tiene cronograma
+    # primero hay que armárselo. Confundirlos deja plata sin agenda de cobro.
+    {'key': 'sin_plan', 'label': 'Sin cronograma', 'tone': 'warning'},
     {'key': 'al_dia', 'label': 'Al día', 'tone': 'success'},
 ]
 
@@ -354,7 +358,19 @@ class ComercialService:
                 'metodo': v.metodo_pago or 'Sin método',
                 'closer': nombre,
                 'setter': v.setter or '',
+                # Se completa abajo: en qué terminó esta seña. `None` en cualquier fila que no sea
+                # una seña, para que la clave no falte nunca y el frontend no tenga que preguntar.
+                'sena_estado': None,
             })
+
+        # En qué terminó cada seña, con la MISMA función que cuenta el panel Señas. Sin esto la
+        # tabla Ventas no sabía cortar por eso: el panel decía "3 caídas" y no había forma de ver
+        # cuáles eran. Se resuelve acá y no en el frontend porque hace falta buscar la venta
+        # posterior del mismo contacto, que el frontend no tiene.
+        from app.services.comercial_analitica import clasificar_senas
+        filas_por_id = {f['id']: f for f in filas}
+        for fila_id, dato in clasificar_senas(filas).items():
+            filas_por_id[fila_id]['sena_estado'] = dato['estado']
         return filas
 
     # --- Leads entrantes del setter -----------------------------------------------------------

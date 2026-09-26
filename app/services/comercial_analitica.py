@@ -96,38 +96,47 @@ def delta(actual, previo, modo):
     return {'valor': round((actual - previo) / previo * 100, 1), 'modo': 'pct'}
 
 
-def senas_de(filas_ventas):
-    """En qué terminó cada seña del período.
+# En qué terminó una seña. El panel los cuenta y la tabla Ventas los muestra fila por fila
+# (`sena_estado`), para que se pueda cortar por ellos: son los mismos cuatro, resueltos una sola vez
+# en `clasificar_senas`.
+SENA_PAGO_COMPLETO = 'pago_completo'
+SENA_PAGO_PARCIAL = 'pago_parcial'
+SENA_EN_ESPERA = 'en_espera'
+SENA_CAIDA = 'caida'
 
-    Una seña es una reserva, no una venta: lo que importa es si después se completó. No hay
-    ninguna columna que lo diga, así que se resuelve buscando, para el mismo contacto, una venta
-    posterior de tipo completo o parcial. Las que no aparecen quedan "en espera" mientras sean
-    recientes y "caída" pasados `DIAS_SENA_CAIDA` días — es la única señal real de que el lead
-    no va a volver (ver la constante).
+# Contador del panel Señas <- estado de cada seña.
+_CONTADOR_DE_SENA = {SENA_PAGO_COMPLETO: 'completo', SENA_PAGO_PARCIAL: 'parcial',
+                     SENA_EN_ESPERA: 'espera', SENA_CAIDA: 'caida'}
+
+
+def clasificar_senas(filas_ventas):
+    """`{id de fila: {'estado', 'venta'}}` para cada seña de `filas_ventas`.
+
+    Una seña es una reserva, no una venta: lo que importa es si después se completó. No hay ninguna
+    columna que lo diga, así que se resuelve buscando, para el mismo contacto, una venta posterior
+    de tipo completo o parcial. Las que no aparecen quedan "en espera" mientras sean recientes y
+    "caída" pasados `DIAS_SENA_CAIDA` días — es la única señal real de que el lead no va a volver.
 
     La antigüedad se mide contra HOY, no contra el fin del período: una seña de agosto mirada en
     diciembre lleva cuatro meses sin completarse, sea cual sea el filtro con el que se la mire.
 
-    `desbloqueado` es el cash de esas ventas posteriores: la plata que la seña destrabó, que es
-    el argumento para seguir pidiéndolas.
+    Vive separada de `senas_de` porque el panel necesita los CONTEOS y la tabla Ventas necesita el
+    estado de CADA fila para poder filtrar por él. Con la clasificación duplicada, el panel diría
+    "3 caídas" y el filtro de la tabla mostraría otras tres.
     """
     senas = [f for f in filas_ventas if f['tipo_pago']['key'] == 'seña']
-    vacio = {'total': 0, 'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0,
-             'cobrado': 0.0, 'ticket': None, 'desbloqueado': 0.0, 'conversion': None}
     if not senas:
-        return vacio
+        return {}
 
     contactos = {}
     for f in senas:
         for clave in (_limpiar_email(f['email']), _limpiar_ig(f['ig'])):
             if clave:
                 contactos.setdefault(clave, []).append(f)
-    cobrado = sum(f['monto'] for f in senas)
     if not contactos:
-        # Sin email ni instagram no hay forma de saber si se convirtió: se cuentan como en
-        # espera en vez de darlas por caídas.
-        return {**vacio, 'total': len(senas), 'espera': len(senas), 'cobrado': round(cobrado, 2),
-                'ticket': round(cobrado / len(senas), 2)}
+        # Sin email ni instagram no hay forma de saber si se convirtió: quedan en espera en vez de
+        # darlas por caídas.
+        return {f['id']: {'estado': SENA_EN_ESPERA, 'venta': None} for f in senas}
 
     claves = sorted(contactos)
     posteriores = FinancialSale.query.filter(
@@ -150,8 +159,7 @@ def senas_de(filas_ventas):
                     conversion[clave] = v
 
     hoy = date.today()
-    grupos = {'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0}
-    desbloqueado, ya_contadas = 0.0, set()
+    salida = {}
     for f in senas:
         venta = None
         for clave in (_limpiar_email(f['email']), _limpiar_ig(f['ig'])):
@@ -163,13 +171,37 @@ def senas_de(filas_ventas):
                 break
         if venta:
             _, tipo, _ = ComercialService.clasificar_venta(venta)
-            grupos['completo' if tipo == 'completo' else 'parcial'] += 1
-            if venta.id not in ya_contadas:
-                ya_contadas.add(venta.id)
-                desbloqueado += float(venta.monto or 0.0)
+            estado = SENA_PAGO_COMPLETO if tipo == 'completo' else SENA_PAGO_PARCIAL
         else:
             dias = (hoy - date.fromisoformat(f['fecha'][:10])).days if f['fecha'] else 0
-            grupos['caida' if dias > DIAS_SENA_CAIDA else 'espera'] += 1
+            estado = SENA_CAIDA if dias > DIAS_SENA_CAIDA else SENA_EN_ESPERA
+        salida[f['id']] = {'estado': estado, 'venta': venta}
+    return salida
+
+
+def senas_de(filas_ventas):
+    """En qué terminó cada seña del período, contado para el panel Señas.
+
+    `desbloqueado` es el cash de las ventas que las señas destrabaron, que es el argumento para
+    seguir pidiéndolas.
+    """
+    senas = [f for f in filas_ventas if f['tipo_pago']['key'] == 'seña']
+    vacio = {'total': 0, 'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0,
+             'cobrado': 0.0, 'ticket': None, 'desbloqueado': 0.0, 'conversion': None}
+    if not senas:
+        return vacio
+
+    clasificadas = clasificar_senas(senas)
+    cobrado = sum(f['monto'] for f in senas)
+    grupos = {'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0}
+    desbloqueado, ya_contadas = 0.0, set()
+    for f in senas:
+        dato = clasificadas.get(f['id']) or {'estado': SENA_EN_ESPERA, 'venta': None}
+        grupos[_CONTADOR_DE_SENA[dato['estado']]] += 1
+        venta = dato['venta']
+        if venta and venta.id not in ya_contadas:
+            ya_contadas.add(venta.id)
+            desbloqueado += float(venta.monto or 0.0)
 
     convertidas = grupos['completo'] + grupos['parcial']
     return {
