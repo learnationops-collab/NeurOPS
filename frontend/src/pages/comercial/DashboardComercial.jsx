@@ -12,9 +12,17 @@ import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
-import ClienteModal from './components/ClienteModal';
+import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
+
+/**
+ * La ficha unificada se pide por agenda o por cliente. Una venta y un lead de ManyChat no
+ * traen ninguno de los dos en su fila, asi que siguen con el modal viejo hasta que la ficha
+ * sepa resolver una identidad por contacto.
+ */
+const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
+    || (fila?.tipo === 'cliente' && !!fila.client_id);
 
 /**
  * Dashboard comercial.
@@ -515,19 +523,28 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                 </div>
 
-                {/* Una fila de Clientes no es una agenda: no tiene pre call ni post call que
-                    corregir, tiene una cartera que mirar. Abre su ficha de cobro en vez del
-                    modal de corrección, que sobre un cliente quedaba sin una sola acción. */}
-                {filaAbierta?.tipo === 'cliente' ? (
-                    <ClienteModal fila={filaAbierta} onCerrar={() => setFilaAbierta(null)} />
+                {/* Una agenda y un cliente abren la ficha unificada: el recorrido entero del
+                    lead en un solo modal, con la pestaña que corresponde al estado en el que
+                    está. Antes eran dos modales distintos y ninguno mostraba todo.
+
+                    Una venta y un lead de ManyChat siguen con el modal viejo: sus filas no
+                    traen ni agenda ni cliente con los que pedir la ficha, y resolverlos por
+                    email o instagram es justo el cruce por texto libre que no conviene hacer
+                    a la ligera. */}
+                {filaAbierta && (esFichaUnificada(filaAbierta) ? (
+                    <FichaLeadModal
+                        appointmentId={filaAbierta.tipo === 'agenda' ? filaAbierta.id : null}
+                        clientId={filaAbierta.tipo === 'cliente' ? filaAbierta.client_id : null}
+                        onCerrar={() => setFilaAbierta(null)}
+                        onCambio={() => { cargarTabla(); cargarAnalizar(); }} />
                 ) : (
                     <LeadModal fila={filaAbierta} estados={contexto.estados}
                         puedeCorregir={puedeCorregirFila(filaAbierta)}
-                        duplicadaDe={filaAbierta ? duplicadas[filaAbierta.id] : null}
+                        duplicadaDe={duplicadas[filaAbierta.id]}
                         onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
                         onEliminar={contexto.puede_reportar ? eliminarAgenda : null}
                         onCerrar={() => setFilaAbierta(null)} />
-                )}
+                ))}
 
                 {!embebido && (
                 <nav className="dock caja" aria-label="Secciones del dashboard comercial">
