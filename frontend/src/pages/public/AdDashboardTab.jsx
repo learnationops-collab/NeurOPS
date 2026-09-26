@@ -1140,7 +1140,7 @@ const AdDashboardTab = () => {
                                                     let color = "text-white";
 
                                                     if (col.id === 'ad_name') {
-                                                        const isAdHidden = hiddenAds.includes(stat.ad_id);
+                                                        const isAdHidden = stat.ad_status === 'archived';
                                                         content = (
                                                             <div className="flex items-center gap-3">
                                                                 {stat.ad_id !== 0 ? (

@@ -13,7 +13,8 @@ import {
     BarChart3,
     TrendingUp,
     Inbox,
-    Zap
+    Zap,
+    CheckCircle2
 } from 'lucide-react';
 import Card from '../ui/Card';
 import Counter from '../ui/Counter';

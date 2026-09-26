@@ -15,7 +15,8 @@ import {
     ChevronDown,
     X,
     LayoutDashboard,
-    DollarSign
+    DollarSign,
+    Wallet
 } from 'lucide-react';
 import Card from '../ui/Card';
 import Counter from '../ui/Counter';

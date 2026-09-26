@@ -3,6 +3,7 @@ import { Zap, MessageSquare, Database, FileUp, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import OperationsSection from '../dashboard/components/OperationsSection';
 import DatabaseTools from '../dashboard/components/DatabaseTools';
+import AdvancedImportTool from '../../../components/admin/AdvancedImportTool';
 
 
 const OperationsPage = () => {
