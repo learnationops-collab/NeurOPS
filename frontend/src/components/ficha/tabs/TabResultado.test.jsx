@@ -136,6 +136,23 @@ describe('TabResultado', () => {
     expect(screen.getByRole('list').textContent).toContain('Seguimiento 2 de 4');
   });
 
+  it('un aviso del backend se muestra aunque el guardado haya salido bien', async () => {
+    const user = userEvent.setup();
+    const conAviso = props(fichaAgendaVencida, {
+      onAccion: vi.fn().mockResolvedValue({ status: 'success', warning: 'El cliente ya tenía una seña sin plan' }),
+    });
+    render(<TabResultado {...conAviso} />);
+    await user.click(screen.getByRole('button', { name: 'Reagenda' }));
+    await user.click(screen.getByRole('button', { name: 'No dio motivo' }));
+    await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
+    const aviso = screen.getByRole('status');
+    expect(aviso).toHaveTextContent('El cliente ya tenía una seña sin plan');
+    await user.click(screen.getByRole('button', { name: 'Descartar el aviso' }));
+    expect(screen.queryByText(/seña sin plan/)).toBeNull();
+  });
+
   it('con `prefers-reduced-motion` el árbol sigue siendo usable', async () => {
     // framer-motion lee esta media query: si el usuario pidió menos movimiento, las opciones
     // tienen que aparecer igual (sin desplazamiento ni cascada), no quedarse invisibles.

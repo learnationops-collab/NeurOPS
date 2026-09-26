@@ -8,7 +8,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft,
+  CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
 } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import CampoArbol from '../acciones/CampoArbol';
@@ -78,6 +78,7 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
   const [respuestas, setRespuestas] = useState(() => precargar(ficha));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [aviso, setAviso] = useState(null);
 
   const contexto = useMemo(() => {
     const res = ficha?.resultado || {};
@@ -114,8 +115,13 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
     const { accion, datos } = construirPayload(respuestas, contexto);
     setGuardando(true);
     setError(null);
+    setAviso(null);
     try {
-      await onAccion(accion, datos);
+      const respuesta = await onAccion(accion, datos);
+      // La venta se guarda igual aunque el historial de pagos previo tenga una inconsistencia
+      // (SheetsService avisa pero no bloquea). Ese aviso tiene que llegar al closer: si no, se
+      // queda sin saber que hay un dato para revisar en el historial del cliente.
+      if (respuesta?.warning) setAviso(respuesta.warning);
       await onRecargar?.();
       // Si quedó saldo, el trabajo sigue en «Acciones»: se lleva al closer ahí en vez de
       // dejarlo en una pantalla de resultado que ya no tiene nada para hacer.
@@ -146,6 +152,19 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
         <div className="ln-alert ln-alert--error" role="alert">
           <span className="ln-alert-ico"><AlertTriangle /></span>
           <span className="ln-alert-body"><span className="ln-alert-title">{error}</span></span>
+        </div>
+      )}
+
+      {aviso && (
+        <div className="ln-alert ln-alert--warning" role="status">
+          <span className="ln-alert-ico"><AlertTriangle /></span>
+          <span className="ln-alert-body">
+            <span className="ln-alert-title">Se guardo, pero hay algo para revisar</span>
+            <span className="ln-alert-desc">{aviso}</span>
+          </span>
+          <button type="button" className="ln-alert-x" aria-label="Descartar el aviso" onClick={() => setAviso(null)}>
+            <X />
+          </button>
         </div>
       )}
 
