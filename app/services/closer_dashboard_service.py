@@ -219,6 +219,11 @@ class CloserDashboardService:
             programas = programas_por_cliente.get(client_id, [])
 
             rows.append({
+                # `client_id` va en la fila para que desde el dashboard se pueda abrir la ficha de
+                # ese cliente. Sin él esta era la única lista del sistema que dice a quién hay que
+                # cobrarle sin dar forma de llegar a su cobro: lo único que viajaba era el nombre,
+                # y cruzar por nombre es exactamente lo que el resto del código evita.
+                'client_id': client_id,
                 'client_name': (cliente.full_name or cliente.email) if cliente else 'Sin nombre',
                 'program': ' · '.join(dict.fromkeys(programas)) or 'Sin programa',
                 'pending_amount': round(deuda, 2),
