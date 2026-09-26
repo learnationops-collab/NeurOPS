@@ -136,6 +136,25 @@ describe('TabResultado', () => {
     expect(screen.getByRole('list').textContent).toContain('Seguimiento 2 de 4');
   });
 
+  it('con `prefers-reduced-motion` el árbol sigue siendo usable', async () => {
+    // framer-motion lee esta media query: si el usuario pidió menos movimiento, las opciones
+    // tienen que aparecer igual (sin desplazamiento ni cascada), no quedarse invisibles.
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      onchange: null,
+      dispatchEvent: () => false,
+    }));
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Asistió' }));
+    expect(screen.getByRole('button', { name: /Sí, con decisor/ })).toBeVisible();
+  });
+
   it('sin permiso de reportar no muestra el árbol', () => {
     const ficha = { ...fichaAgendaVencida, permisos: { ...fichaAgendaVencida.permisos, reportar: false } };
     render(<TabResultado {...props(ficha)} />);

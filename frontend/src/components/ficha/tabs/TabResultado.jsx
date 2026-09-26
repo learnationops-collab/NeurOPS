@@ -20,6 +20,24 @@ import {
   RAICES,
 } from '../arbolResultado';
 
+// Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
+// retardo es corto a proposito (30 ms): el closer reporta llamadas todo el dia y una animacion
+// que se note dos veces ya molesta. Con `prefers-reduced-motion` no hay ni desplazamiento ni
+// retardo, solo el cambio de opacidad que el navegador ya no anima.
+const CASCADA = {
+  contenedor: (reducido) => ({
+    initial: 'oculto',
+    animate: 'visible',
+    variants: { visible: { transition: { staggerChildren: reducido ? 0 : 0.03 } } },
+  }),
+  hijo: (reducido) => ({
+    variants: reducido
+      ? { oculto: { opacity: 1 }, visible: { opacity: 1 } }
+      : { oculto: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } },
+    transition: { duration: 0.16, ease: 'easeOut' },
+  }),
+};
+
 const ICONOS = {
   asistio: <CheckCircle2 />, no_asistio: <XCircle />, cancelo: <CalendarX />, reagenda: <CalendarClock />,
 };
@@ -152,6 +170,7 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
         ) : listo ? (
           <motion.section key="revision" {...animar} aria-label="Revisión del resultado">
             <Revision
+              reducido={reducido}
               respuestas={respuestas}
               contexto={contexto}
               guardando={guardando}
@@ -162,6 +181,7 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
         ) : (
           <motion.section key={pregunta.clave} {...animar} aria-live="polite">
             <Pregunta
+              reducido={reducido}
               pregunta={pregunta}
               respuestas={respuestas}
               contexto={contexto}
@@ -191,15 +211,16 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
 
 // --- una pregunta por pantalla -------------------------------------------------------------
 
-function Pregunta({ pregunta, respuestas, contexto, cuotas, pendientes, puede, onElegir, onCambiar }) {
+function Pregunta({ pregunta, respuestas, contexto, cuotas, pendientes, puede, onElegir, onCambiar, reducido }) {
   if (pregunta.tipo !== 'formulario') {
     const columnas = pregunta.opciones.length > 2 ? 3 : 2;
     return (
       <>
         <h3 className="ln-t-h3">{pregunta.enunciado}</h3>
         {pregunta.ayuda && <p className="ln-t-body-sm ln-muted">{pregunta.ayuda}</p>}
-        <div
+        <motion.div
           role="group"
+          {...CASCADA.contenedor(reducido)}
           style={{
             display: 'grid', gap: 'var(--space-3)', marginTop: 'var(--space-4)',
             gridTemplateColumns: `repeat(auto-fit, minmax(${columnas === 3 ? 180 : 220}px, 1fr))`,
@@ -209,11 +230,12 @@ function Pregunta({ pregunta, respuestas, contexto, cuotas, pendientes, puede, o
             <OpcionGrande
               key={String(o.valor)}
               opcion={o}
+              reducido={reducido}
               activa={respuestas[pregunta.campo] === o.valor}
               onClick={() => onElegir(pregunta.clave, valoresDeOpcion(pregunta, o, contexto))}
             />
           ))}
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -280,16 +302,16 @@ function valoresDeOpcion(pregunta, opcion, contexto) {
 
 const TONOS = { success: 'success', error: 'error', warning: 'warning', info: 'info', idle: 'idle' };
 
-function OpcionGrande({ opcion, activa, onClick }) {
+function OpcionGrande({ opcion, activa, onClick, reducido }) {
   const tono = TONOS[opcion.tono] || 'info';
   return (
     <motion.button
       type="button"
       onClick={onClick}
       aria-pressed={activa}
-      whileHover={{ scale: 1.015 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.12 }}
+      {...CASCADA.hijo(reducido)}
+      whileHover={reducido ? undefined : { scale: 1.015 }}
+      whileTap={reducido ? undefined : { scale: 0.98 }}
       style={{
         display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'flex-start',
         textAlign: 'left', padding: 'var(--space-4)', cursor: 'pointer',
@@ -344,7 +366,7 @@ function CronogramaVenta({ respuestas, contexto, onCambiar }) {
 
 // --- pantalla de revisión -----------------------------------------------------------------
 
-function Revision({ respuestas, contexto, guardando, onGuardar, onVolverA }) {
+function Revision({ respuestas, contexto, guardando, onGuardar, onVolverA, reducido }) {
   const filas = resumen(respuestas, contexto);
   const venta = esVenta(respuestas);
   return (
@@ -352,21 +374,26 @@ function Revision({ respuestas, contexto, guardando, onGuardar, onVolverA }) {
       <h3 className="ln-t-h3">{venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3>
       <p className="ln-t-body-sm ln-muted">Tocá cualquier fila para volver a ese paso y corregirlo.</p>
 
-      <div className="ln-table" style={{ '--cols': '1.4fr 1fr auto', marginTop: 'var(--space-4)' }}>
+      <motion.div
+        className="ln-table"
+        {...CASCADA.contenedor(reducido)}
+        style={{ '--cols': '1.4fr 1fr auto', marginTop: 'var(--space-4)' }}
+      >
         {filas.map((fila) => (
-          <button
+          <motion.button
             key={fila.clave}
             type="button"
             className="ln-table-row"
+            {...CASCADA.hijo(reducido)}
             onClick={() => onVolverA(fila.paso || fila.clave)}
             style={{ width: '100%', cursor: 'pointer', textAlign: 'left', background: 'var(--bg-element)' }}
           >
             <span className="ln-cell-label ln-cell--title">{fila.label}</span>
             <span className="ln-t-body-sm">{fila.valor}</span>
             <small className="ln-t-caption" style={{ color: 'var(--info)' }}><ArrowLeft size={11} /> Corregir</small>
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
       {quedaDeuda(respuestas) && (
         <div className="ln-alert ln-alert--warning" role="status" style={{ marginTop: 'var(--space-4)' }}>
