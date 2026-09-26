@@ -143,6 +143,11 @@ def _agendas_por_embudo(desde, hasta, tz):
     tope_str = (hasta + timedelta(days=1)).strftime('%Y-%m-%d')
 
     candidatas = FinancialAgenda.query.filter(
+        # Las marcadas a mano como repetidas del mismo lead no cuentan. El conteo por
+        # persona ya las absorbe en casi todos los casos, pero no cuando la identidad no
+        # alcanza para reconocerlas (instagram 'no tengo', mail 'N/A'): ahi la unica que
+        # las puede unir es una persona, desde el panel de duplicados.
+        FinancialAgenda.duplicada_de_id.is_(None),
         or_(
             (FinancialAgenda.created_at >= inicio) & (FinancialAgenda.created_at <= fin),
             (FinancialAgenda.registro >= desde_str) & (FinancialAgenda.registro < tope_str),

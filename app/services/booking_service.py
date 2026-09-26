@@ -564,6 +564,13 @@ class BookingService:
         """Sincroniza un registro de agenda financiera con la tabla de citas."""
         if not agenda:
             return None
+        if getattr(agenda, 'duplicada_de_id', None) is not None:
+            # Una agenda marcada como repetida no tiene que tener cita: al descartarla se
+            # cancelo la suya justamente para que el closer no viera dos llamadas con la
+            # misma persona. Sin este corte, el resync masivo de /sync-appointments le
+            # recalcula el `result` desde el `estado` de la fila oculta y le devuelve la
+            # llamada duplicada a la bandeja -- o peor, se la vuelve a crear.
+            return None
 
         # 1. Obtener o crear Cliente
         client = BookingService.find_or_create_client(
@@ -769,7 +776,13 @@ class BookingService:
         # hacia atras a la agenda mas nueva del lead y la sacaba del taller que la gano.
         misma_cita = False
         if filters:
+            # Nunca una agenda marcada como repetida: escribirle el resultado del closer ahi
+            # dejaria a la que SI se conservo en 'Pendiente' para siempre, y de paso le
+            # cambiaria el estado a la descartada, que es justo lo que mira el panel de
+            # duplicados para sugerir cual conservar si alguien la restaura.
+            vigente = FinancialAgenda.duplicada_de_id.is_(None)
             agenda = FinancialAgenda.query.filter(
+                vigente,
                 or_(*filters),
                 FinancialAgenda.date >= start_search,
                 FinancialAgenda.date <= end_search
@@ -777,7 +790,9 @@ class BookingService:
             misma_cita = agenda is not None
 
             if not agenda:
-                agenda = FinancialAgenda.query.filter(or_(*filters)).order_by(FinancialAgenda.date.desc()).first()
+                agenda = (FinancialAgenda.query
+                          .filter(vigente, or_(*filters))
+                          .order_by(FinancialAgenda.date.desc()).first())
 
         # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
         mapped_state = 'Pendiente'

@@ -78,8 +78,11 @@ def _build_agenda_queries():
     encargados_triage = _split_multi(request.args.get('encargado_triage', default='', type=str))
     closer_results = _split_multi(request.args.get('closer_result', default='', type=str))
 
-    # Consulta base filtrada únicamente por fechas
-    date_query = FinancialAgenda.query
+    # Consulta base filtrada únicamente por fechas. Las marcadas como repetidas del mismo
+    # lead quedan fuera de todo el libro: se descartaron justamente para no verlas dos
+    # veces. Siguen existiendo y se listan (y se deshacen) desde el panel de duplicados,
+    # ver app/api/public/financial_agendas_dedup.py.
+    date_query = FinancialAgenda.query.filter(FinancialAgenda.duplicada_de_id.is_(None))
 
     if date_filter_by == 'created':
         if start_date_str:
@@ -280,11 +283,17 @@ def receive_financial_agendas():
             client_filters.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
 
         if client_filters and agenda_date:
+            # Una agenda ya marcada como repetida no puede recibir datos nuevos: la agenda
+            # legitima que acaba de llegar quedaria escondida dentro de una fila que el
+            # libro no muestra.
+            vigente = FinancialAgenda.duplicada_de_id.is_(None)
+
             # "El mismo dia" es el dia local de la fuente, no el dia UTC: con las fechas ya
             # normalizadas a UTC, una cita de las 21:00 cae en el dia UTC siguiente y el
             # deduplicador dejaria de reconocer la agenda que acaba de reprogramarse.
             start_day, end_day = limites_dia_origen(agenda_date)
             existing = FinancialAgenda.query.filter(
+                vigente,
                 or_(*client_filters),
                 FinancialAgenda.date >= start_day,
                 FinancialAgenda.date <= end_day
@@ -301,6 +310,7 @@ def receive_financial_agendas():
                 # Perdido) es una llamada que de verdad ocurrio, y quien vuelve a agendar
                 # despues de eso esta sacando una segunda cita, no moviendo la primera.
                 existing = FinancialAgenda.query.filter(
+                    vigente,
                     or_(*client_filters),
                     FinancialAgenda.date >= datetime.utcnow() - timedelta(hours=2),
                     func.lower(func.coalesce(FinancialAgenda.estado, '')).in_(ESTADOS_AGENDA_ABIERTA)
@@ -1035,7 +1045,10 @@ def sync_all_financial_agendas():
         sync_all = request.args.get('all', 'false').lower() == 'true'
         days = request.args.get('days', 14, type=int)
         
-        query = FinancialAgenda.query
+        # Las marcadas como repetidas quedan fuera: su cita se cancelo al descartarlas y
+        # sincronizarlas se la devolveria a la bandeja del closer. `sync_financial_agenda_
+        # to_appointment` ya las corta por su cuenta; esto ademas evita recorrerlas.
+        query = FinancialAgenda.query.filter(FinancialAgenda.duplicada_de_id.is_(None))
         if not sync_all:
             limit_date = date.today() - timedelta(days=days)
             query = query.filter(FinancialAgenda.date >= limit_date)
