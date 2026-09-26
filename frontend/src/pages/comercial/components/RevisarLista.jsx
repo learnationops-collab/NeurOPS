@@ -136,57 +136,74 @@ const chipsDe = (def) => (fila) => def.cols
 
 const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
 
+/* Las tres piezas viven en el módulo y no dentro de `RevisarLista`. Un componente declarado en el
+   cuerpo de otro es una función NUEVA en cada render, así que React lo trata como un tipo distinto
+   y desmonta y vuelve a montar todo su subárbol: con la lista abierta eso perdía el foco y la
+   posición del scroll en cada tecla del buscador. */
+
+const Encabezado = ({ def, plantilla }) => (
+    <div className="tabla-cab" style={{ '--cols': plantilla }}>
+        {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
+    </div>
+);
+
+const Filas = ({ def, filas, plantilla, onAbrirFila }) => filas.map(fila => (
+    <div key={claveDe(fila)} className="tabla-fila"
+        role="button" tabIndex={0} style={{ '--cols': plantilla }}
+        aria-label={`Abrir ${fila.cliente}`}
+        onClick={() => onAbrirFila(fila)}
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onAbrirFila(fila);
+            }
+        }}>
+        {def.cols.map(c => (
+            // `data-h` es el rótulo que el CSS pinta a la izquierda de cada dato cuando la
+            // tabla se apila en móvil.
+            <div key={c.key} data-h={c.header}>
+                <Celda fila={fila} col={c} />
+            </div>
+        ))}
+    </div>
+));
+
+const Tarjetas = ({ def, filas, onAbrirFila }) => (
+    <VistaTarjetas filas={filas} clave={claveDe} onAbrir={onAbrirFila}
+        titulo={(f) => f.cliente} subtitulo={(f) => f.ig}
+        chips={chipsDe(def)} campos={camposDe(def)} />
+);
+
 const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }) => {
     const quieto = useReducedMotion();
-    const Tabla = ({ filas }) => (
-        <>
-            {filas.map(fila => (
-                <div key={claveDe(fila)} className="tabla-fila"
-                    role="button" tabIndex={0} style={{ '--cols': plantilla }}
-                    aria-label={`Abrir ${fila.cliente}`}
-                    onClick={() => onAbrirFila(fila)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onAbrirFila(fila);
-                        }
-                    }}>
-                    {def.cols.map(c => (
-                        // `data-h` es el rótulo que el CSS pinta a la izquierda de cada dato
-                        // cuando la tabla se apila en móvil.
-                        <div key={c.key} data-h={c.header}>
-                            <Celda fila={fila} col={c} />
-                        </div>
-                    ))}
-                </div>
-            ))}
-        </>
-    );
+    const esTarjetas = modo === 'tarjetas';
 
-    const Tarjetas = ({ filas }) => (
-        <VistaTarjetas filas={filas} clave={claveDe} onAbrir={onAbrirFila}
-            titulo={(f) => f.cliente} subtitulo={(f) => f.ig}
-            chips={chipsDe(def)} campos={camposDe(def)} />
-    );
-
-    const renderFilas = modo === 'tarjetas'
-        ? (filas) => <div style={{ padding: 'var(--s4)' }}><Tarjetas filas={filas} /></div>
-        : (filas) => <Tabla filas={filas} />;
+    const renderFilas = (filas) => (esTarjetas
+        ? (
+            <div style={{ padding: 'var(--s4)' }}>
+                <Tarjetas def={def} filas={filas} onAbrirFila={onAbrirFila} />
+            </div>
+        )
+        : <Filas def={def} filas={filas} plantilla={plantilla} onAbrirFila={onAbrirFila} />);
 
     const cuerpo = () => {
         if (dimension) {
             return (
-                <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
-                    formatoMonto={fmt.money} />
+                <>
+                    {/* Agrupada y en tabla, el encabezado va UNA vez arriba de todos los grupos:
+                        sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
+                        la lista en cinco tablas en vez de una repartida. */}
+                    {!esTarjetas && <Encabezado def={def} plantilla={plantilla} />}
+                    <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
+                        formatoMonto={fmt.money} />
+                </>
             );
         }
-        if (modo === 'tarjetas') return <Tarjetas filas={visibles} />;
+        if (esTarjetas) return <Tarjetas def={def} filas={visibles} onAbrirFila={onAbrirFila} />;
         return (
             <div className="tabla">
-                <div className="tabla-cab" style={{ '--cols': plantilla }}>
-                    {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
-                </div>
-                <Tabla filas={visibles} />
+                <Encabezado def={def} plantilla={plantilla} />
+                <Filas def={def} filas={visibles} plantilla={plantilla} onAbrirFila={onAbrirFila} />
             </div>
         );
     };

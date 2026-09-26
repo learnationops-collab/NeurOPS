@@ -90,7 +90,9 @@
 }
 .dc-shell .reg-tarjeta:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: 2px; }
 
-.dc-shell .reg-tarjeta-cab { display: flex; align-items: flex-start; gap: var(--s3); min-width: 0; }
+/* El nombre arriba y los chips en su propia línea: al lado se comían el ancho y el nombre
+   quedaba en "Gabriela ...", que es justo el dato por el que se busca la tarjeta. */
+.dc-shell .reg-tarjeta-cab { display: grid; gap: var(--s2); min-width: 0; }
 .dc-shell .reg-tarjeta-nom { display: grid; gap: 2px; min-width: 0; }
 .dc-shell .reg-tarjeta-nom b {
     font-size: 14px;
@@ -99,7 +101,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.dc-shell .reg-tarjeta-chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
+.dc-shell .reg-tarjeta-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 
 /* Los pares rótulo/valor: dos columnas, el valor a la derecha, en tabular-nums. */
 .dc-shell .reg-tarjeta-datos {

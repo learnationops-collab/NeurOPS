@@ -448,8 +448,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         </div>
                     ) : (
                         <RevisarLista def={def} visibles={visibles} plantilla={plantilla}
-                            onAbrirFila={onAbrirFila} Celda={Celda} dimension={dimension}
-                            modo={modoVista} />
+                            onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista} />
                     )}
                 </>
             )}
