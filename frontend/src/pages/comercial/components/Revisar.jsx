@@ -279,7 +279,7 @@ const Celda = ({ fila, col }) => {
 };
 
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
-    filtroInicial }) => {
+    filtroInicial, onOlvidarFiltro }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -356,6 +356,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         // Sacar el filtro también saca el aviso de procedencia: si no, la lista seguía diciendo
         // "viniste de Show up" arriba de las agendas completas del período.
         setOrigen(o => ({ ...o, de: null, aviso: null }));
+        // Y lo saca de la URL, que es donde vive el filtro del drill-down: sin esto, salir de
+        // Revisar y volver lo resucitaba.
+        onOlvidarFiltro?.();
     };
 
     const quitarCriterio = (clave, valor) => setFacetas({

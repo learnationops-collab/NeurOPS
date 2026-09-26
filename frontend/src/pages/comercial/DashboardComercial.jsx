@@ -127,7 +127,36 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const [datosTabla, setDatosTabla] = useState(null);
     const [cargandoTabla, setCargandoTabla] = useState(false);
     const [filaAbierta, setFilaAbierta] = useState(null);
-    const [filtroInicial, setFiltroInicial] = useState(null);
+
+    /**
+     * El filtro del drill-down viaja en la QUERY STRING, no en estado local.
+     *
+     * Embebido en el mazo del closer hay DOS montajes distintos de esta pantalla —uno con
+     * `seccionFija="analizar"` y otro con `seccionFija="revisar"`— y el host cambia de uno al
+     * otro. Con el filtro en `useState` se perdía en el camino: se clickeaba un dato en "Ver mis
+     * datos", aterrizaba en "Mi cartera" con la tabla correcta y sin ninguna condición puesta.
+     * Solo `t` sobrevivía, porque era lo único que iba por la URL.
+     *
+     * En la URL además la vista filtrada se puede compartir y volver con el botón "atrás", y
+     * cualquier otra pantalla puede linkear a un corte concreto de la lista (es así como los
+     * datos del dashboard de performance del closer llegan acá).
+     */
+    const filtroInicial = useMemo(() => {
+        const t = Number(params.get('ft'));
+        if (!t) return null;
+        const crudo = params.get('f');
+        let filtro = {};
+        if (crudo) {
+            try {
+                filtro = JSON.parse(crudo);
+            } catch {
+                // Una URL escrita a mano o cortada por un cliente de mail: se ignora el filtro y
+                // se muestra la tabla entera, que es un destino válido, en vez de romper.
+                filtro = {};
+            }
+        }
+        return { ...filtro, __t: t };
+    }, [params]);
 
     // Una fila de la tabla Clientes no es una agenda que corregir: es alguien a quien hay que
     // cobrarle. Si el host sabe abrir la gestión del cliente (ver el docstring de arriba), se la
@@ -248,22 +277,54 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     /**
      * Drill-down desde Analizar: abre Revisar en la tabla pedida, ya filtrada.
      *
-     * `__t` es un contador y no `Date.now()`: dos clics dentro del mismo milisegundo daban el
+     * `ft` es un contador y no `Date.now()`: dos clics dentro del mismo milisegundo daban el
      * mismo token y Revisar tomaba el segundo por un filtro ya consumido, así que ignoraba el
      * drill-down y mostraba el período entero. También distingue dos clics idénticos seguidos,
      * que como objeto serían iguales.
+     *
+     * El contador arranca del token que ya está en la URL y no de cero, porque los dos montajes
+     * embebidos tienen cada uno su propio `ref`: sin el `max` el segundo montaje volvía a emitir
+     * el token 1 y Revisar lo tomaba por el mismo filtro de antes.
      */
+    const proximoToken = useCallback(() => {
+        drillDown.current = Math.max(drillDown.current, Number(params.get('ft')) || 0) + 1;
+        return drillDown.current;
+    }, [params]);
+
     const irA = useCallback((cual, filtro) => {
-        setFiltroInicial({ ...filtro, __t: ++drillDown.current });
-        set(embebido ? { t: cual } : { s: 'revisar', t: cual });
+        const limpio = Object.fromEntries(
+            Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
+        set({
+            ...(embebido ? {} : { s: 'revisar' }),
+            t: cual,
+            f: Object.keys(limpio).length ? JSON.stringify(limpio) : null,
+            ft: proximoToken(),
+        });
         // Embebido la sección no está en la query string, la elige el host: sin este aviso el
         // filtro se aplicaba a una tabla que seguía fuera de pantalla.
         if (embebido) onIrASeccion?.('revisar');
-    }, [set, embebido, onIrASeccion]);
+    }, [set, embebido, onIrASeccion, proximoToken]);
 
-    const irAPersona = useCallback((id) => {
-        if (contexto?.puede_elegir_equipo) set({ s: 'revisar', m: id });
-    }, [contexto, set]);
+    /**
+     * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
+     *
+     * La persona se acota con `m` (el backend rearma el alcance) y no con la faceta Closer: así
+     * la tira de totales y los contadores de faceta también quedan acotados, que es lo que hace
+     * que el número de la celda cierre con lo que se ve abajo.
+     */
+    const irAPersona = useCallback((id, destino = null) => {
+        if (!contexto?.puede_elegir_equipo) return;
+        const filtro = destino?.filtro || {};
+        set({
+            s: 'revisar',
+            m: id && id !== 'equipo' ? id : null,
+            ...(destino ? {
+                t: destino.tabla,
+                f: Object.keys(filtro).length ? JSON.stringify(filtro) : null,
+                ft: proximoToken(),
+            } : {}),
+        });
+    }, [contexto, set, proximoToken]);
 
     /**
      * Corrige un estado y vuelve a pedir TODO lo que depende de él. Es el requisito del diseño:
@@ -435,10 +496,15 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'analizar' && tab === 'variabilidad' && (
                         <Variabilidad datos={variabilidad} />
                     )}
+                    {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
+                        no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda
+                        y el estado interno de Revisar se pierde al desmontarse. */}
                     {seccion === 'revisar' && (
-                        <Revisar tabla={tablaActual} setTabla={(t) => set({ t })} datos={datosVigentes}
+                        <Revisar tabla={tablaActual} setTabla={(t) => set({ t, f: null, ft: null })}
+                            datos={datosVigentes}
                             cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
+                            onOlvidarFiltro={() => set({ f: null, ft: null })}
                             onAbrirFila={abrirFila} />
                     )}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
