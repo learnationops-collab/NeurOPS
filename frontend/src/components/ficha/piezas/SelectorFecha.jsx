@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import usarMovimiento from './movimiento';
-import usarPopover from './usarPopover';
+import useMovimiento from './useMovimiento';
+import usePopover from './usePopover';
 
 const SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -70,8 +70,8 @@ const SelectorFecha = ({
     etiqueta = 'Fecha',
     deshabilitado = false,
 }) => {
-    const { abierto, alternar, cerrar, caja } = usarPopover();
-    const mov = usarMovimiento();
+    const { abierto, alternar, cerrar, caja } = usePopover();
+    const mov = useMovimiento();
     const hoy = useMemo(() => aDia(new Date()), []);
     const piso = minimo === null ? null : (aDia(minimo) || hoy);
     const sel = aDia(valor);

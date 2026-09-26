@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import usarMovimiento from './movimiento';
-import usarPopover from './usarPopover';
+import useMovimiento from './useMovimiento';
+import usePopover from './usePopover';
 
 /**
  * Desplegable con las opciones repartidas en grupos por categoría, cada grupo con
@@ -33,8 +33,8 @@ const DesplegableAgrupado = ({
     alinear = 'izq',
     etiqueta = null,
 }) => {
-    const { abierto, alternar, cerrar, caja } = usarPopover();
-    const mov = usarMovimiento();
+    const { abierto, alternar, cerrar, caja } = usePopover();
+    const mov = useMovimiento();
     // Las opciones creadas acá se muestran de inmediato; persistirlas es de quien nos pasó `onAgregar`.
     const [nuevas, setNuevas] = useState({});
     const [agregandoEn, setAgregandoEn] = useState(null);

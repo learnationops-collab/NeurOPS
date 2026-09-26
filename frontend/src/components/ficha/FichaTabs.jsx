@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
-import usarMovimiento from './piezas/movimiento';
+import useMovimiento from './piezas/useMovimiento';
 
 /**
  * Tablist de la ficha. Navegable con flechas, Inicio y Fin, como manda un tablist
@@ -9,7 +9,7 @@ import usarMovimiento from './piezas/movimiento';
  */
 const FichaTabs = ({ pestanas = [], activa, onCambiar }) => {
     const refs = useRef({});
-    const mov = usarMovimiento();
+    const mov = useMovimiento();
 
     const mover = (e) => {
         const i = pestanas.findIndex(p => p.id === activa);

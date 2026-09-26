@@ -17,7 +17,7 @@ import { useReducedMotion } from 'framer-motion';
  */
 const SUAVE = [0.22, 0.7, 0.2, 1];   // el mismo `--crecer` del design system
 
-export const usarMovimiento = () => {
+export const useMovimiento = () => {
     const quieto = useReducedMotion();
 
     return {
@@ -58,4 +58,4 @@ export const usarMovimiento = () => {
     };
 };
 
-export default usarMovimiento;
+export default useMovimiento;

@@ -7,6 +7,6 @@ export { default as SeccionColapsable } from './SeccionColapsable';
 export { default as SelectorFecha, construirMes } from './SelectorFecha';
 export { default as StepperFicha } from './StepperFicha';
 export { default as SubVista } from './SubVista';
-export { default as usarMovimiento } from './movimiento';
+export { default as useMovimiento } from './useMovimiento';
 export { default as TarjetaAccion } from './TarjetaAccion';
-export { default as usarPopover } from './usarPopover';
+export { default as usePopover } from './usePopover';

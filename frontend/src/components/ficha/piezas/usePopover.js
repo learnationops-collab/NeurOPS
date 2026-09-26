@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * Escape se escucha en fase de captura y detiene la propagación: el modal también
  * escucha Escape para cerrarse, y cerrar un desplegable no tiene que cerrar la ficha.
  */
-const usarPopover = () => {
+const usePopover = () => {
     const [abierto, setAbierto] = useState(false);
     const caja = useRef(null);
 
@@ -44,4 +44,4 @@ const usarPopover = () => {
     return { abierto, setAbierto, alternar, cerrar, caja };
 };
 
-export default usarPopover;
+export default usePopover;

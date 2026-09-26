@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, CheckCircle2, Trash2, XCircle } from 'lucide-react';
-import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, usarMovimiento } from '../piezas';
+import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import { grupos } from '../estadoFicha';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubDescartar from './confirmacion/SubDescartar';
@@ -21,7 +21,7 @@ import SubEliminar from './confirmacion/SubEliminar';
  */
 const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     const [modo, setModo] = useState('menu');
-    const mov = usarMovimiento();
+    const mov = useMovimiento();
     const [guardando, setGuardando] = useState(false);
     const conf = ficha?.confirmacion || {};
     const cerrada = !!conf.cerrada;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
-import usarMovimiento from './piezas/movimiento';
-import usarPopover from './piezas/usarPopover';
+import useMovimiento from './piezas/useMovimiento';
+import usePopover from './piezas/usePopover';
 import { opciones } from './estadoFicha';
 
 /**
@@ -26,8 +26,8 @@ const Dato = ({ rotulo, valor, mono = false }) => (
 );
 
 const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar = true }) => {
-    const { abierto, alternar, cerrar, caja } = usarPopover();
-    const mov = usarMovimiento();
+    const { abierto, alternar, cerrar, caja } = usePopover();
+    const mov = useMovimiento();
     const id = ficha?.identidad || {};
     const closerActual = id.closer?.nombre || null;
     const closers = opciones(ficha, 'closers');

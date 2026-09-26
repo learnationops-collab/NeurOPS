@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
-import { Aviso, usarMovimiento } from './piezas';
+import { Aviso, useMovimiento } from './piezas';
 import { leerEstado } from './estadoFicha';
 import { ejecutarAccion, mensajeDeError, obtenerFicha } from './fichaApi';
 import TabConfirmacion from './tabs/TabConfirmacion';
@@ -85,7 +85,7 @@ const FichaLeadModal = ({
     const [error, setError] = useState(null);
     const [aviso, setAviso] = useState(null);
     const [pestana, setPestana] = useState(null);
-    const mov = usarMovimiento();
+    const mov = useMovimiento();
     const fijada = useRef(false);   // la pestaña por defecto se respeta al abrir, no en cada recarga
 
     const cargar = useCallback(async (signal) => {
