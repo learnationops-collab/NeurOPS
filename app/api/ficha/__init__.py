@@ -39,4 +39,4 @@ def sin_permiso(accion):
                     'accion': accion}), 403
 
 
-from app.api.ficha import lectura  # noqa: E402,F401  (cuelga rutas del blueprint)
+from app.api.ficha import escritura, lectura  # noqa: E402,F401  (cuelgan rutas del blueprint)
