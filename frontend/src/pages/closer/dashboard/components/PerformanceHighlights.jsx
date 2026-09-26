@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
 import { tip, destino } from '../metricSources';
+import { ESTADO_CARTERA } from '../../../comercial/components/tablasDef';
 import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 import { money, qualityItems, computeWeakestQuality, estimateUpside } from '../performanceUtils';
 
@@ -96,7 +97,8 @@ const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, activida
                 tipProps={tip('deuda_total_pendiente')}
                 irA={irA}
                 aLaLista={{
-                    tabla: 'clientes', filtro: { estado: 'Debe, sin plan' }, de: 'Deuda sin plan',
+                    tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.sin_plan },
+                    de: 'Deuda sin plan',
                     aviso: 'La deuda es un saldo a hoy, no un flujo del período. Además este número '
                         + 'atribuye por quién tiene HOY la agenda del cliente y la cartera de la lista '
                         + 'por quién VENDIÓ, así que los totales no coinciden.',

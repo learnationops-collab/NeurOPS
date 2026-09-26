@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-    FACETAS_POR_TABLA, TABLAS, TABLAS_POR_ROL, revisarDestino, rotuloToques,
+    ESTADO_CARTERA, FACETAS_POR_TABLA, SENA_ESTADO, TABLAS, TABLAS_POR_ROL, revisarDestino,
+    rotuloToques,
 } from '../../pages/comercial/components/tablasDef';
 import {
     DESTINOS_CLOSER, DESTINOS_METRICA, DESTINOS_SETTER, PASOS_CLOSER, PASOS_SETTER, conDia,
@@ -86,7 +87,9 @@ describe('el mapa de destinos del drill-down', () => {
         const KEYS = ['venta', 'no_show', 'cancelo', 'reagendo', 'pendiente', 'asistio',
             'segunda_llamada', 'seguimiento', 'presento_no_cerro', 'completo', 'parcial', 'cuota',
             'seña', 'agendo', 'en_conversacion', 'sin_respuesta', 'descartado', 'vencida',
-            'por_vencer', 'sin_plan', 'al_dia', 'confirmada', 'sin_confirmar'];
+            'por_vencer', 'sin_plan', 'al_dia', 'confirmada', 'sin_confirmar',
+            // Las de `sena_estado`, que el backend manda como clave en la fila.
+            'pago_completo', 'pago_parcial', 'en_espera', 'caida'];
 
         const sospechosos = todos().flatMap(([donde, d]) =>
             Object.entries(d.filtro || {}).flatMap(([clave, valor]) =>
@@ -114,6 +117,50 @@ describe('el mapa de destinos del drill-down', () => {
                     .map(v => `${donde}: ${clave}="${v}"`)));
 
         expect(raros).toEqual([]);
+    });
+});
+
+describe('las etiquetas del vocabulario del backend', () => {
+    /**
+     * Una etiqueta renombrada en el servidor deja el destino sin encontrar filas y NO falla: la
+     * clave de faceta sigue siendo válida, así que el test de arriba lo deja pasar. Ya ocurrió con
+     * "Debe, sin plan" → "Sin cronograma" y "Cuota por vencer" → "Con deuda". La defensa es que
+     * las etiquetas estén en un solo lugar; esto verifica que nadie las volvió a escribir a mano.
+     */
+    const literales = (mapa) => Object.values(mapa);
+
+    it('ningún destino escribe a mano una etiqueta de la cartera que no salga del mapa', () => {
+        const validas = new Set(literales(ESTADO_CARTERA));
+        const invalidas = todos().flatMap(([donde, d]) =>
+            [d.filtro?.estado].flat().filter(Boolean)
+                .filter(v => d.tabla === 'clientes' && !validas.has(v))
+                .map(v => `${donde}: estado="${v}" no es una etiqueta de ESTADO_CARTERA`));
+
+        expect(invalidas).toEqual([]);
+    });
+
+    it('ningún destino escribe a mano un estado de seña que no salga del mapa', () => {
+        const validas = new Set(literales(SENA_ESTADO));
+        const invalidas = todos().flatMap(([donde, d]) =>
+            [d.filtro?.sena_estado].flat().filter(Boolean)
+                .filter(v => !validas.has(v))
+                .map(v => `${donde}: sena_estado="${v}" no es una etiqueta de SENA_ESTADO`));
+
+        expect(invalidas).toEqual([]);
+    });
+
+    it('la faceta traduce la clave que manda el backend a la etiqueta del filtro', () => {
+        const faceta = TABLAS.ventas.facetas.find(f => f.key === 'sena_estado');
+
+        // La fila trae `sena_estado: 'pago_completo'` y el destino filtra por 'Pago completo':
+        // si la faceta no tradujera, el clic no encontraría ninguna fila.
+        expect(faceta.de({ sena_estado: 'pago_completo' })).toBe(SENA_ESTADO.pago_completo);
+        expect(faceta.de({ sena_estado: 'caida' })).toBe(SENA_ESTADO.caida);
+        // Una venta que no es una seña no aporta ninguna opción a la faceta.
+        expect(faceta.de({ sena_estado: null })).toBeNull();
+        expect(faceta.de({})).toBeNull();
+        // Y si algún día el backend mandara el chip entero, se usa su etiqueta.
+        expect(faceta.de({ sena_estado: { key: 'caida', label: 'Caída' } })).toBe('Caída');
     });
 });
 

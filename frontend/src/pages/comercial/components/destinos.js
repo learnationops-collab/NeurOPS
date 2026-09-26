@@ -1,4 +1,4 @@
-import { diaDe, rotuloToques } from './tablasDef';
+import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloToques } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -81,12 +81,13 @@ export const DESTINOS_CLOSER = {
             + 'solo esas ventas nuevas.' },
 
     por_cobrar: { tabla: 'clientes', filtro: {}, de: 'Por cobrar · a hoy', aviso: AVISO_POR_COBRAR },
-    por_cobrar_vencido: { tabla: 'clientes', filtro: { estado: 'Cuota vencida' }, de: 'Vencido',
+    por_cobrar_vencido: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.vencida },
+        de: 'Vencido',
         aviso: `${AVISO_POR_COBRAR} Además, el monto cuenta la cuota vencida y la lista muestra el `
             + 'saldo completo de cada cliente que tiene una.' },
-    por_cobrar_por_vencer: { tabla: 'clientes', filtro: { estado: 'Cuota por vencer' },
+    por_cobrar_por_vencer: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.por_vencer },
         de: 'Por vencer', aviso: AVISO_POR_COBRAR },
-    por_cobrar_sin_plan: { tabla: 'clientes', filtro: { estado: 'Debe, sin plan' },
+    por_cobrar_sin_plan: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.sin_plan },
         de: 'Sin cronograma', aviso: AVISO_POR_COBRAR },
 
     // --- Panel Señas ---
@@ -94,13 +95,17 @@ export const DESTINOS_CLOSER = {
     // contacto (ver `senas_de` en comercial_analitica.py). El backend lo baja a la fila de la
     // tabla como `sena_estado` y estas etiquetas tienen que ser las mismas que las del panel.
     senas_total: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos' }, de: 'Señas del período' },
-    senas_completo: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'Pago completo' },
+    senas_completo: { tabla: 'ventas',
+        filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.pago_completo },
         de: 'Señas que pasaron a pago completo' },
-    senas_parcial: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'Pago parcial' },
+    senas_parcial: { tabla: 'ventas',
+        filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.pago_parcial },
         de: 'Señas que pasaron a pago parcial' },
-    senas_espera: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'En espera' },
+    senas_espera: { tabla: 'ventas',
+        filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.en_espera },
         de: 'Señas en espera' },
-    senas_caida: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'Caída' },
+    senas_caida: { tabla: 'ventas',
+        filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.caida },
         de: 'Señas caídas' },
     senas_convirtio: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos' }, de: 'Conversión de señas',
         aviso: 'La lista son todas las señas del período: el estado de cada una está en su propia '

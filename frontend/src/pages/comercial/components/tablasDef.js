@@ -29,6 +29,33 @@ export const estadoDeAgenda = (fila) => {
 };
 
 /**
+ * Las etiquetas del vocabulario del backend con las que se corta una tabla, en un solo lugar.
+ *
+ * El drill-down filtra por ETIQUETA y estas las define el servidor (`ESTADO_CARTERA` en
+ * `comercial_service.py`, y el estado derivado de una seña en `comercial_analitica.py`). Cuando
+ * una etiqueta cambia allá, un destino que la tenga escrita a mano deja de encontrar filas **sin
+ * fallar**: la clave de faceta sigue siendo válida, así que el test de destinos no lo atrapa. La
+ * única defensa es no repetirlas.
+ *
+ * Ya pasó: `sin_plan` pasó de "Debe, sin plan" a "Sin cronograma" y `por_vencer` de "Cuota por
+ * vencer" a "Con deuda", con esas etiquetas escritas a mano en cuatro archivos.
+ */
+export const ESTADO_CARTERA = {
+    vencida: 'Cuota vencida',
+    por_vencer: 'Con deuda',
+    sin_plan: 'Sin cronograma',
+    al_dia: 'Al día',
+};
+
+/** En qué terminó una seña. El backend manda la CLAVE en `sena_estado`; la lista muestra esto. */
+export const SENA_ESTADO = {
+    pago_completo: 'Pago completo',
+    pago_parcial: 'Pago parcial',
+    en_espera: 'En espera',
+    caida: 'Caída',
+};
+
+/**
  * Las facetas de sí/no de los pasos del embudo.
  *
  * Los pasos intermedios —Confirmadas, Asistieron, Presentaciones del embudo de closers, y
@@ -160,10 +187,13 @@ export const TABLAS = {
             { key: 'metodo', label: 'Método', de: (f) => f.metodo },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             // El estado de la seña lo agrega el backend a la fila (`sena_estado`): en qué terminó
-            // esa reserva. Sin ese campo la faceta no lista ninguna opción y no molesta, pero el
-            // panel Señas no puede cortar por estado hasta que llegue.
+            // esa reserva, con la MISMA derivación con la que el panel Señas la cuenta. Viene la
+            // clave (`pago_completo`…) y acá se traduce a la etiqueta, que es contra lo que se
+            // compara el filtro. `null` en una fila que no es una seña: no lista una opción vacía.
             { key: 'sena_estado', label: 'Estado de la seña',
-                de: (f) => f.sena_estado?.label ?? f.sena_estado ?? null },
+                de: (f) => (f.sena_estado
+                    ? (f.sena_estado.label ?? SENA_ESTADO[f.sena_estado] ?? f.sena_estado)
+                    : null) },
             { key: 'dia', label: 'Día del cobro', de: (f) => diaDe(f.fecha), oculta: true },
         ],
         chips: [

@@ -66,6 +66,11 @@ const B = {
  * motivo. No se hacen cliqueables a propósito: una lista que no corresponde al número es peor que
  * un número que no se puede pinchar. */
 
+/* Las etiquetas del vocabulario del backend salen del mismo lugar que las usa la lista, y no
+   escritas a mano: el filtro viaja por etiqueta, y una etiqueta renombrada allá deja de encontrar
+   filas sin que falle nada. */
+import { ESTADO_CARTERA, SENA_ESTADO } from '../../comercial/components/tablasDef';
+
 /** Los dos tipos de pago que abren una venta nueva, tal como los etiqueta el dashboard comercial. */
 const VENTAS_NUEVAS = ['Pago completo', 'Split Pay'];
 
@@ -322,14 +327,16 @@ export const METRICS = {
         source: 'ventas',
         formula: 'señas con un pago PIF posterior del mismo cliente',
         note: 'El cruce es por instagram, mail o teléfono, y solo mira pagos con fecha posterior a la propia seña.',
-        destino: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'Pago completo' },
+        destino: { tabla: 'ventas',
+            filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.pago_completo },
             de: 'Señas que pasaron a pago completo', aviso: AV_SENA_ESTADO }
     },
     senas_a_split: {
         title: 'Señas que terminaron abriendo un plan de cuotas',
         source: 'ventas',
         formula: 'señas con un pago Split posterior del mismo cliente',
-        destino: { tabla: 'ventas', filtro: { tipo_pago: 'Depósitos', sena_estado: 'Pago parcial' },
+        destino: { tabla: 'ventas',
+            filtro: { tipo_pago: 'Depósitos', sena_estado: SENA_ESTADO.pago_parcial },
             de: 'Señas que pasaron a Split Pay', aviso: AV_SENA_ESTADO }
     },
     senas_pendientes: {
@@ -338,7 +345,8 @@ export const METRICS = {
         formula: 'señas − (las que pasaron a PIF o a Split)',
         note: 'Una seña reciente aparece acá hasta que el cliente pague: no siempre es una seña perdida, pero sí es plata comprometida sin cerrar.',
         destino: { tabla: 'ventas',
-            filtro: { tipo_pago: 'Depósitos', sena_estado: ['En espera', 'Caída'] },
+            filtro: { tipo_pago: 'Depósitos',
+                sena_estado: [SENA_ESTADO.en_espera, SENA_ESTADO.caida] },
             de: 'Señas todavía sin pago', aviso: AV_SENA_ESTADO }
     },
     senas_close_promesa: {
@@ -396,16 +404,16 @@ export const METRICS = {
         source: 'cuotas',
         formula: 'cuotas pendientes con vencimiento anterior a hoy',
         note: 'Esto sí es un problema de cobranza, a diferencia del cronograma futuro.',
-        destino: { tabla: 'clientes', filtro: { estado: 'Cuota vencida' }, de: 'Deuda vencida',
-            aviso: AV_DEUDA }
+        destino: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.vencida },
+            de: 'Deuda vencida', aviso: AV_DEUDA }
     },
     deuda_por_vencer: {
         title: 'Cuotas futuras del cronograma normal',
         source: 'cuotas',
         formula: 'cuotas pendientes con vencimiento de hoy en adelante',
         note: 'No es un problema: es el plan de pagos siguiendo su curso.',
-        destino: { tabla: 'clientes', filtro: { estado: 'Cuota por vencer' }, de: 'Deuda por vencer',
-            aviso: AV_DEUDA }
+        destino: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.por_vencer },
+            de: 'Deuda por vencer', aviso: AV_DEUDA }
     },
     programas: {
         title: 'Unidades vendidas y ticket promedio por programa',
