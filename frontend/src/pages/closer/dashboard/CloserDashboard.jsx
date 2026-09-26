@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
+import PerformanceHighlights from './components/PerformanceHighlights';
 import PerformanceKpis from './components/PerformanceKpis';
 import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel, { ConfirmacionesCard } from './components/PerformanceFunnel';
@@ -136,6 +137,22 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                     Calidad de la llamada / Equipo / Para cerrar) en vez de 9 secciones sueltas.
                     Se mantiene todo lo que ya funcionaba: filtros, comparación, el detalle de
                     señas y el resumen de seguimientos — solo cambia dónde vive cada tarjeta. */}
+                {/* "Qué mirar" antes de "cuánto dio": el resto del dashboard contesta la segunda
+                    pregunta y esta fila la primera. Los tres numeros salen de los mismos helpers
+                    que ya usan PerformanceQuality, PerformanceMoney y PerformanceActivity, asi que
+                    no pueden desincronizarse de sus tarjetas; y cada uno lleva a sus registros. */}
+                <SectionTitle>00 · Qué mirar</SectionTitle>
+                <PerformanceHighlights
+                    rings={data.current.rings}
+                    funnel={data.current.funnel}
+                    confirmaciones={data.current.confirmaciones}
+                    cuotas={data.cuotas_por_cobrar}
+                    actividad={data.current.actividad}
+                    ticketPromedio={data.current.kpis.ticket_promedio}
+                    onNavigate={onNavigate}
+                    irA={irA}
+                />
+
                 <SectionTitle>01 · Dinero <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <div className="space-y-4">
                     <PerformanceKpis current={data.current} previous={data.previous}

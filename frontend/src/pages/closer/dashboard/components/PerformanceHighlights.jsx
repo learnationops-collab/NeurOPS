@@ -2,7 +2,8 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
-import { tip } from '../metricSources';
+import { tip, destino } from '../metricSources';
+import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 import { money, qualityItems, computeWeakestQuality, estimateUpside } from '../performanceUtils';
 
 /* "Mirá esto primero", calcada de la referencia (28/ago/2026): antes de los 4 KPIs de dinero, la
@@ -10,9 +11,14 @@ import { money, qualityItems, computeWeakestQuality, estimateUpside } from '../p
    un número de plata detrás. El resto del dashboard ya tenía todos estos números sueltos
    (PerformanceQuality ya calcula el eslabón más débil, PerformanceMoney ya muestra "sin plan",
    PerformanceActivity ya muestra seguimientos hechos/contestados) — acá se reusan, no se
-   recalculan, para que nunca queden desincronizados entre sí. */
+   recalculan, para que nunca queden desincronizados entre sí.
 
-const HighlightCard = ({ hero, eyebrow, value, sub, tone, children, cta, onCta, tipProps }) => (
+   Estuvo escrita y sin importar por nadie desde el 28/ago/2026. Se conecta ahora porque es la
+   pieza que le faltaba al dashboard cliqueable: las otras tarjetas contestan "cuánto dio" y esta
+   contesta "qué mirar", y cada una de las tres cosas que dice ahora lleva a sus registros. */
+
+const HighlightCard = ({ hero, eyebrow, value, sub, tone, children, cta, onCta, tipProps, irA,
+    aLaLista, detalle }) => (
     <Card
         variant="surface"
         padding="p-6"
@@ -22,7 +28,11 @@ const HighlightCard = ({ hero, eyebrow, value, sub, tone, children, cta, onCta, 
             <p className="text-[9px] font-black uppercase tracking-widest text-muted">{eyebrow}</p>
             {tipProps && <MetricTip iconOnly {...tipProps} />}
         </div>
-        <p className={`font-black tracking-tighter mt-2 text-3xl ${tone === 'danger' ? 'text-rose-400' : hero ? 'text-primary' : 'text-base'}`}>{value}</p>
+        <MetricaClicable irA={irA} destino={aLaLista} detalle={detalle || `${eyebrow} · ${value}`}
+            envoltura="p"
+            className={`block font-black tracking-tighter mt-2 text-3xl ${tone === 'danger' ? 'text-rose-400' : hero ? 'text-primary' : 'text-base'}`}>
+            {value}
+        </MetricaClicable>
         {sub && <p className="text-[10.5px] text-muted mt-1 leading-tight">{sub}</p>}
         {children}
         {cta && (
@@ -36,7 +46,8 @@ const HighlightCard = ({ hero, eyebrow, value, sub, tone, children, cta, onCta, 
     </Card>
 );
 
-const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, actividad, ticketPromedio, onNavigate }) => {
+const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, actividad, ticketPromedio,
+    onNavigate, irA }) => {
     const items = qualityItems(rings, funnel, confirmaciones);
     const weakest = computeWeakestQuality(items);
     const upside = weakest ? estimateUpside(weakest, funnel, rings, ticketPromedio) : null;
@@ -44,7 +55,10 @@ const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, activida
     const fu = actividad?.follow_ups;
     const fuRate = fu?.sent ? Math.round((fu.replied / fu.sent) * 100) : null;
 
-    const irA = weakest?.group === 'convertir' ? 'calls' : 'confirmations';
+    // A que paso de la bandeja mandar: si lo que falla es convertir, a reportar la
+    // llamada; si es llegar a ella, a confirmar. (Se llamaba `irA`, que ahora es el
+    // drill-down a la lista.)
+    const pestana = weakest?.group === 'convertir' ? 'calls' : 'confirmations';
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -54,8 +68,10 @@ const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, activida
                     eyebrow="Eslabón más débil"
                     value={`${weakest.value}%`}
                     tipProps={tip(weakest.metric)}
-                    cta={onNavigate ? `Ir a ${irA === 'calls' ? 'reportar' : 'confirmar'}` : null}
-                    onCta={() => onNavigate?.('inbox', { step: irA })}
+                    irA={irA} aLaLista={destino(weakest.metric)}
+                    detalle={`${weakest.label} · ${weakest.num} de ${weakest.den} ${weakest.unit}`}
+                    cta={onNavigate ? `Ir a ${pestana === 'calls' ? 'reportar' : 'confirmar'}` : null}
+                    onCta={() => onNavigate?.('inbox', { step: pestana })}
                 >
                     <p className="text-[11px] font-black uppercase tracking-wider text-muted mt-1">{weakest.label}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -78,6 +94,13 @@ const PerformanceHighlights = ({ rings, funnel, confirmaciones, cuotas, activida
                 sub={`${cuotas?.count_sin_plan ?? 0} cliente${cuotas?.count_sin_plan === 1 ? '' : 's'} sin cronograma`}
                 tone={cuotas?.sin_plan > 0 ? 'danger' : undefined}
                 tipProps={tip('deuda_total_pendiente')}
+                irA={irA}
+                aLaLista={{
+                    tabla: 'clientes', filtro: { estado: 'Debe, sin plan' }, de: 'Deuda sin plan',
+                    aviso: 'La deuda es un saldo a hoy, no un flujo del período. Además este número '
+                        + 'atribuye por quién tiene HOY la agenda del cliente y la cartera de la lista '
+                        + 'por quién VENDIÓ, así que los totales no coinciden.',
+                }}
             />
 
             <HighlightCard
