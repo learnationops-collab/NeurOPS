@@ -127,6 +127,16 @@ def _agendas_por_embudo(desde, hasta, tz):
     fecha local del alta, texto ISO que manda n8n) es de alguno de sus dias. No
     hay tolerancia hacia el dia anterior ni horas de mas al final: las ventanas
     de dos talleres seguidos son contiguas y cada agenda cuenta en uno solo.
+
+    Pero la fecha de alta sola no alcanza: una agenda cuya LLAMADA ya habia
+    pasado antes de la clase no la trajo este taller -- nadie reserva una cita
+    para el pasado. Esas filas son citas viejas que recien ahora llegaron a
+    `financial_agendas`: `BookingService.sync_appointment_to_financial_agenda`
+    espeja la cita cuando un closer la toca y la da de alta con la fecha de ese
+    momento, y las importaciones masivas traen `created_at` del dia del import.
+    Sin este corte caian en la ventana del taller que estuviera abierto: el
+    taller del 26/09/2026 mostraba "1 agenda exitosa" a mitad de la clase, y era
+    una cita del 2 de septiembre (26/09/2026).
     """
     inicio, fin = _limites_utc(desde, hasta, tz)
     desde_str = desde.strftime('%Y-%m-%d')
@@ -141,6 +151,11 @@ def _agendas_por_embudo(desde, hasta, tz):
 
     grupos = {'vivo': [], 'landing': []}
     for a in candidatas:
+        # `date` es la hora de la cita en UTC e `inicio` las 00:00 locales del dia
+        # de la clase: una cita anterior a eso es de antes del taller. Sin `date`
+        # no hay con que descartarla, asi que se cuenta.
+        if a.date and a.date < inicio:
+            continue
         raw = a.raw_data or {}
         grupo = _clasificar_fuente(a.nombre, raw.get('fuente'), raw.get('fuente_form'))
         if grupo:
