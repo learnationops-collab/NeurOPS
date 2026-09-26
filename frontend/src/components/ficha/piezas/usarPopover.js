@@ -24,6 +24,12 @@ const usarPopover = () => {
         };
         const escape = (e) => {
             if (e.key !== 'Escape') return;
+            // Un campo puede reclamar el Escape para sí (el input de "opción nueva" lo
+            // usa para cancelar lo que se está escribiendo). Este listener corre en
+            // captura sobre `document`, o sea ANTES que el handler de React del campo:
+            // sin esta salida, Escape cerraría el desplegable entero en vez de cancelar
+            // el campo, y lo escrito se perdería sin que se pueda corregir.
+            if (e.target?.closest?.('[data-escape-propio="1"]')) return;
             e.stopPropagation();
             setAbierto(false);
         };

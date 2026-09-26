@@ -133,6 +133,7 @@ const DesplegableAgrupado = ({
                                         {/* Enter guarda, Escape cancela: el teclado alcanza para todo el ciclo. */}
                                         <input autoFocus value={borrador}
                                             placeholder="Nueva opción"
+                                            data-escape-propio="1"
                                             aria-label={`Nueva opción en ${g.titulo}`}
                                             onChange={(e) => setBorrador(e.target.value)}
                                             onKeyDown={(e) => {
