@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { agruparPor } from './agruparPor';
 import './listas.css';
 
@@ -22,9 +23,18 @@ import './listas.css';
  * Suman exactamente el total de la tira de arriba porque las dos cifras se calculan sobre el mismo
  * arreglo de filas visibles: es la misma razón por la que el filtrado de esta pantalla es del lado
  * del cliente.
+ *
+ * ## El movimiento al abrir
+ *
+ * El cuerpo del grupo entra desplazándose, y la flecha gira. Sin `AnimatePresence` a
+ * propósito: el grupo cerrado se desmonta y el fundido de salida no se extraña, mientras que en
+ * esta versión de framer-motion `AnimatePresence` dejó overlays sin desmontar dentro del mazo del
+ * closer —que es donde esta lista se monta embebida— y la única salida era recargar la página.
+ * `useReducedMotion` apaga el movimiento sin apagar el colapso.
  */
 const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsadoInicial = [] }) => {
     const [cerrados, setCerrados] = useState(() => new Set(colapsadoInicial));
+    const quieto = useReducedMotion();
 
     const grupos = agruparPor(filas, dimension);
 
@@ -45,9 +55,11 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsado
                         <button type="button" className="grupo-cab" aria-expanded={abierto}
                             aria-controls={idCuerpo}
                             onClick={() => alternar(grupo.clave)}>
-                            <span className="grupo-flecha" aria-hidden="true">
+                            <motion.span className="grupo-flecha" aria-hidden="true"
+                                animate={{ rotate: abierto ? 0 : -90 }}
+                                transition={quieto ? { duration: 0 } : { duration: .2 }}>
                                 <ChevronDown size={15} />
-                            </span>
+                            </motion.span>
                             <span className="grupo-nombre">{grupo.label}</span>
                             <span className="grupo-sub">
                                 <span>{grupo.cantidad === 1 ? '1 registro' : `${grupo.cantidad} registros`}</span>
@@ -59,10 +71,16 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsado
                                 )}
                             </span>
                         </button>
+                        {/* Se anima la opacidad y el desplazamiento, NO el alto: animar el alto
+                            obliga a `overflow: hidden`, que queda puesto cuando la animación
+                            termina y recorta el levantado de las tarjetas al pasarles el mouse. */}
                         {abierto && (
-                            <div className="grupo-cuerpo" id={idCuerpo}>
+                            <motion.div className="grupo-cuerpo" id={idCuerpo}
+                                initial={quieto ? false : { opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={quieto ? { duration: 0 } : { duration: .22, ease: 'easeOut' }}>
                                 {renderFilas(grupo.filas)}
-                            </div>
+                            </motion.div>
                         )}
                     </div>
                 );

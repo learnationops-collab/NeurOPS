@@ -89,6 +89,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
     const def = TABLAS[tabla];
+    const panel = useRef(null);
 
     /**
      * Los filtros se ajustan DURANTE el render y no en un efecto, que es el patrón de React para
@@ -132,6 +133,26 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         // existe en Leads.
         setAgrupacion(null);
     }
+
+    /**
+     * Al aterrizar de un drill-down, el panel parpadea una vez y se trae a la vista.
+     *
+     * Reusa la clase `.destacado` que ya existe para el mismo gesto en Analizar (bajar de un tile
+     * a su panel) en vez de duplicar la animación: es el mismo mensaje —"lo que buscabas está
+     * acá"— y tiene que verse igual. El reflow forzado entre quitar y poner la clase es lo que
+     * hace que dos drill-downs seguidos vuelvan a parpadear: sin él, reagregarla en el mismo
+     * cuadro no reinicia la animación.
+     *
+     * `prefers-reduced-motion` lo apaga por CSS, junto al resto de la animación del tablero.
+     */
+    useEffect(() => {
+        const el = panel.current;
+        if (!el || origen.token === null) return;
+        el.classList.remove('destacado');
+        void el.offsetWidth;
+        el.classList.add('destacado');
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, [origen.token]);
 
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
     useEffect(() => {
@@ -266,7 +287,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const alcanceTexto = [alcance, query ? `"${query}"` : null].filter(Boolean).join(' · ');
 
     return (
-        <section className="panel">
+        <section className="panel" ref={panel}>
             <div className="tabs" role="tablist" aria-label="Tabla"
                 style={{ marginBottom: 'var(--s4)' }}>
                 {TABLAS_POR_ROL[rol].map(k => (

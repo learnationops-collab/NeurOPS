@@ -209,6 +209,9 @@
   .dc-shell .humo i{animation:none}
   .dc-shell,
   .dc-shell *{transition-duration:.01ms!important}
+  /* El parpadeo de "lo que buscabas esta aca" es una animacion, no una transicion: la regla de
+     arriba no lo apaga. El foco y el scroll siguen ubicando igual. */
+  .dc-shell .destacado{animation:none}
 }
 
 /* ============================================================

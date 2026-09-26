@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { fmt } from './Shared';
@@ -14,6 +15,12 @@ import { fmt } from './Shared';
  * totales de arriba.
  *
  * Las cuatro vistas llaman al mismo `onAbrirFila`: una fila y una tarjeta abren la misma ficha.
+ *
+ * El envoltorio lleva una `key` con el modo y la dimensión: al alternar lista/tarjetas o al
+ * agrupar, React desmonta y vuelve a montar, y la vista nueva entra con su animación. Sin
+ * `AnimatePresence` —la vista vieja se va sin fundido— por lo mismo que en `ListaAgrupable`: esta
+ * lista se monta embebida en el mazo del closer, donde `AnimatePresence` ya dejó nodos sin
+ * desmontar.
  */
 
 /** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
@@ -130,6 +137,7 @@ const chipsDe = (def) => (fila) => def.cols
 const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
 
 const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }) => {
+    const quieto = useReducedMotion();
     const Tabla = ({ filas }) => (
         <>
             {filas.map(fila => (
@@ -165,22 +173,31 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
         ? (filas) => <div style={{ padding: 'var(--s4)' }}><Tarjetas filas={filas} /></div>
         : (filas) => <Tabla filas={filas} />;
 
-    if (dimension) {
+    const cuerpo = () => {
+        if (dimension) {
+            return (
+                <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
+                    formatoMonto={fmt.money} />
+            );
+        }
+        if (modo === 'tarjetas') return <Tarjetas filas={visibles} />;
         return (
-            <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
-                formatoMonto={fmt.money} />
+            <div className="tabla">
+                <div className="tabla-cab" style={{ '--cols': plantilla }}>
+                    {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
+                </div>
+                <Tabla filas={visibles} />
+            </div>
         );
-    }
-
-    if (modo === 'tarjetas') return <Tarjetas filas={visibles} />;
+    };
 
     return (
-        <div className="tabla">
-            <div className="tabla-cab" style={{ '--cols': plantilla }}>
-                {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
-            </div>
-            <Tabla filas={visibles} />
-        </div>
+        <motion.div key={`${modo}-${dimension?.key || 'suelta'}`}
+            initial={quieto ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={quieto ? { duration: 0 } : { duration: .2, ease: 'easeOut' }}>
+            {cuerpo()}
+        </motion.div>
     );
 };
 

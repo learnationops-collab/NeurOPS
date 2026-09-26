@@ -28,14 +28,14 @@
 .dc-shell .grupo-cab:hover { background: var(--bg-element); }
 .dc-shell .grupo-cab:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: -2px; }
 
-/* La flecha gira: dice si el grupo está abierto sin necesitar dos íconos distintos. */
+/* La flecha gira: dice si el grupo está abierto sin necesitar dos íconos distintos. El giro lo
+   hace framer-motion desde el componente, no el CSS: dos fuentes para el mismo `transform` se
+   peleaban y la flecha quedaba a mitad de camino. */
 .dc-shell .grupo-flecha {
     display: flex;
     flex-shrink: 0;
     color: var(--text-muted-40);
-    transition: transform .2s var(--spring);
 }
-.dc-shell .grupo-cab[aria-expanded="false"] .grupo-flecha { transform: rotate(-90deg); }
 
 .dc-shell .grupo-nombre {
     font-size: 13px;
@@ -58,12 +58,7 @@
 .dc-shell .grupo-sub b { font-size: 13px; font-weight: 900; letter-spacing: -.015em; }
 .dc-shell .grupo-sub span { font-size: 11px; color: var(--text-muted-40); font-weight: 700; }
 
-.dc-shell .grupo-cuerpo { animation: grupoAbre .22s ease-out; }
-
-@keyframes grupoAbre {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: none; }
-}
+/* El cuerpo del grupo lo anima framer-motion (alto y opacidad), no una keyframe. */
 
 /* --- Tarjetas ------------------------------------------------------------------------------ */
 
@@ -139,6 +134,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dc-shell .grupo-cuerpo { animation: none; }
     .dc-shell .reg-tarjeta:hover { transform: none; }
 }
