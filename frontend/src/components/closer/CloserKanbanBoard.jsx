@@ -34,8 +34,9 @@ import { parseUtcIso } from '../../utils/datetime';
 
 // --- Sortable Item Component ---
 const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCardClick, isOverlay = false }) => {
-    if (!item) return null;
-
+    // `useSortable` va antes de cualquier `return`: con el guardia arriba, una tarjeta sin
+    // item cambiaba el orden de hooks del tablero. El id de descarte solo se usa en ese caso,
+    // en el que la tarjeta no se dibuja.
     const {
         attributes,
         listeners,
@@ -43,7 +44,9 @@ const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCar
         transform,
         transition,
         isDragging
-    } = useSortable({ id: item.id });
+    } = useSortable({ id: item?.id ?? '__sin-item__' });
+
+    if (!item) return null;
 
     const style = {
         transform: CSS.Translate.toString(transform),

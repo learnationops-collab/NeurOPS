@@ -55,8 +55,6 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
         return next;
     });
 
-    if (!applicationId) return null;
-
     const idx = ids.indexOf(applicationId);
     const anterior = () => idx > 0 && onNavigate(ids[idx - 1]);
     const siguiente = () => idx < ids.length - 1 && onNavigate(ids[idx + 1]);
@@ -98,6 +96,10 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
+
+    // El guardia va DESPUES de los hooks: arriba cambiaba el orden de hooks entre un render
+    // con postulacion y uno sin, que es justo lo que React no permite.
+    if (!applicationId) return null;
 
     return (
         // z-[300]: por encima del botón flotante de reportar bugs (z-[190]/[210], ver
