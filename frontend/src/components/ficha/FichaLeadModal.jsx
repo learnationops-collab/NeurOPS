@@ -1,8 +1,9 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
-import { Aviso } from './piezas';
+import { Aviso, usarMovimiento } from './piezas';
 import { leerEstado } from './estadoFicha';
 import { ejecutarAccion, mensajeDeError, obtenerFicha } from './fichaApi';
 import TabConfirmacion from './tabs/TabConfirmacion';
@@ -84,6 +85,7 @@ const FichaLeadModal = ({
     const [error, setError] = useState(null);
     const [aviso, setAviso] = useState(null);
     const [pestana, setPestana] = useState(null);
+    const mov = usarMovimiento();
     const fijada = useRef(false);   // la pestaña por defecto se respeta al abrir, no en cada recarga
 
     const cargar = useCallback(async (signal) => {
@@ -226,7 +228,14 @@ const FichaLeadModal = ({
                         {error && !ficha && (
                             <Aviso tono="error" titulo="No se pudo abrir la ficha">{error}</Aviso>
                         )}
-                        {cargando && !ficha ? <Esqueleto /> : panel()}
+                        {/* La `key` es la pestaña: cambiarla remonta el panel y dispara la
+                            animación de entrada. Sin `AnimatePresence` a propósito — ver
+                            `piezas/movimiento.js`. */}
+                        {cargando && !ficha ? <Esqueleto /> : (
+                            <motion.div key={pestana || 'vacio'} {...mov.panel}>
+                                {panel()}
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </div>

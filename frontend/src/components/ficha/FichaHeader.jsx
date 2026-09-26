@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
+import usarMovimiento from './piezas/movimiento';
 import usarPopover from './piezas/usarPopover';
 import { opciones } from './estadoFicha';
 
@@ -25,6 +27,7 @@ const Dato = ({ rotulo, valor, mono = false }) => (
 
 const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar = true }) => {
     const { abierto, alternar, cerrar, caja } = usarPopover();
+    const mov = usarMovimiento();
     const id = ficha?.identidad || {};
     const closerActual = id.closer?.nombre || null;
     const closers = opciones(ficha, 'closers');
@@ -68,8 +71,11 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
                                     </span>
                                 </button>
                                 {abierto && (
-                                    <div className="fi-pop" role="listbox" aria-label="Pasar el lead a"
-                                        style={{ minWidth: 240, padding: 'var(--s2)', gap: 2,
+                                    <motion.div className="fi-pop" role="listbox"
+                                        aria-label="Pasar el lead a"
+                                        {...mov.popover}
+                                        style={{ ...(mov.popover.style || {}), minWidth: 240,
+                                            padding: 'var(--s2)', gap: 2,
                                             left: 'calc(-1 * var(--s3))' }}>
                                         <small className="t-rotulo" style={{ padding: 'var(--s2) var(--s3)' }}>
                                             Pasar el lead a
@@ -85,7 +91,7 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
                                                 </button>
                                             );
                                         })}
-                                    </div>
+                                    </motion.div>
                                 )}
                             </>
                         ) : (

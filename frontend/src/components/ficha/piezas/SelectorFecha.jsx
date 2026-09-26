@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import usarMovimiento from './movimiento';
 import usarPopover from './usarPopover';
 
 const SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -69,6 +71,7 @@ const SelectorFecha = ({
     deshabilitado = false,
 }) => {
     const { abierto, alternar, cerrar, caja } = usarPopover();
+    const mov = usarMovimiento();
     const hoy = useMemo(() => aDia(new Date()), []);
     const piso = minimo === null ? null : (aDia(minimo) || hoy);
     const sel = aDia(valor);
@@ -99,7 +102,8 @@ const SelectorFecha = ({
             </button>
 
             {abierto && (
-                <div className="fi-pop fi-pop--fecha" role="dialog" aria-label={etiqueta}>
+                <motion.div className="fi-pop fi-pop--fecha" role="dialog" aria-label={etiqueta}
+                    {...mov.popover}>
                     <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
                         <small className="t-rotulo" style={{ padding: '0 var(--s3) var(--s2)' }}>Rápido</small>
                         {presets.map(p => {
@@ -145,7 +149,7 @@ const SelectorFecha = ({
                             )))}
                         </div>
                     </div>
-                </div>
+                </motion.div>
             )}
         </div>
     );

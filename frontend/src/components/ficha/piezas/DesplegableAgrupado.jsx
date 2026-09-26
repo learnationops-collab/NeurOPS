@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import usarMovimiento from './movimiento';
 import usarPopover from './usarPopover';
 
 /**
@@ -32,6 +34,7 @@ const DesplegableAgrupado = ({
     etiqueta = null,
 }) => {
     const { abierto, alternar, cerrar, caja } = usarPopover();
+    const mov = usarMovimiento();
     // Las opciones creadas acá se muestran de inmediato; persistirlas es de quien nos pasó `onAgregar`.
     const [nuevas, setNuevas] = useState({});
     const [agregandoEn, setAgregandoEn] = useState(null);
@@ -105,9 +108,10 @@ const DesplegableAgrupado = ({
             </button>
 
             {abierto && (
-                <div className={`fi-pop fi-pop--ancho${alinear === 'der' ? ' fi-pop--der' : ''}`}
+                <motion.div className={`fi-pop fi-pop--ancho${alinear === 'der' ? ' fi-pop--der' : ''}`}
                     role="listbox" aria-multiselectable={multiple}
-                    aria-label={etiqueta || rotulo || placeholder}>
+                    aria-label={etiqueta || rotulo || placeholder}
+                    {...mov.popover}>
                     <div className="fi-pop-grupos">
                         {listas.map((g, i) => (
                             <div key={g.titulo ?? i} className="fi-grupo" style={{ '--c': `var(--${g.tono || 'idle'})` }}>
@@ -165,7 +169,7 @@ const DesplegableAgrupado = ({
                             <button type="button" className="btn btn--linea btn--sm" onClick={cerrar}>Listo</button>
                         </div>
                     )}
-                </div>
+                </motion.div>
             )}
         </div>
     );

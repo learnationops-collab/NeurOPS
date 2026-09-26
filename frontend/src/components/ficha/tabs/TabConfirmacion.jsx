@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Calendar, CheckCircle2, Trash2, XCircle } from 'lucide-react';
-import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion } from '../piezas';
+import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, usarMovimiento } from '../piezas';
 import { grupos } from '../estadoFicha';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubDescartar from './confirmacion/SubDescartar';
@@ -20,6 +21,7 @@ import SubEliminar from './confirmacion/SubEliminar';
  */
 const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     const [modo, setModo] = useState('menu');
+    const mov = usarMovimiento();
     const [guardando, setGuardando] = useState(false);
     const conf = ficha?.confirmacion || {};
     const cerrada = !!conf.cerrada;
@@ -68,24 +70,28 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
         }
     };
 
-    if (modo === 'repro') {
-        return <SubReprogramar ficha={ficha} guardando={guardando}
-            onVolver={() => setModo('menu')}
-            onConfirmar={(p) => correr('reprogramar', p)} />;
-    }
-    if (modo === 'desc') {
-        return <SubDescartar ficha={ficha} guardando={guardando}
-            onVolver={() => setModo('menu')}
-            onConfirmar={(p) => correr('descartar', p)} />;
-    }
-    if (modo === 'elim') {
-        return <SubEliminar ficha={ficha}
-            onVolver={() => setModo('menu')}
-            onConfirmar={() => onAccion('eliminar', {}).catch(() => {})} />;
+    if (modo !== 'menu') {
+        const volver = () => setModo('menu');
+        return (
+            <motion.div key={modo} {...mov.subvista}>
+                {modo === 'repro' && (
+                    <SubReprogramar ficha={ficha} guardando={guardando} onVolver={volver}
+                        onConfirmar={(p) => correr('reprogramar', p)} />
+                )}
+                {modo === 'desc' && (
+                    <SubDescartar ficha={ficha} guardando={guardando} onVolver={volver}
+                        onConfirmar={(p) => correr('descartar', p)} />
+                )}
+                {modo === 'elim' && (
+                    <SubEliminar ficha={ficha} onVolver={volver}
+                        onConfirmar={() => onAccion('eliminar', {}).catch(() => {})} />
+                )}
+            </motion.div>
+        );
     }
 
     return (
-        <div style={{ display: 'grid', gap: 'var(--s6)' }}>
+        <motion.div key="menu" style={{ display: 'grid', gap: 'var(--s6)' }} {...mov.subvista}>
             {cerrada && (
                 <Aviso tono="success" titulo="Lead 100% confirmado">
                     Queda listo para el día de la llamada.
@@ -210,7 +216,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     </button>
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 };
 

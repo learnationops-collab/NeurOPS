@@ -1,4 +1,6 @@
 import React, { useRef } from 'react';
+import { motion } from 'framer-motion';
+import usarMovimiento from './piezas/movimiento';
 
 /**
  * Tablist de la ficha. Navegable con flechas, Inicio y Fin, como manda un tablist
@@ -7,6 +9,7 @@ import React, { useRef } from 'react';
  */
 const FichaTabs = ({ pestanas = [], activa, onCambiar }) => {
     const refs = useRef({});
+    const mov = usarMovimiento();
 
     const mover = (e) => {
         const i = pestanas.findIndex(p => p.id === activa);
@@ -32,7 +35,12 @@ const FichaTabs = ({ pestanas = [], activa, onCambiar }) => {
                         tabIndex={on ? 0 : -1}
                         onClick={() => onCambiar(p.id)}>
                         {p.label}
-                        {on && <span className="fi-tab-sub" aria-hidden="true" />}
+                        {/* `layoutId` hace que el subrayado se corra de una pestaña a la
+                            otra en vez de reaparecer del otro lado. */}
+                        {on && (
+                            <motion.span layoutId="fi-tab-sub" className="fi-tab-sub"
+                                aria-hidden="true" {...mov.subrayado} />
+                        )}
                     </button>
                 );
             })}
