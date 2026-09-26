@@ -215,7 +215,8 @@ def receive_financial_agendas():
         la_paz_tz = pytz.timezone('America/La_Paz')
 
         # Normalizar el campo de registro a formato local de America/La_Paz
-        registro_val = item.get('registro') or item.get('fecha') or datetime.now(la_paz_tz).isoformat()
+        registro_traido = item.get('registro') or item.get('fecha')
+        registro_val = registro_traido or datetime.now(la_paz_tz).isoformat()
         try:
             from dateutil import parser
             parsed_reg = parser.parse(str(registro_val).strip())
@@ -295,7 +296,14 @@ def receive_financial_agendas():
                 existing.closer = BookingService.normalize_closer_name(raw_closer)
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
-            existing.registro = registro_val
+            # Solo se pisa `registro` si el payload TRAE la fecha de alta. El respaldo
+            # "ahora" de arriba tiene sentido para una fila nueva, pero sobre una agenda
+            # que ya existe reescribe su fecha de alta con la del reenvio: una agenda de
+            # hace semanas pasaba a figurar como registrada hoy, y como el embudo del
+            # workshop mira `created_at` (viejo) O `registro` (nuevo), la misma fila caia
+            # en la ventana de dos talleres a la vez (26/09/2026).
+            if registro_traido:
+                existing.registro = registro_val
             existing.estado = item.get('estado') or existing.estado
             existing.grupo = grupo_val or existing.grupo
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
