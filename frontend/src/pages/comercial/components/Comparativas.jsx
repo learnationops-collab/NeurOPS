@@ -1,12 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { Cargando, Delta, fmt, Segmented, useMontado } from './Shared';
+import { DESTINOS_METRICA } from './destinos';
 
 /**
  * Analizar → Comparativas: un solo panel con el ranking arriba y el mapa del equipo abajo.
  *
  * El ranking ordena por la métrica elegida; el mapa muestra todas a la vez y resalta la columna
- * rankeada. Clickear una celda o el encabezado de una columna rankeable cambia la métrica, que es
- * lo que conecta las dos mitades.
+ * rankeada. El ENCABEZADO de una columna rankeable cambia la métrica —eso es lo que conecta las
+ * dos mitades— y la CELDA abre la lista de esa persona con esa métrica.
+ *
+ * Los dos gestos vivían en el mismo clic: la celda rankeaba, igual que el encabezado, así que el
+ * mapa mostraba siete métricas por persona y ninguna se podía verificar. Ahora el encabezado
+ * rankea y la celda contesta "¿de qué filas está hecho este número?".
  *
  * El marcado usa las clases de la referencia visual (`.rk-*`, `.mapa-*`, `.panel`, `.t-*`), no las
  * `.dc-*` de la primera versión: esas dejaron de existir cuando el CSS del tablero se rehízo
@@ -27,7 +32,7 @@ const Avatar = ({ nombre, rol, chico }) => (
     </span>
 );
 
-const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
+const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
     const montado = useMontado();
     const valores = filas.map(f => f[metrica.key]).filter(v => v !== null && v !== undefined);
     const maximo = Math.max(...valores, 0);
@@ -85,7 +90,8 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
                     const largo = valor && tope ? (valor / tope) * 100 : 0;
                     return (
                         <button key={fila.id} type="button" className="rk-fila"
-                            onClick={() => irAPersona(fila.id)}>
+                            aria-label={`Ver la lista de ${fila.nombre} filtrada por ${metrica.label}`}
+                            onClick={() => irAPersona(fila.id, destino)}>
                             <span className="rk-pos">{i + 1}</span>
                             <span className="rk-quien">
                                 <Avatar nombre={fila.nombre} rol={datos.rol} />
@@ -133,7 +139,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona }) => {
     );
 };
 
-const MapaEquipo = ({ datos, metrica, filas, onMetrica }) => {
+const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
     const columnas = [
         ...datos.metricas.map(m => ({ ...m, rankeable: true })),
         ...datos.columnas_info.map(c => ({ ...c, rankeable: false })),
@@ -159,7 +165,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica }) => {
                 <div style={{ minWidth: 0 }}>
                     <p className="t-eyebrow">Mapa del equipo</p>
                     <p className="t-cap mut" style={{ marginTop: 6 }}>
-                        Tocá una celda para rankear por esa métrica.
+                        Tocá el encabezado para rankear · tocá una celda para abrir su lista.
                     </p>
                 </div>
                 <div className="panel-cab-der mapa-leyenda">
@@ -206,7 +212,16 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica }) => {
                                     if (c.key === metrica.key) clases.push('marcada');
                                     if (!c.rankeable) clases.push('info');
                                     const texto = fmt.porFormato(valor, c.formato);
-                                    return c.rankeable ? (
+                                    const aLaLista = DESTINOS_METRICA[datos.rol]?.[c.key];
+                                    return c.rankeable && aLaLista ? (
+                                        <button key={c.key} type="button"
+                                            title={`${c.desc} · abre la lista de ${fila.nombre}`}
+                                            aria-label={`Ver la lista de ${fila.nombre} filtrada por ${c.label}`}
+                                            className={clases.join(' ')}
+                                            onClick={() => irAPersona(fila.id, aLaLista)}>
+                                            {texto}
+                                        </button>
+                                    ) : c.rankeable ? (
                                         <button key={c.key} type="button" title={c.desc}
                                             className={clases.join(' ')} onClick={() => onMetrica(c.key)}>
                                             {texto}
@@ -240,11 +255,14 @@ const Comparativas = ({ datos, irAPersona }) => {
     });
 
     const conHandler = { ...datos, onMetrica: setMetricaKey };
+    const destino = DESTINOS_METRICA[datos.rol]?.[metrica.key];
 
     return (
         <section className="panel">
-            <Ranking datos={conHandler} metrica={metrica} filas={filas} yo={datos.yo} irAPersona={irAPersona} />
-            <MapaEquipo datos={datos} metrica={metrica} filas={filas} onMetrica={setMetricaKey} />
+            <Ranking datos={conHandler} metrica={metrica} filas={filas} yo={datos.yo}
+                irAPersona={irAPersona} destino={destino} />
+            <MapaEquipo datos={datos} metrica={metrica} filas={filas} onMetrica={setMetricaKey}
+                irAPersona={irAPersona} />
         </section>
     );
 };
