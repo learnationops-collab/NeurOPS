@@ -762,16 +762,23 @@ class BookingService:
             filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
             
         agenda = None
+        # `misma_cita` distingue "esta agenda ES esta cita" (cayo en la ventana de +/-36h)
+        # de "es otra agenda cualquiera del mismo lead" (el respaldo de abajo, que agarra
+        # la mas reciente sin mirar fechas). Solo en el primer caso se puede reescribir la
+        # fecha de la agenda: con el respaldo, procesar una cita vieja le movia la fecha
+        # hacia atras a la agenda mas nueva del lead y la sacaba del taller que la gano.
+        misma_cita = False
         if filters:
             agenda = FinancialAgenda.query.filter(
                 or_(*filters),
                 FinancialAgenda.date >= start_search,
                 FinancialAgenda.date <= end_search
             ).first()
-            
+            misma_cita = agenda is not None
+
             if not agenda:
                 agenda = FinancialAgenda.query.filter(or_(*filters)).order_by(FinancialAgenda.date.desc()).first()
-            
+
         # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
         mapped_state = 'Pendiente'
         if appt.closer_result and appt.closer_result != 'Pendiente':
@@ -860,8 +867,9 @@ class BookingService:
             agenda.nombre = fuente
             agenda.closer = closer_name
             agenda.estado = mapped_state
-            agenda.date = appt.start_time
-            agenda.fecha_meet = appt.start_time.isoformat()
+            if misma_cita:
+                agenda.date = appt.start_time
+                agenda.fecha_meet = appt.start_time.isoformat()
             
         try:
             db.session.flush()
