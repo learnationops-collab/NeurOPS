@@ -54,9 +54,12 @@ export const SelectorFecha = ({ valor, onChange, presets = [], minimo }) => (
   </span>
 );
 
-export const TarjetaAccion = ({ tono = 'info', icono = null, label, onClick }) => (
+// `icono` es el COMPONENTE del icono, no el elemento ya construido: la pieza real le pasa
+// `size`. El stub tiene que imitar ese contrato o los tests pasan con una forma que en
+// produccion explota.
+export const TarjetaAccion = ({ tono = 'info', icono: Icono = null, label, onClick }) => (
   <button type="button" data-pieza="tarjeta-accion" data-tono={tono} onClick={onClick}>
-    {icono}
+    {Icono && <Icono />}
     {label}
   </button>
 );

@@ -14,10 +14,10 @@ import { moneda } from '../acciones/planCuotas';
 
 // El orden y los tonos son los del mockup (`fcAcciones`).
 const ACCIONES = [
-  { modo: 'plan', label: 'Armar plan de cuotas', tono: 'info', icono: <CalendarDays />, accion: 'guardar_plan', ok: 'Plan de cuotas guardado.' },
-  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: <CheckCircle2 />, accion: 'registrar_pago', ok: 'Pago registrado.' },
-  { modo: 'seg', label: 'Registrar seguimiento', tono: 'warning', icono: <Clock />, accion: 'registrar_seguimiento', ok: 'Seguimiento agendado.' },
-  { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: <XCircle />, accion: 'dar_de_baja', ok: 'Baja registrada.' },
+  { modo: 'plan', label: 'Armar plan de cuotas', tono: 'info', icono: CalendarDays, accion: 'guardar_plan', ok: 'Plan de cuotas guardado.' },
+  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: CheckCircle2, accion: 'registrar_pago', ok: 'Pago registrado.' },
+  { modo: 'seg', label: 'Registrar seguimiento', tono: 'warning', icono: Clock, accion: 'registrar_seguimiento', ok: 'Seguimiento agendado.' },
+  { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: XCircle, accion: 'dar_de_baja', ok: 'Baja registrada.' },
 ];
 
 export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar = true }) {

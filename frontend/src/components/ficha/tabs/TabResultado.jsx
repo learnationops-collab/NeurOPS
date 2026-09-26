@@ -39,7 +39,7 @@ const CASCADA = {
 };
 
 const ICONOS = {
-  asistio: <CheckCircle2 />, no_asistio: <XCircle />, cancelo: <CalendarX />, reagenda: <CalendarClock />,
+  asistio: CheckCircle2, no_asistio: XCircle, cancelo: CalendarX, reagenda: CalendarClock,
 };
 
 const hoyIso = () => {
