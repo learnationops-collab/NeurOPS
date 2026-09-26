@@ -24,6 +24,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     const mov = useMovimiento();
     const [guardando, setGuardando] = useState(false);
     const conf = ficha?.confirmacion || {};
+    // El backend manda `como_viene` y `dolores` como {clave, label} —asi un slug historico
+    // que ya no esta en ninguna lista no desaparece— y el desplegable trabaja con la clave.
+    const comoViene = conf.como_viene?.clave ?? conf.como_viene ?? null;
+    const dolores = (conf.dolores || []).map(d => d?.clave ?? d);
     const cerrada = !!conf.cerrada;
     const bloqueado = !puedeEditar || ficha?.permisos?.confirmar === false || cerrada;
 
@@ -112,7 +116,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     etiqueta="Cómo viene"
                     placeholder="Elegí cómo viene"
                     grupos={grupos(ficha, 'como_viene')}
-                    valor={conf.como_viene ?? null}
+                    valor={comoViene}
                     deshabilitado={bloqueado}
                     onChange={(v) => disparar('como_viene', { como_viene: v })}
                     onAgregar={({ label }) => disparar('como_viene', { como_viene: label, nueva_opcion: label })} />
@@ -128,10 +132,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     multiple
                     alinear="der"
                     grupos={grupos(ficha, 'dolores')}
-                    valor={conf.dolores || []}
+                    valor={dolores}
                     deshabilitado={bloqueado}
                     onChange={(v) => disparar('dolores', { dolores: v })}
-                    onAgregar={({ label }) => disparar('dolores', { dolores: [...(conf.dolores || []), label], nueva_opcion: label })} />
+                    onAgregar={({ label }) => disparar('dolores', { dolores: [...dolores, label], nueva_opcion: label })} />
             </div>
 
             {/* El recordatorio previo solo aplica antes del primer contacto: después de
