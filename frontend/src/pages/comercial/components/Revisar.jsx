@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, ChevronDown, Filter, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Cargando, fmt } from './Shared';
 import { TABLAS, TABLAS_POR_ROL, esTablaDeAgendas } from './tablasDef';
+import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
 // importaban otros archivos por este camino, para no mover los imports de media pantalla.
@@ -306,15 +307,22 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      * cambió de pestaña a mano", que tiene que limpiar.
      */
     const token = filtroInicial?.__t ?? null;
-    const [origen, setOrigen] = useState({ tabla, token: null });
+    const [origen, setOrigen] = useState({ tabla, token: null, de: null, aviso: null });
     if (origen.tabla !== tabla || origen.token !== token) {
         const nuevas = {};
+        let de = null;
+        let aviso = null;
         if (token !== null && token !== origen.token) {
+            de = filtroInicial.__de || null;
+            aviso = filtroInicial.__aviso || null;
             Object.entries(filtroInicial).forEach(([k, valor]) => {
-                if (k !== '__t') nuevas[k] = [valor];
+                // Las claves `__` son metadatos del drill-down (token, procedencia, advertencia),
+                // no condiciones. Un array de etiquetas en la misma faceta es un OR.
+                if (k.startsWith('__') || valor === null || valor === undefined) return;
+                nuevas[k] = Array.isArray(valor) ? valor : [valor];
             });
         }
-        setOrigen({ tabla, token });
+        setOrigen({ tabla, token, de, aviso });
         setFacetas(nuevas);
         setChip(null);
         setQuery('');
@@ -341,7 +349,22 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
     const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
 
-    const limpiar = () => { setFacetas({}); setChip(null); setQuery(''); };
+    const limpiar = () => {
+        setFacetas({});
+        setChip(null);
+        setQuery('');
+        // Sacar el filtro también saca el aviso de procedencia: si no, la lista seguía diciendo
+        // "viniste de Show up" arriba de las agendas completas del período.
+        setOrigen(o => ({ ...o, de: null, aviso: null }));
+    };
+
+    const quitarCriterio = (clave, valor) => setFacetas({
+        ...facetas, [clave]: (facetas[clave] || []).filter(x => x !== valor),
+    });
+
+    /** Las condiciones activas, con el nombre de su faceta, para el aviso de procedencia. */
+    const criterios = def.facetas.flatMap(fa => (facetas[fa.key] || []).map(
+        valor => ({ clave: fa.key, faceta: fa.label, valor })));
 
     /**
      * Los seis números de la tira, recalculados sobre lo filtrado con las mismas reglas del
@@ -500,23 +523,27 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <Ayuda titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
+            {/* De dónde viene el filtro. Va arriba de los chips de faceta porque contesta la
+                pregunta anterior: no "qué condición hay puesta" sino "qué número me trajo acá". */}
+            <PanelDetalle de={origen.de} aviso={origen.aviso} criterios={criterios}
+                cuantas={visibles.length} total={filas.length}
+                onQuitarCriterio={quitarCriterio} onLimpiar={limpiar} />
+
             {activas > 0 && (
                 <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)', marginBottom: 'var(--s3)' }}>
                     <span className="t-rotulo">
                         {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
                     </span>
-                    {def.facetas.flatMap(fa => (facetas[fa.key] || []).map(v => (
-                        <button key={`${fa.key}-${v}`} type="button" className="chip"
+                    {criterios.map(c => (
+                        <button key={`${c.clave}-${c.valor}`} type="button" className="chip"
                             style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
                                 letterSpacing: 0, fontWeight: 700 }}
-                            aria-label={`Quitar ${v}`}
-                            onClick={() => setFacetas({
-                                ...facetas, [fa.key]: facetas[fa.key].filter(x => x !== v),
-                            })}>
-                            {v}
+                            aria-label={`Quitar ${c.valor}`}
+                            onClick={() => quitarCriterio(c.clave, c.valor)}>
+                            {c.valor}
                             <X size={12} />
                         </button>
-                    )))}
+                    ))}
                     <button type="button" className="btn btn--linea btn--sm" onClick={limpiar}>
                         <RotateCcw size={13} />
                         Limpiar

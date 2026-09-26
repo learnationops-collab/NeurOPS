@@ -1,0 +1,73 @@
+/* Drill-down de un dato del dashboard a la lista que lo compone.
+ *
+ * Sin prefijo de pantalla a propósito: las mismas dos piezas se usan en el dashboard comercial
+ * (que vive dentro de `.dc-shell`, con su propio sistema de tokens) y en el dashboard de
+ * performance del closer (Tailwind, `dash-v6`). Por eso todo hereda tipografía y color del padre
+ * y lo único que se declara acá es el foco, el hover y el marco del aviso de procedencia.
+ */
+
+.metrica-clic {
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    min-width: 0;
+    transition: opacity .16s ease, box-shadow .16s ease;
+}
+
+.metrica-clic:hover { opacity: .78; }
+
+/* Subrayado punteado: dice "esto lleva a algún lado" sin pintar un botón encima de cada cifra. */
+.metrica-clic > .metrica-clic-txt {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: currentColor;
+    opacity: .999; /* fuerza su propia capa: sin esto el subrayado hereda el opacity del hover */
+}
+
+.metrica-clic:focus-visible {
+    outline: 2px solid var(--brand-secondary, #6366F1);
+    outline-offset: 2px;
+}
+
+/* Un dato en cero también es cliqueable: lleva a una lista vacía con su explicación. Se marca
+   con menos peso para no prometer que hay algo que mirar. */
+.metrica-clic[data-vacio="1"] { opacity: .72; }
+.metrica-clic[data-vacio="1"]:hover { opacity: .9; }
+
+/* --- Aviso de procedencia, arriba de la lista filtrada ------------------------------------- */
+
+.drill-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--brand-secondary-border, rgba(99, 102, 241, .35));
+    background: var(--brand-secondary-surface, rgba(99, 102, 241, .08));
+    border-radius: var(--radius-control, 12px);
+    animation: drillAvisoIn .32s ease-out;
+}
+
+.drill-aviso-cuerpo { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.drill-aviso-criterios { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.drill-aviso-nota { color: var(--warning, #F59E0B); }
+
+@keyframes drillAvisoIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .drill-aviso { animation: none; }
+    .metrica-clic { transition: none; }
+}
