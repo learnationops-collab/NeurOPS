@@ -119,29 +119,42 @@ def resultado(appt, datos, usuario):
     # `process_agenda` hace lo que el mazo no: borra el evento de Google Calendar cuando se cancela
     # y deja el comentario del lead perdido.
     _process_agenda(appt, usuario, {'status': status, 'note': datos.get('nota')})
+    _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
     db.session.commit()
     return {'id': appt.id, 'closer_result': appt.closer_result}
 
 
+def _guardar_respuestas_del_arbol(appt, respuestas, usuario):
+    """Deja las respuestas crudas del arbol de reporte en la bitacora del lead.
+
+    El arbol recoge mas datos de los que tienen columna (motivos, objeciones, angulos). Se guardan
+    en `LeadEventLog` en vez de descartarse: simplificar es dejar de MOSTRAR lo que no hace falta, no
+    dejar de guardarlo. La bitacora es texto libre y auditable, asi que no hace falta una columna
+    nueva por cada pregunta que el arbol agregue.
+    """
+    if not respuestas:
+        return
+    import json
+
+    from app.services.booking_service import BookingService
+    try:
+        detalle = json.dumps(respuestas, ensure_ascii=False, default=str)[:4000]
+    except (TypeError, ValueError):
+        detalle = str(respuestas)[:4000]
+    BookingService.log_lead_event(appt.id, usuario.id, 'reporte_arbol',
+                                  f'Respuestas del reporte de llamada: {detalle}')
+
+
 # --- Venta ------------------------------------------------------------------------------------
 
-def venta(appt, datos, usuario):
-    """Declara una venta o cobra una cuota.
+# Claves del payload de venta que son instrucciones para esta capa y NO campos de la venta: no
+# pueden viajar a Sheets ni a n8n.
+CLAVES_NO_DE_VENTA = ('liquidar_saldo', 'respuestas')
 
-    Pasa por `SheetsService.post_to_sheets('Ventas_DB', ...)` y no por un atajo propio porque ese es
-    el unico camino que hace TODO lo que una venta implica (Client, validacion de secuencia,
-    FinancialSale, espejo a Enrollment/Payment, marcar la agenda como Show up, webhook a n8n). Una
-    segunda via crearia ventas a medias.
-    """
-    from app.services.sheets_service import SheetsService
 
-    if not datos.get('tipo_pago'):
-        raise ErrorDeAccion('Falta tipo_pago (ej. "RR - Parcial").')
-    if not datos.get('monto'):
-        raise ErrorDeAccion('Falta el monto cobrado.')
-
+def _payload_de_venta(appt, usuario, datos):
     cliente = appt.client
-    payload = {
+    return {
         # El vendedor es el closer DUENO de la agenda, no quien aprieta el boton: la comision y la
         # atribucion de la venta son suyas aunque la declare la direccion comercial.
         'email_vendedor': (appt.closer.email if appt.closer else usuario.email),
@@ -152,10 +165,52 @@ def venta(appt, datos, usuario):
         'examen': appt.examen or None,
         'appointment_id': appt.id,
         'estado': 'Completada',
-        **datos,
+        **{k: v for k, v in datos.items() if k not in CLAVES_NO_DE_VENTA},
     }
-    resultado_sheets = SheetsService.post_to_sheets('Ventas_DB', payload)
-    return {'id': appt.id, 'venta': resultado_sheets}
+
+
+def venta(appt, datos, usuario):
+    """Declara una venta o cobra una cuota.
+
+    Pasa por `SheetsService.post_to_sheets('Ventas_DB', ...)` y no por un atajo propio porque ese es
+    el unico camino que hace TODO lo que una venta implica (Client, validacion de secuencia,
+    FinancialSale, espejo a Enrollment/Payment, marcar la agenda como Show up, webhook a n8n). Una
+    segunda via crearia ventas a medias.
+
+    `liquidar_saldo` es el saldo de una venta anterior que se cobra junto con esta (renovacion o
+    upsell de un cliente que todavia debia). Se manda PRIMERO y como una venta aparte de tipo Cuota,
+    y si falla no se declara la venta nueva: es el orden que ya tiene el wizard del closer, y
+    darlo vuelta dejaria la renovacion registrada con el saldo viejo sin cobrar — es decir, la
+    validacion de secuencia de pagos leyendo un historial que no cierra.
+
+    Devuelve la respuesta de Sheets tal cual (`status`, `warning`, `client_id`): el `warning` es el
+    aviso de la validacion de secuencia, que el closer ve en pantalla, y comerselo aca seria
+    esconderle que la venta quedo con una secuencia rara.
+    """
+    from app.services.sheets_service import SheetsService
+
+    if not datos.get('tipo_pago'):
+        raise ErrorDeAccion('Falta tipo_pago (ej. "RR - Parcial").')
+    if not datos.get('monto'):
+        raise ErrorDeAccion('Falta el monto cobrado.')
+
+    liquidacion = None
+    saldo = datos.get('liquidar_saldo')
+    if saldo:
+        if not isinstance(saldo, dict) or not saldo.get('monto'):
+            raise ErrorDeAccion('`liquidar_saldo` necesita al menos un monto.')
+        programa = (saldo.get('programa_code')
+                    or str(datos['tipo_pago']).split('-')[0].strip().upper())
+        liquidacion = SheetsService.post_to_sheets('Ventas_DB', _payload_de_venta(appt, usuario, {
+            'tipo_pago': f'{programa} - Cuota',
+            'monto': saldo['monto'],
+            'metodo_pago': saldo.get('metodo_pago') or datos.get('metodo_pago'),
+            'enviar_webhook': False,
+        }))
+
+    resultado_sheets = SheetsService.post_to_sheets('Ventas_DB',
+                                                   _payload_de_venta(appt, usuario, datos)) or {}
+    return {'id': appt.id, 'liquidacion': liquidacion, **resultado_sheets}
 
 
 # --- Reprogramar ------------------------------------------------------------------------------

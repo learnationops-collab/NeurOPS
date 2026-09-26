@@ -140,7 +140,11 @@ def _identidad(appt, client, programa_nombre, ingreso):
         'ingreso': ingreso,
         'llamada': _momento(appt.start_time if appt else None),
         'fuente': (appt.origin or None) if appt else None,
-        'closer': ({'id': appt.closer_id, 'nombre': appt.closer.username if appt.closer else None}
+        # El email del closer viaja porque es el `email_vendedor` con el que se declara la venta: la
+        # atribucion de una venta (y por lo tanto la comision) es por email y no por FK.
+        'closer': ({'id': appt.closer_id,
+                    'nombre': appt.closer.username if appt.closer else None,
+                    'email': appt.closer.email if appt.closer else None}
                    if appt else None),
         'setter': ({'id': appt.setter_id, 'nombre': appt.setter.username if appt.setter else None}
                    if appt and appt.setter_id else None),
@@ -230,7 +234,8 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
         vacio = chip('post_call', 'pendiente')
         return {'pre_call': chip('pre_call', 'sin_confirmar'), 'post_call': vacio,
                 'con_decisor': None, 'oferta_presentada': None, 'reportada': False,
-                'venta': None, 'hitos': _hitos(False, vacio, None, deuda, tipos_vendidos)}
+                'venta': None, 'hitos': _hitos(False, vacio, None, deuda, tipos_vendidos),
+                'seguimiento_activo': False, 'seguimiento_intento': 1, 'seguimiento_tipo': None}
 
     post = chip('post_call', post_call_de(estado_libro, bool(ventas), con_seguimiento))
     ultima = ventas[-1] if ventas else None
@@ -249,6 +254,13 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
         'reportada': bool(appt.closer_processed),
         'venta': venta,
         'hitos': _hitos(confirmada, post, venta, deuda, tipos_vendidos),
+        # El lead puede entrar a la pestana Resultado por dos caminos distintos: una llamada sin
+        # reportar (se elige entre las 4 tarjetas) o la cadencia de seguimiento, que ya tiene un
+        # resultado y lo que pide es el proximo contacto. Sin esto la pestana no sabe cual es y
+        # entra siempre por las tarjetas.
+        'seguimiento_activo': con_seguimiento,
+        'seguimiento_intento': appt.seguimiento_intento or 1,
+        'seguimiento_tipo': appt.seguimiento_tipo or None,
     }
 
 

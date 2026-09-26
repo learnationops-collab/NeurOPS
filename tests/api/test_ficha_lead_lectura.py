@@ -389,3 +389,57 @@ def test_el_vocabulario_solo_tambien_se_puede_pedir(client, db, equipo, auth_hea
 
     assert r.status_code == 200
     assert 'motivos_descarte' in r.get_json()
+
+
+# --- Anadidos que pidio la pestana Resultado --------------------------------------------------
+
+def test_la_cabecera_trae_el_email_del_closer(client, db, lead, equipo, auth_headers):
+    """Es el `email_vendedor` con el que se declara la venta: la atribucion (y la comision) es por
+    email, no por FK, asi que sin esto el closer tendria que tipearlo."""
+    closer = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
+        .get_json()['identidad']['closer']
+
+    assert closer == {'id': equipo['closer'].id, 'nombre': 'vendedor',
+                      'email': 'vendedor@neuro.com'}
+
+
+def test_un_lead_en_cadencia_de_seguimiento_lo_dice(client, db, lead, equipo, auth_headers):
+    """La pestana Resultado entra por la cadencia en vez de por las 4 tarjetas."""
+    lead.seguimiento_tipo = 'no_tomada'
+    lead.fecha_seguimiento = '2026-10-02'
+    lead.seguimiento_intento = 3
+    lead.seguimiento_realizado = False
+    db.session.commit()
+
+    resultado = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id) \
+        .get_json()['resultado']
+
+    assert resultado['seguimiento_activo'] is True
+    assert resultado['seguimiento_intento'] == 3
+    assert resultado['seguimiento_tipo'] == 'no_tomada'
+
+
+def test_un_seguimiento_ya_resuelto_no_esta_activo(client, db, lead, equipo, auth_headers):
+    lead.seguimiento_tipo = 'tomada'
+    lead.fecha_seguimiento = '2026-09-01'
+    lead.seguimiento_realizado = True
+    db.session.commit()
+
+    resultado = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id) \
+        .get_json()['resultado']
+
+    assert resultado['seguimiento_activo'] is False
+    assert resultado['seguimiento_tipo'] == 'tomada'
+
+
+def test_sin_agenda_los_campos_de_seguimiento_no_faltan(client, db, equipo, auth_headers):
+    cliente = Client(full_name='Sin agenda')
+    db.session.add(cliente)
+    db.session.commit()
+
+    resultado = abrir(client, auth_headers, equipo['director'], client_id=cliente.id) \
+        .get_json()['resultado']
+
+    assert resultado['seguimiento_activo'] is False
+    assert resultado['seguimiento_intento'] == 1
+    assert resultado['seguimiento_tipo'] is None

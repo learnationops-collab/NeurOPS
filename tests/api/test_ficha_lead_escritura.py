@@ -445,3 +445,99 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         all(r.status_code in (401, 403) for r in llamadas)
     assert Appointment.query.count() == 1
     assert FinancialSale.query.count() == 0
+
+
+# --- Anadidos que pidio la pestana Resultado --------------------------------------------------
+
+def test_liquidar_el_saldo_se_cobra_antes_que_la_venta_nueva(client, db, lead, equipo, auth_headers):
+    """Al reves, la renovacion quedaria registrada con el saldo viejo sin cobrar y la validacion de
+    secuencia leeria un historial que no cierra."""
+    with patch('app.services.sheets_service.SheetsService.post_to_sheets',
+               return_value={'status': 'ok', 'client_id': 7}) as enviado:
+        r = client.post(url(lead, '/venta'),
+                        json={'tipo_pago': 'RR - Renovacion', 'monto': 900,
+                              'metodo_pago': 'Stripe',
+                              'liquidar_saldo': {'monto': 200}},
+                        headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201
+    primera, segunda = [llamada[0][1] for llamada in enviado.call_args_list]
+    assert primera['tipo_pago'] == 'RR - Cuota' and primera['monto'] == 200
+    assert segunda['tipo_pago'] == 'RR - Renovacion'
+
+
+def test_si_la_liquidacion_del_saldo_falla_no_se_declara_la_venta(client, db, lead, equipo,
+                                                                 auth_headers):
+    with patch('app.services.sheets_service.SheetsService.post_to_sheets',
+               side_effect=Exception('Sheets no responde')) as enviado:
+        r = client.post(url(lead, '/venta'),
+                        json={'tipo_pago': 'RR - Renovacion', 'monto': 900,
+                              'liquidar_saldo': {'monto': 200}},
+                        headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert enviado.call_count == 1
+
+
+def test_una_liquidacion_sin_monto_no_pasa(client, db, lead, equipo, auth_headers):
+    with patch('app.services.sheets_service.SheetsService.post_to_sheets') as enviado:
+        r = client.post(url(lead, '/venta'),
+                        json={'tipo_pago': 'RR - Renovacion', 'monto': 900,
+                              'liquidar_saldo': {'metodo_pago': 'Stripe'}},
+                        headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    enviado.assert_not_called()
+
+
+def test_la_venta_devuelve_el_aviso_de_la_validacion_de_secuencia(client, db, lead, equipo,
+                                                                 auth_headers):
+    """El `warning` lo ve el closer en pantalla: comerselo seria esconderle que la venta quedo con
+    una secuencia rara."""
+    with patch('app.services.sheets_service.SheetsService.post_to_sheets',
+               return_value={'status': 'ok', 'warning': 'No se encontro el Parcial anterior',
+                             'client_id': 42}):
+        r = client.post(url(lead, '/venta'), json={'tipo_pago': 'RR - Cuota', 'monto': 300},
+                        headers=auth_headers(equipo['closer']))
+
+    cuerpo = r.get_json()
+    assert cuerpo['warning'] == 'No se encontro el Parcial anterior'
+    assert (cuerpo['status'], cuerpo['client_id']) == ('ok', 42)
+
+
+def test_las_instrucciones_del_payload_no_viajan_a_sheets(client, db, lead, equipo, auth_headers):
+    """`liquidar_saldo` y `respuestas` son para esta capa: mandarlas a Sheets ensuciaria la fila."""
+    with patch('app.services.sheets_service.SheetsService.post_to_sheets',
+               return_value={'status': 'ok'}) as enviado:
+        client.post(url(lead, '/venta'),
+                    json={'tipo_pago': 'RR - Completo', 'monto': 900,
+                          'respuestas': {'objeciones': 'precio'}},
+                    headers=auth_headers(equipo['closer']))
+
+    payload = enviado.call_args[0][1]
+    assert 'respuestas' not in payload and 'liquidar_saldo' not in payload
+
+
+def test_las_respuestas_crudas_del_arbol_quedan_en_la_bitacora(client, db, lead, equipo,
+                                                              auth_headers):
+    """El arbol recoge mas datos de los que tienen columna: simplificar es dejar de mostrar, no de
+    guardar."""
+    r = client.post(url(lead, '/resultado'),
+                    json={'resultado': 'no_show', 'respuestas': {'motivo': 'no contesto',
+                                                                 'angulo': 'urgencia'}},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    guardado = LeadEventLog.query.filter_by(action_type='reporte_arbol').one()
+    assert 'no contesto' in guardado.description and 'urgencia' in guardado.description
+
+
+def test_un_bloque_de_respuestas_desconocido_no_hace_fallar_el_reporte(client, db, lead, equipo,
+                                                                      auth_headers):
+    r = client.post(url(lead, '/resultado'),
+                    json={'resultado': 'asistio', 'respuestas': ['lo', 'que', 'sea'],
+                          'campo_que_no_existe': 1},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    assert lead.closer_result == 'Show up'
