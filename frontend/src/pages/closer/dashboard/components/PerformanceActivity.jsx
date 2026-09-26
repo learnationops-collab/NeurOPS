@@ -1,9 +1,10 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
-import { tip } from '../metricSources';
+import { tip, destinoFuente } from '../metricSources';
+import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 
-const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity }) => {
+const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity, irA }) => {
     const fu = actividad.follow_ups;
     const rec = actividad.recoveries;
     const fuRate = fu.sent ? Math.round((fu.replied / fu.sent) * 100) : 0;
@@ -30,12 +31,29 @@ const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity
                             {fuente.map(f => (
                                 <tr key={f.name} className="border-b border-base/50 last:border-0">
                                     <td className="py-2.5"><b>{f.name}</b></td>
-                                    <td className="py-2.5 text-right">{f.agendas}</td>
-                                    <td className="py-2.5 text-right">{f.asistencias}</td>
                                     <td className="py-2.5 text-right">
-                                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${f.show_rate >= 55 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : f.show_rate >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                                        <MetricaClicable irA={irA} destino={destinoFuente(f.name)}
+                                            vacio={!f.agendas}
+                                            detalle={`${f.agendas} agendas de ${f.name}`}>
+                                            {f.agendas}
+                                        </MetricaClicable>
+                                    </td>
+                                    <td className="py-2.5 text-right">
+                                        <MetricaClicable irA={irA}
+                                            destino={destinoFuente(f.name, 'asistencias')}
+                                            vacio={!f.asistencias}
+                                            detalle={`${f.asistencias} asistencias de ${f.name}`}>
+                                            {f.asistencias}
+                                        </MetricaClicable>
+                                    </td>
+                                    <td className="py-2.5 text-right">
+                                        <MetricaClicable irA={irA} subrayar={false}
+                                            destino={destinoFuente(f.name, 'asistencias')}
+                                            vacio={!f.asistencias}
+                                            detalle={`Show rate de ${f.name} · ${f.show_rate}%`}
+                                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${f.show_rate >= 55 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : f.show_rate >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                                             {f.show_rate}%
-                                        </span>
+                                        </MetricaClicable>
                                     </td>
                                 </tr>
                             ))}

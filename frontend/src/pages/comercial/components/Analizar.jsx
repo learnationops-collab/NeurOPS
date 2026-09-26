@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 import { Cargando, Humo, fmt, useMontado } from './Shared';
+import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
+import {
+    DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER, destinoToques,
+} from './destinos';
 
 /**
  * Analizar → Dashboard.
@@ -201,10 +205,11 @@ const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
  * Barra gruesa: el conteo entra dentro de la barra si hay lugar, y el botón de la derecha lleva
  * a ese mismo corte en Revisar. Es la pieza de los paneles que muestran una tasa sola.
  */
-const Gruesa = ({ label, cuenta, help, pct, tone, w, ir, i = 0 }) => {
+const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
     const montado = useMontado();
     const color = v(tone);
     const dentro = (w || 0) >= 22 && cuenta;
+    const ir = abrir(irA, destino);
     return (
         <div className="gruesa-fila">
             <div className="gruesa-cab">
@@ -226,8 +231,11 @@ const Gruesa = ({ label, cuenta, help, pct, tone, w, ir, i = 0 }) => {
                         </span>
                     )}
                 </span>
-                <span className={`gruesa-pct${String(pct).length > 6 ? ' gruesa-pct--larga' : ''}`}
-                    style={{ color }}>{pct}</span>
+                <MetricaClicable irA={irA} destino={destino} detalle={destino?.de}
+                    className={`gruesa-pct${String(pct).length > 6 ? ' gruesa-pct--larga' : ''}`}
+                    style={{ color }}>
+                    {pct}
+                </MetricaClicable>
                 {ir && (
                     <button type="button" className="ir-btn" style={{ '--c': color }} onClick={ir}
                         aria-label={`Ver ${label.toLowerCase()} en Revisar`}>
@@ -393,7 +401,7 @@ const PanelEstados = ({ bloque, irA }) => {
                     <Reparto vista={vista} total={total} centro="agendas"
                         items={bloque.estados.map(e => ({
                             label: e.label, n: e.n, tone: e.tone,
-                            ir: () => irA('agendas', { estado: e.filtro }),
+                            ir: () => irA('agendas', { estado: e.filtro, __de: `Estados: ${e.label}` }),
                         }))} />
                     {sinReporte && (
                         <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
@@ -411,23 +419,23 @@ const PanelEstados = ({ bloque, irA }) => {
  * Las tasas que explican el cierre: la misma cantidad de ventas medida contra tres puntos. La
  * diferencia entre las dos últimas dice cuánto se pierde antes de mostrar la oferta.
  */
-const PanelCierre = ({ bloque }) => {
+const PanelCierre = ({ bloque, irA }) => {
     const filas = [
         {
             label: 'Presentación', cant: bloque.presentaciones, base: bloque.asistieron,
-            n: bloque.presentacion_rate, tone: 'info',
+            n: bloque.presentacion_rate, tone: 'info', destino: D.presentacion_rate,
             help: `De las ${bloque.asistieron} llamadas con show up, en ${bloque.presentaciones} se `
                 + 'llegó a presentar la oferta. Las otras se cortaron antes.',
         },
         {
             label: 'Cierre por llamada', cant: bloque.cerradas, base: bloque.asistieron,
-            n: bloque.close_rate, tone: 'error',
+            n: bloque.close_rate, tone: 'error', destino: D.close_llamada,
             help: 'Ventas sobre todas las llamadas a las que el cliente se presentó. Es la medida '
                 + 'central del cierre.',
         },
         {
             label: 'Cierre por presentación', cant: bloque.cerradas, base: bloque.presentaciones,
-            n: bloque.close_presentacion, tone: 'warning',
+            n: bloque.close_presentacion, tone: 'warning', destino: D.close_presentacion,
             help: 'Ventas sobre las llamadas donde además se llegó a presentar la oferta. Saca del '
                 + 'denominador a las que nunca vieron el precio.',
         },
@@ -449,6 +457,10 @@ const PanelCierre = ({ bloque }) => {
                         <div className="tdatos-cab">
                             <span>Tasa</span><span>Cant.</span><span>%</span><span />
                         </div>
+                        {/* El numerador y la tasa llevan a la MISMA lista, que es la del
+                            numerador: la tasa no tiene filas propias. Las tres tasas de este panel
+                            comparten el numerador de a pares a propósito — es de lo que habla el
+                            panel: la misma cantidad medida contra puntos distintos. */}
                         {filas.map(f => (
                             <div key={f.label} className="tdatos-fila">
                                 <span className="tdatos-nom">
@@ -456,9 +468,17 @@ const PanelCierre = ({ bloque }) => {
                                     <span className="trunc">{f.label}</span>
                                 </span>
                                 <span className="tdatos-p" style={{ fontSize: 13 }}>
-                                    {f.cant}<span style={{ opacity: .6 }}>/{f.base}</span>
+                                    <MetricaClicable irA={irA} destino={f.destino} vacio={!f.cant}
+                                        detalle={`${f.cant} de ${f.base} · ${f.label}`}>
+                                        {f.cant}
+                                    </MetricaClicable>
+                                    <span style={{ opacity: .6 }}>/{f.base}</span>
                                 </span>
-                                <span className="tdatos-n" style={{ color: v(f.tone) }}>{fmt.pct(f.n)}</span>
+                                <MetricaClicable irA={irA} destino={f.destino} vacio={!f.cant}
+                                    detalle={`${f.label} · ${fmt.pct(f.n)}`}
+                                    className="tdatos-n" style={{ color: v(f.tone) }}>
+                                    {fmt.pct(f.n)}
+                                </MetricaClicable>
                                 <span><Tip der texto={f.help} titulo={f.label} /></span>
                             </div>
                         ))}
@@ -470,15 +490,15 @@ const PanelCierre = ({ bloque }) => {
 
 const DEUDA = [
     {
-        label: 'Vencido', campo: 'vencido', tone: 'error',
+        label: 'Vencido', campo: 'vencido', tone: 'error', destino: 'por_cobrar_vencido',
         help: 'Cuotas con vencimiento ya pasado y sin pagar. Plata que había que cobrar y no se cobró.',
     },
     {
-        label: 'Por vencer', campo: 'por_vencer', tone: 'info',
+        label: 'Por vencer', campo: 'por_vencer', tone: 'info', destino: 'por_cobrar_por_vencer',
         help: 'Cuotas con fecha futura. Cronograma normal, no es un problema.',
     },
     {
-        label: 'Sin cronograma', campo: 'sin_plan', tone: 'warning',
+        label: 'Sin cronograma', campo: 'sin_plan', tone: 'warning', destino: 'por_cobrar_sin_plan',
         help: 'Saldo que no tiene ninguna cuota programada: no está vencido ni por vencer, '
             + 'directamente nadie le armó un plan de cobro.',
     },
@@ -500,20 +520,23 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
     const filas = [
         {
             label: 'Cash collected', valor: bloque.cash, p: '100%', tone: 'success',
+            destino: D.cash_collected,
             help: 'Todo lo que entró en el período: pagos completos, primeras cuotas, cuotas de '
                 + 'ventas anteriores y señas.',
         },
         {
             label: 'Fees de pasarela', valor: fees, p: fmt.pct(tasa(fees, bloque.cash)), tone: 'warning',
+            destino: D.fees,
             help: 'Lo que se quedó la pasarela de pago: la diferencia entre lo cobrado y lo neto.',
         },
         {
-            label: 'Cash neto', valor: bloque.cash_neto, tone: 'info',
+            label: 'Cash neto', valor: bloque.cash_neto, tone: 'info', destino: D.cash_neto,
             p: fmt.pct(tasa(bloque.cash_neto, bloque.cash)),
             help: 'Lo cobrado ya descontadas las fees. Es sobre esto que se calcula la comisión.',
         },
         {
             label: 'Ticket promedio', valor: bloque.ticket, p: '—', tone: 'brand-secondary',
+            destino: D.ticket_promedio,
             help: `Cash del período dividido por las ${bloque.ventas} ventas nuevas. No mira el `
                 + 'contrato firmado: mira cuánta plata entró por cada venta.',
         },
@@ -545,7 +568,11 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                                     <span className="dato-punto" style={{ background: v(f.tone) }} />
                                     <span className="trunc">{f.label}</span>
                                 </span>
-                                <span className="tdatos-n" style={{ color: v(f.tone) }}>{fmt.money(f.valor)}</span>
+                                <MetricaClicable irA={irA} destino={f.destino} vacio={!f.valor}
+                                    detalle={`${f.label} · ${fmt.money(f.valor)}`}
+                                    className="tdatos-n" style={{ color: v(f.tone) }}>
+                                    {fmt.money(f.valor)}
+                                </MetricaClicable>
                                 <span className="tdatos-p">{f.p}</span>
                                 <span><Tip der texto={f.help} titulo={f.label} /></span>
                             </div>
@@ -567,8 +594,12 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                             texto={'El saldo de las inscripciones vivas: el precio que negoció cada '
                                 + 'cliente menos lo que ya pagó. No está acotado al período — es lo que '
                                 + 'se debe hoy, sin fecha de corte — así que no lleva variación.'} />
-                        <Cifra className="num" valor={fmt.money(porCobrar.total)}
-                            style={{ marginLeft: 'auto', fontSize: 19, fontWeight: 900 }} />
+                        <MetricaClicable irA={irA} destino={D.por_cobrar}
+                            detalle={`Por cobrar a hoy · ${fmt.money(porCobrar.total)}`}
+                            style={{ marginLeft: 'auto' }}>
+                            <Cifra className="num" valor={fmt.money(porCobrar.total)}
+                                style={{ fontSize: 19, fontWeight: 900 }} />
+                        </MetricaClicable>
                     </div>
                     <div className="grid-sm">
                         {DEUDA.map(x => (
@@ -577,7 +608,11 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                                     <span className="ficha-lbl">{x.label}</span>
                                     <Tip der texto={x.help} titulo={x.label} />
                                 </span>
-                                <Cifra className="ficha-n" valor={fmt.money(porCobrar[x.campo])} />
+                                <MetricaClicable irA={irA} destino={D[x.destino]} subrayar={false}
+                                    vacio={!porCobrar[x.campo]}
+                                    detalle={`${x.label} · ${fmt.money(porCobrar[x.campo])}`}>
+                                    <Cifra className="ficha-n" valor={fmt.money(porCobrar[x.campo])} />
+                                </MetricaClicable>
                             </div>
                         ))}
                     </div>
@@ -585,7 +620,7 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                         {fmt.plural(porCobrar.clientes, 'cliente', 'clientes')} con saldo
                         {porCobrar.clientes_vencido > 0
                             && `, ${porCobrar.clientes_vencido} con una cuota vencida`}.{' '}
-                        <button type="button" className="t-cap num" onClick={() => irA('ventas', {})}
+                        <button type="button" className="t-cap num" onClick={abrir(irA, D.cash_collected)}
                             style={{
                                 background: 'none', border: 0, padding: 0, cursor: 'pointer',
                                 color: v('brand-secondary'), textDecoration: 'underline',
@@ -636,7 +671,7 @@ const PanelPagos = ({ bloque, irA }) => {
                         {bloque.payment_types.map((t, i) => (
                             <button key={t.key} type="button" className="ficha"
                                 style={{ '--c': v(CAT[i]) }}
-                                onClick={() => irA('ventas', { tipo_pago: t.label })}>
+                                onClick={() => irA('ventas', { tipo_pago: t.label, __de: `Payment types: ${t.label}` })}>
                                 <span className="fila" style={{ gap: 7 }}>
                                     <span className="dato-punto" style={{ background: v(CAT[i]) }} />
                                     <span className="ficha-lbl trunc" style={{ color: v('text-on-surface') }}>
@@ -715,7 +750,8 @@ const PanelProgramas = ({ bloque, irA }) => {
                                 return (
                                     <button key={c.key} type="button" className="cel-pago" title={titulo}
                                         aria-label={titulo}
-                                        onClick={() => irA('ventas', { programa: p.programa, tipo_pago: c.label })}>
+                                        onClick={() => irA('ventas', { programa: p.programa, tipo_pago: c.label,
+                                            __de: `${p.programa}: ${c.label}` })}>
                                         <b className="num">{fmt.money(seg.cash)}</b>
                                         <span className="cel-cuenta num">{unidad(c.key, seg.ventas)}</span>
                                     </button>
@@ -742,7 +778,7 @@ const PanelProgramas = ({ bloque, irA }) => {
                     </div>
                     {bloque.programas.map(p => (
                         <button key={p.programa} type="button" className="tdatos-fila"
-                            onClick={() => irA('ventas', { programa: p.programa })}>
+                            onClick={() => irA('ventas', { programa: p.programa, __de: `Programa: ${p.programa}` })}>
                             <span className="tdatos-nom tdatos-nom--fuerte">
                                 <i className="prog-marca" style={{ background: marcaPrograma(p.programa) }} />
                                 <span className="trunc">{p.programa}</span>
@@ -773,27 +809,31 @@ const PanelProgramas = ({ bloque, irA }) => {
  */
 const PanelSenas = ({ senas, irA }) => {
     const estados = [
-        { label: 'Pago completo', n: senas.completo, tone: CAT[0] },
-        { label: 'Pago parcial', n: senas.parcial, tone: CAT[1] },
-        { label: 'En espera', n: senas.espera, tone: CAT[2] },
-        { label: 'Caída', n: senas.caida, tone: CAT[3] },
+        { label: 'Pago completo', n: senas.completo, tone: CAT[0], destino: D.senas_completo },
+        { label: 'Pago parcial', n: senas.parcial, tone: CAT[1], destino: D.senas_parcial },
+        { label: 'En espera', n: senas.espera, tone: CAT[2], destino: D.senas_espera },
+        { label: 'Caída', n: senas.caida, tone: CAT[3], destino: D.senas_caida },
     ];
     const cifras = [
         {
             l: 'convirtió', valor: fmt.pct(senas.conversion), color: v('success'),
+            destino: D.senas_convirtio,
             help: `${senas.completo + senas.parcial} de las ${senas.total} señas del período ya `
                 + 'pasaron a pago completo o parcial.',
         },
         {
             l: 'cobrado', valor: fmt.money(senas.cobrado), color: v('text-on-surface'),
+            destino: D.senas_cobrado,
             help: 'Cobrado sólo en concepto de seña. Ya está contado dentro del cash collected.',
         },
         {
             l: 'ticket', valor: fmt.money(senas.ticket), color: v('text-on-surface'),
+            destino: D.senas_ticket,
             help: 'Monto promedio de cada seña.',
         },
         {
             l: 'desbloqueado', valor: fmt.money(senas.desbloqueado), color: v('text-on-surface'),
+            destino: D.senas_desbloqueado,
             help: 'Cash cobrado en las ventas que arrancaron con una seña. Es el argumento para '
                 + 'seguir pidiéndolas.',
         },
@@ -804,11 +844,10 @@ const PanelSenas = ({ senas, irA }) => {
                 ayuda={'Reservas con un pago inicial chico. Cada una bloquea un cupo hasta que se '
                     + 'completa el pago. Una seña no es una venta: lo que importa es en qué terminó. '
                     + 'Las cuotas y los depósitos van al cash, no a este conteo.'}>
-                <button type="button" className="t-cap mut40 num"
-                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
-                    onClick={() => irA('ventas', { tipo_pago: 'Depósitos' })}>
+                <MetricaClicable irA={irA} destino={D.senas_total} className="t-cap mut40 num"
+                    detalle={`${fmt.plural(senas.total, 'seña', 'señas')} del período`}>
                     {fmt.plural(senas.total, 'seña', 'señas')}
-                </button>
+                </MetricaClicable>
             </PanelCab>
         }>
             {senas.total === 0 ? <Vacio texto="Sin señas en el período." /> : (
@@ -823,10 +862,12 @@ const PanelSenas = ({ senas, irA }) => {
                         {estados.map(e => (
                             <div key={e.label} className="sena-celda" style={{ '--c': v(e.tone) }}>
                                 <span className="ficha-lbl" style={{ lineHeight: 1.3 }}>{e.label}</span>
-                                <span className="sena-n">
+                                <MetricaClicable irA={irA} destino={e.destino} subrayar={false}
+                                    vacio={!e.n} className="sena-n"
+                                    detalle={`${e.n} señas · ${e.label}`}>
                                     <Cifra tag="b" valor={String(e.n)} />
                                     <span>{`${Math.round((e.n / senas.total) * 100)}%`}</span>
-                                </span>
+                                </MetricaClicable>
                             </div>
                         ))}
                     </div>
@@ -838,11 +879,14 @@ const PanelSenas = ({ senas, irA }) => {
                                     <span className="ficha-lbl" style={{ lineHeight: 1.3 }}>{c.l}</span>
                                     <Tip der texto={c.help} titulo={c.l} />
                                 </span>
-                                <Cifra className="num" valor={c.valor}
-                                    style={{
-                                        fontSize: 22, lineHeight: 1, fontWeight: 900,
-                                        letterSpacing: '-.025em', color: c.color,
-                                    }} />
+                                <MetricaClicable irA={irA} destino={c.destino} subrayar={false}
+                                    detalle={`Señas · ${c.l} ${c.valor}`}>
+                                    <Cifra className="num" valor={c.valor}
+                                        style={{
+                                            fontSize: 22, lineHeight: 1, fontWeight: 900,
+                                            letterSpacing: '-.025em', color: c.color,
+                                        }} />
+                                </MetricaClicable>
                             </div>
                         ))}
                     </div>
@@ -857,64 +901,18 @@ const PanelSenas = ({ senas, irA }) => {
    ============================================================ */
 
 /**
- * El embudo se arma acá y se dibuja en `Embudo`: `ayuda` es el tooltip de la fila y `ir` el
- * drill-down. Los tres pasos del medio se cortan con las facetas de sí/no de Revisar, que
- * repiten el criterio con el que el backend cuenta cada paso (ver `fueConfirmada`, `asistio` y
- * `presento` en Revisar.jsx): no hay ninguna columna que los diga, son condiciones sobre la fila.
+ * El embudo se arma con el vocabulario de `destinos.js` y se dibuja en `Embudo`: `ayuda` es el
+ * tooltip de la fila y `destino` el drill-down. Los pasos del medio se cortan con las facetas de
+ * si/no de Revisar, que repiten el criterio con el que el backend cuenta cada paso: no hay ninguna
+ * columna que los diga, son condiciones sobre la fila.
  */
-const EMBUDO_CLOSER = {
-    Agendas: {
-        ayuda: 'Llamadas agendadas en el período, sin importar la fuente.',
-        ir: ['agendas', {}],
-    },
-    Confirmadas: {
-        ayuda: 'Confirmaron asistencia antes de la llamada.',
-        ir: ['agendas', { confirmada: 'Sí' }],
-    },
-    Asistieron: {
-        ayuda: 'La llamada ocurrió y el lead estaba del otro lado.',
-        ir: ['agendas', { asistio: 'Sí' }],
-    },
-    Presentaciones: {
-        ayuda: 'Llamadas donde además se llegó a presentar la oferta.',
-        ir: ['agendas', { presento: 'Sí' }],
-    },
-    Ventas: {
-        ayuda: 'Cierres del período. Cuenta agendas y no cobros: dos cuotas del mismo lead salen '
-            + 'de una sola llamada.',
-        ir: ['agendas', { post_call: 'Venta' }],
-    },
-};
-
-const EMBUDO_SETTER = {
-    Entrantes: {
-        ayuda: 'Leads nuevos que entraron al inbox en el período. Es el denominador de todo lo demás.',
-        ir: ['leads', {}],
-    },
-    Respondieron: {
-        ayuda: 'Contestaron al menos un mensaje.',
-        ir: ['leads', { respondio: 'Sí' }],
-    },
-    Cualificados: {
-        ayuda: 'Cumplen el perfil del programa. Ojo: se mide sobre los que respondieron.',
-        ir: ['leads', { cualificado: 'Sí' }],
-    },
-    Agendaron: {
-        ayuda: 'Reservaron horario en el calendario de un closer.',
-        // Los LEADS que agendaron, no la tabla de agendas generadas: el paso cuenta leads del
-        // período que llegaron a reservar (45), y esa otra tabla son las citas del período mirándolo
-        // al revés (169). El clic mostraba 169 filas debajo de un 45.
-        ir: ['leads', { estado: 'Agendó' }],
-    },
-};
-
 const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     const def = vocabulario[p.paso] || {};
     return {
         paso: p.paso,
         n: p.n,
         ayuda: def.ayuda,
-        ir: def.ir ? () => irA(...def.ir) : undefined,
+        ir: abrir(irA, def.destino),
     };
 });
 
@@ -928,11 +926,12 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 delta={deltas.show_up}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                 sub={`${bloque.asistieron} de ${fmt.plural(bloque.realizadas, 'realizada', 'realizadas')}`}
-                ver={() => irA('agendas', {})} baja="p-estados" />
-            {/* Los dos tiles de tasa abren Revisar SIN filtrar: la tira de totales repite sus
-                cifras tal cual ("28.1% close rate · 16 de 57 cerraron"). Filtrando Close rate por
-                Venta se veían las 16 cerradas, pero arriba la tasa pasaba a 100% y contradecía al
-                tile del que se venía; para ver solo esas 16 está el panel Estados. */}
+                ver={abrir(irA, D.show_up)} baja="p-estados" />
+            {/* Los dos tiles de tasa llevan al NUMERADOR de su tasa, que es lo que se viene a
+                buscar. La contradiccion que esto genera —arriba la tasa del tile, abajo la misma
+                tasa al 100% porque el denominador quedo afuera del filtro— la explica el aviso de
+                procedencia de la lista, que dice exactamente eso. Antes abrian el periodo entero
+                sin filtrar para evitarla, y el precio era que el clic no llevaba a ningun lado. */}
             <Tile label="Close rate" valor={fmt.pct(bloque.close_rate)} color={v('error')}
                 help={'Ventas sobre las llamadas a las que el cliente se presentó. Se cuenta sobre las '
                     + 'llamadas y no sobre las ventas del período: una venta puede no tener agenda en '
@@ -940,30 +939,30 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 delta={deltas.close_rate}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 sub={`${bloque.cerradas} de ${fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}`}
-                ver={() => irA('agendas', {})} baja="p-cierre" />
+                ver={abrir(irA, D.close_rate)} baja="p-cierre" />
             <Tile label="Cash collected" valor={fmt.money(bloque.cash)}
                 help={'Dinero que entró en el período: pagos completos, primeras cuotas, cuotas de '
                     + 'ventas anteriores y señas.'}
                 delta={deltas.cash}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
                 sub={`neto ${fmt.money(bloque.cash_neto)} · comisión ${fmt.money(bloque.comision)}`}
-                ver={() => irA('ventas', {})} baja="p-cash" />
+                ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
                 help={`Cash del período dividido por las ${bloque.ventas} ventas nuevas. No mira el `
                     + 'contrato firmado: mira cuánta plata entró por cada venta.'}
                 delta={deltas.ticket}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
                 sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
-                ver={() => irA('ventas', {})} baja="p-cash" />
+                ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 
         <div className="grid-2">
             <PanelEstados bloque={bloque} irA={irA} />
-            <Embudo pasos={pasosDe(bloque.funnel, EMBUDO_CLOSER, irA)} />
+            <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} />
         </div>
 
         <div className="grid-2">
-            <PanelCierre bloque={bloque} />
+            <PanelCierre bloque={bloque} irA={irA} />
             <PanelCash bloque={bloque} deltas={deltas} porCobrar={porCobrar} irA={irA} />
         </div>
 
@@ -998,14 +997,14 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                     delta={deltas.leads}
                     humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
                     sub="leads nuevos del período"
-                    ver={() => irA('leads', {})} baja="p-embudo-set" />
+                    ver={abrir(irA, S.leads)} baja="p-embudo-set" />
                 <Tile label="Tasa de respuesta" valor={fmt.pct(bloque.respuesta)} color={v('success')}
                     help={'De cada 100 leads que entraron, cuántos contestaron al menos un mensaje. '
                         + 'Mide si se está llegando a la gente, no si la conversación es buena.'}
                     delta={deltas.respuesta}
                     humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                     sub={`${bloque.respondieron} de ${fmt.plural(bloque.leads, 'entrante', 'entrantes')}`}
-                    baja="p-cualificacion" />
+                    ver={abrir(irA, S.respuesta)} baja="p-cualificacion" />
                 {/* Este tile y el panel Conversión abren los LEADS que agendaron y no la tabla
                     "Agendas generadas": el número cuenta leads del período que llegaron a reservar
                     (45) y esa tabla son las citas del período, que es la misma historia contada al
@@ -1016,7 +1015,7 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                     delta={deltas.agendas}
                     humo={[v('brand-secondary'), v('brand-secondary-light'), v('brand-primary'), v('brand-navy')]}
                     sub={`${fmt.pct(bloque.conversion)} de los entrantes`}
-                    ver={() => irA('leads', { estado: 'Agendó' })} baja="p-conversion" />
+                    ver={abrir(irA, S.agendas)} baja="p-conversion" />
             </div>
 
             <div className="grid-2">
@@ -1030,14 +1029,19 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                     </PanelCab>
                 }>
                     <div className="gruesa--sm" style={{ display: 'grid', gap: 'var(--s3)' }}>
+                        {/* Las dos tasas comparten numerador —los mismos leads cualificados— y lo
+                            que cambia es contra que se miden: la lista es la del numerador en las
+                            dos, y el aviso de procedencia dice cual era el denominador. */}
                         <Gruesa i={0} label="Sobre entrantes" cuenta={`sobre ${bloque.leads}`}
                             help={'De cada 100 leads que llegaron, cuántos son buen prospecto. Mezcla '
                                 + 'la calidad del lead con la capacidad de contestarle.'}
-                            pct={fmt.pct(cualifEnt)} tone="info" w={cualifEnt} />
+                            pct={fmt.pct(cualifEnt)} tone="info" w={cualifEnt}
+                            irA={irA} destino={S.cualif_entrantes} />
                         <Gruesa i={1} label="Sobre respuesta" cuenta={`sobre ${bloque.respondieron}`}
                             help={'De cada 100 leads que sí contestaron, cuántos son buen prospecto. '
                                 + 'Esta mide la conversación, sin el ruido de quien nunca respondió.'}
-                            pct={fmt.pct(bloque.cualificacion)} tone="success" w={bloque.cualificacion} />
+                            pct={fmt.pct(bloque.cualificacion)} tone="success" w={bloque.cualificacion}
+                            irA={irA} destino={S.cualif_respuesta} />
                     </div>
                 </Panel>
 
@@ -1054,21 +1058,23 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                             help={'Conversión final. De todo lo que entró por marketing, cuánto '
                                 + 'terminó en el calendario.'}
                             pct={fmt.pct(bloque.conversion)} tone="warning" w={bloque.conversion}
-                            ir={() => irA('leads', { estado: 'Agendó' })} />
+                            irA={irA} destino={S.conv_entrante} />
                         <Gruesa i={1} label="De respuesta a cita" cuenta={`sobre ${bloque.respondieron}`}
                             help="De cada 100 conversaciones abiertas, cuántas llegan a cita."
-                            pct={fmt.pct(convOpen)} tone="info" w={convOpen} />
+                            pct={fmt.pct(convOpen)} tone="info" w={convOpen}
+                            irA={irA} destino={S.conv_respuesta} />
                         <Gruesa i={2} label="De cualificado a cita" cuenta={`sobre ${bloque.cualificados}`}
                             help={'La eficacia pura del setter: de la gente que sí es buen prospecto, '
                                 + 'a cuántos convence de reservar.'}
-                            pct={fmt.pct(convCualif)} tone="success" w={convCualif} />
+                            pct={fmt.pct(convCualif)} tone="success" w={convCualif}
+                            irA={irA} destino={S.conv_cualificado} />
                     </div>
                 </Panel>
             </div>
 
             <div className="grid-2">
                 <div id="p-embudo-set" style={{ minWidth: 0 }}>
-                    <Embudo pasos={pasosDe(bloque.funnel, EMBUDO_SETTER, irA)} />
+                    <Embudo pasos={pasosDe(bloque.funnel, PASOS_SETTER, irA)} />
                 </div>
 
                 <Panel id="p-tenacidad" cab={
@@ -1098,7 +1104,12 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                                                     {t.toques.endsWith('+') && ' o más'}
                                                 </span>
                                             </span>
-                                            <span className="tdatos-n" style={{ color }}>{t.leads}</span>
+                                            <MetricaClicable irA={irA} destino={destinoToques(t.toques)}
+                                                vacio={!t.leads} className="tdatos-n"
+                                                style={{ color }}
+                                                detalle={`${t.leads} leads con ${t.toques} toques`}>
+                                                {t.leads}
+                                            </MetricaClicable>
                                             <span className="tdatos-p">{fmt.pct(tasa(t.leads, conToques))}</span>
                                         </div>
                                     );

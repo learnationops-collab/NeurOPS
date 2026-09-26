@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
+import PerformanceHighlights from './components/PerformanceHighlights';
 import PerformanceKpis from './components/PerformanceKpis';
 import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel, { ConfirmacionesCard } from './components/PerformanceFunnel';
@@ -16,6 +17,7 @@ import DataIssuesPanel from './components/DataIssuesPanel';
 import SlotsPrompt from './components/SlotsPrompt';
 import { periodLabel, compareLabel } from './performanceUtils';
 import { detectIssues } from './dataIssues';
+import { usarDrillDown } from './usarDrillDown';
 
 const SectionTitle = ({ children }) => (
     <h2 className="text-[11.5px] font-black tracking-widest uppercase text-muted mt-10 mb-4 flex items-center gap-3 first:mt-0">
@@ -67,6 +69,12 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
         compareRange.start, compareRange.end, rangoIncompleto]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    /* Cada numero de este dashboard lleva a la lista que lo compone: la seccion Revisar del
+       dashboard comercial, que ya existe y ya sabe acotar por persona y por periodo. El hook
+       arma la URL; `irA(tabla, filtro)` es la misma firma que usa el dashboard comercial por
+       dentro, asi que `MetricaClicable` sirve igual en las dos pantallas. */
+    const irA = usarDrillDown({ period, closerId });
 
     const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
 
@@ -129,30 +137,53 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                     Calidad de la llamada / Equipo / Para cerrar) en vez de 9 secciones sueltas.
                     Se mantiene todo lo que ya funcionaba: filtros, comparación, el detalle de
                     señas y el resumen de seguimientos — solo cambia dónde vive cada tarjeta. */}
+                {/* "Qué mirar" antes de "cuánto dio": el resto del dashboard contesta la segunda
+                    pregunta y esta fila la primera. Los tres numeros salen de los mismos helpers
+                    que ya usan PerformanceQuality, PerformanceMoney y PerformanceActivity, asi que
+                    no pueden desincronizarse de sus tarjetas; y cada uno lleva a sus registros. */}
+                <SectionTitle>00 · Qué mirar</SectionTitle>
+                <PerformanceHighlights
+                    rings={data.current.rings}
+                    funnel={data.current.funnel}
+                    confirmaciones={data.current.confirmaciones}
+                    cuotas={data.cuotas_por_cobrar}
+                    actividad={data.current.actividad}
+                    ticketPromedio={data.current.kpis.ticket_promedio}
+                    onNavigate={onNavigate}
+                    irA={irA}
+                />
+
                 <SectionTitle>01 · Dinero <span className="normal-case text-[10px] font-medium text-muted/80 lowercase">{compareNote}</span></SectionTitle>
                 <div className="space-y-4">
-                    <PerformanceKpis current={data.current} previous={data.previous} deuda={data.cuotas_por_cobrar.total} />
-                    <PerformanceMoney cuotas={data.cuotas_por_cobrar} programas={data.current.programas} />
-                    <PerformanceSenas senas={data.current.senas} />
+                    <PerformanceKpis current={data.current} previous={data.previous}
+                        deuda={data.cuotas_por_cobrar.total} irA={irA} />
+                    <PerformanceMoney cuotas={data.cuotas_por_cobrar} programas={data.current.programas}
+                        irA={irA} />
+                    <PerformanceSenas senas={data.current.senas} irA={irA} />
                 </div>
 
                 <SectionTitle>02 · Dónde se cae</SectionTitle>
-                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas} coverage={data.reports_coverage} cashMix={data.current.cash_mix} />
+                <PerformanceFunnel funnel={data.current.funnel} perdidas={data.current.perdidas}
+                    coverage={data.reports_coverage} cashMix={data.current.cash_mix} irA={irA} />
 
                 <SectionTitle>03 · Calidad de la llamada</SectionTitle>
                 <div className="space-y-4">
-                    <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel} confirmaciones={data.current.confirmaciones} />
-                    {data.current.confirmaciones && <ConfirmacionesCard confirmaciones={data.current.confirmaciones} />}
+                    <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel}
+                        confirmaciones={data.current.confirmaciones} irA={irA} />
+                    {data.current.confirmaciones
+                        && <ConfirmacionesCard confirmaciones={data.current.confirmaciones} irA={irA} />}
                     <PerformanceActivity
                         fuente={data.fuente}
                         actividad={data.current.actividad}
                         referidos={data.current.referidos}
                         reportsProductivity={data.reports_productivity}
+                        irA={irA}
                     />
                 </div>
 
                 <SectionTitle>04 · Equipo</SectionTitle>
-                <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId} alerts={data.alerts} />
+                <PerformanceRanking ranking={data.ranking} selectedCloserId={closerId}
+                    alerts={data.alerts} irA={irA} />
 
                 {/* "Lo que falta completar" va al final a pedido del usuario (27/ago/2026): lo
                     primero que el closer debe ver al abrir la pestaña es su resultado, no su

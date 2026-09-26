@@ -2,7 +2,8 @@ import React from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
 import { money } from '../performanceUtils';
-import { tip } from '../metricSources';
+import { tip, DESTINOS_RANKING } from '../metricSources';
+import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 
 const ALERT_STYLES = {
     danger: 'bg-rose-500/10 border-rose-500/30',
@@ -11,7 +12,22 @@ const ALERT_STYLES = {
     success: 'bg-emerald-500/10 border-emerald-500/30'
 };
 
-const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
+/* Una celda del ranking lleva a la lista de ESA persona con ESA metrica. La persona se acota con
+   el selector de miembro del dashboard comercial (`m` en la query string, que el backend usa para
+   rearmar el alcance) y no con la faceta Closer: asi la tira de totales y los contadores de faceta
+   tambien quedan acotados, y el numero de la celda cierra con lo que se ve abajo. */
+const Celda = ({ fila, metrica, valor, irA, className }) => (
+    <td className={`py-2.5 text-right ${className || ''}`}>
+        <MetricaClicable
+            irA={irA ? (tabla, filtro) => irA(tabla, filtro, { miembroId: fila.closer_id }) : null}
+            destino={DESTINOS_RANKING[metrica]}
+            detalle={`${fila.name} · ${valor}`}>
+            {valor}
+        </MetricaClicable>
+    </td>
+);
+
+const PerformanceRanking = ({ ranking, selectedCloserId, alerts, irA }) => {
     return (
         <div className="space-y-4">
             <Card variant="surface" padding="p-6">
@@ -43,19 +59,23 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts }) => {
                                         <b>{r.name}</b>
                                         {String(r.closer_id) === String(selectedCloserId) && <span className="text-[9px] text-muted ml-2">seleccionado</span>}
                                     </td>
-                                    <td className="py-2.5 text-right font-black">{money(r.cash_collected)}</td>
-                                    <td className="py-2.5 text-right">{r.ventas}</td>
-                                    <td className="py-2.5 text-right">{r.show_rate}%</td>
+                                    <Celda fila={r} irA={irA} metrica="cash_collected"
+                                        valor={money(r.cash_collected)} className="font-black" />
+                                    <Celda fila={r} irA={irA} metrica="ventas" valor={r.ventas} />
+                                    <Celda fila={r} irA={irA} metrica="show_rate" valor={`${r.show_rate}%`} />
                                     <td className="py-2.5 text-right">
-                                        <span
-                                            title={r.close_rate_presentacion > 100
-                                                ? `${r.ventas} ventas sobre ${r.presentaciones} presentaciones reportadas — le faltan ${r.reportes_faltantes} reporte(s) diario(s) en el período`
-                                                : `${r.ventas} ventas sobre ${r.presentaciones} presentaciones`}
+                                        <MetricaClicable subrayar={false}
+                                            irA={irA ? (tabla, filtro) => irA(tabla, filtro, { miembroId: r.closer_id }) : null}
+                                            destino={DESTINOS_RANKING.close_rate_presentacion}
+                                            detalle={r.close_rate_presentacion > 100
+                                                ? `${r.name} · ${r.ventas} ventas sobre ${r.presentaciones} presentaciones reportadas`
+                                                : `${r.name} · ${r.ventas} ventas sobre ${r.presentaciones} presentaciones`}
                                             className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${r.close_rate_presentacion > 100 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : r.close_rate_presentacion >= 40 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                                             {r.close_rate_presentacion}%{r.close_rate_presentacion > 100 ? ' ⚠️' : ''}
-                                        </span>
+                                        </MetricaClicable>
                                     </td>
-                                    <td className="py-2.5 text-right">{money(r.ticket_promedio)}</td>
+                                    <Celda fila={r} irA={irA} metrica="ticket_promedio"
+                                        valor={money(r.ticket_promedio)} />
                                     <td className="py-2.5 text-right">{r.reports_status}%</td>
                                     <td className={`py-2.5 text-right font-black ${r.reportes_faltantes > 0 ? 'text-amber-400' : 'text-muted'}`}>{r.reportes_faltantes}</td>
                                 </tr>

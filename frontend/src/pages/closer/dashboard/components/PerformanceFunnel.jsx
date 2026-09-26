@@ -1,7 +1,8 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
-import { tip } from '../metricSources';
+import { tip, destino } from '../metricSources';
+import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 import { CashMixCard } from './PerformanceMoney';
 
 const FUNNEL_COLORS = ['#6366F1', '#7C5CE0', '#9B4FD8', '#C441C8', '#E639B0', '#FF3FA4'];
@@ -12,7 +13,7 @@ const FUNNEL_METRICS = ['funnel_slots', 'funnel_agendas', 'funnel_confirmadas', 
    trabajo que todavía no se llamó. Exportada (no vive más en este archivo por su cuenta) porque,
    en el reordenamiento del 27/ago/2026, pasa a mostrarse en "03 · Calidad de la llamada" junto a
    Confirmation rate — acá en el embudo quedaba desconectada de las otras tasas de conversión. */
-export const ConfirmacionesCard = ({ confirmaciones }) => (
+export const ConfirmacionesCard = ({ confirmaciones, irA }) => (
     <Card variant="surface" padding="p-6">
         <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
             <span className="w-2 h-2 rounded-full bg-emerald-400" /> Confirmaciones
@@ -22,7 +23,12 @@ export const ConfirmacionesCard = ({ confirmaciones }) => (
         <div className="grid grid-cols-2 gap-3">
             <div className="bg-main/60 border border-base rounded-2xl px-4 py-3.5">
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted">De este período</p>
-                <p className="text-2xl font-black tracking-tighter mt-1 text-emerald-400">{confirmaciones.del_periodo}</p>
+                <MetricaClicable irA={irA} destino={destino('confirm_periodo')} envoltura="p"
+                    vacio={!confirmaciones.del_periodo}
+                    detalle={`${confirmaciones.del_periodo} confirmaciones de este período`}
+                    className="block text-2xl font-black tracking-tighter mt-1 text-emerald-400">
+                    {confirmaciones.del_periodo}
+                </MetricaClicable>
                 <p className="text-[10px] text-muted mt-0.5 leading-tight">
                     de {confirmaciones.agendas_periodo} agendas · {confirmaciones.rate_periodo}%
                 </p>
@@ -38,7 +44,7 @@ export const ConfirmacionesCard = ({ confirmaciones }) => (
     </Card>
 );
 
-const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
+const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, irA }) => {
     const { labels, values, slots_estimated_days: slotsEstimatedDays = 0 } = funnel;
     const max = values[0] || 1;
     // "Agendas" (fila 1) solo cuenta las que ya tuvieron su llamada dentro del período — a
@@ -97,8 +103,14 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
                                 <span className="truncate">{r.label}</span>
                                 <MetricTip iconOnly {...tip(r.metric)} />
                             </div>
+                            {/* La barra entera es el boton: es el area mas grande y la mas
+                                obvia. `funnel_slots` no tiene destino (es capacidad escrita a
+                                mano, no hay un registro por cupo) y ahi vuelve a ser un div. */}
                             <div className="flex-1 h-8 rounded-lg bg-main border border-base overflow-hidden relative flex">
-                                <div
+                                <MetricaClicable irA={irA} destino={destino(r.metric)}
+                                    subrayar={false} vacio={!r.v}
+                                    detalle={`${r.v} · ${r.label}`}
+                                    envoltura="div"
                                     className="h-full flex items-center pl-3 text-[12px] font-black text-white transition-all"
                                     style={{
                                         width: `${r.width}%`,
@@ -113,7 +125,7 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
                                     title={isEstimatedSlots ? `Incluye ${slotsEstimatedDays} día${slotsEstimatedDays === 1 ? '' : 's'} sin reportar, estimado con tu propio promedio histórico.` : undefined}
                                 >
                                     {isEstimatedSlots ? `~${r.v}` : r.v}
-                                </div>
+                                </MetricaClicable>
                             </div>
                             <div className={`w-12 text-right text-[11px] font-black ${r.conv === null ? 'text-muted' : r.conv > 100 ? 'text-amber-400' : r.conv < 50 ? 'text-rose-400' : r.conv < 70 ? 'text-amber-400' : 'text-emerald-400'}`}>
                                 {r.conv === null ? '—' : `${r.conv}%`}
@@ -151,7 +163,11 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix }) => {
                                 </div>
                             </div>
                             <div className="text-right shrink-0">
-                                <b className="text-base font-black block" style={{ color: l.color }}>{l.rate}%</b>
+                                <MetricaClicable irA={irA} destino={destino(l.metric)} vacio={!l.count}
+                                    detalle={`${l.count} agendas · ${l.name}`}
+                                    className="block text-base font-black" style={{ color: l.color }}>
+                                    {l.rate}%
+                                </MetricaClicable>
                                 <span className="text-[10px] text-muted">{l.count} de {values[1] || 0}</span>
                             </div>
                         </div>

@@ -1,7 +1,8 @@
 import React from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
-import { tip, rateHealth } from '../metricSources';
+import { tip, rateHealth, destino } from '../metricSources';
+import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 import { qualityItems, computeWeakestQuality } from '../performanceUtils';
 
 /* Calidad de la llamada, leída como la cadena que realmente es: primero hay que LLEGAR a la
@@ -18,7 +19,7 @@ const HEALTH_CHIP = {
     imposible: 'bg-rose-500/20 text-rose-300 border-rose-500/40'
 };
 
-const QualityMeter = ({ label, value, num, den, unit, metric, weakest }) => {
+const QualityMeter = ({ label, value, num, den, unit, metric, weakest, irA }) => {
     const t = tip(metric);
     const health = rateHealth(value, t.benchmark);
     const fill = Math.max(2, Math.min(100, value));
@@ -40,7 +41,11 @@ const QualityMeter = ({ label, value, num, den, unit, metric, weakest }) => {
             </div>
 
             <div className="flex items-baseline gap-2 mt-2 flex-wrap">
-                <span className={`text-3xl font-black tracking-tighter ${health.text}`}>{value}%</span>
+                <MetricaClicable irA={irA} destino={destino(metric)} vacio={!num}
+                    detalle={`${label} · ${num} de ${den} ${unit}`}
+                    className={`text-3xl font-black tracking-tighter ${health.text}`}>
+                    {value}%
+                </MetricaClicable>
                 {health.label && (
                     <span className={`text-[8.5px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border ${HEALTH_CHIP[health.label]}`}>
                         {health.label}
@@ -82,12 +87,12 @@ const Group = ({ title, subtitle, accent, children }) => (
     </div>
 );
 
-const PerformanceQuality = ({ rings, funnel, confirmaciones }) => {
+const PerformanceQuality = ({ rings, funnel, confirmaciones, irA }) => {
     const items = qualityItems(rings, funnel, confirmaciones);
     const weakest = computeWeakestQuality(items);
 
     const render = (group) => items.filter(i => i.group === group).map(it => (
-        <QualityMeter key={it.metric} {...it} weakest={weakest?.metric === it.metric} />
+        <QualityMeter key={it.metric} {...it} weakest={weakest?.metric === it.metric} irA={irA} />
     ));
 
     return (

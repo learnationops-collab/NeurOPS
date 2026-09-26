@@ -1,6 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ChevronDown, Filter, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
+    SlidersHorizontal, X } from 'lucide-react';
 import { Cargando, fmt } from './Shared';
+import { TABLAS, TABLAS_POR_ROL } from './tablasDef';
+import PanelDetalle from '../../../components/dashboard/PanelDetalle';
+import PanelConfigurar from './PanelConfigurar';
+import RevisarLista from './RevisarLista';
+import { useModoVista } from '../../../components/listas/useModoVista';
+
+// La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
+// importaban otros archivos por este camino, para no mover los imports de media pantalla.
+export { TABLAS_POR_ROL, duplicadasDe, estadoDeAgenda, fueConfirmada, asistio, presento, respondio,
+    cualificado } from './tablasDef';
+// `ChipTono` se fue con la celda a `RevisarLista.jsx`; se re-exporta porque `LeadModal` la pide
+// por este camino.
+export { ChipTono } from './RevisarLista';
 
 /**
  * Revisar: el libro de registros con un buscador, un filtro rápido, UN botón que abre todas las
@@ -19,11 +33,6 @@ import { Cargando, fmt } from './Shared';
  * que se pidió, así que los accesores no llevan guardas.
  */
 
-/** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
-export const ChipTono = ({ chip }) => (chip
-    ? <span className="chip" style={{ '--c': `var(--${chip.tone})` }}>{chip.label}</span>
-    : null);
-
 /** Ícono "i" con la explicación de lo que se está mirando. Se abre y cierra por CSS. */
 const Ayuda = ({ titulo, texto }) => (
     <span className="tip" tabIndex={0} role="note" aria-label={`${titulo}: ${texto}`}>
@@ -31,227 +40,6 @@ const Ayuda = ({ titulo, texto }) => (
         <span className="tip-burbuja" aria-hidden="true"><b>{titulo}</b>{texto}</span>
     </span>
 );
-
-/**
- * El estado con el que el panel Estados cuenta cada agenda.
- *
- * "Pendiente" es un solo valor en la tabla pero dos cosas distintas para leer: una llamada que ya
- * pasó y nadie reportó, y una que todavía no ocurrió. El panel las separa, así que la faceta
- * tiene que separarlas igual — si no, clic en "Sin reporte · 62" aterriza en las 71 pendientes.
- * La derivación es la MISMA que hace `estados_de` en el backend, sobre el mismo campo.
- */
-export const estadoDeAgenda = (fila) => {
-    if (fila.post_call?.key !== 'pendiente') return fila.post_call?.label;
-    return fila.retraso_dias > 0 ? 'Sin reporte' : 'Aún no ocurrió';
-};
-
-/**
- * Las facetas de sí/no de los pasos del embudo.
- *
- * Los cinco pasos intermedios —Confirmadas, Asistieron, Presentaciones del embudo de closers, y
- * Respondieron y Cualificados del de setters— no eran clickeables porque ninguna faceta los
- * aislaba: el corte no es un valor de una columna sino una condición sobre la fila. Cada una
- * repite EXACTAMENTE el criterio con el que el backend cuenta ese paso, así que el clic abre
- * tantas filas como dice el número.
- */
-const SI = 'Sí';
-const NO = 'No';
-const siNo = (condicion) => (fila) => (condicion(fila) ? SI : NO);
-
-// Una llamada a la que el lead asistió estaba confirmada, por definición: el mismo criterio de
-// `bloque_closers`, que existe porque el embudo es una cadena de subconjuntos.
-export const fueConfirmada = siNo((f) => f.pre_call?.key === 'confirmada' || f.asistio);
-export const asistio = siNo((f) => f.asistio);
-// Presentar requiere haber asistido: sin eso el embudo mostraría más presentaciones que
-// asistencias, que es imposible.
-export const presento = siNo((f) => f.asistio && f.presento);
-export const respondio = siNo((f) => f.respondio);
-export const cualificado = siNo((f) => f.cualificado);
-
-/**
- * Las agendas que parecen una copia de otra: {id de la copia -> la hermana que se conserva}.
- *
- * Una misma cita cargada dos veces (visto en producción: Nerina con la lead "Mia Sky",
- * 10/sep/2026, una sincronización procesada dos veces). Una queda con la llamada real y la otra
- * huérfana sin reportar, inflando el total de agendas.
- *
- * Dos condiciones, las MISMAS que valida el backend en `marcar_duplicada` — si divergen, la
- * pantalla ofrece una acción que el backend va a rechazar:
- *
- *   · la copia todavía no tiene resultado (`post_call` pendiente: es el equivalente exacto de
- *     `ESTADOS_SIN_RESULTADO`, porque todos esos estados derivan a "pendiente" acá);
- *   · hay otra cita del mismo cliente a menos de seis horas.
- *
- * Se calcula sobre las filas del período cargado, así que una hermana fuera del período no se
- * detecta — la misma limitación que tenía la pestaña del mazo, y por el mismo motivo.
- */
-const VENTANA_DUPLICADO_MS = 6 * 60 * 60 * 1000;
-
-export const duplicadasDe = (filas) => {
-    const mapa = {};
-    (filas || []).forEach(a => {
-        if (a.tipo !== 'agenda' || !a.client_id || a.post_call?.key !== 'pendiente' || !a.fecha) return;
-        const tA = new Date(a.fecha).getTime();
-        if (!tA) return;
-        const hermana = filas.find(b => (
-            b.id !== a.id && b.client_id === a.client_id && b.fecha
-            && Math.abs(new Date(b.fecha).getTime() - tA) <= VENTANA_DUPLICADO_MS
-        ));
-        if (hermana) mapa[a.id] = hermana;
-    });
-    return mapa;
-};
-
-// Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cuatro.
-const TABLAS = {
-    agendas: {
-        label: 'Agendas',
-        ayuda: 'Todas las llamadas agendadas del período. Tocá una fila para abrir el recorrido '
-            + 'del lead y, si hace falta, corregir su estado.',
-        cols: [
-            { key: 'fecha', header: 'Reunión', width: '0.9fr' },
-            { key: 'cliente', header: 'Cliente', width: '1.8fr' },
-            { key: 'fuente', header: 'Fuente', width: '1fr' },
-            { key: 'closer', header: 'Closer', width: '0.8fr' },
-            { key: 'pre_call', header: 'Pre call', width: '1fr' },
-            { key: 'post_call', header: 'Post call', width: '1.4fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
-        ],
-        facetas: [
-            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
-            { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
-            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
-            { key: 'closer', label: 'Closer', de: (f) => f.closer },
-            { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
-            { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
-            { key: 'asistio', label: 'Asistió', de: asistio },
-            { key: 'presento', label: 'Presentó', de: presento },
-        ],
-        chips: [
-            { key: 'todas', label: 'Todas', filtro: () => true },
-            { key: 'asistieron', label: 'Asistieron', filtro: (f) => f.asistio },
-            { key: 'pendientes', label: 'Pendientes', filtro: (f) => f.post_call.key === 'pendiente' },
-            { key: 'no_show', label: 'No show', filtro: (f) => f.post_call.key === 'no_show' },
-        ],
-    },
-    ventas: {
-        label: 'Ventas',
-        ayuda: 'Las ventas cobradas en el período, con su programa, forma de pago y medio de cobro.',
-        cols: [
-            { key: 'fecha', header: 'Venta', width: '0.8fr' },
-            { key: 'cliente', header: 'Cliente', width: '1.9fr' },
-            { key: 'programa', header: 'Programa', width: '1.3fr' },
-            { key: 'tipo_pago', header: 'Pago', width: '1.1fr' },
-            { key: 'monto', header: 'Monto', width: '1fr' },
-            { key: 'closer', header: 'Closer', width: '0.9fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
-        ],
-        facetas: [
-            { key: 'programa', label: 'Programa', de: (f) => f.programa },
-            { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
-            { key: 'metodo', label: 'Método', de: (f) => f.metodo },
-            { key: 'closer', label: 'Closer', de: (f) => f.closer },
-        ],
-        chips: [
-            { key: 'todas', label: 'Todas', filtro: () => true },
-            { key: 'completo', label: 'Pago completo', filtro: (f) => f.tipo_pago.key === 'completo' },
-            { key: 'parcial', label: 'Split Pay', filtro: (f) => f.tipo_pago.key === 'parcial' },
-        ],
-    },
-    leads: {
-        label: 'Leads entrantes',
-        ayuda: 'Los leads nuevos que entraron al inbox en el período, con su estado de conversación.',
-        cols: [
-            { key: 'fecha', header: 'Llegó', width: '0.9fr' },
-            { key: 'cliente', header: 'Lead', width: '1.9fr' },
-            { key: 'fuente', header: 'Fuente', width: '1fr' },
-            { key: 'setter', header: 'Setter', width: '0.9fr' },
-            { key: 'estado', header: 'Estado', width: '1.1fr' },
-            { key: 'mensajes', header: 'Mensajes', width: '0.9fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
-        ],
-        facetas: [
-            { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
-            { key: 'setter', label: 'Setter', de: (f) => f.setter },
-            { key: 'respondio', label: 'Respondió', de: respondio },
-            { key: 'cualificado', label: 'Cualificado', de: cualificado },
-        ],
-        chips: [
-            { key: 'todos', label: 'Todos', filtro: () => true },
-            { key: 'agendo', label: 'Agendaron', filtro: (f) => f.agendo },
-            { key: 'sin_respuesta', label: 'Sin respuesta', filtro: (f) => !f.respondio },
-        ],
-    },
-    clientes: {
-        label: 'Clientes',
-        ayuda: 'Cada cliente que el equipo ya vendió, con lo que pagó, lo que debe y su próxima '
-            + 'cuota. NO depende del período: la cartera es un saldo a hoy, no un flujo — acotarla '
-            + 'al mes dejaría afuera justamente a los que arrastran deuda de antes. La atribución '
-            + 'es por quién VENDIÓ, así que su deuda no es la misma cifra que el "por cobrar" del '
-            + 'panel Cash, que cuenta por quién tiene hoy la agenda del cliente — y que además '
-            + 'incluye saldos de clientes que nadie del equipo actual vendió.',
-        cols: [
-            { key: 'cliente', header: 'Cliente', width: '1.7fr' },
-            { key: 'programa', header: 'Programa', width: '1.2fr' },
-            { key: 'closer', header: 'Vendió', width: '0.8fr' },
-            { key: 'pagado', header: 'Pagado', width: '0.8fr' },
-            { key: 'deuda', header: 'Debe', width: '0.8fr' },
-            { key: 'cuota', header: 'Próxima cuota', width: '1.3fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
-        ],
-        facetas: [
-            { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
-            { key: 'programa', label: 'Programa', de: (f) => f.programa },
-            { key: 'closer', label: 'Vendió', de: (f) => f.closer },
-        ],
-        chips: [
-            { key: 'todos', label: 'Todos', filtro: () => true },
-            { key: 'con_deuda', label: 'Con deuda', filtro: (f) => f.deuda > 0.01 },
-            { key: 'vencida', label: 'Cuota vencida', filtro: (f) => f.cuota_vencida },
-            { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 },
-        ],
-    },
-    generadas: {
-        label: 'Agendas generadas',
-        ayuda: 'Las agendas que generó el equipo de setting, con el closer asignado y cómo '
-            + 'terminó la llamada.',
-        cols: [
-            { key: 'fecha', header: 'Reunión', width: '0.9fr' },
-            { key: 'cliente', header: 'Lead', width: '1.8fr' },
-            { key: 'setter', header: 'Setter', width: '0.9fr' },
-            { key: 'closer', header: 'Closer', width: '0.9fr' },
-            { key: 'pre_call', header: 'Pre call', width: '1fr' },
-            { key: 'post_call', header: 'Post call', width: '1.4fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
-        ],
-        facetas: [
-            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
-            { key: 'setter', label: 'Setter', de: (f) => f.setter },
-            { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
-            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
-            { key: 'closer', label: 'Closer', de: (f) => f.closer },
-            { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
-            { key: 'asistio', label: 'Asistió', de: asistio },
-            { key: 'presento', label: 'Presentó', de: presento },
-        ],
-        chips: [
-            { key: 'todas', label: 'Todas', filtro: () => true },
-            { key: 'asistieron', label: 'Asistieron', filtro: (f) => f.asistio },
-            { key: 'pendientes', label: 'Pendientes', filtro: (f) => f.post_call.key === 'pendiente' },
-        ],
-    },
-};
-
-export const TABLAS_POR_ROL = {
-    // "Clientes" es la cartera: a quién le vendió y cómo va con los pagos. Es la única de las
-    // cinco que NO se acota al período (ver `ComercialService.clientes`), y va tercera porque se
-    // consulta cuando hay que cobrar, no cuando se revisa el día.
-    closers: ['agendas', 'ventas', 'clientes'],
-    setters: ['leads', 'generadas'],
-};
-
-/** Las dos tablas de agendas comparten totales, columna de post call y el selector de fecha. */
-const esTablaDeAgendas = (tabla) => tabla === 'agendas' || tabla === 'generadas';
 
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
     fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
@@ -266,117 +54,6 @@ const aplicarFiltros = (filas, def, query, facetas, modo) => {
         const cumple = activas.map(fa => facetas[fa.key].includes(fa.de(f)));
         return modo === 'alguna' ? cumple.some(Boolean) : cumple.every(Boolean);
     });
-};
-
-/**
- * Panel de Configurar: un solo botón abre TODAS las facetas, cada una en su columna.
- *
- * Se ancla al borde IZQUIERDO de su botón (`.config-panel`): el panel es ancho (680px) y el botón
- * vive a la izquierda de la barra, así que alinearlo a la derecha lo sacaba de la pantalla. Debajo
- * de 900px el CSS lo saca del flujo flotante y lo despliega en su propia fila, empujando la tabla.
- */
-const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
-    onLimpiar, onCerrar }) => {
-    const opcionesDe = (faceta) => {
-        // Las opciones se cuentan sobre TODAS las filas del período, no sobre lo ya filtrado: si
-        // se contaran sobre lo filtrado, tildar un valor haría desaparecer a sus vecinos.
-        const conteo = new Map();
-        filas.forEach(f => {
-            const v = faceta.de(f);
-            if (v) conteo.set(v, (conteo.get(v) || 0) + 1);
-        });
-        return [...conteo.entries()].sort((a, b) => b[1] - a[1]);
-    };
-
-    const alternar = (faceta, valor) => {
-        const actuales = facetas[faceta.key] || [];
-        setFacetas({
-            ...facetas,
-            [faceta.key]: actuales.includes(valor)
-                ? actuales.filter(v => v !== valor)
-                : [...actuales, valor],
-        });
-    };
-
-    const seleccionados = def.facetas.reduce((a, fa) => a + (facetas[fa.key]?.length || 0), 0);
-
-    return (
-        <div className="config-panel" role="dialog" aria-label="Filtro completo">
-            <div className="config-cab">
-                <p className="t-h3" style={{ fontSize: 16 }}>Filtro completo</p>
-                {seleccionados > 0 && <span className="cuenta-burbuja">{seleccionados}</span>}
-                <button type="button" className="ibtn ibtn--sm" style={{ marginLeft: 'auto' }}
-                    onClick={onCerrar} aria-label="Cerrar">
-                    <X size={15} />
-                </button>
-            </div>
-
-            <div className="fila" style={{ gap: 'var(--s3)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }}>
-                {esTablaDeAgendas(tabla) && (
-                    <>
-                        <span className="t-rotulo">Fecha</span>
-                        <div className="seg">
-                            {[['meet', 'Fecha meet'], ['creacion', 'F. creación']].map(([k, label]) => (
-                                <button key={k} type="button" aria-pressed={basis === k}
-                                    onClick={() => setBasis(k)}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
-                <span className="t-rotulo">Cumple</span>
-                <div className="seg">
-                    {[['todas', 'Todas'], ['alguna', 'Alguna']].map(([k, label]) => (
-                        <button key={k} type="button" aria-pressed={modo === k}
-                            onClick={() => setModo(k)}>
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="config-grid">
-                {def.facetas.map(faceta => {
-                    const sel = facetas[faceta.key] || [];
-                    return (
-                        <div key={faceta.key} className="config-col">
-                            <p className="t-rotulo">
-                                {faceta.label}{sel.length > 0 ? ` · ${sel.length}` : ''}
-                            </p>
-                            <div className="config-lista">
-                                {opcionesDe(faceta).map(([valor, n]) => {
-                                    const on = sel.includes(valor);
-                                    return (
-                                        <button key={valor} type="button" className="config-op"
-                                            role="checkbox" aria-checked={on}
-                                            onClick={() => alternar(faceta, valor)}>
-                                            <span className="config-caja">{on ? '✓' : ''}</span>
-                                            <span className="trunc">{valor}</span>
-                                            <span className="cuenta">{n}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div className="config-pie">
-                <span className="t-cap mut40">
-                    {seleccionados === 0
-                        ? 'Sin condiciones: se ve todo el período.'
-                        : `${seleccionados} ${seleccionados === 1 ? 'condición' : 'condiciones'} sobre ${def.facetas.length} facetas.`}
-                </span>
-                <button type="button" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
-                    disabled={seleccionados === 0} onClick={onLimpiar}>
-                    <RotateCcw size={13} />
-                    Limpiar
-                </button>
-            </div>
-        </div>
-    );
 };
 
 /**
@@ -397,108 +74,22 @@ const TotalesTira = ({ items, alcance }) => (
     </div>
 );
 
-const Celda = ({ fila, col }) => {
-    switch (col.key) {
-        case 'fecha':
-            return (
-                <span className="celda num">
-                    {fmt.fecha(fila.fecha)}
-                    {fmt.hora(fila.fecha) && <span className="celda-sub num">{fmt.hora(fila.fecha)}</span>}
-                </span>
-            );
-        case 'cliente':
-            return (
-                <span className="celda">
-                    {fila.cliente}
-                    {fila.ig && <span className="celda-sub">{fila.ig}</span>}
-                </span>
-            );
-        case 'pre_call':
-            return <ChipTono chip={fila.pre_call} />;
-        case 'post_call':
-            // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
-            // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.
-            return (
-                <>
-                    <ChipTono chip={fila.post_call} />
-                    {fila.retraso_dias > 0 && (
-                        <span className="celda-sub num"
-                            style={{ color: 'var(--error)', fontWeight: 700 }}>
-                            {fila.retraso_dias} {fila.retraso_dias === 1 ? 'día' : 'días'} sin reportar
-                        </span>
-                    )}
-                </>
-            );
-        case 'estado':
-            return <ChipTono chip={fila.estado} />;
-        case 'tipo_pago':
-            return (
-                <>
-                    <ChipTono chip={fila.tipo_pago} />
-                    {fila.metodo && <span className="celda-sub">{fila.metodo}</span>}
-                </>
-            );
-        case 'monto':
-            return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
-        case 'pagado':
-            return (
-                <span className="celda celda--num">
-                    {fmt.money(fila.pagado)}
-                    <span className="celda-sub num">{fmt.plural(fila.cobros, 'cobro', 'cobros')}</span>
-                </span>
-            );
-        case 'deuda':
-            // Cero no se escribe "$0": un cliente que no debe nada es una fila que no hay que
-            // mirar, y el guión la saca del camino.
-            return (
-                <span className="celda celda--num"
-                    style={fila.deuda > 0.01 ? { color: 'var(--error)', fontWeight: 800 } : undefined}>
-                    {fila.deuda > 0.01 ? fmt.money(fila.deuda) : '—'}
-                </span>
-            );
-        case 'cuota':
-            // El chip dice en qué situación está y la bajada dice qué y cuándo cobrar, que es lo
-            // que se viene a buscar acá.
-            return (
-                <>
-                    <ChipTono chip={fila.estado} />
-                    {fila.cuota_monto != null && (
-                        <span className="celda-sub num"
-                            style={fila.cuota_vencida ? { color: 'var(--error)', fontWeight: 700 } : undefined}>
-                            {fmt.money(fila.cuota_monto)}
-                            {fila.cuota_fecha ? ` · ${fmt.fecha(fila.cuota_fecha)}` : ' · sin plan'}
-                        </span>
-                    )}
-                </>
-            );
-        case 'programa':
-            return (
-                <span className="chip" style={{
-                    '--c': fila.programa === 'Residency Roadmap'
-                        ? 'var(--prog-elite-b)' : 'var(--prog-ace)',
-                }}>
-                    {fila.programa}
-                </span>
-            );
-        case 'mensajes':
-            return <span className="celda celda--num">{fmt.num(fila.mensajes)}</span>;
-        case 'ver':
-            return <span className="celda-ver"><ArrowRight size={14} /></span>;
-        default:
-            return <span className="celda">{fila[col.key] || '—'}</span>;
-    }
-};
-
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
-    filtroInicial }) => {
+    filtroInicial, onOlvidarFiltro }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
     const [chip, setChip] = useState(null);
     const [menu, setMenu] = useState(null);
+    const [agrupacion, setAgrupacion] = useState(null);
     const barra = useRef(null);
 
+    // Lista o tarjetas, con la elección recordada. La clave es por tabla: mirar las agendas como
+    // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
+    const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
+
     const def = TABLAS[tabla];
+    const panel = useRef(null);
 
     /**
      * Los filtros se ajustan DURANTE el render y no en un efecto, que es el patrón de React para
@@ -518,20 +109,50 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      * cambió de pestaña a mano", que tiene que limpiar.
      */
     const token = filtroInicial?.__t ?? null;
-    const [origen, setOrigen] = useState({ tabla, token: null });
+    const [origen, setOrigen] = useState({ tabla, token: null, de: null, aviso: null });
     if (origen.tabla !== tabla || origen.token !== token) {
         const nuevas = {};
+        let de = null;
+        let aviso = null;
         if (token !== null && token !== origen.token) {
+            de = filtroInicial.__de || null;
+            aviso = filtroInicial.__aviso || null;
             Object.entries(filtroInicial).forEach(([k, valor]) => {
-                if (k !== '__t') nuevas[k] = [valor];
+                // Las claves `__` son metadatos del drill-down (token, procedencia, advertencia),
+                // no condiciones. Un array de etiquetas en la misma faceta es un OR.
+                if (k.startsWith('__') || valor === null || valor === undefined) return;
+                nuevas[k] = Array.isArray(valor) ? valor : [valor];
             });
         }
-        setOrigen({ tabla, token });
+        setOrigen({ tabla, token, de, aviso });
         setFacetas(nuevas);
         setChip(null);
         setQuery('');
         setMenu(null);
+        // La agrupación también se reinicia: las dimensiones son por tabla y la de Ventas no
+        // existe en Leads.
+        setAgrupacion(null);
     }
+
+    /**
+     * Al aterrizar de un drill-down, el panel parpadea una vez y se trae a la vista.
+     *
+     * Reusa la clase `.destacado` que ya existe para el mismo gesto en Analizar (bajar de un tile
+     * a su panel) en vez de duplicar la animación: es el mismo mensaje —"lo que buscabas está
+     * acá"— y tiene que verse igual. El reflow forzado entre quitar y poner la clase es lo que
+     * hace que dos drill-downs seguidos vuelvan a parpadear: sin él, reagregarla en el mismo
+     * cuadro no reinicia la animación.
+     *
+     * `prefers-reduced-motion` lo apaga por CSS, junto al resto de la animación del tablero.
+     */
+    useEffect(() => {
+        const el = panel.current;
+        if (!el || origen.token === null) return;
+        el.classList.remove('destacado');
+        void el.offsetWidth;
+        el.classList.add('destacado');
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, [origen.token]);
 
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
     useEffect(() => {
@@ -552,8 +173,27 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
     const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
+    const dimension = (def.agrupables || []).find(d => d.key === agrupacion) || null;
 
-    const limpiar = () => { setFacetas({}); setChip(null); setQuery(''); };
+    const limpiar = () => {
+        setFacetas({});
+        setChip(null);
+        setQuery('');
+        // Sacar el filtro también saca el aviso de procedencia: si no, la lista seguía diciendo
+        // "viniste de Show up" arriba de las agendas completas del período.
+        setOrigen(o => ({ ...o, de: null, aviso: null }));
+        // Y lo saca de la URL, que es donde vive el filtro del drill-down: sin esto, salir de
+        // Revisar y volver lo resucitaba.
+        onOlvidarFiltro?.();
+    };
+
+    const quitarCriterio = (clave, valor) => setFacetas({
+        ...facetas, [clave]: (facetas[clave] || []).filter(x => x !== valor),
+    });
+
+    /** Las condiciones activas, con el nombre de su faceta, para el aviso de procedencia. */
+    const criterios = def.facetas.flatMap(fa => (facetas[fa.key] || []).map(
+        valor => ({ clave: fa.key, faceta: fa.label, valor })));
 
     /**
      * Los seis números de la tira, recalculados sobre lo filtrado con las mismas reglas del
@@ -647,7 +287,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const alcanceTexto = [alcance, query ? `"${query}"` : null].filter(Boolean).join(' · ');
 
     return (
-        <section className="panel">
+        <section className="panel" ref={panel}>
             <div className="tabs" role="tablist" aria-label="Tabla"
                 style={{ marginBottom: 'var(--s4)' }}>
                 {TABLAS_POR_ROL[rol].map(k => (
@@ -700,6 +340,54 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     )}
                 </div>
 
+                {/* Agrupar por: la dimensión sale de `def.agrupables`, así que cada tabla ofrece
+                    las suyas y agregar un criterio nuevo es una línea en `tablasDef.js`. */}
+                {(def.agrupables || []).length > 0 && (
+                    <div style={{ position: 'relative' }}>
+                        <button type="button"
+                            className={`pastilla${dimension ? ' pastilla--on' : ''}`}
+                            aria-expanded={menu === 'agrupar'} aria-haspopup="menu"
+                            onClick={() => setMenu(m => (m === 'agrupar' ? null : 'agrupar'))}>
+                            <Rows size={15} />
+                            {dimension ? `Por ${dimension.label.toLowerCase()}` : 'Sin agrupar'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {menu === 'agrupar' && (
+                            <div className="menu" role="menu" aria-label="Agrupar por">
+                                <button type="button" className="menu-item" role="menuitemradio"
+                                    aria-checked={!agrupacion}
+                                    onClick={() => { setAgrupacion(null); setMenu(null); }}>
+                                    <span className="trunc">Sin agrupar</span>
+                                </button>
+                                {def.agrupables.map(d => (
+                                    <button key={d.key} type="button" className="menu-item"
+                                        role="menuitemradio" aria-checked={agrupacion === d.key}
+                                        onClick={() => { setAgrupacion(d.key); setMenu(null); }}>
+                                        <span className="trunc">{d.label}</span>
+                                        <span className="cuenta">
+                                            {new Set(visibles.map(f => d.de(f) || '—')).size}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Lista o tarjetas. Dos posiciones, no un menú: es una sola decisión. */}
+                <div className="seg" role="group" aria-label="Forma de ver la lista">
+                    <button type="button" aria-pressed={modoVista === 'lista'}
+                        title="Ver como lista" aria-label="Ver como lista"
+                        onClick={() => setModoVista('lista')}>
+                        <List size={14} />
+                    </button>
+                    <button type="button" aria-pressed={modoVista === 'tarjetas'}
+                        title="Ver como tarjetas" aria-label="Ver como tarjetas"
+                        onClick={() => setModoVista('tarjetas')}>
+                        <LayoutGrid size={14} />
+                    </button>
+                </div>
+
                 <label className="busca busca--sm">
                     <span className="mut40" style={{ display: 'flex' }}><Search size={14} /></span>
                     <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
@@ -712,23 +400,27 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <Ayuda titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
+            {/* De dónde viene el filtro. Va arriba de los chips de faceta porque contesta la
+                pregunta anterior: no "qué condición hay puesta" sino "qué número me trajo acá". */}
+            <PanelDetalle de={origen.de} aviso={origen.aviso} criterios={criterios}
+                cuantas={visibles.length} total={filas.length}
+                onQuitarCriterio={quitarCriterio} onLimpiar={limpiar} />
+
             {activas > 0 && (
                 <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)', marginBottom: 'var(--s3)' }}>
                     <span className="t-rotulo">
                         {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
                     </span>
-                    {def.facetas.flatMap(fa => (facetas[fa.key] || []).map(v => (
-                        <button key={`${fa.key}-${v}`} type="button" className="chip"
+                    {criterios.map(c => (
+                        <button key={`${c.clave}-${c.valor}`} type="button" className="chip"
                             style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
                                 letterSpacing: 0, fontWeight: 700 }}
-                            aria-label={`Quitar ${v}`}
-                            onClick={() => setFacetas({
-                                ...facetas, [fa.key]: facetas[fa.key].filter(x => x !== v),
-                            })}>
-                            {v}
+                            aria-label={`Quitar ${c.valor}`}
+                            onClick={() => quitarCriterio(c.clave, c.valor)}>
+                            {c.valor}
                             <X size={12} />
                         </button>
-                    )))}
+                    ))}
                     <button type="button" className="btn btn--linea btn--sm" onClick={limpiar}>
                         <RotateCcw size={13} />
                         Limpiar
@@ -755,31 +447,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             </div>
                         </div>
                     ) : (
-                        <div className="tabla">
-                            <div className="tabla-cab" style={{ '--cols': plantilla }}>
-                                {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
-                            </div>
-                            {visibles.map(fila => (
-                                <div key={`${fila.tipo}-${fila.id}`} className="tabla-fila"
-                                    role="button" tabIndex={0} style={{ '--cols': plantilla }}
-                                    aria-label={`Abrir ${fila.cliente}`}
-                                    onClick={() => onAbrirFila(fila)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            onAbrirFila(fila);
-                                        }
-                                    }}>
-                                    {def.cols.map(c => (
-                                        // `data-h` es el rótulo que el CSS pinta a la izquierda de
-                                        // cada dato cuando la tabla se apila en móvil.
-                                        <div key={c.key} data-h={c.header}>
-                                            <Celda fila={fila} col={c} />
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+                        <RevisarLista def={def} visibles={visibles} plantilla={plantilla}
+                            onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista} />
                     )}
                 </>
             )}
