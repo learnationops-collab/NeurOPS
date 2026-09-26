@@ -137,6 +137,7 @@ const SelectorFecha = ({
                             ) : (
                                 <button key={c.clave} type="button" className="fi-cal-dia"
                                     aria-pressed={c.elegido} data-hoy={c.hoy ? '1' : undefined}
+                                    data-dia={c.clave}
                                     aria-label={fmtLargo(c.fecha)}
                                     disabled={c.pasado} onClick={() => elegir(c.fecha)}>
                                     {c.n}
