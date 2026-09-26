@@ -28,7 +28,7 @@ const RUTA_COMERCIAL = {
 const AVISO_RANGO_LIBRE = 'El rango libre de este dashboard no viaja a la lista: la lista se abre '
     + 'con el mes en curso. Volvé a elegir el rango allá si hace falta.';
 
-export const usarDrillDown = ({ period, closerId }) => {
+export const useDrillDown = ({ period, closerId }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const ruta = RUTA_COMERCIAL[user?.role] || null;
@@ -63,4 +63,4 @@ export const usarDrillDown = ({ period, closerId }) => {
 /** ¿Hay a dónde llevar para esta persona? Lo usan las tarjetas para no pintar botones inertes. */
 export const hayListaComercial = (rol) => Boolean(RUTA_COMERCIAL[rol]);
 
-export default usarDrillDown;
+export default useDrillDown;

@@ -17,7 +17,7 @@ import DataIssuesPanel from './components/DataIssuesPanel';
 import SlotsPrompt from './components/SlotsPrompt';
 import { periodLabel, compareLabel } from './performanceUtils';
 import { detectIssues } from './dataIssues';
-import { usarDrillDown } from './usarDrillDown';
+import { useDrillDown } from './useDrillDown';
 
 const SectionTitle = ({ children }) => (
     <h2 className="text-[11.5px] font-black tracking-widest uppercase text-muted mt-10 mb-4 flex items-center gap-3 first:mt-0">
@@ -74,7 +74,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
        dashboard comercial, que ya existe y ya sabe acotar por persona y por periodo. El hook
        arma la URL; `irA(tabla, filtro)` es la misma firma que usa el dashboard comercial por
        dentro, asi que `MetricaClicable` sirve igual en las dos pantallas. */
-    const irA = usarDrillDown({ period, closerId });
+    const irA = useDrillDown({ period, closerId });
 
     const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
 
