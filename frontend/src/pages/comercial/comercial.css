@@ -586,10 +586,20 @@
   font-size:10px;font-weight:900;font-variant-numeric:tabular-nums;
   transition:transform .18s var(--spring)}
 .dc-shell .mapa-dia:hover{transform:scale(1.08)}
+/* Un dia del mapa es un boton cuando abre su propia lista: hereda tipografia y color en vez de
+   los del control nativo, que sobre el color de la celda se lee como otro componente. */
+.dc-shell button.mapa-dia{appearance:none;padding:0;font-family:inherit;color:inherit;cursor:pointer}
+.dc-shell button.mapa-dia:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
 .dc-shell .serie{display:flex;align-items:flex-end;gap:3px;height:118px;min-width:0}
 .dc-shell .serie > i{flex:1 1 0;min-width:0;border-radius:4px 4px 2px 2px;height:2px;
   transition:height .8s var(--crecer),filter .16s ease}
 .dc-shell .serie > i:hover{filter:brightness(1.25)}
+/* Una barra que abre la lista de su dia. Queda como <i> con role=button para no romper el
+   reparto de `.serie`, que posiciona sus hijos directos. */
+.dc-shell .serie > i[role="button"]{cursor:pointer}
+.dc-shell .serie > i[role="button"]:hover{filter:brightness(1.4)}
+.dc-shell .serie > i[role="button"]:focus-visible{outline:2px solid var(--brand-secondary);
+  outline-offset:2px}
 .dc-shell .serie-eje{display:flex;gap:3px;margin-top:6px;min-width:0}
 .dc-shell .serie-eje > span{flex:1 1 0;min-width:0;text-align:center;
   font-size:9px;font-weight:700;color:var(--text-muted-40);

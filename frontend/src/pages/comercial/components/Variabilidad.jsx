@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Cargando, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
+import { abrir } from '../../../components/dashboard/MetricaClicable';
+import { conDia, destinoDeSerie, serieCortable } from './destinos';
 
 /**
  * Analizar → Variabilidad: la serie por día de cada métrica.
@@ -17,6 +19,11 @@ import { Cargando, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
  * ventas por forma de pago, los entrantes por setter. Las categorías las elige el backend a
  * partir de los datos, y cuando hay una sola no manda ninguna — una tira de una sola pestaña no
  * es un filtro.
+ *
+ * **Cada día es cliqueable y abre la lista de ESE día**, con la sub-serie activa como corte. No se
+ * recorta el rango de fechas del backend: el día pedido ya está dentro de las filas que se
+ * cargaron para el período, así que se filtra con la faceta `dia` (ver `tablasDef.js`) y todo —los
+ * contadores, el "mostrando X de Y" y la tira de totales— sigue cerrando sobre el mismo conjunto.
  */
 
 const VISTAS = [
@@ -44,7 +51,7 @@ const Eje = ({ dias }) => (
     </div>
 );
 
-const Barras = ({ serie, activa, dias, max, unico, montado }) => (
+const Barras = ({ serie, activa, dias, max, unico, montado, irDia }) => (
     <>
         <div className="serie">
             {activa.vals.map((v, i) => {
@@ -53,15 +60,23 @@ const Barras = ({ serie, activa, dias, max, unico, montado }) => (
                 const alto = max ? Math.max((v / max) * 100, v === 0 ? 2 : 6) : 2;
                 const color = unico && v === max && v > 0 ? 'brand-secondary'
                     : v === 0 ? 'hueco' : activa.tone;
-                return (
-                    <i key={dias[i]}
-                        style={{
-                            height: montado ? `${alto}%` : '2px',
-                            background: `var(--${color})`,
-                            transitionDelay: `${i * 35}ms`,
-                        }}
-                        title={`${fmt.fecha(dias[i])} · ${valorDe(serie, v)}`} />
-                );
+                const estilo = {
+                    height: montado ? `${alto}%` : '2px',
+                    background: `var(--${color})`,
+                    transitionDelay: `${i * 35}ms`,
+                };
+                const rotulo = `${fmt.fecha(dias[i])} · ${valorDe(serie, v)}`;
+                // Una barra es un botón cuando hay a dónde ir. Se usa `<i>` con `role="button"`
+                // en vez de un `<button>` para no tocar el CSS de la serie, que posiciona los
+                // hijos directos de `.serie`.
+                return irDia
+                    ? <i key={dias[i]} style={estilo} title={`${rotulo} · abre la lista de ese día`}
+                        role="button" tabIndex={0} aria-label={`Ver la lista de ${rotulo}`}
+                        onClick={() => irDia(dias[i])}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irDia(dias[i]); }
+                        }} />
+                    : <i key={dias[i]} style={estilo} title={rotulo} />;
             })}
         </div>
         <Eje dias={dias} />
@@ -124,26 +139,30 @@ const Curva = ({ serie, activa, dias, max }) => {
     );
 };
 
-const Mapa = ({ serie, activa, dias, max }) => (
+const Mapa = ({ serie, activa, dias, max, irDia }) => (
     <div className="mapa-dias">
         {activa.vals.map((v, i) => {
             const k = max ? v / max : 0;
-            return (
-                <span key={dias[i]} className="mapa-dia"
-                    style={{
-                        background: v === 0 ? 'transparent'
-                            : `color-mix(in srgb, var(--${activa.tone}) ${Math.round(14 + k * 76)}%, transparent)`,
-                        color: `var(--${k > 0.55 ? 'on-state' : 'text-muted'})`,
-                    }}
-                    title={`${fmt.fecha(dias[i])} · ${valorDe(serie, v)}`}>
+            const estilo = {
+                background: v === 0 ? 'transparent'
+                    : `color-mix(in srgb, var(--${activa.tone}) ${Math.round(14 + k * 76)}%, transparent)`,
+                color: `var(--${k > 0.55 ? 'on-state' : 'text-muted'})`,
+            };
+            const rotulo = `${fmt.fecha(dias[i])} · ${valorDe(serie, v)}`;
+            return irDia
+                ? <button key={dias[i]} type="button" className="mapa-dia" style={estilo}
+                    title={`${rotulo} · abre la lista de ese día`}
+                    aria-label={`Ver la lista de ${rotulo}`} onClick={() => irDia(dias[i])}>
                     {diaCorto(dias[i])}
-                </span>
-            );
+                </button>
+                : <span key={dias[i]} className="mapa-dia" style={estilo} title={rotulo}>
+                    {diaCorto(dias[i])}
+                </span>;
         })}
     </div>
 );
 
-const PanelSerie = ({ serie, dias, vista }) => {
+const PanelSerie = ({ serie, dias, vista, rol, irA }) => {
     const montado = useMontado();
     const [iSub, setISub] = useState(0);
 
@@ -169,6 +188,14 @@ const PanelSerie = ({ serie, dias, vista }) => {
     }, [activa.vals, serie.tipo]);
 
     const Vista = vista === 'curva' ? Curva : vista === 'mapa' ? Mapa : Barras;
+
+    // La curva no tiene un elemento por día que se pueda pinchar: su drill-down es el pie del
+    // panel (el día del pico), que existe en las tres vistas.
+    const destino = destinoDeSerie(rol, serie.key, activa.label);
+    const cortable = serieCortable(rol, serie.key, activa.label);
+    const irDia = irA && destino && cortable
+        ? (iso) => abrir(irA, conDia(destino, iso))()
+        : null;
 
     return (
         <section className="panel caja">
@@ -205,14 +232,24 @@ const PanelSerie = ({ serie, dias, vista }) => {
             )}
 
             <Vista serie={serie} activa={activa} dias={dias} max={max} unico={unico}
-                montado={montado} />
+                montado={montado} irDia={irDia} />
 
             <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s4)', marginTop: 'var(--s3)' }}>
-                <span className="t-cap mut40 num">
-                    {max === 0 ? 'sin movimiento' : unico
-                        ? `pico ${valorDe(serie, max)} · el ${fmt.fecha(dias[activa.vals.indexOf(max)])}`
-                        : `tope diario ${valorDe(serie, max)}`}
-                </span>
+                {max > 0 && unico && irDia ? (
+                    <button type="button" className="metrica-clic t-cap mut40 num"
+                        onClick={() => irDia(dias[activa.vals.indexOf(max)])}
+                        aria-label={`Ver la lista del día pico, ${valorDe(serie, max)}`}>
+                        <span className="metrica-clic-txt">
+                            pico {valorDe(serie, max)} · el {fmt.fecha(dias[activa.vals.indexOf(max)])}
+                        </span>
+                    </button>
+                ) : (
+                    <span className="t-cap mut40 num">
+                        {max === 0 ? 'sin movimiento' : unico
+                            ? `pico ${valorDe(serie, max)} · el ${fmt.fecha(dias[activa.vals.indexOf(max)])}`
+                            : `tope diario ${valorDe(serie, max)}`}
+                    </span>
+                )}
                 <span className="t-cap mut40 num" style={{ marginLeft: 'auto' }}>
                     {activos} de {dias.length} días con movimiento
                 </span>
@@ -221,7 +258,7 @@ const PanelSerie = ({ serie, dias, vista }) => {
     );
 };
 
-const Variabilidad = ({ datos }) => {
+const Variabilidad = ({ datos, rol, irA }) => {
     const [vista, setVista] = useState('barras');
 
     if (!datos) return <Cargando texto="Cargando las series del período…" />;
@@ -250,7 +287,8 @@ const Variabilidad = ({ datos }) => {
             </div>
             <div className="grid-2">
                 {series.map(serie => (
-                    <PanelSerie key={serie.key} serie={serie} dias={dias} vista={vista} />
+                    <PanelSerie key={serie.key} serie={serie} dias={dias} vista={vista}
+                        rol={rol} irA={irA} />
                 ))}
             </div>
         </>

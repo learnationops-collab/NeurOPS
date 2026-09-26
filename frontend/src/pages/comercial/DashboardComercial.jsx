@@ -494,7 +494,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         <Comparativas datos={comparativas} irAPersona={irAPersona} />
                     )}
                     {seccion === 'analizar' && tab === 'variabilidad' && (
-                        <Variabilidad datos={variabilidad} />
+                        <Variabilidad datos={variabilidad} rol={rol} irA={irA} />
                     )}
                     {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
                         no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda
