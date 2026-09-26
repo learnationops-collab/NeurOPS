@@ -1,0 +1,218 @@
+/* ============================================================
+   FICHA DEL LEAD — estilos propios del modal unificado.
+
+   Todo va bajo `.dc-shell` por dos razones: los tokens de color viven ahí
+   (`comercial.css`) y, sobre todo, el CSS global de `index.css` anula
+   `font-weight` con `!important` en `span/div/button` EXCEPTO dentro de
+   `.dc-shell`. Por eso el scrim del modal se monta como `dc-shell scrim`.
+
+   El tono de una pieza se pasa por la custom property `--c`, nunca por clase
+   de color: así una tarjeta, un chip y un punto de stepper comparten paleta
+   sin duplicar reglas.
+   ============================================================ */
+
+/* ---------- Stepper ---------- */
+.dc-shell .fi-stepper{position:relative;display:grid;gap:var(--s2);
+  grid-template-columns:repeat(var(--pasos,5),minmax(0,1fr))}
+.dc-shell .fi-stepper-riel,
+.dc-shell .fi-stepper-riel i{position:absolute;top:15px;height:2px;pointer-events:none}
+.dc-shell .fi-stepper-riel{left:10%;right:10%;background:var(--border-subtle)}
+.dc-shell .fi-stepper-riel i{left:0;width:var(--avance,0%);background:var(--success);
+  display:block;transition:width .32s var(--crecer)}
+.dc-shell .fi-paso{position:relative;display:flex;flex-direction:column;align-items:center;
+  gap:var(--s2);text-align:center;min-width:0;background:none;border:0;padding:0;
+  color:var(--text-muted);font:inherit}
+.dc-shell button.fi-paso{cursor:pointer}
+.dc-shell .fi-paso-punto{width:32px;height:32px;box-sizing:border-box;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  background:var(--ink);border:2px solid var(--border-control);color:var(--text-muted);
+  transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.dc-shell .fi-paso-lbl{font-size:13px;font-weight:600;line-height:1.3}
+.dc-shell .fi-paso-sub{font-size:12px;line-height:1.3;color:var(--text-muted-40)}
+.dc-shell .fi-paso[data-estado="hecho"] .fi-paso-punto{background:var(--success);
+  border-color:var(--success);color:var(--ink)}
+.dc-shell .fi-paso[data-estado="alerta"] .fi-paso-punto{background:var(--warning);
+  border-color:var(--warning);color:var(--ink)}
+/* El halo de la etapa actual es el único elemento que grita en el panel. */
+.dc-shell .fi-paso[data-estado="actual"] .fi-paso-punto{background:var(--brand-secondary);
+  border-color:var(--brand-secondary);color:var(--ink);
+  box-shadow:0 0 0 6px var(--brand-secondary-surface)}
+.dc-shell .fi-paso[data-estado="hecho"],
+.dc-shell .fi-paso[data-estado="actual"],
+.dc-shell .fi-paso[data-estado="alerta"]{color:var(--text-on-surface)}
+.dc-shell .fi-paso[data-estado="hecho"] .fi-paso-sub,
+.dc-shell .fi-paso[data-estado="actual"] .fi-paso-sub,
+.dc-shell .fi-paso[data-estado="alerta"] .fi-paso-sub{color:var(--text-muted)}
+
+/* ---------- Campo con rótulo y ayuda a la derecha ---------- */
+.dc-shell .fi-campo{display:grid;gap:var(--s2);min-width:0;position:relative}
+.dc-shell .fi-campo-cab{display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--s3);flex-wrap:wrap}
+
+/* ---------- Disparador de desplegable / fecha ---------- */
+.dc-shell .fi-trigger{height:48px;width:100%;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--s3);padding:0 var(--s4);text-align:left;
+  border-radius:var(--radius-control);border:1px solid var(--border-control);
+  background:var(--bg-input);color:var(--text-on-surface);font-size:15px;font-weight:600;
+  cursor:pointer;transition:border-color .16s ease}
+.dc-shell .fi-trigger:hover{border-color:var(--text-muted)}
+.dc-shell .fi-trigger[aria-expanded="true"]{border-color:var(--focus-blue)}
+.dc-shell .fi-trigger--vacio{color:var(--text-muted)}
+.dc-shell .fi-trigger-txt{display:flex;align-items:baseline;gap:var(--s3);min-width:0;
+  overflow:hidden;white-space:nowrap}
+
+/* ---------- Panel flotante ---------- */
+.dc-shell .fi-pop{position:absolute;top:calc(100% + var(--s2));left:0;z-index:60;
+  box-sizing:border-box;padding:var(--s4);background:var(--bg-flotante);
+  border:1px solid var(--border-control);border-radius:var(--radius-control);
+  box-shadow:var(--shadow-main);display:grid;gap:var(--s4)}
+.dc-shell .fi-pop--der{left:auto;right:0}
+.dc-shell .fi-pop--ancho{width:min(680px,calc(100vw - 96px))}
+.dc-shell .fi-pop--fecha{width:min(520px,calc(100vw - 64px));
+  grid-template-columns:minmax(140px,1fr) minmax(240px,2fr)}
+@media (max-width:640px){
+  .dc-shell .fi-pop--fecha{grid-template-columns:1fr}
+}
+.dc-shell .fi-pop-grupos{display:grid;gap:var(--s4);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.dc-shell .fi-grupo{display:grid;gap:2px;align-content:start;min-width:0}
+.dc-shell .fi-opcion{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--s2);padding:10px var(--s3);border-radius:12px;text-align:left;
+  border:1px solid transparent;background:transparent;color:var(--text-on-surface);
+  font-size:14px;font-weight:500;cursor:pointer}
+.dc-shell .fi-opcion:hover{background:var(--bg-element-hover)}
+.dc-shell .fi-opcion[aria-selected="true"],
+.dc-shell .fi-opcion[aria-checked="true"]{background:var(--bg-element);
+  border-color:var(--brand-secondary);font-weight:700}
+.dc-shell .fi-opcion svg{color:var(--brand-secondary)}
+.dc-shell .fi-agregar{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s1);
+  padding:8px var(--s3);border-radius:12px;border:1px dashed var(--border-main);
+  background:transparent;color:var(--c,var(--text-muted));font-size:13px;font-weight:700;
+  cursor:pointer}
+.dc-shell .fi-agregar:hover{background:var(--bg-element-hover)}
+.dc-shell .fi-nueva{display:flex;align-items:center;gap:var(--s1);margin-top:var(--s1)}
+.dc-shell .fi-nueva input{flex:1;min-width:0;height:36px;padding:0 var(--s3);
+  border-radius:12px;border:1px solid var(--focus-blue);background:var(--bg-input);
+  color:var(--text-on-surface);font-size:13px;outline:none}
+.dc-shell .fi-nueva button{width:36px;height:36px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;border-radius:12px;
+  border:1px solid var(--border-control);background:var(--bg-element);
+  color:var(--brand-secondary);cursor:pointer}
+
+/* ---------- Calendario ---------- */
+.dc-shell .fi-cal{display:grid;gap:var(--s2);align-content:start}
+.dc-shell .fi-cal-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.dc-shell .fi-cal-mes{font-size:16px;font-weight:700;text-transform:capitalize}
+.dc-shell .fi-cal-rejilla{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dc-shell .fi-cal-dia{height:34px;border-radius:10px;border:1px solid transparent;
+  background:transparent;color:var(--text-on-surface);font-size:13px;font-weight:500;
+  cursor:pointer}
+.dc-shell .fi-cal-dia:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .fi-cal-dia:disabled{color:var(--text-muted-40);cursor:default}
+.dc-shell .fi-cal-dia[data-hoy="1"]{border-color:var(--border-control);font-weight:700}
+.dc-shell .fi-cal-dia[aria-pressed="true"]{background:var(--brand-secondary);
+  color:var(--on-brand);font-weight:700;border-color:var(--brand-secondary)}
+.dc-shell .fi-cal-hueco{height:34px;visibility:hidden}
+.dc-shell .fi-cal-sem{text-align:center;padding:var(--s1) 0;font-size:12px;
+  color:var(--text-muted-40)}
+
+/* ---------- Tarjeta de acción ---------- */
+.dc-shell .fi-accion{position:relative;isolation:isolate;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;
+  gap:var(--s3);min-height:104px;padding:var(--s4) var(--s6);text-align:left;
+  border-radius:var(--radius-control);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  background:color-mix(in srgb,var(--c) 11%,transparent);
+  color:var(--text-on-surface);font-size:16px;font-weight:700;cursor:pointer;
+  transition:filter .16s ease,transform .16s ease}
+.dc-shell .fi-accion:hover{filter:brightness(1.22)}
+.dc-shell .fi-accion:active{transform:scale(.985)}
+.dc-shell .fi-accion svg{color:var(--c)}
+.dc-shell .fi-accion--linea{min-height:48px;flex-direction:row;align-items:center;
+  padding:0 var(--s4);font-size:14px;white-space:nowrap}
+
+/* ---------- Sección colapsable ---------- */
+.dc-shell .fi-sec{border:1px solid var(--border-main);border-radius:var(--radius-control);
+  background:var(--bg-element);overflow:hidden}
+.dc-shell .fi-sec-cab{width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:var(--s4);padding:var(--s4) var(--s6);background:transparent;border:0;
+  color:var(--text-on-surface);text-align:left;cursor:pointer}
+.dc-shell .fi-sec-cab:hover{background:var(--bg-element-hover)}
+.dc-shell .fi-sec-tit{display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:var(--s1) var(--s4);min-width:0}
+.dc-shell .fi-sec-cuerpo{padding:0 var(--s6) var(--s4)}
+.dc-shell .fi-sec-fila{display:grid;grid-template-columns:110px minmax(0,1fr) auto;
+  align-items:center;gap:var(--s4);padding:var(--s3) 0;
+  border-top:1px solid var(--border-subtle)}
+@media (max-width:640px){
+  .dc-shell .fi-sec-fila{grid-template-columns:1fr;gap:var(--s1)}
+}
+
+/* ---------- Cabecera del modal ---------- */
+.dc-shell .fi-cab{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--s4);flex-wrap:wrap}
+.dc-shell .fi-cab-datos{display:flex;flex-wrap:wrap;align-items:center;
+  gap:var(--s3) var(--s6);min-width:0}
+.dc-shell .fi-dato{display:grid;gap:2px;white-space:nowrap;min-width:0}
+.dc-shell .fi-div{width:1px;align-self:stretch;background:var(--border-subtle)}
+.dc-shell .fi-closer-btn{display:flex;align-items:center;gap:var(--s2);
+  padding:2px var(--s2) 2px var(--s3);margin-left:calc(-1 * var(--s3));
+  border-radius:var(--radius-pill);border:1px solid var(--border-control);
+  background:var(--bg-element);color:var(--text-on-surface);font-size:14px;font-weight:600;
+  cursor:pointer}
+.dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary)}
+
+/* ---------- Tablist ---------- */
+.dc-shell .fi-tabs{display:flex;gap:var(--s6);overflow-x:auto;white-space:nowrap;
+  border-bottom:1px solid var(--border-subtle);scrollbar-width:none}
+.dc-shell .fi-tabs::-webkit-scrollbar{display:none}
+.dc-shell .fi-tab{position:relative;padding:var(--s3) 0;background:transparent;border:0;
+  color:var(--text-muted);font-size:15px;font-weight:600;cursor:pointer}
+.dc-shell .fi-tab:hover{color:var(--text-on-surface)}
+.dc-shell .fi-tab[aria-selected="true"]{color:var(--text-on-surface)}
+.dc-shell .fi-tab-sub{position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:var(--brand-secondary)}
+
+/* ---------- Modal de la ficha (más ancho que `.modal`) ---------- */
+.dc-shell .fi-modal{width:min(1120px,100%);padding:0}
+.dc-shell .fi-modal-cab{padding:var(--s6) var(--s6) var(--s4)}
+.dc-shell .fi-modal-panel{padding:var(--s6)}
+
+/* ---------- Esqueleto de carga ---------- */
+.dc-shell .fi-hueso{border-radius:var(--radius-control);background:var(--mat-1);
+  animation:fiPulso 1.4s ease-in-out infinite}
+@keyframes fiPulso{0%,100%{opacity:.45}50%{opacity:.9}}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-hueso{animation:none}
+}
+
+/* ---------- Hilo de notas ---------- */
+.dc-shell .fi-hilo{display:grid;gap:var(--s4);max-height:420px;overflow-y:auto;
+  padding:var(--s6);overscroll-behavior:contain}
+.dc-shell .fi-nota{display:flex;gap:var(--s3);align-items:flex-start}
+.dc-shell .fi-avatar{width:36px;height:36px;flex-shrink:0;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;background:var(--c,var(--idle));
+  color:var(--on-state);font-size:14px;font-weight:900}
+.dc-shell .fi-globo{padding:var(--s3) var(--s4);
+  border-radius:0 var(--radius-control) var(--radius-control) var(--radius-control);
+  background:var(--bg-surface);border:1px solid var(--border-subtle);line-height:1.55}
+.dc-shell .fi-pildora{height:32px;display:inline-flex;align-items:center;gap:var(--s2);
+  padding:0 var(--s3);border-radius:var(--radius-pill);border:1px solid var(--border-main);
+  background:transparent;color:var(--text-on-surface);font-size:13px;font-weight:600;
+  cursor:pointer;white-space:nowrap}
+.dc-shell .fi-pildora[aria-pressed="true"]{border-color:var(--c,var(--brand-secondary));
+  background:var(--bg-element-hover)}
+.dc-shell .fi-punto{width:8px;height:8px;border-radius:50%;background:var(--c,var(--idle));
+  flex-shrink:0}
+
+/* ---------- Barra de acciones al pie ----------
+   El widget de bugs flota abajo a la derecha (bottom-8 right-24): la barra
+   reserva ese hueco para que el CTA nunca quede debajo del botón flotante. */
+.dc-shell .fi-pie{display:flex;flex-wrap:wrap;justify-content:space-between;
+  align-items:center;gap:var(--s4);padding-top:var(--s6);
+  border-top:1px solid var(--border-subtle);padding-right:168px}
+@media (max-width:900px){
+  .dc-shell .fi-pie{padding-right:0}
+}
+.dc-shell .fi-pie-der{display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:flex-end;gap:var(--s3)}
