@@ -1174,6 +1174,13 @@ class CloserService:
                             fecha_meet=new_dt.isoformat()
                         )
                         db.session.add(new_fa)
+                        # Una segunda llamada es una agenda legitima: cae otro dia y la
+                        # reconciliacion la deja en paz. Pero si el closer la agenda a la
+                        # misma hora que una que ya existe, eso si es un choque y se
+                        # resuelve solo (regla del 28/09/2026).
+                        db.session.flush()
+                        from app.services import agenda_dedup_service
+                        agenda_dedup_service.reconciliar(new_fa)
                     except Exception as e:
                         print(f"Error creating FinancialAgenda for 2TH Call: {e}")
 

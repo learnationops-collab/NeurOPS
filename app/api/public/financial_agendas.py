@@ -417,7 +417,21 @@ def receive_financial_agendas():
             db.session.add(agenda)
             agendas_created.append(agenda)
             saved += 1
-        
+
+    # Red de seguridad de la regla "un lead no puede tener dos agendas el mismo dia a la
+    # misma hora". La deduplicacion de mas arriba decide ANTES de crear y se le escapa
+    # cuando la identidad no coincide (mail 'N/A', instagram escrito distinto, telefono con
+    # otro formato) o cuando n8n manda dos requests en paralelo y ninguno ve la fila del
+    # otro. Esta pasada corre con las filas ya escritas, que es cuando el choque se ve.
+    db.session.flush()
+    from app.services import agenda_dedup_service
+    for agenda in agendas_created:
+        try:
+            agenda_dedup_service.reconciliar(agenda)
+        except Exception:
+            current_app.logger.exception(
+                "[AGENDA UNICA] fallo la reconciliacion de la agenda de '%s'", agenda.lead)
+
     db.session.commit()
 
     # Sincronización en tiempo real con Appointments
