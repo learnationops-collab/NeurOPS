@@ -381,11 +381,21 @@ def test_una_nota_vacia_no_pasa(client, db, lead, equipo, auth_headers):
 
 # --- Eliminar ---------------------------------------------------------------------------------
 
-def test_solo_la_direccion_elimina_una_agenda(client, db, lead, equipo, auth_headers):
-    """Corregir un estado y borrar la fila no son la misma responsabilidad."""
-    assert client.delete(url(lead), headers=auth_headers(equipo['closer'])).status_code == 403
+def test_una_agenda_la_borra_su_closer_o_la_direccion(client, db, lead, equipo, auth_headers):
+    """Corregir un estado y borrar la fila no son la misma responsabilidad: el setter que la
+    genero corrige su pre call pero no la borra, y un closer solo borra la suya. El dueño si,
+    porque es lo que `DELETE /closer/deck/<id>` ya le permite desde el mazo."""
     assert client.delete(url(lead), headers=auth_headers(equipo['setter'])).status_code == 403
+    assert client.delete(url(lead), headers=auth_headers(equipo['relevo'])).status_code == 403
+    assert Appointment.query.count() == 1
 
+    r = client.delete(url(lead), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    assert Appointment.query.count() == 0
+
+
+def test_la_direccion_borra_una_agenda_que_no_es_suya(client, db, lead, equipo, auth_headers):
     r = client.delete(url(lead), headers=auth_headers(equipo['director']))
 
     assert r.status_code == 200

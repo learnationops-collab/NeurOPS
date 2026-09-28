@@ -101,12 +101,17 @@ def test_la_direccion_puede_todo_incluido_borrar(client, db, lead, equipo, auth_
                         'reasignar': True, 'comentar': True}
 
 
-def test_el_closer_puede_todo_menos_borrar(client, db, lead, equipo, auth_headers):
-    permisos = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id) \
-        .get_json()['permisos']
+def test_el_closer_borra_la_suya_y_no_la_de_otro(client, db, lead, equipo, auth_headers):
+    """El mazo ya le deja borrar su propia agenda de prueba; la ficha no se lo puede quitar."""
+    propia = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id)         .get_json()['permisos']
 
-    assert permisos['reportar'] is True and permisos['cobrar'] is True
-    assert permisos['eliminar'] is False
+    assert propia['reportar'] is True and propia['cobrar'] is True
+    assert propia['eliminar'] is True
+
+    ajena = abrir(client, auth_headers, equipo['otro_closer'], appointment_id=lead.id)         .get_json()['permisos']
+
+    assert ajena['reportar'] is True
+    assert ajena['eliminar'] is False
 
 
 def test_triage_confirma_pero_no_reporta_ni_cobra(client, db, lead, equipo, auth_headers):

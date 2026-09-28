@@ -293,17 +293,24 @@ def permisos_de(usuario, appt=None):
 
     Un `setter` solo confirma la agenda que el genero: es el mismo criterio que `_puede_corregir`
     del dashboard comercial, donde un setter corrige el pre call de sus propias filas y de ninguna
-    otra. Borrar queda solo en la direccion, por la misma razon que en `DELETE /comercial/agendas`:
-    corregir un estado y borrar la fila no son la misma responsabilidad.
+    otra.
+
+    Borrar lo puede la direccion sobre cualquier agenda —mismo criterio que
+    `DELETE /comercial/agendas`— y el closer solo sobre la suya, que es exactamente lo que ya
+    permite `DELETE /closer/deck/<id>`: cuando el mazo pase a usar esta ficha, el closer tiene que
+    seguir pudiendo limpiar una agenda de prueba propia. Lo que ninguno de los dos hace es borrar
+    la agenda de otro.
     """
     rol = getattr(usuario, 'role', None)
     direccion = rol in ROLES_DIRECCION
-    setter_dueno = rol == 'setter' and appt is not None and appt.setter_id == getattr(usuario, 'id', None)
+    uid = getattr(usuario, 'id', None)
+    setter_dueno = rol == 'setter' and appt is not None and appt.setter_id == uid
+    closer_dueno = rol == 'closer' and appt is not None and appt.closer_id == uid
     return {
         'confirmar': direccion or rol in ('closer', 'triage') or setter_dueno,
         'reportar': direccion or rol == 'closer',
         'cobrar': direccion or rol == 'closer',
-        'eliminar': direccion,
+        'eliminar': direccion or closer_dueno,
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
     }
