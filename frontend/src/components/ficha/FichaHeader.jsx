@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, MessageCircle, Pencil, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import { soloDia } from './piezas/fecha';
@@ -39,6 +39,16 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
         : null;
     // Ya vendido: el programa reemplaza al examen, que pasa a ser un dato de origen.
     const esCliente = !!id.programa;
+
+    // El telefono del lead es, en la practica, su WhatsApp: el modal del mazo ya abria el chat
+    // desde aca y esa era la forma real de contactarlo.
+    const enlaceWhatsapp = (() => {
+        const digitos = (id.telefono || '').replace(/\D/g, '');
+        if (!digitos) return null;
+        const saludo = `Hola ${id.nombre || ''}, te saluda tu asesor de NeurOPS. ¿Cómo estás?`
+            .replace(/\s+/g, ' ').trim();
+        return `https://wa.me/${digitos}?text=${encodeURIComponent(saludo)}`;
+    })();
 
     const pasarA = (closer) => {
         cerrar();
@@ -103,7 +113,16 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
 
                     <div className="fi-dato">
                         <small className="t-rotulo">Teléfono</small>
-                        <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                        {enlaceWhatsapp ? (
+                            <a className="t-sm trunc num fi-wa" href={enlaceWhatsapp}
+                                target="_blank" rel="noreferrer"
+                                title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
+                                <MessageCircle size={13} />
+                                {id.telefono}
+                            </a>
+                        ) : (
+                            <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                        )}
                     </div>
                 </div>
             </div>

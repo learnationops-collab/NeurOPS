@@ -79,6 +79,7 @@ const FichaLeadModal = ({
     onCerrar,
     onEditar = null,
     onCambio = null,     // se llama después de cada escritura, para que la tabla de atrás se refresque
+    pestanaInicial = null,  // el mazo sabe desde qué columna se abrió; gana sobre la del backend
 }) => {
     const [ficha, setFicha] = useState(null);
     const [cargando, setCargando] = useState(true);
@@ -119,9 +120,13 @@ const FichaLeadModal = ({
     useEffect(() => {
         if (!ficha || fijada.current) return;
         if (!estado.porDefecto) return;
-        setPestana(estado.porDefecto);
+        // Quien abre la ficha desde una columna del mazo ya dijo a qué venía: el closer que
+        // está confirmando no quiere caer en Resultado porque la llamada ya pasó. Solo se
+        // respeta si esa pestaña existe para este lead y este rol.
+        const pedida = estado.pestanas.some(p => p.id === pestanaInicial) ? pestanaInicial : null;
+        setPestana(pedida || estado.porDefecto);
         fijada.current = true;
-    }, [ficha, estado.porDefecto]);
+    }, [ficha, estado.porDefecto, estado.pestanas, pestanaInicial]);
 
     // Si la pestaña abierta deja de existir tras una recarga (cambió el estado del
     // lead), se cae a la primera visible en vez de quedar en un panel en blanco.

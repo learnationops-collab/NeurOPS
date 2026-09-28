@@ -216,3 +216,10 @@
 }
 .dc-shell .fi-pie-der{display:flex;flex-wrap:wrap;align-items:center;
   justify-content:flex-end;gap:var(--s3)}
+
+/* El telefono de la cabecera abre WhatsApp: se ve como dato, no como boton, pero se
+   comporta como enlace. */
+.dc-shell .fi-wa{display:inline-flex;align-items:center;gap:6px;font-weight:600;
+  color:var(--text-on-surface);text-decoration:none}
+.dc-shell .fi-wa:hover{color:var(--brand-secondary)}
+.dc-shell .fi-wa svg{color:var(--success);flex-shrink:0}
