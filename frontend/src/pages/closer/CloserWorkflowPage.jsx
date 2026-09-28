@@ -29,6 +29,7 @@ import InlineConfirm from '../../components/ui/InlineConfirm';
 import CobroCockpit from './components/cobro/CobroCockpit';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, toLocalDateStr, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
+import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -1227,6 +1228,23 @@ const CloserWorkflowPage = () => {
             }
         }
     };
+
+    // Con que pestaña abre la ficha. El mazo ya sabe a que vino el closer por la columna desde
+    // la que abrio, y eso gana sobre "donde el backend cree que hay trabajo": alguien que esta
+    // confirmando no quiere caer en Resultado. `segventa` es un cliente que ya compro, asi que
+    // va derecho al cobro.
+    const pestanaDeLaFicha = modalStep === 'confirm' ? 'conf'
+        : modalStep === 'segventa' ? 'acciones'
+            : 'resultado';
+
+    // Cada escritura de la ficha puede mover el mazo: un lead reportado sale de la columna de
+    // llamadas, uno confirmado cambia de carril. Se recarga la lista y, si el lead se borro, se
+    // cierra la ficha en vez de recargar algo que ya no existe.
+    const alCambiarLaFicha = (accion) => {
+        if (accion === 'eliminar') setSelectedLead(null);
+        fetchAgendas();
+    };
+
 
     // Filtrar localmente por búsqueda
     const filteredAgendas = useMemo(() => {
@@ -4247,375 +4265,20 @@ const CloserWorkflowPage = () => {
                 component como hijo directo), y la única salida era recargar la página. Era la razón
                 real de que un seguimiento resuelto "no desapareciera". La animación de entrada se
                 mantiene; se pierde solo el fundido de salida, que dura 0,2s y no lo extraña nadie. */}
+            {/* La ficha unificada reemplaza al modal propio del mazo. Antes habia uno para
+                confirmar y otro para reportar la llamada, y ninguno mostraba el recorrido
+                entero del lead: ni la deuda, ni el formulario con el que entro, ni el hilo
+                del equipo. Las acciones rapidas siguen viviendo en la tarjeta, que es donde
+                estan: esto reemplaza el modal, no el mazo. */}
             {selectedLead && (
-                    <div className="ov on" id="ovLead">
-                        <motion.div
-                            initial={{ opacity: 0, y: 18, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 18, scale: 0.97 }}
-                            transition={{ duration: 0.2 }}
-                            className="md"
-                        >
-                            {/* Cabecera mdh v7 */}
-                            <div className="mdh">
-                                <div style={{ flex: 1 }}>
-                                    <h3>{(selectedLead.lead_name || 'Sin Nombre').toUpperCase()}</h3>
-                                    <p>
-                                        {modalFlowLabel}
-                                        {selectedLead.date ? ` · ${selectedLead.date} ${selectedLead.time || ''}` : ''}
-                                    </p>
-                                    {selectedLead.phone && (
-                                        <a
-                                            href={waLinkForPhone(selectedLead.phone, selectedLead.lead_name)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="inline-flex items-center gap-1.5 mt-1 text-[10.5px] font-black text-emerald-400 hover:text-emerald-300 transition-colors"
-                                        >
-                                            <Phone size={11} /> {selectedLead.phone}
-                                        </a>
-                                    )}
-                                </div>
-                                {/* Reprogramar/Descargar lead (v8, mockup "Closer Workspace.html"): antes
-                                    "Reagendar" solo aparecía recién en la etapa "conversando", metido entre
-                                    "Otras acciones" — el mockup lo sube al header como acción siempre
-                                    disponible, así que se relaja esa restricción a propósito (reagendar algo
-                                    que nunca respondió no rompe nada, solo confirma una fecha sin más
-                                    contexto). "Descargar lead" no tenía equivalente: en vez de un archivo se
-                                    copia un resumen de contacto al portapapeles (ver handleCopyLeadSummary). */}
-                                {modalStep === 'confirm' && selectedLead.can_edit !== false && (
-                                    <>
-                                        <button
-                                            className="h-8 px-3.5 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/40 text-violet-300 rounded-xl text-[9.5px] font-black uppercase tracking-wide transition-all cursor-pointer mr-2"
-                                            onClick={() => addDecisionPath('Reagendó', 'reagQ')}
-                                        >
-                                            Reprogramar
-                                        </button>
-                                        <button
-                                            className="h-8 px-3.5 bg-transparent hover:bg-white/5 border border-slate-700 text-slate-400 hover:text-slate-200 rounded-xl text-[9.5px] font-black uppercase tracking-wide transition-all cursor-pointer mr-2"
-                                            onClick={handleCopyLeadSummary}
-                                        >
-                                            Descargar lead
-                                        </button>
-                                    </>
-                                )}
-                                {selectedLead.can_edit !== false && (
-                                    <button
-                                        className="p-2 hover:bg-violet-500/20 text-violet-300 rounded-xl transition-all cursor-pointer border border-violet-500/30 mr-2"
-                                        title="Corregir datos del lead (nombre, teléfono, correo, fecha)"
-                                        onClick={() => setEditingLead(selectedLead)}
-                                    >
-                                        <Pencil size={16} />
-                                    </button>
-                                )}
-                                {/* Borrar un lead de prueba tiene que ser obvio y reversible: era un
-                                    ícono de papelera sin etiqueta que abría un confirm del navegador.
-                                    El botón pregunta en su propio lugar y deja 5 s para deshacer —
-                                    que es la única forma de ofrecer deshacer, porque no hay endpoint
-                                    para restaurar un lead borrado. */}
-                                {selectedLead.can_edit !== false && (
-                                    <div className="mr-2">
-                                        <InlineConfirm
-                                            label="Eliminar lead"
-                                            question="¿Seguro?"
-                                            doneLabel="Eliminado"
-                                            corner={16}
-                                            title={`Eliminar a ${selectedLead.lead_name || 'este prospecto'}`}
-                                            onConfirm={() => handleDeleteLead(selectedLead.id)}
-                                        />
-                                    </div>
-                                )}
-                                <button className="x" onClick={() => setSelectedLead(null)}>
-                                    ×
-                                </button>
-                            </div>
-
-                            {selectedLead.can_edit === false && (
-                                <div className="mx-5 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-bold text-amber-300 uppercase tracking-wide">
-                                    Este lead pertenece a {selectedLead.owner_closer_name || 'otro closer'} — solo podés consultarlo, no editarlo ni declarar ventas sobre él.
-                                </div>
-                            )}
-
-                            {/* Pestañas ltabs v7 */}
-                            <div className="ltabs">
-                                <button
-                                    className={`ltab ${modalTab === 'act' ? 'on' : ''}`}
-                                    onClick={() => setModalTab('act')}
-                                >
-                                    ⚡ Acción
-                                </button>
-                                <button
-                                    className={`ltab ${modalTab === 'form' ? 'on' : ''}`}
-                                    onClick={() => setModalTab('form')}
-                                >
-                                    📋 Formulario
-                                </button>
-                                <button
-                                    className={`ltab ${modalTab === 'set' ? 'on' : ''}`}
-                                    onClick={() => setModalTab('set')}
-                                >
-                                    💬 Setter <span className="b">{selectedLead.setter_notes ? 1 : 0}</span>
-                                </button>
-                            </div>
-
-                            {/* Cuerpo mdb v7 */}
-                            <div className="mdb">
-                                {/* Ficha idcard v7 */}
-                                <div className="idcard">
-                                    <div className="idc">
-                                        <span>◈ Examen</span>
-                                        <b>{selectedLead.examen || 'MIR / ENARM'}</b>
-                                    </div>
-                                    <div className="idc">
-                                        <span>▤ Grupo</span>
-                                        <b>{selectedLead.grupo || 'Grupo sin asignar'}</b>
-                                    </div>
-                                    <div className="idc">
-                                        <span>◐ Fecha agendamiento</span>
-                                        <b>{formatIdcardDate(selectedLead.start_time || selectedLead.call_date) || 'Sin fecha'}</b>
-                                    </div>
-                                    {formatIdcardDate(selectedLead.enrollment_date) && (
-                                        <div className="idc">
-                                            <span>✓ Fecha de ingreso</span>
-                                            <b>{formatIdcardDate(selectedLead.enrollment_date)}</b>
-                                        </div>
-                                    )}
-                                    <div className="idc hl">
-                                        <span>● Estado</span>
-                                        <b>{selectedLead.closer_result || selectedLead.result || 'Sin reportar'}</b>
-                                    </div>
-                                </div>
-
-                                {/* Responsable del lead — pase de mano rápido a otro closer, sin
-                                    pasar por admin (ver PATCH /closer/appointments/<id>/reassign). */}
-                                {selectedLead.id > 0 && (
-                                    <div className="w-full bg-black/20 border border-slate-900/60 rounded-xl px-3 py-2">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="text-[9.5px] font-bold uppercase tracking-wide text-slate-400">
-                                                Responsable: <b className="text-white">{selectedLead.closer_name || 'Sin asignar'}</b>
-                                            </span>
-                                            <button
-                                                onClick={() => setReassignOpen(v => !v)}
-                                                className="text-[9.5px] font-black uppercase tracking-wide text-violet-350 hover:text-violet-300 transition-colors cursor-pointer"
-                                            >
-                                                {reassignOpen ? 'Cancelar' : 'Cambiar de closer'}
-                                            </button>
-                                        </div>
-                                        {reassignOpen && (
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <select
-                                                    disabled={reassigning}
-                                                    defaultValue=""
-                                                    onChange={(e) => e.target.value && handleReassignLead(e.target.value)}
-                                                    className="flex-1 bg-slate-950 border border-slate-850 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-200"
-                                                >
-                                                    <option value="" disabled>Elegí un closer...</option>
-                                                    {(teamMembers || [])
-                                                        .filter(m => m.role === 'closer' && m.id !== selectedLead.closer_id)
-                                                        .map(m => (
-                                                            <option key={m.id} value={m.id}>{m.username}</option>
-                                                        ))}
-                                                </select>
-                                                {reassigning && <Loader2 size={14} className="animate-spin text-violet-400 shrink-0" />}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {selectedLead.client_id && (
-                                    <button
-                                        onClick={() => {
-                                            const clientId = selectedLead.client_id;
-                                            setSelectedLead(null);
-                                            setHistoryClientId(clientId);
-                                        }}
-                                        className="w-full text-[9.5px] font-black uppercase tracking-wide text-violet-350 hover:text-violet-300 py-1.5 transition-colors cursor-pointer"
-                                    >
-                                        Ver historial completo del cliente →
-                                    </button>
-                                )}
-
-                                {/* Contenido por pestaña */}
-                                {modalTab === 'act' && (
-                                    <div id="paneAct">
-                                        {selectedLead.can_edit === false ? (
-                                            <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(245,158,11,.4)' }}>
-                                                No podés reportar la llamada, declarar una venta ni tomar ninguna acción sobre este lead — pertenece a {selectedLead.owner_closer_name || 'otro closer'}. Usá la pestaña "Formulario" para consultar sus datos.
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="trail">
-                                                    <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#A9B3EE' }}>Camino:</span>
-                                                    {decisionPath.length === 0 ? (
-                                                        <span className="crumb" style={{ background: 'rgba(255,255,255,.06)', color: '#D1D8FF', borderColor: 'rgba(255,255,255,.12)' }}>
-                                                            Raíz
-                                                        </span>
-                                                    ) : (
-                                                        decisionPath.map((crumb, idx) => (
-                                                            <motion.span
-                                                                key={idx}
-                                                                initial={{ opacity: 0, scale: 0.7, x: -6 }}
-                                                                animate={{ opacity: 1, scale: 1, x: 0 }}
-                                                                transition={{ type: 'spring', bounce: 0.4, duration: 0.4 }}
-                                                                className="crumb"
-                                                            >
-                                                                {crumb}
-                                                            </motion.span>
-                                                        ))
-                                                    )}
-                                                </div>
-                                                {/* key={modalStep}: cada pregunta del arbol de decision entra
-                                                    deslizandose en vez de reemplazarse de golpe. Sin
-                                                    AnimatePresence a proposito (ver nota mas arriba, junto al
-                                                    modal "ovLead", sobre el bug de salida con esta version de
-                                                    framer-motion) -- solo animacion de entrada, que alcanza
-                                                    porque el contenido viejo nunca necesita un fade de salida
-                                                    propio, se reemplaza entero. */}
-                                                <motion.div
-                                                    key={modalStep}
-                                                    id="ldBody"
-                                                    initial={{ opacity: 0, x: 14 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                                                >
-                                                    {renderActionStepContent()}
-                                                </motion.div>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                {modalTab === 'form' && (() => {
-                                    const formAnswers = getFormDataAnswers(selectedLead.form_data);
-                                    const surveyAnswers = selectedLead.survey_answers || [];
-                                    const fuenteForm = selectedLead.form_data?.fuente_form;
-                                    const submittedAt = selectedLead.form_data?.submitted_at;
-                                    return (
-                                        <div id="paneForm">
-                                            <div className="fsec">
-                                                <div className="fh">
-                                                    <b>Datos del lead</b>
-                                                    <span className="tagx" style={{ background: 'rgba(99,102,241,.2)', color: '#A5B4FC' }}>n8n</span>
-                                                    <hr />
-                                                </div>
-                                                {renderFormQuestion("Instagram", `@${selectedLead.instagram || 'N/A'}`)}
-                                                {renderFormQuestion("Fuente del Lead", fuenteForm || selectedLead.origin || 'Meta Ads')}
-                                                {renderFormQuestion("Setter", selectedLead.setter_name || 'Sin Asignar')}
-                                            </div>
-
-                                            {/* Respuestas del formulario de calificación de n8n (Client.form_data). */}
-                                            <div className="fsec" style={{ marginTop: '20px' }}>
-                                                <div className="fh">
-                                                    <b>Formulario de calificación</b>
-                                                    {formAnswers.length > 0 && (
-                                                        <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>
-                                                            ✓ {formAnswers.length} respuesta{formAnswers.length === 1 ? '' : 's'}
-                                                        </span>
-                                                    )}
-                                                    <hr />
-                                                </div>
-                                                {formAnswers.length > 0 ? (
-                                                    <>
-                                                        {selectedLead.form_data_recovered && (
-                                                            <div className="text-[9px] font-bold uppercase tracking-wide text-amber-400 pb-1">
-                                                                ⚠ Recuperado de otro registro con el mismo teléfono/instagram/correo — verificá que corresponda a este lead.
-                                                            </div>
-                                                        )}
-                                                        {formAnswers.map(ans => (
-                                                            renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer), `fd-${ans.key}`)
-                                                        ))}
-                                                        {submittedAt && (
-                                                            <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500 pt-1">
-                                                                Respondido el {formatIdcardDate(submittedAt) || submittedAt}
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
-                                                        Este lead no completó el formulario de calificación.
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Encuesta propia de la página de reserva (SurveyAnswer) — origen distinto
-                                                del formulario de n8n de arriba. Solo se muestra si tiene respuestas. */}
-                                            {surveyAnswers.length > 0 && (
-                                                <div className="fsec" style={{ marginTop: '20px' }}>
-                                                    <div className="fh">
-                                                        <b>Encuesta de cita</b>
-                                                        <span className="tagx" style={{ background: 'rgba(34,197,94,.2)', color: '#86EFAC' }}>✓ completada</span>
-                                                        <hr />
-                                                    </div>
-                                                    {surveyAnswers.map((ans, idx) => (
-                                                        renderFormQuestion(ans.question, ans.answer, getCalificacionColor(ans.answer), `sa-${idx}`)
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
-
-                                {modalTab === 'set' && (
-                                    <div id="paneSet" className="space-y-4">
-                                        <div className="note">
-                                            Contexto de quien lo agendó y notas de cualificación.
-                                        </div>
-                                        {selectedLead.setter_notes ? (
-                                            <div className="snote">
-                                                <div className="sh">
-                                                    <div className="sav">{(selectedLead.setter_name || 'S').charAt(0).toUpperCase()}</div>
-                                                    <div className="sn">{selectedLead.setter_name || 'Setter'}</div>
-                                                    <div className="sd">Nota Setter</div>
-                                                </div>
-                                                <p>"{selectedLead.setter_notes}"</p>
-                                            </div>
-                                        ) : (
-                                            <div className="note" style={{ background: 'rgba(255,255,255,.04)', borderLeft: '3px solid rgba(255,255,255,.12)' }}>
-                                                No hay notas previas del setter.
-                                            </div>
-                                        )}
-
-                                        {selectedLead.can_edit !== false && (
-                                            <div className="pt-4 border-t border-slate-800 space-y-3">
-                                                <label className="text-[10px] font-black uppercase text-slate-400">Agregar nota rápida al lead</label>
-                                                <textarea
-                                                    rows={3}
-                                                    value={reasonInput}
-                                                    onChange={(e) => setReasonInput(e.target.value)}
-                                                    placeholder="Escribe una nota interna para ti o para el equipo..."
-                                                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
-                                                />
-                                                <div className="flex flex-wrap gap-2 items-center pt-1">
-                                                    <span className="text-[9px] font-black uppercase text-slate-500">Mencionar:</span>
-                                                    {['@Elías', '@Jean Carlo', '@Sebastián', '@Dani'].map(m => (
-                                                        <button
-                                                            key={m}
-                                                            type="button"
-                                                            onClick={() => setReasonInput(prev => `${prev ? prev.trim() + ' ' : ''}${m} `)}
-                                                            className="chipbtn"
-                                                        >
-                                                            {m}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <button
-                                                    onClick={addLeadNote}
-                                                    disabled={reasonInput.trim().length < 5 || processingId === selectedLead.id}
-                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                                                >
-                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Guardar Nota'}
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        <div className="pt-4 border-t border-slate-800 space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-slate-400">Comentarios e Hilo</label>
-                                            <CommentsSection clientId={selectedLead.client_id || (selectedLead.id > 0 ? selectedLead.id : null)} />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
+                <FichaLeadModal
+                    appointmentId={selectedLead.id > 0 ? selectedLead.id : null}
+                    clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
+                    pestanaInicial={pestanaDeLaFicha}
+                    onCerrar={() => setSelectedLead(null)}
+                    onEditar={() => setEditingLead(selectedLead)}
+                    onCambio={alCambiarLaFicha}
+                />
             )}
 
             {/* Modal de decisión: Con / Sin Decisor */}
