@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import { soloDia } from './piezas/fecha';
@@ -39,6 +39,42 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
         : null;
     // Ya vendido: el programa reemplaza al examen, que pasa a ser un dato de origen.
     const esCliente = !!id.programa;
+
+    // El telefono del lead es, en la practica, su WhatsApp: el modal del mazo ya abria el chat
+    // desde aca y esa era la forma real de contactarlo.
+    const enlaceWhatsapp = (() => {
+        const digitos = (id.telefono || '').replace(/\D/g, '');
+        if (!digitos) return null;
+        const saludo = `Hola ${id.nombre || ''}, te saluda tu asesor de NeurOPS. ¿Cómo estás?`
+            .replace(/\s+/g, ' ').trim();
+        return `https://wa.me/${digitos}?text=${encodeURIComponent(saludo)}`;
+    })();
+
+    const [copiado, setCopiado] = useState(false);
+
+    // El "Descargar lead" del mazo: en vez de un archivo, un resumen listo para pegar en
+    // WhatsApp o en una nota. Para un closer en movimiento sirve mas que un archivo que
+    // despues hay que abrir en otro lado.
+    const copiarResumen = async () => {
+        const lineas = [
+            `Lead: ${id.nombre || 'Sin nombre'}`,
+            id.instagram ? `Instagram: @${String(id.instagram).replace('@', '')}` : null,
+            id.telefono ? `Teléfono: ${id.telefono}` : null,
+            id.email ? `Correo: ${id.email}` : null,
+            id.examen ? `Examen: ${id.examen}` : null,
+            llamada ? `Agendada: ${llamada}` : null,
+            id.setter?.nombre ? `Setter: ${id.setter.nombre}` : null,
+            ficha?.confirmacion?.nota ? `Notas: ${ficha.confirmacion.nota}` : null,
+        ].filter(Boolean).join('\n');
+        try {
+            await navigator.clipboard.writeText(lineas);
+            setCopiado(true);
+            setTimeout(() => setCopiado(false), 2000);
+        } catch {
+            // Sin portapapeles (permiso denegado, contexto inseguro) no hay nada que hacer
+            // salvo no romper: el dato sigue visible en la cabecera.
+        }
+    };
 
     const pasarA = (closer) => {
         cerrar();
@@ -103,12 +139,26 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
 
                     <div className="fi-dato">
                         <small className="t-rotulo">Teléfono</small>
-                        <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                        {enlaceWhatsapp ? (
+                            <a className="t-sm trunc num fi-wa" href={enlaceWhatsapp}
+                                target="_blank" rel="noreferrer"
+                                title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
+                                <MessageCircle size={13} />
+                                {id.telefono}
+                            </a>
+                        ) : (
+                            <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--s2)', flexShrink: 0, marginLeft: 'auto' }}>
+                <button type="button" className="ibtn" onClick={copiarResumen}
+                    aria-label="Copiar los datos del lead"
+                    title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>
+                    {copiado ? <Check size={16} style={{ color: 'var(--success)' }} /> : <ClipboardCopy size={16} />}
+                </button>
                 {onEditar && (
                     <button type="button" className="ibtn" aria-label="Editar lead" onClick={onEditar}>
                         <Pencil size={16} />

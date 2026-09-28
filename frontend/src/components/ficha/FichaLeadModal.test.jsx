@@ -51,6 +51,27 @@ describe('lectura', () => {
         expect(activa()).toBe('Historial');
     });
 
+    it('el mazo puede pedir con qué pestaña abrir', async () => {
+        // Quien abre desde una columna del mazo ya dijo a qué venía, y eso gana sobre
+        // "donde el backend cree que hay trabajo".
+        await abrir(fichaConDeuda, { pestanaInicial: 'hist' });
+        expect(activa()).toBe('Historial');
+    });
+
+    it('una pestaña pedida que este lead no tiene no deja el panel en blanco', async () => {
+        // `fichaAlDia` es un cliente que ya compró: no tiene Confirmación. Pedirla no puede
+        // dejar la ficha abierta en una pestaña inexistente.
+        await abrir(fichaAlDia, { pestanaInicial: 'conf' });
+        expect(activa()).toBe('Historial');
+    });
+
+    it('el teléfono abre WhatsApp con el saludo listo', async () => {
+        await abrir(fichaPrecall);
+        const enlace = screen.getByTitle(/Escribirle por WhatsApp/);
+        expect(enlace).toHaveAttribute('href', expect.stringContaining('https://wa.me/'));
+        expect(enlace.getAttribute('href')).toContain(encodeURIComponent('te saluda tu asesor'));
+    });
+
     it('muestra solo las pestañas que declara el estado', async () => {
         await abrir(fichaPrecall);
         expect(screen.getAllByRole('tab').map(t => t.textContent))
