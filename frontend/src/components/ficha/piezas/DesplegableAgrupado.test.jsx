@@ -54,6 +54,41 @@ describe('DesplegableAgrupado', () => {
         expect(screen.getByText('1 elegido')).toBeInTheDocument();
     });
 
+    it('con selección múltiple avisa UNA vez, al cerrar', async () => {
+        // Avisar en cada clic disparaba un guardado por opción, y como cada guardado recarga la
+        // ficha, el segundo clic salía calculado sobre el estado viejo: elegir dos dolores
+        // guardaba uno solo. Se vio en pantalla, no en un test, porque el envoltorio `Vivo`
+        // refleja el cambio de inmediato y el servidor real no.
+        const usuario = userEvent.setup();
+        const onChange = vi.fn();
+        render(<DesplegableAgrupado grupos={GRUPOS} valor={[]} multiple onChange={onChange}
+            placeholder="Elegí los dolores" />);
+        const lista = await abrir(usuario);
+
+        await usuario.click(within(lista).getByRole('option', { name: /Pendiente/ }));
+        await usuario.click(within(lista).getByRole('option', { name: /No contesta/ }));
+        expect(onChange).not.toHaveBeenCalled();
+
+        await usuario.click(screen.getByRole('button', { name: 'Listo' }));
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenCalledWith(['pendiente', 'no_contesta']);
+    });
+
+    it('con selección múltiple no avisa si al final quedó lo mismo', async () => {
+        const usuario = userEvent.setup();
+        const onChange = vi.fn();
+        render(<DesplegableAgrupado grupos={GRUPOS} valor={['pendiente']} multiple
+            onChange={onChange} placeholder="Elegí los dolores" />);
+        const lista = await abrir(usuario);
+
+        await usuario.click(within(lista).getByRole('option', { name: /No contesta/ }));
+        await usuario.click(within(lista).getByRole('option', { name: /No contesta/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Listo' }));
+
+        expect(onChange).not.toHaveBeenCalled();
+    });
+
     it('crea una opción nueva con Enter, la deja elegida y avisa a onAgregar', async () => {
         const usuario = userEvent.setup();
         const onAgregar = vi.fn();

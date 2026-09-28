@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import useMovimiento from './useMovimiento';
@@ -40,10 +40,36 @@ const DesplegableAgrupado = ({
     const [agregandoEn, setAgregandoEn] = useState(null);
     const [borrador, setBorrador] = useState('');
 
-    const seleccion = useMemo(() => {
+    // Con seleccion multiple se trabaja sobre un borrador y se avisa UNA vez al cerrar. Avisar en
+    // cada clic disparaba un guardado por opcion, y como cada guardado recarga la ficha, el
+    // segundo clic salia calculado sobre el estado viejo: elegir dos dolores guardaba uno solo.
+    const [borradorSel, setBorradorSel] = useState(null);
+
+    const delValor = useMemo(() => {
         if (multiple) return Array.isArray(valor) ? valor : [];
         return valor == null || valor === '' ? [] : [valor];
     }, [valor, multiple]);
+
+    const seleccion = multiple && borradorSel ? borradorSel : delValor;
+
+    const mismas = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+
+    const cerrarYGuardar = () => {
+        cerrar();
+        if (!multiple || !borradorSel) return;
+        if (!mismas(borradorSel, delValor)) onChange?.(borradorSel);
+        setBorradorSel(null);
+    };
+
+    // Si el popover se cierra por fuera (clic afuera, Escape), igual hay que guardar.
+    useEffect(() => {
+        if (abierto || !multiple || !borradorSel) return;
+        if (!mismas(borradorSel, delValor)) onChange?.(borradorSel);
+        setBorradorSel(null);
+        // `onChange` y `delValor` cambian de identidad en cada render del padre: incluirlos
+        // volveria a disparar el guardado.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [abierto]);
 
     const listas = useMemo(() => grupos.map((g, i) => ({
         ...g,
@@ -58,7 +84,7 @@ const DesplegableAgrupado = ({
             cerrar();
             return;
         }
-        onChange?.(seleccion.includes(clave)
+        setBorradorSel(seleccion.includes(clave)
             ? seleccion.filter(k => k !== clave)
             : [...seleccion, clave]);
     };
@@ -166,7 +192,7 @@ const DesplegableAgrupado = ({
                     {multiple && (
                         <div style={{ display: 'flex', justifyContent: 'flex-end',
                             borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--s3)' }}>
-                            <button type="button" className="btn btn--linea btn--sm" onClick={cerrar}>Listo</button>
+                            <button type="button" className="btn btn--linea btn--sm" onClick={cerrarYGuardar}>Listo</button>
                         </div>
                     )}
                 </motion.div>
