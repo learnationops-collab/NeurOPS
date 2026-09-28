@@ -9,8 +9,8 @@ llegaba la siguiente agenda o venta.
 Como funciona:
 
   1. `before_flush` anota en `session.info` la fecha de cada FinancialAgenda /
-     FinancialSale creada o modificada, la del formulario de cada Client cuyo
-     `form_data` se crea o cambia, y la de cada WorkshopEvent creado o
+     FinancialSale creada, modificada o borrada, la del formulario de cada Client
+     cuyo `form_data` se crea o cambia, y la de cada WorkshopEvent creado o
      borrado. Se anota en el flush y no recien en el commit porque el webhook
      de n8n guarda las agendas de a lotes y la consulta anti-duplicados del
      item siguiente ya flushea el anterior: al llegar al commit `session.new`
@@ -67,13 +67,20 @@ def _dia_del_formulario(cliente):
 
 def _anotar_cambios(session):
     """Registra en `session.info` que dias toca el flush que esta por pasar."""
-    for obj in list(session.new) + list(session.dirty):
+    # Las agendas y ventas BORRADAS cuentan igual que las nuevas: quitar una agenda
+    # repetida cambia el numero del taller tanto como agregarla. Sin esto el snapshot
+    # se quedaba con el numero viejo hasta que otra cosa lo moviera -- el director
+    # borraba a mano la fila duplicada y el panel seguia mostrando lo mismo, sin
+    # ninguna pista de por que (26/09/2026). Se anota en `before_flush`, que es donde
+    # `session.deleted` todavia tiene los objetos con sus datos cargados.
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if isinstance(obj, _TRACKED_MODELS):
             # Un objeto nuevo todavia no tiene `created_at`: el default se aplica
             # recien al insertar y va a ser "ahora" en UTC.
             ts = getattr(obj, 'created_at', None) or datetime.utcnow()
             session.info.setdefault(_KEY_FECHAS, set()).add(ts.date())
-        elif isinstance(obj, Client) and _formulario_tocado(obj):
+    for obj in list(session.new) + list(session.dirty):
+        if isinstance(obj, Client) and _formulario_tocado(obj):
             session.info.setdefault(_KEY_FECHAS, set()).add(_dia_del_formulario(obj))
     for obj in list(session.new) + list(session.deleted):
         if isinstance(obj, WorkshopEvent) and obj.date:

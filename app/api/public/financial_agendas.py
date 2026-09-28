@@ -1,7 +1,7 @@
 from flask import request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import db, FinancialAgenda, User, Client
-from datetime import datetime
+from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, and_, func
 
@@ -25,6 +25,37 @@ def parse_date_robustly(val):
     except:
         return datetime.utcnow()
 
+# Estados en los que la agenda sigue ABIERTA: la llamada todavia no ocurrio y el lead
+# sigue esperando. Todo lo demas (Show Up, No Show, Lead Perdido, conversando, cierres)
+# describe una cita que ya paso, y volver a agendar despues de eso es una segunda cita,
+# no una reprogramacion de la primera.
+ESTADOS_AGENDA_ABIERTA = {
+    '', 'pendiente', 'confirmado', 'por_confirmar', 'por confirmar',
+    'reagendada', 'reagendado', 'reprogramada', 'reprogramado',
+}
+
+_SEPARADORES_TELEFONO = (' ', '-', '(', ')', '+', '.')
+
+
+def _whatsapp_solo_digitos():
+    """Expresion SQL con el whatsapp sin separadores, para comparar numeros y no textos."""
+    columna = FinancialAgenda.whatsapp
+    for sep in _SEPARADORES_TELEFONO:
+        columna = func.replace(columna, sep, '')
+    return columna
+
+
+def _cola_telefono(valor, largo=9):
+    """Ultimos `largo` digitos de un telefono, o None si no llega a tener esos digitos.
+
+    Se compara la cola y no el numero entero porque el prefijo de pais aparece de forma
+    intermitente segun como lo escriba el lead ('+51 996 526 031', '996526031'), y con
+    el numero completo esas dos formas del MISMO telefono no se reconocen.
+    """
+    digitos = ''.join(c for c in str(valor or '') if c.isdigit())
+    return digitos[-largo:] if len(digitos) >= largo else None
+
+
 def _split_multi(raw_value):
     # Los filtros del tablero envian una o varias opciones separadas por coma
     if not raw_value:
@@ -47,8 +78,11 @@ def _build_agenda_queries():
     encargados_triage = _split_multi(request.args.get('encargado_triage', default='', type=str))
     closer_results = _split_multi(request.args.get('closer_result', default='', type=str))
 
-    # Consulta base filtrada únicamente por fechas
-    date_query = FinancialAgenda.query
+    # Consulta base filtrada únicamente por fechas. Las marcadas como repetidas del mismo
+    # lead quedan fuera de todo el libro: se descartaron justamente para no verlas dos
+    # veces. Siguen existiendo y se listan (y se deshacen) desde el panel de duplicados,
+    # ver app/api/public/financial_agendas_dedup.py.
+    date_query = FinancialAgenda.query.filter(FinancialAgenda.duplicada_de_id.is_(None))
 
     if date_filter_by == 'created':
         if start_date_str:
@@ -215,7 +249,8 @@ def receive_financial_agendas():
         la_paz_tz = pytz.timezone('America/La_Paz')
 
         # Normalizar el campo de registro a formato local de America/La_Paz
-        registro_val = item.get('registro') or item.get('fecha') or datetime.now(la_paz_tz).isoformat()
+        registro_traido = item.get('registro') or item.get('fecha')
+        registro_val = registro_traido or datetime.now(la_paz_tz).isoformat()
         try:
             from dateutil import parser
             parsed_reg = parser.parse(str(registro_val).strip())
@@ -239,19 +274,53 @@ def receive_financial_agendas():
             client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
         if mail_val and mail_val != 'n/a' and '@' in mail_val:
             client_filters.append(func.lower(FinancialAgenda.mail) == mail_val)
-        if phone_val and phone_val != 'n/a':
-            client_filters.append(FinancialAgenda.whatsapp.like(f"%{phone_val}%"))
+        cola_telefono = _cola_telefono(phone_val)
+        if cola_telefono:
+            # Se comparan solo los digitos y solo los ultimos: el mismo numero llega
+            # escrito '+51 996 526 031' una vez y '+51996526031' la otra, y con el LIKE
+            # sobre el texto crudo esas dos no matcheaban -- el lead se duplicaba aunque
+            # fuera la misma persona el mismo dia (26/09/2026).
+            client_filters.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
 
         if client_filters and agenda_date:
+            # Una agenda ya marcada como repetida no puede recibir datos nuevos: la agenda
+            # legitima que acaba de llegar quedaria escondida dentro de una fila que el
+            # libro no muestra.
+            vigente = FinancialAgenda.duplicada_de_id.is_(None)
+
             # "El mismo dia" es el dia local de la fuente, no el dia UTC: con las fechas ya
             # normalizadas a UTC, una cita de las 21:00 cae en el dia UTC siguiente y el
             # deduplicador dejaria de reconocer la agenda que acaba de reprogramarse.
             start_day, end_day = limites_dia_origen(agenda_date)
             existing = FinancialAgenda.query.filter(
+                vigente,
                 or_(*client_filters),
                 FinancialAgenda.date >= start_day,
                 FinancialAgenda.date <= end_day
             ).first()
+
+            if not existing:
+                # Reprogramacion a OTRO dia. La regla de arriba solo reconoce el duplicado
+                # si la reunion cae el mismo dia, asi que mover la cita del jueves al
+                # viernes entraba como agenda nueva y el lead quedaba dos veces en el libro
+                # (y con dos llamadas en la bandeja de su closer).
+                #
+                # Solo se toma como reprogramacion si la agenda anterior sigue ABIERTA y su
+                # llamada todavia no paso: una que ya se resolvio (Show Up, No Show, Lead
+                # Perdido) es una llamada que de verdad ocurrio, y quien vuelve a agendar
+                # despues de eso esta sacando una segunda cita, no moviendo la primera.
+                existing = FinancialAgenda.query.filter(
+                    vigente,
+                    or_(*client_filters),
+                    FinancialAgenda.date >= datetime.utcnow() - timedelta(hours=2),
+                    func.lower(func.coalesce(FinancialAgenda.estado, '')).in_(ESTADOS_AGENDA_ABIERTA)
+                ).order_by(FinancialAgenda.date).first()
+                if existing:
+                    current_app.logger.info(
+                        f"[AGENDA REPROGRAMADA] '{lead_val}': la agenda #{existing.id} del "
+                        f"{existing.date} se mueve a {agenda_date} en vez de crear una fila nueva")
+                    item = dict(item)
+                    item['reprogramada_desde'] = existing.date.isoformat() if existing.date else None
 
         # Extraer encargado de triage de forma robusta
         encargado_triage_val = None
@@ -295,7 +364,14 @@ def receive_financial_agendas():
                 existing.closer = BookingService.normalize_closer_name(raw_closer)
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
-            existing.registro = registro_val
+            # Solo se pisa `registro` si el payload TRAE la fecha de alta. El respaldo
+            # "ahora" de arriba tiene sentido para una fila nueva, pero sobre una agenda
+            # que ya existe reescribe su fecha de alta con la del reenvio: una agenda de
+            # hace semanas pasaba a figurar como registrada hoy, y como el embudo del
+            # workshop mira `created_at` (viejo) O `registro` (nuevo), la misma fila caia
+            # en la ventana de dos talleres a la vez (26/09/2026).
+            if registro_traido:
+                existing.registro = registro_val
             existing.estado = item.get('estado') or existing.estado
             existing.grupo = grupo_val or existing.grupo
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
@@ -969,7 +1045,10 @@ def sync_all_financial_agendas():
         sync_all = request.args.get('all', 'false').lower() == 'true'
         days = request.args.get('days', 14, type=int)
         
-        query = FinancialAgenda.query
+        # Las marcadas como repetidas quedan fuera: su cita se cancelo al descartarlas y
+        # sincronizarlas se la devolveria a la bandeja del closer. `sync_financial_agenda_
+        # to_appointment` ya las corta por su cuenta; esto ademas evita recorrerlas.
+        query = FinancialAgenda.query.filter(FinancialAgenda.duplicada_de_id.is_(None))
         if not sync_all:
             limit_date = date.today() - timedelta(days=days)
             query = query.filter(FinancialAgenda.date >= limit_date)

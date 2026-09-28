@@ -24,6 +24,12 @@ if os.path.basename(current_dir) == 'scripts':
 else:
     sys.path.append(current_dir)
 
+# `create_app()` arranca el scheduler de recordatorios de seguimiento, que manda WhatsApp
+# apenas arranca el proceso (ver reminder_scheduler.start_scheduler). Este script solo lee y
+# reescribe snapshots —y se corre a mano contra la base de producción— así que ese envío tiene
+# que quedar apagado siempre. Mismo criterio que scripts/backfill_show_up_por_venta.py.
+os.environ['DISABLE_REMINDER_SCHEDULER'] = 'true'
+
 from app import create_app, db
 from app.models import WorkshopEvent
 from app.services.workshop_metrics_service import calcular_prefill
@@ -57,9 +63,14 @@ def main(apply=False):
                     for c in CAMPOS:
                         setattr(ev, c, despues[c])
                     ev.synced_at = datetime.utcnow()
+                    # Un commit por taller y no uno solo al final: el recálculo de los 13
+                    # eventos tarda minutos, y una única transacción mantiene tomada la fila
+                    # de workshop_events todo ese rato — el hook de sincronización en vivo
+                    # que corre dentro del webhook de n8n escribe esas mismas filas y se
+                    # quedaría esperando. Así cada transacción dura segundos.
+                    db.session.commit()
 
         if apply:
-            db.session.commit()
             print(f"\nListo: {cambiados} workshop(s) actualizados.")
         else:
             print(f"\n{cambiados} workshop(s) cambiarían.")

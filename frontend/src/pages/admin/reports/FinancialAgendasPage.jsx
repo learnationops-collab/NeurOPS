@@ -26,7 +26,8 @@ import {
     Check,
     X,
     Layers,
-    ClipboardCheck
+    ClipboardCheck,
+    CopyCheck
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -34,6 +35,7 @@ import Button from '../../../components/ui/Button';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
 import AgendasBulkEditModal from './AgendasBulkEditModal';
+import AgendasDuplicadosModal from './AgendasDuplicadosModal';
 import { useAuth } from '../../../contexts/AuthContext';
 
 
@@ -554,6 +556,7 @@ const FinancialAgendasPage = () => {
     // Selección múltiple para modificaciones masivas
     const [selectedIds, setSelectedIds] = useState([]);
     const [showBulkModal, setShowBulkModal] = useState(false);
+    const [showDuplicadosModal, setShowDuplicadosModal] = useState(false);
 
     // Estados para exportación de clientes potenciales
     const [showExportModal, setShowExportModal] = useState(false);
@@ -1274,6 +1277,20 @@ const FinancialAgendasPage = () => {
                         </span>
                     </button>
 
+                    {/* Esta misma página la abre también el rol triage (/triage/agendas), pero los
+                        endpoints de duplicados son admin_required: sin este corte el botón aparecía
+                        para triage y respondía 403 al abrirlo. */}
+                    {['admin', 'operator'].includes(user?.role) && (
+                        <button
+                            onClick={() => setShowDuplicadosModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-rose-500/20 cursor-pointer"
+                            title="Buscar el mismo lead agendado más de una vez dentro del recorte filtrado y elegir cuál se conserva"
+                        >
+                            <CopyCheck className="w-4 h-4" />
+                            <span>Duplicados</span>
+                        </button>
+                    )}
+
                     <button
                         onClick={() => openExportModal('potential')}
                         disabled={exporting}
@@ -1635,6 +1652,15 @@ const FinancialAgendasPage = () => {
                     filtrosActivos={activeExportFilters}
                     onClose={() => setShowBulkModal(false)}
                     onDone={handleBulkDone}
+                />
+            )}
+
+            {/* Panel de agendas repetidas */}
+            {showDuplicadosModal && (
+                <AgendasDuplicadosModal
+                    filterParams={filterParams}
+                    onClose={() => setShowDuplicadosModal(false)}
+                    onDone={() => fetchAgendas(1)}
                 />
             )}
 

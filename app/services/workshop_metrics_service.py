@@ -127,12 +127,27 @@ def _agendas_por_embudo(desde, hasta, tz):
     fecha local del alta, texto ISO que manda n8n) es de alguno de sus dias. No
     hay tolerancia hacia el dia anterior ni horas de mas al final: las ventanas
     de dos talleres seguidos son contiguas y cada agenda cuenta en uno solo.
+
+    Pero la fecha de alta sola no alcanza: una agenda cuya LLAMADA ya habia
+    pasado antes de la clase no la trajo este taller -- nadie reserva una cita
+    para el pasado. Esas filas son citas viejas que recien ahora llegaron a
+    `financial_agendas`: `BookingService.sync_appointment_to_financial_agenda`
+    espeja la cita cuando un closer la toca y la da de alta con la fecha de ese
+    momento, y las importaciones masivas traen `created_at` del dia del import.
+    Sin este corte caian en la ventana del taller que estuviera abierto: el
+    taller del 26/09/2026 mostraba "1 agenda exitosa" a mitad de la clase, y era
+    una cita del 2 de septiembre (26/09/2026).
     """
     inicio, fin = _limites_utc(desde, hasta, tz)
     desde_str = desde.strftime('%Y-%m-%d')
     tope_str = (hasta + timedelta(days=1)).strftime('%Y-%m-%d')
 
     candidatas = FinancialAgenda.query.filter(
+        # Las marcadas a mano como repetidas del mismo lead no cuentan. El conteo por
+        # persona ya las absorbe en casi todos los casos, pero no cuando la identidad no
+        # alcanza para reconocerlas (instagram 'no tengo', mail 'N/A'): ahi la unica que
+        # las puede unir es una persona, desde el panel de duplicados.
+        FinancialAgenda.duplicada_de_id.is_(None),
         or_(
             (FinancialAgenda.created_at >= inicio) & (FinancialAgenda.created_at <= fin),
             (FinancialAgenda.registro >= desde_str) & (FinancialAgenda.registro < tope_str),
@@ -141,6 +156,11 @@ def _agendas_por_embudo(desde, hasta, tz):
 
     grupos = {'vivo': [], 'landing': []}
     for a in candidatas:
+        # `date` es la hora de la cita en UTC e `inicio` las 00:00 locales del dia
+        # de la clase: una cita anterior a eso es de antes del taller. Sin `date`
+        # no hay con que descartarla, asi que se cuenta.
+        if a.date and a.date < inicio:
+            continue
         raw = a.raw_data or {}
         grupo = _clasificar_fuente(a.nombre, raw.get('fuente'), raw.get('fuente_form'))
         if grupo:
@@ -187,25 +207,87 @@ def _estado_post_call(agenda):
     return equivalencias.get(appt.closer_result, appt.closer_result)
 
 
-def _desglose_estados(agendas):
+def _bucket_estado(estado):
+    """A cual de las 6 columnas del desglose pertenece un estado."""
+    if estado in ('Show Up', 'Show up', 'Asistió'):
+        return "Show Up"
+    if estado in ('No Show', 'no show', 'Inasistencia'):
+        return "No Show"
+    if estado in ('Cancelado', 'Cancelada'):
+        return "Cancelada"
+    if estado in ('Reagendado', 'Reagendada'):
+        return "Reagendada"
+    if estado == 'Pendiente':
+        return "Pendiente"
+    return "Otros"
+
+
+def _desglose_estados(personas):
+    """Cuenta PERSONAS, no filas: recibe los grupos que devuelve `_agrupar_por_persona`.
+
+    Quien reprograma queda con dos filas (el webhook solo reconoce un duplicado si la
+    reunion cae el MISMO dia, asi que un cambio de dia entra como agenda nueva) y antes
+    sumaba dos veces. Como las ventas ya se contaban por persona, el embudo se dividia
+    entre un numerador deduplicado y un denominador que no lo estaba, y el close rate y
+    el costo por agenda salian mal (26/09/2026).
+
+    A cada persona le corresponde una sola columna del desglose: la de su ultima cita,
+    salvo que haya asistido a alguna, en cuyo caso es Show Up -- lo que ya logro no lo
+    borra una reprogramacion posterior.
+    """
     desglose = {"Show Up": 0, "No Show": 0, "Cancelada": 0, "Reagendada": 0, "Pendiente": 0, "Otros": 0}
     show_up = 0
-    for a in agendas:
-        estado = _estado_post_call(a)
-        if estado in ('Show Up', 'Show up', 'Asistió'):
+    for agendas in personas:
+        buckets = [(a.date, _bucket_estado(_estado_post_call(a))) for a in agendas]
+        if any(b == "Show Up" for _, b in buckets):
             show_up += 1
             desglose["Show Up"] += 1
-        elif estado in ('No Show', 'no show', 'Inasistencia'):
-            desglose["No Show"] += 1
-        elif estado in ('Cancelado', 'Cancelada'):
-            desglose["Cancelada"] += 1
-        elif estado in ('Reagendado', 'Reagendada'):
-            desglose["Reagendada"] += 1
-        elif estado == 'Pendiente':
-            desglose["Pendiente"] += 1
-        else:
-            desglose["Otros"] += 1
+            continue
+        _, bucket = max(buckets, key=lambda par: (par[0] is not None, par[0]))
+        desglose[bucket] += 1
     return show_up, desglose
+
+
+def _clave_identidad(agenda):
+    """Con que se reconoce a la misma persona entre dos agendas, o None si no alcanza.
+
+    Es la misma clave que ya usaba `_ventas_de` para no contarle la venta dos veces a
+    quien aparece en los dos embudos: instagram, si no el mail, si no el nombre. Los
+    handles que no identifican a nadie ('n/a', 'no tengo') se descartan, porque si no
+    todos los que escribieron eso se fusionarian en una sola persona.
+    """
+    ig = (agenda.instagram or '').strip().replace('@', '').lower()
+    mail = (agenda.mail or '').strip().lower()
+    lead = (agenda.lead or '').strip().lower()
+
+    ig = ig if ig and ig not in HANDLES_INVALIDOS else None
+    mail = mail if mail and mail not in HANDLES_INVALIDOS else None
+    lead = lead if lead and len(lead) > 2 else None
+    return ig or mail or lead
+
+
+def _agrupar_por_persona(agendas, claves_ya_contadas):
+    """Agrupa las agendas de una misma persona en una sola entrada.
+
+    `claves_ya_contadas` es el mismo mecanismo que usa `_ventas_de`: quien aparece en el
+    vivo y despues en la grabacion se cuenta una sola vez, del lado del vivo, para que
+    los dos grupos sumen exactamente el total. El set se actualiza en el lugar.
+
+    Una agenda sin datos para identificar a nadie no se puede fusionar con ninguna otra,
+    asi que va sola: mejor contarla de mas que fusionar a dos personas distintas.
+    """
+    grupos = {}
+    sueltas = []
+    for a in sorted(agendas, key=lambda x: (x.date is not None, x.date)):
+        clave = _clave_identidad(a)
+        if not clave:
+            sueltas.append([a])
+            continue
+        if clave in claves_ya_contadas:
+            continue
+        grupos.setdefault(clave, []).append(a)
+    claves_ya_contadas.update(grupos)
+    return list(grupos.values()) + sueltas
 
 
 def _es_venta_valida(sale):
@@ -241,19 +323,18 @@ def _ventas_de(agendas, compradores_ya_contados):
     ventas = set()
 
     for a in agendas:
+        clave = _clave_identidad(a)
+        if not clave:
+            continue
+        if clave in compradores_ya_contados:
+            continue
+
         ig = (a.instagram or '').strip().replace('@', '').lower()
         mail = (a.mail or '').strip().lower()
         lead = (a.lead or '').strip().lower()
-
         ig = ig if ig and ig not in HANDLES_INVALIDOS else None
         mail = mail if mail and mail not in HANDLES_INVALIDOS else None
         lead = lead if lead and len(lead) > 2 else None
-        if not ig and not mail and not lead:
-            continue
-
-        clave = ig or mail or lead
-        if clave in compradores_ya_contados:
-            continue
 
         condiciones = []
         if ig:
@@ -278,10 +359,17 @@ def _ventas_de(agendas, compradores_ya_contados):
     return compradores, ventas
 
 
-def _resumen(agendas, compradores, ventas):
-    show_up, desglose = _desglose_estados(agendas)
+def _resumen(personas, agendas, compradores, ventas):
+    """`personas` son los grupos de `_agrupar_por_persona`; `agendas` las filas crudas.
+
+    Las cuatro metricas del embudo van por persona. `llamadas` queda aparte como dato
+    informativo: es cuantas reuniones se reservaron de verdad, que es lo que mide la
+    carga de los closers y casi siempre es un numero mas alto.
+    """
+    show_up, desglose = _desglose_estados(personas)
     return {
-        "agendas": len(agendas),
+        "agendas": len(personas),
+        "llamadas": len(agendas),
         "show_up": show_up,
         "sales": len(compradores),
         "cash_collected": sum(s.monto or 0.0 for s in ventas),
@@ -297,11 +385,19 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
     aplicaciones = _contar_aplicaciones(desde, hasta, tz)
     grupos = _agendas_por_embudo(desde, hasta, tz)
 
+    # Una persona que agendo dos veces cuenta una sola vez, y si aparece en el vivo y
+    # en la grabacion cuenta del lado del vivo -- el mismo criterio con el que ya se
+    # contaban las ventas, para que el embudo divida personas por personas.
+    vistas = set()
+    personas_vivo = _agrupar_por_persona(grupos['vivo'], vistas)
+    personas_landing = _agrupar_por_persona(grupos['landing'], vistas)
+
     compradores_vivo, ventas_vivo = _ventas_de(grupos['vivo'], set())
     compradores_landing, ventas_landing = _ventas_de(grupos['landing'], compradores_vivo)
 
-    resumen_vivo = _resumen(grupos['vivo'], compradores_vivo, ventas_vivo)
-    resumen_landing = _resumen(grupos['landing'], compradores_landing, ventas_landing - ventas_vivo)
+    resumen_vivo = _resumen(personas_vivo, grupos['vivo'], compradores_vivo, ventas_vivo)
+    resumen_landing = _resumen(personas_landing, grupos['landing'], compradores_landing,
+                               ventas_landing - ventas_vivo)
 
     resumen_vivo["aplicaciones_form"] = aplicaciones['vivo']
     resumen_landing["aplicaciones_form"] = aplicaciones['landing']
@@ -315,6 +411,9 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
         # Totales del workshop: la clase en vivo mas su grabacion
         "aplicaciones_form": aplicaciones['vivo'] + aplicaciones['landing'],
         "agendas_exitosas": resumen_vivo["agendas"] + resumen_landing["agendas"],
+        # Reuniones reservadas (la carga de los closers). Es >= agendas_exitosas cuando
+        # alguien reprogramo o volvio a agendar: no entra al embudo, va como referencia.
+        "llamadas_agendadas": resumen_vivo["llamadas"] + resumen_landing["llamadas"],
         "show_up_sales_call": resumen_vivo["show_up"] + resumen_landing["show_up"],
         "sales": resumen_vivo["sales"] + resumen_landing["sales"],
         "cash_collected": resumen_vivo["cash_collected"] + resumen_landing["cash_collected"],

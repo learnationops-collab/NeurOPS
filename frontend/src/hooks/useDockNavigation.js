@@ -98,7 +98,12 @@ const useDockNavigation = () => {
                 // sigue teniendo solo por URL (/ops/dashboard) -- pero el Editor de curso es lo
                 // bastante autónomo (su propia ruta full-bleed) como para ganarse su propio
                 // ícono, si no el admin no tenía NINGUNA forma de encontrarlo (13/sep/2026).
-                { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' }
+                { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' },
+                // Mismo caso (26/09/2026): cuando Agendas y Ventas pasaron a Operaciones el
+                // admin quedó con acceso solo por URL, y el panel de duplicados que vive ahí
+                // adentro resultó imposible de encontrar. No estaba entre lo que se ocultó a
+                // propósito el 19/ago -- se cayó del Dock como efecto colateral de la mudanza.
+                { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' }
                 // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
                 // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
             ];
