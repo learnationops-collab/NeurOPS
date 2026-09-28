@@ -1277,14 +1277,19 @@ const FinancialAgendasPage = () => {
                         </span>
                     </button>
 
-                    <button
-                        onClick={() => setShowDuplicadosModal(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-rose-500/20 cursor-pointer"
-                        title="Buscar el mismo lead agendado más de una vez dentro del recorte filtrado y elegir cuál se conserva"
-                    >
-                        <CopyCheck className="w-4 h-4" />
-                        <span>Duplicados</span>
-                    </button>
+                    {/* Esta misma página la abre también el rol triage (/triage/agendas), pero los
+                        endpoints de duplicados son admin_required: sin este corte el botón aparecía
+                        para triage y respondía 403 al abrirlo. */}
+                    {['admin', 'operator'].includes(user?.role) && (
+                        <button
+                            onClick={() => setShowDuplicadosModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-rose-500/20 cursor-pointer"
+                            title="Buscar el mismo lead agendado más de una vez dentro del recorte filtrado y elegir cuál se conserva"
+                        >
+                            <CopyCheck className="w-4 h-4" />
+                            <span>Duplicados</span>
+                        </button>
+                    )}
 
                     <button
                         onClick={() => openExportModal('potential')}
