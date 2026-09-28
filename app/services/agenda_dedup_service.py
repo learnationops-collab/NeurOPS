@@ -195,6 +195,13 @@ def sugerir_conservada(grupo):
     ))
 
 
+def _nombre_utilizable(nombre):
+    """True si el nombre identifica a alguien, o sea si sirve para corroborar una fusión."""
+    from app.services.client_dedup_service import _GENERIC_NAMES, _normalize_name
+    limpio = _normalize_name(nombre)
+    return bool(limpio) and limpio not in _GENERIC_NAMES and len(limpio) > 2
+
+
 def _hermanas_del_mismo_dia(agenda):
     """Las otras agendas vigentes del mismo lead cuya reunión cae el mismo día LOCAL.
 
@@ -232,7 +239,16 @@ def _hermanas_del_mismo_dia(agenda):
     ).all()
     # El nombre decide al final: el mismo teléfono aparece compartido entre familiares y el
     # mismo mail tipeado por otra persona. Sin este resguardo se fusionan dos leads reales.
-    return [c for c in candidatas if _names_compatible(agenda.lead, c.lead)]
+    #
+    # Y acá se exige un nombre DE VERDAD en las dos, no el `_names_compatible` a secas:
+    # esa función devuelve True cuando alguno de los dos está vacío o es genérico, así que
+    # sobre una fila sin nombre el resguardo se apaga solo y quedarían unidas por el puro
+    # teléfono. Para una fusión AUTOMÁTICA eso es demasiado: en producción hay 1069 agendas
+    # sin `lead` (todas anteriores a julio, ninguna en el período que esto toca hoy). Sin
+    # nombre no se decide solo — el par igual aparece en el panel para que lo mire alguien.
+    return [c for c in candidatas
+            if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
+            and _names_compatible(agenda.lead, c.lead)]
 
 
 def reconciliar(agenda, actor_id=None, simular=False):
