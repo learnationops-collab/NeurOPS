@@ -47,12 +47,23 @@ def _process_agenda(appt, usuario, payload):
 
 # --- Confirmacion -----------------------------------------------------------------------------
 
-# Lo que el paso de confirmacion puede tocar. La lista es cerrada a proposito: sin esto, el mismo
-# endpoint aceptaria `result` y reportaria la llamada desde el paso de confirmacion, que es
-# exactamente la confusion de superficies que esta ficha viene a resolver.
-CLAVES_CONFIRMACION = ('confirmation_stage', 'confirmation_contact_status',
-                       'confirmation_pain_points', 'confirm_status', 'closer_notes',
-                       'pre_call_reminder_at')
+# Del vocabulario de la ficha a las columnas del modelo. La escritura habla el MISMO idioma que
+# la lectura (`confirmacion.etapa`, `.como_viene`, `.dolores`, `.nota`): que el GET devuelva un
+# nombre y el PATCH exija otro es como se cuelan los errores que ninguna suite ve, porque cada
+# lado se testea contra su propio vocabulario.
+#
+# La lista es cerrada a proposito: sin esto, el mismo endpoint aceptaria `result` y reportaria la
+# llamada desde el paso de confirmacion, que es la confusion de superficies que esta ficha viene
+# a resolver.
+CAMPOS_CONFIRMACION = {
+    'etapa': 'confirmation_stage',
+    'como_viene': 'confirmation_contact_status',
+    'dolores': 'confirmation_pain_points',
+    'nota': 'closer_notes',
+}
+
+# Que grupo de vocabulario alimenta cada campo, para poder crear una opcion al vuelo.
+GRUPO_DE_CAMPO = {'como_viene': 'como_viene', 'dolores': 'dolores'}
 
 
 def _confirm_status_de(appt, etapa):
@@ -68,9 +79,43 @@ def _confirm_status_de(appt, etapa):
     return 'por_confirmar' if (etapa or 'por_contactar') == 'por_contactar' else 'conversando'
 
 
+def _recordatorio(valor):
+    """El checkbox y la fecha viajan juntos: apagarlo borra la fecha, no la deja huerfana."""
+    if not isinstance(valor, dict):
+        return valor or None
+    return valor.get('cuando') if valor.get('activo') else None
+
+
 def confirmacion(appt, datos, usuario):
-    """Guarda la etapa, el «Cómo viene», los dolores y la nota para la llamada."""
-    payload = {k: datos[k] for k in CLAVES_CONFIRMACION if k in datos}
+    """Guarda la etapa, el «Cómo viene», los dolores, la nota y el recordatorio previo."""
+    from app.services import ficha_vocabulario
+
+    # Una opcion nueva escrita a mano en un grupo "Otros" llega junto con la seleccion: para quien
+    # la escribe es un solo gesto, asi que se registra y se usa en la misma peticion.
+    nueva = (datos.get('nueva_opcion') or '').strip() if isinstance(datos.get('nueva_opcion'), str) else ''
+
+    payload = {}
+    for campo, columna in CAMPOS_CONFIRMACION.items():
+        if campo not in datos:
+            continue
+        valor = datos[campo]
+        grupo = GRUPO_DE_CAMPO.get(campo)
+        if nueva and grupo:
+            opcion = ficha_vocabulario.agregar_opcion(grupo, nueva, usuario)
+            if opcion:
+                valor = ([v for v in valor if v != nueva] + [opcion['clave']]
+                         if isinstance(valor, list) else opcion['clave'])
+        payload[columna] = ','.join(valor) if isinstance(valor, list) else valor
+
+    if 'recordatorio_previo' in datos:
+        payload['pre_call_reminder_at'] = _recordatorio(datos['recordatorio_previo'])
+
+    # "Listo · 100% confirmado": el unico lugar donde `Confirmado` se pone a mano.
+    if datos.get('cerrada') is True:
+        etapas = ficha_vocabulario.ETAPAS_CONFIRMACION
+        payload['confirm_status'] = 'Confirmado'
+        payload['confirmation_stage'] = etapas[-1]['clave'] if etapas else 'testimonio'
+
     if not payload:
         raise ErrorDeAccion('No hay nada que guardar.')
     # `confirm_status` viaja siempre, incluso cuando el modal no lo manda: sin el, la regla de

@@ -53,10 +53,9 @@ def url(appt, sufijo=''):
 def test_la_direccion_comercial_guarda_la_etapa_de_confirmacion(client, db, lead, equipo,
                                                                 auth_headers):
     r = client.patch(url(lead, '/confirmacion'),
-                     json={'confirmation_stage': 'videoask',
-                           'confirmation_contact_status': 'confirmo_asiste',
-                           'confirmation_pain_points': ['ansiedad'],
-                           'closer_notes': 'llamar después de las 20'},
+                     json={'etapa': 'videoask', 'como_viene': 'confirmo_asiste',
+                           'dolores': ['ansiedad'],
+                           'nota': 'llamar después de las 20'},
                      headers=auth_headers(equipo['director']))
 
     assert r.status_code == 200
@@ -66,10 +65,32 @@ def test_la_direccion_comercial_guarda_la_etapa_de_confirmacion(client, db, lead
     assert lead.closer_processed is False
 
 
+def test_lo_que_devuelve_la_lectura_se_puede_volver_a_escribir(client, db, lead, equipo,
+                                                              auth_headers):
+    """El GET y el PATCH tienen que hablar el mismo idioma.
+
+    Este es el test que faltaba cuando el modal mandaba `etapa`/`como_viene`/`dolores` —los
+    nombres que devuelve la lectura— y la escritura exigia los de la base: cada lado pasaba sus
+    propios tests y en pantalla guardar una etapa respondia "No hay nada que guardar".
+    """
+    leido = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
+                       headers=auth_headers(equipo['closer'])).get_json()['confirmacion']
+
+    # Se devuelve lo leido tal cual, sin traducir ni una clave.
+    r = client.patch(url(lead, '/confirmacion'),
+                     json={'etapa': leido['etapa'],
+                           'como_viene': (leido['como_viene'] or {}).get('clave'),
+                           'dolores': [d['clave'] for d in leido['dolores']],
+                           'nota': leido['nota'] or 'sin nota'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+
+
 def test_confirmar_no_puede_reportar_de_contrabando(client, db, lead, equipo, auth_headers):
     """Aceptar `result` acá seria reportar la llamada desde el paso de confirmacion."""
     r = client.patch(url(lead, '/confirmacion'),
-                     json={'result': 'Show up', 'confirmation_stage': 'horario'},
+                     json={'result': 'Show up', 'etapa': 'horario'},
                      headers=auth_headers(equipo['closer']))
 
     assert r.status_code == 200
