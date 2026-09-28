@@ -317,11 +317,20 @@ def cita_de(agenda):
         return None
     ig = _normalize_instagram(agenda.instagram)
     mail = _normalize_email(agenda.mail)
+    tel = _normalize_phone(agenda.whatsapp)
     condiciones = []
     if mail:
         condiciones.append(db.func.lower(Client.email) == mail)
     if ig:
         condiciones.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig)
+    if tel:
+        # El teléfono como tercera señal: una agenda que llegó con mail 'N/A' e instagram
+        # 'N/A' no tiene con qué encontrar su cita, y sin cita el descarte no puede saber
+        # que la que iba a cancelar es la misma de la fila que se conserva.
+        columna = Client.phone
+        for sep in (' ', '-', '(', ')', '+', '.'):
+            columna = db.func.replace(columna, sep, '')
+        condiciones.append(columna.like('%' + tel))
     if not condiciones:
         return None
 
@@ -406,6 +415,16 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
         cita = cita_de(duplicada)
         cita_conservada = cita_de(conservada)
         ya_cancelada = bool(cita and (cita.result or '').strip().lower().startswith('cancel'))
+        # Guarda dura: si la cita cae a la misma hora que la reunión de la fila que se
+        # CONSERVA, es su cita, y cancelarla apagaría la llamada que queríamos dejar viva.
+        # No alcanza con comparar contra `cita_de(conservada)`: cuando la conservada tiene
+        # la identidad rota (mail 'N/A', instagram 'N/A') esa búsqueda devuelve None y el
+        # resguardo de abajo no se entera de que las dos filas son la misma reunión.
+        es_la_cita_de_la_conservada = bool(
+            cita and conservada.date
+            and abs((cita.start_time - conservada.date).total_seconds()) <= MINUTOS_MISMA_HORA * 60)
+        if es_la_cita_de_la_conservada:
+            cita = None
         # Solo se guarda el estado previo de la cita que este descarte cancela DE VERDAD.
         # Dos agendas repetidas pueden apuntar a la misma cita: si la segunda volviera a
         # anotar el snapshot, guardaría 'Cancelado' —lo que dejó la primera— y al deshacer

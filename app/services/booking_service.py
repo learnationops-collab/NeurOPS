@@ -761,7 +761,14 @@ class BookingService:
         from sqlalchemy import func
         ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
         mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-        
+        # El mail sintetico que `find_or_create_client` le pone al Client que llego sin
+        # correo ('no-email-<hex>@neurops.com') no identifica a nadie: la agenda de ese
+        # mismo lead tiene mail='N/A', asi que comparar uno contra otro no matchea NUNCA y
+        # el espejo terminaba creando una segunda fila para la misma reunion. El resto del
+        # archivo ya lo trata como ausente (lineas 145, 210, 223); aca faltaba.
+        if mail_clean and 'no-email-' in mail_clean:
+            mail_clean = None
+
         filters = []
         if mail_clean:
             filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
