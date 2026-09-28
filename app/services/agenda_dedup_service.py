@@ -25,7 +25,7 @@ aprendió contra datos reales — en particular `_names_compatible`, que evita e
 dos personas distintas a través de un registro con el mail de otra.
 """
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app import db
 from app.models import Appointment, Client, FinancialAgenda
@@ -57,6 +57,12 @@ HORAS_MISMA_REUNION = 2
 # Cuánto después de la hora de la reunión se sigue considerando que "todavía no pasó".
 # Cubre al lead que reagenda apenas el closer no aparece o apenas cuelga sin avanzar.
 HORAS_GRACIA_REUNION = 1
+
+# Qué tan cerca tienen que estar dos reuniones para ser "la misma hora" y no una
+# reprogramación. Con tolerancia amplia se confundirían las dos cosas; en los datos reales
+# los duplicados exactos caen al mismo minuto, así que alcanza con un margen chico para
+# absorber el redondeo de Calendly.
+MINUTOS_MISMA_HORA = 5
 
 
 def _senales(agenda):
@@ -175,12 +181,130 @@ def sugerir_conservada(grupo):
         return consulta.filter(
             db.func.lower(db.func.replace(FinancialSale.instagram, '@', '')) == ig).count() > 0
 
+    # Los dos últimos criterios son el desempate y tienen que ser deterministas: con tres
+    # filas idénticas (mismo día, misma hora, mismo estado) `max` devolvía la primera de la
+    # lista, así que comparar A con B y después A con C daba ganadoras distintas. Cuando
+    # todo lo demás empata gana la MÁS VIEJA, que es la original; las otras son la copia.
     return max(grupo, key=lambda a: (
         tiene_venta(a),
         not _sin_resolver(a),
         a.date is not None,
-        a.date or a.created_at,
+        a.date or datetime.min,
+        -(a.created_at.timestamp() if a.created_at else 0),
+        -a.id if a.id else 0,
     ))
+
+
+def _hermanas_del_mismo_dia(agenda):
+    """Las otras agendas vigentes del mismo lead cuya reunión cae el mismo día LOCAL.
+
+    El día es el local de la fuente y no el día UTC: una cita de las 21:00 cae en el día
+    UTC siguiente, y comparando en UTC dos filas de la misma tarde parecerían de días
+    distintos (mismo criterio que usa el deduplicador del webhook).
+    """
+    from app.services.agenda_time_service import limites_dia_origen
+
+    condiciones = []
+    mail = _normalize_email(agenda.mail)
+    ig = _normalize_instagram(agenda.instagram)
+    tel = _normalize_phone(agenda.whatsapp)
+    if mail:
+        condiciones.append(db.func.lower(FinancialAgenda.mail) == mail)
+    if ig:
+        condiciones.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig)
+    if tel:
+        # `_normalize_phone` se queda con los últimos 8 dígitos; del lado de la columna hay
+        # que sacarle los separadores para comparar números y no textos.
+        columna = FinancialAgenda.whatsapp
+        for sep in (' ', '-', '(', ')', '+', '.'):
+            columna = db.func.replace(columna, sep, '')
+        condiciones.append(columna.like('%' + tel))
+    if not condiciones:
+        return []
+
+    inicio, fin = limites_dia_origen(agenda.date)
+    candidatas = FinancialAgenda.query.filter(
+        FinancialAgenda.duplicada_de_id.is_(None),
+        FinancialAgenda.id != agenda.id,
+        FinancialAgenda.date >= inicio,
+        FinancialAgenda.date <= fin,
+        db.or_(*condiciones)
+    ).all()
+    # El nombre decide al final: el mismo teléfono aparece compartido entre familiares y el
+    # mismo mail tipeado por otra persona. Sin este resguardo se fusionan dos leads reales.
+    return [c for c in candidatas if _names_compatible(agenda.lead, c.lead)]
+
+
+def reconciliar(agenda, actor_id=None, simular=False):
+    """Hace cumplir la regla: un lead no puede tener dos agendas el mismo día a la misma hora.
+
+    La definió Kerwin el 28/09/2026 mirando el libro:
+
+      · mismo día y MISMA hora  -> no existe tal cosa, es la misma reunión cargada dos
+        veces. Se conserva la fila con más historia y la otra se marca.
+      · mismo día y otra hora   -> es una REPROGRAMACIÓN, no una segunda llamada: queda una
+        sola agenda, la que trae la hora vigente (la de alta más reciente).
+      · días distintos          -> puede ser una segunda llamada de verdad (reagendó, o no
+        se llegó a hacer la presentación). No se toca.
+
+    Corre después de crear una agenda, en las vías que la crean. Devuelve las filas que
+    marcó, vacía si no había nada que reconciliar. Con `simular=True` no escribe: devuelve
+    las decisiones (conservada, sobrante, motivo) que tomaría.
+    """
+    decisiones = decidir_reconciliacion(agenda)
+    if simular:
+        return decisiones
+
+    marcadas = []
+    for conservada, sobrante, motivo in decisiones:
+        try:
+            descartar(conservada, sobrante, actor_id, motivo=motivo)
+            marcadas.append(sobrante)
+            logger.info('[AGENDA UNICA] %s -> se conserva #%s y se marca #%s (%s)',
+                        agenda.lead, conservada.id, sobrante.id, motivo)
+        except ValueError as e:
+            logger.info('[AGENDA UNICA] no se pudo reconciliar #%s con #%s: %s',
+                        agenda.id, sobrante.id, e)
+    return marcadas
+
+
+def decidir_reconciliacion(agenda):
+    """Qué haría `reconciliar` con esta agenda, sin tocar nada.
+
+    Devuelve una lista de (conservada, sobrante, motivo). Existe aparte para que el
+    dry-run del script de backfill muestre exactamente la misma decisión que se va a
+    aplicar: si la simulación tuviera su propia copia de las reglas, mentiría en cuanto
+    una de las dos cambiara.
+    """
+    if not agenda or not agenda.date or agenda.duplicada_de_id is not None:
+        return []
+
+    decisiones = []
+    for hermana in _hermanas_del_mismo_dia(agenda):
+        if hermana.duplicada_de_id is not None:
+            continue
+        distancia = abs((hermana.date - agenda.date).total_seconds())
+
+        if distancia <= MINUTOS_MISMA_HORA * 60:
+            conservada = sugerir_conservada([agenda, hermana])
+            motivo = 'automático: misma persona, mismo día y misma hora'
+        elif _sin_resolver(hermana) and _sin_resolver(agenda):
+            # Reprogramación: manda la hora que se cargó último. Si alguna de las dos ya
+            # se resolvió no aplica: una llamada que de verdad ocurrió no es la hora vieja
+            # de la otra, ahí son dos agendas distintas y no se toca ninguna.
+            conservada = max([agenda, hermana],
+                             key=lambda a: (a.created_at is not None, a.created_at))
+            motivo = 'automático: reprogramación del mismo día'
+        else:
+            continue
+
+        sobrante = hermana if conservada is agenda else agenda
+        decisiones.append((conservada, sobrante, motivo))
+        if sobrante is agenda:
+            # La recién llegada fue la que sobró: no tiene sentido seguir comparándola.
+            break
+
+    return decisiones
 
 
 def cita_de(agenda):
