@@ -24,6 +24,12 @@ import './listas.css';
  * arreglo de filas visibles: es la misma razón por la que el filtrado de esta pantalla es del lado
  * del cliente.
  *
+ * Por eso `filas` son TODAS las filtradas, aunque la lista dibuje de a tandas. `enPagina` —el
+ * conjunto de las que ya se dibujaron— recorta sólo lo que se RENDERIZA dentro de cada grupo; los
+ * subtotales se siguen calculando sobre el grupo entero. Pasarle el prefijo dibujado en su lugar
+ * hacía que la tira dijera «515 clientes · $143.788 por cobrar» y los encabezados sumaran 40
+ * registros y $60.225: números por persona lisa y llanamente falsos.
+ *
  * ## El movimiento al abrir
  *
  * El cuerpo del grupo entra desplazándose, y la flecha gira. Sin `AnimatePresence` a
@@ -32,11 +38,14 @@ import './listas.css';
  * closer —que es donde esta lista se monta embebida— y la única salida era recargar la página.
  * `useReducedMotion` apaga el movimiento sin apagar el colapso.
  */
-const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsadoInicial = [] }) => {
+const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsadoInicial = [],
+    enPagina = null }) => {
     const [cerrados, setCerrados] = useState(() => new Set(colapsadoInicial));
     const quieto = useReducedMotion();
 
     const grupos = agruparPor(filas, dimension);
+    // Sin paginado se dibuja el grupo entero; con paginado, sólo lo que ya entró.
+    const aDibujar = (grupo) => (enPagina ? grupo.filas.filter(f => enPagina.has(f)) : grupo.filas);
 
     const alternar = (clave) => setCerrados(previos => {
         const siguiente = new Set(previos);
@@ -79,7 +88,7 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, formatoMonto, colapsado
                                 initial={quieto ? false : { opacity: 0, y: -6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={quieto ? { duration: 0 } : { duration: .22, ease: 'easeOut' }}>
-                                {renderFilas(grupo.filas)}
+                                {renderFilas(aDibujar(grupo))}
                             </motion.div>
                         )}
                     </div>

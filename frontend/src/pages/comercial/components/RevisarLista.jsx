@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
@@ -259,6 +259,10 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
     // final y nunca reordena los que ya estaban. Agrupar primero y paginar los grupos habría hecho
     // saltar la lista entera en cada página.
     const { pagina, hayMas, pie, dibujadas } = usePaginaProgresiva(visibles);
+    // Qué filas ya entraron, para que la vista agrupada dibuje sólo esas sin que sus subtotales
+    // dejen de contar el grupo entero. Es un `Set` por identidad: las filas son los mismos objetos
+    // que `visibles`, así que no hace falta una clave.
+    const enPagina = useMemo(() => (hayMas ? new Set(pagina) : null), [hayMas, pagina]);
 
     // Agrupada, el escalonado se cuenta dentro de cada grupo (`ListaAgrupable` llama a
     // `renderFilas` una vez por grupo y no sabe de índices globales). Es una aproximación: el tope
@@ -280,8 +284,11 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
                         sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
                         la lista en cinco tablas en vez de una repartida. */}
                     {!esTarjetas && <Encabezado def={def} plantilla={plantilla} />}
-                    <ListaAgrupable filas={pagina} dimension={dimension} renderFilas={renderFilas}
-                        formatoMonto={fmt.money} />
+                    {/* `filas` son TODAS las filtradas y `enPagina` recorta lo que se dibuja:
+                        así los subtotales de cada grupo cierran con la tira de arriba desde el
+                        primer momento, y lo que va llegando al bajar son las filas. */}
+                    <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
+                        enPagina={enPagina} formatoMonto={fmt.money} />
                 </>
             );
         }
