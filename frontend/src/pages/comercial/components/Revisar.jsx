@@ -407,7 +407,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
             {/* De dónde viene el filtro. Va arriba de los chips de faceta porque contesta la
                 pregunta anterior: no "qué condición hay puesta" sino "qué número me trajo acá". */}
-            <PanelDetalle de={origen.de} aviso={origen.aviso} criterios={criterios}
+            <PanelDetalle de={origen.de} criterios={criterios}
                 cuantas={visibles.length} total={filas.length}
                 onQuitarCriterio={quitarCriterio} onLimpiar={limpiar} />
 
