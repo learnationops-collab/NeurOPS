@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pencil } from 'lucide-react';
-import { fechaLegible as fecha, SeccionColapsable } from '../piezas';
+import { fechaLegible as fecha, instanteLegible, SeccionColapsable } from '../piezas';
+import { datetimeLocalToUtcIso } from '../../../utils/datetime';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import InlineConfirm from '../../ui/InlineConfirm';
@@ -219,7 +220,11 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, onAccion }) => {
     const agendar = async () => {
         setOcupada('nueva');
         try {
-            await onAccion?.('crear_agenda', { fecha: cuando, closer_id: closerId || null });
+            // El `datetime-local` da la hora LOCAL sin zona y el backend la guarda como UTC: sin
+            // convertirla, una llamada a las 10:00 de La Paz quedaba a las 06:00 para el mazo.
+            await onAccion?.('crear_agenda', {
+                fecha: datetimeLocalToUtcIso(cuando), closer_id: closerId || null,
+            });
             setAgregando(false);
         } catch {
             // Se queda abierto: el error más común es que ese closer ya tiene esa hora ocupada.
@@ -232,16 +237,16 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, onAccion }) => {
         <>
             {agendas.length ? agendas.map((a) => (
                 <div key={a.id} className="fi-sec-fila" style={{ gridTemplateColumns: '110px minmax(0,1fr) auto' }}>
-                    <span className="t-sm mut">{fecha(a.fecha) || '—'}</span>
+                    <span className="t-sm mut">{instanteLegible(a.fecha) || '—'}</span>
                     <span className="t-sm trunc">{a.detalle}</span>
                     <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         {puedeEditar ? (
                             <>
-                                <SelectorEstado etiqueta={`Pre call de la agenda del ${fecha(a.fecha)}`}
+                                <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
                                     valor={a.pre_call} opciones={preCall}
                                     disabled={ocupada === `${a.id}:pre_call`}
                                     onCambiar={(v) => corregir(a.id, 'pre_call', v)} />
-                                <SelectorEstado etiqueta={`Post call de la agenda del ${fecha(a.fecha)}`}
+                                <SelectorEstado etiqueta={`Post call de la agenda del ${instanteLegible(a.fecha)}`}
                                     valor={a.post_call} opciones={postCall}
                                     disabled={ocupada === `${a.id}:post_call`}
                                     onCambiar={(v) => corregir(a.id, 'post_call', v)} />
@@ -410,7 +415,7 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
             <SeccionColapsable titulo="Agendas"
                 resumen={agendas.length
                     ? `${agendas.length} ${agendas.length === 1 ? 'agenda' : 'agendas'}`
-                        + (agendas[0]?.fecha ? ` · próxima ${fecha(agendas[0].fecha)}` : '')
+                        + (agendas[0]?.fecha ? ` · próxima ${instanteLegible(agendas[0].fecha)}` : '')
                     : 'Sin agendas'}>
                 <Agendas agendas={agendas} vocabulario={ficha?.vocabulario}
                     closerId={ficha?.identidad?.closer?.id}

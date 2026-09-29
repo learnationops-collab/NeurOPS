@@ -9,6 +9,8 @@
  * Lo que no sea una fecha se devuelve tal cual: antes que un 'Invalid Date', el texto original.
  */
 
+import { parseUtcIso } from '../../../utils/datetime';
+
 /** Una fecha 'YYYY-MM-DD' se ancla al mediodia para que el huso no la corra un dia. */
 const aDate = (v) => new Date(typeof v === 'string' && v.length === 10 ? `${v}T12:00:00` : v);
 
@@ -25,5 +27,21 @@ export const fechaLegible = (v, { conHora = 'auto' } = {}) => {
 
 /** Solo el dia, sin hora: para «Ingresó» o «Último pago», donde la hora es ruido. */
 export const soloDia = (v) => fechaLegible(v, { conHora: false });
+
+/**
+ * La hora de una AGENDA en el reloj de quien mira: `19 ago 2026 · 14:00`.
+ *
+ * `start_time` se guarda en UTC y el backend lo manda con `isoformat()`, sin la Z. `fechaLegible`
+ * arma el `Date` tal cual, y un ISO sin zona el navegador lo toma como hora LOCAL: la ficha
+ * mostraba la hora UTC como si fuera la de La Paz, cuatro horas corrida respecto del mazo y del
+ * contador. `parseUtcIso` es la conversión que usa el resto de la app para esta misma columna.
+ */
+export const instanteLegible = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    const d = parseUtcIso(String(v));
+    if (!d) return String(v);
+    const dia = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${dia} · ${d.toTimeString().slice(0, 5)}`;
+};
 
 export default fechaLegible;

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
-import { soloDia } from './piezas/fecha';
+import { instanteLegible, soloDia } from './piezas/fecha';
 import { opciones } from './estadoFicha';
 import { mensajeDeError } from './fichaApi';
 import { CAMPOS_DATOS, cambiosDe, valoresIniciales } from './datosCliente';
@@ -50,9 +50,11 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
     // esconde. El backend lo manda siempre, y la ruta lo vuelve a comprobar.
     const puedeCorregir = puedeEditar && ficha?.permisos?.editar_datos !== false;
 
-    const llamada = id.llamada
-        ? [id.llamada.fecha, id.llamada.hora].filter(Boolean).join(' · ')
-        : null;
+    // Desde el instante (`iso`, UTC) y no desde `fecha`/`hora`, que el backend arma en UTC: la
+    // cabecera decía otra hora que la fila de esa misma agenda en el historial.
+    const llamada = id.llamada?.iso
+        ? instanteLegible(id.llamada.iso)
+        : id.llamada ? [id.llamada.fecha, id.llamada.hora].filter(Boolean).join(' · ') : null;
     // Ya vendido: el programa reemplaza al examen, que pasa a ser un dato de origen.
     const esCliente = !!id.programa;
 
