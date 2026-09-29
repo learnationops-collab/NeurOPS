@@ -23,7 +23,6 @@ import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
-import LeadEditModal from './components/LeadEditModal';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
@@ -175,8 +174,6 @@ const CloserWorkflowPage = () => {
     // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
     // días) — sigue siendo editable, no es un valor fijo.
     const [reportSlotsIsDefault, setReportSlotsIsDefault] = useState(false);
-    // Lead cuya ficha se está corrigiendo (nombre/teléfono/correo/instagram/fecha de la llamada).
-    const [editingLead, setEditingLead] = useState(null);
     // Aviso en vivo si los slots escritos no llegan a las agendas del día: un cupo agendado
     // sigue siendo un cupo, así que ese número es imposible (venía pasando en reportes reales).
     const slotsPorDebajoDeAgendas = (
@@ -1128,23 +1125,6 @@ const CloserWorkflowPage = () => {
         setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
         setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
 
-    };
-
-    // El editor de datos del lead se arma con lo que la ficha YA trajo. Antes el mazo pedia
-    // `/closer/deck/card/<id>` al abrir cada lead solo para esto: dos peticiones por apertura
-    // pidiendo lo mismo. Importa sobre todo cuando el lead viene de la busqueda global, que lo
-    // pasa con nada mas que su id.
-    const editarDesdeLaFicha = (ficha) => {
-        const id = ficha?.identidad || {};
-        setEditingLead({
-            id: id.appointment_id ?? selectedLead?.id,
-            client_id: id.client_id ?? selectedLead?.client_id ?? null,
-            lead_name: id.nombre || '',
-            phone: id.telefono || '',
-            email: id.email || '',
-            instagram: id.instagram || '',
-            start_time: id.llamada?.iso || null,
-        });
     };
 
     // Con que pestaña abre la ficha. El mazo ya sabe a que vino el closer por la columna desde
@@ -2719,7 +2699,6 @@ const CloserWorkflowPage = () => {
                     clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
                     pestanaInicial={pestanaDeLaFicha}
                     onCerrar={() => setSelectedLead(null)}
-                    onEditar={editarDesdeLaFicha}
                     onCambio={alCambiarLaFicha}
                 />
             )}
@@ -3277,17 +3256,11 @@ const CloserWorkflowPage = () => {
             </>
 
 
-            {/* Corrección de la ficha del lead: nombre, teléfono, correo, instagram y fecha/hora
-                de la llamada. Al guardar se recarga el mazo y se cierra el modal de detalle, para
-                que el lead vuelva a leerse con los datos nuevos en vez de los de la copia vieja. */}
-            {editingLead && (
-                <LeadEditModal
-                    lead={editingLead}
-                    onClose={() => setEditingLead(null)}
-                    onSaved={() => { setSelectedLead(null); fetchAgendas(); }}
-                />
-            )}
-
+            {/* Los datos del lead ya no se corrigen en un modal aparte encima de la ficha: el lápiz
+                de la cabecera los edita en el lugar, igual que desde el dashboard comercial (ver
+                `FichaHeader`). Guardar pasa por `onCambio`, que recarga el mazo. La fecha/hora
+                de la llamada, que ese modal también movía, queda para la edición de agendas del
+                Historial de la ficha. */}
             {showProcrastinar && (
                 <ProcrastinarModal
                     pendientes={counts.seguimientos}
