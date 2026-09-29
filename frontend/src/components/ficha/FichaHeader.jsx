@@ -132,8 +132,9 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
             await onAccion?.('editar_datos', cambios);
             setEditando(false);
         } catch (err) {
-            // El aviso del cascarón ya lo muestra abajo; si el backend dice qué campo fue, se
-            // muestra además al lado de ese campo, que es donde está mirando quien edita.
+            // Si el backend dice qué campo fue, el error va al lado de ese campo, que es donde
+            // está mirando quien edita, y el cascarón no lo repite en su aviso. Sin campo, lo
+            // muestra solo el aviso del cascarón.
             setError({ campo: err?.response?.data?.campo || null, texto: mensajeDeError(err) });
         } finally {
             setGuardando(false);

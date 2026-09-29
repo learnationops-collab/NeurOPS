@@ -183,7 +183,10 @@ const FichaLeadModal = ({
                 texto: (typeof mensaje === 'function' ? mensaje(resultado) : mensaje) || 'Guardado.' });
             return resultado;
         } catch (err) {
-            setAviso({ tono: 'error', texto: mensajeDeError(err) });
+            // Si el backend dice QUÉ campo falló, el error ya se pinta al lado de ese campo (el
+            // editor de la cabecera lo hace): repetirlo en la franja de arriba era el mismo
+            // párrafo dos veces, uno debajo del otro.
+            if (!err?.response?.data?.campo) setAviso({ tono: 'error', texto: mensajeDeError(err) });
             throw err;
         }
     }, [ficha, appointmentId, cargar, onCambio, onCerrar]);
