@@ -18,6 +18,7 @@ import OperatorControls from '../../components/modals/OperatorControls';
 import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import EsqueletoKanban from './components/EsqueletoKanban';
 import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
@@ -2163,10 +2164,13 @@ const CloserWorkflowPage = () => {
                     {activeStep === 'confirmations' ? (
                         /* Renderizado del Kanban de Confirmaciones */
                         loading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                <Loader2 className="animate-spin text-pink-500" size={32} />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando confirmaciones...</span>
-                            </div>
+                            /* La forma del kanban de abajo, no un spinner (pedido del usuario,
+                               29/sep/2026). Las columnas son las mismas dos, con su título: si
+                               cambia una de abajo, cambia acá. */
+                            <EsqueletoKanban rotulo="Cargando confirmaciones…" columnas={[
+                                { clase: 'k1-v6', titulo: 'Por confirmar', subgrupo: true },
+                                { clase: 'k3-v6', titulo: 'Confirmado', hecha: true },
+                            ]} />
                         ) : filteredAgendas.length === 0 ? (
                             <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
                                 👏 No hay citas pendientes de confirmación.
@@ -2280,10 +2284,12 @@ const CloserWorkflowPage = () => {
                             )}
 
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                    <Loader2 className="animate-spin text-pink-500" size={32} />
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando llamadas...</span>
-                                </div>
+                                /* Ídem Confirmar: las tres columnas de abajo, en hueso. */
+                                <EsqueletoKanban rotulo="Cargando llamadas…" columnas={[
+                                    { clase: 'k1-v6', titulo: 'Atrasadas' },
+                                    { clase: 'k2-v6', titulo: 'Hoy' },
+                                    { clase: 'k3-v6', titulo: 'Reportadas', hecha: true },
+                                ]} />
                             ) : filteredAgendas.length === 0 ? (
                                 <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
                                     👏 Ninguna llamada pendiente de reportar.
