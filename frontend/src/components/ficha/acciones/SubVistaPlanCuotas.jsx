@@ -44,17 +44,20 @@ export default function SubVistaPlanCuotas({ ficha, onVolver, onGuardar, guardan
     setFilas((prev) => redimensionar(prev, prev.length, Number(v) || 0, primeraFechaPorDefecto()));
   };
 
+  // El backend reconcilia por `id`: una cuota que ya existe se actualiza en su sitio y por eso
+  // un plan con cobros se puede corregir. Una fila nueva viaja con `id: null`.
   const guardar = () => onGuardar({
     programa_code: cobro.programa_code || null,
     total: Number(total) || 0,
-    cuotas: filas.map((f, i) => ({
+    cuotas: filas.map((f) => ({
       id: f.id ?? null,
-      numero_cuota: i + 1,
       monto: Number(f.monto) || 0,
       fecha_vencimiento: f.fecha || null,
       estado: f.estado || 'pendiente',
     })),
   });
+
+  const sinFecha = filas.some((f) => !f.fecha);
 
   return (
     <SubVista
@@ -64,7 +67,8 @@ export default function SubVistaPlanCuotas({ ficha, onVolver, onGuardar, guardan
         <button
           type="button"
           className="ln-btn ln-btn--cta"
-          disabled={guardando || filas.length === 0}
+          disabled={guardando || filas.length === 0 || sinFecha}
+          title={sinFecha ? 'Cada cuota necesita su fecha de cobro' : undefined}
           onClick={guardar}
         >
           {guardando && <span className="ln-spinner" />}
@@ -73,7 +77,7 @@ export default function SubVistaPlanCuotas({ ficha, onVolver, onGuardar, guardan
       )}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        <div className="ln-field-wrap" style={{ maxWidth: 240 }}>
+        <div className="ln-field-wrap" style={{ maxWidth: 280 }}>
           <small className="ln-field-label" style={{ letterSpacing: '.08em', textTransform: 'uppercase' }}>
             Total del plan
           </small>
@@ -88,6 +92,12 @@ export default function SubVistaPlanCuotas({ ficha, onVolver, onGuardar, guardan
             />
             <span className="ln-unit">USD</span>
           </span>
+          {/* No es el total del programa: es lo que queda por cobrar y se reparte en estas
+              cuotas. El total del programa se edita en la tarjeta de Deuda, que es de donde
+              sale esta deuda. */}
+          <small className="ln-t-caption ln-muted">
+            {`Lo que queda por cobrar, repartido en cuotas. Hoy la deuda es ${moneda(deuda)}.`}
+          </small>
         </div>
 
         <div className="ln-field-wrap">

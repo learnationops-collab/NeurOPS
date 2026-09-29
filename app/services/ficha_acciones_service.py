@@ -352,10 +352,33 @@ def seguimiento(appt, datos, usuario):
 # --- Plan de cuotas ---------------------------------------------------------------------------
 
 def plan_cuotas(appt, datos, usuario):
+    """Arma o corrige el cronograma de cuotas del cliente.
+
+    Admite dos formas del pedido, y la diferencia no es cosmetica:
+
+      · `cuotas`: el cronograma explicito que manda el editor de la ficha, fila por fila con su
+        id, su monto, su fecha y su estado. Se reconcilia (`sync_plan`), asi que un plan con
+        cuotas ya cobradas se puede corregir sin perder el cobro.
+      · `total` + `num_cuotas`: el reparto automatico de siempre (`create_plan`), que es lo que
+        manda el wizard del closer al declarar una venta. Se deja intacto.
+    """
     from app.services.installment_service import InstallmentService
 
     if not appt.client_id:
         raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién armarle el plan.')
+
+    programa_code = (datos.get('programa_code') or '').strip().upper() or None
+
+    if isinstance(datos.get('cuotas'), list):
+        filas = [c for c in datos['cuotas'] if isinstance(c, dict)]
+        if not filas:
+            raise ErrorDeAccion('El plan necesita al menos una cuota.')
+        for c in filas:
+            if not c.get('fecha_vencimiento') and not c.get('fecha'):
+                raise ErrorDeAccion('Cada cuota necesita su fecha de cobro.')
+        planes = InstallmentService.sync_plan(appt.client_id, appt.id, programa_code, filas)
+        return {'id': appt.id, 'cuotas': [p.to_dict() for p in planes]}
+
     try:
         total = float(datos.get('total') or 0)
         cobrado_hoy = float(datos.get('cobrado_hoy') or 0)
@@ -369,7 +392,7 @@ def plan_cuotas(appt, datos, usuario):
         appt.client_id, appt.id, total, cobrado_hoy, num_cuotas,
         fechas=datos.get('fechas') if isinstance(datos.get('fechas'), list) else None,
         montos=datos.get('montos') if isinstance(datos.get('montos'), list) else None,
-        programa_code=(datos.get('programa_code') or '').strip().upper() or None)
+        programa_code=programa_code)
     if planes is None:
         # Misma negativa que `POST /closer/installments`: un plan con pagos ya registrados no se
         # recrea desde cero, porque se perderia el rastro de lo cobrado.

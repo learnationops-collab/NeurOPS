@@ -97,6 +97,88 @@ class InstallmentService:
         return plans
 
     @staticmethod
+    def sync_plan(client_id, appointment_id, programa_code, cuotas):
+        """Deja el cronograma del cliente igual a `cuotas`, reconciliando fila por fila.
+
+        Es la contraparte de `create_plan` para EDITAR un plan que ya existe. `create_plan`
+        borra y rehace, y por eso se niega a tocar un plan con cuotas cobradas: rehacerlo
+        perderia el registro del cobro. Pero negarse dejaba al closer sin ninguna forma de
+        corregir un plan en cuanto entraba el primer pago -- ni mover una fecha, ni cambiar un
+        monto, ni agregar la cuota que faltaba. Reconciliar en vez de rehacer resuelve las dos
+        cosas: la cuota que llega con `id` se actualiza EN SU SITIO, asi que su cobro sigue ahi.
+
+        `cuotas` es una lista de dicts con `id` (None si es nueva), `monto`, `fecha_vencimiento`
+        ('YYYY-MM-DD') y `estado`. El orden del cronograma lo da la fecha, y `numero_cuota` se
+        renumera sobre ese orden: asi borrar una del medio no deja un hueco en la numeracion.
+
+        Dos reglas que no se negocian:
+
+          - **una cuota cobrada no se borra.** Si el payload no la trae, se conserva igual. Que
+            una pantalla que dice "editar el plan" borre la constancia de un pago no es editar.
+          - el estado se normaliza contra el vocabulario del modelo ('pendiente' | 'pagado').
+            'vencido' no es un estado guardado: `to_dict()` lo deriva de una cuota pendiente con
+            la fecha pasada, y volver a escribirlo dejaria en la base un valor que ninguna
+            consulta busca.
+
+        Devuelve el plan resultante, ordenado.
+        """
+        existentes = {p.id: p for p in InstallmentPlan.query.filter_by(
+            client_id=client_id, programa_code=programa_code).all()}
+
+        resultado, conservados = [], set()
+        for fila in (cuotas or []):
+            if not isinstance(fila, dict):
+                continue
+            cuota = existentes.get(fila.get('id'))
+            if cuota is None:
+                cuota = InstallmentPlan(client_id=client_id, appointment_id=appointment_id,
+                                        programa_code=programa_code, numero_cuota=0, monto=0.0,
+                                        fecha_vencimiento=date.today())
+                db.session.add(cuota)
+            else:
+                conservados.add(cuota.id)
+            InstallmentService._aplicar_fila(cuota, fila)
+            resultado.append(cuota)
+
+        # Lo que el payload no trajo se va, salvo que este cobrado.
+        for cuota in existentes.values():
+            if cuota.id in conservados:
+                continue
+            if cuota.estado == 'pagado':
+                resultado.append(cuota)
+            else:
+                db.session.delete(cuota)
+
+        resultado.sort(key=lambda c: (c.fecha_vencimiento or date.max, c.id or 0))
+        for i, cuota in enumerate(resultado, start=1):
+            cuota.numero_cuota = i
+
+        db.session.commit()
+        return resultado
+
+    @staticmethod
+    def _aplicar_fila(cuota, fila):
+        """Vuelca una fila del editor sobre una cuota. Un valor invalido no pisa lo que habia."""
+        try:
+            cuota.monto = round(float(fila.get('monto') or 0), 2)
+        except (TypeError, ValueError):
+            cuota.monto = cuota.monto or 0.0
+
+        cruda = fila.get('fecha_vencimiento') or fila.get('fecha')
+        if cruda:
+            try:
+                cuota.fecha_vencimiento = (cruda if isinstance(cruda, date)
+                                           else datetime.strptime(str(cruda), '%Y-%m-%d').date())
+            except (ValueError, TypeError):
+                pass
+
+        pagada = str(fila.get('estado') or '').strip().lower() == 'pagado'
+        cuota.estado = 'pagado' if pagada else 'pendiente'
+        # La fecha de pago acompana al estado: una cuota que vuelve a pendiente no puede seguir
+        # diciendo cuando se cobro.
+        cuota.fecha_pago = (cuota.fecha_pago or datetime.utcnow()) if pagada else None
+
+    @staticmethod
     def get_plan_by_client(client_id, programa_code=None):
         q = InstallmentPlan.query.filter_by(client_id=client_id)
         if programa_code:

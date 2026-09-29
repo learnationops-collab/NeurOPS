@@ -336,6 +336,93 @@ def test_no_se_rehace_un_plan_con_pagos_ya_registrados(client, db, lead, equipo,
     assert 'pagos registrados' in r.get_json()['message']
 
 
+# El editor de la ficha no manda `num_cuotas`: manda el cronograma entero, fila por fila, porque
+# tiene que poder mover una fecha sola o marcar una cuota como cobrada. Es otra forma del mismo
+# pedido y se reconcilia en vez de rehacerse.
+
+def _cuota(fecha, monto, estado='pendiente', id=None):
+    return {'id': id, 'monto': monto, 'fecha_vencimiento': fecha, 'estado': estado}
+
+
+def test_el_cronograma_explicito_arma_el_plan(client, db, lead, equipo, auth_headers):
+    r = client.put(url(lead, '/plan-cuotas'),
+                   json={'programa_code': 'RR', 'total': 600,
+                         'cuotas': [_cuota('2026-11-10', 250), _cuota('2026-12-10', 350)]},
+                   headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    cuotas = (InstallmentPlan.query.filter_by(client_id=lead.client_id)
+              .order_by(InstallmentPlan.numero_cuota).all())
+    assert [(c.numero_cuota, c.monto, c.fecha_vencimiento) for c in cuotas] == [
+        (1, 250.0, date(2026, 11, 10)), (2, 350.0, date(2026, 12, 10))]
+
+
+def test_un_plan_con_una_cuota_cobrada_si_se_puede_corregir(client, db, lead, equipo, auth_headers):
+    """Lo que `create_plan` bloquea es rehacerlo. Corregirlo sin perder el cobro es otra cosa."""
+    pagada = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                             numero_cuota=1, monto=300.0, fecha_vencimiento=date(2026, 10, 1),
+                             estado='pagado', fecha_pago=datetime(2026, 10, 1))
+    pendiente = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                                numero_cuota=2, monto=300.0, fecha_vencimiento=date(2026, 11, 1))
+    db.session.add_all([pagada, pendiente])
+    db.session.commit()
+    id_pagada, id_pendiente = pagada.id, pendiente.id
+
+    r = client.put(url(lead, '/plan-cuotas'),
+                   json={'programa_code': 'RR',
+                         'cuotas': [_cuota('2026-10-01', 300, 'pagado', id_pagada),
+                                    _cuota('2026-12-05', 400, 'pendiente', id_pendiente)]},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert InstallmentPlan.query.get(id_pagada).estado == 'pagado'
+    corregida = InstallmentPlan.query.get(id_pendiente)
+    assert (corregida.monto, corregida.fecha_vencimiento) == (400.0, date(2026, 12, 5))
+
+
+def test_sacar_una_cuota_del_cronograma_no_borra_la_que_ya_se_cobro(client, db, lead, equipo,
+                                                                    auth_headers):
+    """Una pantalla que dice "editar el plan" no puede borrar la constancia de un pago."""
+    pagada = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                             numero_cuota=1, monto=300.0, fecha_vencimiento=date(2026, 10, 1),
+                             estado='pagado')
+    sobra = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                            numero_cuota=2, monto=300.0, fecha_vencimiento=date(2026, 11, 1))
+    db.session.add_all([pagada, sobra])
+    db.session.commit()
+    id_pagada, id_sobra = pagada.id, sobra.id
+
+    r = client.put(url(lead, '/plan-cuotas'),
+                   json={'programa_code': 'RR', 'cuotas': [_cuota('2026-12-01', 500)]},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert InstallmentPlan.query.get(id_pagada) is not None
+    assert InstallmentPlan.query.get(id_sobra) is None
+
+
+def test_una_cuota_vencida_se_guarda_como_pendiente(client, db, lead, equipo, auth_headers):
+    """'vencido' lo deriva `to_dict()` de la fecha; guardarlo dejaria un estado que nadie busca."""
+    r = client.put(url(lead, '/plan-cuotas'),
+                   json={'programa_code': 'RR', 'cuotas': [_cuota('2020-01-10', 300, 'vencido')]},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    cuota = InstallmentPlan.query.filter_by(client_id=lead.client_id).one()
+    assert (cuota.estado, cuota.fecha_pago) == ('pendiente', None)
+    assert r.get_json()['cuotas'][0]['estado'] == 'vencido'
+
+
+def test_una_cuota_sin_fecha_no_entra_al_cronograma(client, db, lead, equipo, auth_headers):
+    r = client.put(url(lead, '/plan-cuotas'),
+                   json={'programa_code': 'RR', 'cuotas': [_cuota(None, 300)]},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'fecha' in r.get_json()['message'].lower()
+    assert InstallmentPlan.query.filter_by(client_id=lead.client_id).count() == 0
+
+
 def test_dar_de_baja_no_falsea_el_resultado_de_la_llamada(client, db, lead, equipo, auth_headers):
     """La llamada ocurrio y fue una venta: reescribirla como Lead Perdido falsearia el embudo."""
     lead.closer_result = 'Show up'
