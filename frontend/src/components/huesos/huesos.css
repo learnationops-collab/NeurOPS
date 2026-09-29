@@ -1,0 +1,60 @@
+/* Los huesos del esqueleto de carga.
+ *
+ * Generaliza `.fi-hueso`, que nació dentro de `ficha.css` y estaba encerrado bajo `.dc-shell`:
+ * el mismo hueso lo necesitan el tablero comercial, el mazo del closer y la ficha, y dos de
+ * esos tres viven fuera de ese contenedor. Por eso la clase acá va sin prefijo y con fallback
+ * en el token de fondo: `--mat-1` sólo existe dentro de `.dc-shell`.
+ *
+ * El hueso hace dos cosas a la vez y por eso el color vive en `::after`. Una sola animación de
+ * opacidad no puede latir y aparecer: si se declaran las dos, la segunda gana y la entrada no
+ * se ve. Así que el elemento aparece (una vez, con su retraso) y el pseudo late (para siempre).
+ * Ese retraso es el pedido de que la carga "vaya cargando elemento por elemento": cada hueso
+ * entra un escalón después del anterior, en vez de que el bloque entero aparezca de golpe. */
+
+.hueso {
+    position: relative;
+    display: block;
+    border-radius: var(--radius-control, 10px);
+    opacity: 0;
+    animation: huesoEntra .26s ease-out var(--d, 0ms) forwards;
+}
+
+.hueso::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--mat-1, rgba(148, 163, 184, .14));
+    animation: huesoPulso 1.4s ease-in-out infinite;
+}
+
+@keyframes huesoEntra {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes huesoPulso {
+    0%, 100% { opacity: .5; }
+    50% { opacity: 1; }
+}
+
+/* Sin movimiento el esqueleto sigue siendo útil —dice dónde va a caer cada cosa—, así que se
+   apagan las dos animaciones y se deja el hueso quieto y visible, no invisible. */
+@media (prefers-reduced-motion: reduce) {
+    .hueso {
+        opacity: 1;
+        transform: none;
+        animation: none;
+    }
+
+    .hueso::after {
+        opacity: .7;
+        animation: none;
+    }
+}
+
+/* Un bloque de huesos apilados: el gap es el mismo que separa las piezas reales. */
+.huesos {
+    display: grid;
+    gap: var(--s3, 10px);
+}

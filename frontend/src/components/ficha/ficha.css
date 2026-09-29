@@ -232,13 +232,11 @@
 .dc-shell .fi-modal-cab{padding:var(--s5) var(--s5) var(--s4)}
 .dc-shell .fi-modal-panel{padding:var(--s5)}
 
-/* ---------- Esqueleto de carga ---------- */
-.dc-shell .fi-hueso{border-radius:var(--radius-control);background:var(--mat-1);
-  animation:fiPulso 1.4s ease-in-out infinite}
-@keyframes fiPulso{0%,100%{opacity:.45}50%{opacity:.9}}
-@media (prefers-reduced-motion:reduce){
-  .dc-shell .fi-hueso{animation:none}
-}
+/* El esqueleto de carga vivia aca como `.fi-hueso`, encerrado bajo `.dc-shell`.
+   Se generalizo a `.hueso` en `components/huesos/huesos.css` cuando el tablero
+   comercial y el mazo del closer pidieron el mismo hueso: dos de los tres se
+   dibujan fuera de ese contenedor. La animacion y el `prefers-reduced-motion`
+   se mudaron con el. */
 
 /* ---------- Hilo de notas ---------- */
 .dc-shell .fi-hilo{display:grid;gap:var(--s4);max-height:420px;overflow-y:auto;

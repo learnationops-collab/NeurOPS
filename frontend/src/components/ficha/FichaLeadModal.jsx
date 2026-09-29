@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
 import { Aviso, useMovimiento } from './piezas';
+import { Hueso } from '../huesos/Huesos';
 import { leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
 import TabConfirmacion from './tabs/TabConfirmacion';
@@ -61,12 +62,12 @@ const MENSAJES = {
 /** Mientras carga se dibuja la forma del modal, no un spinner: no salta el layout. */
 const Esqueleto = () => (
     <div style={{ display: 'grid', gap: 'var(--s6)' }} aria-hidden="true">
-        <div className="fi-hueso" style={{ height: 40, width: '42%' }} />
-        <div className="fi-hueso" style={{ height: 34 }} />
+        <Hueso alto={40} ancho="42%" />
+        <Hueso alto={34} paso={1} />
         <div style={{ display: 'grid', gap: 'var(--s4)' }}>
-            <div className="fi-hueso" style={{ height: 76 }} />
-            <div className="fi-hueso" style={{ height: 120 }} />
-            <div className="fi-hueso" style={{ height: 96 }} />
+            <Hueso alto={76} paso={2} />
+            <Hueso alto={120} paso={3} />
+            <Hueso alto={96} paso={4} />
         </div>
     </div>
 );
@@ -228,7 +229,7 @@ const FichaLeadModal = ({
                 <div className="fi-modal-cab">
                     {cargando && !ficha ? (
                         <div className="fila" style={{ justifyContent: 'space-between' }}>
-                            <div className="fi-hueso" style={{ height: 36, width: 280 }} />
+                            <Hueso alto={36} ancho={280} />
                             <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>×</button>
                         </div>
                     ) : (

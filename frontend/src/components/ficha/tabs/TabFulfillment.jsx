@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, GraduationCap, RefreshCw } from 'lucide-react';
 import { soloDia } from '../piezas/fecha';
+import { Hueso } from '../../huesos/Huesos';
 
 const pct = (n) => `${Math.round(Number(n) || 0)}%`;
 const horas = (n) => `${Math.round((Number(n) || 0) * 10) / 10} h`;
@@ -36,10 +37,10 @@ const Dato = ({ rotulo, valor, tono = undefined }) => (
   </div>
 );
 
-const Hueso = () => (
+const PanelHuesos = () => (
   <div className="ln-panel ln-panel--sm" aria-hidden="true">
-    <div className="fi-hueso" style={{ height: 22, width: '38%' }} />
-    <div className="fi-hueso" style={{ height: 64, marginTop: 'var(--space-4)' }} />
+    <Hueso alto={22} ancho="38%" />
+    <Hueso alto={64} paso={1} style={{ marginTop: 'var(--space-4)' }} />
   </div>
 );
 
@@ -94,7 +95,7 @@ export default function TabFulfillment({ ficha, onConsultar }) {
     ? {}
     : { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.18, ease: 'easeOut' } };
 
-  if (cargando && !datos) return <Hueso />;
+  if (cargando && !datos) return <PanelHuesos />;
 
   const error = fallo || datos?.error?.motivo;
   const alumno = datos?.alumno;
