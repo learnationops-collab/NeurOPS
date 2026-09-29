@@ -901,6 +901,37 @@ def test_mover_la_agenda_mueve_su_fila_del_tablero(client, db, lead, equipo, aut
     assert (lead.start_time, lead.origin) == (nueva, 'workshop')
 
 
+def test_corregir_una_agenda_vieja_no_toca_la_fila_del_tablero_de_otra_llamada(client, db, lead,
+                                                                              equipo,
+                                                                              auth_headers):
+    """La agenda vieja no tiene fila propia en el Tablero; la de mañana si. El respaldo del sync
+    del mazo («la agenda mas reciente del lead») es la fila de OTRA llamada: escribirle el closer y
+    el No Show de la vieja haria que, al pasar por el sync tablero -> citas, la llamada de mañana
+    saliera del mazo como No Show antes de ocurrir."""
+    from app.models import FinancialAgenda
+
+    fila = FinancialAgenda(nombre='vsl', lead='Ana Gomez', closer='vendedor', mail='ana@x.com',
+                           instagram='ana.g', whatsapp='+59171234567', estado='Show Up',
+                           date=lead.start_time, fecha_meet=lead.start_time.isoformat())
+    db.session.add(fila)
+    db.session.commit()
+    vieja = _agenda_vieja(db, lead, equipo, closer_id=equipo['relevo'].id, origin='vsl',
+                          start_time=datetime.utcnow() - timedelta(days=60),
+                          closer_result='No Show', result='No Show', closer_processed=True)
+
+    r = client.patch(f'/api/ficha/{vieja.id}/agenda',
+                     json={'fuente': 'workshop', 'closer_id': equipo['closer'].id,
+                           'fecha': (vieja.start_time - timedelta(days=1)).isoformat() + 'Z'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    db.session.refresh(fila)
+    assert (fila.estado, fila.closer, fila.nombre, fila.date) == \
+        ('Show Up', 'vendedor', 'vsl', lead.start_time)
+    # Corregir no da de alta filas en el Tablero: una cita sin fila no la pisa ningun sync.
+    assert FinancialAgenda.query.count() == 1
+
+
 # --- Seguimientos del historial ---------------------------------------------------------------
 #
 # Pedido del 29/09/2026: los seguimientos se crean y se les cambia el estado desde el historial.

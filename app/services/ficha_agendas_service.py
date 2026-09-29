@@ -118,22 +118,35 @@ def _espejo_en_el_tablero(appt):
     la fecha vieja, la correccion duraria hasta la proxima sincronizacion — o, si la cita se movio
     mas de 12 horas, el sync no la encontraria y crearia una SEGUNDA cita a la hora vieja.
 
-    Se reusa `sync_appointment_to_financial_agenda`, que es como cualquier escritura del mazo
-    encuentra (o crea) esa fila. Su respaldo cuando no hay una fila en la ventana es "la agenda
-    mas reciente del mismo lead": esa es otra llamada, y a esa no se la mueve.
+    Se busca con el mismo cruce que `sync_appointment_to_financial_agenda` (mail, instagram,
+    telefono, nunca una fila marcada como repetida) y la misma ventana, pero SIN pasar por esa
+    funcion: cuando no hay fila en la ventana, su respaldo es "la agenda mas reciente del lead",
+    que es OTRA llamada, y le escribe el closer y el estado de esta antes de devolverla. Corregir
+    una agenda vieja le ponia el No Show de la vieja a la fila de la llamada de mañana, y el sync
+    tablero -> citas sacaba despues esa llamada del mazo antes de que ocurriera.
+
+    Tampoco se crea una fila cuando no la hay: una cita sin fila no la pisa ningun sync, y dar de
+    alta una agenda en el Tablero no es corregir esta. Por lo mismo no se usa el ultimo recurso de
+    ese sync (una fila a la misma hora con un nombre compatible, que da por bueno cualquier nombre
+    generico): el sync tablero -> citas llega a la cita por el contacto de la fila, y una fila que
+    no comparte ninguno con este cliente no la va a pisar. Entre varias filas en la ventana gana la
+    mas cercana a la hora de la cita.
     """
+    from app.models.financial import FinancialAgenda
     from app.services.booking_service import BookingService
 
-    if not appt.start_time:
+    if not appt.start_time or not appt.client:
         return None
-    try:
-        espejo = BookingService.sync_appointment_to_financial_agenda(appt)
-    except Exception:
-        # El cruce es por texto libre y falla en leads sin contacto: no puede tumbar la correccion.
+    filtros = BookingService.filtros_de_agenda_del_cliente(appt.client)
+    if not filtros:
         return None
-    if not espejo or not espejo.date or abs(espejo.date - appt.start_time) > VENTANA_ESPEJO:
+    candidatas = FinancialAgenda.query.filter(
+        FinancialAgenda.duplicada_de_id.is_(None), or_(*filtros),
+        FinancialAgenda.date >= appt.start_time - VENTANA_ESPEJO,
+        FinancialAgenda.date <= appt.start_time + VENTANA_ESPEJO).all()
+    if not candidatas:
         return None
-    return espejo
+    return min(candidatas, key=lambda fila: abs(fila.date - appt.start_time))
 
 
 def _en_la_zona(dt, zona):
@@ -161,7 +174,8 @@ def editar_agenda(appt, datos, usuario):
       · Los avisos por WhatsApp no dependen de esta hora: `followup_reminder_sent_at` y
         `followup_reminder_time` son del SEGUIMIENTO (`fecha_seguimiento`), y
         `pre_call_reminder_at` es una fecha que el closer elige a mano. No hay bandera que resetear.
-      · El espejo en el Tablero de Agendas se mueve con la cita (ver `_espejo_en_el_tablero`).
+      · El espejo en el Tablero de Agendas se mueve con la cita, si la cita tiene uno; la fila de
+        otra llamada del mismo lead no se toca (ver `_espejo_en_el_tablero`).
       · El evento de Google Calendar NO se mueve: no hay una funcion que lo actualice, y el evento
         vive en el calendario de quien lo creo. Es lo mismo que hace el reagendado del closer
         (`PATCH /closer/appointments/<id>`).
