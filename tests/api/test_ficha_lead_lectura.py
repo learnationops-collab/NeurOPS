@@ -317,6 +317,20 @@ def test_el_cobro_reusa_la_deuda_y_la_etapa_que_ya_calcula_el_closer(client, db,
                                'monto': 400.0, 'tipo': 'parcial'}]
     assert cobro['ultimo_pago'] == '2026-08-01T00:00:00'
     assert cobro['estado_pagos']['balance_remaining'] == 600.0
+    # El total negociado viaja crudo: es el numero del que sale la deuda y el que la ficha deja
+    # corregir.
+    assert cobro['total'] == 1000.0
+
+
+def test_un_cliente_sin_total_cargado_no_se_lo_inventa(client, db, comprador, equipo, auth_headers):
+    """Deducido y declarado no son lo mismo: el deducido se propone aparte, no se hace pasar."""
+    comprador.total_amount = None
+    db.session.commit()
+
+    cobro = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()['cobro']
+
+    assert cobro['total'] is None
+    assert cobro['total_sugerido'] == round(cobro['pagado'] + cobro['deuda'], 2)
 
 
 def test_una_venta_al_dia_se_abre_en_historial(client, db, comprador, equipo, auth_headers):

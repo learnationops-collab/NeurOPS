@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  CalendarDays, CheckCircle2, Clock, XCircle, AlertTriangle, X,
+  CalendarDays, Check, CheckCircle2, Clock, Pencil, XCircle, AlertTriangle, X,
 } from 'lucide-react';
 import { TarjetaAccion } from '../acciones/piezas';
 import { soloDia } from '../piezas/fecha';
@@ -77,7 +77,11 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
 
         {modo === 'menu' ? (
           <motion.div key="menu" {...animar} className="ln-grid" style={{ gridTemplateColumns: 'minmax(220px, 1fr) minmax(0, 2fr)', gap: 'var(--space-6)' }}>
-            <TarjetaDeuda cobro={ficha?.cobro} />
+            <TarjetaDeuda
+              cobro={ficha?.cobro}
+              puedeEditar={puedeCobrar}
+              onGuardarTotal={(total) => onAccion('guardar_total', { total })}
+            />
             <div className="ln-grid ln-grid-2">
               {ACCIONES.map((a) => (
                 <TarjetaAccion
@@ -107,29 +111,140 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
   );
 }
 
-// La deuda es el dato que manda en esta pestaña: monto grande en rojo, y al pie lo cobrado y el
-// último pago para que el closer sepa si el cliente venía pagando o no.
-function TarjetaDeuda({ cobro }) {
+// La deuda es el dato que manda en esta pestaña: monto grande en rojo, y debajo los tres números
+// que la explican — el total que el cliente negoció, lo que ya pagó y cuándo fue el último pago.
+//
+// El total se edita ACÁ y no solo en el historial del mazo porque es de donde sale la deuda:
+// `_client_debt` lo prefiere al precio de lista del programa, que es igual para todos y no
+// refleja descuentos. Ver un saldo que no cierra y no poder tocar el número que lo produce era
+// pedirle al closer que avisara a Operaciones para arreglar su propia cartera.
+function TarjetaDeuda({ cobro, puedeEditar = true, onGuardarTotal }) {
+  const reducido = useReducedMotion();
+  const [editando, setEditando] = useState(false);
+  const [valor, setValor] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
   const deuda = Number(cobro?.deuda) || 0;
   const alDia = deuda < 0.01;
+  const total = cobro?.total ?? null;
+  const sugerido = Number(cobro?.total_sugerido) || 0;
+
+  const abrir = () => {
+    // Sin total cargado se propone el deducido (pagado + deuda): es el que el sistema ya está
+    // usando de hecho, así que confirmarlo tal cual también es una corrección.
+    setValor(String(total ?? sugerido));
+    setEditando(true);
+  };
+
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      await onGuardarTotal?.(Number(valor));
+      setEditando(false);
+    } catch {
+      // El error lo muestra el aviso del cascarón. Acá el editor se queda abierto con lo que
+      // el closer tipeó, para corregirlo sin volver a escribirlo entero.
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const animar = reducido
+    ? {}
+    : { initial: { opacity: 0, y: -4 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.14, ease: 'easeOut' } };
+
   return (
     <div className="ln-panel ln-panel--sm">
       <small className="ln-t-eyebrow ln-muted">Deuda</small>
-      <p
+      {/* La cifra se remonta con su valor: corregir el total la cambia, y el parpadeo es lo que
+          avisa que ese era el número que estaba mal. */}
+      <motion.p
+        key={deuda}
+        {...animar}
         className="ln-t-display"
         style={{ color: alDia ? 'var(--success)' : 'var(--error)', margin: 'var(--space-2) 0 var(--space-4)' }}
       >
         {alDia ? 'Al día' : moneda(deuda)}
-      </p>
-      <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
-        <span>
-          <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Pagado</small>
-          <b className="ln-t-body">{moneda(cobro?.pagado)}</b>
-        </span>
-        <span>
-          <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Último pago</small>
-          <b className="ln-t-body">{soloDia(cobro?.ultimo_pago) || '—'}</b>
-        </span>
+      </motion.p>
+
+      <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        <div>
+          <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Total a pagar</small>
+          {editando ? (
+            <motion.span
+              {...animar}
+              style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginTop: 'var(--space-2)' }}
+            >
+              <span className="ln-field" style={{ maxWidth: 160 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  autoFocus
+                  value={valor}
+                  aria-label="Total a pagar"
+                  onChange={(e) => setValor(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') guardar();
+                    if (e.key === 'Escape') setEditando(false);
+                  }}
+                />
+                <span className="ln-unit">USD</span>
+              </span>
+              <button
+                type="button"
+                className="ln-iconbtn"
+                disabled={guardando}
+                aria-label="Guardar el total a pagar"
+                onClick={guardar}
+              >
+                {guardando ? <span className="ln-spinner" /> : <Check />}
+              </button>
+              <button
+                type="button"
+                className="ln-iconbtn"
+                aria-label="Dejar el total como estaba"
+                onClick={() => setEditando(false)}
+              >
+                <X />
+              </button>
+            </motion.span>
+          ) : (
+            <span style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+              <b className="ln-t-body" style={{ color: total === null ? 'var(--text-muted)' : undefined }}>
+                {total === null ? 'Sin definir' : moneda(total)}
+              </b>
+              {puedeEditar && (
+                <button
+                  type="button"
+                  className="ln-iconbtn"
+                  style={{ width: 32, height: 32 }}
+                  aria-label={total === null ? 'Poner el total a pagar' : 'Corregir el total a pagar'}
+                  title={total === null ? 'Poner el total a pagar' : 'Corregir el total a pagar'}
+                  onClick={abrir}
+                >
+                  <Pencil />
+                </button>
+              )}
+            </span>
+          )}
+          {total === null && !editando && (
+            <small className="ln-t-caption ln-muted" style={{ display: 'block', marginTop: 'var(--space-2)' }}>
+              {`Nadie lo cargó. Por lo cobrado y lo que debe hoy, serían ${moneda(sugerido)}.`}
+            </small>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
+          <span>
+            <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Pagado</small>
+            <b className="ln-t-body">{moneda(cobro?.pagado)}</b>
+          </span>
+          <span>
+            <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Último pago</small>
+            <b className="ln-t-body">{soloDia(cobro?.ultimo_pago) || '—'}</b>
+          </span>
+        </div>
       </div>
     </div>
   );

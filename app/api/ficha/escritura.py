@@ -93,6 +93,12 @@ def plan_cuotas(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.plan_cuotas)
 
 
+@bp.route('/<int:appt_id>/total', methods=['PATCH'])
+def total(appt_id):
+    """El total a pagar que negocio el cliente, del que sale su deuda."""
+    return _ejecutar(appt_id, 'cobrar', acciones.total_a_pagar)
+
+
 @bp.route('/<int:appt_id>/baja', methods=['POST'])
 def baja(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.baja)

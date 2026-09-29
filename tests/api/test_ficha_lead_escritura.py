@@ -14,8 +14,8 @@ from unittest.mock import patch
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, Comment, FinancialSale, InstallmentPlan, LeadEventLog,
-    Notification,
+    Appointment, Client, ClientComment, Comment, Enrollment, FinancialSale, InstallmentPlan,
+    LeadEventLog, Notification, Payment, Program,
 )
 
 
@@ -421,6 +421,75 @@ def test_una_cuota_sin_fecha_no_entra_al_cronograma(client, db, lead, equipo, au
     assert r.status_code == 400
     assert 'fecha' in r.get_json()['message'].lower()
     assert InstallmentPlan.query.filter_by(client_id=lead.client_id).count() == 0
+
+
+# El total a pagar (`Client.total_amount`) es de donde sale la deuda: `_client_debt` lo prefiere
+# al precio de lista del programa. Corregirlo desde la ficha es corregir la cartera.
+
+@pytest.fixture()
+def inscripto(db, lead, equipo):
+    """El lead ya comprado: $500 de total y $400 cobrados, o sea $100 de deuda.
+
+    La deuda cuelga de `Enrollment`/`Payment`, no de la venta: sin inscripcion `_client_debt`
+    devuelve 0 por mucho total que tenga el cliente.
+    """
+    programa = Program(name='Residency Roadmap', price=800.0)
+    db.session.add(programa)
+    lead.client.total_amount = 500.0
+    db.session.commit()
+    inscripcion = Enrollment(client_id=lead.client_id, program_id=programa.id,
+                             closer_id=equipo['closer'].id, enrollment_date=date(2026, 8, 1))
+    db.session.add(inscripcion)
+    db.session.commit()
+    db.session.add(Payment(enrollment_id=inscripcion.id, amount=400.0, date=date(2026, 8, 1),
+                           payment_type='first_payment', status='completed'))
+    db.session.commit()
+    return lead.client
+
+
+def test_corregir_el_total_a_pagar_recalcula_la_deuda(client, db, lead, inscripto, equipo,
+                                                      auth_headers):
+    """Es el punto de poder editarlo: el saldo que el closer ve sale de este numero."""
+    r = client.patch(url(lead, '/total'), json={'total': 1200},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert inscripto.total_amount == 1200.0
+    assert r.get_json()['deuda'] == 800.0   # 1200 negociados - 400 cobrados
+
+
+def test_el_total_a_pagar_queda_en_la_bitacora(client, db, lead, equipo, auth_headers):
+    """Un registro financiero no se cambia en silencio."""
+    client.patch(url(lead, '/total'), json={'total': 900},
+                 headers=auth_headers(equipo['closer']))
+
+    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
+                                          action_type='total_amount_edited').one()
+    assert '900' in evento.description
+
+
+def test_un_total_a_pagar_negativo_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/total'), json={'total': -1},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert lead.client.total_amount is None
+
+
+def test_un_total_a_pagar_que_no_es_numero_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/total'), json={'total': 'mil'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+
+
+def test_el_setter_no_toca_el_total_a_pagar(client, db, lead, equipo, auth_headers):
+    """`cobrar` es de la direccion y del closer: el setter ve la ficha pero no la cartera."""
+    r = client.patch(url(lead, '/total'), json={'total': 900},
+                     headers=auth_headers(equipo['setter']))
+
+    assert r.status_code == 403
+    assert lead.client.total_amount is None
 
 
 def test_dar_de_baja_no_falsea_el_resultado_de_la_llamada(client, db, lead, equipo, auth_headers):

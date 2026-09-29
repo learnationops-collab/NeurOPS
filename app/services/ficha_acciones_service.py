@@ -401,6 +401,46 @@ def plan_cuotas(appt, datos, usuario):
     return {'id': appt.id, 'cuotas': [p.to_dict() for p in planes]}
 
 
+# --- Total a pagar ----------------------------------------------------------------------------
+
+def total_a_pagar(appt, datos, usuario):
+    """Corrige el total que este cliente negocio (`Client.total_amount`).
+
+    Es el numero del que sale la deuda: `CloserFollowUpService._client_debt` lo prefiere al precio
+    de lista del programa porque el de lista es igual para todos. Tenerlo mal cargado hacia que la
+    ficha, la cola de cobro y la cartera mostraran una deuda que el closer sabia que no era —el
+    caso que dejo escrito ese servicio: "dice que debe 400, pero en total debe 900"—, y hasta ahora
+    solo se podia corregir desde el historial del mazo, no desde donde se mira la deuda.
+
+    Misma escritura que `PATCH /closer/clients/<id>/total-amount`; lo que faltaba era la puerta.
+    """
+    from app.services.booking_service import BookingService
+
+    if not appt.client:
+        raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién ponerle un total.')
+    if datos.get('total') in (None, ''):
+        raise ErrorDeAccion('Falta el total a pagar.')
+    try:
+        nuevo = round(float(datos['total']), 2)
+    except (TypeError, ValueError):
+        raise ErrorDeAccion('El total a pagar tiene que ser un número.') from None
+    if nuevo < 0:
+        raise ErrorDeAccion('El total a pagar no puede ser negativo.')
+
+    anterior = appt.client.total_amount
+    appt.client.total_amount = nuevo
+    db.session.commit()
+
+    # Un registro financiero no se cambia en silencio: queda quien lo toco y desde que valor.
+    BookingService.log_lead_event(
+        appt.id, usuario.id, 'total_amount_edited',
+        f'{usuario.username} corrigió el total a pagar: {anterior!r} → {nuevo!r}')
+
+    from app.services.closer_followup_service import CloserFollowUpService
+    return {'id': appt.id, 'total': nuevo,
+            'deuda': CloserFollowUpService._client_debt(appt.client_id)}
+
+
 # --- Baja del cliente -------------------------------------------------------------------------
 
 def baja(appt, datos, usuario):

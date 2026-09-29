@@ -45,6 +45,7 @@ const MENSAJES = {
     eliminar: 'Lead eliminado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
     guardar_plan: 'Plan de cuotas guardado.',
+    guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
     registrar_pago: 'Pago registrado.',
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: 'Baja registrada.',
