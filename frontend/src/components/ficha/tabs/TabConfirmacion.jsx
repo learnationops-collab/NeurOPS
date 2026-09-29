@@ -1,19 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CheckCircle2, Trash2, XCircle } from 'lucide-react';
+import { Calendar, CalendarX, CheckCircle2, Trash2, XCircle } from 'lucide-react';
 import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import { grupos } from '../estadoFicha';
 import SubReprogramar from './confirmacion/SubReprogramar';
+import SubCancelo from './confirmacion/SubCancelo';
 import SubDescartar from './confirmacion/SubDescartar';
 import SubEliminar from './confirmacion/SubEliminar';
 
 /**
  * Pestaña de confirmación (precall).
  *
- * Es el reemplazo del paso `modalStep === 'confirm'` del mazo del closer y conserva
- * TODO lo que ese paso recolectaba: etapa, «cómo viene», dolores, el recordatorio
- * previo a la llamada y la nota. Simplificar era dejar de mostrar lo que no hace
- * falta, no dejar de guardar.
+ * Es el reemplazo del paso `modalStep === 'confirm'` del mazo del closer: etapa,
+ * «cómo viene», dolores y la nota para la llamada.
+ *
+ * El recordatorio previo se quitó a pedido del equipo (28/09/2026). El campo sigue en
+ * la base y en el endpoint: lo que se fue es el control, no el dato.
  *
  * Las etapas y los vocabularios llegan del servidor: hoy viven hardcodeados en
  * `CloserWorkflowPage.jsx` y por eso el mazo y el libro de la dirección muestran
@@ -40,14 +42,6 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     // sería una petición cada 200 ms mientras se escribe.
     const [nota, setNota] = useState(conf.nota || '');
     useEffect(() => { setNota(conf.nota || ''); }, [ficha?.identidad?.appointment_id, conf.nota]);
-
-    const recordatorio = conf.recordatorio_previo || {};
-    const [avisoActivo, setAvisoActivo] = useState(!!recordatorio.activo);
-    const [avisoCuando, setAvisoCuando] = useState(recordatorio.cuando || '');
-    useEffect(() => {
-        setAvisoActivo(!!conf.recordatorio_previo?.activo);
-        setAvisoCuando(conf.recordatorio_previo?.cuando || '');
-    }, [ficha?.identidad?.appointment_id, conf.recordatorio_previo?.activo, conf.recordatorio_previo?.cuando]);
 
     const pasos = useMemo(() => etapas.map((e, i) => ({
         key: e.clave,
@@ -82,6 +76,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     <SubReprogramar ficha={ficha} guardando={guardando} onVolver={volver}
                         onConfirmar={(p) => correr('reprogramar', p)} />
                 )}
+                {modo === 'cancelo' && (
+                    <SubCancelo ficha={ficha} guardando={guardando} onVolver={volver}
+                        onConfirmar={(p) => correr('cancelar', p)} />
+                )}
                 {modo === 'desc' && (
                     <SubDescartar ficha={ficha} guardando={guardando} onVolver={volver}
                         onConfirmar={(p) => correr('descartar', p)} />
@@ -95,7 +93,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     }
 
     return (
-        <motion.div key="menu" style={{ display: 'grid', gap: 'var(--s6)' }} {...mov.subvista}>
+        <motion.div key="menu" style={{ display: 'grid', gap: 'var(--s5)' }} {...mov.subvista}>
             {cerrada && (
                 <Aviso tono="success" titulo="Lead 100% confirmado">
                     Queda listo para el día de la llamada.
@@ -138,34 +136,6 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     onAgregar={({ label }) => disparar('dolores', { dolores: [...dolores, label], nueva_opcion: label })} />
             </div>
 
-            {/* El recordatorio previo solo aplica antes del primer contacto: después de
-                contactar, lo que hace falta es la nota, no un aviso para escribirle. */}
-            {!cerrada && indice === 0 && (
-                <div className="hundido" style={{ display: 'grid', gap: 'var(--s2)', padding: 'var(--s4)' }}>
-                    <label className="fila" style={{ gap: 'var(--s2)', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={avisoActivo} disabled={bloqueado}
-                            style={{ width: 16, height: 16, accentColor: 'var(--brand-secondary)' }}
-                            onChange={(e) => {
-                                setAvisoActivo(e.target.checked);
-                                disparar('recordatorio_previo', {
-                                    recordatorio_previo: { activo: e.target.checked, cuando: avisoCuando || null },
-                                });
-                            }} />
-                        <small className="t-rotulo">Recordarme escribirle antes de la llamada</small>
-                    </label>
-                    {avisoActivo && (
-                        <div className="campo">
-                            <input type="datetime-local" value={avisoCuando} disabled={bloqueado}
-                                aria-label="Cuándo recordarme"
-                                onChange={(e) => setAvisoCuando(e.target.value)}
-                                onBlur={() => disparar('recordatorio_previo', {
-                                    recordatorio_previo: { activo: true, cuando: avisoCuando || null },
-                                })} />
-                        </div>
-                    )}
-                </div>
-            )}
-
             <div className="fi-campo">
                 <label className="t-rotulo" htmlFor="fi-nota">Nota para la llamada (opcional)</label>
                 <textarea id="fi-nota" className="area" rows={3} value={nota} disabled={bloqueado}
@@ -179,6 +149,9 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                 <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)' }}>
                     <TarjetaAccion linea tono="info" icono={Calendar} label="Reprogramar"
                         deshabilitado={bloqueado} onClick={() => setModo('repro')} />
+                    <TarjetaAccion linea tono="warning" icono={CalendarX} label="Canceló"
+                        titulo="La llamada no se hace, pero el lead sigue vivo"
+                        deshabilitado={bloqueado} onClick={() => setModo('cancelo')} />
                     <TarjetaAccion linea tono="warning" icono={XCircle} label="Descartar lead"
                         deshabilitado={bloqueado} onClick={() => setModo('desc')} />
                     <TarjetaAccion linea tono="error" icono={Trash2} label="Eliminar lead"
