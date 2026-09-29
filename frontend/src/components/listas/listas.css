@@ -35,7 +35,16 @@
     display: flex;
     flex-shrink: 0;
     color: var(--text-muted-40);
+    transition: color .16s ease;
 }
+
+/* Los grupos arrancan cerrados, así que la lista agrupada se lee como un índice de encabezados:
+   la flecha del que está abierto toma el color del texto para encontrarlo sin leer las flechas. */
+.dc-shell .grupo-cab[aria-expanded="true"] .grupo-flecha { color: inherit; }
+
+/* Cerrado, el último encabezado es lo último de la caja: su borde se sumaba al de `.tabla` y
+   dibujaba una línea doble al pie. */
+.dc-shell .grupo:last-child > .grupo-cab[aria-expanded="false"] { border-bottom: 0; }
 
 .dc-shell .grupo-nombre {
     font-size: 13px;
@@ -58,7 +67,7 @@
 .dc-shell .grupo-sub b { font-size: 13px; font-weight: 900; letter-spacing: -.015em; }
 .dc-shell .grupo-sub span { font-size: 11px; color: var(--text-muted-40); font-weight: 700; }
 
-/* El cuerpo del grupo lo anima framer-motion (alto y opacidad), no una keyframe. */
+/* El cuerpo del grupo lo anima framer-motion (desplazamiento y opacidad), no una keyframe. */
 
 /* --- Tarjetas ------------------------------------------------------------------------------ */
 
