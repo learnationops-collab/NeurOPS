@@ -45,17 +45,28 @@ def _sin_espacios(texto):
 
 
 def _claves_de(texto):
-    """Las formas normalizadas con las que se puede reconocer un texto.
+    """Las formas normalizadas con las que se puede reconocer un texto, de la mas exacta
+    a la mas suelta y sin repetidos.
 
     Para un correo se indexa tambien la parte local, que es lo que hace que
     'jeancarlo@thelearnation.com', 'jeancarlo@gmail.com', 'jeancarlo' y
     'Jean Carlo' terminen todos en la misma clave 'jeancarlo'.
+
+    El orden importa: `resolver_nombre_closer` se queda con la PRIMERA clave que esta
+    en el indice, y dos claves del mismo texto pueden llevar a personas distintas.
+    Caso real (base local, sep/2026): 'marlon@thelearnation.com' es el correo de
+    'Marlon Closer', pero su parte local 'marlon' es el nombre de usuario de 'Marlon',
+    otro closer ya inactivo. Antes esto era un set, y el orden de un set de textos
+    cambia con la semilla de hash de cada proceso: segun el arranque, las 329 ventas
+    de ese correo eran de uno o del otro, y cada worker de produccion podia repartir
+    distinto la tabla Clientes y "Mi cartera". Ahora el texto completo va primero y la
+    parte local al final, asi el correo exacto le gana a un nombre que se le parece.
     """
-    claves = {normalizar(texto), _sin_espacios(texto)}
+    claves = [normalizar(texto), _sin_espacios(texto)]
     if '@' in str(texto):
         local = str(texto).split('@')[0]
-        claves |= {normalizar(local), _sin_espacios(local)}
-    return {c for c in claves if c}
+        claves += [normalizar(local), _sin_espacios(local)]
+    return tuple(dict.fromkeys(c for c in claves if c))
 
 
 def _indice_historico():
@@ -124,7 +135,8 @@ def resolver_nombre_closer(email_o_nombre):
     crudo = str(email_o_nombre).strip()
     indice = _indice()
 
-    # 1. Coincidencia exacta contra usuario, correo, alias o diccionario historico
+    # 1. Coincidencia exacta contra usuario, correo, alias o diccionario historico,
+    #    en el orden de `_claves_de`: el texto completo antes que la parte local
     for clave in _claves_de(crudo):
         if clave in indice:
             return indice[clave]

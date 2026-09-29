@@ -22,25 +22,27 @@ def con_indice(monkeypatch):
 
 # --- _claves_de -------------------------------------------------------------------------------
 
-def test_claves_de_un_correo_incluye_la_parte_local():
-    assert cns._claves_de('jeancarlo@thelearnation.com') == {
+def test_claves_de_un_correo_incluye_la_parte_local_al_final():
+    # En orden y sin repetidos: la parte local 'jeancarlo' sale una sola vez aunque con y sin
+    # espacios de lo mismo, y va despues del correo completo.
+    assert cns._claves_de('jeancarlo@thelearnation.com') == (
         'jeancarlo@thelearnation com', 'jeancarlo@thelearnationcom', 'jeancarlo',
-    }
+    )
 
 
 def test_claves_de_un_nombre_con_espacios_incluye_la_version_sin_espacios():
-    assert cns._claves_de('Jean Carlo') == {'jean carlo', 'jeancarlo'}
+    assert cns._claves_de('Jean Carlo') == ('jean carlo', 'jeancarlo')
 
 
 @pytest.mark.parametrize('vacio', [None, '', '   '])
 def test_claves_de_un_vacio_no_tiene_claves(vacio):
-    assert cns._claves_de(vacio) == set()
+    assert cns._claves_de(vacio) == ()
 
 
 def test_todas_las_formas_de_escribir_al_mismo_closer_comparten_una_clave():
     variantes = ['jeancarlo@thelearnation.com', 'jeancarlo@gmail.com', 'jeancarlo', 'Jean Carlo', 'JEANCARLO']
 
-    comunes = set.intersection(*(cns._claves_de(v) for v in variantes))
+    comunes = set.intersection(*(set(cns._claves_de(v)) for v in variantes))
 
     assert comunes == {'jeancarlo'}
 
@@ -85,6 +87,17 @@ def test_todas_las_variantes_de_un_closer_se_unifican(con_indice, escrito):
     con_indice({'jeancarlo': 'Jean Carlo'})
 
     assert cns.resolver_nombre_closer(escrito) == 'Jean Carlo'
+
+
+def test_el_correo_completo_gana_sobre_un_nombre_igual_a_su_parte_local(con_indice):
+    """Caso real (sep/2026): 'marlon@thelearnation.com' es el correo de 'Marlon Closer' y 'marlon'
+    el usuario de otro closer. Con las claves en un set el ganador dependia de la semilla de hash
+    del proceso (por eso el orden de `_claves_de` se fija arriba); tiene que ser siempre el dueno
+    del correo."""
+    con_indice({'marlon': 'Marlon', 'marlon@thelearnation com': 'Marlon Closer'})
+
+    assert cns.resolver_nombre_closer('marlon@thelearnation.com') == 'Marlon Closer'
+    assert cns.resolver_nombre_closer('Marlon') == 'Marlon'
 
 
 def test_un_usuario_del_sistema_manda_sobre_el_diccionario_historico(con_indice):
