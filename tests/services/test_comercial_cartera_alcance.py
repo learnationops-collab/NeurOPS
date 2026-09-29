@@ -68,3 +68,43 @@ def test_sin_acotar_se_ve_la_cartera_del_equipo(db, vendedor, cliente_del_vended
     """La dirección y el setter piden sin acotar: ahí sí corresponde ver todo."""
     filas = ComercialService.clientes(closer_id=None)
     assert [f['client_id'] for f in filas] == [cliente_del_vendedor.id]
+
+
+def test_la_atribucion_es_la_de_cada_closer_sin_una_consulta_por_closer(db, make_user, vendedor):
+    """Los identificadores de todos se leen de una vez; antes era una lectura de todos los
+    vendedores por cada closer del equipo. El resultado tiene que ser el mismo que pedirlos de a
+    uno (`CloserService._resolve_sale_identifiers`)."""
+    from flask import g
+    from sqlalchemy import event
+
+    from app.models import User
+    from app.services.closer_service import CloserService
+
+    db.session.add(FinancialSale(mail_cliente='x@x.com', monto=1.0, email_vendedor='Vendedor@Neuro.com'))
+    db.session.commit()
+
+    def atribuir():
+        g.pop('_indice_closers', None)
+        consultas = []
+
+        def contar(*_a, **_k):
+            consultas.append(1)
+
+        motor = db.session.get_bind()
+        event.listen(motor, 'before_cursor_execute', contar)
+        try:
+            resultado = ComercialService._atribucion_de_ventas(vendedor.id)
+        finally:
+            event.remove(motor, 'before_cursor_execute', contar)
+        return resultado, len(consultas)
+
+    (_, pedido), pocas = atribuir()
+    for _ in range(5):
+        make_user(role='closer')
+    (de_quien, pedido), muchas = atribuir()
+
+    assert muchas == pocas
+    assert pedido == {'vendedor@neuro.com'}
+    de_a_uno = {i.lower(): u.username for u in User.query.filter_by(role='closer')
+                for i in CloserService._resolve_sale_identifiers(u)}
+    assert de_quien == de_a_uno

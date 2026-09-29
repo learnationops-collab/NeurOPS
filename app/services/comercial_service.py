@@ -580,19 +580,28 @@ class ComercialService:
 
         Vive aparte porque la tabla Clientes y el detalle de un cliente tienen que atribuir con
         exactamente la misma regla: si divergen, un closer podría abrir la ficha de un cliente
-        que su propia tabla no le muestra."""
+        que su propia tabla no le muestra.
+
+        Los identificadores son los de `CloserService._resolve_sale_identifiers` (los de
+        `identificadores_de_closer` para su username), pero leídos para todos de una vez: de a
+        un closer era una consulta por cada uno, y cada una traía la lista entera de vendedores."""
         from app.models.user import ROLE_CLOSER
-        from app.services.closer_service import CloserService
+        from app.services.closer_name_service import identificadores_por_nombre
+
+        por_nombre = identificadores_por_nombre()
+
+        def identificadores(usuario):
+            return por_nombre.get(usuario.username, []) if usuario and usuario.username else []
 
         de_quien = {}
         for usuario in User.query.filter(User.role == ROLE_CLOSER).all():
-            for identificador in CloserService._resolve_sale_identifiers(usuario):
+            for identificador in identificadores(usuario):
                 de_quien[identificador.lower()] = usuario.username
 
         pedido = None
         if closer_id:
             usuario = User.query.get(closer_id)
-            pedido = {e.lower() for e in CloserService._resolve_sale_identifiers(usuario)} if usuario else set()
+            pedido = {e.lower() for e in identificadores(usuario)} if usuario else set()
         return de_quien, pedido
 
     @staticmethod

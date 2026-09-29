@@ -186,10 +186,22 @@ def identificadores_de_closer(nombre_canonico):
     aparecia con cero ventas en el dashboard aunque la lista de ventas SI se las mostrara
     (caso real: 'Mario Closer', sep/2026 — sus 2 ventas usan `mario.buhler.br@gmail.com`, que no
     estaba en la lista a mano)."""
-    from app.models.financial import FinancialSale
-    from app import db
-
     if not nombre_canonico:
         return []
-    valores = db.session.query(FinancialSale.email_vendedor).distinct().all()
-    return [valor for (valor,) in valores if valor and resolver_nombre_closer(valor) == nombre_canonico]
+    return identificadores_por_nombre().get(nombre_canonico, [])
+
+
+def identificadores_por_nombre():
+    """{nombre canónico -> [valores crudos de `email_vendedor`]} de todos los vendedores a la vez.
+
+    Es `identificadores_de_closer` para todos en una sola lectura: quien necesita los de cada
+    closer del equipo (la atribución de la tabla Clientes, por ejemplo) hacía una consulta por
+    closer, y cada una traía la misma lista entera de vendedores."""
+    from app import db
+    from app.models.financial import FinancialSale
+
+    por_nombre = {}
+    for (valor,) in db.session.query(FinancialSale.email_vendedor).distinct().all():
+        if valor:
+            por_nombre.setdefault(resolver_nombre_closer(valor), []).append(valor)
+    return por_nombre
