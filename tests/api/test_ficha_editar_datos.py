@@ -243,8 +243,10 @@ def test_corregirle_el_correo_a_quien_ya_compro_no_le_hace_perder_sus_ventas(cli
     """El 79% de las ventas no tiene `client_id`: son del cliente porque coinciden por contacto.
     Cambiarle el correo sin atarlas antes las dejaba huerfanas —sin programa, sin pagos en la
     ficha— justo despues de arreglarle un dato."""
-    suya = FinancialSale(mail_cliente='jesus@x.com', tipo_pago='RR - Parcial', monto=500,
-                         estado='Completada', date=datetime(2026, 9, 1))
+    # Una sola señal (el correo) corroborada por el nombre: es suya con el criterio de los pagos.
+    suya = FinancialSale(mail_cliente='jesus@x.com', nombre_cliente='Jesús Capuchino',
+                         tipo_pago='RR - Parcial', monto=500, estado='Completada',
+                         date=datetime(2026, 9, 1))
     # Coincide por telefono con Jesus pero por correo con Maria: es de Maria, y no se toca.
     maria = otro_cliente(db, email='maria@x.com')
     de_maria = FinancialSale(mail_cliente='maria@x.com', telefono='5255 1234 5678',
@@ -266,3 +268,45 @@ def test_corregirle_el_correo_a_quien_ya_compro_no_le_hace_perder_sus_ventas(cli
     assert ficha['identidad']['programa'] == 'Residency Roadmap'
     assert 500.0 in [p['monto'] for p in ficha['cobro']['pagos']]
     assert '1 venta(s) quedaron atadas' in eventos(lead)[0].description
+
+
+def _venta(db, **campos):
+    venta = FinancialSale(tipo_pago=campos.pop('tipo_pago', 'RR - Parcial'), monto=100,
+                          estado='Completada', date=datetime(2026, 9, 1), **campos)
+    db.session.add(venta)
+    db.session.commit()
+    return venta
+
+
+def test_la_venta_de_otra_persona_que_coincidia_por_el_telefono_mal_cargado_no_se_ata(
+        client, db, lead, equipo, auth_headers):
+    """El caso tipico de corregir un telefono: la venta de otra persona coincidia SOLO por ese
+    telefono. Atarla la dejaba del cliente para siempre —y `get_client_payment_state`, que hoy no
+    la cuenta porque el nombre no corrobora, pasaba a decir que ya pago la seña—."""
+    from app.services.sales_consistency_service import SalesConsistencyService
+
+    ajena = _venta(db, mail_cliente='victor@x.com', nombre_cliente='Victor Ureta Romero',
+                   telefono='52 55 1234 5678', tipo_pago='RR - Seña')
+
+    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
+
+    assert r.status_code == 200
+    assert r.get_json()['ventas_atadas'] == 0
+    assert ajena.client_id is None
+    estado = SalesConsistencyService.get_client_payment_state(lead.client_id, 'RR')
+    assert (estado['total_paid'], estado['has_deposit']) == (0, False)
+
+
+def test_solo_se_ata_la_venta_que_el_cambio_deja_sin_una_senal(client, db, lead, equipo,
+                                                               auth_headers):
+    """Atar es para siempre: la venta que sigue coincidiendo igual despues del cambio no se toca."""
+    # Correo e instagram: corregir el telefono no le quita nada.
+    intacta = _venta(db, mail_cliente='jesus@x.com', instagram='@jesus.c')
+    # Correo y telefono: corregir el telefono le quita una de sus dos señales.
+    pierde = _venta(db, mail_cliente='jesus@x.com', telefono='5255 1234 5678')
+
+    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
+
+    assert r.get_json()['ventas_atadas'] == 1
+    assert intacta.client_id is None
+    assert pierde.client_id == lead.client_id

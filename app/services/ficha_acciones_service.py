@@ -486,8 +486,11 @@ def total_a_pagar(appt, datos, usuario):
 #     instagram -> ultimos 8 digitos del telefono) y FUSIONA lo que encuentra: guardarlo callado
 #     dejaria a los dos clientes pegados en la proxima agenda que entre, sin que nadie lo decidiera;
 #   · las ventas que hoy son del cliente solo porque coinciden por contacto (el 79% no tiene
-#     `client_id`) se atan por id ANTES del cambio: si no, corregirle el correo a quien ya compro
-#     le haria perder sus ventas, su programa y su deuda en la ficha y en la cola de cobro;
+#     `client_id`) y que el cambio le haria perder se atan por id ANTES del cambio: si no,
+#     corregirle el correo a quien ya compro le haria perder sus ventas, su programa y su deuda en
+#     la ficha y en la cola de cobro. Solo las que son suyas con el criterio estricto de los pagos
+#     (ver `_atar_ventas_que_se_perderian`): la de otra persona que coincidia por el dato mal
+#     cargado se suelta, que es lo que se buscaba al corregirlo;
 #   · una linea en la bitacora del lead con lo que cambio, antes -> despues.
 #
 # Lo que NO se toca, y queda con el dato viejo: las ventas en Google Sheets, el `Lead` del pipeline
@@ -575,21 +578,56 @@ def _otro_cliente_con(cliente, campo, valor):
                  if _ultimos8(c.phone) == ultimos), None)
 
 
-def _atar_ventas_por_contacto(cliente):
-    """Ata por id las ventas que hoy son de este cliente solo porque coinciden por contacto.
+def _contacto(cliente, **cambios):
+    """El cliente como lo miran las señales de `SalesConsistencyService`, con `cambios` (columna ->
+    valor nuevo) aplicados encima. No toca la fila: es para preguntar "¿y despues del cambio?"."""
+    from types import SimpleNamespace
 
-    Se decide con `clientes_de_ventas`, el mismo cruce con el que la tabla de ventas elige a quien
-    abrirle la ficha: una venta que coincide con este cliente por telefono pero con otro por correo
-    es del otro, y atarla aca se la robaria.
+    datos = {'full_name': cliente.full_name, 'email': cliente.email,
+             'instagram': cliente.instagram, 'phone': cliente.phone}
+    datos.update(cambios)
+    return SimpleNamespace(**datos)
+
+
+def _atar_ventas_que_se_perderian(cliente, nuevos):
+    """Ata por id las ventas sueltas de este cliente que el cambio de contacto le haria perder.
+
+    Atar es para siempre: una venta con `client_id` cuenta como del cliente por si sola en todas
+    partes (`get_client_payment_state` no le vuelve a mirar el contacto) y `clientes_de_ventas` ya
+    no se la da a nadie mas. Por eso se ata SOLO la que cumple las tres:
+
+      · es de este cliente y no de otro, con `clientes_de_ventas`: una que coincide con este por
+        telefono pero con otro por correo es del otro, y atarla aca se la robaria;
+      · es suya con el criterio estricto de `SalesConsistencyService._contact_match_suffices` (2
+        señales, o 1 corroborada por el nombre). Con una sola señal y otro nombre NO se ata: es
+        justo el caso de corregir un telefono mal cargado —la venta de otra persona que coincidia
+        por ese telefono tiene que dejar de ser de este cliente, no quedarle pegada—. En la base
+        local son la mayoria de las coincidencias por correo solo (479 de 681 sueltas resueltas:
+        la venta a nombre de una persona y el cliente a nombre de otra) y dos por telefono o
+        instagram; el caso Kervin Calderon fue un correo compartido;
+      · el cambio le quita una señal con la que hoy coincide. La que sigue coincidiendo igual
+        despues (se corrigio el telefono y cruzaba por correo e instagram) no necesita atarse.
+
+    `nuevos` es {columna del cliente -> valor nuevo} de los contactos que cambian.
     """
     from app.services.comercial_service import clientes_de_ventas
     from app.services.ficha_lead_service import _ventas_del_cliente
+    from app.services.sales_consistency_service import SalesConsistencyService
 
     sueltas = [v for v in _ventas_del_cliente(cliente) if not v.client_id]
-    duenos = clientes_de_ventas(sueltas) if sueltas else {}
+    if not sueltas:
+        return 0
+    duenos = clientes_de_ventas(sueltas)
+    antes, despues = _contacto(cliente), _contacto(cliente, **nuevos)
     atadas = 0
     for venta in sueltas:
-        if duenos.get(venta.id) == cliente.id:
+        if duenos.get(venta.id) != cliente.id:
+            continue
+        if not SalesConsistencyService._contact_match_suffices(antes, venta):
+            continue
+        pierde = (SalesConsistencyService._matching_signals(antes, venta)
+                  - SalesConsistencyService._matching_signals(despues, venta))
+        if pierde:
             venta.client_id = cliente.id
             atadas += 1
     return atadas
@@ -644,9 +682,9 @@ def editar_datos(appt, datos, usuario):
                 'No se fusionan solos: si son la misma persona hay que unir los dos clientes; si '
                 'no, revisá el dato.', campo, {'id': otro.id, 'nombre': nombre})
 
-    atadas = 0
-    if cliente is not None and any(c in cambios for c in ('email', 'instagram', 'telefono')):
-        atadas = _atar_ventas_por_contacto(cliente)
+    contactos = {CAMPOS_DEL_CLIENTE[c][0]: nuevo for c, (_, nuevo) in cambios.items()
+                 if c in ('email', 'instagram', 'telefono')}
+    atadas = _atar_ventas_que_se_perderian(cliente, contactos) if contactos else 0
 
     for campo, (_, nuevo) in cambios.items():
         if campo == 'examen':
