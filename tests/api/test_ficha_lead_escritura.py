@@ -492,6 +492,92 @@ def test_el_setter_no_toca_el_total_a_pagar(client, db, lead, equipo, auth_heade
     assert lead.client.total_amount is None
 
 
+# El historial lista TODAS las agendas del cliente y desde ahi se corrige cualquiera: la de hace
+# tres meses es justamente la que ninguna otra pantalla deja tocar.
+
+def test_se_corrige_el_post_call_de_una_agenda_vieja_del_mismo_cliente(client, db, lead, equipo,
+                                                                       auth_headers):
+    vieja = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                        start_time=datetime.utcnow() - timedelta(days=90),
+                        closer_result='Pendiente')
+    db.session.add(vieja)
+    db.session.commit()
+
+    r = client.patch(f'/api/ficha/{vieja.id}/estado',
+                     json={'campo': 'post_call', 'valor': 'no_show'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert vieja.closer_result == 'No Show'
+    # Darle un resultado es reportarla: si no, seguiria apareciendo como pendiente en el mazo.
+    assert vieja.closer_processed is True
+    assert lead.closer_result == 'Pendiente'   # la agenda abierta no se toca
+
+
+def test_corregir_el_pre_call_escribe_el_result(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/estado'), json={'campo': 'pre_call', 'valor': 'confirmada'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.result == 'Confirmado'
+
+
+def test_un_estado_que_no_esta_en_el_vocabulario_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/estado'), json={'campo': 'post_call', 'valor': 'venta'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert lead.closer_result == 'Pendiente'
+
+
+def test_la_correccion_del_estado_queda_en_la_bitacora(client, db, lead, equipo, auth_headers):
+    client.patch(url(lead, '/estado'), json={'campo': 'post_call', 'valor': 'asistio'},
+                 headers=auth_headers(equipo['director']))
+
+    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
+                                          action_type='status_changed').one()
+    assert 'closer_result' in evento.description
+
+
+def test_agendar_otra_llamada_con_el_mismo_cliente(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/agenda'), json={'fecha': '2026-12-15T16:00'},
+                    headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 201, r.get_json()
+    nueva = Appointment.query.filter(Appointment.client_id == lead.client_id,
+                                     Appointment.id != lead.id).one()
+    assert nueva.start_time == datetime(2026, 12, 15, 16, 0)
+    # El closer por defecto es el del lead, no quien apretó el botón: la dirección agenda PARA él.
+    assert nueva.closer_id == equipo['closer'].id
+
+
+def test_no_se_agenda_dos_veces_al_mismo_closer_a_la_misma_hora(client, db, lead, equipo,
+                                                                auth_headers):
+    client.post(url(lead, '/agenda'), json={'fecha': '2026-12-15T16:00'},
+                headers=auth_headers(equipo['closer']))
+
+    r = client.post(url(lead, '/agenda'), json={'fecha': '2026-12-15T16:00'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'misma hora' in r.get_json()['message']
+
+
+def test_una_agenda_sin_fecha_no_se_crea(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/agenda'), json={},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+
+
+def test_el_setter_no_corrige_el_estado_de_una_agenda(client, db, lead, equipo, auth_headers):
+    """Corregir el estado es reportar, y reportar es de la dirección y del closer."""
+    r = client.patch(url(lead, '/estado'), json={'campo': 'post_call', 'valor': 'no_show'},
+                     headers=auth_headers(equipo['setter']))
+
+    assert r.status_code == 403
+
+
 # El programa de un cliente vive en el prefijo de `tipo_pago`. Asignarlo es reetiquetar sus
 # ventas, porque es de ahi que lo leen el libro comercial, el plan de cuotas y la comision.
 

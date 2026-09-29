@@ -16,6 +16,7 @@ diria una cosa y el mazo del closer otra sobre el mismo lead.
 `ErrorDeAccion` es un pedido mal hecho (400). Lo que revienta adentro de un servicio se propaga.
 """
 import re
+from datetime import datetime
 
 from app import db
 from app.models import Appointment, ClientComment, Comment, Notification, User
@@ -31,6 +32,10 @@ ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial')
 
 class ErrorDeAccion(Exception):
     """Un pedido mal hecho del frontend: falta un dato o el valor no es admitido."""
+
+
+def _iso_dt(valor):
+    return valor.isoformat() if valor else None
 
 
 def _texto(datos, clave, obligatorio=False):
@@ -443,6 +448,83 @@ def total_a_pagar(appt, datos, usuario):
             'deuda': CloserFollowUpService._client_debt(appt.client_id)}
 
 
+# --- Estado de una agenda ---------------------------------------------------------------------
+
+def estado_agenda(appt, datos, usuario):
+    """Corrige el pre call o el post call de UNA agenda.
+
+    Es la misma escritura que `PATCH /comercial/agendas/<id>` —los mismos dos mapas, la misma
+    marca de reportada y la misma entrada en la bitacora—, con la diferencia de que se llega por
+    la ficha. Existe porque el historial lista TODAS las agendas del cliente y desde ahi hay que
+    poder corregir cualquiera, no solo la que la ficha tiene abierta: la ruta ya recibe el id de
+    la agenda y `permisos_de` la comprueba contra esa, asi que corregir la de hace tres meses pasa
+    por el mismo permiso que corregir la de hoy.
+    """
+    from app.services.booking_service import BookingService
+    from app.services.comercial_service import POST_CALL_A_CLOSER_RESULT, PRE_CALL_A_RESULT
+
+    campo, valor = datos.get('campo'), datos.get('valor')
+    if campo == 'pre_call' and valor in PRE_CALL_A_RESULT:
+        anterior, columna, nuevo = appt.result, 'result', PRE_CALL_A_RESULT[valor]
+        appt.result = nuevo
+    elif campo == 'post_call' and valor in POST_CALL_A_CLOSER_RESULT:
+        anterior, columna, nuevo = appt.closer_result, 'closer_result', POST_CALL_A_CLOSER_RESULT[valor]
+        appt.closer_result = nuevo
+        # Darle un resultado a la llamada es reportarla: sin esto la agenda seguiria apareciendo
+        # en el mazo del closer como pendiente de reportar.
+        appt.closer_processed = valor != 'pendiente'
+    else:
+        raise ErrorDeAccion('Ese campo o ese valor no se pueden corregir.')
+
+    db.session.commit()
+    BookingService.log_lead_event(
+        appt.id, usuario.id, 'status_changed',
+        f'{usuario.username} corrigió {columna} desde el historial de la ficha: '
+        f'{anterior!r} -> {nuevo!r}.')
+    return {'id': appt.id, 'campo': campo, 'valor': valor, 'anterior': anterior}
+
+
+# --- Agenda nueva -----------------------------------------------------------------------------
+
+def crear_agenda(appt, datos, usuario):
+    """Agenda otra llamada con el MISMO cliente, desde el historial.
+
+    Pasa por `BookingService.create_appointment` y no por un `Appointment(...)` propio porque esa
+    funcion hace ademas todo lo que una agenda implica y que no se ve: la notificacion al closer,
+    el espejo al `Lead` del pipeline y su cambio de etapa. Crear la fila a mano dejaria una agenda
+    que no existe para ninguna de las otras pantallas.
+
+    El closer por defecto es el de la agenda desde la que se abre la ficha, no quien aprieta el
+    boton: la direccion comercial agenda PARA el closer del lead, no para si misma.
+    """
+    from app.services.booking_service import BookingService
+
+    if not appt.client_id:
+        raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién agendarle.')
+
+    cuando = _texto(datos, 'fecha', obligatorio=True)
+    try:
+        inicio = datetime.fromisoformat(cuando.replace('Z', ''))
+    except ValueError:
+        raise ErrorDeAccion('La fecha tiene que ser "AAAA-MM-DDTHH:MM".') from None
+
+    closer_id = datos.get('closer_id') or appt.closer_id
+    if not closer_id:
+        raise ErrorDeAccion('Falta el closer al que se le agenda la llamada.')
+
+    nueva = BookingService.create_appointment(
+        appt.client_id, closer_id, inicio,
+        origin=(datos.get('fuente') or appt.origin or 'ficha'),
+        setter_id=appt.setter_id)
+    if not nueva:
+        # `create_appointment` devuelve None cuando ese closer ya tiene una cita sin resolver a
+        # esa misma hora. Es una guarda, no un fallo: se dice cual es.
+        raise ErrorDeAccion('Ese closer ya tiene una llamada sin resolver a esa misma hora.')
+
+    db.session.commit()
+    return {'id': nueva.id, 'fecha': _iso_dt(nueva.start_time)}
+
+
 # --- Programa del cliente ---------------------------------------------------------------------
 
 # El prefijo de programa de un `tipo_pago` ("RR - Parcial"), y el hueco que dejan los datos
@@ -491,13 +573,14 @@ def programa(appt, datos, usuario):
     **No se propaga a Google Sheets**, igual que `PUT /closer/sales/<id>`, que es la correccion de
     ventas que el closer ya tenia. La hoja conserva el valor viejo.
     """
+    # `_ventas_del_cliente` es privada a proposito: es el mismo cruce cliente-ventas (email /
+    # instagram / ultimos 8 del telefono) con el que la lectura de la ficha resolvio las ventas
+    # que se estan mostrando. Rehacerlo aca con otro criterio dejaria ventas sin reetiquetar que
+    # la ficha si cuenta.
     from app.models import InstallmentPlan
     from app.services.closer_followup_service import PROGRAM_CODE_NAMES
-    from app.services.sheets_service import SheetsService
-    # Privada a proposito: es el mismo cruce cliente-ventas (email / instagram / ultimos 8 del
-    # telefono) con el que la lectura de la ficha resolvio las ventas que se estan mostrando.
-    # Rehacerlo aca con otro criterio dejaria ventas sin reetiquetar que la ficha si cuenta.
     from app.services.ficha_lead_service import _ventas_del_cliente
+    from app.services.sheets_service import SheetsService
 
     codigo = (datos.get('programa_code') or '').strip().upper()
     if codigo not in PROGRAM_CODE_NAMES:

@@ -59,6 +59,8 @@ _CHIP_AGENDA = {
 
 
 def historial(appts, ahora):
+    from app.services.comercial_service import post_call_de, pre_call_de
+
     agendas, seguimientos = [], []
     for a in appts:
         estado = estado_de_agenda(a, ahora)
@@ -67,8 +69,16 @@ def historial(appts, ahora):
         else:
             label, tono = _CHIP_AGENDA.get(estado, (str(estado), 'idle'))
         detalle = ' · '.join(p for p in (a.origin, a.closer.username if a.closer else None) if p)
+        # `pre_call` y `post_call` son las dos CLAVES con las que se corrige el estado de esta
+        # agenda desde el historial (mismo vocabulario que el libro de registros, para que una
+        # correccion diga lo mismo desde las dos pantallas). El chip se queda: es el estado
+        # derivado, que no siempre coincide con ninguno de los dos campos sueltos.
         agendas.append({'id': a.id, 'fecha': _iso(a.start_time), 'detalle': detalle or 'Sin detalle',
-                        'chip': {'label': label, 'tone': tono}})
+                        'chip': {'label': label, 'tone': tono},
+                        'pre_call': pre_call_de(a),
+                        'post_call': post_call_de(estado, False, False),
+                        'closer': a.closer.username if a.closer else None,
+                        'fuente': a.origin or None})
         if a.fecha_seguimiento or a.seguimiento_sub:
             seguimientos.append({
                 'fecha': a.fecha_seguimiento,

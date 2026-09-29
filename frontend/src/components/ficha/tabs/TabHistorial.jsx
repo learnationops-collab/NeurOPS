@@ -87,6 +87,121 @@ const ResumenCobro = ({ cobro, programas, puedeEditar, onAccion }) => {
  * con la misma aritmética (`planCuotas.js`) y la misma acción de guardado, y se monta también en
  * la sub-vista «Armar plan de cuotas» de Acciones.
  */
+const hoyMasUnDia = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setMinutes(0, 0, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T10:00`;
+};
+
+/** Un desplegable chico de estado, con el vocabulario que manda el backend. */
+const SelectorEstado = ({ etiqueta, valor, opciones, disabled, onCambiar }) => (
+    <span className="ln-field" style={{ height: 34, minWidth: 0 }}>
+        <select value={valor || ''} disabled={disabled} aria-label={etiqueta}
+            onChange={(e) => onCambiar(e.target.value)}>
+            {opciones.map(o => (
+                // Los no editables se muestran pero no se eligen: «Venta» no es un estado que se
+                // fije a mano —es que exista una venta cruzada— y ponerlo acá marcaría una venta
+                // que la contabilidad no tiene. Mismo criterio que el libro de registros.
+                <option key={o.key} value={o.key} disabled={o.editable === false}>{o.label}</option>
+            ))}
+        </select>
+    </span>
+);
+
+/**
+ * La sección «Agendas»: todas las llamadas del cliente, con su estado corregible en la fila y un
+ * formulario para agendar otra.
+ *
+ * Se corrige acá y no saltando al reporte de la llamada porque son dos cosas distintas: reportar
+ * es contar cómo fue la llamada, y esto es arreglar un dato que quedó mal cargado en CUALQUIERA
+ * de las agendas del cliente — incluida la de hace tres meses, que es justamente la que ninguna
+ * otra pantalla deja tocar.
+ */
+const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, onAccion }) => {
+    const [agregando, setAgregando] = useState(false);
+    const [cuando, setCuando] = useState(hoyMasUnDia);
+    const [ocupada, setOcupada] = useState(null);
+
+    const preCall = vocabulario?.pre_call || [];
+    const postCall = vocabulario?.post_call || [];
+
+    const corregir = async (agendaId, campo, valor) => {
+        setOcupada(`${agendaId}:${campo}`);
+        try {
+            // El tercer argumento apunta la acción a ESTA agenda, no a la que abrió la ficha.
+            await onAccion?.('estado_agenda', { campo, valor }, agendaId);
+        } catch {
+            // El aviso del cascarón ya lo dice; la fila vuelve a su valor al recargar la ficha.
+        } finally {
+            setOcupada(null);
+        }
+    };
+
+    const agendar = async () => {
+        setOcupada('nueva');
+        try {
+            await onAccion?.('crear_agenda', { fecha: cuando, closer_id: closerId || null });
+            setAgregando(false);
+        } catch {
+            // Se queda abierto: el error más común es que ese closer ya tiene esa hora ocupada.
+        } finally {
+            setOcupada(null);
+        }
+    };
+
+    return (
+        <>
+            {agendas.length ? agendas.map((a) => (
+                <div key={a.id} className="fi-sec-fila" style={{ gridTemplateColumns: '110px minmax(0,1fr) auto' }}>
+                    <span className="t-sm mut">{fecha(a.fecha) || '—'}</span>
+                    <span className="t-sm trunc">{a.detalle}</span>
+                    <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {puedeEditar ? (
+                            <>
+                                <SelectorEstado etiqueta={`Pre call de la agenda del ${fecha(a.fecha)}`}
+                                    valor={a.pre_call} opciones={preCall}
+                                    disabled={ocupada === `${a.id}:pre_call`}
+                                    onCambiar={(v) => corregir(a.id, 'pre_call', v)} />
+                                <SelectorEstado etiqueta={`Post call de la agenda del ${fecha(a.fecha)}`}
+                                    valor={a.post_call} opciones={postCall}
+                                    disabled={ocupada === `${a.id}:post_call`}
+                                    onCambiar={(v) => corregir(a.id, 'post_call', v)} />
+                            </>
+                        ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} />}
+                    </span>
+                </div>
+            )) : <Vacio texto="Este lead todavía no tiene ninguna agenda." />}
+
+            {puedeEditar && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s3)',
+                    alignItems: 'center', paddingTop: 'var(--s3)', flexWrap: 'wrap' }}>
+                    {agregando ? (
+                        <>
+                            <span className="ln-field" style={{ height: 34 }}>
+                                <input type="datetime-local" value={cuando} aria-label="Fecha y hora de la llamada"
+                                    onChange={(e) => setCuando(e.target.value)} />
+                            </span>
+                            <button type="button" className="btn btn--linea btn--sm"
+                                disabled={ocupada === 'nueva'} onClick={() => setAgregando(false)}>
+                                Cancelar
+                            </button>
+                            <button type="button" className="btn btn--sm"
+                                disabled={ocupada === 'nueva' || !cuando} onClick={agendar}>
+                                Agendar
+                            </button>
+                        </>
+                    ) : (
+                        <button type="button" className="btn btn--linea btn--sm" onClick={() => setAgregando(true)}>
+                            Agendar otra llamada
+                        </button>
+                    )}
+                </div>
+            )}
+        </>
+    );
+};
+
 /**
  * La sección «Plan de cuotas»: la tabla de siempre, y el editor en línea al tocar «Editar».
  *
@@ -161,6 +276,9 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
     const eventos = hist.eventos || [];
 
     const puedeCobrar = puedeEditar && ficha?.permisos?.cobrar !== false;
+    // Corregir el estado de una agenda es reportar, no cobrar: es el mismo permiso con el que la
+    // ruta lo comprueba.
+    const puedeReportar = puedeEditar && ficha?.permisos?.reportar !== false;
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     // `como_viene` llega como {clave, label}; la clave es la que busca en el vocabulario.
     const claveComoViene = conf.como_viene?.clave ?? conf.como_viene;
@@ -209,9 +327,9 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                     ? `${agendas.length} ${agendas.length === 1 ? 'agenda' : 'agendas'}`
                         + (agendas[0]?.fecha ? ` · próxima ${fecha(agendas[0].fecha)}` : '')
                     : 'Sin agendas'}>
-                {agendas.length
-                    ? agendas.map((a, i) => <Fila key={`${a.fecha}-${i}`} a={fecha(a.fecha)} b={a.detalle} chip={a.chip} />)
-                    : <Vacio texto="Este lead todavía no tiene ninguna agenda." />}
+                <Agendas agendas={agendas} vocabulario={ficha?.vocabulario}
+                    closerId={ficha?.identidad?.closer?.id}
+                    puedeEditar={puedeReportar} onAccion={onAccion} />
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Plan de cuotas" resumen={resumenCuotas}>

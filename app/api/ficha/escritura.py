@@ -99,6 +99,18 @@ def total(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.total_a_pagar)
 
 
+@bp.route('/<int:appt_id>/estado', methods=['PATCH'])
+def estado(appt_id):
+    """El pre call o el post call de esta agenda, corregidos desde el historial."""
+    return _ejecutar(appt_id, 'reportar', acciones.estado_agenda)
+
+
+@bp.route('/<int:appt_id>/agenda', methods=['POST'])
+def agenda(appt_id):
+    """Otra llamada con el mismo cliente. `appt_id` es la agenda desde la que se pide."""
+    return _ejecutar(appt_id, 'confirmar', acciones.crear_agenda, exito=201)
+
+
 @bp.route('/<int:appt_id>/programa', methods=['PATCH'])
 def programa(appt_id):
     """El programa que compro el cliente, escrito donde el resto del sistema lo lee."""

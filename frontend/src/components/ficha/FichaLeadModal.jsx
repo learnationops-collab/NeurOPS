@@ -48,6 +48,8 @@ const MENSAJES = {
     guardar_plan: 'Plan de cuotas guardado.',
     guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
+    estado_agenda: 'Estado de la agenda corregido.',
+    crear_agenda: 'Agenda creada.',
     registrar_pago: 'Pago registrado.',
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: 'Baja registrada.',
@@ -151,8 +153,13 @@ const FichaLeadModal = ({
         return () => { document.body.style.overflow = ''; };
     }, []);
 
-    const onAccion = useCallback(async (nombre, payload = {}) => {
-        const appt = ficha?.identidad?.appointment_id ?? appointmentId;
+    /**
+     * `agendaId` apunta la acción a OTRA agenda del mismo cliente. El historial las lista todas y
+     * desde ahí hay que poder corregir cualquiera; la ruta ya recibe el id y `permisos_de` lo
+     * comprueba contra esa agenda, así que no es un atajo: es la misma puerta con otro número.
+     */
+    const onAccion = useCallback(async (nombre, payload = {}, agendaId = null) => {
+        const appt = agendaId ?? ficha?.identidad?.appointment_id ?? appointmentId;
         setAviso(null);
         try {
             const resultado = await ejecutarAccion(nombre, appt, payload);

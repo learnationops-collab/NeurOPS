@@ -48,6 +48,10 @@ const RUTAS = {
     descartar: (appt, p) => api.post(`/ficha/${appt}/descartar`, p),
     eliminar: (appt) => api.delete(`/ficha/${appt}`),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
+    // Las dos del historial. `estado_agenda` corrige el pre/post call de CUALQUIER agenda del
+    // cliente, no solo la que la ficha tiene abierta: el id viaja en la URL (ver `onAccion`).
+    estado_agenda: (appt, p) => api.patch(`/ficha/${appt}/estado`, p),
+    crear_agenda: (appt, p) => api.post(`/ficha/${appt}/agenda`, p),
 
     // Post-venta / cobro. Un pago es una escritura de venta: el único camino real
     // de una venta y de una cuota cobrada es el mismo (`SheetsService.post_to_sheets`).
