@@ -160,7 +160,8 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
                     {copiado ? <Check size={16} style={{ color: 'var(--success)' }} /> : <ClipboardCopy size={16} />}
                 </button>
                 {onEditar && (
-                    <button type="button" className="ibtn" aria-label="Editar lead" onClick={onEditar}>
+                    <button type="button" className="ibtn" aria-label="Editar lead"
+                        onClick={() => onEditar(ficha)}>
                         <Pencil size={16} />
                     </button>
                 )}

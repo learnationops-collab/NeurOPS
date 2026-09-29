@@ -219,7 +219,8 @@ const FichaLeadModal = ({
                 {/* El tablist espera a la ficha: sin ella `estado.pestanas` es el catálogo
                     entero y se verían seis pestañas que todavía no se sabe si aplican. */}
                 {ficha && estado.pestanas.length > 0 && (
-                    <FichaTabs pestanas={estado.pestanas} activa={pestana} onCambiar={setPestana} />
+                    <FichaTabs pestanas={estado.pestanas} activa={pestana} onCambiar={setPestana}
+                        contadores={{ com: ficha.comunicacion?.notas?.length || 0 }} />
                 )}
 
                 <div className="fi-modal-panel"

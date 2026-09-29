@@ -162,16 +162,30 @@
   cursor:pointer}
 .dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary)}
 
-/* ---------- Tablist ---------- */
-.dc-shell .fi-tabs{display:flex;gap:var(--s6);overflow-x:auto;white-space:nowrap;
-  border-bottom:1px solid var(--border-subtle);scrollbar-width:none}
+/* ---------- Tablist: control segmentado, igual que `.tabs`/`.tab` del tablero ---------- */
+.dc-shell .fi-tabs-fila{padding:0 var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
+.dc-shell .fi-tabs{display:inline-flex;align-items:center;gap:2px;padding:5px;
+  border-radius:var(--radius-pill);background:var(--mat-0);border:1px solid var(--border-main);
+  max-width:100%;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
 .dc-shell .fi-tabs::-webkit-scrollbar{display:none}
-.dc-shell .fi-tab{position:relative;padding:var(--s3) 0;background:transparent;border:0;
-  color:var(--text-muted);font-size:15px;font-weight:600;cursor:pointer}
+.dc-shell .fi-tab{position:relative;flex-shrink:0;height:36px;padding:0 16px;
+  border-radius:var(--radius-pill);background:transparent;border:0;color:var(--text-muted);
+  font-size:13.5px;font-weight:600;cursor:pointer;transition:color .18s ease}
 .dc-shell .fi-tab:hover{color:var(--text-on-surface)}
-.dc-shell .fi-tab[aria-selected="true"]{color:var(--text-on-surface)}
-.dc-shell .fi-tab-sub{position:absolute;left:0;right:0;bottom:-1px;height:2px;
-  background:var(--brand-secondary)}
+.dc-shell .fi-tab[aria-selected="true"]{color:var(--on-inverso);font-weight:700}
+/* La pildora llena va DETRAS del contenido: se mueve entre pestañas con `layoutId`. */
+.dc-shell .fi-tab-fondo{position:absolute;inset:0;z-index:0;border-radius:var(--radius-pill);
+  background:var(--text-on-surface)}
+.dc-shell .fi-tab-cuerpo{position:relative;z-index:1;display:inline-flex;align-items:center;
+  gap:8px}
+.dc-shell .fi-tab svg{width:15px;height:15px;flex-shrink:0}
+.dc-shell .fi-tab-cuenta{font-size:11px;font-weight:900;opacity:.6;
+  font-variant-numeric:tabular-nums}
+
+@media (max-width:640px){
+  .dc-shell .fi-tabs-fila{padding:0 var(--s4) var(--s3)}
+  .dc-shell .fi-tab{padding:0 12px}
+}
 
 /* ---------- Modal de la ficha (más ancho que `.modal`) ---------- */
 .dc-shell .fi-modal{width:min(1120px,100%);padding:0}

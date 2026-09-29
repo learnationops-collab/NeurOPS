@@ -1073,11 +1073,6 @@ const CloserWorkflowPage = () => {
             refs_ask: undefined,
             refs_rows: [],
             showRefsStep: false,
-            // Wizard de "Proceso de confirmación" v8 — ver CONFIRM_STAGES/app/models/booking.py.
-            // None se trata como el primer valor de cada lista (por_contactar/pendiente/[]).
-            confirmation_stage: lead.confirmation_stage || 'por_contactar',
-            confirmation_contact_status: lead.confirmation_contact_status || 'pendiente',
-            confirmation_pain_points: lead.confirmation_pain_points ? lead.confirmation_pain_points.split(',').filter(Boolean) : []
         });
 
         // 2. Determinar paso inicial del árbol por contexto. `lead.fase`, cuando viene
@@ -1104,17 +1099,23 @@ const CloserWorkflowPage = () => {
         setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
         setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
 
-        // 3. Enriquecer datos completos si la cita tiene ID real de BD
-        if (lead.id && lead.id > 0) {
-            try {
-                const res = await api.get(`/closer/deck/card/${lead.id}`, { skipAuthError: true });
-                if (res.data) {
-                    setSelectedLead(prev => ({ ...prev, ...res.data }));
-                }
-            } catch (err) {
-                console.warn("No se pudieron cargar detalles completos del lead:", err);
-            }
-        }
+    };
+
+    // El editor de datos del lead se arma con lo que la ficha YA trajo. Antes el mazo pedia
+    // `/closer/deck/card/<id>` al abrir cada lead solo para esto: dos peticiones por apertura
+    // pidiendo lo mismo. Importa sobre todo cuando el lead viene de la busqueda global, que lo
+    // pasa con nada mas que su id.
+    const editarDesdeLaFicha = (ficha) => {
+        const id = ficha?.identidad || {};
+        setEditingLead({
+            id: id.appointment_id ?? selectedLead?.id,
+            client_id: id.client_id ?? selectedLead?.client_id ?? null,
+            lead_name: id.nombre || '',
+            phone: id.telefono || '',
+            email: id.email || '',
+            instagram: id.instagram || '',
+            start_time: id.llamada?.iso || null,
+        });
     };
 
     // Con que pestaña abre la ficha. El mazo ya sabe a que vino el closer por la columna desde
@@ -2661,7 +2662,7 @@ const CloserWorkflowPage = () => {
                     clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
                     pestanaInicial={pestanaDeLaFicha}
                     onCerrar={() => setSelectedLead(null)}
-                    onEditar={() => setEditingLead(selectedLead)}
+                    onEditar={editarDesdeLaFicha}
                     onCambio={alCambiarLaFicha}
                 />
             )}

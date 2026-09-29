@@ -74,8 +74,12 @@ describe('lectura', () => {
 
     it('muestra solo las pestañas que declara el estado', async () => {
         await abrir(fichaPrecall);
-        expect(screen.getAllByRole('tab').map(t => t.textContent))
-            .toEqual(['Confirmación', 'Resultado', 'Historial', 'Formulario', 'Comunicación']);
+        // Por el nombre accesible y no por el texto: la pestaña lleva además un ícono y, si
+        // hay notas, su contador, y ninguno de los dos forma parte de cómo se llama.
+        const esperadas = ['Confirmación', 'Resultado', 'Historial', 'Formulario', 'Comunicación'];
+        const tabs = screen.getAllByRole('tab');
+        expect(tabs).toHaveLength(esperadas.length);
+        tabs.forEach((tab, i) => expect(tab).toHaveAccessibleName(esperadas[i]));
     });
 
     it('una venta con deuda abre en Acciones con las cuatro acciones de cobro', async () => {
