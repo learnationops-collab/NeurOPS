@@ -36,6 +36,12 @@ import './ficha.css';
 const MODULOS_TAB = import.meta.glob(['./tabs/Tab*.jsx', '!./tabs/*.test.jsx']);
 const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 
+// Las acciones cuyo editor dice él mismo por qué falló, al lado de su botón (`MotivoDelFallo` en
+// los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
+// veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
+const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
+    'corregir_pago', 'borrar_pago', 'agregar_pago']);
+
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
     como_viene: 'Estado del lead guardado.',
@@ -196,16 +202,19 @@ const FichaLeadModal = ({
                 return resultado;
             }
             await cargar();
-            // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos` y `corregir_pago`).
+            // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos` y
+            // `corregir_pago`).
             const mensaje = MENSAJES[nombre];
             setAviso({ tono: 'success',
                 texto: (typeof mensaje === 'function' ? mensaje(resultado) : mensaje) || 'Guardado.' });
             return resultado;
         } catch (err) {
             // Si el backend dice QUÉ campo falló, el error ya se pinta al lado de ese campo (el
-            // editor de la cabecera lo hace): repetirlo en la franja de arriba era el mismo
-            // párrafo dos veces, uno debajo del otro.
-            if (!err?.response?.data?.campo) setAviso({ tono: 'error', texto: mensajeDeError(err) });
+            // editor de la cabecera lo hace), y los editores del historial dicen el suyo junto a
+            // su botón: repetirlo en la franja de arriba era el mismo párrafo dos veces.
+            if (!err?.response?.data?.campo && !ERRORES_EN_LINEA.has(nombre)) {
+                setAviso({ tono: 'error', texto: mensajeDeError(err) });
+            }
             throw err;
         }
     }, [ficha, appointmentId, cargar, onCambio, onCerrar]);
