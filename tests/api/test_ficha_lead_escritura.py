@@ -801,6 +801,21 @@ def test_se_cambia_el_closer_de_una_agenda(client, db, lead, equipo, auth_header
     assert lead.closer_id == equipo['relevo'].id
 
 
+def test_la_agenda_de_un_closer_que_ya_no_esta_se_corrige_igual(client, db, lead, equipo,
+                                                               make_user, auth_headers):
+    """Su propio closer, inactivo, no puede hacerla rebotar: se valida solo un closer NUEVO."""
+    ex = make_user(role='closer', username='ex_closer', email='ex@neuro.com')
+    ex.is_active = False
+    vieja = _agenda_vieja(db, lead, equipo, closer_id=ex.id)
+
+    r = client.patch(f'/api/ficha/{vieja.id}/agenda',
+                     json={'fecha': '2026-08-01T15:00:00Z', 'closer_id': ex.id},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert (vieja.start_time, vieja.closer_id) == (datetime(2026, 8, 1, 15, 0), ex.id)
+
+
 def test_un_closer_que_no_existe_no_pasa(client, db, lead, equipo, auth_headers):
     r = client.patch(url(lead, '/agenda'), json={'closer_id': equipo['setter'].id},
                      headers=auth_headers(equipo['director']))

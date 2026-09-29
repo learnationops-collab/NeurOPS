@@ -180,8 +180,11 @@ def editar_agenda(appt, datos, usuario):
     inicio = _instante_utc(datos.get('fecha')) if 'fecha' in datos else appt.start_time
     fuente = _fuente(datos.get('fuente'), appt.origin) if 'fuente' in datos else None
     closer = appt.closer
-    if datos.get('closer_id') not in (None, ''):
-        closer = closer_activo(datos['closer_id'])
+    pedido = datos.get('closer_id')
+    # El mismo closer que ya tiene no se valida: una agenda vieja de un closer que ya no está
+    # activo tiene que poder corregirse de fecha sin que su propio closer la haga rebotar.
+    if pedido not in (None, '') and str(pedido) != str(appt.closer_id):
+        closer = closer_activo(pedido)
 
     cambia_fecha = inicio != appt.start_time
     cambia_closer = closer is not None and closer.id != appt.closer_id
