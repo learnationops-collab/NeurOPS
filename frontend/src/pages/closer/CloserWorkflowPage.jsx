@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -265,6 +265,12 @@ const CloserWorkflowPage = () => {
 
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
+    // De qué pestaña y qué día son las agendas que el kanban tiene dibujadas. El esqueleto sólo
+    // tiene sentido cuando todavía no hay nada que mostrar —la primera carga, o cambiar de pestaña
+    // o de día—; en la recarga que sigue a una acción (confirmar, reportar, crear una agenda…) la
+    // lista se reemplaza en silencio. Si no, cada acción borraba el tablero entero y lo volvía a
+    // hacer entrar tarjeta por tarjeta. Mismo criterio que `loadedDateRef` en SeguimientosPane.
+    const mazoCargadoRef = useRef(null);
     const [processingId, setProcessingId] = useState(null);
     // Llamadas de hoy YA reportadas (para la columna "Reportadas" del Kanban de ② Reportar).
     // `step=calls` del mazo excluye por diseño lo ya procesado (closer_processed=true) — no hay
@@ -802,7 +808,8 @@ const CloserWorkflowPage = () => {
     // avisarle para que un seguimiento recién resuelto desaparezca sin recargar la página. Se
     // apaga solo en la carga por cambio de pestaña/día, donde el panel ya se monta pidiendo datos.
     const fetchAgendas = async ({ refreshSeguimientos = true } = {}) => {
-        setLoading(true);
+        const clave = `${activeStep}|${selectedDate}`;
+        if (mazoCargadoRef.current !== clave) setLoading(true);
         try {
             const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
             const res = await api.get(url);
@@ -842,6 +849,7 @@ const CloserWorkflowPage = () => {
             console.error("Error al cargar agendas:", err);
             toast.error("Error al cargar las agendas");
         } finally {
+            mazoCargadoRef.current = clave;
             setLoading(false);
             // Aunque falle la carga del mazo: la acción que la disparó ya se guardó, y el panel
             // de seguimientos tiene que reflejarla igual.
