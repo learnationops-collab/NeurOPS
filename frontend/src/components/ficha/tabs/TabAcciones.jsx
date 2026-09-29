@@ -79,8 +79,10 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
           <motion.div key="menu" {...animar} className="ln-grid" style={{ gridTemplateColumns: 'minmax(220px, 1fr) minmax(0, 2fr)', gap: 'var(--space-6)' }}>
             <TarjetaDeuda
               cobro={ficha?.cobro}
+              programas={ficha?.vocabulario?.programas}
               puedeEditar={puedeCobrar}
               onGuardarTotal={(total) => onAccion('guardar_total', { total })}
+              onGuardarPrograma={(programa_code) => onAccion('guardar_programa', { programa_code })}
             />
             <div className="ln-grid ln-grid-2">
               {ACCIONES.map((a) => (
@@ -118,7 +120,7 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
 // `_client_debt` lo prefiere al precio de lista del programa, que es igual para todos y no
 // refleja descuentos. Ver un saldo que no cierra y no poder tocar el número que lo produce era
 // pedirle al closer que avisara a Operaciones para arreglar su propia cartera.
-function TarjetaDeuda({ cobro, puedeEditar = true, onGuardarTotal }) {
+function TarjetaDeuda({ cobro, programas, puedeEditar = true, onGuardarTotal, onGuardarPrograma }) {
   const reducido = useReducedMotion();
   const [editando, setEditando] = useState(false);
   const [valor, setValor] = useState('');
@@ -168,6 +170,13 @@ function TarjetaDeuda({ cobro, puedeEditar = true, onGuardarTotal }) {
       </motion.p>
 
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        <CampoPrograma
+          cobro={cobro}
+          programas={programas}
+          puedeEditar={puedeEditar}
+          onGuardar={onGuardarPrograma}
+        />
+
         <div>
           <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Total a pagar</small>
           {editando ? (
@@ -246,6 +255,89 @@ function TarjetaDeuda({ cobro, puedeEditar = true, onGuardarTotal }) {
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// El programa del cliente, arriba de la deuda porque es de lo que dependen las otras dos acciones:
+// el plan de cuotas cuelga del par (cliente, programa) y un pago necesita el prefijo del programa
+// para declarar su tipo. Un cliente en «Sin programa» las tenía las dos a medias.
+//
+// Guardar reetiqueta las ventas del cliente, que es donde el programa vive de verdad — se avisa,
+// porque no es un campo suelto de esta pantalla.
+function CampoPrograma({ cobro, programas, puedeEditar, onGuardar }) {
+  const [eligiendo, setEligiendo] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const opciones = programas || [];
+  const actual = cobro?.programa_code || '';
+  const nombre = cobro?.programa_nombre || null;
+
+  const elegir = async (codigo) => {
+    if (!codigo || codigo === actual) {
+      setEligiendo(false);
+      return;
+    }
+    setGuardando(true);
+    try {
+      await onGuardar?.(codigo);
+      setEligiendo(false);
+    } catch {
+      // El aviso del cascarón ya lo dice (ej. "tiene ventas de más de un programa"): el
+      // desplegable se queda abierto para elegir otro o cerrarlo.
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div>
+      <small className="ln-t-caption ln-muted" style={{ display: 'block' }}>Programa</small>
+      {eligiendo ? (
+        <span style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginTop: 'var(--space-2)' }}>
+          <span className="ln-field" style={{ maxWidth: 220 }}>
+            <select
+              autoFocus
+              defaultValue={actual}
+              disabled={guardando}
+              aria-label="Programa que compró el cliente"
+              onChange={(e) => elegir(e.target.value)}
+            >
+              <option value="">Elegí el programa…</option>
+              {opciones.map((p) => <option key={p.clave} value={p.clave}>{p.label}</option>)}
+            </select>
+          </span>
+          {guardando ? <span className="ln-spinner" /> : (
+            <button type="button" className="ln-iconbtn" style={{ width: 32, height: 32 }}
+              aria-label="Dejar el programa como estaba" onClick={() => setEligiendo(false)}>
+              <X />
+            </button>
+          )}
+        </span>
+      ) : (
+        <span style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <b className="ln-t-body" style={{ color: nombre ? undefined : 'var(--text-muted)' }}>
+            {nombre || 'Sin programa'}
+          </b>
+          {puedeEditar && opciones.length > 0 && (
+            <button
+              type="button"
+              className="ln-iconbtn"
+              style={{ width: 32, height: 32 }}
+              aria-label={nombre ? 'Corregir el programa' : 'Asignar el programa'}
+              title={nombre ? 'Corregir el programa' : 'Asignar el programa'}
+              onClick={() => setEligiendo(true)}
+            >
+              <Pencil />
+            </button>
+          )}
+        </span>
+      )}
+      {!nombre && !eligiendo && (
+        <small className="ln-t-caption ln-muted" style={{ display: 'block', marginTop: 'var(--space-2)' }}>
+          Sin programa no se puede armar el plan de cuotas ni registrar una cuota. Asignarlo
+          reetiqueta las ventas de este cliente.
+        </small>
+      )}
     </div>
   );
 }

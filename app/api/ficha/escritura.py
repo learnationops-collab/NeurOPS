@@ -99,6 +99,12 @@ def total(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.total_a_pagar)
 
 
+@bp.route('/<int:appt_id>/programa', methods=['PATCH'])
+def programa(appt_id):
+    """El programa que compro el cliente, escrito donde el resto del sistema lo lee."""
+    return _ejecutar(appt_id, 'cobrar', acciones.programa)
+
+
 @bp.route('/<int:appt_id>/baja', methods=['POST'])
 def baja(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.baja)

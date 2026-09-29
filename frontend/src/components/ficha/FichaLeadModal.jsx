@@ -46,6 +46,7 @@ const MENSAJES = {
     reasignar_closer: 'Lead pasado al closer elegido.',
     guardar_plan: 'Plan de cuotas guardado.',
     guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
+    guardar_programa: 'Programa asignado en las ventas de este cliente.',
     registrar_pago: 'Pago registrado.',
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: 'Baja registrada.',

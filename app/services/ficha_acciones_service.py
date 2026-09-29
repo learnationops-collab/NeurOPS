@@ -15,6 +15,8 @@ diria una cosa y el mazo del closer otra sobre el mismo lead.
 
 `ErrorDeAccion` es un pedido mal hecho (400). Lo que revienta adentro de un servicio se propaga.
 """
+import re
+
 from app import db
 from app.models import Appointment, ClientComment, Comment, Notification, User
 from app.services.deck_escritura_service import aplicar_cambios
@@ -439,6 +441,114 @@ def total_a_pagar(appt, datos, usuario):
     from app.services.closer_followup_service import CloserFollowUpService
     return {'id': appt.id, 'total': nuevo,
             'deuda': CloserFollowUpService._client_debt(appt.client_id)}
+
+
+# --- Programa del cliente ---------------------------------------------------------------------
+
+# El prefijo de programa de un `tipo_pago` ("RR - Parcial"), y el hueco que dejan los datos
+# historicos cuando ese prefijo nunca se escribio ("Desconocido - Seña").
+_PREFIJO_PROGRAMA = re.compile(r'^\s*[A-Za-z]{2,3}\s*-\s*')
+_PREFIJO_VACIO = re.compile(r'^\s*desconocido\s*-\s*', re.IGNORECASE)
+
+
+def _tipo_pago_con_programa(crudo, codigo):
+    """`tipo_pago` reetiquetado con otro programa, conservando el tipo de pago escrito.
+
+    'Parcial' -> 'RR - Parcial'; 'Desconocido - Seña' -> 'RR - Seña'; 'AL - Cuota' -> 'RR - Cuota'.
+    `None` cuando no hay ningun tipo de pago que conservar: inventarle uno ("Cuota") le daria de
+    comer un dato falso a la validacion de secuencia de pagos, que es peor que no arreglar nada.
+    """
+    from app.services.sheets_service import SheetsService
+
+    texto = (crudo or '').strip()
+    if SheetsService.parse_tipo_pago(texto)[0]:
+        texto = _PREFIJO_PROGRAMA.sub('', texto, count=1)
+    else:
+        texto = _PREFIJO_VACIO.sub('', texto, count=1)
+    texto = texto.strip()
+    return f'{codigo} - {texto}' if texto else None
+
+
+def programa(appt, datos, usuario):
+    """Asigna (o corrige) el programa del cliente que ya compro.
+
+    El programa de un cliente no es una columna suya: esta escrito en el prefijo de
+    `FinancialSale.tipo_pago`, que es de donde lo leen `_client_program_code`, la clasificacion
+    de ventas del libro comercial, el espejo a Enrollment/Payment y la validacion de secuencia de
+    pagos. Por eso asignarlo es reetiquetar sus ventas —lo mismo que hace la edicion en lote de
+    Operaciones— y no escribir un dato nuevo en paralelo que despues diga otra cosa.
+
+    Existe por los datos historicos: 281 de las 897 ventas de la base local llegan sin prefijo
+    ('Parcial', 'Cuota') o con uno que no es un codigo ('Desconocido - Parcial'). Son los que el
+    libro comercial agrupa bajo "Sin programa", y hasta ahora el closer los veia en la lista y no
+    tenia desde donde arreglarlos. El texto detras del prefijo se conserva tal cual: es el tipo de
+    pago, y no es lo que se esta corrigiendo.
+
+    Con ventas de MAS DE UN programa se niega. Cual de los dos vale no lo puede decidir un
+    desplegable, y pisar el otro seria borrar una compra: eso se corrige venta por venta desde el
+    historial del cliente.
+
+    **No se propaga a Google Sheets**, igual que `PUT /closer/sales/<id>`, que es la correccion de
+    ventas que el closer ya tenia. La hoja conserva el valor viejo.
+    """
+    from app.models import InstallmentPlan
+    from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+    from app.services.sheets_service import SheetsService
+    # Privada a proposito: es el mismo cruce cliente-ventas (email / instagram / ultimos 8 del
+    # telefono) con el que la lectura de la ficha resolvio las ventas que se estan mostrando.
+    # Rehacerlo aca con otro criterio dejaria ventas sin reetiquetar que la ficha si cuenta.
+    from app.services.ficha_lead_service import _ventas_del_cliente
+
+    codigo = (datos.get('programa_code') or '').strip().upper()
+    if codigo not in PROGRAM_CODE_NAMES:
+        raise ErrorDeAccion('Elegí uno de los programas de la lista.')
+    if not appt.client:
+        raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién ponerle un programa.')
+
+    ventas = _ventas_del_cliente(appt.client)
+    if not ventas:
+        raise ErrorDeAccion('Este cliente todavía no tiene ninguna venta, y el programa sale de '
+                            'la venta: primero hay que declararla.')
+
+    codigos = {SheetsService.parse_tipo_pago(v.tipo_pago)[0] for v in ventas} - {None}
+    if len(codigos) > 1:
+        nombres = ', '.join(sorted(PROGRAM_CODE_NAMES.get(c, c) for c in codigos))
+        raise ErrorDeAccion(f'Este cliente tiene ventas de más de un programa ({nombres}): cuál '
+                            'vale no lo puede decidir un desplegable. Corregí la venta que esté '
+                            'mal desde el historial del cliente.')
+    anterior = next(iter(codigos), None)
+
+    reetiquetadas = 0
+    for v in ventas:
+        nuevo = _tipo_pago_con_programa(v.tipo_pago, codigo)
+        if nuevo and nuevo != v.tipo_pago:
+            v.tipo_pago = nuevo
+            reetiquetadas += 1
+    if not reetiquetadas and anterior != codigo:
+        raise ErrorDeAccion('Ninguna venta de este cliente tiene escrito el tipo de pago, así que '
+                            'no hay dónde anotar el programa. Corregí la venta desde el historial '
+                            'del cliente.')
+
+    # El plan de cuotas cuelga del par (cliente, programa). Sin mover tambien el plan, el
+    # cronograma que ya existia quedaria colgado de un programa que este cliente ya no tiene y la
+    # ficha lo mostraria vacio.
+    InstallmentPlan.query.filter(
+        InstallmentPlan.client_id == appt.client_id,
+        InstallmentPlan.programa_code.is_(None) if anterior is None
+        else InstallmentPlan.programa_code.in_([anterior, None]),
+    ).update({'programa_code': codigo}, synchronize_session=False)
+
+    db.session.commit()
+
+    from app.services.booking_service import BookingService
+    BookingService.log_lead_event(
+        appt.id, usuario.id, 'programa_asignado',
+        f'{usuario.username} puso el programa {PROGRAM_CODE_NAMES[codigo]} '
+        f'(antes: {PROGRAM_CODE_NAMES.get(anterior) or "sin programa"}). '
+        f'{reetiquetadas} venta(s) reetiquetada(s).')
+
+    return {'id': appt.id, 'programa_code': codigo,
+            'programa_nombre': PROGRAM_CODE_NAMES[codigo], 'ventas': reetiquetadas}
 
 
 # --- Baja del cliente -------------------------------------------------------------------------

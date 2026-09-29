@@ -240,6 +240,19 @@ def etiqueta_de(grupo, clave):
     return clave
 
 
+def programas_disponibles():
+    """Los programas a los que se puede asignar un cliente.
+
+    Salen de `PROGRAM_CODE_NAMES`, que es el mismo mapa con el que `_client_program_code` traduce
+    el prefijo de `tipo_pago` a un nombre. Dos listas de programas se desincronizan: el
+    desplegable ofreceria un codigo que la lectura no sabe traducir y la ficha mostraria el
+    codigo crudo.
+    """
+    from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+
+    return [{'clave': codigo, 'label': nombre} for codigo, nombre in PROGRAM_CODE_NAMES.items()]
+
+
 def vocabulario(closers=None):
     """El bloque `vocabulario` completo de `GET /api/ficha/lead`.
 
@@ -261,6 +274,7 @@ def vocabulario(closers=None):
         'post_call': list(POST_CALL),
         'tipos_pago': list(TIPOS_PAGO),
         'medios_pago': list(MEDIOS_PAGO),
+        'programas': programas_disponibles(),
         'canales_seguimiento': list(CANALES_SEGUIMIENTO),
         'closers': closers if closers is not None else closers_disponibles(),
     }

@@ -492,6 +492,99 @@ def test_el_setter_no_toca_el_total_a_pagar(client, db, lead, equipo, auth_heade
     assert lead.client.total_amount is None
 
 
+# El programa de un cliente vive en el prefijo de `tipo_pago`. Asignarlo es reetiquetar sus
+# ventas, porque es de ahi que lo leen el libro comercial, el plan de cuotas y la comision.
+
+def _venta(lead, tipo_pago, monto=400.0, cuando=datetime(2026, 8, 1)):
+    return FinancialSale(client_id=lead.client_id, mail_cliente='ana@x.com',
+                         nombre_cliente='Ana Gomez', tipo_pago=tipo_pago, monto=monto,
+                         metodo_pago='Stripe', estado='Completada', date=cuando,
+                         email_vendedor='vendedor@neuro.com')
+
+
+def test_asignar_el_programa_reetiqueta_las_ventas_sin_prefijo(client, db, lead, equipo,
+                                                               auth_headers):
+    """El caso de los datos historicos: 'Parcial' a secas es lo que se lee como "Sin programa"."""
+    venta = _venta(lead, 'Parcial')
+    db.session.add(venta)
+    db.session.commit()
+
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'RR'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.tipo_pago == 'RR - Parcial'
+    assert r.get_json()['programa_nombre'] == 'Residency Roadmap'
+
+
+def test_el_prefijo_vacio_de_los_datos_viejos_se_reemplaza(client, db, lead, equipo, auth_headers):
+    venta = _venta(lead, 'Desconocido - Seña')
+    db.session.add(venta)
+    db.session.commit()
+
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'AL'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.tipo_pago == 'AL - Seña'
+
+
+def test_corregir_el_programa_se_lleva_el_plan_de_cuotas(client, db, lead, equipo, auth_headers):
+    """El plan cuelga del par (cliente, programa): dejarlo atras lo vuelve invisible."""
+    db.session.add(_venta(lead, 'RR - Parcial'))
+    cuota = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                            numero_cuota=1, monto=600.0, fecha_vencimiento=date(2026, 11, 1))
+    db.session.add(cuota)
+    db.session.commit()
+
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'SI'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    db.session.refresh(cuota)
+    assert cuota.programa_code == 'SI'
+
+
+def test_un_cliente_con_dos_programas_no_lo_decide_un_desplegable(client, db, lead, equipo,
+                                                                  auth_headers):
+    """Pisar el otro programa seria borrar una compra: eso se corrige venta por venta."""
+    db.session.add_all([_venta(lead, 'RR - Parcial'),
+                        _venta(lead, 'AL - Completo', cuando=datetime(2026, 9, 1))])
+    db.session.commit()
+
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'SI'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'más de un programa' in r.get_json()['message']
+
+
+def test_un_cliente_sin_ventas_no_tiene_programa_que_asignar(client, db, lead, equipo,
+                                                             auth_headers):
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'RR'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'venta' in r.get_json()['message']
+
+
+def test_un_programa_que_no_existe_no_pasa(client, db, lead, equipo, auth_headers):
+    db.session.add(_venta(lead, 'Parcial'))
+    db.session.commit()
+
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'ZZ'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+
+
+def test_el_setter_no_asigna_el_programa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/programa'), json={'programa_code': 'RR'},
+                     headers=auth_headers(equipo['setter']))
+
+    assert r.status_code == 403
+
+
 def test_dar_de_baja_no_falsea_el_resultado_de_la_llamada(client, db, lead, equipo, auth_headers):
     """La llamada ocurrio y fue una venta: reescribirla como Lead Perdido falsearia el embudo."""
     lead.closer_result = 'Show up'

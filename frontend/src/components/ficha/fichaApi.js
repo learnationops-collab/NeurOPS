@@ -53,6 +53,7 @@ const RUTAS = {
     // de una venta y de una cuota cobrada es el mismo (`SheetsService.post_to_sheets`).
     guardar_plan: (appt, p) => api.put(`/ficha/${appt}/plan-cuotas`, p),
     guardar_total: (appt, p) => api.patch(`/ficha/${appt}/total`, p),
+    guardar_programa: (appt, p) => api.patch(`/ficha/${appt}/programa`, p),
     registrar_pago: (appt, p) => api.post(`/ficha/${appt}/venta`, p),
     registrar_seguimiento: (appt, p) => api.post(`/ficha/${appt}/seguimiento`, p),
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),

@@ -119,7 +119,19 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
 
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
                            'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
-                           'tipos_pago', 'medios_pago', 'canales_seguimiento', 'closers'}
+                           'tipos_pago', 'medios_pago', 'programas', 'canales_seguimiento',
+                           'closers'}
+
+
+def test_los_programas_salen_del_mismo_mapa_que_traduce_el_tipo_de_pago(db):
+    """Dos listas de programas se desincronizan: el desplegable ofreceria un codigo que la
+    lectura no sabe traducir y la ficha mostraria el codigo crudo."""
+    from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+
+    programas = voc.vocabulario()['programas']
+
+    assert {p['clave'] for p in programas} == set(PROGRAM_CODE_NAMES)
+    assert all(p['label'] == PROGRAM_CODE_NAMES[p['clave']] for p in programas)
 
 
 def test_los_estados_de_pre_y_post_call_se_reusan_del_dashboard_comercial(db):
