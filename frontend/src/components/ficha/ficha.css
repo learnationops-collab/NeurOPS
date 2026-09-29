@@ -219,6 +219,12 @@
   grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
 .dc-shell .fi-agenda-editor optgroup{background:var(--brand-navy);color:var(--text-muted)}
 .dc-shell .fi-agenda-pie{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--s3)}
+/* Por qué no se guardó, al lado del botón que se tocó (`MotivoDelFallo`). El ícono va a la altura
+   de la primera línea: un motivo largo del backend se parte en dos. */
+.dc-shell .fi-motivo{display:flex;align-items:flex-start;gap:var(--s2);color:var(--error);
+  line-height:1.4}
+.dc-shell .fi-motivo svg{margin-top:1px}
+.dc-shell .fi-sec-fila + .fi-motivo{padding:0 0 var(--s3)}
 @media (max-width:640px){
   .dc-shell .fi-agenda > .fi-agenda-fila{grid-template-columns:1fr}
 }

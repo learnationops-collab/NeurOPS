@@ -1,7 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { localToday } from '../../../utils/datetime';
+import { mensajeDeError } from '../fichaApi';
 import CamposPago, { faltaParaGuardar } from './CamposPago';
+import MotivoDelFallo from './MotivoDelFallo';
 
 /**
  * «Agregar pago», al pie de la sección Pagos del historial.
@@ -28,6 +30,7 @@ const AgregarPago = ({
     const [abierto, setAbierto] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [valores, setValores] = useState({});
+    const [error, setError] = useState(null);
 
     // Al cerrar, el foco vuelve al botón que abrió el formulario. Se hace después de dibujarlo:
     // mientras el formulario está abierto el botón no existe.
@@ -47,6 +50,7 @@ const AgregarPago = ({
             programa: programaDelCliente || ultimo?.programa_code || '',
             tipo: tipos.some(t => t.clave === 'cuota') ? 'cuota' : (tipos[0]?.clave || ''),
         });
+        setError(null);
         setAbierto(true);
     };
 
@@ -60,14 +64,17 @@ const AgregarPago = ({
     const agregar = async () => {
         if (falta) return;
         setGuardando(true);
+        setError(null);
         try {
             await onAgregar?.({
                 fecha: valores.fecha, monto: Number(valores.monto), metodo_pago: valores.medio,
                 programa_code: valores.programa, tipo: valores.tipo,
             });
             cerrar();
-        } catch {
-            // El aviso del cascarón dice por qué; el formulario se queda con lo cargado.
+        } catch (err) {
+            // El formulario se queda con lo cargado y dice por qué, al lado del botón: el aviso
+            // del cascarón queda arriba del panel, fuera de la vista.
+            setError(mensajeDeError(err));
         } finally {
             setGuardando(false);
         }
@@ -99,7 +106,11 @@ const AgregarPago = ({
                 transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
             })}>
             <CamposPago ids={ids} valores={valores} disabled={guardando} autoFocus
-                onCambiar={(parche) => setValores(v => ({ ...v, ...parche }))}
+                onCambiar={(parche) => {
+                    // Cambiar un campo borra el motivo del intento anterior.
+                    setError(null);
+                    setValores(v => ({ ...v, ...parche }));
+                }}
                 medios={medios} programas={programas} tipos={tipos} />
 
             <small className="t-cap mut">
@@ -107,6 +118,8 @@ const AgregarPago = ({
                 escribe en Google Sheets ni marca cuotas del plan: para cobrar una cuota, «Registrar
                 pago» en Acciones.
             </small>
+
+            <MotivoDelFallo motivo={error} />
 
             <div className="fi-agenda-pie">
                 <button type="button" className="btn btn--linea" disabled={guardando} onClick={cerrar}>

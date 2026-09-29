@@ -2,10 +2,12 @@ import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
 import InlineConfirm from '../../ui/InlineConfirm';
+import { mensajeDeError } from '../fichaApi';
 import { diaLegible } from '../piezas/fecha';
 import CamposPago, {
     etiquetaDeTipo, faltaParaGuardar, montoExacto, nombreDePrograma,
 } from './CamposPago';
+import MotivoDelFallo from './MotivoDelFallo';
 
 /**
  * Una fila de la sección «Pagos» del historial, con su editor en el sitio y su borrado.
@@ -35,6 +37,7 @@ const FilaPago = ({
     const [editando, setEditando] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [valores, setValores] = useState({});
+    const [error, setError] = useState(null);
 
     const inicial = {
         fecha: diaDe(p.fecha), monto: p.monto != null ? String(p.monto) : '', medio: p.medio || '',
@@ -49,12 +52,14 @@ const FilaPago = ({
 
     const abrir = () => {
         setValores(inicial);
+        setError(null);
         setEditando(true);
     };
 
     // Al cerrar, el foco vuelve al lápiz: el editor desaparece y, si no, quedaría en el `body`.
     const cerrar = () => {
         setEditando(false);
+        setError(null);
         lapiz.current?.focus();
     };
 
@@ -80,11 +85,14 @@ const FilaPago = ({
     const guardar = async () => {
         if (!hayCambios || falta) return;
         setGuardando(true);
+        setError(null);
         try {
             await onCorregir?.(cambios);
             cerrar();
-        } catch {
-            // El aviso del cascarón dice por qué; el editor se queda abierto con lo cargado.
+        } catch (err) {
+            // El editor se queda abierto con lo cargado y dice por qué, al lado del botón: el
+            // aviso del cascarón queda arriba del panel, fuera de la vista.
+            setError(mensajeDeError(err));
         } finally {
             setGuardando(false);
         }
@@ -139,7 +147,11 @@ const FilaPago = ({
                         transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
                     })}>
                     <CamposPago ids={ids} valores={valores} disabled={guardando} autoFocus
-                        onCambiar={(parche) => setValores(v => ({ ...v, ...parche }))}
+                        onCambiar={(parche) => {
+                            // Cambiar un campo borra el motivo del intento anterior.
+                            setError(null);
+                            setValores(v => ({ ...v, ...parche }));
+                        }}
                         medios={medios} programas={programas} tipos={tipos}
                         actual={{ medio: p.medio, programa: p.programa_code, tipo: p.tipo,
                             tipoCrudo: p.tipo_pago }} />
@@ -148,6 +160,8 @@ const FilaPago = ({
                         Corrige el pago y lo que cuenta la deuda. No escribe en Google Sheets ni le avisa
                         a nadie.
                     </small>
+
+                    <MotivoDelFallo motivo={error} />
 
                     <div className="fi-agenda-pie">
                         <button type="button" className="btn btn--linea" disabled={guardando}

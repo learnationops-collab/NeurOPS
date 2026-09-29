@@ -3,8 +3,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import Aviso from '../piezas/Aviso';
 import { diaLegible, instanteLegible } from '../piezas/fecha';
 import { localDateFromNow, localToday } from '../../../utils/datetime';
+import { mensajeDeError } from '../fichaApi';
 import Desplegable from './Desplegable';
 import { estadoDeSeguimiento } from './FilaSeguimiento';
+import MotivoDelFallo from './MotivoDelFallo';
 
 /**
  * «Agendar seguimiento», al pie de la sección Seguimientos del historial.
@@ -40,6 +42,7 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
     const [tipo, setTipo] = useState('');
     const [tipoElegido, setTipoElegido] = useState(false);
     const [nota, setNota] = useState('');
+    const [error, setError] = useState(null);
 
     // Al cerrar, el foco vuelve al botón que abrió el formulario. Se hace después de dibujarlo:
     // mientras el formulario está abierto el botón no existe.
@@ -66,6 +69,7 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
         setTipo(tipoPorDefecto(tipos, agendas[0]));
         setTipoElegido(false);
         setNota('');
+        setError(null);
         setAbierto(true);
     };
 
@@ -74,7 +78,14 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
         setAbierto(false);
     };
 
+    // Cambiar un campo borra el motivo del intento anterior: ya habla de otros datos.
+    const cambiarCon = (set) => (valor) => {
+        setError(null);
+        set(valor);
+    };
+
     const elegirAgenda = (id) => {
+        setError(null);
         setAgendaId(id);
         // El tipo sigue a la agenda mientras nadie lo haya elegido a mano: un no show pide
         // recuperación y una llamada que asistió, seguimiento de la decisión.
@@ -83,12 +94,15 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
 
     const agendar = async () => {
         setGuardando(true);
+        setError(null);
         try {
             // El segundo argumento apunta la acción a la agenda ELEGIDA, no a la que abrió la ficha.
             await onAgendar?.({ fecha: dia, tipo, nota: nota.trim() }, agenda.id);
             cerrar();
-        } catch {
-            // El aviso del cascarón dice por qué; el formulario se queda con lo cargado.
+        } catch (err) {
+            // El formulario se queda con lo cargado y dice por qué, al lado del botón: el aviso
+            // del cascarón queda arriba del panel, fuera de la vista.
+            setError(mensajeDeError(err));
         } finally {
             setGuardando(false);
         }
@@ -141,7 +155,7 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
                     <label className="t-rotulo" htmlFor={`${ids}-dia`}>Día del contacto</label>
                     <span className="ln-field" style={{ height: 44 }}>
                         <input id={`${ids}-dia`} type="date" value={dia} required autoFocus
-                            disabled={guardando} onChange={(e) => setDia(e.target.value)} />
+                            disabled={guardando} onChange={(e) => cambiarCon(setDia)(e.target.value)} />
                     </span>
                 </div>
 
@@ -149,7 +163,7 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
                     <label className="t-rotulo" htmlFor={`${ids}-tipo`}>Tipo</label>
                     <Desplegable id={`${ids}-tipo`} etiqueta="Tipo de seguimiento" valor={tipo}
                         disabled={guardando}
-                        onCambiar={(v) => { setTipo(v); setTipoElegido(true); }}>
+                        onCambiar={(v) => { cambiarCon(setTipo)(v); setTipoElegido(true); }}>
                         {tipos.map(t => <option key={t.clave} value={t.clave}>{t.label}</option>)}
                     </Desplegable>
                     {tipos.find(t => t.clave === tipo)?.desc && (
@@ -162,7 +176,7 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
                     <span className="ln-field" style={{ height: 44 }}>
                         <input id={`${ids}-nota`} value={nota} maxLength={255} disabled={guardando}
                             placeholder="Qué hay que hacer (opcional)"
-                            onChange={(e) => setNota(e.target.value)} />
+                            onChange={(e) => cambiarCon(setNota)(e.target.value)} />
                     </span>
                 </div>
             </div>
@@ -193,6 +207,8 @@ const AgendarSeguimiento = ({ agendas = [], seguimientos = [], tipos = [], close
                     </small>
                 )}
             </div>
+
+            <MotivoDelFallo motivo={error} />
 
             <div className="fi-agenda-pie">
                 <button type="button" className="btn btn--linea" disabled={guardando} onClick={cerrar}>

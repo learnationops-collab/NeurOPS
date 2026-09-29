@@ -3,7 +3,9 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
 import { diaLegible, instanteLegible } from '../piezas/fecha';
 import { localToday } from '../../../utils/datetime';
+import { mensajeDeError } from '../fichaApi';
 import Desplegable from './Desplegable';
+import MotivoDelFallo from './MotivoDelFallo';
 
 /**
  * Una fila de la sección «Seguimientos» del historial, con su estado y su editor en el sitio.
@@ -77,6 +79,9 @@ const FilaSeguimiento = ({
     const [dia, setDia] = useState('');
     const [tipo, setTipo] = useState('');
     const [nota, setNota] = useState('');
+    // Por qué no se guardó el último intento: el estado de la fila o el editor. Se dibuja adentro
+    // del editor si está abierto, y si no, debajo de la fila.
+    const [error, setError] = useState(null);
 
     const diaInicial = s.fecha ? String(s.fecha).slice(0, 10) : '';
     const realizado = enVuelo ?? !!s.realizado;
@@ -89,21 +94,32 @@ const FilaSeguimiento = ({
         setDia(diaInicial);
         setTipo(s.tipo || '');
         setNota(s.nota || '');
+        setError(null);
         setEditando(true);
     };
 
     // Al cerrar, el foco vuelve al lápiz: el editor desaparece y, si no, quedaría en el `body`.
     const cerrar = () => {
         setEditando(false);
+        setError(null);
         lapiz.current?.focus();
+    };
+
+    // Cambiar un campo borra el motivo del intento anterior: ya habla de otros datos.
+    const cambiarCon = (set) => (valor) => {
+        setError(null);
+        set(valor);
     };
 
     const cambiarEstado = async (valor) => {
         setEnVuelo(valor);
+        setError(null);
         try {
             await onCorregir?.({ realizado: valor });
-        } catch {
-            // El aviso del cascarón dice por qué; la marca vuelve a donde estaba.
+        } catch (err) {
+            // La marca vuelve a donde estaba, y el motivo se dice en la fila: el aviso del
+            // cascarón queda arriba del panel, fuera de la vista.
+            setError(mensajeDeError(err));
         } finally {
             setEnVuelo(null);
         }
@@ -122,11 +138,14 @@ const FilaSeguimiento = ({
     const guardar = async () => {
         if (!hayCambios) return;
         setGuardando(true);
+        setError(null);
         try {
             await onCorregir?.(cambios);
             cerrar();
-        } catch {
-            // El editor se queda abierto con lo escrito, para corregir sin volver a empezar.
+        } catch (err) {
+            // El editor se queda abierto con lo escrito y dice por qué, para corregir sin volver
+            // a empezar.
+            setError(mensajeDeError(err));
         } finally {
             setGuardando(false);
         }
@@ -176,6 +195,8 @@ const FilaSeguimiento = ({
                 </span>
             </div>
 
+            {!editando && <MotivoDelFallo motivo={error} />}
+
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
                     role="group" aria-label={`Corregir el seguimiento ${cual}`}
@@ -197,14 +218,14 @@ const FilaSeguimiento = ({
                             <span className="ln-field" style={{ height: 44 }}>
                                 <input id={`${ids}-dia`} type="date" value={dia} required
                                     disabled={guardando} autoFocus
-                                    onChange={(e) => setDia(e.target.value)} />
+                                    onChange={(e) => cambiarCon(setDia)(e.target.value)} />
                             </span>
                         </div>
 
                         <div className="fi-campo">
                             <label className="t-rotulo" htmlFor={`${ids}-tipo`}>Tipo</label>
                             <Desplegable id={`${ids}-tipo`} etiqueta="Tipo de seguimiento" valor={tipo}
-                                disabled={guardando} onCambiar={setTipo}>
+                                disabled={guardando} onCambiar={cambiarCon(setTipo)}>
                                 {!s.tipo && <option value="">Sin tipo · elegí uno</option>}
                                 {tipos.map(t => <option key={t.clave} value={t.clave}>{t.label}</option>)}
                             </Desplegable>
@@ -216,11 +237,13 @@ const FilaSeguimiento = ({
                             <span className="ln-field" style={{ height: 44 }}>
                                 <input id={`${ids}-nota`} value={nota} maxLength={255}
                                     placeholder="Qué hay que hacer" disabled={guardando}
-                                    onChange={(e) => setNota(e.target.value)}
+                                    onChange={(e) => cambiarCon(setNota)(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') guardar(); }} />
                             </span>
                         </div>
                     </div>
+
+                    <MotivoDelFallo motivo={error} />
 
                     <div className="fi-agenda-pie">
                         <button type="button" className="btn btn--linea" disabled={guardando}

@@ -5,7 +5,9 @@ import { instanteLegible } from '../piezas/fecha';
 import {
     datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
 } from '../../../utils/datetime';
+import { mensajeDeError } from '../fichaApi';
 import Desplegable from './Desplegable';
+import MotivoDelFallo from './MotivoDelFallo';
 
 /**
  * Una fila de la sección «Agendas» del historial, con su editor en el sitio.
@@ -47,6 +49,7 @@ const FilaAgenda = ({
     const [cuando, setCuando] = useState('');
     const [fuente, setFuente] = useState('');
     const [closerId, setCloserId] = useState('');
+    const [error, setError] = useState(null);
 
     const cuandoInicial = toDatetimeLocalValue(agenda.fecha);
     const grupos = gruposDeFuente(fuentes, agenda.fuente);
@@ -61,6 +64,7 @@ const FilaAgenda = ({
         setCuando(cuandoInicial);
         setFuente(agenda.fuente || '');
         setCloserId(agenda.closer_id != null ? String(agenda.closer_id) : '');
+        setError(null);
         setEditando(true);
     };
 
@@ -68,7 +72,14 @@ const FilaAgenda = ({
     // quien usa el teclado tendría que volver a recorrer la ficha desde arriba.
     const cerrar = () => {
         setEditando(false);
+        setError(null);
         lapiz.current?.focus();
+    };
+
+    // Cambiar un campo borra el motivo del intento anterior: ya habla de otros datos.
+    const cambiarCon = (set) => (valor) => {
+        setError(null);
+        set(valor);
     };
 
     // Solo viaja lo que cambió: la bitácora del backend dice exactamente qué se tocó, y un campo
@@ -86,12 +97,15 @@ const FilaAgenda = ({
     const guardar = async () => {
         if (!hayCambios) return;
         setGuardando(true);
+        setError(null);
         try {
             await onEditar?.(cambios);
             cerrar();
-        } catch {
-            // El aviso del cascarón ya dice por qué (ej. el closer tiene otra llamada a esa hora):
-            // el editor se queda abierto con lo elegido, para corregir sin volver a empezar.
+        } catch (err) {
+            // El motivo va acá, al lado del botón (ej. el closer tiene otra llamada a esa hora): el
+            // aviso del cascarón queda arriba del panel, fuera de la vista. El editor se queda
+            // abierto con lo elegido, para corregir sin volver a empezar.
+            setError(mensajeDeError(err));
         } finally {
             setGuardando(false);
         }
@@ -147,14 +161,14 @@ const FilaAgenda = ({
                             <span className="ln-field" style={{ height: 44 }}>
                                 <input id={`${ids}-cuando`} type="datetime-local" value={cuando}
                                     disabled={guardando} autoFocus
-                                    onChange={(e) => setCuando(e.target.value)} />
+                                    onChange={(e) => cambiarCon(setCuando)(e.target.value)} />
                             </span>
                         </div>
 
                         <div className="fi-campo">
                             <label className="t-rotulo" htmlFor={`${ids}-fuente`}>Fuente</label>
                             <Desplegable id={`${ids}-fuente`} etiqueta="Fuente de la agenda" valor={fuente}
-                                disabled={guardando} onCambiar={setFuente}>
+                                disabled={guardando} onCambiar={cambiarCon(setFuente)}>
                                 {!agenda.fuente && <option value="">Sin fuente · elegí una</option>}
                                 {grupos.map(g => (
                                     <optgroup key={g.titulo} label={g.titulo}>
@@ -170,7 +184,7 @@ const FilaAgenda = ({
                             <div className="fi-campo">
                                 <label className="t-rotulo" htmlFor={`${ids}-closer`}>Closer</label>
                                 <Desplegable id={`${ids}-closer`} etiqueta="Closer de la agenda" valor={closerId}
-                                    disabled={guardando} onCambiar={setCloserId}>
+                                    disabled={guardando} onCambiar={cambiarCon(setCloserId)}>
                                     {!agenda.closer_id && <option value="">Sin asignar</option>}
                                     {opcionesCloser.map(c => (
                                         <option key={c.id} value={String(c.id)}>
@@ -181,6 +195,8 @@ const FilaAgenda = ({
                             </div>
                         )}
                     </div>
+
+                    <MotivoDelFallo motivo={error} />
 
                     <div className="fi-agenda-pie">
                         <button type="button" className="btn btn--linea" disabled={guardando}

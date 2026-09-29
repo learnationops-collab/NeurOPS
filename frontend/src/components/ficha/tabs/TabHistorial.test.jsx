@@ -150,7 +150,7 @@ describe('corregir una agenda en la fila', () => {
         expect(onAccion).toHaveBeenCalledWith('editar_agenda', { closer_id: 9 }, 71);
     });
 
-    it('si el backend rechaza, el editor se queda abierto con lo elegido', async () => {
+    it('si el backend rechaza, el editor se queda abierto con lo elegido y dice por qué', async () => {
         const usuario = userEvent.setup();
         const onAccion = vi.fn().mockRejectedValue(new Error('Ese closer ya tiene otra llamada'));
         await abrirAgendas(usuario, ficha(), onAccion);
@@ -159,6 +159,21 @@ describe('corregir una agenda en la fila', () => {
         await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
 
         expect(within(editor()).getByLabelText('Fuente de la agenda')).toHaveValue('workshop');
+        // El motivo va al lado del botón: el aviso del cascarón queda arriba del panel, fuera de
+        // la vista cuando la sección está abajo.
+        expect(within(editor()).getByRole('alert')).toHaveTextContent('Ese closer ya tiene otra llamada');
+    });
+
+    it('cambiar un campo después de un rechazo borra el motivo viejo', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('Ese closer ya tiene otra llamada'));
+        await abrirAgendas(usuario, ficha(), onAccion);
+        await usuario.click(lapiz());
+        await usuario.selectOptions(within(editor()).getByLabelText('Fuente de la agenda'), 'workshop');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+        await usuario.selectOptions(within(editor()).getByLabelText('Closer de la agenda'), '8');
+
+        expect(within(editor()).queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('sin el permiso de reasignar no se ofrece cambiar el closer', async () => {
@@ -239,6 +254,21 @@ describe('los seguimientos del historial', () => {
 
         expect(within(estado()).getByRole('button', { name: 'Pendiente' }))
             .toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('alert')).toHaveTextContent('No se pudo');
+    });
+
+    it('si el backend rechaza la corrección, el editor se queda abierto y dice por qué', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('Esta agenda no tiene seguimiento.'));
+        await abrirSeguimientos(usuario, conSeguimientos(), onAccion);
+        await usuario.click(screen.getByRole('button', { name: /Corregir día, tipo y nota/ }));
+        const nota = within(editor()).getByLabelText('Nota');
+        await usuario.clear(nota);
+        await usuario.type(nota, 'Llamar el lunes');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(within(editor()).getByLabelText('Nota')).toHaveValue('Llamar el lunes');
+        expect(within(editor()).getByRole('alert')).toHaveTextContent('Esta agenda no tiene seguimiento.');
     });
 
     it('el lápiz corrige día, tipo y nota, y manda solo lo que cambió', async () => {
@@ -467,6 +497,7 @@ describe('los pagos del historial', () => {
         await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
 
         expect(within(editor()).getByLabelText('Medio de pago')).toHaveValue('Hotmart');
+        expect(within(editor()).getByRole('alert')).toHaveTextContent('Ese pago no es de este lead.');
     });
 
     it('Escape cierra el editor del pago y no llega a cerrar la ficha', async () => {
@@ -600,6 +631,8 @@ describe('agregar un pago desde el historial', () => {
         await usuario.click(within(formulario()).getByRole('button', { name: 'Agregar pago' }));
 
         expect(within(formulario()).getByLabelText('Monto')).toHaveValue(250);
+        expect(within(formulario()).getByRole('alert'))
+            .toHaveTextContent('Elegí uno de los programas de la lista.');
     });
 
     it('Escape cierra el formulario sin cerrar la ficha y el foco vuelve al botón', async () => {
@@ -721,5 +754,6 @@ describe('agendar un seguimiento desde el historial', () => {
         await usuario.click(within(formulario()).getByRole('button', { name: 'Agendar seguimiento' }));
 
         expect(within(formulario()).getByLabelText('Nota')).toHaveValue('Cobrar la cuota');
+        expect(within(formulario()).getByRole('alert')).toHaveTextContent('No se pudo');
     });
 });
