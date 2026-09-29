@@ -34,7 +34,17 @@
 .dc-shell .fi-paso-punto{width:32px;height:32px;box-sizing:border-box;border-radius:50%;
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
   background:var(--ink);border:2px solid var(--border-control);color:var(--text-muted);
-  transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+  transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,
+    transform .2s var(--crecer)}
+/* La ayuda dice «tocá la etapa a la que llegó», pero el paso no devolvía nada al pasar
+   por encima: mismo punto, mismo color, solo cambiaba el cursor. Se agranda apenas, que
+   sirve para los cuatro estados —cada uno ya tiene su color y no hay ninguno libre para
+   el hover— y no toca el halo de la etapa actual. En el stepper de solo lectura del
+   resultado no aplica: ahí los pasos son `div`, no `button`. */
+.dc-shell button.fi-paso:not(:disabled):hover .fi-paso-punto{transform:scale(1.09)}
+/* Mientras se guarda la etapa el paso queda deshabilitado; el cursor seguía prometiendo
+   que se podía clickear. */
+.dc-shell button.fi-paso:disabled{cursor:default}
 .dc-shell .fi-paso-lbl{font-size:13px;font-weight:600;line-height:1.3}
 .dc-shell .fi-paso-sub{font-size:12px;line-height:1.3;color:var(--text-muted-40)}
 .dc-shell .fi-paso[data-estado="hecho"] .fi-paso-punto{background:var(--success);
