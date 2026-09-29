@@ -174,21 +174,72 @@ def _emparejar(ventas, pagos):
     return parejas
 
 
-def _espejo_de(appt, venta):
-    """El `Payment` que refleja esta venta en la deuda del cliente, o None.
+def _inscripcion(client_id, codigo, closer_id):
+    """La inscripcion a la que va el espejo de un pago de ese programa, o None.
 
-    Se empareja con TODAS las ventas del cliente y no con esta sola: si no, dos ventas iguales del
-    mismo dia reclamarian el mismo espejo.
+    La que el cliente YA tiene en ese programa, de cualquier version, y solo si no tiene ninguna,
+    una a la version activa (creandola), como el espejo de una venta declarada.
+
+    Primero la que ya tiene porque es contra la que su deuda ya se calcula. El camino de una venta
+    declarada (`_sync_enrollment_payment`) busca solo en la version ACTIVA del programa, y a un
+    cliente inscripto en una version vieja le abre una segunda inscripcion, que `_client_debt`
+    cobra al precio de lista entero: probado contra la base local, cargar una cuota de $50 a un
+    cliente de Residency Roadmap v1 le subia la deuda de $400 a $1.850. Para cargar lo que falto,
+    eso es exactamente lo contrario de corregir.
     """
-    # `_ventas_del_cliente` es privada a proposito: es el mismo cruce cliente-ventas (email /
-    # instagram / ultimos 8 del telefono) con el que la lectura armo la lista que se esta
-    # corrigiendo. Rehacerlo aca con otro criterio dejaria pagos que la ficha muestra y esto no ve.
-    from app.services.ficha_lead_service import _ventas_del_cliente
+    from app.models import Program
 
-    if not appt.client_id:
+    clave = SheetsService.PROGRAM_KEYWORDS.get(codigo)
+    if not clave:
         return None
-    parejas = _emparejar(_ventas_del_cliente(appt.client), _pagos_del_cliente(appt.client_id))
-    return parejas.get(venta.id)
+    ya_tiene = (Enrollment.query.join(Program, Enrollment.program_id == Program.id)
+                .filter(Enrollment.client_id == client_id, Program.name.ilike(f'%{clave}%'))
+                .order_by(Enrollment.enrollment_date.desc(), Enrollment.id.desc()).first())
+    if ya_tiene is not None:
+        return ya_tiene
+    programa = SheetsService.resolve_program(codigo)
+    if not programa:
+        return None
+    nueva = Enrollment(client_id=client_id, program_id=programa.id, closer_id=closer_id)
+    db.session.add(nueva)
+    db.session.flush()
+    return nueva
+
+
+def _id_del_medio(medio):
+    """El `PaymentMethod` del medio, por nombre, como lo resuelve el espejo de una venta
+    declarada. None para los que no tienen fila ('Transferencia', 'Efectivo')."""
+    metodo = PaymentMethod.query.filter(
+        func.lower(PaymentMethod.name) == (medio or '').strip().lower()).first()
+    return metodo.id if metodo else None
+
+
+def _ingreso_desde(espejo):
+    """La fecha de ingreso sigue al primer pago completado de la inscripcion.
+
+    Misma regla que la correccion de un pago del historial del mazo (`CloserService.
+    update_payment`): cargar o corregir la fecha de un primer pago corrige tambien desde cuando el
+    cliente es alumno.
+    """
+    inscripcion = espejo.enrollment
+    if inscripcion is None:
+        return
+    primero = (inscripcion.payments.filter_by(status='completed')
+               .order_by(Payment.date.asc()).first())
+    if primero is not None and primero.id == espejo.id:
+        inscripcion.enrollment_date = espejo.date
+
+
+def _soltar_si_quedo_vacia(inscripcion):
+    """Borra una inscripcion que se quedo sin ningun pago.
+
+    Una inscripcion sin pagos no es «inscripto que no pago»: `_client_debt` la cobra entera (el
+    total negociado, o el precio de lista, menos cero), y la ficha pasaria a mostrar como deudor
+    de todo el programa a quien no compro nada. Solo se llega aca cuando la inscripcion se vacia
+    por esta correccion: una que ya estaba vacia no se toca.
+    """
+    if inscripcion is not None and inscripcion.payments.count() == 0:
+        db.session.delete(inscripcion)
 
 
 # --- Bitacora ---------------------------------------------------------------------------------
@@ -225,11 +276,11 @@ def crear(appt, datos, usuario):
     """Carga a mano un pago que nunca se registro: la venta y su espejo, y nada mas.
 
     Es lo que hace `scripts/registrar_pago_historico.py` desde la consola (09/08/2026, el caso de
-    Andres Simon), con una puerta en la ficha: el espejo lo arma `_sync_enrollment_payment`, la
-    MISMA funcion del camino de una venta declarada, para que el pago cargado aca entre a la deuda
-    con el mismo `payment_type`, la misma inscripcion y la misma fecha de ingreso que uno
-    declarado. Lo que ese camino hace ademas (Sheets, n8n, avisos, Show up, total negociado) queda
-    afuera: ver el encabezado.
+    Andres Simon), con una puerta en la ficha. El espejo se arma como el de una venta declarada
+    —mismo `payment_type` (`PAYMENT_TYPE_MAP`), mismo medio, completado, con la fecha de la venta—
+    con una diferencia a proposito: va a la inscripcion que el cliente ya tiene en ese programa
+    aunque sea de una version vieja (ver `_inscripcion`). Lo que el camino de una venta declarada
+    hace ademas (Sheets, n8n, avisos, Show up, total negociado) queda afuera: ver el encabezado.
 
     El vendedor es el closer DUEÑO de la agenda y no quien carga el pago, igual que en la venta
     declarada desde la ficha: la atribucion de un pago —y su comision— es por ese email.
@@ -243,7 +294,8 @@ def crear(appt, datos, usuario):
     monto = _monto(datos.get('monto'))
     medio = _medio(datos.get('metodo_pago'))
     codigo = _programa(datos.get('programa_code'))
-    tipo_pago = f'{codigo} - {TIPOS[_tipo(datos.get("tipo"))]}'
+    tipo = _tipo(datos.get('tipo'))
+    tipo_pago = f'{codigo} - {TIPOS[tipo]}'
 
     cliente = appt.client
     vendedor = appt.closer.email if appt.closer else usuario.email
@@ -254,15 +306,20 @@ def crear(appt, datos, usuario):
         tipo_pago=tipo_pago, monto=monto, metodo_pago=medio, estado='Completada',
         sold_in_call=False, date=datetime.combine(dia, time()))
     db.session.add(venta)
-    db.session.flush()
-    SheetsService._sync_enrollment_payment(
-        {'tipo_pago': tipo_pago, 'monto': monto, 'metodo_pago': medio, 'email_vendedor': vendedor},
-        venta, cliente)
+
+    espejo = None
+    inscripcion = _inscripcion(cliente.id, codigo, appt.closer_id)
+    if inscripcion is not None:
+        espejo = Payment(enrollment_id=inscripcion.id, payment_method_id=_id_del_medio(medio),
+                         amount=monto, payment_type=SheetsService.PAYMENT_TYPE_MAP[tipo],
+                         status='completed', date=venta.date)
+        db.session.add(espejo)
+        db.session.flush()
+        _ingreso_desde(espejo)
     db.session.commit()
 
-    espejo = _espejo_de(appt, venta)
-    # Sin espejo es porque no hay un `Program` activo para ese codigo: la venta queda, pero la
-    # deuda no la cuenta, y eso tiene que quedar escrito.
+    # Sin espejo es porque el cliente no tiene inscripcion a ese programa y no hay un `Program`
+    # activo donde abrirle una: la venta queda, pero la deuda no la cuenta, y eso queda escrito.
     _anotar(appt, usuario, 'pago_cargado', 'cargó a mano un pago',
             f'{_resumen(venta)} (pago #{venta.id}); '
             + ('también en inscripciones, así que la deuda lo cuenta' if espejo
@@ -323,46 +380,11 @@ def _tipo_pago_corregido(crudo, datos):
     return nuevo
 
 
-def _inscripcion(client_id, codigo, closer_id):
-    """La inscripcion del cliente a ese programa, creandola si no existe (como el espejo de una
-    venta declarada). None si no hay un `Program` activo para el codigo."""
-    programa = SheetsService.resolve_program(codigo)
-    if not programa:
-        return None
-    inscripcion = Enrollment.query.filter_by(client_id=client_id, program_id=programa.id).first()
-    if not inscripcion:
-        inscripcion = Enrollment(client_id=client_id, program_id=programa.id, closer_id=closer_id)
-        db.session.add(inscripcion)
-        db.session.flush()
-    return inscripcion
-
-
-def _soltar_si_quedo_vacia(inscripcion):
-    """Borra una inscripcion que se quedo sin ningun pago.
-
-    Una inscripcion sin pagos no es «inscripto que no pago»: `_client_debt` la cobra entera (el
-    total negociado, o el precio de lista, menos cero), y la ficha pasaria a mostrar como deudor
-    de todo el programa a quien no compro nada. Solo se llega aca cuando la inscripcion se vacia
-    por esta correccion: una que ya estaba vacia no se toca.
-    """
-    if inscripcion is not None and inscripcion.payments.count() == 0:
-        db.session.delete(inscripcion)
-
-
-def _ingreso_desde(espejo):
-    """La fecha de ingreso sigue al primer pago completado de la inscripcion.
-
-    Misma regla que la correccion de un pago del historial del mazo (`CloserService.
-    update_payment`): corregir la fecha de un primer pago mal cargado corrige tambien desde cuando
-    el cliente es alumno.
-    """
-    inscripcion = espejo.enrollment
-    if inscripcion is None:
-        return
-    primero = (inscripcion.payments.filter_by(status='completed')
-               .order_by(Payment.date.asc()).first())
-    if primero is not None and primero.id == espejo.id:
-        inscripcion.enrollment_date = espejo.date
+def _es_del_programa(inscripcion, codigo):
+    """Si la inscripcion es a ese programa, en cualquiera de sus versiones."""
+    clave = SheetsService.PROGRAM_KEYWORDS.get(codigo)
+    programa = inscripcion.program if inscripcion is not None else None
+    return bool(clave and programa and clave in (programa.name or '').lower())
 
 
 def _mover_espejo(espejo, venta, cambios, appt):
@@ -374,22 +396,22 @@ def _mover_espejo(espejo, venta, cambios, appt):
     if 'monto' in cambios:
         espejo.amount = venta.monto
     if 'metodo_pago' in cambios:
-        metodo = PaymentMethod.query.filter(
-            func.lower(PaymentMethod.name) == (venta.metodo_pago or '').strip().lower()).first()
-        espejo.payment_method_id = metodo.id if metodo else None
+        espejo.payment_method_id = _id_del_medio(venta.metodo_pago)
     if 'tipo_pago' in cambios:
         codigo, tipo = SheetsService.parse_tipo_pago(venta.tipo_pago)
         if tipo:
             espejo.payment_type = SheetsService.PAYMENT_TYPE_MAP[tipo]
         # Otro programa es otra inscripcion: la deuda se calcula por inscripcion cuando el cliente
-        # no tiene total negociado, y el pago tiene que restar de la del programa que pago.
+        # no tiene total negociado, y el pago tiene que restar de la del programa que pago. Si
+        # solo cambio el tipo, el espejo se queda donde esta, aunque el cliente tenga otra
+        # inscripcion al mismo programa en otra version.
         origen = espejo.enrollment
-        destino = _inscripcion(appt.client_id, codigo, origen.closer_id if origen else None) \
-            if codigo else None
-        if destino is not None and destino.id != espejo.enrollment_id:
-            espejo.enrollment = destino
-            db.session.flush()
-            _soltar_si_quedo_vacia(origen)
+        if codigo and not _es_del_programa(origen, codigo):
+            destino = _inscripcion(appt.client_id, codigo, origen.closer_id if origen else None)
+            if destino is not None:
+                espejo.enrollment = destino
+                db.session.flush()
+                _soltar_si_quedo_vacia(origen)
     if 'fecha' in cambios:
         espejo.date = venta.date
     if cambios & {'fecha', 'tipo_pago'}:

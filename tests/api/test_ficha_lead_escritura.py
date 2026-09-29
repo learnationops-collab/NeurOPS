@@ -1400,6 +1400,38 @@ def test_sin_un_programa_activo_el_pago_queda_y_avisa_que_la_deuda_no_lo_cuenta(
     assert 'la deuda no lo cuenta' in evento.description
 
 
+def _inscripcion_vieja(db, lead, nombre='Residency Roadmap v1', precio=1000.0, monto=600.0,
+                       cuando=datetime(2025, 1, 8)):
+    """Un cliente inscripto en una version que ya no esta activa, con un pago."""
+    programa = Program(name=nombre, price=precio, is_active=False)
+    db.session.add(programa)
+    db.session.commit()
+    inscripcion = Enrollment(client_id=lead.client_id, program_id=programa.id, enrollment_date=cuando)
+    db.session.add(inscripcion)
+    db.session.commit()
+    db.session.add(Payment(enrollment_id=inscripcion.id, amount=monto, date=cuando,
+                           payment_type='Primer Pago', status='completed'))
+    db.session.commit()
+    return inscripcion
+
+
+def test_un_pago_cargado_va_a_la_inscripcion_que_el_cliente_ya_tiene(client, db, lead, programas,
+                                                                     equipo, auth_headers):
+    """El camino de una venta declarada busca solo en la version ACTIVA del programa: a este
+    cliente (RR v1, sin total negociado) le abriria una inscripcion a la v3 que la deuda cobra
+    entera. Contra la base local, una cuota de $50 le subia la deuda de $400 a $1.850."""
+    lead.client.total_amount = None
+    vieja = _inscripcion_vieja(db, lead)
+
+    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 50},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201, r.get_json()
+    assert r.get_json()['deuda'] == 350.0   # 1000 de la v1 - 600 - 50
+    assert Enrollment.query.count() == 1
+    assert Payment.query.order_by(Payment.id.desc()).first().enrollment_id == vieja.id
+
+
 @pytest.mark.parametrize('cambio', [
     {'monto': 0}, {'monto': -50}, {'monto': 'mucho'}, {'monto': True}, {'monto': None},
     {'fecha': '2026-13-01'}, {'fecha': '15/09/2026'}, {'fecha': ''}, {'fecha': '2099-01-01'},
@@ -1490,6 +1522,39 @@ def test_otro_programa_y_otro_tipo_mueven_el_espejo_a_esa_inscripcion(client, db
     assert espejo.payment_type == 'full'
     assert espejo.enrollment.program_id == programas['AL'].id
     # La inscripcion a RR se quedo sin pagos: dejarla haria que `_client_debt` la cobrara entera.
+    assert Enrollment.query.count() == 1
+
+
+def test_otro_tipo_del_mismo_programa_no_muda_el_espejo_de_version(client, db, lead, programas,
+                                                                  equipo, auth_headers):
+    """Con una inscripcion a RR v1 y otra a RR v3, corregir el tipo de un pago de la v1 no lo
+    pasa a la v3: el programa es el mismo, y la deuda de cada una cambiaria sin motivo."""
+    vieja = _inscripcion_vieja(db, lead)
+    venta = _venta(lead, 'RR - Parcial', 600.0, datetime(2025, 1, 8))
+    db.session.add(venta)
+    db.session.commit()
+    _declarada(db, lead, 'RR - Renovación', 900.0)   # abre la inscripcion a la v3
+
+    r = corregir(client, lead, venta, {'tipo': 'completo'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['espejo'] is True
+    espejo = Payment.query.filter_by(amount=600.0).one()
+    assert (espejo.enrollment_id, espejo.payment_type) == (vieja.id, 'full')
+
+
+def test_otro_programa_usa_la_inscripcion_que_el_cliente_ya_tiene_en_ese(client, db, lead,
+                                                                         programas, equipo,
+                                                                         auth_headers):
+    vieja_al = _inscripcion_vieja(db, lead, 'Ace Learner v2', 500.0, monto=100.0,
+                                  cuando=datetime(2025, 3, 1))
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'programa_code': 'AL'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert Payment.query.filter_by(amount=400.0).one().enrollment_id == vieja_al.id
+    # La de RR se quedo sin pagos y se fue; no se abrio una a Ace Learner v3.
     assert Enrollment.query.count() == 1
 
 
