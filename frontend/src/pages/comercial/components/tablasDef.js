@@ -248,7 +248,7 @@ export const TABLAS = {
         cols: [
             { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'programa', header: 'Programa', width: '1.2fr' },
-            { key: 'closer', header: 'Vendió', width: '0.8fr' },
+            { key: 'closer', header: 'Closer', width: '0.8fr' },
             { key: 'pagado', header: 'Pagado', width: '0.8fr' },
             { key: 'deuda', header: 'Debe', width: '0.8fr' },
             { key: 'cuota', header: 'Próxima cuota', width: '1.3fr' },
@@ -257,7 +257,7 @@ export const TABLAS = {
         facetas: [
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
-            { key: 'closer', label: 'Vendió', de: (f) => f.closer },
+            { key: 'closer', label: 'Closer', de: (f) => f.closer },
         ],
         chips: [
             { key: 'todos', label: 'Todos', filtro: () => true },
@@ -266,7 +266,7 @@ export const TABLAS = {
             { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 },
         ],
         agrupables: [
-            { key: 'closer', label: 'Vendió', de: (f) => f.closer },
+            { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
         ],
