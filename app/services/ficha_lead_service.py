@@ -310,10 +310,13 @@ def permisos_de(usuario, appt=None):
     seguir pudiendo limpiar una agenda de prueba propia. Lo que ninguno de los dos hace es borrar
     la agenda de otro.
 
-    Corregir los datos del cliente (`editar_datos`) sigue la misma regla que borrar: la direccion
-    sobre cualquier lead y el closer sobre los suyos. A diferencia de reportar o cobrar —que un
-    closer hace sobre un lead ajeno cuando cubre a un companero—, un nombre o un correo cambiados
-    los ven todas las pantallas y todos los closers, y el cruce de ventas depende de ellos.
+    Corregir los datos del cliente (`editar_datos`) lo puede la direccion y CUALQUIER closer, sea
+    o no el de la agenda, como reportar o cobrar. Es una decision explicita del usuario (bitacora,
+    5 de agosto de 2026: "cualquier closer puede editar cualquier lead", bloquear por dueno solo
+    generaba friccion) y lo que ya permitia el lapiz del mazo por `PATCH /closer/customers/<id>`:
+    un closer que cubre a un companero, que trabaja un lead de la busqueda global o un huerfano del
+    pool de cobro (anclado a 'otro' o a un closer inactivo) tiene que poder arreglarle el telefono.
+    Un setter o triage no: confirman la agenda, los datos no son suyos.
     """
     rol = getattr(usuario, 'role', None)
     direccion = rol in ROLES_DIRECCION
@@ -325,7 +328,7 @@ def permisos_de(usuario, appt=None):
         'reportar': direccion or rol == 'closer',
         'cobrar': direccion or rol == 'closer',
         'eliminar': direccion or closer_dueno,
-        'editar_datos': direccion or closer_dueno,
+        'editar_datos': direccion or rol == 'closer',
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
     }

@@ -114,8 +114,8 @@ def datos_del_lead(appt_id):
     """Nombre, telefono, correo e instagram del cliente de esta agenda, y el examen de la agenda.
 
     Es la misma correccion que `PATCH /closer/customers/<id>` con la misma normalizacion, pero con
-    el permiso de la ficha (la direccion y el closer del lead, no cualquier closer) y rechazando
-    lo que esa ruta guarda mal callada: ver `ficha_acciones_service.editar_datos`.
+    el permiso de la ficha (la direccion y cualquier closer, como esa ruta; ni setter ni triage) y
+    rechazando lo que esa ruta guarda mal callada: ver `ficha_acciones_service.editar_datos`.
     """
     return _ejecutar(appt_id, 'editar_datos', acciones.editar_datos)
 

@@ -117,9 +117,20 @@ def test_un_correo_vacio_borra_el_correo(client, db, lead, equipo, auth_headers)
 
 # --- Permisos ---------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('rol', ['ajeno', 'setter', 'triage'])
-def test_un_closer_ajeno_un_setter_y_triage_no_corrigen(client, db, lead, equipo, auth_headers,
-                                                         rol):
+def test_un_closer_corrige_tambien_el_lead_de_otro_closer(client, db, lead, equipo, auth_headers):
+    """Decision explicita del usuario (bitacora, 5/08/2026): cualquier closer edita cualquier
+    lead. Es lo que ya dejaba el lapiz del mazo, y lo que necesita quien cubre a un companero o
+    trabaja un huerfano del pool de cobro."""
+    r = editar(client, auth_headers, equipo['ajeno'], lead, nombre='Jesus Armando Capuchino')
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.client.full_name == 'Jesus Armando Capuchino'
+    [evento] = eventos(lead)
+    assert evento.user_id == equipo['ajeno'].id
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_un_setter_y_triage_no_corrigen(client, db, lead, equipo, auth_headers, rol):
     """El setter de ESTE lead tampoco: confirma su agenda, pero los datos no son suyos."""
     r = editar(client, auth_headers, equipo[rol], lead, nombre='Otro nombre')
 
@@ -136,7 +147,7 @@ def test_la_lectura_le_dice_al_frontend_quien_ve_el_lapiz(client, db, lead, equi
 
     assert permiso(equipo['closer']) is True
     assert permiso(equipo['director']) is True
-    assert permiso(equipo['ajeno']) is False
+    assert permiso(equipo['ajeno']) is True
     assert permiso(equipo['setter']) is False
 
 
