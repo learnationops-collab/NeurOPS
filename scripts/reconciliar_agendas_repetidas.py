@@ -62,13 +62,19 @@ def main():
         # que en el modo real hace el propio `duplicada_de_id` ya escrito.
         ya_resueltas = set()
 
+        # `universo` hace que las hermanas se busquen en memoria sobre las filas ya
+        # cargadas. Preguntando por cada agenda eran miles de viajes a la base y contra el
+        # proxy público de Railway la conexión se caía a mitad del recorrido. Las reglas
+        # son exactamente las mismas.
         for agenda in reversed(agendas):
             if agenda.duplicada_de_id is not None or agenda.id in ya_resueltas:
                 continue  # ya la resolvió una vuelta anterior de este mismo bucle
+
             if not args.apply:
                 # Mismo cálculo que el modo real, no una copia: `simular` devuelve las
                 # decisiones sin escribirlas.
-                for conservada, sobrante, motivo in dedup.reconciliar(agenda, simular=True):
+                for conservada, sobrante, motivo in dedup.reconciliar(
+                        agenda, simular=True, universo=agendas):
                     if sobrante.id in ya_resueltas or conservada.id in ya_resueltas:
                         continue
                     ya_resueltas.add(sobrante.id)
@@ -78,11 +84,15 @@ def main():
                     marcadas += 1
                 continue
 
-            for sobrante in dedup.reconciliar(agenda):
+            for sobrante in dedup.reconciliar(agenda, universo=agendas):
                 print(f"  {(agenda.lead or '')[:28]:<28} marcada #{sobrante.id} "
                       f"({sobrante.descartada_motivo})")
                 marcadas += 1
-            db.session.commit()
+                # Se commitea por cada marca y no una vez por agenda recorrida: así la
+                # transacción dura lo que dura el cambio, y si la conexión se corta a
+                # mitad (pasó contra el proxy de Railway) lo ya resuelto queda guardado y
+                # volver a correrlo sigue desde ahí.
+                db.session.commit()
 
         if args.apply:
             print(f"\nListo: {marcadas} agenda(s) marcadas como repetidas.")

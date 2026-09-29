@@ -202,7 +202,17 @@ def _nombre_utilizable(nombre):
     return bool(limpio) and limpio not in _GENERIC_NAMES and len(limpio) > 2
 
 
-def _hermanas_del_mismo_dia(agenda):
+def _comparte_senal(a, b):
+    """True si dos agendas comparten mail, instagram o teléfono normalizados."""
+    for norm, campo in ((_normalize_email, 'mail'), (_normalize_instagram, 'instagram'),
+                        (_normalize_phone, 'whatsapp')):
+        va, vb = norm(getattr(a, campo)), norm(getattr(b, campo))
+        if va and va == vb:
+            return True
+    return False
+
+
+def _hermanas_del_mismo_dia(agenda, universo=None):
     """Las otras agendas vigentes del mismo lead cuya reunión cae el mismo día LOCAL.
 
     El día es el local de la fuente y no el día UTC: una cita de las 21:00 cae en el día
@@ -211,32 +221,29 @@ def _hermanas_del_mismo_dia(agenda):
     """
     from app.services.agenda_time_service import limites_dia_origen
 
-    condiciones = []
-    mail = _normalize_email(agenda.mail)
-    ig = _normalize_instagram(agenda.instagram)
-    tel = _normalize_phone(agenda.whatsapp)
-    if mail:
-        condiciones.append(db.func.lower(FinancialAgenda.mail) == mail)
-    if ig:
-        condiciones.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig)
-    if tel:
-        # `_normalize_phone` se queda con los últimos 8 dígitos; del lado de la columna hay
-        # que sacarle los separadores para comparar números y no textos.
-        columna = FinancialAgenda.whatsapp
-        for sep in (' ', '-', '(', ')', '+', '.'):
-            columna = db.func.replace(columna, sep, '')
-        condiciones.append(columna.like('%' + tel))
-    if not condiciones:
-        return []
-
     inicio, fin = limites_dia_origen(agenda.date)
-    candidatas = FinancialAgenda.query.filter(
-        FinancialAgenda.duplicada_de_id.is_(None),
-        FinancialAgenda.id != agenda.id,
-        FinancialAgenda.date >= inicio,
-        FinancialAgenda.date <= fin,
-        db.or_(*condiciones)
-    ).all()
+
+    # La base solo acota por día; quién es la misma persona lo decide SIEMPRE Python, con
+    # los mismos normalizadores. Antes la condición de identidad iba en el SQL y ahí había
+    # que reescribir a mano lo que hacen esos normalizadores: el `replace` de la columna no
+    # recorta espacios ni cubre todos los separadores, así que un instagram guardado con un
+    # espacio al final o un teléfono con un guion raro no matcheaba. Comparado contra los
+    # datos reales, el SQL perdía 2 de 102 pares que Python sí reconoce.
+    #
+    # `universo` evita incluso esa consulta: el backfill trae todo una vez y compara en
+    # memoria. Preguntando por cada agenda eran miles de viajes y contra el proxy público
+    # de Railway la conexión se caía a mitad del recorrido.
+    if universo is None:
+        universo = FinancialAgenda.query.filter(
+            FinancialAgenda.duplicada_de_id.is_(None),
+            FinancialAgenda.date >= inicio,
+            FinancialAgenda.date <= fin,
+        ).all()
+
+    candidatas = [c for c in universo
+                  if c.id != agenda.id and c.duplicada_de_id is None
+                  and c.date and inicio <= c.date <= fin
+                  and _comparte_senal(agenda, c)]
     # El nombre decide al final: el mismo teléfono aparece compartido entre familiares y el
     # mismo mail tipeado por otra persona. Sin este resguardo se fusionan dos leads reales.
     #
@@ -246,12 +253,18 @@ def _hermanas_del_mismo_dia(agenda):
     # teléfono. Para una fusión AUTOMÁTICA eso es demasiado: en producción hay 1069 agendas
     # sin `lead` (todas anteriores a julio, ninguna en el período que esto toca hoy). Sin
     # nombre no se decide solo — el par igual aparece en el panel para que lo mire alguien.
-    return [c for c in candidatas
-            if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
-            and _names_compatible(agenda.lead, c.lead)]
+    hermanas = [c for c in candidatas
+                if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
+                and _names_compatible(agenda.lead, c.lead)]
+    # Orden explícito: `decidir_reconciliacion` corta el recorrido en cuanto la que sobra
+    # es la propia agenda, así que el orden decide qué par se evalúa. Sin esto la consulta
+    # devolvía las filas en el orden que quisiera Postgres y el resultado no era
+    # reproducible — dos corridas sobre los mismos datos podían resolver pares distintos.
+    hermanas.sort(key=lambda c: (c.created_at is not None, c.created_at, c.id))
+    return hermanas
 
 
-def reconciliar(agenda, actor_id=None, simular=False):
+def reconciliar(agenda, actor_id=None, simular=False, universo=None):
     """Hace cumplir la regla: un lead no puede tener dos agendas el mismo día a la misma hora.
 
     La definió Kerwin el 28/09/2026 mirando el libro:
@@ -267,7 +280,7 @@ def reconciliar(agenda, actor_id=None, simular=False):
     marcó, vacía si no había nada que reconciliar. Con `simular=True` no escribe: devuelve
     las decisiones (conservada, sobrante, motivo) que tomaría.
     """
-    decisiones = decidir_reconciliacion(agenda)
+    decisiones = decidir_reconciliacion(agenda, universo=universo)
     if simular:
         return decisiones
 
@@ -284,7 +297,7 @@ def reconciliar(agenda, actor_id=None, simular=False):
     return marcadas
 
 
-def decidir_reconciliacion(agenda):
+def decidir_reconciliacion(agenda, universo=None):
     """Qué haría `reconciliar` con esta agenda, sin tocar nada.
 
     Devuelve una lista de (conservada, sobrante, motivo). Existe aparte para que el
@@ -296,7 +309,7 @@ def decidir_reconciliacion(agenda):
         return []
 
     decisiones = []
-    for hermana in _hermanas_del_mismo_dia(agenda):
+    for hermana in _hermanas_del_mismo_dia(agenda, universo=universo):
         if hermana.duplicada_de_id is not None:
             continue
         distancia = abs((hermana.date - agenda.date).total_seconds())
