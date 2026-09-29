@@ -163,6 +163,11 @@
 .dc-shell .fi-seg-op:focus-visible{box-shadow:var(--focus-ring)}
 .dc-shell .fi-seg-marca{position:absolute;inset:0;z-index:-1;border-radius:inherit;
   background:var(--text-on-surface)}
+/* En un teléfono las siete opciones no entran a 44 px y el «12» caía solo en una segunda fila,
+   dentro de una píldora de dos pisos. Más angostas entran en una. */
+@media (max-width:520px){
+  .dc-shell .fi-seg-op{min-width:34px;padding:0 var(--s2)}
+}
 
 /* ---------- Tarjeta de acción ---------- */
 .dc-shell .fi-accion{position:relative;isolation:isolate;overflow:hidden;
