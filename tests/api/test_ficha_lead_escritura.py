@@ -1450,6 +1450,17 @@ def test_un_pago_mal_cargado_no_se_guarda(client, db, lead, programas, equipo, a
     assert FinancialSale.query.count() == 0 and Payment.query.count() == 0
 
 
+@pytest.mark.parametrize('monto', [True, 'mucho', [300]])
+def test_un_monto_que_no_es_un_numero_se_rechaza_con_su_motivo(client, db, lead, programas,
+                                                               equipo, auth_headers, monto):
+    """`true` no «falta»: es un valor que no es un monto, y el motivo tiene que decir eso."""
+    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': monto},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message'] == 'El monto del pago tiene que ser un número.'
+
+
 @pytest.mark.parametrize('rol', ['setter', 'triage'])
 def test_quien_no_cobra_no_carga_pagos(client, db, lead, programas, equipo, auth_headers, rol):
     r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo[rol]))

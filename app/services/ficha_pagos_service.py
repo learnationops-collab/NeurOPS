@@ -88,10 +88,12 @@ def _dia(valor):
 
 
 def _monto(valor):
-    # `bool` es un `int` para Python: sin esto, `true` pasaria como un pago de $1.
-    if valor in (None, '') or isinstance(valor, bool):
+    if valor in (None, ''):
         raise ErrorDeAccion('Falta el monto del pago.')
     try:
+        # `bool` es un `int` para Python: sin esto, `true` pasaria como un pago de $1.
+        if isinstance(valor, bool):
+            raise TypeError
         monto = round(float(valor), 2)
     except (TypeError, ValueError):
         raise ErrorDeAccion('El monto del pago tiene que ser un número.') from None
