@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Hueso } from '../../../components/huesos/Huesos';
+import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
@@ -197,6 +197,33 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
     );
 };
 
+// La misma fila, en hueso: la caja `.row-v6` de verdad (padding, borde, margen de abajo) con la
+// urgencia a la izquierda, nombre y chips al centro y la ganancia a la derecha. Cada hueso va
+// dentro del alto de LÍNEA del texto que reemplaza, no del alto de la letra, que es lo que ocupa el
+// texto real: la fila en hueso mide 84 px, como la de verdad con los chips en un solo renglón. Las
+// barras de 62 px de antes quedaban 15 px cortas por fila, y la lista crecía al llegar los datos.
+const HuesoFila = ({ paso }) => (
+    <div className="row-v6" aria-hidden="true" style={{ pointerEvents: 'none' }}>
+        {/* La caja de urgencia (`.time-v6`): 104 px de ancho mínimo y 35 de alto. */}
+        <Hueso alto={35} ancho={104} radio={10} paso={paso} style={{ flex: 'none' }} />
+        <div className="rmain-v6">
+            {/* El nombre: 16 px de letra en una línea de 24. */}
+            <Hueso alto={15} ancho="42%" paso={paso} style={{ margin: '4.5px 0' }} />
+            {/* Los chips (`.chip-v6`): 24 px de alto, 6 por debajo del nombre. */}
+            <div className="chips-v6">
+                <Hueso alto={24} ancho={96} radio={6} paso={paso} />
+                <Hueso alto={24} ancho={70} radio={6} paso={paso} />
+                <Hueso alto={24} ancho={124} radio={6} paso={paso} />
+            </div>
+        </div>
+        {/* La ganancia (`.earn-v6`): el rótulo en una línea de 12 y la cifra en una de 25,5. */}
+        <div className="earn-v6">
+            <Hueso alto={8} ancho={58} paso={paso} style={{ margin: '2px 0' }} />
+            <Hueso alto={17} ancho={64} paso={paso} style={{ margin: '4px 0' }} />
+        </div>
+    </div>
+);
+
 // Payload del modal de seguimiento — compartido entre el click de una fila (`openLead`) y el
 // aviso hacia CloserWorkflowPage de a quién seguir primero (`onTopPending`, ver más abajo) para
 // no mantener el mapeo de campos en dos lugares.
@@ -348,25 +375,71 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // resumen general del cliente (se quitó como destino por defecto).
     const openLead = (item, tipo) => onOpenLead(buildLeadPayload(item, tipo));
 
-    // Mientras carga se dibuja la forma de lo que viene —la barra de la meta y las filas de
-    // "asignados para hoy"— y no un spinner: con el spinner la pestaña medía 120 px y al llegar
-    // los datos crecía de golpe, empujando el resto del mazo hacia abajo.
+    // Mientras carga se dibuja la forma de lo que viene y no un spinner: con el spinner la pestaña
+    // medía 120 px y al llegar los datos crecía de golpe, empujando el resto del mazo hacia abajo.
+    //
+    // Son las tres tarjetas de abajo con su estructura real: un hueso que no coincide con lo que
+    // carga es peor que el spinner (ver `Huesos.jsx`), y el pedido del usuario (29/sep/2026) fue
+    // justamente ver el esqueleto mientras cargan las cosas. Antes faltaba la tarjeta del pool
+    // entera, que aparecía de la nada al llegar los datos, y las otras dos quedaban cortas.
+    //
+    // Los títulos van escritos, como las cabeceras del kanban en hueso: se saben antes de la
+    // respuesta. Va en hueso lo que manda el servidor —cifras, contadores, filas— y los botones
+    // del pool, que todavía no se pueden tocar.
     if (loading) {
         return (
-            <div className="space-y-6" role="status" aria-busy="true" aria-label="Cargando seguimientos…">
-                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6">
-                    <Hueso alto={44} ancho={92} />
-                    <div className="flex-1 space-y-2">
-                        <Hueso alto={13} ancho="46%" paso={1} />
-                        <Hueso alto={10} ancho="32%" paso={2} />
-                        <Hueso alto={8} radio={999} paso={3} />
+            <Esqueleto rotulo="Cargando seguimientos…" className="space-y-6">
+                {/* Meta del día. Cada hueso dentro del alto de línea de lo que reemplaza: la cifra
+                    (`text-4xl`, línea de 40), el renglón de "te faltan" (24: es un span suelto y
+                    manda el renglón del div) y la barra (8, con 8 de margen). */}
+                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6 flex-wrap" aria-hidden="true">
+                    <Hueso alto={32} ancho={84} style={{ margin: '4px 0' }} />
+                    <div className="flex-1 min-w-[180px]">
+                        <b className="text-sm font-black text-white block">Objetivo de seguimientos del día</b>
+                        <Hueso alto={10} ancho="36%" style={{ margin: '7px 0' }} />
+                        <Hueso alto={8} radio={999} style={{ marginTop: 8 }} />
                     </div>
                 </div>
-                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4">
-                    <Hueso alto={15} ancho={210} />
-                    {[0, 1, 2, 3].map(i => <Hueso key={i} alto={62} paso={i + 1} />)}
+
+                {/* Asignados para hoy: la cabecera, el bloque de cobros (el único que se ve de
+                    entrada) y tres filas. */}
+                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4" aria-hidden="true">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                        <div>
+                            <h3 className="text-sm font-black text-white">📅 Asignados para hoy</h3>
+                            <p className="text-xs text-slate-400 font-semibold mt-0.5">Bloquean el reporte hasta que los resuelvas</p>
+                        </div>
+                        <Hueso alto={26} ancho={34} radio={12} paso={1} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <span style={{ fontSize: '28px', lineHeight: 1 }}>{TIPOS[TIPO_PRINCIPAL].icon}</span>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-white truncate" style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.01em' }}>{TIPOS[TIPO_PRINCIPAL].label}</div>
+                                <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[TIPO_PRINCIPAL].desc}</div>
+                            </div>
+                            {/* El contador: 28 px de letra en una línea de 42. */}
+                            <Hueso alto={24} ancho={20} paso={1} style={{ margin: '9px 0' }} />
+                        </div>
+                        {[0, 1, 2].map(i => <HuesoFila key={i} paso={i + 2} />)}
+                    </div>
                 </div>
-            </div>
+
+                {/* Pool sin fecha: la cabecera y los tres botones de categoría (74 px: 16 de
+                    padding arriba y abajo, el borde y el rótulo con su descripción). */}
+                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4" aria-hidden="true">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                        <div>
+                            <h3 className="text-sm font-black text-white">📥 Pool sin fecha asignada</h3>
+                            <p className="text-xs text-slate-400 font-semibold mt-0.5">Base para elegir a quién seguir</p>
+                        </div>
+                        <Hueso alto={26} ancho={104} radio={12} paso={5} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {Object.keys(TIPOS).map((tipo, i) => <Hueso key={tipo} alto={74} radio={16} paso={i + 5} />)}
+                    </div>
+                </div>
+            </Esqueleto>
         );
     }
 
@@ -556,10 +629,13 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                         </div>
 
                         {poolLoading ? (
-                            <div className="space-y-2" role="status" aria-busy="true"
-                                aria-label="Cargando el pool…">
-                                {[0, 1, 2, 3].map(i => <Hueso key={i} alto={54} paso={i} />)}
-                            </div>
+                            // Filas con la forma de `SeguimientoRow`, dentro del mismo contenedor
+                            // (alto máximo y `pr-1`) que la lista real, para que caigan en el mismo
+                            // ancho. Antes eran barras lisas de 54 px con 8 de separación: cuatro
+                            // filas reales miden 373 px y el esqueleto 240, así que todo saltaba.
+                            <Esqueleto rotulo="Cargando el pool…" className="max-h-[50vh] overflow-hidden pr-1">
+                                {[0, 1, 2, 3].map(i => <HuesoFila key={i} paso={i} />)}
+                            </Esqueleto>
                         ) : poolVisibles.length === 0 ? (
                             <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">
                                 {q && poolItems.length > 0
