@@ -199,13 +199,26 @@ const InlineConfirm = ({
         flexShrink: 0,
     };
 
-    // Lo que se mide. `max-content` es lo que hace que la medición sirva: si heredara el ancho
-    // de la caja, mediría el ancho viejo y nunca convergería.
+    // Lo que se mide, y además lo que reparte el espacio adentro de la pastilla.
+    //
+    // Las dos reglas hacen falta, y ninguna de las dos sola alcanza:
+    //
+    //   · `minWidth: max-content` es lo que hace que la medición sirva. Si el interior heredara
+    //     y punto el ancho de la caja, mediría el ancho viejo y nunca convergería; con el piso
+    //     por debajo del contenido, `scrollWidth` devuelve el contenido y la caja crece a taparlo.
+    //   · `width: 100%` es lo que evita el hueco. Con `max-content` a secas el interior se
+    //     encogía a su contenido mientras la pastilla se quedaba en el piso de la fase, así que
+    //     el sobrante caía ENTRE los dos, donde el `flex` del rótulo no lo puede alcanzar: en los
+    //     usos NO compactos (`asking` pide 218px y el contenido mide 184) el botón rojo terminaba
+    //     33px antes del borde redondeado, con el fondo de la pastilla asomando detrás.
+    //
+    // Juntas convergen en un paso: el interior nunca baja del contenido ni deja aire al final.
     const interior = {
         display: 'flex',
         alignItems: 'center',
         height: '100%',
-        width: anchoFijo ? anchoFijo - BORDE * 2 : 'max-content',
+        width: '100%',
+        minWidth: 'max-content',
     };
 
     const textoBoton = {
@@ -224,7 +237,12 @@ const InlineConfirm = ({
     };
 
     const rotulo = {
-        flexShrink: 0,
+        // Crece para comerse el sobrante, pero nunca se encoge por debajo de su texto.
+        // Sin esto, cuando el piso de ancho es mayor que el contenido —los tres usos NO
+        // compactos, donde `asking` pide 218px y el contenido mide ~190— el sobrante quedaba
+        // al final y el boton rojo no llegaba al borde derecho de la pastilla. En compacto no
+        // cambia nada: ahi el contenido pasa el piso, no hay sobrante que repartir.
+        flex: '1 0 auto',
         fontSize: 10,
         fontWeight: 900,
         letterSpacing: '.06em',
