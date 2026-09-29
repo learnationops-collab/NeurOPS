@@ -303,6 +303,9 @@ const CloserWorkflowPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searching, setSearching] = useState(false);
+    // Mientras se averigua en qué etapa está el lead que se tocó en los resultados (ver
+    // handleSelectSearchResult). El desplegable ya se cerró, así que el aviso va en el buscador.
+    const [resolviendoLead, setResolviendoLead] = useState(false);
     // Historial completo del cliente (agendas/ventas/pagos) — accesible como vista secundaria
     // desde el modal de etapa (botón "Ver historial completo"), ya no es lo que abre por
     // defecto un resultado de búsqueda (ver handleSelectSearchResult).
@@ -598,7 +601,11 @@ const CloserWorkflowPage = () => {
             return;
         }
 
-        setLoading(true);
+        // Estado propio y no `loading`: `loading` es la carga del mazo, y con él el kanban se
+        // cambiaba por su esqueleto ("Cargando confirmaciones…") mientras se resolvía la etapa de
+        // un lead, aunque el tablero no estuviera cargando nada; al volver, todas las tarjetas
+        // entraban de nuevo una por una. La espera se nota en el buscador, que es donde se tocó.
+        setResolviendoLead(true);
         try {
             const res = await api.get(`/closer/leads/${lead.id}/stage`);
             const stage = res.data;
@@ -645,7 +652,7 @@ const CloserWorkflowPage = () => {
             console.error("Error al resolver la etapa del lead:", err);
             toast.error("Error al abrir el lead");
         } finally {
-            setLoading(false);
+            setResolviendoLead(false);
         }
     };
 
@@ -1740,16 +1747,24 @@ const CloserWorkflowPage = () => {
                     
                     <div className="search-v6">
                         <div className="sinner-v6">
-                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-                            <input 
-                                id="q" 
-                                placeholder="Buscar lead por nombre, @IG o examen…" 
+                            {/* Mientras se abre el lead que se tocó, la lupa gira: es un aviso de
+                                la acción, en el lugar donde se hizo, no una carga del mazo. */}
+                            {resolviendoLead
+                                ? <Loader2 className="animate-spin" aria-hidden="true" />
+                                : <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>}
+                            <input
+                                id="q"
+                                placeholder="Buscar lead por nombre, @IG o examen…"
                                 autoComplete="off"
+                                aria-busy={resolviendoLead}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
                             />
                         </div>
+                        {/* Siempre presente y con el texto cambiando: un lector de pantalla sólo
+                            anuncia los cambios de una región que ya estaba en la página. */}
+                        <span className="sr-only" role="status">{resolviendoLead ? 'Abriendo el lead…' : ''}</span>
                         {showSearchResults && (
                             <div id="qres" className="sresults-v6">
                                 {searching ? (
