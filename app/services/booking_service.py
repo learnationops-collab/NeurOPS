@@ -773,22 +773,21 @@ class BookingService:
             return None
 
     @staticmethod
-    def sync_appointment_to_financial_agenda(appt):
-        """Sincroniza un Appointment de vuelta a la tabla de FinancialAgenda (BD de agendas financieras)."""
+    def filtros_de_agenda_del_cliente(client):
+        """Las señales con las que una fila del Tablero de Agendas (`FinancialAgenda`) se reconoce
+        como de este cliente: mail, instagram y telefono, para un `or_`. Lista vacia si no tiene
+        ninguna que sirva.
+
+        Vivia adentro de `sync_appointment_to_financial_agenda`; sale a su propia funcion para que
+        quien necesite la fila de UNA cita (la correccion de una agenda desde la ficha) la busque
+        con el mismo cruce, sin pasar por el respaldo de «la agenda mas reciente del lead».
+        """
         from app.models.financial import FinancialAgenda
-        from app.models import User
-        from sqlalchemy import or_
-        
-        if not appt or not appt.client:
-            return None
-            
-        client = appt.client
-        # Buscar agenda financiera existente (rango de +/- 36 horas para tolerar desfases UTC/local)
-        start_search = appt.start_time - timedelta(hours=36)
-        end_search = appt.start_time + timedelta(hours=36)
-        
-        # Buscar agenda financiera existente (normalizando email e instagram para evitar problemas de matching exacto)
         from sqlalchemy import func
+
+        if not client:
+            return []
+        # Normalizando email e instagram para evitar problemas de matching exacto.
         ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
         mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
         # El mail sintetico que `find_or_create_client` le pone al Client que llego sin
@@ -814,7 +813,24 @@ class BookingService:
             for sep in (' ', '-', '(', ')', '+', '.'):
                 columna_tel = func.replace(columna_tel, sep, '')
             filters.append(columna_tel.like('%' + tel_cliente[-9:]))
+        return filters
 
+    @staticmethod
+    def sync_appointment_to_financial_agenda(appt):
+        """Sincroniza un Appointment de vuelta a la tabla de FinancialAgenda (BD de agendas financieras)."""
+        from app.models.financial import FinancialAgenda
+        from app.models import User
+        from sqlalchemy import or_
+        
+        if not appt or not appt.client:
+            return None
+            
+        client = appt.client
+        # Buscar agenda financiera existente (rango de +/- 36 horas para tolerar desfases UTC/local)
+        start_search = appt.start_time - timedelta(hours=36)
+        end_search = appt.start_time + timedelta(hours=36)
+
+        filters = BookingService.filtros_de_agenda_del_cliente(client)
 
         agenda = None
         # `misma_cita` distingue "esta agenda ES esta cita" (cayo en la ventana de +/-36h)
