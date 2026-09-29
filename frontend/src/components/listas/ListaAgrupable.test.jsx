@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ListaAgrupable from './ListaAgrupable';
+import { useGruposElegidos } from './useGruposElegidos';
 import { TAMANO_PAGINA } from './usePaginaProgresiva';
 
 /**
@@ -163,6 +164,50 @@ describe('ListaAgrupable', () => {
         expect(encabezado('Nerina')).toHaveTextContent('1 registro');
         expect(encabezado('Marlon')).toHaveAttribute('aria-expanded', 'false');
         expect(filasDibujadas()).toEqual(['Ana']);
+    });
+
+    describe('con los grupos elegidos guardados afuera', () => {
+        it('abre lo que dice `elegidos` y avisa el click en vez de guardarlo', () => {
+            const onElegir = vi.fn();
+            montar({ elegidos: new Map([['Nerina', true]]), onElegir });
+
+            expect(encabezado('Nerina')).toHaveAttribute('aria-expanded', 'true');
+            expect(encabezado('Marlon')).toHaveAttribute('aria-expanded', 'false');
+
+            fireEvent.click(encabezado('Marlon'));
+            fireEvent.click(encabezado('Nerina'));
+
+            expect(onElegir.mock.calls).toEqual([['Marlon', true], ['Nerina', false]]);
+            // Manda quien la controla: sin un `elegidos` nuevo, nada cambia.
+            expect(encabezado('Marlon')).toHaveAttribute('aria-expanded', 'false');
+        });
+
+        it('el grupo único sigue arrancando abierto', () => {
+            montar({ filas: VENTAS.filter(f => f.closer === 'Nerina'), elegidos: new Map(),
+                onElegir: () => {} });
+
+            expect(encabezado('Nerina')).toHaveAttribute('aria-expanded', 'true');
+        });
+
+        it('lo abierto sobrevive a que la lista se desmonte', () => {
+            // Es lo que hace Revisar al recargar: cambia la lista por el esqueleto y la vuelve a
+            // montar con las filas nuevas. Con la memoria adentro de la lista, el grupo que el
+            // usuario estaba revisando volvía cerrado.
+            const Contenedor = ({ cargando }) => {
+                const [elegidos, elegir] = useGruposElegidos('closer');
+                return cargando ? <p>cargando</p> : (
+                    <ListaAgrupable filas={VENTAS} dimension={porCloser} renderFilas={renderFilas}
+                        formatoMonto={dinero} elegidos={elegidos} onElegir={elegir} />);
+            };
+            const { rerender } = render(<Contenedor cargando={false} />);
+            fireEvent.click(encabezado('Nerina'));
+
+            rerender(<Contenedor cargando />);
+            rerender(<Contenedor cargando={false} />);
+
+            expect(encabezado('Nerina')).toHaveAttribute('aria-expanded', 'true');
+            expect(filasDibujadas()).toEqual(['Ana', 'Cora']);
+        });
     });
 
     describe('paginado dentro de cada grupo', () => {

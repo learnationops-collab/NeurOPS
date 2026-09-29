@@ -19,7 +19,9 @@ import { fmt } from './Shared';
  * Las cuatro vistas llaman al mismo `onAbrirFila`: una fila y una tarjeta abren la misma ficha.
  *
  * El envoltorio lleva una `key` con el modo y la dimensión: al alternar lista/tarjetas o al
- * agrupar, React desmonta y vuelve a montar, y la vista nueva entra con su animación. Sin
+ * agrupar, React desmonta y vuelve a montar, y la vista nueva entra con su animación. Lo que se
+ * desmonta es sólo el dibujo: qué grupos abrió el usuario lo guarda `Revisar` y llega acá en
+ * `gruposElegidos`, así que pasar a tarjetas no cierra el grupo que se estaba mirando. Sin
  * `AnimatePresence` —la vista vieja se va sin fundido— por lo mismo que en `ListaAgrupable`: esta
  * lista se monta embebida en el mazo del closer, donde `AnimatePresence` ya dejó nodos sin
  * desmontar.
@@ -257,7 +259,8 @@ export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 
     </Esqueleto>
 );
 
-const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }) => {
+const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, gruposElegidos,
+    onElegirGrupo }) => {
     const quieto = useReducedMotion();
     const esTarjetas = modo === 'tarjetas';
 
@@ -303,7 +306,8 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
                         con la tira de arriba aunque el grupo esté cerrado, y lo que va llegando al
                         bajar dentro de un grupo abierto son sus filas. */}
                     <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
-                        renderPie={renderPie} formatoMonto={fmt.money} />
+                        renderPie={renderPie} formatoMonto={fmt.money}
+                        elegidos={gruposElegidos} onElegir={onElegirGrupo} />
                 </>
             );
         }

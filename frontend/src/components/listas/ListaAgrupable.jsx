@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { agruparPor } from './agruparPor';
+import { useGruposElegidos } from './useGruposElegidos';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
 import './listas.css';
 
@@ -30,6 +31,12 @@ import './listas.css';
  * dimensión: cambiar un filtro o la búsqueda rearma los grupos, pero el que estaba abierto sigue
  * abierto. Cambiar de dimensión vuelve todo a cerrado, porque las claves de "por closer" no
  * significan nada en "por fuente".
+ *
+ * Esa memoria puede venir de afuera, con `elegidos` y `onElegir` (ver `useGruposElegidos`), y en
+ * Revisar viene de afuera: Revisar desmonta esta lista cuando recarga, cuando un filtro la deja
+ * vacía y al alternar lista/tarjetas. Con la memoria adentro, el grupo que el closer estaba
+ * revisando se cerraba después de cada cosa que registraba en la ficha, y al cambiar el período.
+ * Sin esas props la lista lleva su propia cuenta, con las mismas reglas.
  *
  * ## Los subtotales cierran con la lista
  *
@@ -84,20 +91,17 @@ const CuerpoGrupo = ({ filas, renderFilas, renderPie }) => {
     );
 };
 
-const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto }) => {
+const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto,
+    elegidos: elegidosDeAfuera, onElegir }) => {
     // Lo que el usuario eligió a mano, clave del grupo → abierto. Lo que no está acá toma el valor
-    // por defecto (cerrado, salvo el grupo único). Se vacía al cambiar de dimensión, ajustando el
-    // estado durante el render —el patrón de React para "recalcular estado cuando cambia una
-    // entrada"— y no en un efecto, que habría dibujado un cuadro con los grupos abiertos de la
-    // dimensión anterior. Se compara la `key` y no el objeto: una dimensión armada en línea cambia
-    // de identidad en cada render y el reinicio no convergería.
+    // por defecto (cerrado, salvo el grupo único). Si quien usa la lista lo pasa, manda el suyo;
+    // si no, la lista lleva su propia cuenta, que se vacía al cambiar de dimensión. El hook propio
+    // se llama igual cuando lo controlan de afuera: un hook no puede depender de una condición.
     const claveDimension = dimension?.key;
-    const [deDimension, setDeDimension] = useState(claveDimension);
-    const [elegidos, setElegidos] = useState(() => new Map());
-    if (deDimension !== claveDimension) {
-        setDeDimension(claveDimension);
-        setElegidos(new Map());
-    }
+    const propios = useGruposElegidos(claveDimension);
+    const [elegidos, elegir] = elegidosDeAfuera && onElegir
+        ? [elegidosDeAfuera, onElegir]
+        : propios;
     const quieto = useReducedMotion();
 
     // Memorizados: cada grupo abierto pagina su arreglo `filas` por identidad, y recalcularlos en
@@ -106,11 +110,7 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto
     const porDefecto = grupos.length === 1;
     const estaAbierto = (clave) => (elegidos.has(clave) ? elegidos.get(clave) : porDefecto);
 
-    const alternar = (clave) => setElegidos(previos => {
-        const siguiente = new Map(previos);
-        siguiente.set(clave, !(previos.has(clave) ? previos.get(clave) : porDefecto));
-        return siguiente;
-    });
+    const alternar = (clave) => elegir(clave, !estaAbierto(clave));
 
     return (
         <div className="tabla">

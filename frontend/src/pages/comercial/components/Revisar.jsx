@@ -9,6 +9,7 @@ import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { useModoVista } from '../../../components/listas/useModoVista';
+import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
 // importaban otros archivos por este camino, para no mover los imports de media pantalla.
@@ -173,6 +174,15 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         () => (def.agrupables || []).filter(d => puedeElegirEquipo || d.key !== DIMENSION_PROPIA[rol]),
         [def, puedeElegirEquipo, rol]);
     const dimension = agrupables.find(d => d.key === agrupacion) || null;
+
+    // Qué grupos abrió el usuario se guarda ACÁ y no en la lista, porque Revisar la desmonta
+    // mientras recarga (el esqueleto la reemplaza), cuando un filtro la deja vacía y al alternar
+    // lista/tarjetas. Con la memoria en la lista, el closer abría su grupo, registraba algo en la
+    // ficha —que recarga la tabla— y el grupo volvía cerrado; lo mismo al cambiar el período o la
+    // base de fecha. La clave lleva la tabla además de la dimensión, así que cambiar cualquiera de
+    // las dos vuelve todo a cerrado: "por closer" en Agendas y en Ventas no son los mismos grupos.
+    const [gruposElegidos, elegirGrupo] = useGruposElegidos(
+        dimension ? `${tabla}.${dimension.key}` : null);
 
     const limpiar = () => {
         setFacetas({});
@@ -448,7 +458,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         </div>
                     ) : (
                         <RevisarLista def={def} visibles={visibles} plantilla={plantilla}
-                            onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista} />
+                            onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista}
+                            gruposElegidos={gruposElegidos} onElegirGrupo={elegirGrupo} />
                     )}
                 </>
             )}
