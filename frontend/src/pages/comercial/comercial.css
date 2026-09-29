@@ -213,6 +213,10 @@
   /* El parpadeo de "lo que buscabas esta aca" es una animacion, no una transicion: la regla de
      arriba no lo apaga. El foco y el scroll siguen ubicando igual. */
   .dc-shell .destacado{animation:none}
+  /* Lo mismo con la entrada del tooltip: con 33 "i" en Analizar, cada uno que se roza es un
+     parpadeo. La burbuja aparece igual, sin desplazarse. */
+  .dc-shell .tip-burbuja,
+  .dc-shell .tip-burbuja--arriba{animation:none}
 }
 
 /* ============================================================
@@ -401,7 +405,10 @@
   letter-spacing:.14em;text-transform:uppercase;color:var(--brand-secondary)}
 /* `--flecha` es la distancia desde el borde izquierdo de la burbuja hasta el centro del icono:
    cuando la burbuja se corre para entrar en pantalla, el icono deja de estar en su esquina. */
+/* `--flecha-visible` lo pone `Tip` en 0 cuando hubo que correr la burbuja para que entrara en
+   pantalla: ahi la flecha ya no apunta al icono y senalaria cualquier cosa. */
 .dc-shell .tip-burbuja::before{content:"";position:absolute;top:-5px;left:calc(var(--flecha,14px) - 4.5px);
+  opacity:var(--flecha-visible,1);
   width:9px;height:9px;transform:rotate(45deg);
   background:var(--bg-flotante);border-left:1px solid var(--sheen);border-top:1px solid var(--sheen)}
 /* Burbuja abierta hacia arriba (no entraba abajo): la flecha pasa al borde de abajo y la entrada

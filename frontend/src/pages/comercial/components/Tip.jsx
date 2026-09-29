@@ -29,8 +29,16 @@ import { createPortal } from 'react-dom';
  * estilo.
  *
  * Sacar la burbuja del `.tip` obliga a abrir por JS: el CSS del ancla ya no puede alcanzar un
- * nodo que vive en otra rama del árbol. De paso se gana el click, que es lo único que funciona en
+ * nodo que vive en otra rama del árbol. De paso se gana el toque, que es lo único que funciona en
  * touch, donde no hay hover.
+ *
+ * Ese toque se resuelve en `pointerdown` mirando el `pointerType`, y no en `click`, por algo que
+ * no se ve leyendo el código: con el mouse, el `mouseenter` SIEMPRE llega antes que el click, así
+ * que un `onClick` que alterna encontraba la burbuja ya abierta y la cerraba — apuntar y hacer
+ * click la dejaba cerrada, y como el cursor seguía encima no había otro `mouseenter` con el que
+ * reabrirla. En touch era peor: la secuencia de compatibilidad (mouseover → focus → click) la
+ * abría y la cerraba en el mismo toque. Con el mouse manda el hover y el click no hace nada; con
+ * el dedo o el lápiz, el toque alterna.
  */
 
 const MARGEN = 12; // aire mínimo contra el borde de la ventana
@@ -45,6 +53,14 @@ const ubicar = (ancla, burbuja) => {
     // Abajo por defecto (es donde la vista espera el tooltip de un "i"); arriba solo si abajo no
     // cabe Y arriba sí: dar vuelta una burbuja que tampoco entra arriba no gana nada.
     const arriba = a.bottom + SALTO + h > vh - MARGEN && a.top - SALTO - h >= MARGEN;
+
+    // Cuando no entra ni abajo ni arriba —ventana baja, texto largo, zoom alto— se queda abajo,
+    // y ahí es donde se seguía saliendo de la pantalla: el eje X se clavaba y el Y salía crudo.
+    // El tope alto la deja scrollear en vez de desbordar; sin él, clavar el `top` solo correría
+    // el recorte del pie a la cabeza.
+    const alto = Math.min(h, vh - MARGEN * 2);
+    const crudo = arriba ? a.top - SALTO - h : a.bottom + SALTO;
+    const top = Math.min(Math.max(crudo, MARGEN), Math.max(MARGEN, vh - MARGEN - alto));
 
     // Los -10 / +10 replican el encuadre viejo (`left:-10px`): la burbuja sobresale un poco del
     // ícono para que la flecha no nazca justo sobre la esquina redondeada.
@@ -62,7 +78,11 @@ const ubicar = (ancla, burbuja) => {
     return {
         arriba,
         left,
-        top: arriba ? a.top - SALTO - h : a.bottom + SALTO,
+        top,
+        alto,
+        // La flecha solo tiene sentido si la burbuja quedó pegada al ancla. Si hubo que correrla
+        // para que entrara, apuntaría a cualquier lado: se esconde.
+        conFlecha: Math.abs(crudo - top) < 1,
         flecha: Math.min(Math.max(centro, 14), Math.max(14, w - 14)),
     };
 };
@@ -109,6 +129,14 @@ const Tip = ({ texto, titulo }) => {
         return () => document.removeEventListener('keydown', escape);
     }, [abierto, cerrar]);
 
+    // Con el mouse manda el hover: el click no toca nada (ver el docstring). Con el dedo o el
+    // lápiz no hay hover, así que el toque es lo único que queda y ahí sí alterna.
+    const alternarConDedo = (e) => {
+        if (e.pointerType === 'mouse') return;
+        e.stopPropagation();
+        setAbierto(a => !a);
+    };
+
     if (!texto) return null;
     const etiqueta = `${titulo ? `${titulo}: ` : ''}${texto}`;
 
@@ -117,7 +145,11 @@ const Tip = ({ texto, titulo }) => {
             <span ref={ancla} className="tip" tabIndex={0} role="note" aria-label={etiqueta}
                 onMouseEnter={abrir} onMouseLeave={cerrar}
                 onFocus={abrir} onBlur={cerrar}
-                onClick={abierto ? cerrar : abrir}>
+                onPointerDown={alternarConDedo}
+                // El "i" de la tabla de programas de Analizar vive DENTRO del botón de la fila,
+                // que navega al drill-down. Sin esto, pedir la explicación te sacaba de la
+                // pantalla antes de poder leerla.
+                onClick={(e) => e.stopPropagation()}>
                 <span className="tip-dot" aria-hidden="true">i</span>
             </span>
             {abierto && createPortal(
@@ -127,7 +159,9 @@ const Tip = ({ texto, titulo }) => {
                     <span ref={burbuja} aria-hidden="true"
                         className={`tip-burbuja${pos && pos.arriba ? ' tip-burbuja--arriba' : ''}`}
                         style={pos
-                            ? { top: pos.top, left: pos.left, '--flecha': `${pos.flecha}px` }
+                            ? { top: pos.top, left: pos.left, maxHeight: pos.alto,
+                                overflowY: 'auto', '--flecha': `${pos.flecha}px`,
+                                '--flecha-visible': pos.conFlecha ? 1 : 0 }
                             : { top: 0, left: 0, visibility: 'hidden' }}>
                         {titulo && <b>{titulo}</b>}
                         {texto}
