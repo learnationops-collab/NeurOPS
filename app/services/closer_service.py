@@ -1446,7 +1446,8 @@ class CloserService:
 
         Lo que esta puerta NO hace y la de la ficha (`ficha_acciones_service.editar_datos`) si:
         no comprueba de quien es el cliente (la ruta deja entrar a cualquier closer), vacia en
-        silencio un correo sin '@' en vez de rechazarlo, no mira si el correo, el instagram o el
+        silencio un correo sin '@' en vez de rechazarlo, guarda tal cual un instagram de relleno
+        ('no tengo', '.') que despues coincide con cualquier otro relleno igual, no mira si el correo, el instagram o el
         telefono nuevo ya son de OTRO cliente —un correo repetido revienta contra el `unique` de la
         columna— y no deja rastro en la bitacora del lead.
         """

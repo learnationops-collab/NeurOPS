@@ -481,6 +481,8 @@ def total_a_pagar(appt, datos, usuario):
 # La normalizacion es la de `CloserService.update_client` (ver `closer_service.normalizar_*`), para
 # que el mazo y la ficha guarden lo mismo. Lo que esta puerta agrega:
 #   · un correo sin arroba se RECHAZA; `update_client` lo vacia en silencio;
+#   · un instagram de relleno ('no tengo', '.') se guarda vacio; `update_client` lo guarda tal cual
+#     (ver `_IG_DE_RELLENO`);
 #   · un correo, un instagram o un telefono que ya son de OTRO cliente se rechazan con el nombre de
 #     ese cliente. `BookingService.create_or_update_client` cruza por esos tres datos (correo ->
 #     instagram -> ultimos 8 digitos del telefono) y FUSIONA lo que encuentra: guardarlo callado
@@ -513,6 +515,19 @@ EXAMEN = ('examen', 255)
 # frena el 'ana@gmail' y el 'ana @gmail.com' que se cuelan al tipear rapido.
 _FORMA_DE_CORREO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
+# Lo que se escribe en el instagram cuando la persona no tiene. `normalizar_instagram` solo vacia
+# 'n/a' y compania (`SIN_DATO`); estos pasan, y en la base local hay 'no tengo' x3, 'no' x2 y '.'
+# x2 repetidos entre clientes, y '.' en 4 ventas. Un relleno guardado coincide con cualquier otro
+# relleno igual, no con la persona: el choque decia "ese instagram ya es de otro cliente" y el
+# cruce de ventas le pasaba a este cliente la venta de otro que tambien habia puesto '.'.
+_IG_DE_RELLENO = {'no', 'no tengo', 'no tiene', 'ninguno', 'ninguna', 'sin instagram', 'nada'}
+
+
+def _es_ig_de_relleno(valor):
+    """True para un relleno de la lista o un valor sin ninguna letra ni numero ('.', '-', '?')."""
+    limpio = (valor or '').strip().strip('@').lower()
+    return bool(limpio) and (limpio in _IG_DE_RELLENO or not any(c.isalnum() for c in limpio))
+
 
 def _valor_nuevo(campo, crudo):
     """Lo que se guardaria en `campo` para lo que se escribio, o `ErrorDeAccion` con el motivo."""
@@ -541,6 +556,10 @@ def _valor_nuevo(campo, crudo):
             raise ErrorDeAccion(f'«{texto}» no es un teléfono: no tiene ningún número.', campo)
     elif campo == 'instagram':
         valor = normalizar_instagram(texto)
+        # Un relleno quiere decir "no tiene instagram": se guarda vacio, como el 'n/a'.
+        # `update_client` lo guarda tal cual; aca no, por lo que cruza guardado (ver arriba).
+        if _es_ig_de_relleno(valor):
+            valor = None
     else:
         valor = texto or None
 
@@ -580,12 +599,18 @@ def _otro_cliente_con(cliente, campo, valor):
 
 def _contacto(cliente, **cambios):
     """El cliente como lo miran las señales de `SalesConsistencyService`, con `cambios` (columna ->
-    valor nuevo) aplicados encima. No toca la fila: es para preguntar "¿y despues del cambio?"."""
+    valor nuevo) aplicados encima. No toca la fila: es para preguntar "¿y despues del cambio?".
+
+    Sin el instagram si es un relleno que ya estaba guardado: un '.' en el cliente y otro en la
+    venta no son una señal de que la venta sea suya.
+    """
     from types import SimpleNamespace
 
     datos = {'full_name': cliente.full_name, 'email': cliente.email,
              'instagram': cliente.instagram, 'phone': cliente.phone}
     datos.update(cambios)
+    if _es_ig_de_relleno(datos['instagram']):
+        datos['instagram'] = None
     return SimpleNamespace(**datos)
 
 

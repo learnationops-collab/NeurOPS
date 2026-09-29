@@ -310,3 +310,34 @@ def test_solo_se_ata_la_venta_que_el_cambio_deja_sin_una_senal(client, db, lead,
     assert r.get_json()['ventas_atadas'] == 1
     assert intacta.client_id is None
     assert pierde.client_id == lead.client_id
+
+
+# --- Instagram de relleno ---------------------------------------------------------------------
+
+@pytest.mark.parametrize('relleno', ['No tengo', '.', '-', 'no', '@ninguno'])
+def test_un_instagram_de_relleno_se_guarda_vacio_y_no_choca_con_otro_relleno(
+        client, db, lead, equipo, auth_headers, relleno):
+    """'no tengo' o '.' quieren decir "no tiene". Guardados, chocaban con el otro cliente que puso
+    lo mismo ("ese instagram ya es de otro cliente") y se cruzaban con sus ventas."""
+    otro_cliente(db, instagram=relleno.lstrip('@').lower())
+
+    r = editar(client, auth_headers, equipo['closer'], lead, instagram=relleno)
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == {'instagram': None}
+    assert lead.client.instagram is None
+
+
+def test_un_instagram_de_relleno_ya_guardado_no_cuenta_como_senal_para_atar(
+        client, db, lead, equipo, auth_headers):
+    """Un '.' en el cliente y otro en la venta de otra persona no la hacen suya: sin el relleno le
+    queda una sola señal (el telefono) y el nombre no corrobora."""
+    lead.client.instagram = '.'
+    db.session.commit()
+    ajena = _venta(db, mail_cliente='emanuel@x.com', nombre_cliente='Emanuel Gavilanes',
+                   instagram='.', telefono='52 55 1234 5678')
+
+    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
+
+    assert r.get_json()['ventas_atadas'] == 0
+    assert ajena.client_id is None
