@@ -6,7 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import './comercial.css';
 import '../../components/learnation-ds/learnation-ds.css';
-import { EsqueletoPagina, Humo, PillMenu, Segmented } from './components/Shared';
+import { EsqueletoPagina, Humo, Isotipo, PillMenu, Segmented } from './components/Shared';
+import DockSecciones, { HUMO_DOCK } from './components/DockSecciones';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
@@ -94,23 +95,6 @@ const PRONTO = {
     proyectar: 'Vas a poder proyectar el cierre del mes con el ritmo actual y ajustar la meta. Estamos puliendo el cálculo.',
     simulador: 'Vas a poder mover cada palanca del embudo y ver cuánto cambia el resultado. Estamos puliendo el modelo.',
 };
-
-/** Isotipo de Learnation, con el degradado de marca. */
-const Isotipo = () => (
-    <svg width="36" height="36" viewBox="0 0 100 100" role="img" aria-label="Learnation">
-        <defs>
-            <linearGradient id="lnGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="var(--brand-secondary)" />
-                <stop offset="100%" stopColor="var(--brand-secondary-light)" />
-            </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="100" height="100" rx="26" fill="url(#lnGrad)" />
-        <g fill="#FFFFFF" stroke="#FFFFFF">
-            <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" strokeWidth="5" strokeLinejoin="round" />
-            <path d="M23 18 L42 18 L23 37 Z" strokeWidth="5" strokeLinejoin="round" />
-        </g>
-    </svg>
-);
 
 const ProntoSection = ({ seccion }) => (
     <section className="panel">
@@ -208,23 +192,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId }),
         [period, compare, rol, miembroId]);
-
-    // El indicador del dock se mide del DOM porque su ancho es el del botón activo, y eso
-    // depende del texto de cada sección y de si el label está visible (bajo 1120px se esconde
-    // el de los inactivos). Se remide al cambiar de sección, de rol y al redimensionar.
-    const navRef = useRef(null);
-    const [indicador, setIndicador] = useState({ '--w': '0px', '--x': '0px' });
-    useEffect(() => {
-        const medir = () => {
-            const nav = navRef.current;
-            const activo = nav?.querySelector('[aria-current="page"]');
-            if (!nav || !activo) return;
-            setIndicador({ '--w': `${activo.offsetWidth}px`, '--x': `${activo.offsetLeft}px` });
-        };
-        const id = requestAnimationFrame(medir);
-        window.addEventListener('resize', medir);
-        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
-    }, [seccion, rol, contexto]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -554,39 +521,21 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 ))}
 
                 {!embebido && (
-                <nav className="dock caja" aria-label="Secciones del dashboard comercial">
-                    <Humo colores={['var(--brand-secondary)', 'var(--brand-primary)',
-                        'var(--brand-secondary-light)', 'var(--brand-navy)']} />
-                    {contexto.puede_elegir_equipo && (
-                        <div className="dock-rol caja">
-                            <Humo colores={['var(--brand-secondary)', 'var(--brand-primary)',
-                                'var(--brand-secondary-light)', 'var(--brand-navy)']} />
-                            {[['closers', 'Closers'], ['setters', 'Setters']].map(([k, label]) => (
-                                <button key={k} type="button" aria-pressed={rol === k}
-                                    onClick={() => set({ rol: k, t: null, m: null })}>
-                                    <span className="punto" />
-                                    <span>{label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {contexto.puede_elegir_equipo && <span className="dock-sep" />}
-                    <div className="dock-nav" ref={navRef}>
-                        {/* Indicador que se desliza hasta el item activo, en vez de que cada uno
-                            pinte su propio fondo: el movimiento dice de dónde a dónde se fue. */}
-                        <span className="dock-ind" style={indicador} aria-hidden="true" />
-                        {secciones.map((s_, i) => (
-                            <button key={s_.id} type="button" className="dock-item"
-                                aria-current={seccion === s_.id ? 'page' : undefined}
-                                aria-label={s_.label} onClick={() => set({ s: s_.id })}>
-                                <span className="dock-num">{i + 1}</span>
-                                <s_.Icono size={20} />
-                                <span className="dock-label">{s_.label}</span>
-                                {s_.pronto && <span className="dock-pronto">Pronto</span>}
-                            </button>
-                        ))}
-                    </div>
-                </nav>
+                    <DockSecciones secciones={secciones} activa={seccion}
+                        onElegir={(id) => set({ s: id })}
+                        ariaLabel="Secciones del dashboard comercial"
+                        antes={contexto.puede_elegir_equipo && (
+                            <div className="dock-rol caja">
+                                <Humo colores={HUMO_DOCK} />
+                                {[['closers', 'Closers'], ['setters', 'Setters']].map(([k, label]) => (
+                                    <button key={k} type="button" aria-pressed={rol === k}
+                                        onClick={() => set({ rol: k, t: null, m: null })}>
+                                        <span className="punto" />
+                                        <span>{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )} />
                 )}
             </div>
         </div>

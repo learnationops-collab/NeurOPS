@@ -65,6 +65,27 @@ export const Humo = ({ colores = [], clase, tarjeta }) => (
     </span>
 );
 
+/**
+ * Isotipo de Learnation, con el degradado de marca. Lo firman el header del dashboard y el del
+ * espacio del setter; `idGrad` existe porque un `id` repetido en la página hace que el segundo
+ * SVG tome el degradado del primero.
+ */
+export const Isotipo = ({ idGrad = 'lnGrad' }) => (
+    <svg width="36" height="36" viewBox="0 0 100 100" role="img" aria-label="Learnation">
+        <defs>
+            <linearGradient id={idGrad} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--brand-secondary)" />
+                <stop offset="100%" stopColor="var(--brand-secondary-light)" />
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" rx="26" fill={`url(#${idGrad})`} />
+        <g fill="#FFFFFF" stroke="#FFFFFF">
+            <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" strokeWidth="5" strokeLinejoin="round" />
+            <path d="M23 18 L42 18 L23 37 Z" strokeWidth="5" strokeLinejoin="round" />
+        </g>
+    </svg>
+);
+
 /** Badge de variación vs el período comparado. Las tasas van en puntos y los montos en %. */
 export const Delta = ({ delta, grande }) => {
     if (!delta) return null;
