@@ -37,6 +37,48 @@ def _program_from_examen(examen):
     return None
 
 
+# --- Datos de contacto del cliente --------------------------------------------------------------
+#
+# Como se guarda un correo, un telefono o un instagram escritos a mano. Viven sueltos y no dentro de
+# `update_client` porque hay dos puertas que corrigen el mismo dato —el mazo (`PATCH
+# /closer/customers/<id>`) y la ficha del lead (`PATCH /ficha/<id>/datos`)— y las dos tienen que
+# guardar lo mismo para la misma entrada: si una guardara '@ana' y la otra 'ana', el cruce por
+# instagram de las ventas encontraria a una y no a la otra.
+
+# Lo que un formulario escribe cuando "no hay dato".
+SIN_DATO = ('n/a', 'na', 'none', 'null', '')
+
+
+def normalizar_email(valor):
+    """El correo como se guarda, o None.
+
+    Tambien None cuando no tiene '@': `update_client` descarta ese valor EN SILENCIO y lo guarda
+    vacio. Quien quiera rechazarlo en vez de vaciarlo (la ficha lo hace) compara la entrada con lo
+    que devuelve esta funcion.
+    """
+    if not valor:
+        return None
+    limpio = str(valor).strip().lower()
+    if limpio in SIN_DATO or '@' not in limpio:
+        return None
+    return limpio
+
+
+def normalizar_telefono(valor):
+    if not valor:
+        return None
+    limpio = str(valor).strip()
+    return None if limpio.lower() in SIN_DATO else limpio
+
+
+def normalizar_instagram(valor):
+    """Sin la '@' de adelante (ni la de atras): el cruce con las ventas compara sin ella."""
+    if not valor:
+        return None
+    limpio = str(valor).strip().strip('@')
+    return None if limpio.lower() in SIN_DATO else limpio
+
+
 class CloserService:
     @staticmethod
     def get_leads_pagination(closer_id, page=1, per_page=50, filters=None):
@@ -1400,32 +1442,25 @@ class CloserService:
 
     @staticmethod
     def update_client(client_id, data):
+        """Corrige los datos de contacto de un cliente. La normalizacion es la de la ficha del lead.
+
+        Lo que esta puerta NO hace y la de la ficha (`ficha_acciones_service.editar_datos`) si:
+        no comprueba de quien es el cliente (la ruta deja entrar a cualquier closer), vacia en
+        silencio un correo sin '@' en vez de rechazarlo, no mira si el correo, el instagram o el
+        telefono nuevo ya son de OTRO cliente —un correo repetido revienta contra el `unique` de la
+        columna— y no deja rastro en la bitacora del lead.
+        """
         client = Client.query.get_or_404(client_id)
-        
+
         if 'full_name' in data:
             client.full_name = data['full_name']
         if 'email' in data:
-            email_val = data['email']
-            if email_val:
-                email_val = email_val.strip().lower()
-                if email_val in ('n/a', 'na', 'none', 'null', '') or '@' not in email_val:
-                    email_val = None
-            client.email = email_val
+            client.email = normalizar_email(data['email'])
         if 'phone' in data:
-            phone_val = data['phone']
-            if phone_val:
-                phone_val = phone_val.strip()
-                if phone_val.lower() in ('n/a', 'na', 'none', 'null', ''):
-                    phone_val = None
-            client.phone = phone_val
+            client.phone = normalizar_telefono(data['phone'])
         if 'instagram' in data:
-            val = data['instagram']
-            if val:
-                val = val.strip().strip('@')
-                if val.lower() in ('n/a', 'na', 'none', 'null', ''):
-                    val = None
-            client.instagram = val
-            
+            client.instagram = normalizar_instagram(data['instagram'])
+
         db.session.commit()
         return client
     @staticmethod
