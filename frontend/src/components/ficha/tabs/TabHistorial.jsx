@@ -195,9 +195,10 @@ const TabHistorial = ({ ficha, irA }) => {
                 para el uso diario y sirven cuando hay que auditar algo. */}
             {eventos.length > 0 && (
                 <SeccionColapsable titulo="Registro de eventos"
-                    resumen={`${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`}>
+                    resumen={`${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`
+                        + (eventos[0]?.fecha ? ` · último ${fecha(eventos[0].fecha)}` : '')}>
                     {eventos.map((e, i) => (
-                        <Fila key={e.id ?? i} a={fecha(e.fecha || e.created_at)} b={e.detalle || e.evento || e.tipo} />
+                        <Fila key={e.id ?? i} a={fecha(e.fecha)} b={e.detalle} c={e.autor} />
                     ))}
                 </SeccionColapsable>
             )}

@@ -457,13 +457,22 @@ def test_el_historial_trae_las_agendas_del_cliente_con_su_chip(client, db, lead,
 
 
 def test_la_bitacora_del_lead_viaja_en_el_historial(client, db, lead, equipo, auth_headers):
+    """Con las MISMAS claves que las otras secciones del historial: `fecha` y `detalle`.
+
+    Este test pasaba pidiendo `action_type` mientras la pantalla mostraba la columna del detalle
+    vacía, porque leía `detalle`. Un evento sin su texto no es un registro de nada.
+    """
     from app.services.booking_service import BookingService
     BookingService.log_lead_event(lead.id, equipo['closer'].id, 'confirmed', 'confirmó la cita')
 
     eventos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
         .get_json()['historial']['eventos']
 
-    assert [e['action_type'] for e in eventos] == ['confirmed']
+    assert len(eventos) == 1
+    assert eventos[0]['tipo'] == 'confirmed'
+    assert eventos[0]['detalle'] == 'confirmó la cita'
+    assert eventos[0]['autor'] == 'vendedor'
+    assert eventos[0]['fecha']
 
 
 def test_abrir_por_client_id_elige_la_agenda_mas_reciente(client, db, lead, equipo, auth_headers):

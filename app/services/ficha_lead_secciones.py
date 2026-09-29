@@ -83,7 +83,16 @@ def historial(appts, ahora):
     ids = [a.id for a in appts]
     eventos = []
     if ids:
-        eventos = [e.to_dict() for e in LeadEventLog.query
+        # `to_dict()` habla en `description` / `action_type` / `created_at`, y el historial lee
+        # `detalle` / `fecha` como en las otras tres secciones. Mandando el dict crudo, la columna
+        # del detalle salia VACIA en los 1.573 eventos de la base —ninguno tiene la descripcion
+        # vacia— y el registro parecia una lista de fechas sueltas.
+        eventos = [{'id': e.id,
+                    'fecha': _iso(e.created_at),
+                    'tipo': e.action_type,
+                    'detalle': e.description,
+                    'autor': (e.user.username if e.user else 'Sistema')}
+                   for e in LeadEventLog.query
                    .filter(LeadEventLog.appointment_id.in_(ids))
                    .order_by(LeadEventLog.created_at.desc()).all()]
     return {'agendas': agendas, 'seguimientos': seguimientos, 'eventos': eventos}
