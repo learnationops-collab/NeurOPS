@@ -153,7 +153,7 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 'var(--s2)', flexShrink: 0, marginLeft: 'auto' }}>
+            <div className="fi-cab-acciones">
                 <button type="button" className="ibtn" onClick={copiarResumen}
                     aria-label="Copiar los datos del lead"
                     title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>

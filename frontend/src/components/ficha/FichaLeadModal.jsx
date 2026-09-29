@@ -40,6 +40,7 @@ const MENSAJES = {
     reportar_resultado: 'Resultado reportado.',
     registrar_venta: 'Venta registrada.',
     reprogramar: 'Llamada reprogramada.',
+    cancelar: 'Cancelación registrada.',
     descartar: 'Lead descartado.',
     eliminar: 'Lead eliminado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
@@ -227,7 +228,7 @@ const FichaLeadModal = ({
                     id={pestana ? `fi-panel-${pestana}` : undefined}
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
-                    <div style={{ display: 'grid', gap: 'var(--s4)' }}>
+                    <div style={{ display: 'grid', gap: 'var(--s3)' }}>
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
