@@ -2,7 +2,13 @@ line-length = 120
 
 [lint]
 select = ["E", "F", "W", "I", "N"]
-ignore = []
+# E711/E712 (`== None`, `== True`) quedan fuera porque en un filtro de SQLAlchemy NO son el error
+# que describen: son como se construye el `IS NULL` / `IS true` del SQL. Cambiarlos por `is None`, o
+# por `if Columna:`, evalua la columna como un bool de Python y el filtro deja de filtrar, en
+# silencio. Son 150 avisos en el repo y 144 estan en consultas; de los 6 restantes ninguno es un
+# error: son coerciones deliberadas de JSON/Sheets (`x == True or x in ('true', '1', 1)`), donde la
+# sugerencia de ruff cambiaria el comportamiento.
+ignore = ["E711", "E712"]
 
 [format]
 quote-style = "single"
