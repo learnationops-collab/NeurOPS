@@ -14,16 +14,15 @@ import { opciones } from './estadoFicha';
  * para pasarle el lead a otro, que es la acción más frecuente sobre esta franja y
  * hoy vive escondida en el mazo.
  */
+// Sin divisor propio: los datos viven en una rejilla y un separador suelto ocuparia una
+// columna, que es lo que descuadraba las dos filas.
 const Dato = ({ rotulo, valor, mono = false }) => (
-    <>
-        <div className="fi-dato">
-            <small className="t-rotulo">{rotulo}</small>
-            <span className={`t-sm trunc${mono ? ' num' : ''}`} style={{ fontWeight: 600 }}>
-                {valor || '—'}
-            </span>
-        </div>
-        <span className="fi-div" aria-hidden="true" />
-    </>
+    <div className="fi-dato">
+        <small className="t-rotulo">{rotulo}</small>
+        <span className={`t-sm trunc${mono ? ' num' : ''}`} style={{ fontWeight: 600 }}>
+            {valor || '—'}
+        </span>
+    </div>
 );
 
 const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar = true }) => {
