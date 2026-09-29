@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronDown, Pencil } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
@@ -51,6 +51,7 @@ const FilaAgenda = ({
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
+    const lapiz = useRef(null);
     const [editando, setEditando] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [cuando, setCuando] = useState('');
@@ -73,6 +74,13 @@ const FilaAgenda = ({
         setEditando(true);
     };
 
+    // Al cerrar, el foco vuelve al lápiz: el editor desaparece y, si no, quedaría en el `body` y
+    // quien usa el teclado tendría que volver a recorrer la ficha desde arriba.
+    const cerrar = () => {
+        setEditando(false);
+        lapiz.current?.focus();
+    };
+
     // Solo viaja lo que cambió: la bitácora del backend dice exactamente qué se tocó, y un campo
     // que no se tocó no puede fallar (una fuente vieja fuera del catálogo, por ejemplo).
     const cambios = {};
@@ -90,7 +98,7 @@ const FilaAgenda = ({
         setGuardando(true);
         try {
             await onEditar?.(cambios);
-            setEditando(false);
+            cerrar();
         } catch {
             // El aviso del cascarón ya dice por qué (ej. el closer tiene otra llamada a esa hora):
             // el editor se queda abierto con lo elegido, para corregir sin volver a empezar.
@@ -113,12 +121,12 @@ const FilaAgenda = ({
                 <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     {children}
                     {puedeEditar && (
-                        <button type="button" className="ibtn ibtn--sm"
+                        <button type="button" className="ibtn ibtn--sm" ref={lapiz}
                             aria-expanded={editando}
                             aria-controls={`${ids}-editor`}
                             aria-label={`Corregir fecha, fuente y closer de la agenda del ${fecha}`}
                             title="Corregir fecha, fuente y closer"
-                            onClick={() => (editando ? setEditando(false) : abrir())}>
+                            onClick={() => (editando ? cerrar() : abrir())}>
                             <Pencil />
                         </button>
                     )}
@@ -128,7 +136,13 @@ const FilaAgenda = ({
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
                     role="group" aria-label={`Corregir la agenda del ${fecha}`}
-                    onKeyDown={(e) => { if (e.key === 'Escape') setEditando(false); }}
+                    onKeyDown={(e) => {
+                        if (e.key !== 'Escape') return;
+                        // Escape cierra ESTE editor y nada más: sin cortar la propagación, el
+                        // listener del cascarón en `document` cerraba la ficha entera.
+                        e.stopPropagation();
+                        cerrar();
+                    }}
                     {...(reducido ? {} : {
                         initial: { opacity: 0, y: -6 },
                         animate: { opacity: 1, y: 0 },
@@ -180,7 +194,7 @@ const FilaAgenda = ({
 
                     <div className="fi-agenda-pie">
                         <button type="button" className="btn btn--linea" disabled={guardando}
-                            onClick={() => setEditando(false)}>
+                            onClick={cerrar}>
                             Cancelar
                         </button>
                         <button type="button" className="btn btn--cta" disabled={guardando || !hayCambios}

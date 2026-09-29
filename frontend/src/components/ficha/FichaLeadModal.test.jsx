@@ -200,6 +200,27 @@ describe('cerrar', () => {
         expect(onCerrar).toHaveBeenCalledTimes(2);
     });
 
+    it('Escape en el editor de una agenda cierra el editor y no la ficha', async () => {
+        const usuario = userEvent.setup();
+        const onCerrar = vi.fn();
+        await abrir({
+            ...fichaAlDia,
+            historial: { ...fichaAlDia.historial, agendas: [{
+                id: 555, fecha: '2026-08-02T21:30:00', fuente: 'vsl', closer: 'Jean Carlo',
+                closer_id: 7, chip: { label: 'Asistió', tone: 'success' },
+            }] },
+        }, { onCerrar });
+        await usuario.click(screen.getByRole('button', { name: /^Agendas/ }));
+        const lapiz = screen.getByRole('button', { name: /Corregir fecha, fuente y closer/ });
+        await usuario.click(lapiz);
+        await usuario.keyboard('{Escape}');
+
+        expect(onCerrar).not.toHaveBeenCalled();
+        expect(screen.queryByRole('group', { name: /Corregir la agenda/ })).not.toBeInTheDocument();
+        // El foco vuelve al lápiz y no se pierde en el `body`.
+        expect(lapiz).toHaveFocus();
+    });
+
     it('eliminar cierra la ficha en vez de recargar un lead que ya no existe', async () => {
         const usuario = userEvent.setup();
         const onCerrar = vi.fn();
