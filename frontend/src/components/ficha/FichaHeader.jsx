@@ -97,6 +97,26 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         setError(null);
     };
 
+    // Escape cancela la edición esté donde esté el foco. El cascarón escucha Escape en
+    // `document` para cerrar la ficha, y un `onKeyDown` en la cabecera solo lo ve si el foco
+    // está adentro: con el foco en el body —un clic en una zona que no toma foco, o Guardar
+    // en Safari, que no enfoca el botón— el Escape cerraba la ficha con lo tipeado adentro.
+    // En captura sobre `document` y cortando la propagación, como `usePopover`; mientras
+    // guarda no cancela, pero tampoco deja cerrar.
+    useEffect(() => {
+        if (!editando) return undefined;
+        const escape = (e) => {
+            if (e.key !== 'Escape') return;
+            if (e.target?.closest?.('[data-escape-propio="1"]')) return;
+            e.stopPropagation();
+            cancelar();
+        };
+        document.addEventListener('keydown', escape, true);
+        return () => document.removeEventListener('keydown', escape, true);
+        // `cancelar` cambia en cada render; lo que decide lo que hace es `guardando`.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editando, guardando]);
+
     const guardar = async () => {
         if (guardando) return;
         const cambios = cambiosDe(iniciales, borrador);
@@ -120,15 +140,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         }
     };
 
-    // Enter guarda y Escape cancela desde cualquier campo. El Escape se detiene acá: el
-    // cascarón también lo escucha para cerrar la ficha, y cancelar una edición no puede
-    // cerrar el modal con lo tipeado adentro.
+    // Enter guarda desde cualquier campo. El Escape no pasa por acá: lo escucha el efecto de
+    // arriba en todo el documento.
     const teclas = (e) => {
-        if (!editando) return;
-        if (e.key === 'Escape') {
-            e.stopPropagation();
-            cancelar();
-        } else if (e.key === 'Enter' && e.target?.tagName === 'INPUT') {
+        if (editando && e.key === 'Enter' && e.target?.tagName === 'INPUT') {
             e.preventDefault();
             guardar();
         }

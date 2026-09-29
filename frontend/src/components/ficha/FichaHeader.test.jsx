@@ -119,6 +119,21 @@ describe('la franja en modo edición', () => {
         expect(onCerrar).toHaveBeenCalledTimes(1);
     });
 
+    it('Escape cancela aunque el foco ya no esté en la cabecera', async () => {
+        // Un clic en una zona que no toma foco deja el foco en el body: el Escape ya no pasa
+        // por la cabecera y, sin escucharlo en el documento, cerraba la ficha con lo tipeado.
+        const usuario = userEvent.setup();
+        const { onCerrar } = await abrir(fichaPrecall);
+        await usuario.click(lapiz());
+        await usuario.type(screen.getByLabelText('Correo'), 'algo');
+        await usuario.click(document.body);
+        expect(document.activeElement).toBe(document.body);
+        await usuario.keyboard('{Escape}');
+
+        expect(onCerrar).not.toHaveBeenCalled();
+        expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Kevin Encalada');
+    });
+
     it('el error del backend queda al lado del campo que lo causó y el editor sigue abierto', async () => {
         const usuario = userEvent.setup();
         await abrir(fichaPrecall);
