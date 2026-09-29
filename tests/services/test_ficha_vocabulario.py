@@ -119,8 +119,31 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
 
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
                            'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
-                           'tipos_pago', 'medios_pago', 'programas', 'canales_seguimiento',
-                           'tipos_seguimiento', 'fuentes', 'closers'}
+                           'tipos_pago', 'medios_pago', 'medios_pago_venta', 'tipos_pago_venta',
+                           'programas', 'canales_seguimiento', 'tipos_seguimiento', 'fuentes',
+                           'closers'}
+
+
+def test_los_tipos_de_pago_de_una_venta_se_leen_como_los_escribe_el_wizard(db):
+    """La clave es la palabra canonica de `parse_tipo_pago` y la etiqueta, como se escribe detras
+    del programa: un pago corregido desde la ficha tiene que leerse con el mismo tipo que tenia."""
+    from app.services.sheets_service import SheetsService
+
+    tipos = voc.vocabulario()['tipos_pago_venta']
+
+    assert [t['clave'] for t in tipos] == ['completo', 'parcial', 'seña', 'cuota', 'renovacion',
+                                           'upsell']
+    for t in tipos:
+        assert SheetsService.parse_tipo_pago(f"RR - {t['label']}") == ('RR', t['clave'])
+
+
+def test_los_medios_de_una_venta_cubren_los_que_escriben_el_wizard_y_registrar_pago(db):
+    """Corregir es arreglar lo que ya esta en la base: con un medio que no se puede elegir, el
+    pago no se corrige sin cambiarle tambien el medio."""
+    medios = {m['clave'] for m in voc.vocabulario()['medios_pago_venta']}
+
+    wizard = {'Stripe', 'PayPal', 'Transferencia Bancaria', 'Binance / USDT', 'Hotmart', 'Otro'}
+    assert wizard | {m['clave'] for m in voc.MEDIOS_PAGO} <= medios
 
 
 def test_los_tipos_de_seguimiento_son_los_grupos_de_la_pestana_del_closer(db):

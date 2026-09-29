@@ -147,6 +147,36 @@ MEDIOS_PAGO = [
     {'clave': 'Efectivo', 'label': 'Efectivo'},
 ]
 
+# Los medios de pago que se le pueden poner a un pago al corregirlo desde el historial. Es la union
+# de los dos que escriben ventas: los seis del wizard de venta (`DeclararVentaWizard.METHODS`) y los
+# cuatro de "Registrar pago" de arriba. Corregir es arreglar lo que ya esta en la base, y ahi hay de
+# los dos: con la lista corta, un pago de Hotmart —al que Operaciones le descuenta su comision por
+# este texto— no se podria corregir sin pasarlo a otro medio.
+MEDIOS_PAGO_VENTA = [
+    {'clave': 'Stripe', 'label': 'Stripe'},
+    {'clave': 'Hotmart', 'label': 'Hotmart'},
+    {'clave': 'PayPal', 'label': 'PayPal'},
+    {'clave': 'Transferencia Bancaria', 'label': 'Transferencia bancaria'},
+    {'clave': 'Transferencia', 'label': 'Transferencia'},
+    {'clave': 'Binance / USDT', 'label': 'Binance / USDT'},
+    {'clave': 'Efectivo', 'label': 'Efectivo'},
+    {'clave': 'Otro', 'label': 'Otro'},
+]
+
+# Los seis tipos de pago de una venta. La clave es la palabra canonica a la que
+# `SheetsService._extract_tipo_keyword` reduce cualquier variante historica ('Con Seña', 'PARCIAL',
+# 'Renovacion'), y la etiqueta es como se escribe detras del programa en `tipo_pago`: 'RR - Cuota'.
+# Es la grafia del wizard de venta y del script de pagos historicos, asi que un pago corregido desde
+# la ficha se lee igual que uno declarado.
+TIPOS_PAGO_VENTA = [
+    {'clave': 'completo', 'label': 'Completo'},
+    {'clave': 'parcial', 'label': 'Parcial'},
+    {'clave': 'seña', 'label': 'Seña'},
+    {'clave': 'cuota', 'label': 'Cuota'},
+    {'clave': 'renovacion', 'label': 'Renovación'},
+    {'clave': 'upsell', 'label': 'Upsell'},
+]
+
 CANALES_SEGUIMIENTO = [
     {'clave': 'whatsapp', 'label': 'WhatsApp'},
     {'clave': 'llamada', 'label': 'Llamada'},
@@ -318,6 +348,9 @@ def vocabulario(closers=None):
         'post_call': list(POST_CALL),
         'tipos_pago': list(TIPOS_PAGO),
         'medios_pago': list(MEDIOS_PAGO),
+        # Los dos de la correccion de un pago desde la seccion Pagos del historial.
+        'medios_pago_venta': list(MEDIOS_PAGO_VENTA),
+        'tipos_pago_venta': list(TIPOS_PAGO_VENTA),
         'programas': programas_disponibles(),
         'canales_seguimiento': list(CANALES_SEGUIMIENTO),
         'tipos_seguimiento': tipos_seguimiento(),
