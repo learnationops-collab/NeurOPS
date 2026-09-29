@@ -128,7 +128,11 @@ describe('TabResultado', () => {
     expect(datos.venta).toMatchObject({ tipo_pago: 'RR - parcial', monto: 500, precio_total: 2000, metodo_pago: 'Stripe' });
     expect(datos.plan_cuotas).toMatchObject({ total: 2000, num_cuotas: 1 });
     expect(p.irA).toHaveBeenCalledWith('acciones');
-  });
+    // Recorre el wizard de venta ENTERO: una veintena de clics y dos campos tipeados letra por
+    // letra. Solo tarda unos 2 s, pero con la suite completa en paralelo (y más con pytest
+    // corriendo al lado) pasaba los 5 s por defecto y fallaba sin que nada estuviera roto. El
+    // tope es de este test, no global, para que un test corto que se cuelgue siga saltando rápido.
+  }, 20000);
 
   it('en modo seguimiento arranca por la cadencia y no por la llamada', () => {
     render(<TabResultado {...props(fichaEnSeguimiento)} />);
