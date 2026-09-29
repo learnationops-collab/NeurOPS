@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TabHistorial from './TabHistorial';
 import { fichaPrecall } from '../__fixtures__/ficha';
+import { localDateFromNow } from '../../../utils/datetime';
 
 // `start_time` viaja en UTC y sin Z, como lo manda `isoformat()`. Las expectativas se arman con la
 // misma cuenta en la zona del proceso, para que el test no dependa del huso de la máquina.
@@ -284,7 +285,7 @@ describe('los seguimientos del historial', () => {
         expect(screen.getByText('2 seguimientos · 1 atrasado · próximo 2 mar 2099')).toBeInTheDocument();
     });
 
-    it('quien no puede reportar ve el estado pero no lo corrige', async () => {
+    it('quien no puede reportar ve el estado pero no lo corrige ni agenda otro', async () => {
         const usuario = userEvent.setup();
         await abrirSeguimientos(usuario, conSeguimientos([{ ...SEGUIMIENTO, realizado: true }],
             [AGENDA, OTRA_AGENDA], { permisos: { ...fichaPrecall.permisos, reportar: false } }));
@@ -292,5 +293,98 @@ describe('los seguimientos del historial', () => {
         expect(screen.getByText('Realizado')).toBeInTheDocument();
         expect(screen.queryByRole('group', { name: /Estado del seguimiento/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Corregir día, tipo y nota/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Agendar seguimiento' })).not.toBeInTheDocument();
+    });
+});
+
+describe('agendar un seguimiento desde el historial', () => {
+    const RECIENTE = { ...AGENDA, tipo_seguimiento: 'tomada' };
+    const formulario = () => screen.getByRole('group', { name: 'Agendar un seguimiento' });
+    const abrirFormulario = async (usuario, f, onAccion) => {
+        const accion = await abrirSeguimientos(usuario, f, onAccion);
+        await usuario.click(screen.getByRole('button', { name: 'Agendar seguimiento' }));
+        return accion;
+    };
+
+    it('arranca sobre la agenda más reciente, con su tipo y a tres días, y manda día, tipo y nota', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirFormulario(usuario, conSeguimientos([], [RECIENTE, OTRA_AGENDA]));
+
+        expect(within(formulario()).getByLabelText('Agenda del seguimiento')).toHaveValue('71');
+        expect(within(formulario()).getByLabelText('Día del contacto')).toHaveValue(localDateFromNow(3));
+        expect(within(formulario()).getByLabelText('Tipo de seguimiento')).toHaveValue('tomada');
+        const dia = within(formulario()).getByLabelText('Día del contacto');
+        await usuario.clear(dia);
+        await usuario.type(dia, '2099-03-02');
+        await usuario.type(within(formulario()).getByLabelText('Nota'), '  Llamarlo después de las 20 ');
+        await usuario.click(within(formulario()).getByRole('button', { name: 'Agendar seguimiento' }));
+
+        expect(onAccion).toHaveBeenCalledWith('agendar_seguimiento',
+            { fecha: '2099-03-02', tipo: 'tomada', nota: 'Llamarlo después de las 20' }, 71);
+        expect(screen.queryByRole('group', { name: 'Agendar un seguimiento' })).not.toBeInTheDocument();
+    });
+
+    it('avisa que reemplaza el seguimiento de una agenda que ya tiene uno', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirFormulario(usuario, conSeguimientos([SEGUIMIENTO], [RECIENTE, OTRA_AGENDA]));
+
+        expect(within(formulario()).getByText(/agendar este lo reemplaza/)).toBeInTheDocument();
+        expect(within(formulario()).getByText(/Pendiente · 6 oct 2026 · «Lo habla con la esposa»/))
+            .toBeInTheDocument();
+        await usuario.click(within(formulario()).getByRole('button', { name: 'Reemplazar seguimiento' }));
+
+        expect(onAccion).toHaveBeenCalledWith('agendar_seguimiento',
+            expect.objectContaining({ tipo: 'tomada' }), 71);
+    });
+
+    it('elegir otra agenda trae el tipo de esa agenda y apunta el pedido a ella', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirFormulario(usuario, conSeguimientos([SEGUIMIENTO], [RECIENTE, OTRA_AGENDA]));
+        await usuario.selectOptions(within(formulario()).getByLabelText('Agenda del seguimiento'), '64');
+
+        expect(within(formulario()).getByLabelText('Tipo de seguimiento')).toHaveValue('no_tomada');
+        // La 64 no tiene seguimiento: no hay nada que reemplazar.
+        expect(within(formulario()).queryByText(/lo reemplaza/)).not.toBeInTheDocument();
+        await usuario.click(within(formulario()).getByRole('button', { name: 'Agendar seguimiento' }));
+
+        expect(onAccion).toHaveBeenCalledWith('agendar_seguimiento',
+            expect.objectContaining({ tipo: 'no_tomada' }), 64);
+    });
+
+    it('un tipo elegido a mano no se pisa al cambiar de agenda', async () => {
+        const usuario = userEvent.setup();
+        await abrirFormulario(usuario, conSeguimientos([], [RECIENTE, OTRA_AGENDA]));
+        await usuario.selectOptions(within(formulario()).getByLabelText('Tipo de seguimiento'), 'cerrada');
+        await usuario.selectOptions(within(formulario()).getByLabelText('Agenda del seguimiento'), '64');
+
+        expect(within(formulario()).getByLabelText('Tipo de seguimiento')).toHaveValue('cerrada');
+    });
+
+    it('dice a quién le va a aparecer, y avisa si ese closer ya no está activo', async () => {
+        const usuario = userEvent.setup();
+        const deBaja = { ...OTRA_AGENDA, closer: 'Sebastián', closer_id: 99 };
+        await abrirFormulario(usuario, conSeguimientos([], [RECIENTE, deBaja]));
+
+        expect(within(formulario()).getByText(/Le va a aparecer a Jean Carlo en su pestaña Seguimientos desde el/))
+            .toBeInTheDocument();
+        await usuario.selectOptions(within(formulario()).getByLabelText('Agenda del seguimiento'), '64');
+        expect(within(formulario()).getByText(/Sebastián ya no está activo/)).toBeInTheDocument();
+    });
+
+    it('con una sola agenda no pregunta sobre cuál', async () => {
+        const usuario = userEvent.setup();
+        await abrirFormulario(usuario, conSeguimientos([], [RECIENTE]));
+
+        expect(within(formulario()).queryByLabelText('Agenda del seguimiento')).not.toBeInTheDocument();
+    });
+
+    it('si el backend rechaza, el formulario se queda con lo cargado', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('No se pudo'));
+        await abrirFormulario(usuario, conSeguimientos([], [RECIENTE]), onAccion);
+        await usuario.type(within(formulario()).getByLabelText('Nota'), 'Cobrar la cuota');
+        await usuario.click(within(formulario()).getByRole('button', { name: 'Agendar seguimiento' }));
+
+        expect(within(formulario()).getByLabelText('Nota')).toHaveValue('Cobrar la cuota');
     });
 });

@@ -7,6 +7,7 @@ import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import InlineConfirm from '../../ui/InlineConfirm';
 import FilaAgenda from '../historial/FilaAgenda';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
+import AgendarSeguimiento from '../historial/AgendarSeguimiento';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -292,23 +293,33 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
 
 /**
  * La sección «Seguimientos»: el seguimiento de cada agenda del cliente, con su estado corregible
- * en la fila y un lápiz para el día, el tipo y la nota (`FilaSeguimiento`).
+ * en la fila y un lápiz para el día, el tipo y la nota (`FilaSeguimiento`), y al pie un
+ * formulario para agendar otro (`AgendarSeguimiento`).
  *
- * Un seguimiento vive en su agenda —uno por agenda—, así que cada corrección viaja con el id de
- * ESA agenda y no con el de la que abrió la ficha. Cuando el cliente tiene más de una agenda, la
- * fila dice de cuál es.
+ * Un seguimiento vive en su agenda —uno por agenda—, así que cada pedido viaja con el id de ESA
+ * agenda y no con el de la que abrió la ficha. Cuando el cliente tiene más de una agenda, la fila
+ * dice de cuál es y el formulario pregunta sobre cuál.
  */
 const Seguimientos = ({ seguimientos, agendas, vocabulario, puedeEditar, onAccion }) => {
     const tipos = vocabulario?.tipos_seguimiento || [];
-    return seguimientos.length
-        ? seguimientos.map((s, i) => (
-            <FilaSeguimiento key={s.agenda_id ?? `${s.fecha}-${i}`} seguimiento={s} tipos={tipos}
-                mostrarAgenda={agendas.length > 1}
-                // Sin el id de su agenda no hay a dónde mandar la corrección (datos viejos).
-                puedeEditar={puedeEditar && s.agenda_id != null}
-                onCorregir={(cambios) => onAccion?.('corregir_seguimiento', cambios, s.agenda_id)} />
-        ))
-        : <Vacio texto="No se registró ningún seguimiento." />;
+    return (
+        <>
+            {seguimientos.length
+                ? seguimientos.map((s, i) => (
+                    <FilaSeguimiento key={s.agenda_id ?? `${s.fecha}-${i}`} seguimiento={s} tipos={tipos}
+                        mostrarAgenda={agendas.length > 1}
+                        // Sin el id de su agenda no hay a dónde mandar la corrección (datos viejos).
+                        puedeEditar={puedeEditar && s.agenda_id != null}
+                        onCorregir={(cambios) => onAccion?.('corregir_seguimiento', cambios, s.agenda_id)} />
+                ))
+                : <Vacio texto="No se registró ningún seguimiento." />}
+            {puedeEditar && (
+                <AgendarSeguimiento agendas={agendas} seguimientos={seguimientos} tipos={tipos}
+                    closers={vocabulario?.closers || []}
+                    onAgendar={(datos, agendaId) => onAccion?.('agendar_seguimiento', datos, agendaId)} />
+            )}
+        </>
+    );
 };
 
 /** «2 seguimientos · 1 atrasado · próximo 9 oct 2026»: lo que importa, sin abrir la sección. */

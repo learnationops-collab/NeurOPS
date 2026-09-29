@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // El cliente HTTP se mockea completo: ninguna pestaña llama a axios por su cuenta,
@@ -160,6 +160,30 @@ describe('onAccion pega en el endpoint correcto', () => {
 
         expect(api.patch).toHaveBeenCalledWith('/ficha/555/seguimiento', { realizado: true });
         expect(await screen.findByText('Seguimiento corregido.')).toBeInTheDocument();
+    });
+
+    it('agendar un seguimiento desde el historial lo pone en la agenda elegida', async () => {
+        const usuario = userEvent.setup();
+        await abrir({
+            ...fichaAlDia,
+            historial: { ...fichaAlDia.historial, seguimientos: [], agendas: [{
+                id: 555, fecha: '2026-08-02T21:30:00', fuente: 'vsl', closer: 'Jean Carlo',
+                closer_id: 7, chip: { label: 'Asistió', tone: 'success' }, tipo_seguimiento: 'cerrada',
+            }] },
+            vocabulario: { ...fichaAlDia.vocabulario, tipos_seguimiento: [
+                { clave: 'tomada', label: 'Llamadas tomadas' },
+                { clave: 'cerrada', label: 'Llamadas cerradas' },
+            ] },
+        });
+        await usuario.click(screen.getByRole('button', { name: /^Seguimientos/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Agendar seguimiento' }));
+        await usuario.type(screen.getByLabelText('Nota'), 'Cobrar la cuota');
+        const formulario = screen.getByRole('group', { name: 'Agendar un seguimiento' });
+        await usuario.click(within(formulario).getByRole('button', { name: 'Agendar seguimiento' }));
+
+        expect(api.put).toHaveBeenCalledWith('/ficha/555/seguimiento',
+            expect.objectContaining({ tipo: 'cerrada', nota: 'Cobrar la cuota' }));
+        expect(await screen.findByText('Seguimiento agendado.')).toBeInTheDocument();
     });
 
     it('enviar una nota postea en la ruta de notas y limpia el campo', async () => {
