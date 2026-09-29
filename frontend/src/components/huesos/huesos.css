@@ -5,11 +5,21 @@
  * esos tres viven fuera de ese contenedor. Por eso la clase acá va sin prefijo y con fallback
  * en el token de fondo: `--mat-1` sólo existe dentro de `.dc-shell`.
  *
- * El hueso hace dos cosas a la vez y por eso el color vive en `::after`. Una sola animación de
- * opacidad no puede latir y aparecer: si se declaran las dos, la segunda gana y la entrada no
- * se ve. Así que el elemento aparece (una vez, con su retraso) y el pseudo late (para siempre).
- * Ese retraso es el pedido de que la carga "vaya cargando elemento por elemento": cada hueso
- * entra un escalón después del anterior, en vez de que el bloque entero aparezca de golpe. */
+ * El hueso hace dos cosas a la vez y por eso el color vive en `::after`. Una sola animación no
+ * puede aparecer y seguir moviéndose: si se declaran las dos sobre el mismo elemento, la segunda
+ * gana y la entrada no se ve. Así que el elemento aparece (una vez, con su retraso) y el pseudo
+ * se mueve (para siempre).
+ *
+ * El movimiento es un BRILLO que barre el hueso de derecha a izquierda, no un latido de opacidad.
+ * Hubo un latido primero y el pedido fue claro: "más movimiento, que se vea que está cargando". Un
+ * latido que sube y baja la opacidad en el lugar se lee como algo apagado; una franja de luz que
+ * pasa se lee como algo que está llegando, que es justamente lo que dice un esqueleto.
+ *
+ * Y el barrido arranca con el MISMO retraso `--d` que la entrada. `animation-delay` corre sólo al
+ * principio, así que el desfase entre un hueso y el siguiente se conserva en cada vuelta: el
+ * brillo no pasa por todos a la vez sino que baja por la lista como una ola, fila por fila. Es el
+ * otro pedido —"que vaya cargando uno por uno"— dicho con el esqueleto mismo, antes de que haya
+ * un solo dato. */
 
 .hueso {
     position: relative;
@@ -24,8 +34,15 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: var(--mat-1, rgba(148, 163, 184, .14));
-    animation: huesoPulso 1.4s ease-in-out infinite;
+    /* Dos capas: la franja de luz arriba, que es la que se mueve, y el color del hueso abajo, que
+       queda quieto. Con una sola capa el hueso entero cambiaba de tono en vez de dejar pasar el
+       brillo por encima. El ancho de 250% es para que la franja entre y salga del todo del hueso
+       en cada vuelta; con menos se ve el corte del degradado en el borde. */
+    background:
+        linear-gradient(100deg, transparent 30%, var(--hueso-brillo, rgba(255, 255, 255, .11)) 50%,
+            transparent 70%) 150% 0 / 250% 100% no-repeat,
+        var(--mat-1, rgba(148, 163, 184, .14));
+    animation: huesoBarrido 1.5s ease-in-out var(--d, 0ms) infinite;
 }
 
 @keyframes huesoEntra {
@@ -33,9 +50,10 @@
     to { opacity: 1; transform: none; }
 }
 
-@keyframes huesoPulso {
-    0%, 100% { opacity: .5; }
-    50% { opacity: 1; }
+/* Sólo se mueve la primera capa (la franja); la segunda —el color— se repite quieta. */
+@keyframes huesoBarrido {
+    from { background-position: 150% 0, 0 0; }
+    to { background-position: -50% 0, 0 0; }
 }
 
 /* Sin movimiento el esqueleto sigue siendo útil —dice dónde va a caer cada cosa—, así que se
@@ -47,8 +65,9 @@
         animation: none;
     }
 
+    /* Sin barrido la franja queda estacionada fuera del hueso (`150%`), así que lo que se ve es
+       sólo el color: un hueso quieto, visible y sin nada que parpadee. */
     .hueso::after {
-        opacity: .7;
         animation: none;
     }
 }
