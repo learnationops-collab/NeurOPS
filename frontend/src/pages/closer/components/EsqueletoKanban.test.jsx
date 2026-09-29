@@ -26,7 +26,7 @@ const LLAMADAS = [
 
 const tablero = (columnas) => render(<EsqueletoKanban rotulo="Cargando…" columnas={columnas} />).container;
 
-/** El último hueso de cada tarjeta es el botón (36 px) o el sello de hecha (24 px). */
+/** El último hueso de cada tarjeta es el botón (36,25 px) o el sello de hecha (23,5 px). */
 const piesDe = (columna) => [...columna.querySelectorAll('.kcard-v6')]
     .map(tarjeta => [...tarjeta.querySelectorAll('.hueso')].at(-1).style.height);
 
@@ -57,9 +57,9 @@ describe('EsqueletoKanban', () => {
 
     it('las tarjetas pendientes cierran con el botón y las hechas con el sello', () => {
         const [atrasadas, hoy, reportadas] = tablero(LLAMADAS).querySelectorAll('.kcol-v6');
-        expect(piesDe(atrasadas)).toEqual(['36px', '36px']);
-        expect(piesDe(hoy)).toEqual(['36px', '36px']);
-        expect(piesDe(reportadas)).toEqual(['24px', '24px']);
+        expect(piesDe(atrasadas)).toEqual(['36.25px', '36.25px']);
+        expect(piesDe(hoy)).toEqual(['36.25px', '36.25px']);
+        expect(piesDe(reportadas)).toEqual(['23.5px', '23.5px']);
     });
 
     it('entra renglón por renglón: primero la primera tarjeta de cada columna', () => {
