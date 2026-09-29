@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
+import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
@@ -125,7 +125,10 @@ const estimateEarning = (item, tipo, earnings) => {
 // agenda, programa/examen, deuda) al centro, y la ganancia potencial de este seguimiento puntual
 // bien a la derecha — mismo orden izquierda→derecha que "cuándo → quién → cuánto vale" en vez de
 // mezclar todo en una sola fila de chips sin jerarquía.
-const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
+//
+// `orden` es su lugar en la fila de entrada (ver `.row-v6` en index.css): cada fila entra con el
+// escalón de `escalonDe`, el mismo de los huesos que ocupaban su lugar mientras cargaba.
+const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0 }) => {
     const pc = item.proxima_cuota;
     const when = retrasoWhen(item.dias_retraso);
     const result = resultChip(item.closer_result);
@@ -153,7 +156,7 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
     }
 
     return (
-        <div className="row-v6" onClick={onClick}>
+        <div className="row-v6" onClick={onClick} style={{ animationDelay: `${escalonDe(orden)}ms` }}>
             <div className="time-v6" style={when ? TIME_BOX_STYLE[when.cls] : undefined}>
                 {when ? when.text : '—'}
             </div>
@@ -203,7 +206,8 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick }) => {
 // texto real: la fila en hueso mide 84 px, como la de verdad con los chips en un solo renglón. Las
 // barras de 62 px de antes quedaban 15 px cortas por fila, y la lista crecía al llegar los datos.
 const HuesoFila = ({ paso }) => (
-    <div className="row-v6" aria-hidden="true" style={{ pointerEvents: 'none' }}>
+    <div className="row-v6" aria-hidden="true"
+        style={{ pointerEvents: 'none', animationDelay: `${escalonDe(paso)}ms` }}>
         {/* La caja de urgencia (`.time-v6`): 104 px de ancho mínimo y 35 de alto. */}
         <Hueso alto={35} ancho={104} radio={10} paso={paso} style={{ flex: 'none' }} />
         <div className="rmain-v6">
@@ -520,8 +524,12 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                         </span>
                                     </div>
                                     {grouped[tipo].length > 0 ? (
-                                        grouped[tipo].map(item => (
-                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} onClick={() => openLead(item, tipo)} />
+                                        // El escalón se cuenta dentro de cada bloque y no sobre
+                                        // todos: al desplegar los de llamadas, los cobros ya están
+                                        // a la vista y los bloques nuevos no tienen que esperar el
+                                        // turno de filas que no se van a volver a animar.
+                                        grouped[tipo].map((item, i) => (
+                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} orden={i} onClick={() => openLead(item, tipo)} />
                                         ))
                                     ) : (
                                         <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
@@ -652,8 +660,8 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                     </div>
                                 )}
                                 <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-                                    {poolVisibles.map(item => (
-                                        <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} onClick={() => openLead(item, openPool)} />
+                                    {poolVisibles.map((item, i) => (
+                                        <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} orden={i} onClick={() => openLead(item, openPool)} />
                                     ))}
                                 </div>
                             </>

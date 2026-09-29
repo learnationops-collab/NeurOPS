@@ -1818,11 +1818,20 @@ header.top-v6 {
   transition: .2s;
   cursor: pointer;
   text-align: left;
+  /* Entra igual que las tarjetas del kanban (ver `cardRiseIn`): el retraso de cada fila lo pone
+     SeguimientosPane con `escalonDe`, así las filas llegan de a una y con el mismo ritmo que los
+     huesos que ocupaban su lugar. `backwards` por lo mismo que allá: deja la fila invisible
+     durante su turno y no le pisa el `transform` del hover al terminar. */
+  animation: cardRiseIn .34s cubic-bezier(.22, 1, .36, 1) backwards;
 }
 .row-v6:hover {
   border-color: rgba(255,63,164,.45);
   background: rgba(255,63,164,.055);
   transform: translateX(4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-v6 { animation: none; }
+  .row-v6:hover { transform: none; }
 }
 .time-v6 {
   font-size: 11.5px;
