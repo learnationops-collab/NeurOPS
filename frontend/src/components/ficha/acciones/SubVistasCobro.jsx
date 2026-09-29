@@ -29,6 +29,11 @@ const CANALES_POR_DEFECTO = ['WhatsApp', 'Llamada', 'Email'];
 const labels = (vocabulario, porDefecto) => (vocabulario?.length
   ? vocabulario.map((v) => (typeof v === 'string' ? v : v.label)) : porDefecto);
 
+// Cobrar una cuota es declarar una venta de tipo Cuota: `POST /ficha/<id>/venta` pasa por
+// `SheetsService.post_to_sheets`, que es el único camino que hace todo lo que un cobro implica
+// (FinancialSale, espejo a Enrollment/Payment, secuencia de pagos). Y ese camino habla en
+// `tipo_pago` / `metodo_pago` / `marca_temporal`, no en monto/medio/fecha: mandarle las otras
+// claves era pedirle un cobro sin tipo de pago, que rechazaba siempre.
 export function SubVistaPago({ ficha, onVolver, onGuardar, guardando }) {
   const [valores, setValores] = useState({ fecha: hoyIso(), medio: null, monto: '' });
   const campos = useMemo(() => [
@@ -37,21 +42,32 @@ export function SubVistaPago({ ficha, onVolver, onGuardar, guardando }) {
     { campo: 'medio', label: 'Medio', tipo: 'opcion', requerido: true, opciones: labels(ficha?.vocabulario?.medios_pago, MEDIOS_POR_DEFECTO) },
   ], [ficha]);
 
+  // El programa es el prefijo de `tipo_pago`: sin él no hay cobro que declarar. Se dice acá y se
+  // manda a arreglarlo a la tarjeta de la izquierda, en vez de dejar que el backend lo rechace.
+  const programa = ficha?.cobro?.programa_code || null;
+
   return (
     <SubVista titulo="Registrar pago" onVolver={onVolver}>
-      <FormularioSimple
-        campos={campos}
-        valores={valores}
-        guardando={guardando}
-        cta="Registrar pago"
-        onCambio={(parche) => setValores((p) => ({ ...p, ...parche }))}
-        onGuardar={() => onGuardar({
-          monto: parseFloat(valores.monto) || 0,
-          fecha: valores.fecha,
-          medio: valores.medio,
-          programa_code: ficha?.cobro?.programa_code || null,
-        })}
-      />
+      {programa ? (
+        <FormularioSimple
+          campos={campos}
+          valores={valores}
+          guardando={guardando}
+          cta="Registrar pago"
+          onCambio={(parche) => setValores((p) => ({ ...p, ...parche }))}
+          onGuardar={() => onGuardar({
+            tipo_pago: `${programa} - Cuota`,
+            monto: parseFloat(valores.monto) || 0,
+            metodo_pago: valores.medio,
+            marca_temporal: valores.fecha,
+          })}
+        />
+      ) : (
+        <p className="ln-t-body-sm ln-muted">
+          Este cliente no tiene programa asignado, y un cobro se declara como «programa – Cuota».
+          Asignáselo en la tarjeta de la deuda y volvé a esta acción.
+        </p>
+      )}
     </SubVista>
   );
 }
@@ -73,14 +89,12 @@ export function SubVistaSeguimiento({ ficha, onVolver, onGuardar, guardando }) {
         cta="Guardar seguimiento"
         onCambio={(parche) => setValores((p) => ({ ...p, ...parche }))}
         onGuardar={() => onGuardar({
-          fecha_seguimiento: valores.fecha,
-          fecha_seguimiento_cobro: valores.fecha,
+          fecha: valores.fecha,
           canal: valores.canal,
           nota: valores.nota || '',
-          // Es un seguimiento de cobro: el lead ya compró (misma clasificación que hoy).
-          seguimiento_tipo: 'cerrada',
-          seguimiento_sub: 'Seguimiento de cobro',
-          seguimiento_realizado: false,
+          // Es un seguimiento de cobro: el lead ya compró (misma clasificación que hoy). El canal
+          // y la nota los junta el backend en `seguimiento_sub`, que es donde el equipo los lee.
+          tipo: 'cerrada',
         })}
       />
     </SubVista>
