@@ -45,7 +45,7 @@ export const fichaAgendaVencida = {
     proxima_cuota: null, etapa: null, cuotas: [], pagos: [],
     estado_pagos: { total_paid: 0, balance_remaining: 0, sales_count: 0 },
   },
-  permisos: { confirmar: true, reportar: true, cobrar: true, eliminar: false, reasignar: true, comentar: true },
+  permisos: { confirmar: true, reportar: true, cobrar: true, eliminar: false, editar_datos: false, reasignar: true, comentar: true },
   vocabulario: { medios_pago: [], canales_seguimiento: [], motivos_baja: [] },
 };
 

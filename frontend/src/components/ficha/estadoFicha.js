@@ -64,7 +64,7 @@ export const pestanaPorDefecto = (ficha) => {
 export const puedeEditarFicha = (ficha) => {
     const permisos = ficha?.permisos;
     if (!permisos) return true;
-    return ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar']
+    return ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos']
         .some(k => permisos[k] === true);
 };
 

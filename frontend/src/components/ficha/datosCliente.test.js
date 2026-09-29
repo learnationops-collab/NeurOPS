@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'vitest';
+import { cambiosDe, valoresIniciales } from './datosCliente';
+
+describe('valoresIniciales', () => {
+    it('trae lo guardado, con el instagram sin la arroba', () => {
+        expect(valoresIniciales({
+            nombre: 'Kevin Encalada', email: 'kevin@example.com', telefono: '+593 99 515 7254',
+            instagram: '@kevin.enc', examen: 'MIR / ENARM',
+        })).toEqual({
+            nombre: 'Kevin Encalada', email: 'kevin@example.com', telefono: '+593 99 515 7254',
+            instagram: 'kevin.enc', examen: 'MIR / ENARM',
+        });
+    });
+
+    it('el nombre de relleno de la lectura no es un nombre que corregir', () => {
+        // Sin `full_name` la lectura cae al correo, y sin cliente a "Sin cliente".
+        expect(valoresIniciales({ nombre: 'ana@x.com', email: 'ana@x.com' }).nombre).toBe('');
+        expect(valoresIniciales({ nombre: 'Sin nombre' }).nombre).toBe('');
+        expect(valoresIniciales({ nombre: 'Sin cliente' }).nombre).toBe('');
+    });
+
+    it('el correo inventado por NeurOPS se muestra vacío', () => {
+        expect(valoresIniciales({ email: 'no-email-3fa9c2e1b0d4@neurops.com' }).email).toBe('');
+    });
+
+    it('aguanta una identidad ausente', () => {
+        expect(valoresIniciales(null)).toEqual(
+            { nombre: '', telefono: '', email: '', instagram: '', examen: '' });
+    });
+});
+
+describe('cambiosDe', () => {
+    const iniciales = { nombre: 'Kevin', telefono: '123', email: '', instagram: 'kev', examen: '' };
+
+    it('solo manda lo que cambió, recortado', () => {
+        expect(cambiosDe(iniciales, { ...iniciales, telefono: ' 456 ', examen: 'MIR' }))
+            .toEqual({ telefono: '456', examen: 'MIR' });
+    });
+
+    it('espacios de más no son un cambio', () => {
+        expect(cambiosDe(iniciales, { ...iniciales, nombre: '  Kevin ' })).toEqual({});
+    });
+
+    it('vaciar un dato sí es un cambio: viaja vacío', () => {
+        expect(cambiosDe(iniciales, { ...iniciales, instagram: '' })).toEqual({ instagram: '' });
+    });
+});

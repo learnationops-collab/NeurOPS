@@ -181,7 +181,7 @@
 .dc-shell .fi-cab{display:grid;gap:var(--s3)}
 .dc-shell .fi-cab-titulo{display:flex;align-items:center;justify-content:space-between;
   gap:var(--s4)}
-.dc-shell .fi-cab-acciones{display:flex;gap:var(--s2);flex-shrink:0}
+.dc-shell .fi-cab-acciones{display:flex;gap:var(--s2);flex-shrink:0;align-items:center}
 /* Numero de columnas EXPLICITO y siempre par: con `auto-fit` el reparto vuelve a depender
    del ancho disponible y reaparece el 3 + 1. */
 .dc-shell .fi-cab-datos{display:grid;justify-content:start;align-items:start;
@@ -200,6 +200,29 @@
   background:var(--bg-element);color:var(--text-on-surface);font-size:14px;font-weight:600;
   cursor:pointer}
 .dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary)}
+
+/* La misma franja en modo edicion: el titulo se vuelve el campo del nombre y los cuatro
+   datos, cuatro campos. Columnas de ancho IGUAL (no `auto` como al leer): un campo vacio
+   mediria lo que su placeholder y la fila quedaria dentada. Mismos cortes que la franja,
+   por la misma razon: siempre par, nunca un 3 + 1. */
+.dc-shell .fi-cab-editor{justify-content:stretch;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){
+  .dc-shell .fi-cab-editor{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){
+  .dc-shell .fi-cab-editor{grid-template-columns:minmax(0,1fr)}
+}
+/* 40px y no los 48 del campo del sistema: es una franja de datos, no un formulario, y a 48
+   la cabecera crecia casi el doble al entrar en edicion. */
+.dc-shell .fi-cab .ln-field{height:40px;padding:0 var(--s3)}
+.dc-shell .fi-cab-nombre{max-width:560px}
+.dc-shell .fi-cab-nombre input{font-size:20px;font-weight:800;letter-spacing:-.02em}
+/* En edicion el titulo es un campo con Cancelar y Guardar al lado: en un telefono pasa a su
+   propia fila en vez de quedar aplastado contra los botones. */
+.dc-shell .fi-cab-titulo--editando{flex-wrap:wrap}
+.dc-shell .fi-cab-titulo--editando .fi-cab-acciones{margin-left:auto}
+.dc-shell .fi-cab label.t-rotulo{cursor:pointer}
+.dc-shell .fi-dato-error{color:var(--error);font-size:12px;line-height:1.4;white-space:normal}
 
 /* ---------- Tablist ---------- */
 /* Texto con subrayado, no pildoras: el control segmentado competia por atencion con el

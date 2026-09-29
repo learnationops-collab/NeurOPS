@@ -46,6 +46,7 @@ const MENSAJES = {
     descartar: 'Lead descartado.',
     eliminar: 'Lead eliminado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
+    editar_datos: 'Datos del lead corregidos.',
     guardar_plan: 'Plan de cuotas guardado.',
     guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
@@ -86,7 +87,6 @@ const FichaLeadModal = ({
     appointmentId = null,
     clientId = null,
     onCerrar,
-    onEditar = null,
     onCambio = null,     // se llama después de cada escritura, para que la tabla de atrás se refresque
     pestanaInicial = null,  // el mazo sabe desde qué columna se abrió; gana sobre la del backend
 }) => {
@@ -233,7 +233,7 @@ const FichaLeadModal = ({
                             <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>×</button>
                         </div>
                     ) : (
-                        <FichaHeader ficha={ficha} onAccion={onAccion} onEditar={onEditar}
+                        <FichaHeader ficha={ficha} onAccion={onAccion}
                             onCerrar={onCerrar} puedeEditar={estado.puedeEditar} />
                     )}
                 </div>

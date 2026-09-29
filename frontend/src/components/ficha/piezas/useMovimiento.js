@@ -51,6 +51,19 @@ export const useMovimiento = () => {
                 style: { transformOrigin: 'top center' },
             },
 
+        /**
+         * Un campo de un formulario en el lugar (la cabecera en modo edición): entran de a
+         * uno, en el orden en que se leen, así el ojo sigue el cambio de dato a campo en vez
+         * de ver saltar la franja entera de golpe.
+         */
+        campo: (i = 0) => (quieto
+            ? { initial: false, animate: { opacity: 1, y: 0 } }
+            : {
+                initial: { opacity: 0, y: 6 },
+                animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.22, ease: SUAVE, delay: 0.04 * i },
+            }),
+
         /** El subrayado del tablist viaja de pestaña a pestaña en vez de saltar. */
         subrayado: quieto
             ? {}

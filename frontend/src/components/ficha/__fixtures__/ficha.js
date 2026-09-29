@@ -107,7 +107,7 @@ const VOCABULARIO = {
 
 const PERMISOS_TODO = {
     confirmar: true, reportar: true, cobrar: true,
-    eliminar: true, reasignar: true, comentar: true,
+    eliminar: true, editar_datos: true, reasignar: true, comentar: true,
 };
 
 /** Lead en precall: la ficha abre en Confirmación, a medio camino del stepper. */
@@ -275,7 +275,7 @@ export const fichaSoloLectura = {
     ...fichaPrecall,
     estado: { ...fichaPrecall.estado, pestana_por_defecto: 'resultado' },
     permisos: { confirmar: false, reportar: false, cobrar: false,
-        eliminar: false, reasignar: false, comentar: true },
+        eliminar: false, editar_datos: false, reasignar: false, comentar: true },
 };
 
 export default fichaPrecall;
