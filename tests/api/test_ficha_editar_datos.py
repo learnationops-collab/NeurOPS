@@ -341,3 +341,38 @@ def test_un_instagram_de_relleno_ya_guardado_no_cuenta_como_senal_para_atar(
 
     assert r.get_json()['ventas_atadas'] == 0
     assert ajena.client_id is None
+
+
+# --- Las pantallas que cruzan en lote siguen viendo la venta ----------------------------------
+
+def test_revisar_y_el_libro_siguen_mostrando_la_venta_despues_de_corregir_el_correo(
+        client, db, lead, equipo, auth_headers):
+    """La venta se ata por id antes del cambio y `_client_has_sale` ya la cuenta. Los cruces en
+    lote de Revisar, del libro de agendas y del conteo de seguimientos miraban solo correo e
+    instagram: la fila pasaba de "Venta" a "Presentó, no cerró" y la ficha seguía diciendo que
+    compró."""
+    from datetime import date
+
+    from app.services.closer_agendas_service import CloserAgendasService
+    from app.services.closer_followup_service import CloserFollowUpService
+    from app.services.closer_pending_service import CloserPendingService
+    from app.services.comercial_service import ComercialService
+
+    lead.start_time = datetime.utcnow() - timedelta(days=1)
+    lead.closer_result = 'Show up'
+    db.session.commit()
+    _venta(db, mail_cliente='jesus@x.com', nombre_cliente='Jesus Capuchino',
+           tipo_pago='RR - Completo', email_vendedor=equipo['closer'].email)
+
+    r = editar(client, auth_headers, equipo['director'], lead, email='jesus.nuevo@x.com')
+    assert r.get_json()['ventas_atadas'] == 1
+
+    hoy = date.today()
+    [fila] = ComercialService.agendas(hoy - timedelta(days=7), hoy + timedelta(days=1))
+    assert (fila['post_call']['key'], fila['con_venta']) == ('venta', True)
+
+    [item] = CloserAgendasService.get_ledger(equipo['closer'].id, period='todo')['items']
+    assert (item['venta'], item['venta_propia']) == (True, True)
+
+    assert CloserPendingService._client_ids_con_venta([lead.client]) == {lead.client_id}
+    assert CloserFollowUpService._client_has_sale(lead.client) is True

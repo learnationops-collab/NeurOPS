@@ -325,9 +325,10 @@ class ComercialService:
             return []
 
         # Cruce agenda -> venta en una sola pasada (mismo criterio que el libro de agendas del
-        # closer: email o instagram del cliente contra FinancialSale). El segundo argumento son
-        # los identificadores para marcar la venta como "propia", que acá no hace falta.
-        ventas_email, ventas_ig = CloserAgendasService._ventas_por_contacto(appts, set())
+        # closer: email o instagram del cliente contra FinancialSale, más las ventas atadas al
+        # cliente por id). El segundo argumento son los identificadores para marcar la venta como
+        # "propia", que acá no hace falta.
+        ventas_email, ventas_ig, ventas_id = CloserAgendasService._ventas_por_contacto(appts, set())
 
         hoy = date.today()
         ahora = datetime.utcnow()
@@ -336,7 +337,7 @@ class ComercialService:
             cliente = a.client
             mail = _limpiar_email(cliente.email) if cliente else None
             ig = _limpiar_ig(cliente.instagram) if cliente else None
-            con_venta = (mail in ventas_email) or (ig in ventas_ig)
+            con_venta = (mail in ventas_email) or (ig in ventas_ig) or (a.client_id in ventas_id)
             con_seguimiento = bool(a.seguimiento_tipo or a.fecha_seguimiento) and not a.seguimiento_realizado
 
             estado = derivar_estado(a, ahora)

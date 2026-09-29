@@ -119,27 +119,36 @@ class CloserPendingService:
         """Cuáles de estos clientes ya tienen una venta en FinancialSale, en UNA sola consulta.
 
         Es el equivalente en lote de `CloserFollowUpService._client_has_sale` (mismo cruce por
-        email y por instagram sin '@', todo en minúsculas). Se hace así porque el original corre
-        una consulta por cita: clasificar la lista de seguimientos de todo el equipo disparaba
-        cientos de consultas contra FinancialSale, una por cada llamada asistida sin seguimiento
-        etiquetado."""
+        email y por instagram sin '@', todo en minúsculas, más las ventas atadas al cliente por
+        id). Se hace así porque el original corre una consulta por cita: clasificar la lista de
+        seguimientos de todo el equipo disparaba cientos de consultas contra FinancialSale, una por
+        cada llamada asistida sin seguimiento etiquetado.
+
+        Las atadas por id cuentan porque la ficha del lead se las ata al cliente antes de
+        corregirle el correo o el instagram: sin ellas, el conteo de seguimientos volvía a tratar
+        como "no compró" a quien la lista y la ficha ya muestran como cliente."""
         from app.models import FinancialSale
 
         if not clients:
             return set()
 
-        mails, igs = set(), set()
-        for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+        mails, igs, atados = set(), set(), set()
+        for mail, ig, client_id in db.session.query(
+                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id).all():
             if mail:
                 mails.add(mail.strip().lower())
             if ig:
                 igs.add(ig.strip().lstrip('@').lower())
+            if client_id:
+                atados.add(client_id)
 
         con_venta = set()
         for c in clients:
             if not c:
                 continue
-            if c.email and c.email.strip().lower() in mails:
+            if c.id in atados:
+                con_venta.add(c.id)
+            elif c.email and c.email.strip().lower() in mails:
                 con_venta.add(c.id)
             elif c.instagram and c.instagram.strip().lstrip('@').lower() in igs:
                 con_venta.add(c.id)

@@ -254,37 +254,49 @@ class CloserAgendasService:
     @staticmethod
     def _ventas_por_contacto(appts, identifiers):
         """Cruce en lote cita→venta con el mismo criterio que `CloserFollowUpService.
-        _client_has_sale` (email o instagram del cliente contra FinancialSale), pero en una sola
-        pasada para toda la lista en vez de una consulta por fila. Devuelve dos diccionarios
-        {email → es_propia} e {instagram → es_propia}; "propia" = `email_vendedor` es de este
-        closer (mismo mapeo que usan Mi cartera y las estadísticas)."""
+        _client_has_sale` (email o instagram del cliente contra FinancialSale, más las ventas
+        atadas al cliente por id), pero en una sola pasada para toda la lista en vez de una
+        consulta por fila. Devuelve tres diccionarios {email → es_propia}, {instagram → es_propia}
+        y {client_id → es_propia}; "propia" = `email_vendedor` es de este closer (mismo mapeo que
+        usan Mi cartera y las estadísticas).
+
+        El de client_id existe porque la ficha del lead, al corregirle el correo o el instagram a
+        quien ya compró, le ata las ventas por id antes del cambio: sin él, la fila de Revisar y la
+        del libro de agendas pasaban de "Venta" a "Presentó, no cerró" mientras la ficha y
+        `_client_has_sale` seguían diciendo que compró."""
         emails = {e for e in (_clean_email(a.client.email) for a in appts if a.client) if e}
         igs = {i for i in (_clean_ig(a.client.instagram) for a in appts if a.client) if i}
-        por_email, por_ig = {}, {}
-        if not emails and not igs:
-            return por_email, por_ig
+        ids = {a.client_id for a in appts if a.client_id}
+        por_email, por_ig, por_id = {}, {}, {}
+        if not emails and not igs and not ids:
+            return por_email, por_ig, por_id
 
         def _chunks(values):
             values = sorted(values)
             for i in range(0, len(values), _IN_CHUNK):
                 yield values[i:i + _IN_CHUNK]
 
-        columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.email_vendedor)
+        columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.email_vendedor,
+                    FinancialSale.client_id)
         rows = []
         for lote in _chunks(emails):
             rows += db.session.query(*columnas).filter(func.lower(FinancialSale.mail_cliente).in_(lote)).all()
         for lote in _chunks(igs):
             rows += db.session.query(*columnas).filter(
                 func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
+        for lote in _chunks(ids):
+            rows += db.session.query(*columnas).filter(FinancialSale.client_id.in_(lote)).all()
 
-        for mail, ig, vendedor in rows:
+        for mail, ig, vendedor, client_id in rows:
             propia = (vendedor or '').strip().lower() in identifiers
             mail_c, ig_c = _clean_email(mail), _clean_ig(ig)
             if mail_c in emails:
                 por_email[mail_c] = por_email.get(mail_c, False) or propia
             if ig_c in igs:
                 por_ig[ig_c] = por_ig.get(ig_c, False) or propia
-        return por_email, por_ig
+            if client_id in ids:
+                por_id[client_id] = por_id.get(client_id, False) or propia
+        return por_email, por_ig, por_id
 
     @staticmethod
     def _fase_modal(appt, estado, venta):
@@ -367,7 +379,7 @@ class CloserAgendasService:
         appts = query.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
 
         identifiers = {e.lower() for e in CloserService._resolve_sale_identifiers(user)}
-        ventas_email, ventas_ig = CloserAgendasService._ventas_por_contacto(appts, identifiers)
+        ventas_email, ventas_ig, ventas_id = CloserAgendasService._ventas_por_contacto(appts, identifiers)
 
         now_utc = datetime.utcnow()
         items = []
@@ -376,8 +388,9 @@ class CloserAgendasService:
             estado = derivar_estado(a, now_utc)
             mail_c = _clean_email(a.client.email) if a.client else None
             ig_c = _clean_ig(a.client.instagram) if a.client else None
-            venta = (mail_c in ventas_email) or (ig_c in ventas_ig)
-            venta_propia = bool(ventas_email.get(mail_c) or ventas_ig.get(ig_c))
+            venta = (mail_c in ventas_email) or (ig_c in ventas_ig) or (a.client_id in ventas_id)
+            venta_propia = bool(ventas_email.get(mail_c) or ventas_ig.get(ig_c)
+                                or ventas_id.get(a.client_id))
             items.append(CloserAgendasService._serialize(a, estado, venta, venta_propia))
             counts['total'] += 1
             counts['por_estado'][estado] += 1
