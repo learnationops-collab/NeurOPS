@@ -3,11 +3,11 @@ import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
-import { Cargando, Tip, fmt } from './Shared';
+import { Tip, fmt } from './Shared';
 import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
-import RevisarLista from './RevisarLista';
+import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { useModoVista } from '../../../components/listas/useModoVista';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
@@ -427,7 +427,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 </div>
             )}
 
-            {cargando ? <Cargando /> : (
+            {cargando ? <EsqueletoRevisar def={def} plantilla={plantilla} modo={modoVista}
+                totales={totales.length} /> : (
                 <>
                     <TotalesTira items={totales} alcance={alcanceTexto} />
 

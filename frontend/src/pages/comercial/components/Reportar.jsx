@@ -3,7 +3,7 @@ import { ArrowRight, Check, ChevronRight, Plus, Trophy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 // El "i" era una copia local que abría por CSS y no sabía nada de la ventana; ahora es el `Tip`
 // compartido, que mide antes de abrir (ver `Tip.jsx`).
-import { Cargando, Tip, fmt } from './Shared';
+import { EsqueletoFilas, EsqueletoPanel, Tip, fmt } from './Shared';
 import { getConstancia, getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
 
 /**
@@ -254,7 +254,7 @@ const PanelConstancia = () => {
                 </div>
             </div>
 
-            {!datos ? <Cargando texto="Cargando la constancia…" /> : (
+            {!datos ? <EsqueletoFilas rotulo="Cargando la constancia…" lineas={6} alto={22} /> : (
                 <div className="hundido" style={{ padding: 'var(--s3) var(--s4)' }}>
                     <div className="rep-fila"
                         style={{ cursor: 'default', paddingLeft: 0, paddingRight: 0 }}>
@@ -775,7 +775,7 @@ const Historial = ({ miembros, nuevoId, aviso, onCerrarAviso }) => {
         </>
     );
 
-    if (!datos) return <>{banda}<Cargando texto="Cargando el historial…" /></>;
+    if (!datos) return <>{banda}<EsqueletoPanel rotulo="Cargando el historial…" /></>;
 
     if (datos.reportes.length === 0 && filtro === TODO) {
         return (
@@ -1023,7 +1023,7 @@ const Reportar = ({ tab, setTab, miembros, irAPersona, onStepper }) => {
         return <Historial miembros={miembros} nuevoId={nuevoId} aviso={aviso}
             onCerrarAviso={() => setAviso(false)} />;
     }
-    if (!dia) return <Cargando texto="Cargando el día del equipo…" />;
+    if (!dia) return <EsqueletoPanel rotulo="Cargando el día del equipo…" />;
 
     return (
         <>

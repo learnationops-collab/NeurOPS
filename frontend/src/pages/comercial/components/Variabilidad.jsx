@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Cargando, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
+import { EsqueletoPanel, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
 import { abrir } from '../../../components/dashboard/MetricaClicable';
 import { conDia, destinoDeSerie, serieCortable } from './destinos';
 
@@ -261,7 +261,7 @@ const PanelSerie = ({ serie, dias, vista, rol, irA }) => {
 const Variabilidad = ({ datos, rol, irA }) => {
     const [vista, setVista] = useState('barras');
 
-    if (!datos) return <Cargando texto="Cargando las series del período…" />;
+    if (!datos) return <EsqueletoPanel rotulo="Cargando las series del período…" lineas={1} alto={248} />;
 
     const { dias, series } = datos;
     if (!series?.length || !dias?.length) {

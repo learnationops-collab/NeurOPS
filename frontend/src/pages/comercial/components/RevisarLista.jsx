@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
+import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
 import { fmt } from './Shared';
 
 /**
@@ -172,6 +173,62 @@ const Tarjetas = ({ def, filas, onAbrirFila }) => (
     <VistaTarjetas filas={filas} clave={claveDe} onAbrir={onAbrirFila}
         titulo={(f) => f.cliente} subtitulo={(f) => f.ig}
         chips={chipsDe(def)} campos={camposDe(def)} />
+);
+
+/* ============================================================
+   HUESOS — la forma de la tabla mientras carga
+   ============================================================ */
+
+/* Los anchos de los huesos se alternan: con todos iguales la tabla parecía un tablero de ajedrez,
+   que no es la forma de ninguna lista real. `ver` es la flecha, que sí es siempre del mismo tamaño. */
+const ANCHOS_HUESO = ['70%', '84%', '56%', '76%', '62%'];
+const anchoHueso = (col, i) => (col.key === 'ver' ? 14 : ANCHOS_HUESO[i % ANCHOS_HUESO.length]);
+
+/** Una fila de huesos con las columnas REALES de la tabla: `def.cols` trae el `width` de cada una,
+ *  así que el hueso cae justo donde va a caer el dato y al llegar las filas nada se corre. */
+const HuesoFila = ({ def, plantilla, paso }) => (
+    <div className="tabla-fila" style={{ '--cols': plantilla }} aria-hidden="true">
+        {def.cols.map((c, i) => (
+            <div key={c.key} data-h={c.header}>
+                <Hueso alto={12} ancho={anchoHueso(c, i)} paso={paso} />
+            </div>
+        ))}
+    </div>
+);
+
+const HuesoTarjeta = ({ paso }) => (
+    <div className="reg-tarjeta" aria-hidden="true" style={{ pointerEvents: 'none' }}>
+        <Hueso alto={15} ancho="58%" paso={paso} />
+        <Hueso alto={11} ancho="34%" paso={paso + 1} style={{ marginTop: 'var(--s2)' }} />
+        <Hueso alto={46} paso={paso + 2} style={{ marginTop: 'var(--s4)' }} />
+    </div>
+);
+
+/**
+ * Lo que se ve en Revisar mientras el backend devuelve las filas: la tira de totales y la tabla,
+ * con el encabezado de verdad. El encabezado no se dibuja con huesos porque ya se sabe —las
+ * columnas son de la definición, no del servidor— y leerlo mientras carga adelanta qué viene.
+ */
+export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 }) => (
+    <Esqueleto rotulo="Cargando los registros…">
+        <div className="tot-tira" aria-hidden="true">
+            {Array.from({ length: totales }, (_, i) => (
+                <Hueso key={i} alto={18} ancho={96} paso={i} />
+            ))}
+        </div>
+        {modo === 'tarjetas' ? (
+            <div className="tarjetas" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, i) => <HuesoTarjeta key={i} paso={i} />)}
+            </div>
+        ) : (
+            <div className="tabla">
+                <Encabezado def={def} plantilla={plantilla} />
+                {Array.from({ length: filas }, (_, i) => (
+                    <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+                ))}
+            </div>
+        )}
+    </Esqueleto>
 );
 
 const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }) => {

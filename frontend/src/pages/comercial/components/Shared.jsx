@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Loader2 } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import Tip from './Tip';
+import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
 
 /**
  * Piezas compartidas del dashboard comercial.
@@ -159,8 +160,69 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
     );
 };
 
-export const Cargando = ({ texto = 'Cargando…' }) => (
-    <div className="dc-loading"><Loader2 size={18} className="dc-spin" /> {texto}</div>
+/**
+ * Lo que se ve mientras el tablero carga: la forma de los cuatro KPIs y de los paneles que vienen
+ * abajo, no un círculo girando.
+ *
+ * El spinner que había acá tenía un `min-height` fijo de 240 px, así que al llegar los datos la
+ * página crecía de golpe y todo lo de abajo saltaba. El esqueleto ocupa el lugar real: los KPIs
+ * con el alto de la cifra, los paneles con el alto de sus filas.
+ */
+const HuesoPanel = ({ paso = 0, lineas = 5, alto = 26 }) => (
+    <section className="panel" aria-hidden="true">
+        <div className="panel-cab"><Hueso alto={12} ancho={150} paso={paso} /></div>
+        <div className="huesos">
+            {Array.from({ length: lineas }, (_, i) => (
+                <Hueso key={i} alto={alto} paso={paso + i + 1} />
+            ))}
+        </div>
+    </section>
+);
+
+/** El esqueleto de una sección entera. `alto` es para las que no son filas: una curva es un solo
+ *  bloque alto, y dibujarla como seis renglones prometería una tabla que no viene. */
+export const EsqueletoPanel = ({ rotulo = 'Cargando…', lineas = 6, alto }) => (
+    <Esqueleto rotulo={rotulo}><HuesoPanel lineas={lineas} alto={alto} /></Esqueleto>
+);
+
+/** Huesos sueltos, sin caja: para cuando el esqueleto va DENTRO de un panel que ya está dibujado
+ *  (si no, la caja quedaba anidada y se veían dos bordes). */
+export const EsqueletoFilas = ({ rotulo = 'Cargando…', lineas = 5, alto = 26 }) => (
+    <Esqueleto rotulo={rotulo} className="huesos">
+        {Array.from({ length: lineas }, (_, i) => <Hueso key={i} alto={alto} paso={i} />)}
+    </Esqueleto>
+);
+
+export const EsqueletoTablero = ({ rotulo = 'Cargando el tablero…' }) => (
+    <Esqueleto rotulo={rotulo} style={{ display: 'grid', gap: 'var(--s4)' }}>
+        <div className="grid grid--4">
+            {[0, 1, 2, 3].map(i => (
+                <section key={i} className="kpi" aria-hidden="true">
+                    <Hueso alto={10} ancho="48%" paso={i} />
+                    {/* 34 px es el alto de `.kpi-n`: el hueso de la cifra tiene que medir lo que
+                        va a medir la cifra, o el KPI cambia de alto al llegar el número. */}
+                    <Hueso alto={34} ancho="72%" paso={i + 1} style={{ marginTop: 'var(--s4)' }} />
+                    <Hueso alto={10} ancho="60%" paso={i + 2} style={{ marginTop: 'var(--s3)' }} />
+                </section>
+            ))}
+        </div>
+        <div className="grid-2">
+            <HuesoPanel paso={4} />
+            <HuesoPanel paso={5} />
+        </div>
+    </Esqueleto>
+);
+
+/** Igual, más la barra del header: es lo que se dibuja antes de saber quién es el que mira. */
+export const EsqueletoPagina = ({ rotulo = 'Abriendo el dashboard…' }) => (
+    <div style={{ display: 'grid', gap: 'var(--s5)' }}>
+        <div className="fila" style={{ gap: 'var(--s2)' }} aria-hidden="true">
+            <Hueso alto={32} ancho={190} radio="var(--radius-pill)" />
+            <Hueso alto={32} ancho={150} radio="var(--radius-pill)" paso={1} />
+            <Hueso alto={32} ancho={120} radio="var(--radius-pill)" paso={2} />
+        </div>
+        <EsqueletoTablero rotulo={rotulo} />
+    </div>
 );
 
 /** Barra que anima de 0 al valor al montar (1s, la curva `--crecer` del diseño). */

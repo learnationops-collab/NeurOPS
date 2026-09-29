@@ -1332,28 +1332,9 @@
    ya funciona; los duplicados se resuelven al integrar.
    ============================================================ */
 
-/* El spinner de carga (componente `Cargando`) no existe en la referencia.
-   Va sin prefijo de shell, como estaba, porque se renderiza tambien antes
-   de que el tablero exista. */
-.dc-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 240px;
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-.dc-spin {
-    animation: dcSpin 1s linear infinite;
-}
-
-@keyframes dcSpin {
-    to {
-        transform: rotate(360deg);
-    }
-}
+/* El spinner de carga se fue: la carga ahora se dibuja con la forma de lo
+   que viene (`components/huesos`). Se lo saco junto con sus clases para que
+   nadie lo reviva por copiar y pegar. */
 
 /* Alias de los dos nombres que el marcado viejo usa y la referencia
    renombro: `.dc-wrap` es `.wrap` y `.dc-num` es `.num`. */

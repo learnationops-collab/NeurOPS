@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Cargando, Delta, fmt, Segmented, useMontado } from './Shared';
+import { Delta, EsqueletoPanel, fmt, Segmented, useMontado } from './Shared';
 import { DESTINOS_METRICA } from './destinos';
 
 /**
@@ -244,7 +244,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
 const Comparativas = ({ datos, irAPersona }) => {
     const [metricaKey, setMetricaKey] = useState(null);
 
-    if (!datos) return <Cargando />;
+    if (!datos) return <EsqueletoPanel rotulo="Cargando las comparativas…" lineas={7} />;
 
     const metrica = datos.metricas.find(m => m.key === metricaKey) || datos.metricas[0];
     const filas = [...datos.filas].sort((a, b) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Hueso } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
@@ -348,11 +348,24 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // resumen general del cliente (se quitó como destino por defecto).
     const openLead = (item, tipo) => onOpenLead(buildLeadPayload(item, tipo));
 
+    // Mientras carga se dibuja la forma de lo que viene —la barra de la meta y las filas de
+    // "asignados para hoy"— y no un spinner: con el spinner la pestaña medía 120 px y al llegar
+    // los datos crecía de golpe, empujando el resto del mazo hacia abajo.
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 className="animate-spin text-violet-500" size={32} />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Cargando seguimientos...</span>
+            <div className="space-y-6" role="status" aria-busy="true" aria-label="Cargando seguimientos…">
+                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6">
+                    <Hueso alto={44} ancho={92} />
+                    <div className="flex-1 space-y-2">
+                        <Hueso alto={13} ancho="46%" paso={1} />
+                        <Hueso alto={10} ancho="32%" paso={2} />
+                        <Hueso alto={8} radio={999} paso={3} />
+                    </div>
+                </div>
+                <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 space-y-4">
+                    <Hueso alto={15} ancho={210} />
+                    {[0, 1, 2, 3].map(i => <Hueso key={i} alto={62} paso={i + 1} />)}
+                </div>
             </div>
         );
     }
@@ -543,7 +556,10 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                         </div>
 
                         {poolLoading ? (
-                            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-violet-500" size={24} /></div>
+                            <div className="space-y-2" role="status" aria-busy="true"
+                                aria-label="Cargando el pool…">
+                                {[0, 1, 2, 3].map(i => <Hueso key={i} alto={54} paso={i} />)}
+                            </div>
                         ) : poolVisibles.length === 0 ? (
                             <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">
                                 {q && poolItems.length > 0

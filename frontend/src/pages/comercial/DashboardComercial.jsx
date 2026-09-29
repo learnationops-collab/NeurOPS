@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import './comercial.css';
 import '../../components/learnation-ds/learnation-ds.css';
-import { Cargando, Humo, PillMenu, Segmented } from './components/Shared';
+import { EsqueletoPagina, Humo, PillMenu, Segmented } from './components/Shared';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
@@ -401,7 +401,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     if (!contexto) {
         return (
             <div className={embebido ? 'dc-shell dc-shell--embebido' : 'dc-shell'}>
-                <div className="wrap"><Cargando texto="Abriendo el dashboard…" /></div>
+                <div className="wrap"><EsqueletoPagina /></div>
             </div>
         );
     }
