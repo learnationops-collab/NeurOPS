@@ -132,11 +132,17 @@ export const duplicadasDe = (filas) => {
 };
 
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cinco.
+//
+// El `ayuda` de cada tabla es lo que se lee en el tooltip del "i", y va al MÍNIMO: alcanza con lo
+// que hace falta para no malinterpretar la lista. Antes explicaba la decisión entera y el de
+// `clientes` eran seis renglones que nadie termina de leer. El porqué largo no se perdió: vive en
+// el comentario que hay arriba de cada `ayuda`, donde le sirve a quien toque este archivo.
 export const TABLAS = {
     agendas: {
         label: 'Agendas',
-        ayuda: 'Todas las llamadas agendadas del período. Tocá una fila para abrir el recorrido '
-            + 'del lead y, si hace falta, corregir su estado.',
+        // Se aclara que la fila se abre porque el `div` de la fila no parece clicable (no es un
+        // `<button>`) y desde acá se corrigen los estados mal cargados.
+        ayuda: 'Las llamadas agendadas del período. Tocá una fila para abrir el lead.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
             { key: 'cliente', header: 'Cliente', width: '1.8fr' },
@@ -171,7 +177,10 @@ export const TABLAS = {
     },
     ventas: {
         label: 'Ventas',
-        ayuda: 'Las ventas cobradas en el período, con su programa, forma de pago y medio de cobro.',
+        // Se dice "cobradas" y no "cerradas" a propósito, porque son dos listas distintas y el
+        // equipo las confunde. Lo que antes enumeraba el texto (programa, forma de pago, medio de
+        // cobro) son las columnas de al lado: describirlas en el tooltip era repetir la pantalla.
+        ayuda: 'Las ventas cobradas en el período.',
         cols: [
             { key: 'fecha', header: 'Venta', width: '0.8fr' },
             { key: 'cliente', header: 'Cliente', width: '1.9fr' },
@@ -209,7 +218,9 @@ export const TABLAS = {
     },
     leads: {
         label: 'Leads entrantes',
-        ayuda: 'Los leads nuevos que entraron al inbox en el período, con su estado de conversación.',
+        // "Entraron en el período" es el dato que importa: la tabla NO es el inbox de hoy, es
+        // quiénes llegaron en esas fechas, con el estado en que está hoy esa conversación.
+        ayuda: 'Los leads que entraron al inbox en el período.',
         cols: [
             { key: 'fecha', header: 'Llegó', width: '0.9fr' },
             { key: 'cliente', header: 'Lead', width: '1.9fr' },
@@ -239,12 +250,17 @@ export const TABLAS = {
     },
     clientes: {
         label: 'Clientes',
-        ayuda: 'Cada cliente que el equipo ya vendió, con lo que pagó, lo que debe y su próxima '
-            + 'cuota. NO depende del período: la cartera es un saldo a hoy, no un flujo — acotarla '
-            + 'al mes dejaría afuera justamente a los que arrastran deuda de antes. La atribución '
-            + 'es por quién VENDIÓ, así que su deuda no es la misma cifra que el "por cobrar" del '
-            + 'panel Cash, que cuenta por quién tiene hoy la agenda del cliente — y que además '
-            + 'incluye saldos de clientes que nadie del equipo actual vendió.',
+        // Las dos cosas que el texto corto tiene que salvar, y por qué:
+        //
+        //   · **No depende del período.** La cartera es un SALDO a hoy, no un flujo: acotarla al
+        //     mes elegido dejaría afuera justamente a los que arrastran deuda de antes, que son
+        //     los que hay que ir a cobrar. Es también el motivo de que la tabla tarde: pide todo.
+        //   · **Su total no coincide con el "por cobrar" del panel Cash.** Acá la atribución es
+        //     por quién VENDIÓ; en Cash, por quién tiene hoy la agenda del cliente — y Cash suma
+        //     además saldos de clientes que nadie del equipo actual vendió. Ver los dos números
+        //     distintos y pensar que uno está roto era la lectura equivocada más común.
+        ayuda: 'Todos los clientes con venta, no solo los del período: la cartera es un saldo a '
+            + 'hoy. Su total no coincide con el "por cobrar" de Cash, que atribuye por otra regla.',
         cols: [
             { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'programa', header: 'Programa', width: '1.2fr' },
@@ -273,8 +289,10 @@ export const TABLAS = {
     },
     generadas: {
         label: 'Agendas generadas',
-        ayuda: 'Las agendas que generó el equipo de setting, con el closer asignado y cómo '
-            + 'terminó la llamada.',
+        // Es la misma llamada que en `agendas`, contada del otro lado: acá el dueño de la fila es
+        // el setter que la generó, no el closer que la atendió. Eso es lo único que el texto
+        // necesita decir; el closer y el resultado están en sus columnas.
+        ayuda: 'Las agendas que generó el equipo de setting.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
             { key: 'cliente', header: 'Lead', width: '1.8fr' },
