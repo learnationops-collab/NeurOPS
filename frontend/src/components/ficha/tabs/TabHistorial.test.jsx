@@ -4,7 +4,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TabHistorial from './TabHistorial';
 import { fichaPrecall } from '../__fixtures__/ficha';
-import { localDateFromNow } from '../../../utils/datetime';
+import { localDateFromNow, localToday } from '../../../utils/datetime';
 
 // `start_time` viaja en UTC y sin Z, como lo manda `isoformat()`. Las expectativas se arman con la
 // misma cuenta en la zona del proceso, para que el test no dependa del huso de la máquina.
@@ -444,6 +444,20 @@ describe('los pagos del historial', () => {
         expect(onAccion).not.toHaveBeenCalled();
     });
 
+    it('pasarle la fecha a un día que todavía no llegó no se guarda', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario);
+        await usuario.click(lapiz());
+        const fecha = within(editor()).getByLabelText('Fecha del pago');
+        await usuario.clear(fecha);
+        await usuario.type(fecha, '2099-01-01');
+
+        const guardar = within(editor()).getByRole('button', { name: 'Guardar cambios' });
+        expect(guardar).toBeDisabled();
+        expect(guardar).toHaveAttribute('title', expect.stringMatching(/fecha futura/));
+        expect(onAccion).not.toHaveBeenCalled();
+    });
+
     it('si el backend rechaza, el editor se queda abierto con lo cargado', async () => {
         const usuario = userEvent.setup();
         const onAccion = vi.fn().mockRejectedValue(new Error('Ese pago no es de este lead.'));
@@ -510,6 +524,95 @@ describe('los pagos del historial', () => {
         expect(screen.getByText('Residency Roadmap · Stripe')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Corregir el pago/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Borrar el pago/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Agregar pago' })).not.toBeInTheDocument();
+    });
+});
+
+describe('agregar un pago desde el historial', () => {
+    const formulario = () => screen.getByRole('group', { name: 'Agregar un pago' });
+    const abrirFormulario = async (usuario, f, onAccion) => {
+        const accion = await abrirPagos(usuario, f, onAccion);
+        await usuario.click(screen.getByRole('button', { name: 'Agregar pago' }));
+        return accion;
+    };
+
+    it('arranca con hoy, el programa del cliente, el medio de su último pago y «Cuota»', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirFormulario(usuario, conPagos([PAGO]));
+
+        expect(within(formulario()).getByLabelText('Fecha del pago')).toHaveValue(localToday());
+        expect(within(formulario()).getByLabelText('Programa del pago')).toHaveValue('RR');
+        expect(within(formulario()).getByLabelText('Medio de pago')).toHaveValue('Stripe');
+        expect(within(formulario()).getByLabelText('Tipo de pago')).toHaveValue('cuota');
+        const agregar = within(formulario()).getByRole('button', { name: 'Agregar pago' });
+        expect(agregar).toHaveAttribute('title', 'El monto tiene que ser mayor que cero');
+        await usuario.type(within(formulario()).getByLabelText('Monto'), '250');
+        await usuario.click(agregar);
+
+        expect(onAccion).toHaveBeenCalledWith('agregar_pago', {
+            fecha: localToday(), monto: 250, metodo_pago: 'Stripe', programa_code: 'RR', tipo: 'cuota',
+        });
+        expect(screen.queryByRole('group', { name: 'Agregar un pago' })).not.toBeInTheDocument();
+    });
+
+    it('dice que no es «Registrar pago»: no avisa al cliente ni escribe en la hoja', async () => {
+        const usuario = userEvent.setup();
+        await abrirFormulario(usuario, conPagos([]));
+
+        expect(within(formulario()).getByText(/No le avisa al cliente, no\s+escribe en Google Sheets/))
+            .toBeInTheDocument();
+    });
+
+    it('una fecha futura no se agrega', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirFormulario(usuario, conPagos([PAGO]));
+        const fecha = within(formulario()).getByLabelText('Fecha del pago');
+        await usuario.clear(fecha);
+        await usuario.type(fecha, '2099-01-01');
+        await usuario.type(within(formulario()).getByLabelText('Monto'), '250');
+
+        const agregar = within(formulario()).getByRole('button', { name: 'Agregar pago' });
+        expect(agregar).toBeDisabled();
+        expect(agregar).toHaveAttribute('title', expect.stringMatching(/fecha futura/));
+        expect(onAccion).not.toHaveBeenCalled();
+    });
+
+    it('un cliente sin programa lo tiene que elegir antes de agregar', async () => {
+        const usuario = userEvent.setup();
+        const sinPrograma = conPagos([]);
+        sinPrograma.cobro = { ...sinPrograma.cobro, programa_code: null };
+        const onAccion = await abrirFormulario(usuario, sinPrograma);
+        await usuario.type(within(formulario()).getByLabelText('Monto'), '250');
+
+        const agregar = within(formulario()).getByRole('button', { name: 'Agregar pago' });
+        expect(agregar).toHaveAttribute('title', 'Elegí el programa del pago');
+        await usuario.selectOptions(within(formulario()).getByLabelText('Programa del pago'), 'AL');
+        await usuario.click(agregar);
+
+        expect(onAccion).toHaveBeenCalledWith('agregar_pago', expect.objectContaining({ programa_code: 'AL' }));
+    });
+
+    it('si el backend rechaza, el formulario se queda con lo cargado', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('Elegí uno de los programas de la lista.'));
+        await abrirFormulario(usuario, conPagos([PAGO]), onAccion);
+        await usuario.type(within(formulario()).getByLabelText('Monto'), '250');
+        await usuario.click(within(formulario()).getByRole('button', { name: 'Agregar pago' }));
+
+        expect(within(formulario()).getByLabelText('Monto')).toHaveValue(250);
+    });
+
+    it('Escape cierra el formulario sin cerrar la ficha y el foco vuelve al botón', async () => {
+        const usuario = userEvent.setup();
+        const cerrarFicha = vi.fn();
+        document.addEventListener('keydown', cerrarFicha);
+        await abrirFormulario(usuario, conPagos([PAGO]));
+        await usuario.keyboard('{Escape}');
+        document.removeEventListener('keydown', cerrarFicha);
+
+        expect(screen.queryByRole('group', { name: 'Agregar un pago' })).not.toBeInTheDocument();
+        expect(cerrarFicha).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Agregar pago' })).toHaveFocus();
     });
 });
 

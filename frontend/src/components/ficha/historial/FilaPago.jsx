@@ -73,7 +73,9 @@ const FilaPago = ({
         if (valores.tipo && valores.tipo !== inicial.tipo) cambios.tipo = valores.tipo;
     }
     const hayCambios = Object.keys(cambios).length > 0;
-    const falta = editando ? faltaParaGuardar(valores, { cambiaTipo: !!cambios.tipo }) : null;
+    const falta = editando
+        ? faltaParaGuardar(valores, { cambiaTipo: !!cambios.tipo, cambiaFecha: !!cambios.fecha })
+        : null;
 
     const guardar = async () => {
         if (!hayCambios || falta) return;

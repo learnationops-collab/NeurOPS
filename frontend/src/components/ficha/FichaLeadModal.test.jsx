@@ -222,6 +222,24 @@ describe('onAccion pega en el endpoint correcto', () => {
 
             expect(await screen.findByText(/la deuda no cambió/)).toBeInTheDocument();
         });
+
+        it('agregar un pago postea en la ruta de pagos y no declara una venta', async () => {
+            // `/venta` pasa por Sheets y n8n: agregar un pago olvidado no tiene que avisarle a nadie.
+            const usuario = userEvent.setup();
+            await abrir(conVocabularioDePagos);
+            api.post.mockResolvedValueOnce({ data: { id: 900, espejo: true, deuda: 50 } });
+            await usuario.click(screen.getByRole('button', { name: /^Pagos/ }));
+            await usuario.click(screen.getByRole('button', { name: 'Agregar pago' }));
+            await usuario.type(screen.getByLabelText('Monto'), '50');
+            const formulario = screen.getByRole('group', { name: 'Agregar un pago' });
+            await usuario.click(within(formulario).getByRole('button', { name: 'Agregar pago' }));
+
+            expect(api.post).toHaveBeenCalledWith('/ficha/9012/pago', expect.objectContaining({
+                monto: 50, metodo_pago: 'Stripe', tipo: 'cuota',
+            }));
+            expect(api.post).not.toHaveBeenCalledWith('/ficha/9012/venta', expect.anything());
+            expect(await screen.findByText('Pago agregado: la deuda ya lo cuenta.')).toBeInTheDocument();
+        });
     });
 
     it('enviar una nota postea en la ruta de notas y limpia el campo', async () => {
