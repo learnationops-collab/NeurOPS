@@ -271,6 +271,116 @@ def test_las_ventas_se_acotan_por_el_nombre_canonico_del_closer(db, marlon):
     assert ComercialService.totales_ventas(filas)['cash'] == 300.0
 
 
+# --- El cliente de cada venta, para poder abrirle la ficha --------------------------------------
+#
+# Sin `client_id` en la fila, la tabla Ventas cae al modal viejo. Y `FinancialSale.client_id` solo
+# lo tienen las ventas nuevas: en la base local faltaba en 711 de 897.
+
+@freeze_time(HOY)
+def test_la_venta_lleva_el_cliente_que_ya_tenia_guardado(db, marlon):
+    cliente = Client(full_name='Luciana Paredes', email='luciana@test.local')
+    db.session.add(cliente)
+    db.session.commit()
+    v = venta(db, mail='luciana@test.local')
+    v.client_id = cliente.id
+    db.session.commit()
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] == cliente.id
+
+
+@freeze_time(HOY)
+def test_una_venta_vieja_se_cruza_por_correo(db, marlon):
+    """El caso de los datos historicos: la venta no guardo el cliente, pero es el mismo correo."""
+    cliente = Client(full_name='Luciana Paredes', email='Luciana@Test.local')
+    db.session.add(cliente)
+    db.session.commit()
+    venta(db, mail='luciana@test.local')
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] == cliente.id
+
+
+@freeze_time(HOY)
+def test_si_no_hay_correo_se_cruza_por_instagram(db, marlon):
+    cliente = Client(full_name='Luciana Paredes', instagram='@luci.paredes')
+    db.session.add(cliente)
+    db.session.commit()
+    venta(db, mail=None, ig='luci.paredes')
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] == cliente.id
+
+
+@freeze_time(HOY)
+def test_el_correo_gana_sobre_el_instagram(db, marlon):
+    """Mismo orden de precedencia que `create_or_update_client`, o la ficha abriria otro cliente."""
+    por_correo = Client(full_name='La del correo', email='luciana@test.local')
+    por_ig = Client(full_name='La del instagram', instagram='luci.paredes')
+    db.session.add_all([por_correo, por_ig])
+    db.session.commit()
+    venta(db, mail='luciana@test.local', ig='luci.paredes')
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] == por_correo.id
+
+
+@freeze_time(HOY)
+def test_el_correo_inventado_por_neurops_no_cruza_a_nadie(db, marlon):
+    """`no-email-<hex>@neurops.com` no identifica a nadie: cruzar por el juntaria dos leads."""
+    cliente = Client(full_name='Otro', email='no-email-abc123@neurops.com')
+    db.session.add(cliente)
+    db.session.commit()
+    venta(db, mail='no-email-abc123@neurops.com')
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] is None
+
+
+@freeze_time(HOY)
+def test_una_venta_que_no_cruza_con_nadie_no_inventa_un_cliente(db, marlon):
+    """Esa fila se queda con el modal viejo, que es lo unico honesto: no hay ficha que abrir."""
+    venta(db, mail='nadie@test.local', ig='nadie')
+
+    fila = ComercialService.ventas(DESDE, HASTA)[0]
+
+    assert fila['client_id'] is None
+
+
+@freeze_time(HOY)
+def test_el_cruce_no_consulta_una_vez_por_venta(db, marlon):
+    """El indice se arma UNA vez: con una consulta por fila, la tabla del periodo se arrastra."""
+    from sqlalchemy import event
+
+    db.session.add(Client(full_name='Luciana Paredes', email='luciana@test.local'))
+    db.session.commit()
+    for i in range(12):
+        venta(db, mail='luciana@test.local', monto=100.0 + i)
+
+    consultas = []
+    motor = db.session.get_bind()
+
+    def contar(conn, cursor, sentencia, *a, **k):
+        if 'clients' in sentencia.lower():
+            consultas.append(sentencia)
+
+    event.listen(motor, 'before_cursor_execute', contar)
+    try:
+        filas = ComercialService.ventas(DESDE, HASTA)
+    finally:
+        event.remove(motor, 'before_cursor_execute', contar)
+
+    assert len(filas) == 12
+    assert all(f['client_id'] for f in filas)
+    # Una sola lectura de `clients` para las 12 ventas, no doce.
+    assert len(consultas) == 1, consultas
+
+
 @freeze_time(HOY)
 def test_el_programa_sale_del_prefijo_del_tipo_de_pago(db, marlon):
     venta(db, mail='a@test.local', tipo='RR - Completo')

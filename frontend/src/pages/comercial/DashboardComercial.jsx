@@ -17,12 +17,20 @@ import Reportar from './components/Reportar';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 
 /**
- * La ficha unificada se pide por agenda o por cliente. Una venta y un lead de ManyChat no
- * traen ninguno de los dos en su fila, asi que siguen con el modal viejo hasta que la ficha
- * sepa resolver una identidad por contacto.
+ * La ficha unificada se pide por agenda o por cliente, así que una fila la puede abrir solo si
+ * trae uno de los dos.
+ *
+ * Una venta ahora sí: el backend le resuelve el `client_id` —el guardado, y si no lo tiene, el
+ * que sale de cruzar su contacto (ver `clientes_de_ventas`)—, lo que cubre 867 de las 897 ventas
+ * de la base local. Las 30 que no se cruzan con ningún cliente siguen con el modal viejo, porque
+ * no hay ficha que abrir: no es una degradación, es que esa venta no tiene a quién pertenecer.
+ *
+ * Un lead de ManyChat sigue afuera por el mismo motivo, y ese sí es un pendiente: su fila no
+ * trae ninguna de las dos claves.
  */
 const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
-    || (fila?.tipo === 'cliente' && !!fila.client_id);
+    || (fila?.tipo === 'cliente' && !!fila.client_id)
+    || (fila?.tipo === 'venta' && !!fila.client_id);
 
 /**
  * Dashboard comercial.
@@ -524,18 +532,16 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                 </div>
 
-                {/* Una agenda y un cliente abren la ficha unificada: el recorrido entero del
-                    lead en un solo modal, con la pestaña que corresponde al estado en el que
-                    está. Antes eran dos modales distintos y ninguno mostraba todo.
+                {/* Una agenda, un cliente y una venta abren la ficha unificada: el recorrido
+                    entero del lead en un solo modal, con la pestaña que corresponde al estado en
+                    el que está. Antes eran dos modales distintos y ninguno mostraba todo.
 
-                    Una venta y un lead de ManyChat siguen con el modal viejo: sus filas no
-                    traen ni agenda ni cliente con los que pedir la ficha, y resolverlos por
-                    email o instagram es justo el cruce por texto libre que no conviene hacer
-                    a la ligera. */}
+                    Un lead de ManyChat sigue con el modal viejo: su fila no trae ni agenda ni
+                    cliente con los que pedir la ficha. */}
                 {filaAbierta && (esFichaUnificada(filaAbierta) ? (
                     <FichaLeadModal
                         appointmentId={filaAbierta.tipo === 'agenda' ? filaAbierta.id : null}
-                        clientId={filaAbierta.tipo === 'cliente' ? filaAbierta.client_id : null}
+                        clientId={filaAbierta.tipo === 'agenda' ? null : filaAbierta.client_id}
                         onCerrar={() => setFilaAbierta(null)}
                         onCambio={() => { cargarTabla(); cargarAnalizar(); }} />
                 ) : (

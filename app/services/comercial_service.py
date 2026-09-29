@@ -158,6 +158,69 @@ def _limpiar_ig(valor):
     return v if v and v != 'n/a' else None
 
 
+def _ultimos8(valor):
+    digitos = ''.join(c for c in str(valor or '') if c.isdigit())
+    return digitos[-8:] if len(digitos) >= 8 else None
+
+
+def clientes_de_ventas(ventas):
+    """{id de venta -> client_id}, cruzando por contacto las ventas que no lo tienen guardado.
+
+    `FinancialSale.client_id` existe desde que `SheetsService.post_to_sheets` resuelve el Client
+    antes de guardar la venta, pero las anteriores quedaron sin él: en la base local son 711 de
+    897 (79%). Sin cruzarlas, la fila de la tabla Ventas no sabe a quién abrirle la ficha y cae
+    al modal viejo — o sea que el modal nuevo no se vería casi nunca desde Ventas.
+
+    El cruce es el MISMO que usa `BookingService.create_or_update_client` para decidir a qué
+    cliente pertenece un contacto, y en el mismo orden de precedencia: email, después instagram,
+    después los últimos 8 dígitos del teléfono. Inventar acá otro criterio haría que la ficha
+    abriera un cliente distinto del que el resto del sistema considera dueño de esa venta.
+
+    **Un índice, no una consulta por fila.** `ventas()` devuelve cientos de filas por período y
+    esto corre en cada pedido de la tabla: buscar el cliente de cada venta por separado sería el
+    N+1 que ya hace lento a `_resolve_sales_and_clients`. Se leen las tres columnas de contacto
+    de todos los clientes UNA vez (5.638 filas en la base local) y se arma el índice en memoria.
+
+    `order_by(Client.id)` + `setdefault` reproduce el `.first()` de `create_or_update_client`
+    cuando dos clientes comparten un contacto: gana el más viejo, que es el que esa función
+    encuentra primero.
+
+    Las que no se cruzan por ninguna de las tres vías no entran en el mapa (30 de 897 en la base
+    local): esa fila se queda con el modal viejo, que es lo único honesto — no hay cliente al que
+    abrirle la ficha.
+    """
+    mapa = {v.id: v.client_id for v in ventas if v.client_id}
+    pendientes = [v for v in ventas if not v.client_id]
+    if not pendientes:
+        return mapa
+
+    por_email, por_ig, por_tel = {}, {}, {}
+    for cid, email, ig, telefono in (db.session.query(
+            Client.id, Client.email, Client.instagram, Client.phone)
+            .order_by(Client.id).all()):
+        # El correo sintético que inventa `BookingService` cuando el lead llegó sin ninguno no
+        # identifica a nadie: dos clientes distintos jamás comparten uno, pero tampoco sirve
+        # para reconocer a este.
+        limpio = _limpiar_email(email)
+        if limpio and 'no-email-' not in limpio:
+            por_email.setdefault(limpio, cid)
+        ig_limpio = _limpiar_ig(ig)
+        if ig_limpio:
+            por_ig.setdefault(ig_limpio, cid)
+        tel = _ultimos8(telefono)
+        if tel:
+            por_tel.setdefault(tel, cid)
+
+    for v in pendientes:
+        tel = _ultimos8(v.telefono)
+        encontrado = (por_email.get(_limpiar_email(v.mail_cliente) or '')
+                      or por_ig.get(_limpiar_ig(v.instagram) or '')
+                      or (por_tel.get(tel) if tel else None))
+        if encontrado:
+            mapa[v.id] = encontrado
+    return mapa
+
+
 def pre_call_de(appt):
     """Etapa de confirmación de la agenda, a partir de `Appointment.result`."""
     res = (appt.result or '').strip().lower()
@@ -330,11 +393,14 @@ class ComercialService:
         desde, hasta = ComercialService._limites(start, end)
         q = FinancialSale.query.filter(FinancialSale.date >= desde, FinancialSale.date <= hasta)
 
+        # El cliente de cada venta, para que la fila pueda abrir la ficha unificada. Se resuelve
+        # en bloque ANTES del bucle: adentro sería una consulta por fila.
+        del_periodo = [v for v in q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all()
+                       if (v.estado or '').strip().lower() in ('', 'completada', 'confirmada')]
+        clientes = clientes_de_ventas(del_periodo)
+
         filas = []
-        for v in q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all():
-            # Las ventas anuladas no son cash: el resto del sistema las descarta por `estado`.
-            if (v.estado or '').strip().lower() not in ('', 'completada', 'confirmada'):
-                continue
+        for v in del_periodo:
             nombre = resolver_nombre_closer(v.email_vendedor)
             if closer_nombre and normalizar_nombre(nombre) != normalizar_nombre(closer_nombre):
                 continue
@@ -343,6 +409,9 @@ class ComercialService:
             filas.append({
                 'id': v.id,
                 'tipo': 'venta',
+                # `None` cuando la venta no se pudo cruzar con ningún cliente: esa fila sigue
+                # abriendo el modal viejo, porque no hay ficha que abrir.
+                'client_id': clientes.get(v.id),
                 'fecha': v.date.isoformat() if v.date else None,
                 'creada': v.created_at.isoformat() if v.created_at else None,
                 'cliente': v.nombre_cliente or 'Sin nombre',
