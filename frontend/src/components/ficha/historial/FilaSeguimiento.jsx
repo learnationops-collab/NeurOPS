@@ -39,11 +39,11 @@ const OPCIONES_ESTADO = [
  * id por fila) y se corre ANTES de que vuelva la respuesta: si el pedido falla, vuelve a su lugar.
  * Con movimiento reducido salta sin animar.
  */
-const EstadoSeguimiento = ({ realizado, fecha, disabled, onCambiar }) => {
+const EstadoSeguimiento = ({ realizado, cual, disabled, onCambiar }) => {
     const reducido = useReducedMotion();
     const marca = useId();
     return (
-        <div className="fi-seg fi-seg--sm" role="group" aria-label={`Estado del seguimiento del ${fecha}`}>
+        <div className="fi-seg fi-seg--sm" role="group" aria-label={`Estado del seguimiento ${cual}`}>
             {OPCIONES_ESTADO.map((o) => {
                 const activo = o.realizado === realizado;
                 return (
@@ -82,6 +82,8 @@ const FilaSeguimiento = ({
     const realizado = enVuelo ?? !!s.realizado;
     const estado = estadoDeSeguimiento({ ...s, realizado });
     const fecha = diaLegible(s.fecha) || 'Sin fecha';
+    // Cómo lo nombran los lectores de pantalla: «del 6 oct 2026» o «sin fecha».
+    const cual = s.fecha ? `del ${fecha}` : 'sin fecha';
 
     const abrir = () => {
         setDia(diaInicial);
@@ -157,12 +159,12 @@ const FilaSeguimiento = ({
                 <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     {puedeEditar ? (
                         <>
-                            <EstadoSeguimiento realizado={realizado} fecha={fecha}
+                            <EstadoSeguimiento realizado={realizado} cual={cual}
                                 disabled={enVuelo !== null || guardando} onCambiar={cambiarEstado} />
                             <button type="button" className="ibtn ibtn--sm" ref={lapiz}
                                 aria-expanded={editando}
                                 aria-controls={`${ids}-editor`}
-                                aria-label={`Corregir día, tipo y nota del seguimiento del ${fecha}`}
+                                aria-label={`Corregir día, tipo y nota del seguimiento ${cual}`}
                                 title="Corregir día, tipo y nota"
                                 onClick={() => (editando ? cerrar() : abrir())}>
                                 <Pencil />
@@ -176,7 +178,7 @@ const FilaSeguimiento = ({
 
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
-                    role="group" aria-label={`Corregir el seguimiento del ${fecha}`}
+                    role="group" aria-label={`Corregir el seguimiento ${cual}`}
                     onKeyDown={(e) => {
                         if (e.key !== 'Escape') return;
                         // Escape cierra ESTE editor y nada más: el cascarón escucha Escape en

@@ -285,6 +285,18 @@ describe('los seguimientos del historial', () => {
         expect(screen.getByText('2 seguimientos · 1 atrasado · próximo 2 mar 2099')).toBeInTheDocument();
     });
 
+    it('uno que el mazo cerró sin día se lee «Sin fecha» y se puede reabrir', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirSeguimientos(usuario,
+            conSeguimientos([{ ...SEGUIMIENTO, fecha: null, realizado: true }]));
+
+        expect(screen.getByText('Sin fecha')).toBeInTheDocument();
+        const estadoSinFecha = screen.getByRole('group', { name: 'Estado del seguimiento sin fecha' });
+        await usuario.click(within(estadoSinFecha).getByRole('button', { name: 'Pendiente' }));
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_seguimiento', { realizado: false }, 71);
+    });
+
     it('quien no puede reportar ve el estado pero no lo corrige ni agenda otro', async () => {
         const usuario = userEvent.setup();
         await abrirSeguimientos(usuario, conSeguimientos([{ ...SEGUIMIENTO, realizado: true }],
