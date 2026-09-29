@@ -309,16 +309,20 @@ const PlanDeCuotas = ({ ficha, cuotas, onAccion, puedeEditar }) => {
             // con el plan que quedó en la base y no con el que tenía en la mano.
             <PlanCuotasForm key={(ficha?.cobro?.cuotas || []).map(c => c.id).join('-')}
                 ficha={ficha} onGuardar={guardar} guardando={guardando}>
-                {({ boton }) => (
-                    // «Cancelar» con el mismo alto que el guardado: al lado de un botón de 44 px,
-                    // el `btn--sm` de 34 se leía como una etiqueta suelta y no como la otra salida.
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s3)',
-                        flexWrap: 'wrap' }}>
-                        <button type="button" className="btn btn--linea"
-                            disabled={guardando} onClick={() => setEditando(false)}>
-                            Cancelar
-                        </button>
-                        {boton}
+                {({ formulario, boton }) => (
+                    <div style={{ display: 'grid', gap: 'var(--s6)' }}>
+                        {formulario}
+                        {/* «Cancelar» con el mismo alto que el guardado: al lado de un botón de
+                            44 px, el `btn--sm` de 34 se leía como una etiqueta suelta y no como
+                            la otra salida. */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s3)',
+                            flexWrap: 'wrap' }}>
+                            <button type="button" className="btn btn--linea"
+                                disabled={guardando} onClick={() => setEditando(false)}>
+                                Cancelar
+                            </button>
+                            {boton}
+                        </div>
                     </div>
                 )}
             </PlanCuotasForm>

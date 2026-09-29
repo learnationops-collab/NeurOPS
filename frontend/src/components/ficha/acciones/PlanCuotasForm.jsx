@@ -81,9 +81,14 @@ function CantidadDeCuotas({ actual, onElegir }) {
 }
 
 /**
- * `children` recibe `{ boton }`: el botón de guardar ya armado, con su estado y su texto. Así cada
- * montaje lo pone donde le corresponde —la sub-vista en su cabecera, el historial al pie— sin que
- * el editor tenga que saber en cuál de los dos está.
+ * `children` recibe `{ formulario, boton }` y devuelve el montaje entero: los campos por un lado y
+ * el botón de guardar ya armado —con su estado y su texto— por el otro. Así cada montaje pone el
+ * botón donde le corresponde sin que el editor sepa en cuál está: la sub-vista de Acciones en su
+ * pie, a la derecha de «Volver», y el historial debajo de la tabla, al lado de «Cancelar».
+ *
+ * Antes `children` recibía solo el botón y se dibujaba DENTRO del formulario, así que en Acciones
+ * el guardado quedaba en una fila propia y «Volver» en otra debajo: dos barras de botones al pie
+ * de la misma pantalla. Sin `children`, los campos y el botón van uno debajo del otro.
  */
 export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }) {
   const cobro = ficha?.cobro || {};
@@ -129,7 +134,7 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
     </button>
   );
 
-  return (
+  const formulario = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       <div className="ln-field-wrap" style={{ maxWidth: 280 }}>
         <Rotulo>Total del plan</Rotulo>
@@ -171,8 +176,14 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
           {`El plan se puede guardar igual, pero ${estado.mensaje.toLowerCase()} contra el total de ${moneda(total)}.`}
         </small>
       )}
+    </div>
+  );
 
-      {children?.({ boton })}
+  if (children) return children({ formulario, boton });
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      {formulario}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>{boton}</div>
     </div>
   );
 }
