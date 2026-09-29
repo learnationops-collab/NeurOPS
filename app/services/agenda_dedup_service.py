@@ -338,7 +338,7 @@ def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
         distancia = abs((hermana.date - agenda.date).total_seconds())
 
         if distancia <= MINUTOS_MISMA_HORA * 60:
-            conservada = sugerir_conservada([agenda, hermana], ventas_conocidas)
+            conservada = _conservar_misma_reunion(agenda, hermana)
             motivo = 'automático: misma persona, mismo día y misma hora'
         elif _sin_resolver(hermana) and _sin_resolver(agenda):
             # Reprogramación: manda la hora que se cargó último. Si alguna de las dos ya
@@ -357,6 +357,31 @@ def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
             break
 
     return decisiones
+
+
+# Campos que la fila que se conserva HEREDA de la repetida cuando ella no los tiene.
+# Sin esto, conservar la original significaría perder el resultado que el closer cargó
+# sobre la copia.
+_VACIOS = {'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
+CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
+
+
+def _esta_vacio(valor):
+    return (valor or '').strip().lower() in _VACIOS
+
+
+def _conservar_misma_reunion(a, b):
+    """De dos filas que son la MISMA reunión, cuál sobrevive: la ORIGINAL.
+
+    Manda la fecha de alta más vieja, y no quién tiene el resultado del closer. Suena al
+    revés hasta que se mira lo que pasó el 08/07/2026: la copia era el espejo de la cita,
+    dado de alta DOS SEMANAS después de la original, y como traía 'Show Up' el criterio
+    viejo la elegía a ella. Conservarla movía la agenda —y su venta de 750 USD— a la
+    ventana de otro taller, porque el embudo atribuye por fecha de alta.
+
+    El resultado del closer no se pierde: `descartar` se lo pasa a la que sobrevive.
+    """
+    return min([a, b], key=lambda x: (x.created_at or datetime.max, x.id or 0))
 
 
 def cita_de(agenda):
@@ -489,6 +514,26 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
             logger.info('[DEDUP AGENDAS] cita #%s cancelada por descartar la agenda #%s',
                         cita.id, duplicada.id)
 
+    # La que sobrevive se queda con lo mejor de las dos. Si no, descartar la copia tira el
+    # dato que solo ella tenía: el resultado que el closer cargó ahí, el mail que en la
+    # original llegó 'N/A', el closer asignado. Se anota el valor previo para que
+    # `restaurar` deje todo como estaba.
+    heredado = {}
+    for campo in CAMPOS_HEREDABLES:
+        nuevo = getattr(duplicada, campo, None)
+        if _esta_vacio(getattr(conservada, campo, None)) and not _esta_vacio(nuevo):
+            heredado[campo] = getattr(conservada, campo, None)
+            setattr(conservada, campo, nuevo)
+    # El estado solo se hereda si el de la copia es un resultado REAL de la llamada y el de
+    # la conservada todavía no lo es: un 'Pendiente' nunca debe pisar un 'Show Up'.
+    if _sin_resolver(conservada) and not _sin_resolver(duplicada):
+        heredado['estado'] = conservada.estado
+        conservada.estado = duplicada.estado
+    if heredado:
+        snapshot['heredado'] = heredado
+        logger.info('[AGENDA UNICA] #%s hereda de #%s: %s',
+                    conservada.id, duplicada.id, ', '.join(heredado))
+
     duplicada.duplicada_de_id = conservada.id
     duplicada.descartada_at = datetime.utcnow()
     duplicada.descartada_por_id = usuario_id
@@ -510,6 +555,15 @@ def restaurar(agenda):
         if cita:
             cita.result = snapshot.get('result_previo')
             cita.closer_result = snapshot.get('closer_result_previo')
+
+    # Devolver lo que la conservada heredó de esta fila: si no, deshacer dejaría las dos
+    # con el mismo dato y ya no se sabría cuál era de quién.
+    heredado = snapshot.get('heredado') or {}
+    if heredado:
+        conservada = FinancialAgenda.query.get(snapshot.get('conservada_id'))
+        if conservada:
+            for campo, previo in heredado.items():
+                setattr(conservada, campo, previo)
 
     agenda.duplicada_de_id = None
     agenda.descartada_at = None
