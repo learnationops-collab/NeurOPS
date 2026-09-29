@@ -1432,6 +1432,47 @@ def test_un_pago_cargado_va_a_la_inscripcion_que_el_cliente_ya_tiene(client, db,
     assert Payment.query.order_by(Payment.id.desc()).first().enrollment_id == vieja.id
 
 
+def test_un_pago_de_un_cliente_con_ventas_importadas_no_le_inventa_una_deuda(client, db, lead,
+                                                                            programas, equipo,
+                                                                            auth_headers):
+    """Las ventas importadas de la hoja no tienen espejo, y el cliente no tiene inscripcion: su
+    deuda es 0 porque `_client_debt` no tiene de donde calcularla. Abrirle una inscripcion para
+    la renovacion de $100 le cobraria el programa entero sin sus $1.500 ya pagados. En la base
+    local, 87 de los 150 clientes con ventas vinculadas no tienen ninguna inscripcion."""
+    lead.client.total_amount = None
+    db.session.add(_venta(lead, 'RR - Completo', 1500.0, datetime(2026, 3, 2)))
+    db.session.commit()
+
+    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 100, 'tipo': 'renovacion'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201, r.get_json()
+    cuerpo = r.get_json()
+    assert (cuerpo['espejo'], cuerpo['deuda']) == (False, 0.0)
+    assert Enrollment.query.count() == 0 and Payment.query.count() == 0
+    assert FinancialSale.query.count() == 2
+    evento = LeadEventLog.query.filter_by(action_type='pago_cargado').one()
+    assert 'la deuda no lo cuenta' in evento.description
+    assert 'pagos anteriores' in evento.description
+
+
+def test_un_pago_de_un_cliente_con_ventas_importadas_va_a_la_inscripcion_que_ya_tiene(
+        client, db, lead, programas, equipo, auth_headers):
+    """Con una inscripcion al programa, la deuda ya se calcula contra ella: el pago cargado resta
+    de ahi aunque el cliente tenga otras ventas sin espejo."""
+    lead.client.total_amount = None
+    vieja = _inscripcion_vieja(db, lead)
+    db.session.add(_venta(lead, 'RR - Cuota', 200.0, datetime(2025, 5, 1)))
+    db.session.commit()
+
+    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 50},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201, r.get_json()
+    assert (r.get_json()['espejo'], r.get_json()['deuda']) == (True, 350.0)
+    assert Payment.query.order_by(Payment.id.desc()).first().enrollment_id == vieja.id
+
+
 @pytest.mark.parametrize('cambio', [
     {'monto': 0}, {'monto': -50}, {'monto': 'mucho'}, {'monto': True}, {'monto': None},
     {'fecha': '2026-13-01'}, {'fecha': '15/09/2026'}, {'fecha': ''}, {'fecha': '2099-01-01'},
@@ -1567,6 +1608,29 @@ def test_otro_programa_usa_la_inscripcion_que_el_cliente_ya_tiene_en_ese(client,
     assert Payment.query.filter_by(amount=400.0).one().enrollment_id == vieja_al.id
     # La de RR se quedo sin pagos y se fue; no se abrio una a Ace Learner v3.
     assert Enrollment.query.count() == 1
+
+
+def test_otro_programa_no_abre_una_inscripcion_a_un_cliente_con_ventas_importadas(
+        client, db, lead, programas, equipo, auth_headers):
+    """Mismo criterio que al cargar un pago: con ventas sin espejo, una inscripcion nueva cobraria
+    el programa entero. El espejo se queda donde estaba, la deuda no se mueve, y se dice."""
+    db.session.add(_venta(lead, 'AL - Seña', 200.0, datetime(2026, 2, 1)))   # importada
+    db.session.commit()
+    venta = _declarada(db, lead)
+    deuda_antes = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
+                             headers=auth_headers(equipo['closer'])).get_json()['cobro']['deuda']
+
+    r = corregir(client, lead, venta, {'programa_code': 'AL'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.tipo_pago == 'AL - Parcial'
+    assert r.get_json()['deuda'] == deuda_antes
+    espejo = Payment.query.one()
+    assert espejo.enrollment.program_id == programas['RR'].id
+    assert Enrollment.query.count() == 1
+    evento = LeadEventLog.query.filter_by(action_type='pago_corregido').one()
+    assert 'se quedó en Residency Roadmap v3' in evento.description
+    assert 'pagos sin registro' in evento.description
 
 
 def test_solo_el_programa_conserva_el_tipo_como_esta_escrito(client, db, lead, programas, equipo,

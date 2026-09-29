@@ -176,11 +176,17 @@ def _emparejar(ventas, pagos):
     return parejas
 
 
-def _inscripcion(client_id, codigo, closer_id):
+def _sin_espejo(ventas, parejas, excepto=None):
+    """Las ventas del cliente que no tienen espejo en la deuda, sin contar `excepto`."""
+    return [v for v in ventas if v.id not in parejas and v.id != excepto]
+
+
+def _inscripcion(client_id, codigo, closer_id, abrir=True):
     """La inscripcion a la que va el espejo de un pago de ese programa, o None.
 
-    La que el cliente YA tiene en ese programa, de cualquier version, y solo si no tiene ninguna,
-    una a la version activa (creandola), como el espejo de una venta declarada.
+    La que el cliente YA tiene en ese programa, de cualquier version, y solo si no tiene ninguna
+    —y `abrir` lo permite—, una a la version activa (creandola), como el espejo de una venta
+    declarada.
 
     Primero la que ya tiene porque es contra la que su deuda ya se calcula. El camino de una venta
     declarada (`_sync_enrollment_payment`) busca solo en la version ACTIVA del programa, y a un
@@ -188,6 +194,9 @@ def _inscripcion(client_id, codigo, closer_id):
     cobra al precio de lista entero: probado contra la base local, cargar una cuota de $50 a un
     cliente de Residency Roadmap v1 le subia la deuda de $400 a $1.850. Para cargar lo que falto,
     eso es exactamente lo contrario de corregir.
+
+    `abrir=False` es para el cliente con ventas sin espejo (ver `crear`): una inscripcion nueva la
+    cobraria entera sin restarle esa plata ya pagada.
     """
     from app.models import Program
 
@@ -199,6 +208,8 @@ def _inscripcion(client_id, codigo, closer_id):
                 .order_by(Enrollment.enrollment_date.desc(), Enrollment.id.desc()).first())
     if ya_tiene is not None:
         return ya_tiene
+    if not abrir:
+        return None
     programa = SheetsService.resolve_program(codigo)
     if not programa:
         return None
@@ -289,7 +300,16 @@ def crear(appt, datos, usuario):
 
     No se valida la secuencia de pagos (Seña -> Parcial -> Cuota...): corregir es justamente
     cargar lo que falta en un historial que no cierra, y la validacion leeria ese historial roto.
+
+    Si el cliente no tiene inscripcion a ese programa y tiene ventas sin espejo —las importadas de
+    la hoja: en la base local, 87 de los 150 clientes con ventas vinculadas no tienen ninguna
+    inscripcion—, NO se le abre una. `_client_debt` le cobraria el programa entero menos este pago,
+    sin restar lo que ya pago en esas ventas: probado contra una copia de la base, una renovacion de
+    $100 a una clienta al dia le subia la deuda de $0 a $1.400. Es el mismo criterio de `corregir`
+    con una venta sin espejo: la venta queda, la deuda no se mueve, y la respuesta lo dice.
     """
+    from app.services.ficha_lead_service import _ventas_del_cliente
+
     if not appt.client:
         raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién cargarle un pago.')
     dia = _dia(datos.get('fecha'))
@@ -300,6 +320,9 @@ def crear(appt, datos, usuario):
     tipo_pago = f'{codigo} - {TIPOS[tipo]}'
 
     cliente = appt.client
+    # Antes de agregar la venta nueva: todavia no tiene espejo y se contaria a si misma.
+    previas = _ventas_del_cliente(cliente)
+    huerfanas = _sin_espejo(previas, _emparejar(previas, _pagos_del_cliente(cliente.id)))
     vendedor = appt.closer.email if appt.closer else usuario.email
     venta = FinancialSale(
         client_id=cliente.id, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
@@ -310,7 +333,7 @@ def crear(appt, datos, usuario):
     db.session.add(venta)
 
     espejo = None
-    inscripcion = _inscripcion(cliente.id, codigo, appt.closer_id)
+    inscripcion = _inscripcion(cliente.id, codigo, appt.closer_id, abrir=not huerfanas)
     if inscripcion is not None:
         espejo = Payment(enrollment_id=inscripcion.id, payment_method_id=_id_del_medio(medio),
                          amount=monto, payment_type=SheetsService.PAYMENT_TYPE_MAP[tipo],
@@ -320,12 +343,19 @@ def crear(appt, datos, usuario):
         _ingreso_desde(espejo)
     db.session.commit()
 
-    # Sin espejo es porque el cliente no tiene inscripcion a ese programa y no hay un `Program`
-    # activo donde abrirle una: la venta queda, pero la deuda no la cuenta, y eso queda escrito.
+    # Sin espejo es porque el cliente no tiene inscripcion a ese programa y no se le abrio una:
+    # tiene pagos anteriores sin registro, o no hay un `Program` activo. La venta queda, pero la
+    # deuda no la cuenta, y eso queda escrito con el motivo.
+    if espejo:
+        destino = 'también en inscripciones, así que la deuda lo cuenta'
+    elif huerfanas:
+        destino = ('sin registro en inscripciones: la deuda no lo cuenta, porque sus pagos '
+                   'anteriores tampoco están ahí y abrirle una inscripción le cobraría el '
+                   'programa entero')
+    else:
+        destino = 'sin registro en inscripciones: la deuda no lo cuenta'
     _anotar(appt, usuario, 'pago_cargado', 'cargó a mano un pago',
-            f'{_resumen(venta)} (pago #{venta.id}); '
-            + ('también en inscripciones, así que la deuda lo cuenta' if espejo
-               else 'sin registro en inscripciones: la deuda no lo cuenta'))
+            f'{_resumen(venta)} (pago #{venta.id}); {destino}')
     return _respuesta(appt, venta, espejo, tipo_pago=tipo_pago, monto=monto,
                       fecha=dia.isoformat())
 
@@ -339,10 +369,13 @@ CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo')
 
 
 def _venta_y_espejo(appt, pago_id):
-    """(venta, espejo) del pago pedido, si es de ESTE lead. `ErrorDeAccion` si no.
+    """(venta, espejo, otras ventas sin espejo) del pago pedido, si es de ESTE lead.
+    `ErrorDeAccion` si no.
 
     Sin comprobar que la venta sea del lead, el id de la URL alcanzaria para corregir o borrar el
-    pago de cualquier otro cliente con solo abrir una ficha cualquiera.
+    pago de cualquier otro cliente con solo abrir una ficha cualquiera. Las otras ventas sin
+    espejo se cuentan ANTES de tocar nada: con la venta ya corregida, el emparejamiento por fecha y
+    monto dejaria de reconocer su propio espejo.
     """
     from app.services.ficha_lead_service import _ventas_del_cliente
 
@@ -353,7 +386,7 @@ def _venta_y_espejo(appt, pago_id):
     if venta.id not in {v.id for v in ventas}:
         raise ErrorDeAccion('Ese pago no es de este lead.')
     parejas = _emparejar(ventas, _pagos_del_cliente(appt.client_id))
-    return venta, parejas.get(venta.id)
+    return venta, parejas.get(venta.id), _sin_espejo(ventas, parejas, excepto=venta.id)
 
 
 def _tipo_pago_corregido(crudo, datos):
@@ -389,12 +422,14 @@ def _es_del_programa(inscripcion, codigo):
     return bool(clave and programa and clave in (programa.name or '').lower())
 
 
-def _mover_espejo(espejo, venta, cambios, appt):
-    """Lleva al espejo lo que cambio en la venta, y solo eso.
+def _mover_espejo(espejo, venta, cambios, appt, abrir=True):
+    """Lleva al espejo lo que cambio en la venta, y solo eso. Devuelve una nota para la bitacora
+    cuando el espejo NO pudo seguir a la venta a otro programa, o None.
 
     Un campo que no cambio no se reescribe: un `Payment` historico con el tipo en castellano
     ('Primer Pago') se queda como esta si lo que se corrigio fue el monto.
     """
+    nota = None
     if 'monto' in cambios:
         espejo.amount = venta.monto
     if 'metodo_pago' in cambios:
@@ -409,16 +444,27 @@ def _mover_espejo(espejo, venta, cambios, appt):
         # inscripcion al mismo programa en otra version.
         origen = espejo.enrollment
         if codigo and not _es_del_programa(origen, codigo):
-            destino = _inscripcion(appt.client_id, codigo, origen.closer_id if origen else None)
+            destino = _inscripcion(appt.client_id, codigo, origen.closer_id if origen else None,
+                                   abrir=abrir)
             if destino is not None:
                 espejo.enrollment = destino
                 db.session.flush()
                 _soltar_si_quedo_vacia(origen)
+            else:
+                # Sin inscripcion a donde llevarlo, el espejo se queda donde estaba: la deuda no se
+                # mueve. Es el criterio de siempre: no mover un pago que no era, y decirlo.
+                donde = (origen.program.name if origen is not None and origen.program
+                         else 'la inscripción que tenía')
+                nota = (f'su registro en inscripciones se quedó en {donde}, porque el cliente no '
+                        f'tiene inscripción a {PROGRAM_CODE_NAMES.get(codigo, codigo)}'
+                        + ('' if abrir else ' y tiene pagos sin registro: abrirle una le '
+                                            'cobraría el programa entero'))
     if 'fecha' in cambios:
         espejo.date = venta.date
     if cambios & {'fecha', 'tipo_pago'}:
         db.session.flush()
         _ingreso_desde(espejo)
+    return nota
 
 
 def corregir(appt, datos, usuario, pago_id=None):
@@ -434,7 +480,7 @@ def corregir(appt, datos, usuario, pago_id=None):
     """
     if not any(campo in datos for campo in CAMPOS):
         raise ErrorDeAccion('No hay nada que guardar.')
-    venta, espejo = _venta_y_espejo(appt, pago_id)
+    venta, espejo, sin_espejo = _venta_y_espejo(appt, pago_id)
 
     dia = _dia(datos.get('fecha')) if 'fecha' in datos else None
     monto = _monto(datos.get('monto')) if 'monto' in datos else None
@@ -465,13 +511,19 @@ def corregir(appt, datos, usuario, pago_id=None):
     if not cambios:
         return _respuesta(appt, venta, espejo, cambios=[])
 
+    nota = None
     if espejo is not None:
-        _mover_espejo(espejo, venta, cambios, appt)
+        # Mismo criterio que `crear`: a un cliente con otras ventas sin espejo no se le abre una
+        # inscripcion para llevar ahi este pago.
+        nota = _mover_espejo(espejo, venta, cambios, appt, abrir=not sin_espejo)
     db.session.commit()
 
+    if espejo is None:
+        destino = 'sin registro en inscripciones: la deuda no cambió'
+    else:
+        destino = nota or 'su registro en inscripciones se corrigió igual'
     _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}',
-            '; '.join(bitacora) + ('; su registro en inscripciones se corrigió igual' if espejo
-                                   else '; sin registro en inscripciones: la deuda no cambió'))
+            '; '.join(bitacora) + f'; {destino}')
     return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
 
 
@@ -510,7 +562,7 @@ def borrar(appt, datos, usuario, pago_id=None):
     mostrara como deudor de todo el programa a quien no pago nada (ver `_soltar_si_quedo_vacia`).
     Sin espejo, se borra la venta sola y la deuda no cambia; la respuesta lo dice.
     """
-    venta, espejo = _venta_y_espejo(appt, pago_id)
+    venta, espejo, _ = _venta_y_espejo(appt, pago_id)
     resumen, borrado = _resumen(venta), venta.id
 
     _excluir_de_la_hoja(venta)
