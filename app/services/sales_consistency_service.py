@@ -55,22 +55,43 @@ class SalesConsistencyService:
         return SequenceMatcher(None, a, b).ratio() >= 0.72
 
     @staticmethod
-    def _signal_match_count(client, sale):
-        """Cuenta cuántas de las 3 señales (email/instagram/teléfono) coinciden entre el
-        Client y una FinancialSale, normalizadas igual que el filtro SQL que las trajo."""
-        count = 0
+    def _matching_signals(client, sale):
+        """Cuáles de las 3 señales ('email', 'instagram', 'telefono') coinciden entre el Client y
+        una FinancialSale, normalizadas igual que el filtro SQL que las trajo.
+
+        El conjunto y no solo la cuenta: la ficha del lead, al corregir un contacto, necesita saber
+        qué señal pierde cada venta con el cambio."""
+        signals = set()
         if client.email and '@' in client.email and sale.mail_cliente:
             if sale.mail_cliente.strip().lower() == client.email.strip().lower():
-                count += 1
+                signals.add('email')
         if client.instagram and client.instagram.lower() not in ('n/a', '') and sale.instagram:
             ig_clean = client.instagram.strip().replace('@', '').lower()
             sale_ig = sale.instagram.strip().replace('@', '').lower()
             if sale_ig == ig_clean:
-                count += 1
+                signals.add('instagram')
         if client.phone and len(client.phone.strip()) >= 8 and sale.telefono:
             if client.phone.strip()[-8:] in sale.telefono:
-                count += 1
-        return count
+                signals.add('telefono')
+        return signals
+
+    @staticmethod
+    def _signal_match_count(client, sale):
+        """Cuenta cuántas de las 3 señales coinciden (ver `_matching_signals`)."""
+        return len(SalesConsistencyService._matching_signals(client, sale))
+
+    @staticmethod
+    def _contact_match_suffices(client, sale):
+        """True si una venta SIN client_id es de este cliente por contacto: 2 de las 3 señales, o
+        una sola corroborada por el nombre (el criterio de `get_client_payment_state`, ver ahí el
+        caso Kervin Calderón).
+
+        Suelto para que quien ate una venta al cliente por id use exactamente este criterio: una
+        venta atada pasa a ser suya "por sí sola" y ya no se vuelve a mirar su contacto."""
+        matches = SalesConsistencyService._signal_match_count(client, sale)
+        if matches >= 2:
+            return True
+        return matches == 1 and SalesConsistencyService._names_corroborate(client.full_name, sale.nombre_cliente)
 
     @staticmethod
     def get_client_payment_state(client_id, program_code):
@@ -128,12 +149,7 @@ class SalesConsistencyService:
                 if client_id and s.client_id == client_id:
                     all_sales.append(s)
                     continue
-                if not client:
-                    continue
-                matches = SalesConsistencyService._signal_match_count(client, s)
-                if matches >= 2:
-                    all_sales.append(s)
-                elif matches == 1 and SalesConsistencyService._names_corroborate(client.full_name, s.nombre_cliente):
+                if client and SalesConsistencyService._contact_match_suffices(client, s):
                     all_sales.append(s)
 
         # Datos históricos tienen formatos inconsistentes (acentos, "Con Seña", sin prefijo de
