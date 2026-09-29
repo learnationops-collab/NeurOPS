@@ -797,8 +797,13 @@ class CloserFollowUpService:
         una llamada de seguimiento que tomó otro closer) sin que cambie quién vendió. Antes se
         scopeaba por vendedor acá y esa mezcla producía el problema inverso (un cobro apareciendo
         en la cola de DOS closers a la vez) — reportado como "tengo seguimientos de leads que le
-        corresponden a otro closer". Para "de quién es esta venta" (Mi Cartera), ver `_cartera_items`."""
-        from app.models import User, Client
+        corresponden a otro closer". Para "de quién es esta venta" (Mi Cartera), ver `_cartera_items`.
+
+        Lee la cartera en lote (`CarteraEnLote`), como la tabla Clientes: eran una docena de
+        consultas por cliente comprado. Con `cita_exacta` (el valor por defecto) porque acá la
+        cita decide el dueño: si la última cita de un cliente empata en hora con otra, se le
+        pregunta a la base lo mismo que antes."""
+        from app.models import User
 
         if not closer_id:
             return []
@@ -809,17 +814,18 @@ class CloserFollowUpService:
             row[0] for row in db.session.query(User.id).filter(User.role == 'closer', User.is_active == False)
         }
 
+        lote = CarteraEnLote(list(sales_by_client))
         items = []
         for cid in sales_by_client:
-            client = Client.query.get(cid)
+            client = lote.clientes.get(cid)
             if not client:
                 continue
-            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
+            appt = lote.ultima_cita.get(cid)
             if not appt:
                 continue
             if appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
                 continue
-            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client))
+            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client, lote=lote))
 
         return CloserFollowUpService._sort_by_urgency(items)
 
@@ -837,8 +843,11 @@ class CloserFollowUpService:
         pasar a propósito para que alguien siga la cobranza, pero como no filtra a cuál closer
         específico se los asigna, terminaban visibles en la cartera de TODOS los closers activos
         a la vez, no solo del que realmente vendió. Acá no hay ese caso: un huérfano nunca tiene
-        ventas con el email de otro closer, así que simplemente no aparece si nadie más lo vendió."""
-        from app.models import Client
+        ventas con el email de otro closer, así que simplemente no aparece si nadie más lo vendió.
+
+        Lee la cartera en lote (`CarteraEnLote`), como la tabla Clientes. Con `cita_exacta` (el
+        valor por defecto) porque el item muestra la cita: en un empate de hora decide la base,
+        como antes."""
         from app.services.closer_service import CloserService
 
         if not closer_id:
@@ -850,21 +859,23 @@ class CloserFollowUpService:
             return []
 
         sales_by_client = CloserFollowUpService._resolve_sales_and_clients()
+        propios = [cid for cid, sales in sales_by_client.items()
+                   if any((s.email_vendedor or '').strip().lower() in identifiers for s in sales)]
 
+        # Las anclas antes que el lote: cada una hace commit (ver `_anclar_clientes_sin_cita`).
+        CloserFollowUpService._anclar_clientes_sin_cita(propios, sales_by_client)
+        lote = CarteraEnLote(propios)
         items = []
-        for cid, sales in sales_by_client.items():
-            propias = [s for s in sales if (s.email_vendedor or '').strip().lower() in identifiers]
-            if not propias:
-                continue
-            client = Client.query.get(cid)
+        for cid in propios:
+            client = lote.clientes.get(cid)
             if not client:
                 continue
             # `appt` es solo para los campos de display (origen, examen, fecha de la última
             # llamada) — cualquier cita del cliente sirve, sea o no de este closer.
-            appt = Appointment.query.filter_by(client_id=cid).order_by(Appointment.start_time.desc()).first()
+            appt = lote.ultima_cita.get(cid)
             if not appt:
                 appt = CloserFollowUpService._ensure_appointment_for_client(client)
-            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client))
+            items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client, lote=lote))
 
         return CloserFollowUpService._sort_by_urgency(items)
 

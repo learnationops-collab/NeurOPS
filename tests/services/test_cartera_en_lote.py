@@ -436,3 +436,48 @@ def test_el_pedido_que_crea_un_ancla_tampoco_relee_venta_por_venta(db, vendedor,
     muchas = con_un_cliente_sin_cita(10)
 
     assert muchas == pocas
+
+
+# --- "Mi cartera" y la cola de cobro del closer ---------------------------------------------------
+
+@freeze_time(HOY)
+def test_mi_cartera_y_la_cola_de_cobro_no_hacen_una_consulta_por_cliente(db, vendedor, programa):
+    ids = vendedor.id, programa.id
+    _compradores(db, *ids, 2)
+    _, cartera_pocas = contar_consultas(db, CloserFollowUpService._cartera_items, ids[0])
+    _, cola_pocas = contar_consultas(db, CloserFollowUpService._cerrada_pool_items, ids[0])
+    _compradores(db, *ids, 10)
+    cartera, cartera_muchas = contar_consultas(db, CloserFollowUpService._cartera_items, ids[0])
+    cola, cola_muchas = contar_consultas(db, CloserFollowUpService._cerrada_pool_items, ids[0])
+
+    assert (len(cartera), len(cola)) == (12, 12)
+    assert (cartera_muchas, cola_muchas) == (cartera_pocas, cola_pocas)
+
+
+@freeze_time(HOY)
+def test_la_cola_de_cobro_decide_el_dueno_con_la_misma_cita_que_antes(db, vendedor, make_user):
+    """Dos citas a la misma hora con closers distintos: la cola sigue al dueño de la cita que
+    devuelve la consulta de siempre, no a la que elegiría un desempate propio."""
+    otro = make_user(role='closer', username='otro_closer', email='otro@neuro.com')
+    cli = cliente(db)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    cita(db, otro, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    dueno = CloserFollowUpService._ultima_cita_de(cli.id).closer_id
+    ajeno = otro.id if dueno == vendedor.id else vendedor.id
+
+    assert [i['client_id'] for i in CloserFollowUpService._cerrada_pool_items(dueno)] == [cli.id]
+    assert CloserFollowUpService._cerrada_pool_items(ajeno) == []
+
+
+@freeze_time(HOY)
+def test_mi_cartera_sigue_anclando_al_cliente_sin_cita(db, vendedor, programa):
+    cli = cliente(db)
+    venta(db, mail=cli.email, fecha=datetime(2026, 5, 4))
+    cid = cli.id
+
+    items = CloserFollowUpService._cartera_items(vendedor.id)
+
+    ancla = Appointment.query.filter_by(client_id=cid).one()
+    assert [(i['client_id'], i['id']) for i in items] == [(cid, ancla.id)]
+    assert ancla.origin == 'Venta histórica sin agenda'
