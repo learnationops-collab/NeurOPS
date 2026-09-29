@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { fechaLegible as fecha, SeccionColapsable } from '../piezas';
+import PlanCuotasForm from '../acciones/PlanCuotasForm';
+import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -45,30 +47,27 @@ const Cifra = ({ rotulo, valor, color = undefined }) => (
  * Los cuatro datos del cobro, arriba del historial y sin abrir nada: el programa, cuánto va a
  * pagar en total, cuánto pagó y cuánto falta.
  *
- * El total faltaba y es el que ordena a los otros dos: un historial que muestra pagos y cuotas
- * pero no contra qué total se están pagando no dice si el cliente va bien o mal. Se VE acá y se
- * EDITA en Acciones, el mismo reparto que el plan de cuotas y por el mismo motivo — dos lugares
- * donde tocar el mismo número serían dos verdades sobre él.
+ * El total es el que ordena a los otros dos: un historial que muestra pagos y cuotas pero no
+ * contra qué total se están pagando no dice si el cliente va bien o mal.
+ *
+ * El programa y el total se corrigen ACÁ, con el lápiz, y no mandando a Acciones: son los mismos
+ * `CamposCobro` que monta esa pestaña, así que no hay dos editores ni dos verdades. Lo que queda
+ * del otro lado son las ACCIONES —registrar un pago, un seguimiento, una baja—, que son otra cosa
+ * que corregir un dato mal cargado.
  */
-const ResumenCobro = ({ cobro, irA }) => {
+const ResumenCobro = ({ cobro, programas, puedeEditar, onAccion }) => {
     const deuda = Number(cobro?.deuda) || 0;
     const alDia = deuda < 0.01;
     return (
-        <div className="fi-sec" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s4)',
-            alignItems: 'center', justifyContent: 'space-between', padding: 'var(--s4) var(--s6)' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s6)', minWidth: 0 }}>
-                <Cifra rotulo="Programa" valor={cobro?.programa_nombre || 'Sin programa'}
-                    color={cobro?.programa_nombre ? undefined : 'var(--text-muted)'} />
-                <Cifra rotulo="Total a pagar"
-                    valor={cobro?.total == null ? 'Sin definir' : plata(cobro.total)}
-                    color={cobro?.total == null ? 'var(--text-muted)' : undefined} />
-                <Cifra rotulo="Pagado" valor={plata(cobro?.pagado)} />
-                <Cifra rotulo="Debe" valor={alDia ? 'Al día' : plata(deuda)}
-                    color={alDia ? 'var(--success)' : 'var(--error)'} />
-            </div>
-            <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
-                Editar el cobro
-            </button>
+        <div className="fi-sec" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s6)',
+            alignItems: 'flex-start', padding: 'var(--s4) var(--s6)' }}>
+            <CampoPrograma cobro={cobro} programas={programas} puedeEditar={puedeEditar}
+                onGuardar={(programa_code) => onAccion?.('guardar_programa', { programa_code })} />
+            <CampoTotal cobro={cobro} puedeEditar={puedeEditar}
+                onGuardar={(total) => onAccion?.('guardar_total', { total })} />
+            <Cifra rotulo="Pagado" valor={plata(cobro?.pagado)} />
+            <Cifra rotulo="Debe" valor={alDia ? 'Al día' : plata(deuda)}
+                color={alDia ? 'var(--success)' : 'var(--error)'} />
         </div>
     );
 };
@@ -79,11 +78,78 @@ const ResumenCobro = ({ cobro, irA }) => {
  * El resumen es el punto: `4 cuotas de $500 · 1 pagada · 1 vencida` se lee sin
  * abrir nada. Abrir es para ver el detalle, no para enterarse de qué hay.
  *
- * El plan de cuotas se muestra en solo lectura acá: editarlo es una acción de cobro
- * y vive en la pestaña Acciones, con su total, su validación de suma y su reparto.
- * Tenerlo editable en dos lugares sería tener dos verdades sobre el mismo plan.
+ * El plan de cuotas se edita ACÁ, en línea. Antes el botón mandaba a la pestaña Acciones, con el
+ * argumento de que tenerlo en dos lugares serían dos verdades sobre el mismo plan — pero el
+ * closer se da cuenta de que hay que corregirlo mientras lo está MIRANDO, acá, y mandarlo a otra
+ * pestaña a buscar la misma tabla no evitaba ninguna contradicción: sólo agregaba un salto.
+ *
+ * Dos montajes no son dos verdades mientras sea el mismo editor: `PlanCuotasForm` es uno solo,
+ * con la misma aritmética (`planCuotas.js`) y la misma acción de guardado, y se monta también en
+ * la sub-vista «Armar plan de cuotas» de Acciones.
  */
-const TabHistorial = ({ ficha, irA }) => {
+/**
+ * La sección «Plan de cuotas»: la tabla de siempre, y el editor en línea al tocar «Editar».
+ *
+ * Se monta cerrado. Abrir el editor de entrada haría que leer el plan —que es para lo que se abre
+ * el historial— empezara con ocho campos de formulario en pantalla.
+ */
+const PlanDeCuotas = ({ ficha, cuotas, onAccion, puedeEditar }) => {
+    const [editando, setEditando] = useState(false);
+    const [guardando, setGuardando] = useState(false);
+
+    const guardar = async (payload) => {
+        setGuardando(true);
+        try {
+            // El aviso —de éxito o de error— lo pone el cascarón, igual que en Acciones.
+            await onAccion?.('guardar_plan', payload);
+            setEditando(false);
+        } catch {
+            // Se queda abierto con lo cargado, para corregir sin volver a tipear el plan entero.
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    if (editando) {
+        return (
+            // La `key` son las cuotas guardadas: al volver de un guardado, el editor se remonta
+            // con el plan que quedó en la base y no con el que tenía en la mano.
+            <PlanCuotasForm key={(ficha?.cobro?.cuotas || []).map(c => c.id).join('-')}
+                ficha={ficha} onGuardar={guardar} guardando={guardando}>
+                {({ boton }) => (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s3)' }}>
+                        <button type="button" className="btn btn--linea btn--sm"
+                            disabled={guardando} onClick={() => setEditando(false)}>
+                            Cancelar
+                        </button>
+                        {boton}
+                    </div>
+                )}
+            </PlanCuotasForm>
+        );
+    }
+
+    return (
+        <>
+            {cuotas.length
+                ? cuotas.map((c, i) => (
+                    <Fila key={c.id ?? i} a={fecha(c.fecha_vencimiento || c.fecha)}
+                        b={`Cuota ${c.numero_cuota ?? c.numero ?? i + 1}`}
+                        c={plata(c.monto)} chip={chipDeCuota(c.estado)} />
+                ))
+                : <Vacio texto="Sin plan de cuotas armado." />}
+            {puedeEditar && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setEditando(true)}>
+                        {cuotas.length ? 'Editar el plan' : 'Armar el plan'}
+                    </button>
+                </div>
+            )}
+        </>
+    );
+};
+
+const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
     const hist = ficha?.historial || {};
     const cobro = ficha?.cobro || {};
     const conf = ficha?.confirmacion || {};
@@ -94,6 +160,7 @@ const TabHistorial = ({ ficha, irA }) => {
     const cuotas = cobro.cuotas || [];
     const eventos = hist.eventos || [];
 
+    const puedeCobrar = puedeEditar && ficha?.permisos?.cobrar !== false;
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     // `como_viene` llega como {clave, label}; la clave es la que busca en el vocabulario.
     const claveComoViene = conf.como_viene?.clave ?? conf.como_viene;
@@ -120,7 +187,10 @@ const TabHistorial = ({ ficha, irA }) => {
 
     return (
         <div style={{ display: 'grid', gap: 'var(--s3)' }}>
-            {esCliente && <ResumenCobro cobro={cobro} irA={irA} />}
+            {esCliente && (
+                <ResumenCobro cobro={cobro} programas={ficha?.vocabulario?.programas}
+                    puedeEditar={puedeCobrar} onAccion={onAccion} />
+            )}
 
             <SeccionColapsable titulo="Confirmación"
                 resumen={[etapaLabel && `Etapa: ${etapaLabel}`, comoViene?.label || 'Sin estado']
@@ -145,31 +215,8 @@ const TabHistorial = ({ ficha, irA }) => {
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Plan de cuotas" resumen={resumenCuotas}>
-                {cuotas.length ? (
-                    <>
-                        {cuotas.map((c, i) => (
-                            <Fila key={c.id ?? i} a={fecha(c.fecha_vencimiento || c.fecha)}
-                                b={`Cuota ${c.numero_cuota ?? c.numero ?? i + 1}`}
-                                c={plata(c.monto)} chip={chipDeCuota(c.estado)} />
-                        ))}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
-                            <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
-                                Editar el plan
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <Vacio texto="Sin plan de cuotas armado." />
-                        {/* El botón sólo existía si YA había un plan, así que el caso que más lo
-                            necesita —no hay ninguno— era el único sin salida. */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
-                            <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
-                                Armar el plan
-                            </button>
-                        </div>
-                    </>
-                )}
+                <PlanDeCuotas ficha={ficha} cuotas={cuotas} onAccion={onAccion}
+                    puedeEditar={puedeCobrar} />
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Seguimientos"
