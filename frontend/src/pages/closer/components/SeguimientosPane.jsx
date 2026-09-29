@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
+import { Esqueleto, Hueso, Renglon, escalonDe, useVentanaDeEntrada } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
@@ -127,8 +127,10 @@ const estimateEarning = (item, tipo, earnings) => {
 // mezclar todo en una sola fila de chips sin jerarquía.
 //
 // `orden` es su lugar en la fila de entrada (ver `.row-v6` en index.css): cada fila entra con el
-// escalón de `escalonDe`, el mismo de los huesos que ocupaban su lugar mientras cargaba.
-const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0 }) => {
+// escalón de `escalonDe`, el mismo de los huesos que ocupaban su lugar mientras cargaba. Sólo si
+// `escalonar`, que es la ventana de entrada de su lista (ver `useVentanaDeEntrada`): una fila que
+// vuelve a aparecer al borrar letras del buscador entra ya, sin esperar el turno de su índice.
+const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0, escalonar = false }) => {
     const pc = item.proxima_cuota;
     const when = retrasoWhen(item.dias_retraso);
     const result = resultChip(item.closer_result);
@@ -156,7 +158,7 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0 }) => {
     }
 
     return (
-        <div className="row-v6" onClick={onClick} style={{ animationDelay: `${escalonDe(orden)}ms` }}>
+        <div className="row-v6" onClick={onClick} style={{ animationDelay: `${escalonar ? escalonDe(orden) : 0}ms` }}>
             <div className="time-v6" style={when ? TIME_BOX_STYLE[when.cls] : undefined}>
                 {when ? when.text : '—'}
             </div>
@@ -285,9 +287,15 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // reemplaza en silencio para no hacer parpadear el panel entero.
     const loadedDateRef = useRef(null);
     const loadedPoolRef = useRef(null);
+    // Las filas entran escalonadas sólo en la tanda que reemplaza al esqueleto o que aparece al
+    // desplegar una lista; una por una, después, entran sin esperar (ver `useVentanaDeEntrada`).
+    // Una ventana por lista: la de "Asignados para hoy" y la del pool no se pisan.
+    const [hoyEntrando, abrirEntradaDeHoy] = useVentanaDeEntrada();
+    const [poolEntrando, abrirEntradaDelPool] = useVentanaDeEntrada();
 
     const fetchMain = useCallback(async () => {
-        if (loadedDateRef.current !== selectedDate) setLoading(true);
+        const conEsqueleto = loadedDateRef.current !== selectedDate;
+        if (conEsqueleto) setLoading(true);
         try {
             const [todayRes, countsRes, goalRes] = await Promise.all([
                 api.get(`/closer/followups/today?selected_date=${selectedDate}`),
@@ -302,8 +310,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
         } finally {
             loadedDateRef.current = selectedDate;
             setLoading(false);
+            if (conEsqueleto) abrirEntradaDeHoy();
         }
-    }, [selectedDate, refreshKey]);
+    }, [selectedDate, refreshKey, abrirEntradaDeHoy]);
 
     useEffect(() => { fetchMain(); }, [fetchMain]);
 
@@ -320,7 +329,8 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     const fetchPool = useCallback(async () => {
         if (!openPool) return;
         const poolSignature = JSON.stringify([openPool, poolFilters]);
-        if (loadedPoolRef.current !== poolSignature) setPoolLoading(true);
+        const conEsqueleto = loadedPoolRef.current !== poolSignature;
+        if (conEsqueleto) setPoolLoading(true);
         try {
             const params = new URLSearchParams({ tipo: openPool });
             if (poolFilters.sub) params.set('sub', poolFilters.sub);
@@ -334,8 +344,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
         } finally {
             loadedPoolRef.current = JSON.stringify([openPool, poolFilters]);
             setPoolLoading(false);
+            if (conEsqueleto) abrirEntradaDelPool();
         }
-    }, [openPool, poolFilters, refreshKey]);
+    }, [openPool, poolFilters, refreshKey, abrirEntradaDelPool]);
 
     useEffect(() => { fetchPool(); }, [fetchPool]);
 
@@ -371,6 +382,10 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     }, [grouped, poolCounts, loading, onTopPending]);
 
     const togglePool = (tipo) => {
+        // Abrir un pool es desplegar una lista: si ya estaba cargada (se cerró y se vuelve a abrir
+        // la misma) las filas aparecen en este mismo render, sin esqueleto de por medio, y entran
+        // escalonadas igual. Si hay que pedirla, la ventana se vuelve a abrir al llegar los datos.
+        if (openPool !== tipo) abrirEntradaDelPool();
         setOpenPool(prev => (prev === tipo ? null : tipo));
         setPoolFilters({ sub: '', days_since: '', programa: '', deuda: '' });
         // El buscador se limpia con los demás filtros: arrastrarlo entre categorías dejaba la
@@ -535,7 +550,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                         // a la vista y los bloques nuevos no tienen que esperar el
                                         // turno de filas que no se van a volver a animar.
                                         grouped[tipo].map((item, i) => (
-                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} orden={i} onClick={() => openLead(item, tipo)} />
+                                            <SeguimientoRow key={item.id} item={item} tipo={tipo} earnings={earnings} orden={i} escalonar={hoyEntrando} onClick={() => openLead(item, tipo)} />
                                         ))
                                     ) : (
                                         <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
@@ -552,7 +567,11 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                 {ocultos > 0 && (
                     <button
                         type="button"
-                        onClick={() => setVerSecundarios(v => !v)}
+                        onClick={() => {
+                            // Desplegar es otra tanda: los bloques nuevos entran fila por fila.
+                            if (!verSecundarios) abrirEntradaDeHoy();
+                            setVerSecundarios(v => !v);
+                        }}
                         className="w-full text-center pt-2 text-[11px] font-bold text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
                     >
                         {verSecundarios
@@ -667,7 +686,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                 )}
                                 <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                                     {poolVisibles.map((item, i) => (
-                                        <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} orden={i} onClick={() => openLead(item, openPool)} />
+                                        <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} orden={i} escalonar={poolEntrando} onClick={() => openLead(item, openPool)} />
                                     ))}
                                 </div>
                             </>

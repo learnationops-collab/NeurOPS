@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import './huesos.css';
 
 /**
@@ -29,6 +29,41 @@ const TOPE_ESCALON = 24;
 
 /** El retraso de entrada del elemento número `i`, ya topeado. Lo usan también las filas reales. */
 export const escalonDe = (i, paso = PASO_MS) => Math.min(Math.max(i, 0), TOPE_ESCALON) * paso;
+
+// Cuánto tarda en terminar de entrar el último elemento de una tanda: el retraso topeado, la
+// entrada de filas y tarjetas (`cardRiseIn`, .34 s en index.css) y un margen para el render que
+// separa abrir la ventana del primer cuadro pintado.
+const FIN_DE_ENTRADA_MS = escalonDe(TOPE_ESCALON) + 340 + 260;
+
+/**
+ * La ventana en la que las filas o tarjetas reales entran escalonadas. `entrando` vale true desde
+ * que se llama a `abrir` —cuando terminó una carga con esqueleto, o cuando se despliega una
+ * lista— hasta que la última de la tanda terminó de entrar; fuera de la ventana, lo que aparece
+ * entra sin retraso.
+ *
+ * Sin la ventana el escalón se aplicaba cada vez que un elemento se montaba, no sólo en la tanda
+ * que reemplaza al esqueleto. Una tarjeta del kanban que cambia de columna después de una acción
+ * se monta en otro padre, y una fila del pool que vuelve a aparecer al borrar letras del buscador
+ * también: cada una esperaba su turno invisible, con el hueco reservado, hasta 1,44 s, mientras el
+ * resto de la lista estaba quieto.
+ *
+ * Al cerrarse, los retrasos vuelven a cero, y eso no mueve nada: para entonces todas las de la
+ * tanda ya entraron, y cambiarle el `animation-delay` a una animación terminada no la repite.
+ *
+ * El estado se toca sólo desde `abrir` y desde su temporizador —en el manejador que termina la
+ * carga, no en un efecto ni durante el render—, y `abrir` es estable, así que puede ir en las
+ * dependencias de un `useCallback` sin dispararlo de nuevo.
+ */
+export const useVentanaDeEntrada = () => {
+    const [entrando, setEntrando] = useState(false);
+    const temporizador = useRef(null);
+    const abrir = useCallback(() => {
+        setEntrando(true);
+        clearTimeout(temporizador.current);
+        temporizador.current = setTimeout(() => setEntrando(false), FIN_DE_ENTRADA_MS);
+    }, []);
+    return [entrando, abrir];
+};
 
 export const Hueso = ({ alto = 14, ancho, radio, paso = 0, style, className }) => (
     <span className={`hueso${className ? ` ${className}` : ''}`} aria-hidden="true"

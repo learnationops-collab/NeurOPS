@@ -19,7 +19,7 @@ import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
-import { escalonDe } from '../../components/huesos/Huesos';
+import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
@@ -271,6 +271,10 @@ const CloserWorkflowPage = () => {
     // lista se reemplaza en silencio. Si no, cada acción borraba el tablero entero y lo volvía a
     // hacer entrar tarjeta por tarjeta. Mismo criterio que `loadedDateRef` en SeguimientosPane.
     const mazoCargadoRef = useRef(null);
+    // Las tarjetas entran escalonadas sólo en la tanda que reemplaza al esqueleto (ver
+    // `useVentanaDeEntrada`). Una que cambia de columna por una acción —la recarga silenciosa de
+    // arriba— entra enseguida, en vez de quedarse invisible esperando su turno con el resto quieto.
+    const [tableroEntrando, abrirEntradaDelTablero] = useVentanaDeEntrada();
     const [processingId, setProcessingId] = useState(null);
     // Llamadas de hoy YA reportadas (para la columna "Reportadas" del Kanban de ② Reportar).
     // `step=calls` del mazo excluye por diseño lo ya procesado (closer_processed=true) — no hay
@@ -809,7 +813,8 @@ const CloserWorkflowPage = () => {
     // apaga solo en la carga por cambio de pestaña/día, donde el panel ya se monta pidiendo datos.
     const fetchAgendas = async ({ refreshSeguimientos = true } = {}) => {
         const clave = `${activeStep}|${selectedDate}`;
-        if (mazoCargadoRef.current !== clave) setLoading(true);
+        const conEsqueleto = mazoCargadoRef.current !== clave;
+        if (conEsqueleto) setLoading(true);
         try {
             const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
             const res = await api.get(url);
@@ -851,6 +856,8 @@ const CloserWorkflowPage = () => {
         } finally {
             mazoCargadoRef.current = clave;
             setLoading(false);
+            // En el mismo render que saca el esqueleto: las tarjetas que se montan ahí son la tanda.
+            if (conEsqueleto) abrirEntradaDelTablero();
             // Aunque falle la carga del mazo: la acción que la disparó ya se guardó, y el panel
             // de seguimientos tiene que reflejarla igual.
             if (refreshSeguimientos) setSeguimientosRefreshKey(k => k + 1);
@@ -1221,7 +1228,8 @@ const CloserWorkflowPage = () => {
     // Renderizar una tarjeta individual del Kanban de confirmación (v6).
     // `orden` es su lugar en la fila de entrada: el renglón del tablero por la cantidad de
     // columnas, más la columna. Así entran de a una, de izquierda a derecha y de arriba abajo, con
-    // el mismo escalón (`escalonDe`) que el esqueleto que ocupaba su lugar.
+    // el mismo escalón (`escalonDe`) que el esqueleto que ocupaba su lugar. Sólo mientras dura la
+    // entrada del tablero (`tableroEntrando`): fuera de ella, la tarjeta que aparece entra ya.
     const renderKanbanCard = (a, phase, orden = 0) => {
         const isViewed = selectedLead?.id === a.id;
 
@@ -1276,7 +1284,7 @@ const CloserWorkflowPage = () => {
             <div 
                 key={a.id} 
                 className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
-                style={{ animationDelay: `${escalonDe(orden)}ms` }}
+                style={{ animationDelay: `${tableroEntrando ? escalonDe(orden) : 0}ms` }}
                 onClick={() => handleSelectLead(a)}
             >
                 <div
