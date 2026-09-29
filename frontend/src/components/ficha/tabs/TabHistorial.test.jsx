@@ -309,6 +309,22 @@ describe('los seguimientos del historial', () => {
     });
 });
 
+describe('el registro de eventos', () => {
+    it('el botón de borrar un evento se nombra para los lectores de pantalla', async () => {
+        const usuario = userEvent.setup();
+        render(<TabHistorial onAccion={vi.fn()} ficha={{
+            ...fichaPrecall,
+            historial: { ...fichaPrecall.historial, eventos: [
+                { id: 5, fecha: '2026-09-20T10:00:00', detalle: 'Llamó dos veces', autor: 'vendedor' },
+            ] },
+        }} />);
+        await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
+
+        // Es solo un ícono: sin nombre, el lector anunciaba «botón» a secas.
+        expect(screen.getByRole('button', { name: 'Borrar este evento' })).toBeInTheDocument();
+    });
+});
+
 describe('agendar un seguimiento desde el historial', () => {
     const RECIENTE = { ...AGENDA, tipo_seguimiento: 'tomada' };
     const formulario = () => screen.getByRole('group', { name: 'Agendar un seguimiento' });

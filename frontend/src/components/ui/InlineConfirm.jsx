@@ -264,6 +264,10 @@ const InlineConfirm = ({
                     <button
                         type="button"
                         disabled={disabled}
+                        // Compacto es un ícono solo: sin esto el botón no tiene nombre y un lector
+                        // de pantalla anuncia «botón» a secas. El `title` va en la caja de afuera,
+                        // que no es lo que recibe el foco.
+                        aria-label={compacto ? (title || label) : undefined}
                         onClick={() => setFase('asking')}
                         onMouseEnter={() => setResaltado(true)}
                         onMouseLeave={() => setResaltado(false)}
