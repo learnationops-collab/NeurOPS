@@ -2212,9 +2212,9 @@ const CloserWorkflowPage = () => {
                     {activeStep === 'confirmations' ? (
                         /* Renderizado del Kanban de Confirmaciones */
                         loading ? (
-                            /* La forma del kanban de abajo, no un spinner (pedido del usuario,
-                               29/sep/2026). Las columnas son las mismas dos, con su título: si
-                               cambia una de abajo, cambia acá. */
+                            /* La forma del kanban de abajo, no un spinner (ver EsqueletoKanban).
+                               Las columnas son las mismas dos, con su título: si cambia una de
+                               abajo, cambia acá. */
                             <EsqueletoKanban rotulo="Cargando confirmaciones…" columnas={[
                                 { clase: 'k1-v6', titulo: 'Por confirmar', subgrupo: true },
                                 { clase: 'k3-v6', titulo: 'Confirmado', hecha: true },

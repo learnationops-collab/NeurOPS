@@ -5,10 +5,10 @@ import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos
  * El kanban de Confirmar y de Reportar mientras llega el mazo: las mismas columnas, con su título
  * y su punto de color, y tarjetas con la forma de `.kcard-v6`, en vez de un círculo girando.
  *
- * Pedido del usuario (29/sep/2026): "al entrar como closer, en las pestañas de confirmar reportar
- * no hay un esqueleto sino una carga con un círculo dando vueltas; eso no me gusta". Y había una
- * razón de layout además del gusto: el spinner medía unos 120 px y el kanban mide como mínimo 400
- * (el `min-height` de `.kcol-v6`), así que al llegar los datos todo lo de abajo saltaba.
+ * Es el mismo criterio que el resto de las cargas desde que existen los huesos (ver `Huesos.jsx`):
+ * la forma de lo que viene, no un spinner que no dice nada. Y acá había además una razón de layout:
+ * el spinner medía unos 120 px y el kanban mide como mínimo 400 (el `min-height` de `.kcol-v6`),
+ * así que al llegar los datos todo lo de abajo saltaba.
  *
  * Los títulos de las columnas van escritos y no en hueso, como el encabezado de la tabla en
  * `EsqueletoRevisar`: se saben antes de la respuesta y leerlos adelanta qué viene. Lo único del

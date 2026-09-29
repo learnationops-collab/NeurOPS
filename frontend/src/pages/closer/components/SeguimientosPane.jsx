@@ -402,9 +402,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // medía 120 px y al llegar los datos crecía de golpe, empujando el resto del mazo hacia abajo.
     //
     // Son las tres tarjetas de abajo con su estructura real: un hueso que no coincide con lo que
-    // carga es peor que el spinner (ver `Huesos.jsx`), y el pedido del usuario (29/sep/2026) fue
-    // justamente ver el esqueleto mientras cargan las cosas. Antes faltaba la tarjeta del pool
-    // entera, que aparecía de la nada al llegar los datos, y las otras dos quedaban cortas.
+    // carga es peor que el spinner (ver `Huesos.jsx`), y es la misma regla que siguen el kanban de
+    // Confirmar y Reportar (EsqueletoKanban). Antes faltaba la tarjeta del pool entera, que
+    // aparecía de la nada al llegar los datos, y las otras dos quedaban cortas.
     //
     // Los títulos van escritos, como las cabeceras del kanban en hueso: se saben antes de la
     // respuesta. Va en hueso lo que manda el servidor —cifras, contadores, filas— y los botones

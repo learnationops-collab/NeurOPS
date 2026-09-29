@@ -21,10 +21,10 @@ const ROTULO = { fontSize: 10.5, fontWeight: 900, letterSpacing: '.22em', textTr
 // mes"). Se auto-contiene y se fetchea sola (no depende de ningún estado de CloserWorkflowPage,
 // que ya es enorme) — ver `CommissionService` en el backend para de dónde sale el %.
 //
-// Mientras carga ocupa su lugar con la forma que va a tener (pedido del usuario, 29/sep/2026: ver
-// el esqueleto mientras cargan las cosas del mazo). Antes no dibujaba nada hasta tener el dato, y
-// como está ARRIBA de la navegación y del kanban, al llegar empujaba el mazo entero 100 px hacia
-// abajo —con el esqueleto del kanban ya a la vista, o con el closer a punto de tocar una tarjeta—.
+// Mientras carga ocupa su lugar con la forma que va a tener, como el esqueleto del kanban de abajo
+// (ver EsqueletoKanban). Antes no dibujaba nada hasta tener el dato, y como está ARRIBA de la
+// navegación y del kanban, al llegar empujaba el mazo entero 100 px hacia abajo —con el esqueleto
+// del kanban ya a la vista, o con el closer a punto de tocar una tarjeta—.
 // El ícono y el rótulo van de verdad (no dependen de nada); en hueso, las dos cifras.
 //
 // Si la consulta falla la tarjeta no se muestra, como antes: un hueso que no se va nunca sería
