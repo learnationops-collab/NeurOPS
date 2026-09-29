@@ -114,6 +114,15 @@ def agendar_seguimiento(appt_id):
     return _ejecutar(appt_id, 'reportar', seguimientos.agendar)
 
 
+@bp.route('/<int:appt_id>/seguimiento', methods=['PATCH'])
+def corregir_seguimiento(appt_id):
+    """El estado (pendiente/realizado), el día, el tipo y la nota del seguimiento de ESTA agenda,
+    corregidos desde el historial. Mismo permiso que agendarlo."""
+    from app.services import ficha_seguimientos_service as seguimientos
+
+    return _ejecutar(appt_id, 'reportar', seguimientos.corregir)
+
+
 @bp.route('/<int:appt_id>/plan-cuotas', methods=['PUT'])
 def plan_cuotas(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.plan_cuotas)

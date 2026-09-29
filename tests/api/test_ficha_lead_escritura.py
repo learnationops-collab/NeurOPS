@@ -1014,6 +1014,154 @@ def test_quien_no_reporta_no_agenda_seguimientos(client, db, lead, equipo, auth_
     assert lead.fecha_seguimiento is None
 
 
+def _con_seguimiento(db, lead, equipo, **campos):
+    """Una agenda vieja con un seguimiento pendiente para el 6 de octubre."""
+    datos = {'closer_result': 'Show up', 'closer_processed': True,
+             'fecha_seguimiento': '2026-10-06', 'seguimiento_tipo': 'tomada',
+             'seguimiento_sub': 'Lo habla con la esposa', 'seguimiento_intento': 2,
+             'seguimiento_realizado': False, **campos}
+    return _agenda_vieja(db, lead, equipo, **datos)
+
+
+def test_marcar_realizado_un_seguimiento_lo_saca_de_la_pestana_del_closer(client, db, lead, equipo,
+                                                                         auth_headers):
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    vieja = _con_seguimiento(db, lead, equipo)
+
+    r = client.patch(seguimiento(vieja), json={'realizado': True},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == ['realizado']
+    assert vieja.seguimiento_realizado is True
+    # La fecha se conserva: reabrirlo por un error de dedo no pierde el dato.
+    assert vieja.fecha_seguimiento == '2026-10-06'
+    assert CloserFollowUpService.get_today_grouped(equipo['closer'].id, '2026-10-06')['tomada'] == []
+    evento = LeadEventLog.query.filter_by(appointment_id=vieja.id,
+                                          action_type='seguimiento_corregido').one()
+    assert evento.description == ('vendedor corrigió el seguimiento desde el historial de la '
+                                  'ficha: estado pendiente → realizado.')
+
+
+def test_reabrir_un_seguimiento_lo_devuelve_a_la_pestana_del_closer(client, db, lead, equipo,
+                                                                   auth_headers):
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    vieja = _con_seguimiento(db, lead, equipo, seguimiento_realizado=True)
+
+    r = client.patch(seguimiento(vieja), json={'realizado': False},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    del_dia = CloserFollowUpService.get_today_grouped(equipo['closer'].id, '2026-10-06')
+    assert [s['id'] for s in del_dia['tomada']] == [vieja.id]
+
+
+def test_se_corrigen_el_dia_el_tipo_y_la_nota_en_un_solo_pedido(client, db, lead, equipo,
+                                                                auth_headers):
+    vieja = _con_seguimiento(db, lead, equipo, followup_reminder_enabled=True,
+                             followup_reminder_time='10:00',
+                             followup_reminder_sent_at=datetime(2026, 10, 1, 10, 5))
+
+    r = client.patch(seguimiento(vieja),
+                     json={'fecha': '2026-10-09', 'tipo': 'cerrada', 'nota': 'Cobrar la cuota'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == ['fecha', 'tipo', 'nota']
+    assert (vieja.fecha_seguimiento, vieja.seguimiento_tipo, vieja.seguimiento_sub) == \
+        ('2026-10-09', 'cerrada', 'Cobrar la cuota')
+    # El aviso que el closer había pedido sigue pedido, y vuelve a salir el día nuevo.
+    assert (vieja.followup_reminder_enabled, vieja.followup_reminder_sent_at) == (True, None)
+    evento = LeadEventLog.query.filter_by(appointment_id=vieja.id,
+                                          action_type='seguimiento_corregido').one()
+    assert 'fecha 2026-10-06 → 2026-10-09' in evento.description
+    assert 'tipo Llamadas tomadas → Llamadas cerradas' in evento.description
+    assert 'nota «Lo habla con la esposa» → «Cobrar la cuota»' in evento.description
+
+
+def test_corregir_un_seguimiento_no_toca_el_mazo_ni_la_cadencia(client, db, lead, equipo,
+                                                               auth_headers):
+    lead.fecha_seguimiento, lead.seguimiento_tipo = '2026-10-06', 'no_tomada'
+    db.session.commit()
+
+    r = client.patch(seguimiento(lead), json={'realizado': True, 'nota': ''},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.closer_processed is False
+    assert lead.seguimiento_intento == 1
+    assert (lead.last_contact_outcome, lead.last_contact_at) == (None, None)
+
+
+def test_una_nota_vacia_borra_la_nota(client, db, lead, equipo, auth_headers):
+    vieja = _con_seguimiento(db, lead, equipo)
+
+    r = client.patch(seguimiento(vieja), json={'nota': '   '},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert vieja.seguimiento_sub is None
+
+
+def test_una_agenda_sin_seguimiento_no_tiene_nada_que_corregir(client, db, lead, equipo,
+                                                              auth_headers):
+    r = client.patch(seguimiento(lead), json={'realizado': True},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert 'no tiene ningún seguimiento' in r.get_json()['message']
+    assert lead.seguimiento_realizado is False
+
+
+@pytest.mark.parametrize('datos', [
+    {},
+    {'intento': 4},                                  # no se corrige desde acá
+    {'realizado': 'si'},
+    {'fecha': ''},
+    {'fecha': '2026-13-01'},
+    {'tipo': 'urgente'},
+    {'nota': 'x' * 256},
+    # Uno bueno y uno malo: no se escribe ninguno.
+    {'realizado': True, 'tipo': 'urgente'},
+])
+def test_una_correccion_mal_pedida_no_escribe_nada(client, db, lead, equipo, auth_headers, datos):
+    vieja = _con_seguimiento(db, lead, equipo)
+
+    r = client.patch(seguimiento(vieja), json=datos, headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message']
+    assert (vieja.seguimiento_realizado, vieja.fecha_seguimiento, vieja.seguimiento_tipo,
+            vieja.seguimiento_intento) == (False, '2026-10-06', 'tomada', 2)
+    assert LeadEventLog.query.filter_by(action_type='seguimiento_corregido').count() == 0
+
+
+def test_un_pedido_que_no_cambia_nada_no_deja_rastro(client, db, lead, equipo, auth_headers):
+    vieja = _con_seguimiento(db, lead, equipo)
+
+    r = client.patch(seguimiento(vieja),
+                     json={'realizado': False, 'fecha': '2026-10-06', 'tipo': 'tomada',
+                           'nota': 'Lo habla con la esposa'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == []
+    assert LeadEventLog.query.filter_by(action_type='seguimiento_corregido').count() == 0
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_reporta_no_corrige_seguimientos(client, db, lead, equipo, auth_headers, rol):
+    vieja = _con_seguimiento(db, lead, equipo)
+
+    r = client.patch(seguimiento(vieja), json={'realizado': True},
+                     headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert vieja.seguimiento_realizado is False
+
+
 # El programa de un cliente vive en el prefijo de `tipo_pago`. Asignarlo es reetiquetar sus
 # ventas, porque es de ahi que lo leen el libro comercial, el plan de cuotas y la comision.
 
@@ -1261,6 +1409,7 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         client.patch(url(lead, '/closer'), json={'closer_id': 1}),
         client.post(url(lead, '/seguimiento'), json={'fecha': '2026-10-01'}),
         client.put(url(lead, '/seguimiento'), json={'fecha': '2026-10-01', 'tipo': 'tomada'}),
+        client.patch(url(lead, '/seguimiento'), json={'realizado': True}),
         client.put(url(lead, '/plan-cuotas'), json={'total': 1, 'num_cuotas': 1}),
         client.post(url(lead, '/baja'), json={'motivo': 'x'}),
         client.post(url(lead, '/nota'), json={'texto': 'x'}),

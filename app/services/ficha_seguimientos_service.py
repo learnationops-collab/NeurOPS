@@ -141,3 +141,71 @@ def agendar(appt, datos, usuario):
 
     return {'id': appt.id, 'fecha': appt.fecha_seguimiento, 'tipo': appt.seguimiento_tipo,
             'nota': appt.seguimiento_sub, 'reemplazado': anterior is not None}
+
+
+# Lo que se corrige de un seguimiento, con los MISMOS nombres con los que lo lee el historial
+# (`ficha_lead_secciones.historial`): si el GET dijera `nota` y el PATCH pidiera `sub`, cada lado
+# pasaria sus tests y en pantalla guardar no haria nada.
+CAMPOS = ('realizado', 'fecha', 'tipo', 'nota')
+
+
+def corregir(appt, datos, usuario):
+    """Corrige el estado, el día, el tipo y/o la nota del seguimiento de ESTA agenda.
+
+    Solo se tocan los campos que vienen, y se validan todos antes de escribir ninguno. Lo que se
+    decidió con cada uno:
+
+      · `realizado`: cierra o reabre el seguimiento, y nada más. La fecha se CONSERVA al cerrarlo
+        —el mazo la borra, pero ninguna pantalla lista un realizado por su fecha—, así que
+        reabrirlo por error de dedo no pierde el dato. Reabierto con la fecha pasada, vuelve como
+        atrasado: es lo que es.
+      · `fecha`: se mueve, no se borra (sin día el seguimiento pasaría al pool «Asignar fecha»
+        del closer, que es otra cosa que corregirlo). Mover el día rearma el aviso por WhatsApp si
+        el closer lo tenía pedido —se borra la marca de «ya avisé hoy», igual que al reprogramar
+        desde su pestaña—; no lo prende si no lo tenía.
+      · `tipo`: lo cambia de grupo en la pestaña del closer.
+      · `nota`: vacía la borra.
+
+    El intento no se corrige: es la cuenta de contactos de la cadencia y lo lleva el closer al
+    procesar cada uno.
+    """
+    if not any(campo in datos for campo in CAMPOS):
+        raise ErrorDeAccion('No hay nada que guardar.')
+    if not tiene_seguimiento(appt):
+        raise ErrorDeAccion('Esta agenda no tiene ningún seguimiento que corregir: agendale uno.')
+
+    realizado = datos.get('realizado')
+    if 'realizado' in datos and not isinstance(realizado, bool):
+        raise ErrorDeAccion('El estado del seguimiento es pendiente o realizado.')
+    fecha = _dia(datos.get('fecha')) if 'fecha' in datos else None
+    tipo = _tipo(datos.get('tipo')) if 'tipo' in datos else None
+    nota = _nota(datos.get('nota')) if 'nota' in datos else None
+
+    cambios, bitacora = [], []
+    if 'realizado' in datos and realizado != bool(appt.seguimiento_realizado):
+        antes, ahora = ('pendiente', 'realizado') if realizado else ('realizado', 'pendiente')
+        bitacora.append(f'estado {antes} → {ahora}')
+        appt.seguimiento_realizado = realizado
+        cambios.append('realizado')
+    if fecha and fecha != (appt.fecha_seguimiento or ''):
+        bitacora.append(f'fecha {appt.fecha_seguimiento or "sin fecha"} → {fecha}')
+        appt.fecha_seguimiento = fecha
+        appt.followup_reminder_sent_at = None
+        cambios.append('fecha')
+    if tipo and tipo != appt.seguimiento_tipo:
+        bitacora.append(f'tipo {_etiqueta(appt.seguimiento_tipo)} → {_etiqueta(tipo)}')
+        appt.seguimiento_tipo = tipo
+        cambios.append('tipo')
+    if 'nota' in datos and nota != (appt.seguimiento_sub or None):
+        bitacora.append(f'nota «{appt.seguimiento_sub or ""}» → «{nota or ""}»')
+        appt.seguimiento_sub = nota
+        cambios.append('nota')
+
+    if not cambios:
+        return {'id': appt.id, 'cambios': []}
+
+    db.session.commit()
+    _anotar(appt, usuario, 'seguimiento_corregido', 'corrigió el seguimiento', '; '.join(bitacora))
+    return {'id': appt.id, 'cambios': cambios, 'realizado': bool(appt.seguimiento_realizado),
+            'fecha': appt.fecha_seguimiento, 'tipo': appt.seguimiento_tipo,
+            'nota': appt.seguimiento_sub}
