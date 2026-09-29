@@ -98,6 +98,19 @@ def _codigo_de_programa(tipo_pago):
     return code if code in PROGRAM_CODE_NAMES else None
 
 
+def _ventas_atadas(client_id):
+    """El filtro de las ventas que ya estan atadas a este cliente por id, en una lista para sumarle
+    los del cruce por contacto.
+
+    Sin esto, una venta atada por id deja de ser del cliente en cuanto se le corrige el correo o el
+    instagram: la ficha ata las ventas que el cliente tenia por contacto antes de cambiarselo
+    (`ficha_acciones_service.editar_datos`), y el programa y el "ya compro" se leen de aca.
+
+    Vacio sin id: `client_id == None` es `IS NULL` en SQL y juntaria todas las ventas sueltas.
+    """
+    return [FinancialSale.client_id == client_id] if client_id else []
+
+
 class CloserFollowUpService:
     @staticmethod
     def next_cadence_date(intento, base_date=None):
@@ -108,10 +121,10 @@ class CloserFollowUpService:
     @staticmethod
     def _client_has_sale(client):
         """True si el cliente ya tiene una venta registrada en FinancialSale (mismo cruce
-        email/instagram que _client_program_code)."""
+        email/instagram que _client_program_code, mas las ventas atadas a el por id)."""
         if not client:
             return False
-        filters = []
+        filters = _ventas_atadas(client.id)
         if client.email:
             filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
         if client.instagram:
@@ -347,9 +360,9 @@ class CloserFollowUpService:
 
     @staticmethod
     def _ultima_venta_de(client):
-        """La venta más reciente del cliente en FinancialSale (de cualquier estado), cruzada por
-        email o instagram. None si no tiene ninguno de los dos o no hay venta."""
-        filters = []
+        """La venta más reciente del cliente en FinancialSale (de cualquier estado), atada a él por
+        id o cruzada por email o instagram. None si no hay ninguna."""
+        filters = _ventas_atadas(client.id)
         if client.email:
             filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
         if client.instagram:
@@ -1361,15 +1374,23 @@ class CarteraEnLote:
             self.cuota_pendiente[cid] = CloserFollowUpService._cuota_pendiente_de(cid)
 
     def _leer_programas(self):
-        """El programa de cada cliente, de su última venta cruzada por email o instagram (de
-        cualquier estado, como `_client_program_code`). Se leen todas las ventas una vez,
-        ordenadas como la consulta original, y a cada cliente le toca la primera que cruza."""
-        por_email, por_ig = {}, {}
+        """El programa de cada cliente, de su última venta atada a él por id o cruzada por email
+        o instagram (de cualquier estado, como `_client_program_code`). Se leen todas las ventas
+        una vez, ordenadas como la consulta original, y a cada cliente le toca la primera que
+        cruza.
+
+        El índice por id es el mismo `_ventas_atadas` de la lectura cliente por cliente: sin él,
+        a un cliente al que se le corrigió el correo desde la ficha (sus ventas quedan atadas por
+        id antes del cambio) la tabla Clientes le mostraba "Sin programa" y la ficha no."""
+        por_id, por_email, por_ig = {}, {}, {}
         filas = (db.session.query(FinancialSale.date, FinancialSale.tipo_pago,
+                                  FinancialSale.client_id,
                                   func.lower(FinancialSale.mail_cliente),
                                   func.lower(func.replace(FinancialSale.instagram, '@', '')))
                  .order_by(FinancialSale.date.desc(), FinancialSale.id.asc()))
-        for pos, (fecha, tipo_pago, mail, ig) in enumerate(filas):
+        for pos, (fecha, tipo_pago, client_id, mail, ig) in enumerate(filas):
+            if client_id is not None:
+                por_id.setdefault(client_id, []).append((pos, fecha, tipo_pago))
             if mail is not None:
                 por_email.setdefault(mail, []).append((pos, fecha, tipo_pago))
             if ig is not None:
@@ -1378,7 +1399,7 @@ class CarteraEnLote:
         for cid, cliente in self.clientes.items():
             # Las mismas claves que arma `_ultima_venta_de`, incluido el caso raro de un email
             # o instagram que queda vacío después del strip (cruza con las ventas vacías).
-            candidatas = {}
+            candidatas = {pos: (fecha, tipo_pago) for pos, fecha, tipo_pago in por_id.get(cid, ())}
             if cliente.email:
                 for pos, fecha, tipo_pago in por_email.get(cliente.email.strip().lower(), ()):
                     candidatas[pos] = (fecha, tipo_pago)
