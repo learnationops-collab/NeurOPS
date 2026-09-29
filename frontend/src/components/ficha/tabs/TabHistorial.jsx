@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { fechaLegible as fecha, SeccionColapsable } from '../piezas';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
+import InlineConfirm from '../../ui/InlineConfirm';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -108,6 +110,78 @@ const SelectorEstado = ({ etiqueta, valor, opciones, disabled, onCambiar }) => (
         </select>
     </span>
 );
+
+/**
+ * La sección «Registro de eventos»: la bitácora del lead, reescribible y borrable.
+ *
+ * Decisión explícita del usuario (29/09/2026), tomada sabiendo lo que cuesta: con esto el
+ * registro deja de servir como auditoría. Las entradas que dejan las correcciones de la propia
+ * ficha —el total a pagar, el programa, el estado de una agenda— se pueden reescribir o hacer
+ * desaparecer desde la misma pantalla que las produjo.
+ *
+ * El borrado usa `InlineConfirm` y no un `window.confirm`, igual que el resto de lo destructivo
+ * de esta app. Ojo: acá la ventana de deshacer es de verdad la única oportunidad — una vez que
+ * el pedido sale, la fila se borra y no hay endpoint que la devuelva.
+ */
+const Eventos = ({ eventos, puedeEditar, onAccion }) => {
+    const [editando, setEditando] = useState(null);
+    const [texto, setTexto] = useState('');
+    const [ocupado, setOcupado] = useState(null);
+
+    const abrir = (e) => { setEditando(e.id); setTexto(e.detalle || ''); };
+
+    const guardar = async (id) => {
+        setOcupado(id);
+        try {
+            await onAccion?.('editar_evento', { evento_id: id, detalle: texto });
+            setEditando(null);
+        } catch {
+            // El aviso del cascarón ya lo dice; el editor se queda con lo tipeado.
+        } finally {
+            setOcupado(null);
+        }
+    };
+
+    const borrar = (id) => onAccion?.('borrar_evento', { evento_id: id })?.catch?.(() => {});
+
+    return eventos.map((e, i) => (
+        <div key={e.id ?? i} className="fi-sec-fila">
+            <span className="t-sm mut">{fecha(e.fecha) || '—'}</span>
+            {editando === e.id ? (
+                <span className="fila" style={{ gap: 'var(--s2)', minWidth: 0 }}>
+                    <span className="ln-field" style={{ height: 34, flex: 1, minWidth: 0 }}>
+                        <input value={texto} autoFocus aria-label="Texto del evento"
+                            onChange={(ev) => setTexto(ev.target.value)}
+                            onKeyDown={(ev) => {
+                                if (ev.key === 'Enter') guardar(e.id);
+                                if (ev.key === 'Escape') setEditando(null);
+                            }} />
+                    </span>
+                    <button type="button" className="btn btn--sm" disabled={ocupado === e.id || !texto.trim()}
+                        onClick={() => guardar(e.id)}>Guardar</button>
+                    <button type="button" className="btn btn--linea btn--sm"
+                        onClick={() => setEditando(null)}>Cancelar</button>
+                </span>
+            ) : (
+                <span className="t-sm">{e.detalle}</span>
+            )}
+            <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                <span className="t-sm mut">{e.autor}</span>
+                {puedeEditar && editando !== e.id && (
+                    <>
+                        <button type="button" className="ibtn" aria-label="Reescribir este evento"
+                            title="Reescribir este evento" onClick={() => abrir(e)}>
+                            <Pencil size={14} />
+                        </button>
+                        <InlineConfirm compacto label="Borrar" title="Borrar este evento"
+                            confirmLabel="Sí, borrar" doneLabel="Borrado"
+                            onConfirm={() => borrar(e.id)} />
+                    </>
+                )}
+            </span>
+        </div>
+    ));
+};
 
 /**
  * La sección «Agendas»: todas las llamadas del cliente, con su estado corregible en la fila y un
@@ -362,9 +436,7 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                 <SeccionColapsable titulo="Registro de eventos"
                     resumen={`${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`
                         + (eventos[0]?.fecha ? ` · último ${fecha(eventos[0].fecha)}` : '')}>
-                    {eventos.map((e, i) => (
-                        <Fila key={e.id ?? i} a={fecha(e.fecha)} b={e.detalle} c={e.autor} />
-                    ))}
+                    <Eventos eventos={eventos} puedeEditar={puedeReportar} onAccion={onAccion} />
                 </SeccionColapsable>
             )}
         </div>

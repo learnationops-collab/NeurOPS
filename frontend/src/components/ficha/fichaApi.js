@@ -52,6 +52,9 @@ const RUTAS = {
     // cliente, no solo la que la ficha tiene abierta: el id viaja en la URL (ver `onAccion`).
     estado_agenda: (appt, p) => api.patch(`/ficha/${appt}/estado`, p),
     crear_agenda: (appt, p) => api.post(`/ficha/${appt}/agenda`, p),
+    // El id del evento va en la URL: `editar_evento` y `borrar_evento` lo sacan del payload.
+    editar_evento: (appt, p) => api.patch(`/ficha/${appt}/evento/${p.evento_id}`, { detalle: p.detalle }),
+    borrar_evento: (appt, p) => api.delete(`/ficha/${appt}/evento/${p.evento_id}`),
 
     // Post-venta / cobro. Un pago es una escritura de venta: el único camino real
     // de una venta y de una cuota cobrada es el mismo (`SheetsService.post_to_sheets`).

@@ -170,15 +170,29 @@ def test_la_ficha_registro_sus_rutas(app):
     assert ('GET', '/api/ficha/lead') in rutas
 
 
+# Con que valor se rellena cada parametro de una ruta de la ficha para poder pedirla. Un
+# parametro sin rellenar deja el `<...>` literal en la URL, que no matchea ninguna regla y
+# responde 405: el trinquete daria por ABIERTA una ruta que en realidad nunca se llego a llamar.
+_RELLENOS = {'<grupo>': 'dolores', '<int:evento_id>': '1'}
+
+
 def test_ninguna_ruta_de_la_ficha_responde_a_un_anonimo(client, app, db, lead_de_prueba):
     """Trinquete: una ruta nueva en la ficha sin sesion rompe este test y hay que decidirla."""
-    abiertas = []
+    abiertas, sin_rellenar = [], []
     for metodo, regla in _rutas_de_la_ficha(app):
-        ruta = regla.replace('<int:appt_id>', str(lead_de_prueba.id)).replace('<grupo>', 'dolores')
+        ruta = regla.replace('<int:appt_id>', str(lead_de_prueba.id))
+        for marca, valor in _RELLENOS.items():
+            ruta = ruta.replace(marca, valor)
+        if '<' in ruta:
+            sin_rellenar.append(f'{metodo} {regla}')
+            continue
         respuesta = client.open(ruta, method=metodo, json={})
         if respuesta.status_code not in (401, 403):
             abiertas.append(f'{metodo} {regla} -> {respuesta.status_code}')
 
+    assert sin_rellenar == [], ('Estas rutas tienen un parametro que este test no sabe rellenar, '
+                               'asi que NO se comprobaron. Agregalo a `_RELLENOS`:\n'
+                               + '\n'.join(sin_rellenar))
     assert abiertas == [], 'Rutas de la ficha abiertas a cualquiera:\n' + '\n'.join(abiertas)
 
 

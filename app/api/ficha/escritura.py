@@ -99,6 +99,25 @@ def total(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.total_a_pagar)
 
 
+@bp.route('/<int:appt_id>/evento/<int:evento_id>', methods=['PATCH', 'DELETE'])
+def evento(appt_id, evento_id):
+    """Reescribe o borra una fila del registro de eventos de este lead.
+
+    El permiso es `reportar` —la direccion y el closer—, que es lo que se pidio. Ver la nota de
+    `ficha_acciones_service`: con esto el registro deja de servir como auditoria.
+    """
+    accion = acciones.borrar_evento if request.method == 'DELETE' else acciones.editar_evento
+    datos = _datos()
+    datos['evento_id'] = evento_id
+    appt, error = _agenda_y_permiso(appt_id, 'reportar')
+    if error:
+        return error
+    try:
+        return jsonify(accion(appt, datos, current_user)), 200
+    except acciones.ErrorDeAccion as e:
+        return jsonify({'message': str(e)}), 400
+
+
 @bp.route('/<int:appt_id>/estado', methods=['PATCH'])
 def estado(appt_id):
     """El pre call o el post call de esta agenda, corregidos desde el historial."""

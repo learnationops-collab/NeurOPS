@@ -492,6 +492,80 @@ def test_el_setter_no_toca_el_total_a_pagar(client, db, lead, equipo, auth_heade
     assert lead.client.total_amount is None
 
 
+# El registro de eventos es reescribible y borrable por decision explicita del usuario
+# (29/09/2026): con esto deja de servir como auditoria. Lo que si se comprueba es que el evento
+# sea de ESTE lead — sin eso, el id de la URL alcanzaria para borrar el registro de cualquier otro.
+
+@pytest.fixture()
+def evento(db, lead, equipo):
+    from app.services.booking_service import BookingService
+    BookingService.log_lead_event(lead.id, equipo['closer'].id, 'comment', 'texto original')
+    return LeadEventLog.query.filter_by(appointment_id=lead.id).one()
+
+
+def test_se_reescribe_el_texto_de_un_evento(client, db, lead, evento, equipo, auth_headers):
+    r = client.patch(f'/api/ficha/{lead.id}/evento/{evento.id}',
+                     json={'detalle': 'lo que de verdad pasó'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert evento.description == 'lo que de verdad pasó'
+
+
+def test_un_evento_no_se_queda_sin_texto(client, db, lead, evento, equipo, auth_headers):
+    r = client.patch(f'/api/ficha/{lead.id}/evento/{evento.id}', json={'detalle': '   '},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert evento.description == 'texto original'
+
+
+def test_se_borra_un_evento_del_registro(client, db, lead, evento, equipo, auth_headers):
+    evento_id = evento.id
+
+    r = client.delete(f'/api/ficha/{lead.id}/evento/{evento_id}',
+                      headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert db.session.get(LeadEventLog, evento_id) is None
+
+
+def test_no_se_toca_el_evento_de_otro_lead(client, db, lead, equipo, auth_headers):
+    """El id de la URL no puede alcanzar para editar el registro de cualquiera."""
+    from app.services.booking_service import BookingService
+
+    otro_cliente = Client(full_name='Otro', email='otro@x.com')
+    db.session.add(otro_cliente)
+    db.session.commit()
+    ajena = Appointment(closer_id=equipo['closer'].id, client_id=otro_cliente.id,
+                        start_time=datetime.utcnow())
+    db.session.add(ajena)
+    db.session.commit()
+    BookingService.log_lead_event(ajena.id, equipo['closer'].id, 'comment', 'de otro lead')
+    de_otro = LeadEventLog.query.filter_by(appointment_id=ajena.id).one()
+
+    r = client.delete(f'/api/ficha/{lead.id}/evento/{de_otro.id}',
+                      headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert db.session.get(LeadEventLog, de_otro.id) is not None
+
+
+def test_un_evento_que_no_existe_da_un_pedido_mal_hecho(client, db, lead, equipo, auth_headers):
+    r = client.delete(f'/api/ficha/{lead.id}/evento/999999',
+                      headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+
+
+def test_el_setter_no_borra_eventos(client, db, lead, evento, equipo, auth_headers):
+    r = client.delete(f'/api/ficha/{lead.id}/evento/{evento.id}',
+                      headers=auth_headers(equipo['setter']))
+
+    assert r.status_code == 403
+    assert db.session.get(LeadEventLog, evento.id) is not None
+
+
 # El historial lista TODAS las agendas del cliente y desde ahi se corrige cualquiera: la de hace
 # tres meses es justamente la que ninguna otra pantalla deja tocar.
 

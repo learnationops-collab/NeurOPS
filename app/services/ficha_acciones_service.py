@@ -448,6 +448,54 @@ def total_a_pagar(appt, datos, usuario):
             'deuda': CloserFollowUpService._client_debt(appt.client_id)}
 
 
+# --- Registro de eventos ----------------------------------------------------------------------
+#
+# Decision explicita del usuario (29/09/2026), tomada sabiendo lo que cuesta: el registro DEJA de
+# ser una auditoria. Una descripcion se puede reescribir y una fila se puede borrar, incluidas las
+# que dejan las correcciones de la propia ficha —el total a pagar, el programa, el estado de una
+# agenda—, asi que el rastro de un cambio se puede hacer desaparecer desde la misma pantalla que
+# lo produjo. Queda escrito aca porque es lo que alguien se va a preguntar dentro de seis meses,
+# cuando un evento no cuadre con lo que dice la base.
+#
+# Lo que si se comprueba: que el evento sea de ESTE lead. Sin eso, el id de la URL alcanzaria para
+# borrar el registro de cualquier otro.
+
+
+def _evento_del_lead(appt, evento_id):
+    """El evento pedido, si pertenece a alguna agenda de este cliente. `ErrorDeAccion` si no."""
+    from app.models import LeadEventLog
+
+    evento = db.session.get(LeadEventLog, evento_id)
+    if not evento:
+        raise ErrorDeAccion('Ese evento no existe.')
+
+    if appt.client_id:
+        propias = {a.id for a in Appointment.query.filter_by(client_id=appt.client_id).all()}
+    else:
+        propias = {appt.id}
+    if evento.appointment_id not in propias:
+        raise ErrorDeAccion('Ese evento no es de este lead.')
+    return evento
+
+
+def editar_evento(appt, datos, usuario):
+    """Reescribe el texto de un evento del registro."""
+    texto = _texto(datos, 'detalle', obligatorio=True)
+    evento = _evento_del_lead(appt, datos.get('evento_id'))
+    evento.description = texto
+    db.session.commit()
+    return {'id': evento.id, 'detalle': evento.description}
+
+
+def borrar_evento(appt, datos, usuario):
+    """Saca una fila del registro. No se puede deshacer: la fila se borra, no se marca."""
+    evento = _evento_del_lead(appt, datos.get('evento_id'))
+    borrado = evento.id
+    db.session.delete(evento)
+    db.session.commit()
+    return {'id': borrado, 'borrado': True}
+
+
 # --- Estado de una agenda ---------------------------------------------------------------------
 
 def estado_agenda(appt, datos, usuario):
