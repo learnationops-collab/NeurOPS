@@ -3,7 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
-import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
+import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
+import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
 import { fmt } from './Shared';
 
 /**
@@ -22,6 +23,15 @@ import { fmt } from './Shared';
  * `AnimatePresence` —la vista vieja se va sin fundido— por lo mismo que en `ListaAgrupable`: esta
  * lista se monta embebida en el mazo del closer, donde `AnimatePresence` ya dejó nodos sin
  * desmontar.
+ *
+ * ## El dibujado es progresivo; el filtrado no
+ *
+ * Las filas llegan TODAS del backend y `Revisar` las filtra completas: eso es lo que hace que el
+ * "mostrando X de Y", los contadores de las facetas y la tira de totales cierren sobre el mismo
+ * conjunto (ver el docstring de `tablasDef.js`). Lo único paginado acá es el dibujado, con
+ * `usePaginaProgresiva`: entran 40 filas y el resto llega al bajar. Por eso el pie de la lista no
+ * dice "cargando más datos" —no hay ninguna petición— sino que muestra los huesos de las filas que
+ * están por dibujarse.
  */
 
 /** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
@@ -148,10 +158,19 @@ const Encabezado = ({ def, plantilla }) => (
     </div>
 );
 
-const Filas = ({ def, filas, plantilla, onAbrirFila }) => filas.map(fila => (
-    <div key={claveDe(fila)} className="tabla-fila"
+/* Cada fila entra por su cuenta, escalonada dentro de la página que está entrando (`desde`).
+   El escalonado va topeado en `escalonDe`: 500 filas a 45 ms acumulados serían 22 segundos de
+   animación. Las filas ya montadas no vuelven a animarse porque la `key` es estable, así que al
+   llegar la página siguiente sólo se mueven las nuevas. */
+const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto }) => filas.map((fila, i) => (
+    <motion.div key={claveDe(fila)} className="tabla-fila"
         role="button" tabIndex={0} style={{ '--cols': plantilla }}
         aria-label={`Abrir ${fila.cliente}`}
+        initial={quieto ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={quieto
+            ? { duration: 0 }
+            : { duration: .2, ease: 'easeOut', delay: escalonDe(i - desde) / 1000 }}
         onClick={() => onAbrirFila(fila)}
         onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -166,17 +185,17 @@ const Filas = ({ def, filas, plantilla, onAbrirFila }) => filas.map(fila => (
                 <Celda fila={fila} col={c} />
             </div>
         ))}
-    </div>
+    </motion.div>
 ));
 
-const Tarjetas = ({ def, filas, onAbrirFila }) => (
-    <VistaTarjetas filas={filas} clave={claveDe} onAbrir={onAbrirFila}
+const Tarjetas = ({ def, filas, onAbrirFila, desde = 0 }) => (
+    <VistaTarjetas filas={filas} clave={claveDe} onAbrir={onAbrirFila} desde={desde}
         titulo={(f) => f.cliente} subtitulo={(f) => f.ig}
         chips={chipsDe(def)} campos={camposDe(def)} />
 );
 
 /* ============================================================
-   HUESOS — la forma de la tabla mientras carga
+   HUESOS — la forma de la tabla mientras carga y mientras baja
    ============================================================ */
 
 /* Los anchos de los huesos se alternan: con todos iguales la tabla parecía un tablero de ajedrez,
@@ -235,13 +254,23 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
     const quieto = useReducedMotion();
     const esTarjetas = modo === 'tarjetas';
 
+    // Se pagina el arreglo COMPLETO y después se agrupa el prefijo: `agruparPor` saca los grupos en
+    // el orden en el que aparece su primera fila, así que agregar filas al final agrega grupos al
+    // final y nunca reordena los que ya estaban. Agrupar primero y paginar los grupos habría hecho
+    // saltar la lista entera en cada página.
+    const { pagina, hayMas, pie, dibujadas } = usePaginaProgresiva(visibles);
+
+    // Agrupada, el escalonado se cuenta dentro de cada grupo (`ListaAgrupable` llama a
+    // `renderFilas` una vez por grupo y no sabe de índices globales). Es una aproximación: el tope
+    // de `escalonDe` la vuelve irrelevante, porque ningún grupo escalona más de 12 filas.
     const renderFilas = (filas) => (esTarjetas
         ? (
             <div style={{ padding: 'var(--s4)' }}>
                 <Tarjetas def={def} filas={filas} onAbrirFila={onAbrirFila} />
             </div>
         )
-        : <Filas def={def} filas={filas} plantilla={plantilla} onAbrirFila={onAbrirFila} />);
+        : <Filas def={def} filas={filas} plantilla={plantilla} onAbrirFila={onAbrirFila}
+            quieto={quieto} />);
 
     const cuerpo = () => {
         if (dimension) {
@@ -251,16 +280,19 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
                         sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
                         la lista en cinco tablas en vez de una repartida. */}
                     {!esTarjetas && <Encabezado def={def} plantilla={plantilla} />}
-                    <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
+                    <ListaAgrupable filas={pagina} dimension={dimension} renderFilas={renderFilas}
                         formatoMonto={fmt.money} />
                 </>
             );
         }
-        if (esTarjetas) return <Tarjetas def={def} filas={visibles} onAbrirFila={onAbrirFila} />;
+        if (esTarjetas) {
+            return <Tarjetas def={def} filas={pagina} onAbrirFila={onAbrirFila} desde={dibujadas} />;
+        }
         return (
             <div className="tabla">
                 <Encabezado def={def} plantilla={plantilla} />
-                <Filas def={def} filas={visibles} plantilla={plantilla} onAbrirFila={onAbrirFila} />
+                <Filas def={def} filas={pagina} plantilla={plantilla} onAbrirFila={onAbrirFila}
+                    desde={dibujadas} quieto={quieto} />
             </div>
         );
     };
@@ -271,6 +303,19 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
             animate={{ opacity: 1, y: 0 }}
             transition={quieto ? { duration: 0 } : { duration: .2, ease: 'easeOut' }}>
             {cuerpo()}
+            {/* El pie que trae la página siguiente. Lleva los huesos de lo que falta dibujar en vez
+                de un rótulo: es la misma promesa que el esqueleto de la carga inicial, y el
+                `IntersectionObserver` necesita un elemento con alto para disparar. */}
+            {hayMas && (
+                <div ref={pie} className={esTarjetas ? 'tarjetas' : 'tabla'}
+                    style={{ marginTop: esTarjetas ? 'var(--s4)' : 0 }}>
+                    {esTarjetas
+                        ? Array.from({ length: 2 }, (_, i) => <HuesoTarjeta key={i} paso={i} />)
+                        : Array.from({ length: 3 }, (_, i) => (
+                            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+                        ))}
+                </div>
+            )}
         </motion.div>
     );
 };
