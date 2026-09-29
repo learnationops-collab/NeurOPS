@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
+import Tip from './Tip';
 
 /**
  * Piezas compartidas del dashboard comercial.
@@ -82,36 +83,10 @@ export const Chip = ({ chip }) => {
     return <span className="chip" style={{ '--c': `var(--${chip.tone})` }}>{chip.label}</span>;
 };
 
-/**
- * Ícono "i" con la explicación de la métrica.
- *
- * El globo se muestra por CSS (`:hover`/`:focus-within`), como en la referencia: no hace falta
- * estado de React para algo que el navegador ya sabe hacer. Lo único que sí se calcula es de qué
- * lado abrirlo, porque contra el borde derecho de la ventana se cortaba.
- */
-export const Tip = ({ texto, titulo }) => {
-    const [derecha, setDerecha] = useState(false);
-    const ref = useRef(null);
-
-    const decidirLado = () => {
-        if (!ref.current) return;
-        const { left } = ref.current.getBoundingClientRect();
-        setDerecha(left + 288 > window.innerWidth - 16);
-    };
-
-    if (!texto) return null;
-    return (
-        <span ref={ref} className={`tip${derecha ? ' tip--der' : ''}`} tabIndex={0} role="note"
-            aria-label={`${titulo ? `${titulo}: ` : ''}${texto}`}
-            onMouseEnter={decidirLado} onFocus={decidirLado}>
-            <span className="tip-dot" aria-hidden="true">i</span>
-            <span className="tip-burbuja" aria-hidden="true">
-                {titulo && <b>{titulo}</b>}
-                {texto}
-            </span>
-        </span>
-    );
-};
+// El ícono "i" se fue a `Tip.jsx` cuando la burbuja pasó a dibujarse en un portal (acá se elegía
+// el lado a ojo contra un ancho de 288 fijo y aun así se cortaba). Se re-exporta porque las cuatro
+// secciones lo importan por este camino.
+export { Tip };
 
 /** Cabecera de panel: título + tooltip a la izquierda, lo que le pasen a la derecha. */
 export const PanelCab = ({ titulo, tip, children, eyebrow }) => (

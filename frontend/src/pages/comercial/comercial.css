@@ -203,6 +203,7 @@
   30%{transform:translate(-44%,32%) scale(1.22);opacity:.7}
   70%{transform:translate(-92%,-14%) scale(1);opacity:.45}}
 @keyframes dcTipIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes dcTipInArriba{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes dcModalIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 
 @media (prefers-reduced-motion:reduce){
@@ -379,23 +380,35 @@
 .dc-shell .tip:hover .tip-dot,
 .dc-shell .tip:focus-within .tip-dot{color:var(--text-on-surface);
   border-color:var(--border-control);background:var(--bg-element)}
-.dc-shell .tip-burbuja{position:absolute;top:28px;left:-10px;z-index:80;
+/* La capa del portal donde vive la burbuja (ver `Tip.jsx`: `.dock`, `.modal` y `.tabs` la
+   recortaban con su `overflow` y ningun `z-index` la salvaba de eso). Existe solo para llevarle
+   los tokens del tablero, igual que el velo del modal, asi que hay que apagarle lo que
+   `.dc-shell` pone por ser la pagina —fondo, alto minimo, colchon del dock— o taparia todo. El
+   `pointer-events:none` es lo que evita que la capa se coma el hover de lo que hay debajo. */
+.dc-shell.tip-capa{position:fixed;top:0;left:0;width:0;height:0;z-index:1200;
+  pointer-events:none;background:none;min-height:0;padding:0;overflow:visible}
+/* `fixed` y sin `top`/`left` propios: las coordenadas las calcula `Tip.jsx` midiendo el ancla
+   contra la ventana, que es la unica forma de que la burbuja no se corte contra el borde. */
+.dc-shell .tip-burbuja{position:fixed;z-index:1;
   width:max-content;max-width:min(288px,calc(100vw - 32px));
   padding:var(--s3) 14px;background:var(--bg-flotante);
   border:1px solid var(--border-main);border-top-color:var(--sheen);border-radius:16px;
   box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.2);color:var(--text-on-surface);
   font-size:12.5px;font-weight:400;line-height:1.5;letter-spacing:0;
   text-transform:none;text-align:left;pointer-events:none;white-space:normal;
-  display:none}
+  animation:dcTipIn .16s ease-out both}
 .dc-shell .tip-burbuja b{display:block;margin-bottom:5px;font-size:10px;font-weight:900;
   letter-spacing:.14em;text-transform:uppercase;color:var(--brand-secondary)}
-.dc-shell .tip-burbuja::before{content:"";position:absolute;top:-5px;left:14px;
+/* `--flecha` es la distancia desde el borde izquierdo de la burbuja hasta el centro del icono:
+   cuando la burbuja se corre para entrar en pantalla, el icono deja de estar en su esquina. */
+.dc-shell .tip-burbuja::before{content:"";position:absolute;top:-5px;left:calc(var(--flecha,14px) - 4.5px);
   width:9px;height:9px;transform:rotate(45deg);
   background:var(--bg-flotante);border-left:1px solid var(--sheen);border-top:1px solid var(--sheen)}
-.dc-shell .tip--der .tip-burbuja{left:auto;right:-10px}
-.dc-shell .tip--der .tip-burbuja::before{left:auto;right:14px}
-.dc-shell .tip:hover .tip-burbuja,
-.dc-shell .tip:focus-within .tip-burbuja{display:block;animation:dcTipIn .16s ease-out both}
+/* Burbuja abierta hacia arriba (no entraba abajo): la flecha pasa al borde de abajo y la entrada
+   sube desde el ancla en vez de bajar, para que el movimiento siga saliendo del icono. */
+.dc-shell .tip-burbuja--arriba{animation-name:dcTipInArriba}
+.dc-shell .tip-burbuja--arriba::before{top:auto;bottom:-5px;
+  border-left:0;border-top:0;border-right:1px solid var(--sheen);border-bottom:1px solid var(--sheen)}
 
 /* ============================================================
    8 · EL DOCK

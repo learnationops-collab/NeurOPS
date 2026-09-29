@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
-import { Cargando, Humo, fmt, useMontado } from './Shared';
+// El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
+// mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
+import { Cargando, Humo, Tip, fmt, useMontado } from './Shared';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import {
     DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER, destinoToques,
@@ -31,20 +33,6 @@ import {
    ============================================================ */
 
 const v = (tono) => `var(--${tono})`;
-
-/** Ícono "i" con la explicación de la métrica. Abre por CSS (`:hover` / `:focus-within`). */
-const Tip = ({ texto, titulo, der }) => {
-    if (!texto) return null;
-    return (
-        <span className={`tip${der ? ' tip--der' : ''}`} tabIndex={0} role="note"
-            aria-label={titulo ? `${titulo}: ${texto}` : texto}>
-            <span className="tip-dot" aria-hidden="true">i</span>
-            <span className="tip-burbuja" aria-hidden="true">
-                {titulo && <b>{titulo}</b>}{texto}
-            </span>
-        </span>
-    );
-};
 
 /**
  * Variación contra el período comparado. El `title` lleva el valor actual, porque un porcentaje
@@ -479,7 +467,7 @@ const PanelCierre = ({ bloque, irA }) => {
                                     className="tdatos-n" style={{ color: v(f.tone) }}>
                                     {fmt.pct(f.n)}
                                 </MetricaClicable>
-                                <span><Tip der texto={f.help} titulo={f.label} /></span>
+                                <span><Tip texto={f.help} titulo={f.label} /></span>
                             </div>
                         ))}
                     </div>
@@ -574,7 +562,7 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                                     {fmt.money(f.valor)}
                                 </MetricaClicable>
                                 <span className="tdatos-p">{f.p}</span>
-                                <span><Tip der texto={f.help} titulo={f.label} /></span>
+                                <span><Tip texto={f.help} titulo={f.label} /></span>
                             </div>
                         ))}
                     </div>
@@ -606,7 +594,7 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                             <div key={x.label} className="ficha" style={{ '--c': v(x.tone) }}>
                                 <span className="fila" style={{ gap: 5, alignItems: 'flex-start' }}>
                                     <span className="ficha-lbl">{x.label}</span>
-                                    <Tip der texto={x.help} titulo={x.label} />
+                                    <Tip texto={x.help} titulo={x.label} />
                                 </span>
                                 <MetricaClicable irA={irA} destino={D[x.destino]} subrayar={false}
                                     vacio={!porCobrar[x.campo]}
@@ -877,7 +865,7 @@ const PanelSenas = ({ senas, irA }) => {
                             <div key={c.l} style={{ display: 'grid', gap: 5, minWidth: 0 }}>
                                 <span className="fila" style={{ gap: 5, alignItems: 'flex-start' }}>
                                     <span className="ficha-lbl" style={{ lineHeight: 1.3 }}>{c.l}</span>
-                                    <Tip der texto={c.help} titulo={c.l} />
+                                    <Tip texto={c.help} titulo={c.l} />
                                 </span>
                                 <MetricaClicable irA={irA} destino={c.destino} subrayar={false}
                                     detalle={`Señas · ${c.l} ${c.valor}`}>

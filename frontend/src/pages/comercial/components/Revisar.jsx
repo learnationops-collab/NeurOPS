@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
-import { Cargando, fmt } from './Shared';
+// El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
+// barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
+import { Cargando, Tip, fmt } from './Shared';
 import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
@@ -32,14 +34,6 @@ export { ChipTono } from './RevisarLista';
  * pedida (ver el fix de DashboardComercial): las filas que llegan acá SON siempre de la tabla
  * que se pidió, así que los accesores no llevan guardas.
  */
-
-/** Ícono "i" con la explicación de lo que se está mirando. Se abre y cierra por CSS. */
-const Ayuda = ({ titulo, texto }) => (
-    <span className="tip" tabIndex={0} role="note" aria-label={`${titulo}: ${texto}`}>
-        <span className="tip-dot" aria-hidden="true">i</span>
-        <span className="tip-burbuja" aria-hidden="true"><b>{titulo}</b>{texto}</span>
-    </span>
-);
 
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
     fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
@@ -402,7 +396,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <span className="t-cap mut40 num" style={{ marginLeft: 'auto' }}>
                     mostrando {visibles.length} de {filtradas.length}
                 </span>
-                <Ayuda titulo="Qué estás mirando" texto={def.ayuda} />
+                <Tip titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
             {/* De dónde viene el filtro. Va arriba de los chips de faceta porque contesta la

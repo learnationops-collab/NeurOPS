@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronRight, Plus, Trophy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Cargando, fmt } from './Shared';
+// El "i" era una copia local que abría por CSS y no sabía nada de la ventana; ahora es el `Tip`
+// compartido, que mide antes de abrir (ver `Tip.jsx`).
+import { Cargando, Tip, fmt } from './Shared';
 import { getConstancia, getReporteHoy, getReportes, guardarReporte } from '../comercialApi';
 
 /**
@@ -78,17 +80,6 @@ const avatarEstilo = (grupo, px, radio) => ({
 /** Chip de estado con el tono que manda el backend (nunca uno elegido acá). */
 const Chip = ({ tono, children }) => (
     <span className="chip" style={{ '--c': `var(--${tono})` }}>{children}</span>
-);
-
-/** El "i" con la explicación. Es CSS puro: abre con hover y con foco de teclado. */
-const Tip = ({ titulo, texto }) => (
-    <span className="tip" tabIndex={0} role="note" aria-label={`${titulo ? `${titulo}: ` : ''}${texto}`}>
-        <span className="tip-dot" aria-hidden="true">i</span>
-        <span className="tip-burbuja" aria-hidden="true">
-            {titulo && <b>{titulo}</b>}
-            {texto}
-        </span>
-    </span>
 );
 
 /** Cifras del día, todas en la misma caja: mismo alto, mismo padding, número tabular. */
