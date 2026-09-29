@@ -62,6 +62,19 @@ const RUTAS = {
     enviar_nota: (appt, p) => api.post(`/ficha/${appt}/nota`, p),
 };
 
+/**
+ * Mapa consulta → petición: lo mismo que `RUTAS` pero para LEER.
+ *
+ * Existe aparte porque una lectura no puede pasar por `onAccion`: el cascarón recarga la ficha
+ * entera y deja un aviso después de cada acción, que es lo correcto para una escritura y absurdo
+ * para traer datos. Las pestañas siguen sin llamar `axios`: reciben `onConsultar`.
+ */
+const CONSULTAS = {
+    // Cómo le va al alumno en la Academia. No viaja en `GET /ficha/lead` porque es una llamada a
+    // otro sistema: si fallara, se caería la ficha entera en vez de una pestaña.
+    fulfillment: (appt) => api.get(`/ficha/${appt}/fulfillment`),
+};
+
 export const ACCIONES = Object.keys(RUTAS);
 
 /**
@@ -76,10 +89,18 @@ export const ejecutarAccion = (nombre, appointmentId, payload = {}) => {
     return Promise.resolve(fn(appointmentId, payload)).then(r => r?.data ?? null);
 };
 
+/** Ejecuta una consulta. Mismo trato que `ejecutarAccion` con un nombre desconocido. */
+export const ejecutarConsulta = (nombre, appointmentId, config = {}) => {
+    const fn = CONSULTAS[nombre];
+    if (!fn) throw new Error(`Consulta de ficha desconocida: ${nombre}`);
+    if (appointmentId == null) throw new Error(`La consulta "${nombre}" necesita una agenda`);
+    return Promise.resolve(fn(appointmentId, config)).then(r => r?.data ?? null);
+};
+
 /** Mensaje de error legible: el `detail` del backend gana sobre el texto de axios. */
 export const mensajeDeError = (err) => err?.response?.data?.message
     || err?.response?.data?.error
     || err?.message
     || 'No se pudo completar la acción';
 
-export default { obtenerFicha, ejecutarAccion, ACCIONES, mensajeDeError };
+export default { obtenerFicha, ejecutarAccion, ejecutarConsulta, ACCIONES, mensajeDeError };

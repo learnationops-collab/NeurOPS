@@ -125,7 +125,12 @@ def test_sin_venta_no_hay_pestana_de_cobro():
 
 def test_con_deuda_aparece_la_pestana_de_cobro():
     pestanas = resolver_estado(estado_agenda='show_up', tiene_venta=True, deuda=600.0)['pestanas']
-    assert pestanas == ['resultado', 'acciones', 'hist', 'form', 'com']
+    assert pestanas == ['resultado', 'acciones', 'ful', 'hist', 'form', 'com']
+
+
+def test_sin_venta_tampoco_hay_pestana_de_fulfillment():
+    """Un alumno existe porque alguien compro: buscarlo antes es mandar a buscar a nadie."""
+    assert 'ful' not in resolver_estado(estado_agenda='no_show')['pestanas']
 
 
 def test_una_llamada_ya_ocurrida_no_muestra_confirmacion():

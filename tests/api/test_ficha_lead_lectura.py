@@ -333,6 +333,80 @@ def test_un_cliente_sin_total_cargado_no_se_lo_inventa(client, db, comprador, eq
     assert cobro['total_sugerido'] == round(cobro['pagado'] + cobro['deuda'], 2)
 
 
+# --- Fulfillment: como le va al alumno en la Academia -----------------------------------------
+#
+# Ruta aparte de `GET /ficha/lead` a proposito: habla con OTRO sistema. Si viajara en la lectura,
+# abrir cualquier lead dependeria de que la Academia este arriba.
+
+def test_el_fulfillment_no_viaja_en_la_lectura_de_la_ficha(client, db, comprador, equipo,
+                                                           auth_headers):
+    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
+
+    assert 'fulfillment' not in datos
+
+
+def test_la_pestana_de_fulfillment_aparece_para_un_cliente(client, db, comprador, equipo,
+                                                           auth_headers):
+    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
+
+    assert 'ful' in datos['estado']['pestanas']
+
+
+def test_un_lead_sin_venta_no_tiene_pestana_de_fulfillment(client, db, lead, equipo, auth_headers):
+    datos = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id).get_json()
+
+    assert 'ful' not in datos['estado']['pestanas']
+
+
+def test_el_fulfillment_devuelve_el_alumno_de_la_academia(client, db, lead, equipo, auth_headers):
+    from unittest.mock import patch
+
+    from app.services import ficha_fulfillment_service as ful
+
+    lead.client.learnation_user_id = 87
+    db.session.commit()
+
+    with patch.object(ful, 'LearnationService') as academia:
+        academia.get_student_summary.return_value = {
+            'student': {'id': 87, 'name': 'Ana Gomez', 'email': 'ana@x.com', 'phone': None,
+                        'role': 'student', 'active_product': None},
+            'performance': {'streak_days': 3}}
+        academia.get_student_products.return_value = {'products': []}
+        r = client.get(f'/api/ficha/{lead.id}/fulfillment', headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['alumno']['nombre'] == 'Ana Gomez'
+
+
+def test_la_academia_caida_no_rompe_la_pestana(client, db, lead, equipo, auth_headers):
+    """Un token revocado o un rate limit son un aviso dentro de la respuesta, no un 500."""
+    from unittest.mock import patch
+
+    from app.services import ficha_fulfillment_service as ful
+    from app.services.learnation_service import LearnationAPIError
+
+    with patch.object(ful, 'LearnationService') as academia:
+        academia.check_user.side_effect = LearnationAPIError('Unauthenticated', status_code=401)
+        r = client.get(f'/api/ficha/{lead.id}/fulfillment',
+                       headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200
+    assert r.get_json()['error']['codigo'] == 401
+
+
+def test_el_setter_no_ve_el_fulfillment(client, db, lead, equipo, auth_headers):
+    """Misma audiencia que el cobro: la direccion y el closer."""
+    r = client.get(f'/api/ficha/{lead.id}/fulfillment', headers=auth_headers(equipo['setter']))
+
+    assert r.status_code == 403
+
+
+def test_una_agenda_que_no_existe_da_404(client, db, equipo, auth_headers):
+    r = client.get('/api/ficha/999999/fulfillment', headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 404
+
+
 def test_una_venta_al_dia_se_abre_en_historial(client, db, comprador, equipo, auth_headers):
     comprador.total_amount = 400.0
     db.session.commit()

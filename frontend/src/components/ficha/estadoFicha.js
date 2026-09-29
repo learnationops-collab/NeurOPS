@@ -21,6 +21,9 @@ export const PESTANAS = [
     { id: 'conf', label: 'Confirmación', permiso: null },
     { id: 'resultado', label: 'Resultado', permiso: 'reportar' },
     { id: 'acciones', label: 'Acciones', permiso: 'cobrar' },
+    // Fulfillment mira lo mismo que Acciones desde el otro lado: una cobra, la otra entrega. El
+    // permiso es el de cobro porque la audiencia es la misma (dirección y closer).
+    { id: 'ful', label: 'Fulfillment', permiso: 'cobrar' },
     { id: 'hist', label: 'Historial', permiso: null },
     { id: 'form', label: 'Formulario', permiso: null },
     { id: 'com', label: 'Comunicación', permiso: 'comentar' },

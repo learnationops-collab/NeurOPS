@@ -5,8 +5,9 @@ import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
 import { Aviso, useMovimiento } from './piezas';
 import { leerEstado } from './estadoFicha';
-import { ejecutarAccion, mensajeDeError, obtenerFicha } from './fichaApi';
+import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
 import TabConfirmacion from './tabs/TabConfirmacion';
+import TabFulfillment from './tabs/TabFulfillment';
 import TabHistorial from './tabs/TabHistorial';
 import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
@@ -170,6 +171,13 @@ const FichaLeadModal = ({
         }
     }, [ficha, appointmentId, cargar, onCambio, onCerrar]);
 
+    // Leer no pasa por `onAccion`: recargar la ficha y dejar un aviso es lo que corresponde
+    // después de escribir, no después de traer datos. La pestaña maneja su propia carga.
+    const onConsultar = useCallback((nombre, config) => {
+        const appt = ficha?.identidad?.appointment_id ?? appointmentId;
+        return ejecutarConsulta(nombre, appt, config);
+    }, [ficha, appointmentId]);
+
     const irA = useCallback((id) => setPestana(id), []);
     const onRecargar = useCallback(() => cargar(), [cargar]);
 
@@ -182,7 +190,7 @@ const FichaLeadModal = ({
         return l ? React.lazy(l) : null;
     }, []);
 
-    const props = { ficha, onAccion, onRecargar, irA, puedeEditar: estado.puedeEditar };
+    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar };
 
     const panel = () => {
         switch (pestana) {
@@ -193,6 +201,7 @@ const FichaLeadModal = ({
             case 'acciones': return TabAcciones
                 ? <Suspense fallback={<Esqueleto />}><TabAcciones {...props} /></Suspense>
                 : <Faltante label="Acciones" />;
+            case 'ful': return <TabFulfillment {...props} />;
             case 'hist': return <TabHistorial {...props} />;
             case 'form': return <TabFormulario {...props} />;
             case 'com': return <TabComunicacion {...props} />;

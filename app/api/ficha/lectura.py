@@ -2,7 +2,7 @@
 from flask import jsonify, request
 from flask_login import current_user
 
-from app.api.ficha import bp
+from app.api.ficha import bp, sin_permiso
 from app.services import ficha_lead_service
 
 
@@ -32,6 +32,30 @@ def lead():
         # confirmaria su existencia (mismo criterio que GET /api/comercial/clientes/<id>).
         return jsonify({'message': 'Lead no encontrado'}), 404
     return jsonify(datos), 200
+
+
+@bp.route('/<int:appt_id>/fulfillment', methods=['GET'])
+def fulfillment(appt_id):
+    """Como le va al alumno dentro de la Academia (Learnation).
+
+    Ruta propia y no parte de `GET /ficha/lead` porque es una llamada a OTRO sistema, con su
+    timeout y su limite de peticiones por minuto: si viajara en la lectura de la ficha, abrir
+    cualquier lead —incluso uno que nunca compro— dependeria de que la Academia este arriba.
+
+    El permiso es `cobrar` y no uno propio: la audiencia es exactamente la misma (la direccion y
+    el closer), y un permiso nuevo sin una politica distinta detras es una clave mas que mantener
+    en los cuatro lugares donde se comprueba.
+    """
+    from app.services import ficha_fulfillment_service
+
+    appt, client = ficha_lead_service.resolver_lead(appointment_id=appt_id)
+    if not appt:
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    if not ficha_lead_service.permisos_de(current_user, appt)['cobrar']:
+        return sin_permiso('cobrar')
+
+    ventas = ficha_lead_service._ventas_del_cliente(client)
+    return jsonify(ficha_fulfillment_service.fulfillment(client, ventas)), 200
 
 
 @bp.route('/vocabulario', methods=['GET'])

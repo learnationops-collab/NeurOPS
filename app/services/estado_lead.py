@@ -16,7 +16,9 @@ porque no dependen de la agenda sino del cobro: sin agenda, con deuda y al día.
 from app.services.lead_cobro_service import UMBRAL_DEUDA
 
 # Identificadores de pestaña, en el orden en que se muestran. El frontend obedece este orden.
-PESTANAS = ('conf', 'resultado', 'acciones', 'hist', 'form', 'com')
+# 'ful' (Fulfillment: cómo le va al alumno en la Academia) va pegada a 'acciones' porque las dos
+# son post-venta: una cobra y la otra entrega.
+PESTANAS = ('conf', 'resultado', 'acciones', 'ful', 'hist', 'form', 'com')
 
 # Estados de `derivar_estado` que significan "la llamada todavía no ocurrió".
 _PRE_CALL = ('por_confirmar', 'confirmada')
@@ -97,6 +99,9 @@ def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=Fal
         'resultado': bool(estado_agenda),
         # Cobro: solo para quien ya compró. Sin venta no hay deuda ni plan que armar.
         'acciones': bool(tiene_venta) or deuda > UMBRAL_DEUDA,
+        # Fulfillment: mismo criterio, porque un alumno existe porque alguien compró. Ofrecerla
+        # antes sería mandar al closer a buscar en la Academia a alguien que no puede estar.
+        'ful': bool(tiene_venta) or deuda > UMBRAL_DEUDA,
         'hist': True,
         'form': True,
         'com': True,
