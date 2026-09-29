@@ -14,8 +14,7 @@
 /* ---------- Stepper ---------- */
 .dc-shell .fi-stepper{position:relative;display:grid;gap:var(--s2);
   grid-template-columns:repeat(var(--pasos,5),minmax(0,1fr))}
-.dc-shell .fi-stepper-riel,
-.dc-shell .fi-stepper-riel i{position:absolute;top:15px;height:2px;pointer-events:none}
+.dc-shell .fi-stepper-riel{position:absolute;top:15px;height:2px;pointer-events:none}
 /* El riel no cruza el ancho entero: nace en el centro del primer punto y muere en el del
    último, que es el único tramo donde una línea que une pasos dice algo. Con N columnas
    iguales separadas por `--s2`, ese centro cae a media columna del borde. Estaba escrito
@@ -25,7 +24,13 @@
 .dc-shell .fi-stepper-riel{
   --medio-paso:calc((100% - (var(--pasos,5) - 1) * var(--s2)) / var(--pasos,5) / 2);
   left:var(--medio-paso);right:var(--medio-paso);background:var(--border-subtle)}
-.dc-shell .fi-stepper-riel i{left:0;width:var(--avance,0%);background:var(--success);
+/* El verde se posiciona DENTRO del riel, no en el stepper. Compartía el `top:15px` del
+   riel por estar los dos en el mismo selector: como el riel mide 2 px de alto, ese top
+   volvía a bajarlo 15 px y el verde terminaba dibujado por debajo de la línea gris, como
+   una barra suelta flotando bajo los puntos en vez de pintar el riel. Va pegado arriba y
+   toma el alto del riel, así sigue la línea aunque mañana cambie el grosor. */
+.dc-shell .fi-stepper-riel i{position:absolute;top:0;left:0;height:100%;pointer-events:none;
+  width:var(--avance,0%);background:var(--success);
   display:block;transition:width .32s var(--crecer)}
 .dc-shell .fi-paso{position:relative;display:flex;flex-direction:column;align-items:center;
   gap:var(--s2);text-align:center;min-width:0;background:none;border:0;padding:0;
