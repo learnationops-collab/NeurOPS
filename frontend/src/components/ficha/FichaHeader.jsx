@@ -86,88 +86,87 @@ const FichaHeader = ({ ficha, onAccion, onEditar = null, onCerrar, puedeEditar =
 
     return (
         <div className="fi-cab">
-            <div className="fi-cab-datos">
-                <h2 className="t-h2 trunc" style={{ flexShrink: 0 }}>{id.nombre || 'Lead sin nombre'}</h2>
-                <div className="fi-cab-datos">
-                    <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : id.examen} />
-                    <Dato rotulo={esCliente ? 'Ingresó' : 'Llamada'} valor={esCliente ? soloDia(id.ingreso) : llamada} />
-
-                    <div className="fi-dato" ref={caja} style={{ position: 'relative' }}>
-                        <small className="t-rotulo">Closer</small>
-                        {puedeReasignar ? (
-                            <>
-                                <button type="button" className="fi-closer-btn"
-                                    aria-haspopup="listbox" aria-expanded={abierto}
-                                    onClick={alternar}>
-                                    <span>{closerActual || 'Sin asignar'}</span>
-                                    <span className="t-cap" style={{ color: 'var(--brand-secondary)', fontWeight: 700 }}>
-                                        Pasar
-                                    </span>
-                                    <span className="mut" style={{ display: 'flex' }}>
-                                        {abierto ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </span>
-                                </button>
-                                {abierto && (
-                                    <motion.div className="fi-pop" role="listbox"
-                                        aria-label="Pasar el lead a"
-                                        {...mov.popover}
-                                        style={{ ...(mov.popover.style || {}), minWidth: 240,
-                                            padding: 'var(--s2)', gap: 2,
-                                            left: 'calc(-1 * var(--s3))' }}>
-                                        <small className="t-rotulo" style={{ padding: 'var(--s2) var(--s3)' }}>
-                                            Pasar el lead a
-                                        </small>
-                                        {closers.map(c => {
-                                            const on = c.nombre === closerActual;
-                                            return (
-                                                <button key={c.id ?? c.nombre} type="button" className="fi-opcion"
-                                                    role="option" aria-selected={on}
-                                                    onClick={() => pasarA(c)}>
-                                                    <span>{c.nombre}</span>
-                                                    <span className="t-cap mut">{on ? 'Actual' : c.pista}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </motion.div>
-                                )}
-                            </>
-                        ) : (
-                            <span className="t-sm trunc" style={{ fontWeight: 600 }}>{closerActual || '—'}</span>
-                        )}
-                    </div>
-                    <span className="fi-div" aria-hidden="true" />
-
-                    <div className="fi-dato">
-                        <small className="t-rotulo">Teléfono</small>
-                        {enlaceWhatsapp ? (
-                            <a className="t-sm trunc num fi-wa" href={enlaceWhatsapp}
-                                target="_blank" rel="noreferrer"
-                                title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
-                                <MessageCircle size={13} />
-                                {id.telefono}
-                            </a>
-                        ) : (
-                            <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
-                        )}
-                    </div>
+            <div className="fi-cab-titulo">
+                <h2 className="t-h2">{id.nombre || 'Lead sin nombre'}</h2>
+                <div className="fi-cab-acciones">
+                    <button type="button" className="ibtn" onClick={copiarResumen}
+                        aria-label="Copiar los datos del lead"
+                        title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>
+                        {copiado ? <Check size={16} style={{ color: 'var(--success)' }} /> : <ClipboardCopy size={16} />}
+                    </button>
+                    {onEditar && (
+                        <button type="button" className="ibtn" aria-label="Editar lead"
+                            onClick={() => onEditar(ficha)}>
+                            <Pencil size={16} />
+                        </button>
+                    )}
+                    <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>
+                        <X size={17} />
+                    </button>
                 </div>
             </div>
 
-            <div className="fi-cab-acciones">
-                <button type="button" className="ibtn" onClick={copiarResumen}
-                    aria-label="Copiar los datos del lead"
-                    title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>
-                    {copiado ? <Check size={16} style={{ color: 'var(--success)' }} /> : <ClipboardCopy size={16} />}
-                </button>
-                {onEditar && (
-                    <button type="button" className="ibtn" aria-label="Editar lead"
-                        onClick={() => onEditar(ficha)}>
-                        <Pencil size={16} />
-                    </button>
-                )}
-                <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>
-                    <X size={17} />
-                </button>
+            <div className="fi-cab-datos">
+                <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : id.examen} />
+                <Dato rotulo={esCliente ? 'Ingresó' : 'Llamada'} valor={esCliente ? soloDia(id.ingreso) : llamada} />
+
+                <div className="fi-dato" ref={caja} style={{ position: 'relative' }}>
+                    <small className="t-rotulo">Closer</small>
+                    {puedeReasignar ? (
+                        <>
+                            <button type="button" className="fi-closer-btn"
+                                aria-haspopup="listbox" aria-expanded={abierto}
+                                onClick={alternar}>
+                                <span>{closerActual || 'Sin asignar'}</span>
+                                <span className="t-cap" style={{ color: 'var(--brand-secondary)', fontWeight: 700 }}>
+                                    Pasar
+                                </span>
+                                <span className="mut" style={{ display: 'flex' }}>
+                                    {abierto ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </span>
+                            </button>
+                            {abierto && (
+                                <motion.div className="fi-pop" role="listbox"
+                                    aria-label="Pasar el lead a"
+                                    {...mov.popover}
+                                    style={{ ...(mov.popover.style || {}), minWidth: 240,
+                                        padding: 'var(--s2)', gap: 2,
+                                        left: 'calc(-1 * var(--s3))' }}>
+                                    <small className="t-rotulo" style={{ padding: 'var(--s2) var(--s3)' }}>
+                                        Pasar el lead a
+                                    </small>
+                                    {closers.map(c => {
+                                        const on = c.nombre === closerActual;
+                                        return (
+                                            <button key={c.id ?? c.nombre} type="button" className="fi-opcion"
+                                                role="option" aria-selected={on}
+                                                onClick={() => pasarA(c)}>
+                                                <span>{c.nombre}</span>
+                                                <span className="t-cap mut">{on ? 'Actual' : c.pista}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </motion.div>
+                            )}
+                        </>
+                    ) : (
+                        <span className="t-sm trunc" style={{ fontWeight: 600 }}>{closerActual || '—'}</span>
+                    )}
+                </div>
+
+                <div className="fi-dato">
+                    <small className="t-rotulo">Teléfono</small>
+                    {enlaceWhatsapp ? (
+                        <a className="t-sm trunc num fi-wa" href={enlaceWhatsapp}
+                            target="_blank" rel="noreferrer"
+                            title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
+                            <MessageCircle size={13} />
+                            {id.telefono}
+                        </a>
+                    ) : (
+                        <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                    )}
+                    </div>
             </div>
         </div>
     );
