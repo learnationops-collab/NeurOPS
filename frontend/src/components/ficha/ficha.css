@@ -160,7 +160,11 @@
   font-variant-numeric:tabular-nums;transition:color .16s ease}
 .dc-shell .fi-seg-op:hover{color:var(--text-on-surface)}
 .dc-shell .fi-seg-op[aria-pressed="true"]{color:var(--on-inverso)}
-.dc-shell .fi-seg-op:focus-visible{box-shadow:var(--focus-ring)}
+/* El radio se repite a proposito: el foco global del DS (`.dc-shell button:focus-visible`,
+   0,2,1) le pone 6 px y le gana a `.fi-seg-op` (0,2,0). Sin esto, la opcion enfocada con el
+   teclado perdia la pildora y la marca del elegido (`border-radius:inherit`) se volvia un
+   rectangulo adentro del riel redondo. */
+.dc-shell .fi-seg-op:focus-visible{box-shadow:var(--focus-ring);border-radius:var(--radius-pill)}
 .dc-shell .fi-seg-marca{position:absolute;inset:0;z-index:-1;border-radius:inherit;
   background:var(--text-on-surface)}
 /* En un teléfono las siete opciones no entran a 44 px y el «12» caía solo en una segunda fila,
