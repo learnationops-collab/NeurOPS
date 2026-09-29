@@ -230,6 +230,19 @@ class SheetsService:
 
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
 
+    # Tipo de pago canonico de la venta (`parse_tipo_pago`) -> `Payment.payment_type` de su espejo
+    # en Enrollment/Payment. Queda a la vista y no adentro de `_sync_enrollment_payment` porque la
+    # correccion a mano de un pago desde el historial de la ficha mueve el mismo espejo, y tiene que
+    # escribir exactamente el mismo valor.
+    PAYMENT_TYPE_MAP = {
+        'completo': 'full',
+        'parcial': 'first_payment',
+        'seña': 'down_payment',
+        'cuota': 'installment',
+        'renovacion': 'renewal',
+        'upsell': 'upsell',
+    }
+
     @staticmethod
     def _extract_tipo_keyword(text):
         """Reduce cualquier variante de texto libre ('Con Seña', 'parcial', 'RENOVACIÓN'...) a
@@ -298,15 +311,7 @@ class SheetsService:
             logger.warning(f"[Enrollment Sync] No se pudo resolver el programa activo para código '{program_code}', se omite el espejo a Enrollment/Payment.")
             return
 
-        PAYMENT_TYPE_MAP = {
-            'completo': 'full',
-            'parcial': 'first_payment',
-            'seña': 'down_payment',
-            'cuota': 'installment',
-            'renovacion': 'renewal',
-            'upsell': 'upsell',
-        }
-        payment_type = PAYMENT_TYPE_MAP.get(tipo_simple_lower, 'full')
+        payment_type = SheetsService.PAYMENT_TYPE_MAP.get(tipo_simple_lower, 'full')
 
         closer = None
         email_vendedor = payload.get('email_vendedor')
