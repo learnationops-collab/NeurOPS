@@ -513,29 +513,71 @@ class CloserFollowUpService:
         FinancialSale.client_id debería estar poblado (backfill de una pasada anterior) pero en
         muchas copias de la base la gran mayoría quedó en NULL — en vez de depender ciegamente de
         esa columna, se resuelve el cliente con el mismo cruce email/instagram/teléfono que usa el
-        resto del sistema (BookingService.find_or_create_client), sin crear nada nuevo (solo lectura)."""
+        resto del sistema (BookingService.find_or_create_client), sin crear nada nuevo (solo lectura).
+
+        **Un índice en memoria, no hasta tres consultas por venta.** Antes cada venta buscaba su
+        cliente por separado (por id, después email, instagram y teléfono): ~940 consultas en la
+        base local, y esto corre en cada pedido de la tabla Clientes, de "Mi cartera" y de la
+        cola de cobro. Ahora se lee `clients` UNA vez y el cruce es el mismo, en el mismo orden
+        de precedencia (client_id → email → instagram → teléfono) y con las mismas expresiones:
+        `lower()` y `replace()` los calcula la base, igual que en el WHERE de antes, así que dos
+        textos que antes coincidían siguen coincidiendo y viceversa.
+
+        Cuando dos clientes comparten el dato (13 correos y 12 instagrams repetidos en la base
+        local), el `.first()` de antes devolvía el primero que encontraba al RECORRER la tabla:
+        ninguna de las tres búsquedas tiene índice que usar (`lower(...)`, `replace(...)`,
+        `LIKE '%...%'`), así que la base la lee entera en su orden físico. Por eso la lectura de
+        acá va SIN `ORDER BY` a propósito y se queda con la primera coincidencia: es el mismo
+        recorrido, y elige el mismo cliente. En SQLite ese orden es el del id."""
         from app.models import Client, FinancialSale
 
         sales = FinancialSale.query.filter(
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
+        existentes, por_email, por_ig, telefonos = set(), {}, {}, []
+        for cid, email_l, ig_l, telefono in db.session.query(
+                Client.id, func.lower(Client.email),
+                func.lower(func.replace(Client.instagram, '@', '')), Client.phone):
+            existentes.add(cid)
+            if email_l is not None:
+                por_email.setdefault(email_l, cid)
+            if ig_l is not None:
+                por_ig.setdefault(ig_l, cid)
+            if telefono is not None:
+                telefonos.append((cid, telefono))
+
+        por_sufijo = {}
+
+        def por_telefono(sufijo):
+            if sufijo not in por_sufijo:
+                if any(c in '%_\\' or (c.isascii() and c.isalpha()) for c in sufijo):
+                    # Con un comodín de LIKE (`%`, `_`; en Postgres también `\`) o con letras (que
+                    # SQLite compara sin distinguir mayúsculas y Postgres distinguiéndolas) el
+                    # LIKE ya no es un "contiene": se le pregunta a la base lo mismo que antes. En
+                    # la base local ningún teléfono de venta cae acá.
+                    c = Client.query.filter(Client.phone.like(f"%{sufijo}%")).first()
+                    por_sufijo[sufijo] = c.id if c else None
+                else:
+                    por_sufijo[sufijo] = next((cid for cid, tel in telefonos if sufijo in tel), None)
+            return por_sufijo[sufijo]
+
         def resolve_client(sale):
             if sale.client_id:
-                return Client.query.get(sale.client_id)
+                return sale.client_id if sale.client_id in existentes else None
             email_clean = sale.mail_cliente.strip().lower() if sale.mail_cliente and '@' in sale.mail_cliente else None
             ig_clean = sale.instagram.strip().replace('@', '').lower() if sale.instagram and sale.instagram.lower() not in ('n/a', '') else None
             phone_clean = sale.telefono.strip() if sale.telefono and sale.telefono.lower() not in ('n/a', '') else None
             if email_clean:
-                c = Client.query.filter(func.lower(Client.email) == email_clean).first()
+                c = por_email.get(email_clean)
                 if c:
                     return c
             if ig_clean:
-                c = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                c = por_ig.get(ig_clean)
                 if c:
                     return c
             if phone_clean and len(phone_clean) >= 8:
-                c = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
+                c = por_telefono(phone_clean[-8:])
                 if c:
                     return c
             return None
@@ -544,7 +586,7 @@ class CloserFollowUpService:
         for s in sales:
             c = resolve_client(s)
             if c:
-                sales_by_client.setdefault(c.id, []).append(s)
+                sales_by_client.setdefault(c, []).append(s)
         return sales_by_client
 
     @staticmethod
