@@ -173,7 +173,7 @@ def test_la_ficha_registro_sus_rutas(app):
 # Con que valor se rellena cada parametro de una ruta de la ficha para poder pedirla. Un
 # parametro sin rellenar deja el `<...>` literal en la URL, que no matchea ninguna regla y
 # responde 405: el trinquete daria por ABIERTA una ruta que en realidad nunca se llego a llamar.
-_RELLENOS = {'<grupo>': 'dolores', '<int:evento_id>': '1'}
+_RELLENOS = {'<grupo>': 'dolores', '<int:evento_id>': '1', '<int:pago_id>': '1'}
 
 
 def test_ninguna_ruta_de_la_ficha_responde_a_un_anonimo(client, app, db, lead_de_prueba):
@@ -245,6 +245,8 @@ ESCRITURAS = [
     # Cargar un pago a mano desde el historial es cobrar, como el plan de cuotas.
     ('POST', '/pago', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                        'triage': 403, 'setter': 403}),
+    ('PATCH', '/pago/1', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                          'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los tres que NO pueden y al final el rol de
     # direccion que si. Que `admin` tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.
     ('DELETE', '', {'closer': 403, 'triage': 403, 'setter': 403, 'director_comercial': 200}),

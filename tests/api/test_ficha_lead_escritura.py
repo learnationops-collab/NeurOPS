@@ -1426,6 +1426,232 @@ def test_quien_no_cobra_no_carga_pagos(client, db, lead, programas, equipo, auth
     assert FinancialSale.query.count() == 0
 
 
+def _declarada(db, lead, tipo_pago='RR - Parcial', monto=400.0,
+               cuando=datetime(2026, 9, 10, 15, 32, 7), metodo='Stripe'):
+    """Una venta como la deja el camino de una venta declarada: la fila y su espejo en la deuda,
+    armado por la misma funcion (`_sync_enrollment_payment`)."""
+    from app.services.sheets_service import SheetsService
+
+    venta = _venta(lead, tipo_pago, monto, cuando)
+    venta.metodo_pago = metodo
+    db.session.add(venta)
+    db.session.commit()
+    SheetsService._sync_enrollment_payment({'tipo_pago': tipo_pago, 'monto': monto,
+                                            'metodo_pago': metodo,
+                                            'email_vendedor': 'vendedor@neuro.com'},
+                                           venta, lead.client)
+    return venta
+
+
+def corregir(client, lead, venta, cambios, usuario, auth_headers):
+    return client.patch(url(lead, f'/pago/{venta.id}'), json=cambios,
+                        headers=auth_headers(usuario))
+
+
+def test_corregir_el_monto_mueve_tambien_la_deuda(client, db, lead, programas, equipo,
+                                                  auth_headers):
+    """Es el punto de mover las dos: lo «Pagado» sale de la venta y el «Debe», del espejo."""
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'monto': 450}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.monto == 450.0
+    assert Payment.query.one().amount == 450.0
+    cuerpo = r.get_json()
+    assert (cuerpo['cambios'], cuerpo['espejo'], cuerpo['deuda']) == (['monto'], True, 550.0)
+
+
+def test_corregir_la_fecha_conserva_la_hora_y_se_lleva_la_fecha_de_ingreso(client, db, lead,
+                                                                          programas, equipo,
+                                                                          auth_headers):
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'fecha': '2026-09-08'}, equipo['director'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.date == datetime(2026, 9, 8, 15, 32, 7)
+    espejo = Payment.query.one()
+    assert espejo.date == datetime(2026, 9, 8, 15, 32, 7)
+    # Era el primer pago de la inscripcion: el cliente es alumno desde el dia corregido.
+    assert espejo.enrollment.enrollment_date == datetime(2026, 9, 8, 15, 32, 7)
+
+
+def test_otro_programa_y_otro_tipo_mueven_el_espejo_a_esa_inscripcion(client, db, lead, programas,
+                                                                     equipo, auth_headers):
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'programa_code': 'AL', 'tipo': 'completo'}, equipo['closer'],
+                 auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.tipo_pago == 'AL - Completo'
+    espejo = Payment.query.one()
+    assert espejo.payment_type == 'full'
+    assert espejo.enrollment.program_id == programas['AL'].id
+    # La inscripcion a RR se quedo sin pagos: dejarla haria que `_client_debt` la cobrara entera.
+    assert Enrollment.query.count() == 1
+
+
+def test_solo_el_programa_conserva_el_tipo_como_esta_escrito(client, db, lead, programas, equipo,
+                                                             auth_headers):
+    """Mismo criterio que asignar el programa desde la ficha: el tipo no es lo que se corrige."""
+    venta = _venta(lead, 'Desconocido - Seña')
+    db.session.add(venta)
+    db.session.commit()
+
+    r = corregir(client, lead, venta, {'programa_code': 'SI'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.tipo_pago == 'SI - Seña'
+
+
+def test_el_tipo_de_un_pago_sin_programa_no_se_escribe_sin_elegir_uno(client, db, lead, programas,
+                                                                     equipo, auth_headers):
+    venta = _venta(lead, 'Parcial')
+    db.session.add(venta)
+    db.session.commit()
+
+    r = corregir(client, lead, venta, {'tipo': 'cuota'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 400
+    assert 'programa' in r.get_json()['message']
+    assert venta.tipo_pago == 'Parcial'
+
+
+def test_corregir_el_medio_lo_corrige_tambien_en_el_espejo(client, db, lead, programas, equipo,
+                                                           auth_headers):
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'metodo_pago': 'Hotmart'}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert venta.metodo_pago == 'Hotmart'
+    assert Payment.query.one().payment_method.name == 'Hotmart'
+
+
+def test_un_medio_historico_se_conserva_si_no_se_toca(client, db, lead, programas, equipo,
+                                                      auth_headers):
+    """Como una fuente vieja de una agenda: la fila puede conservarlo, uno nuevo sale de la lista."""
+    venta = _declarada(db, lead, metodo='Binance')
+
+    r = corregir(client, lead, venta, {'metodo_pago': 'Binance', 'monto': 500}, equipo['closer'],
+                 auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert (venta.metodo_pago, venta.monto) == ('Binance', 500.0)
+
+
+def test_dos_cuotas_iguales_del_mismo_dia_no_se_cruzan(client, db, lead, programas, equipo,
+                                                       auth_headers):
+    """El espejo se reconoce por fecha y monto: con dos iguales, cada venta se queda con el suyo."""
+    primera = _declarada(db, lead, 'RR - Cuota', 250.0, datetime(2026, 9, 10, 9, 0))
+    segunda = _declarada(db, lead, 'RR - Cuota', 250.0, datetime(2026, 9, 10, 18, 0))
+
+    r = corregir(client, lead, segunda, {'monto': 300}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    montos = {p.date.hour: p.amount for p in Payment.query.all()}
+    assert montos == {9: 250.0, 18: 300.0}
+    assert primera.monto == 250.0
+
+
+def test_un_pago_sin_espejo_se_corrige_solo_y_lo_dice(client, db, lead, inscripto, programas,
+                                                      equipo, auth_headers):
+    """Las ventas importadas de la hoja nunca tuvieron espejo. Inventarle uno podria contar dos
+    veces una plata que ya esta en otro `Payment` (el del fixture tiene otra fecha)."""
+    venta = _venta(lead, 'RR - Parcial', 400.0, datetime(2026, 7, 20))
+    db.session.add(venta)
+    db.session.commit()
+
+    r = corregir(client, lead, venta, {'monto': 380}, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['espejo'] is False
+    assert venta.monto == 380.0
+    assert Payment.query.one().amount == 400.0
+    evento = LeadEventLog.query.filter_by(action_type='pago_corregido').one()
+    assert 'la deuda no cambió' in evento.description
+
+
+def test_la_correccion_del_pago_queda_en_la_bitacora(client, db, lead, programas, equipo,
+                                                     auth_headers):
+    venta = _declarada(db, lead)
+
+    corregir(client, lead, venta, {'monto': 450, 'fecha': '2026-09-09'}, equipo['closer'],
+             auth_headers)
+
+    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
+                                          action_type='pago_corregido').one()
+    assert f'pago #{venta.id}' in evento.description
+    assert 'monto $400.00 → $450.00' in evento.description
+    assert 'fecha 2026-09-10 → 2026-09-09' in evento.description
+
+
+def test_corregir_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
+                                                            auth_headers):
+    venta = _declarada(db, lead)
+    base = 'app.services.sheets_service'
+    with patch(f'{base}.SheetsService.update_in_sheets') as hoja, \
+            patch(f'{base}.requests.post') as post, \
+            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n:
+        r = corregir(client, lead, venta, {'monto': 450, 'tipo': 'completo'}, equipo['closer'],
+                     auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    for automatizacion in (hoja, post, n8n):
+        automatizacion.assert_not_called()
+
+
+def test_no_se_corrige_el_pago_de_otro_lead(client, db, lead, programas, equipo, auth_headers):
+    """Sin esto, el id de la URL alcanzaria para corregir el pago de cualquier cliente."""
+    ajeno = FinancialSale(mail_cliente='otro@x.com', tipo_pago='RR - Cuota', monto=100.0,
+                          estado='Completada', date=datetime(2026, 9, 1))
+    db.session.add(ajeno)
+    db.session.commit()
+
+    r = corregir(client, lead, ajeno, {'monto': 1}, equipo['director'], auth_headers)
+
+    assert r.status_code == 400
+    assert 'no es de este lead' in r.get_json()['message']
+    assert ajeno.monto == 100.0
+
+
+@pytest.mark.parametrize('cambios', [
+    {}, {'monto': 0}, {'monto': 'x'}, {'fecha': '2099-01-01'}, {'fecha': 'ayer'},
+    {'metodo_pago': 'Trueque'}, {'programa_code': 'ZZ'}, {'tipo': 'regalo'},
+    # Uno invalido tumba el pedido entero: el monto bueno de al lado tampoco se escribe.
+    {'monto': 999, 'tipo': 'regalo'},
+])
+def test_una_correccion_de_pago_mal_pedida_no_escribe_nada(client, db, lead, programas, equipo,
+                                                           auth_headers, cambios):
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, cambios, equipo['closer'], auth_headers)
+
+    assert r.status_code == 400
+    assert (venta.monto, venta.tipo_pago) == (400.0, 'RR - Parcial')
+    assert Payment.query.one().amount == 400.0
+
+
+def test_un_pago_que_no_existe_no_se_corrige(client, db, lead, programas, equipo, auth_headers):
+    r = client.patch(url(lead, '/pago/999'), json={'monto': 5},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message'] == 'Ese pago no existe.'
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_cobra_no_corrige_pagos(client, db, lead, programas, equipo, auth_headers, rol):
+    venta = _declarada(db, lead)
+
+    r = corregir(client, lead, venta, {'monto': 1}, equipo[rol], auth_headers)
+
+    assert r.status_code == 403
+    assert venta.monto == 400.0
+
+
 # --- Nota del equipo --------------------------------------------------------------------------
 
 def test_cualquiera_de_los_cinco_roles_puede_comentar(client, db, lead, equipo, auth_headers):
@@ -1560,6 +1786,7 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         client.post(url(lead, '/pago'), json={'fecha': '2026-09-01', 'monto': 1,
                                               'metodo_pago': 'Stripe', 'programa_code': 'RR',
                                               'tipo': 'cuota'}),
+        client.patch(url(lead, '/pago/1'), json={'monto': 1}),
         client.post(url(lead, '/nota'), json={'texto': 'x'}),
         client.delete(url(lead)),
         client.post('/api/ficha/vocabulario/dolores/opciones', json={'label': 'x'}),

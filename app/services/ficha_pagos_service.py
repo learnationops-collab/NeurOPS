@@ -42,8 +42,10 @@ que no escribe en la hoja.
 import math
 from datetime import date, datetime, time, timedelta
 
+from sqlalchemy import func
+
 from app import db
-from app.models import Enrollment, FinancialSale, Payment
+from app.models import Enrollment, FinancialSale, Payment, PaymentMethod
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.ficha_acciones_service import ErrorDeAccion
 from app.services.ficha_agendas_service import PRIMER_ANIO
@@ -266,3 +268,183 @@ def crear(appt, datos, usuario):
                else 'sin registro en inscripciones: la deuda no lo cuenta'))
     return _respuesta(appt, venta, espejo, tipo_pago=tipo_pago, monto=monto,
                       fecha=dia.isoformat())
+
+
+# --- Corregir un pago -------------------------------------------------------------------------
+
+# Lo que se corrige de un pago, con los MISMOS nombres con los que lo lee y lo carga la ficha
+# (`fecha`, `monto`, `metodo_pago`, `programa_code`, `tipo`): si el GET dijera una cosa y el PATCH
+# pidiera otra, cada lado pasaria sus tests y en pantalla guardar no haria nada.
+CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo')
+
+
+def _venta_y_espejo(appt, pago_id):
+    """(venta, espejo) del pago pedido, si es de ESTE lead. `ErrorDeAccion` si no.
+
+    Sin comprobar que la venta sea del lead, el id de la URL alcanzaria para corregir o borrar el
+    pago de cualquier otro cliente con solo abrir una ficha cualquiera.
+    """
+    from app.services.ficha_lead_service import _ventas_del_cliente
+
+    venta = db.session.get(FinancialSale, pago_id) if pago_id else None
+    if not venta:
+        raise ErrorDeAccion('Ese pago no existe.')
+    ventas = _ventas_del_cliente(appt.client) if appt.client else []
+    if venta.id not in {v.id for v in ventas}:
+        raise ErrorDeAccion('Ese pago no es de este lead.')
+    parejas = _emparejar(ventas, _pagos_del_cliente(appt.client_id))
+    return venta, parejas.get(venta.id)
+
+
+def _tipo_pago_corregido(crudo, datos):
+    """El `tipo_pago` que queda al cambiar el programa y/o el tipo de un pago.
+
+    Solo el programa: se reetiqueta conservando el texto del tipo tal cual esta escrito, con la
+    misma regla que la asignacion de programa de la ficha ('Parcial' -> 'RR - Parcial',
+    'Desconocido - Seña' -> 'AL - Seña'). Con el tipo, se escribe con la grafia de la lista
+    ('RR - Cuota'), y hace falta un programa: el del pedido o el que ya tenia.
+    """
+    # Privada a proposito, como `_ventas_del_cliente`: es la regla con la que la ficha ya
+    # reetiqueta ventas al asignar el programa, y dos reglas darian dos grafias para lo mismo.
+    from app.services.ficha_acciones_service import _tipo_pago_con_programa
+
+    actual, _ = SheetsService.parse_tipo_pago(crudo)
+    codigo = _programa(datos.get('programa_code')) if 'programa_code' in datos else actual
+    if 'tipo' in datos:
+        tipo = _tipo(datos.get('tipo'))
+        if not codigo:
+            raise ErrorDeAccion('Este pago no tiene programa: elegilo junto con el tipo, que se '
+                                'escribe «programa - tipo».')
+        return f'{codigo} - {TIPOS[tipo]}'
+    nuevo = _tipo_pago_con_programa(crudo, codigo)
+    if not nuevo:
+        raise ErrorDeAccion('Este pago no tiene escrito el tipo: elegilo junto con el programa.')
+    return nuevo
+
+
+def _inscripcion(client_id, codigo, closer_id):
+    """La inscripcion del cliente a ese programa, creandola si no existe (como el espejo de una
+    venta declarada). None si no hay un `Program` activo para el codigo."""
+    programa = SheetsService.resolve_program(codigo)
+    if not programa:
+        return None
+    inscripcion = Enrollment.query.filter_by(client_id=client_id, program_id=programa.id).first()
+    if not inscripcion:
+        inscripcion = Enrollment(client_id=client_id, program_id=programa.id, closer_id=closer_id)
+        db.session.add(inscripcion)
+        db.session.flush()
+    return inscripcion
+
+
+def _soltar_si_quedo_vacia(inscripcion):
+    """Borra una inscripcion que se quedo sin ningun pago.
+
+    Una inscripcion sin pagos no es «inscripto que no pago»: `_client_debt` la cobra entera (el
+    total negociado, o el precio de lista, menos cero), y la ficha pasaria a mostrar como deudor
+    de todo el programa a quien no compro nada. Solo se llega aca cuando la inscripcion se vacia
+    por esta correccion: una que ya estaba vacia no se toca.
+    """
+    if inscripcion is not None and inscripcion.payments.count() == 0:
+        db.session.delete(inscripcion)
+
+
+def _ingreso_desde(espejo):
+    """La fecha de ingreso sigue al primer pago completado de la inscripcion.
+
+    Misma regla que la correccion de un pago del historial del mazo (`CloserService.
+    update_payment`): corregir la fecha de un primer pago mal cargado corrige tambien desde cuando
+    el cliente es alumno.
+    """
+    inscripcion = espejo.enrollment
+    if inscripcion is None:
+        return
+    primero = (inscripcion.payments.filter_by(status='completed')
+               .order_by(Payment.date.asc()).first())
+    if primero is not None and primero.id == espejo.id:
+        inscripcion.enrollment_date = espejo.date
+
+
+def _mover_espejo(espejo, venta, cambios, appt):
+    """Lleva al espejo lo que cambio en la venta, y solo eso.
+
+    Un campo que no cambio no se reescribe: un `Payment` historico con el tipo en castellano
+    ('Primer Pago') se queda como esta si lo que se corrigio fue el monto.
+    """
+    if 'monto' in cambios:
+        espejo.amount = venta.monto
+    if 'metodo_pago' in cambios:
+        metodo = PaymentMethod.query.filter(
+            func.lower(PaymentMethod.name) == (venta.metodo_pago or '').strip().lower()).first()
+        espejo.payment_method_id = metodo.id if metodo else None
+    if 'tipo_pago' in cambios:
+        codigo, tipo = SheetsService.parse_tipo_pago(venta.tipo_pago)
+        if tipo:
+            espejo.payment_type = SheetsService.PAYMENT_TYPE_MAP[tipo]
+        # Otro programa es otra inscripcion: la deuda se calcula por inscripcion cuando el cliente
+        # no tiene total negociado, y el pago tiene que restar de la del programa que pago.
+        origen = espejo.enrollment
+        destino = _inscripcion(appt.client_id, codigo, origen.closer_id if origen else None) \
+            if codigo else None
+        if destino is not None and destino.id != espejo.enrollment_id:
+            espejo.enrollment = destino
+            db.session.flush()
+            _soltar_si_quedo_vacia(origen)
+    if 'fecha' in cambios:
+        espejo.date = venta.date
+    if cambios & {'fecha', 'tipo_pago'}:
+        db.session.flush()
+        _ingreso_desde(espejo)
+
+
+def corregir(appt, datos, usuario, pago_id=None):
+    """Corrige la fecha, el monto, el medio, el programa y/o el tipo de UN pago del cliente.
+
+    Solo se tocan los campos que vienen, y se validan todos antes de escribir ninguno. La fecha
+    conserva la hora que tenia la venta: lo que se corrige es el dia. Lo que cambia en la venta se
+    lleva a su espejo en la deuda (`_mover_espejo`); sin espejo, se corrige la venta sola y la
+    respuesta lo dice.
+
+    No se propaga a Google Sheets, igual que la correccion de ventas del historial del mazo
+    (`PUT /closer/sales/<id>`): la hoja conserva el valor viejo.
+    """
+    if not any(campo in datos for campo in CAMPOS):
+        raise ErrorDeAccion('No hay nada que guardar.')
+    venta, espejo = _venta_y_espejo(appt, pago_id)
+
+    dia = _dia(datos.get('fecha')) if 'fecha' in datos else None
+    monto = _monto(datos.get('monto')) if 'monto' in datos else None
+    medio = _medio(datos.get('metodo_pago'), venta.metodo_pago) if 'metodo_pago' in datos else None
+    tipo_pago = (_tipo_pago_corregido(venta.tipo_pago, datos)
+                 if 'programa_code' in datos or 'tipo' in datos else None)
+
+    cambios, bitacora = set(), []
+    antes = _instante(venta.date)
+    if dia and (antes is None or dia != antes.date()):
+        bitacora.append(f'fecha {antes.date().isoformat() if antes else "sin fecha"} → '
+                        f'{dia.isoformat()}')
+        venta.date = datetime.combine(dia, antes.time() if antes else time())
+        cambios.add('fecha')
+    if monto is not None and abs(monto - (venta.monto or 0)) >= CENTAVO:
+        bitacora.append(f'monto {_plata(venta.monto)} → {_plata(monto)}')
+        venta.monto = monto
+        cambios.add('monto')
+    if medio and medio != (venta.metodo_pago or ''):
+        bitacora.append(f'medio {venta.metodo_pago or "sin medio"} → {medio}')
+        venta.metodo_pago = medio
+        cambios.add('metodo_pago')
+    if tipo_pago and tipo_pago != (venta.tipo_pago or ''):
+        bitacora.append(f'tipo {venta.tipo_pago or "sin tipo"} → {tipo_pago}')
+        venta.tipo_pago = tipo_pago
+        cambios.add('tipo_pago')
+
+    if not cambios:
+        return _respuesta(appt, venta, espejo, cambios=[])
+
+    if espejo is not None:
+        _mover_espejo(espejo, venta, cambios, appt)
+    db.session.commit()
+
+    _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}',
+            '; '.join(bitacora) + ('; su registro en inscripciones se corrigió igual' if espejo
+                                   else '; sin registro en inscripciones: la deuda no cambió'))
+    return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
