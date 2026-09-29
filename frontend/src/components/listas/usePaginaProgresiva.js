@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /**
  * Scroll infinito que pagina el DIBUJADO, no la carga de datos.
@@ -25,11 +25,24 @@ export const TAMANO_PAGINA = 40;
  *  lista lenta a una lista que nunca termina de aparecer porque el sentinel no avisa. */
 const HAY_OBSERVER = typeof IntersectionObserver !== 'undefined';
 
+// Un solo arreglo vacío para todos los renders. Con `filas || []` cada render creaba uno nuevo,
+// así que `conjunto !== todas` daba true siempre y el reset en fase de render no convergía nunca:
+// cualquier consumidor que pasara `filas` en `null` reventaba con "Too many re-renders".
+const VACIO = [];
+
 export const usePaginaProgresiva = (filas, tamano = TAMANO_PAGINA) => {
-    const todas = filas || [];
+    const todas = filas || VACIO;
     const [cuantas, setCuantas] = useState(tamano);
     const [conjunto, setConjunto] = useState(todas);
-    const pie = useRef(null);
+    // El pie es una ref de CALLBACK y no una `useRef`, y eso no es un detalle: cambiar la
+    // agrupación remonta el árbol entero de la lista (la `key` de su `motion.div` incluye la
+    // dimensión), así que el nodo del pie es OTRO. Con una `useRef`, `pie.current` apuntaba al
+    // nodo nuevo pero el efecto no se volvía a correr —ninguna de sus dependencias cambia cuando
+    // cambia una ref—, y el observador se quedaba mirando un nodo ya desprendido del DOM: el
+    // scroll infinito moría para siempre y quedaban 475 clientes inalcanzables. Guardar el nodo
+    // en estado hace que el efecto se reenganche cada vez que el nodo cambia.
+    const [nodoPie, setNodoPie] = useState(null);
+    const pie = useCallback((nodo) => setNodoPie(nodo), []);
 
     if (conjunto !== todas) {
         setConjunto(todas);
@@ -39,16 +52,19 @@ export const usePaginaProgresiva = (filas, tamano = TAMANO_PAGINA) => {
     const hayMas = HAY_OBSERVER && cuantas < todas.length;
 
     useEffect(() => {
-        const el = pie.current;
-        if (!hayMas || !el) return undefined;
+        if (!hayMas || !nodoPie) return undefined;
         // El margen adelanta la página siguiente a que el pie se vea: así el usuario que baja
         // rápido no llega nunca al borde de lo dibujado.
         const observer = new IntersectionObserver(
             (entradas) => { if (entradas.some(e => e.isIntersecting)) setCuantas(c => c + tamano); },
             { rootMargin: '400px 0px' });
-        observer.observe(el);
+        observer.observe(nodoPie);
         return () => observer.disconnect();
-    }, [hayMas, tamano, cuantas, conjunto]);
+        // `cuantas` está en las dependencias a propósito: al crecer la página el pie baja pero
+        // puede seguir dentro del margen, y el observador no vuelve a avisar si la intersección
+        // no CAMBIA. Recrearlo fuerza la llamada inicial y la lista sigue cargando sola mientras
+        // el pie siga a la vista.
+    }, [hayMas, tamano, cuantas, nodoPie]);
 
     return {
         pagina: hayMas ? todas.slice(0, cuantas) : todas,
