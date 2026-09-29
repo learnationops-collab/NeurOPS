@@ -284,6 +284,19 @@ def fuentes_disponibles():
             {'titulo': 'Setters', 'tono': 'success', 'opciones': setters}]
 
 
+def tipos_seguimiento():
+    """Los tres tipos de seguimiento, con el nombre y la explicacion de la pestaña del closer.
+
+    Salen de `CloserFollowUpService.TIPOS_SEGUIMIENTO`, que es de donde la pestaña Seguimientos
+    saca el titulo de cada grupo: el tipo que se elige en la ficha ES el grupo en el que el closer
+    va a ver el seguimiento, y con dos listas uno de los dos terminaria llamandolo distinto.
+    """
+    from app.services.closer_followup_service import TIPOS_SEGUIMIENTO
+
+    return [{'clave': clave, 'label': tipo['label'], 'desc': tipo['desc']}
+            for clave, tipo in TIPOS_SEGUIMIENTO.items()]
+
+
 def vocabulario(closers=None):
     """El bloque `vocabulario` completo de `GET /api/ficha/lead`.
 
@@ -307,6 +320,7 @@ def vocabulario(closers=None):
         'medios_pago': list(MEDIOS_PAGO),
         'programas': programas_disponibles(),
         'canales_seguimiento': list(CANALES_SEGUIMIENTO),
+        'tipos_seguimiento': tipos_seguimiento(),
         'fuentes': fuentes_disponibles(),
         'closers': closers if closers is not None else closers_disponibles(),
     }

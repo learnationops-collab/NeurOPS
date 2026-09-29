@@ -120,7 +120,19 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
                            'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
                            'tipos_pago', 'medios_pago', 'programas', 'canales_seguimiento',
-                           'fuentes', 'closers'}
+                           'tipos_seguimiento', 'fuentes', 'closers'}
+
+
+def test_los_tipos_de_seguimiento_son_los_grupos_de_la_pestana_del_closer(db):
+    """El tipo que se elige en la ficha ES el grupo en el que el closer ve el seguimiento: con
+    otra lista, la ficha lo llamaria de una forma y la pestaña Seguimientos de otra."""
+    from app.services.closer_followup_service import TIPOS_SEGUIMIENTO
+
+    tipos = voc.vocabulario()['tipos_seguimiento']
+
+    assert [t['clave'] for t in tipos] == ['no_tomada', 'tomada', 'cerrada']
+    assert all(t['label'] == TIPOS_SEGUIMIENTO[t['clave']]['label'] for t in tipos)
+    assert all(t['desc'] for t in tipos)
 
 
 def test_las_fuentes_son_el_catalogo_del_tablero_de_agendas(db):
