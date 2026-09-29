@@ -31,7 +31,29 @@ ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial')
 
 
 class ErrorDeAccion(Exception):
-    """Un pedido mal hecho del frontend: falta un dato o el valor no es admitido."""
+    """Un pedido mal hecho del frontend: falta un dato o el valor no es admitido.
+
+    `campo` es la clave del payload que lo causo, cuando hay una sola: el frontend pinta el error
+    al lado de ese campo y no solo en el aviso general de la ficha.
+    """
+    codigo = 400
+
+    def __init__(self, mensaje, campo=None):
+        super().__init__(mensaje)
+        self.campo = campo
+
+
+class ChoqueDeContacto(ErrorDeAccion):
+    """El correo, el instagram o el telefono nuevo ya son de OTRO cliente.
+
+    409 y no 400: el pedido esta bien hecho, lo que pasa es que choca con lo que ya hay en la base.
+    `choque` dice con quien, para que quien edita decida si son la misma persona.
+    """
+    codigo = 409
+
+    def __init__(self, mensaje, campo, choque):
+        super().__init__(mensaje, campo)
+        self.choque = choque
 
 
 def _iso_dt(valor):
@@ -446,6 +468,210 @@ def total_a_pagar(appt, datos, usuario):
     from app.services.closer_followup_service import CloserFollowUpService
     return {'id': appt.id, 'total': nuevo,
             'deuda': CloserFollowUpService._client_debt(appt.client_id)}
+
+
+# --- Datos del cliente ------------------------------------------------------------------------
+#
+# Nombre, telefono, correo e instagram son del CLIENTE (los comparten todas sus agendas); el
+# examen es de la AGENDA —el examen al que se presenta, texto libre que escribe el formulario de
+# origen o el setter— y se corrige en la que la ficha tiene abierta, que es la que muestra la
+# cabecera. No hay vocabulario de examenes: en la base local hay 'enarm', 'ENARM', 'enarm peru',
+# 'Step 1', 'colombia'... y cerrarlo a una lista dejaria sin poder guardar la mitad de lo que ya hay.
+#
+# La normalizacion es la de `CloserService.update_client` (ver `closer_service.normalizar_*`), para
+# que el mazo y la ficha guarden lo mismo. Lo que esta puerta agrega:
+#   · un correo sin arroba se RECHAZA; `update_client` lo vacia en silencio;
+#   · un correo, un instagram o un telefono que ya son de OTRO cliente se rechazan con el nombre de
+#     ese cliente. `BookingService.create_or_update_client` cruza por esos tres datos (correo ->
+#     instagram -> ultimos 8 digitos del telefono) y FUSIONA lo que encuentra: guardarlo callado
+#     dejaria a los dos clientes pegados en la proxima agenda que entre, sin que nadie lo decidiera;
+#   · las ventas que hoy son del cliente solo porque coinciden por contacto (el 79% no tiene
+#     `client_id`) se atan por id ANTES del cambio: si no, corregirle el correo a quien ya compro
+#     le haria perder sus ventas, su programa y su deuda en la ficha y en la cola de cobro;
+#   · una linea en la bitacora del lead con lo que cambio, antes -> despues.
+#
+# Lo que NO se toca, y queda con el dato viejo: las ventas en Google Sheets, el `Lead` del pipeline
+# (que se cruza por correo e instagram al crear la proxima agenda) y la cuenta de la Academia, que
+# se busca por el id guardado (`learnation_user_id`) y conserva el correo con el que se creo.
+
+# clave de la lectura (`identidad.*`) -> (columna del cliente, como se nombra, largo de la columna).
+# El largo se comprueba aca porque Postgres rechaza el UPDATE de un valor mas largo y SQLite —los
+# tests, la base local— lo guarda callado. Los cinco nombres son masculinos: los mensajes les
+# anteponen "el".
+CAMPOS_DEL_CLIENTE = {
+    'nombre': ('full_name', 'nombre', 120),
+    'telefono': ('phone', 'teléfono', 20),
+    'email': ('email', 'correo', 120),
+    'instagram': ('instagram', 'instagram', 64),
+}
+EXAMEN = ('examen', 255)
+
+# Algo@algo.algo, sin espacios. No valida un correo de verdad —nadie puede sin mandarle uno—, pero
+# frena el 'ana@gmail' y el 'ana @gmail.com' que se cuelan al tipear rapido.
+_FORMA_DE_CORREO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def _valor_nuevo(campo, crudo):
+    """Lo que se guardaria en `campo` para lo que se escribio, o `ErrorDeAccion` con el motivo."""
+    from app.services.closer_service import (
+        SIN_DATO, normalizar_email, normalizar_instagram, normalizar_telefono,
+    )
+
+    rotulo, largo = CAMPOS_DEL_CLIENTE[campo][1:] if campo in CAMPOS_DEL_CLIENTE else EXAMEN
+    if crudo is not None and not isinstance(crudo, str):
+        raise ErrorDeAccion(f'El {rotulo} tiene que ser texto.', campo)
+    texto = (crudo or '').strip()
+
+    if campo == 'nombre':
+        if not texto:
+            raise ErrorDeAccion('El nombre no puede quedar vacío.', campo)
+        valor = texto
+    elif campo == 'email':
+        valor = normalizar_email(texto)
+        # Vacio o "n/a" es borrar el correo, que se puede. Lo que no se puede es escribir uno que
+        # no es un correo y que se guarde vacio creyendo que se guardo.
+        if texto.lower() not in SIN_DATO and not (valor and _FORMA_DE_CORREO.match(valor)):
+            raise ErrorDeAccion(f'«{texto}» no es un correo válido.', campo)
+    elif campo == 'telefono':
+        valor = normalizar_telefono(texto)
+        if valor and not any(c.isdigit() for c in valor):
+            raise ErrorDeAccion(f'«{texto}» no es un teléfono: no tiene ningún número.', campo)
+    elif campo == 'instagram':
+        valor = normalizar_instagram(texto)
+    else:
+        valor = texto or None
+
+    if valor and len(valor) > largo:
+        raise ErrorDeAccion(f'El {rotulo} es demasiado largo: el máximo es {largo} caracteres.',
+                            campo)
+    return valor
+
+
+def _otro_cliente_con(cliente, campo, valor):
+    """El OTRO cliente al que ya pertenece ese contacto, o None.
+
+    El mismo cruce que `create_or_update_client` y `comercial_service.clientes_de_ventas`: correo
+    e instagram sin mayusculas (y el instagram sin la '@'), y el telefono por sus ultimos 8
+    DIGITOS, sin mirar como esta escrito —'+591 7123-4567' y '59171234567' son el mismo—. Ante dos
+    candidatos gana el mas viejo, que es el que esas funciones encuentran primero.
+    """
+    from sqlalchemy import func
+
+    from app.models import Client
+    from app.services.comercial_service import _ultimos8
+
+    otros = Client.query.filter(Client.id != cliente.id).order_by(Client.id)
+    if campo == 'email':
+        return otros.filter(func.lower(Client.email) == valor.lower()).first()
+    if campo == 'instagram':
+        ig = valor.lstrip('@').lower()
+        return otros.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig).first()
+    ultimos = _ultimos8(valor)
+    if not ultimos:
+        return None
+    # En memoria y no con un LIKE: el LIKE sobre el texto crudo no ve el mismo numero escrito con
+    # otros espacios. Son unas miles de filas de tres columnas, una vez por edicion.
+    return next((c for c in otros.filter(Client.phone.isnot(None)).all()
+                 if _ultimos8(c.phone) == ultimos), None)
+
+
+def _atar_ventas_por_contacto(cliente):
+    """Ata por id las ventas que hoy son de este cliente solo porque coinciden por contacto.
+
+    Se decide con `clientes_de_ventas`, el mismo cruce con el que la tabla de ventas elige a quien
+    abrirle la ficha: una venta que coincide con este cliente por telefono pero con otro por correo
+    es del otro, y atarla aca se la robaria.
+    """
+    from app.services.comercial_service import clientes_de_ventas
+    from app.services.ficha_lead_service import _ventas_del_cliente
+
+    sueltas = [v for v in _ventas_del_cliente(cliente) if not v.client_id]
+    duenos = clientes_de_ventas(sueltas) if sueltas else {}
+    atadas = 0
+    for venta in sueltas:
+        if duenos.get(venta.id) == cliente.id:
+            venta.client_id = cliente.id
+            atadas += 1
+    return atadas
+
+
+def _para_la_bitacora(valor):
+    return repr(valor) if valor else 'vacío'
+
+
+def editar_datos(appt, datos, usuario):
+    """Corrige los datos de contacto del cliente de esta agenda, y el examen de la agenda.
+
+    Llegan solo los campos que se tocaron; los que llegan pero quedan igual despues de normalizar
+    (un '@ana' sobre un 'ana') no cuentan como cambio. Se valida TODO antes de escribir nada: un
+    choque en el telefono no puede dejar el nombre guardado a medias.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    from app.services.booking_service import BookingService
+
+    pedidos = [c for c in (*CAMPOS_DEL_CLIENTE, 'examen') if c in datos]
+    if not pedidos:
+        raise ErrorDeAccion('No hay nada que guardar.')
+
+    cliente = appt.client
+    cambios = {}
+    for campo in pedidos:
+        nuevo = _valor_nuevo(campo, datos[campo])
+        if campo == 'examen':
+            antes = appt.examen
+        elif cliente is None:
+            raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién corregirle los datos '
+                                'de contacto.', campo)
+        else:
+            antes = getattr(cliente, CAMPOS_DEL_CLIENTE[campo][0])
+        if (antes or None) != nuevo:
+            cambios[campo] = (antes, nuevo)
+
+    if not cambios:
+        return {'id': appt.id, 'cambios': {}, 'ventas_atadas': 0}
+
+    # En el orden del cruce de `create_or_update_client`: si chocan dos, se nombra el que ese cruce
+    # usaria primero para fusionar.
+    for campo in ('email', 'instagram', 'telefono'):
+        nuevo = cambios.get(campo, (None, None))[1]
+        otro = _otro_cliente_con(cliente, campo, nuevo) if nuevo else None
+        if otro:
+            nombre = otro.full_name or otro.email or f'cliente #{otro.id}'
+            raise ChoqueDeContacto(
+                f'El {CAMPOS_DEL_CLIENTE[campo][1]} «{nuevo}» ya es de otro cliente: {nombre} '
+                f'(#{otro.id}). '
+                'No se fusionan solos: si son la misma persona hay que unir los dos clientes; si '
+                'no, revisá el dato.', campo, {'id': otro.id, 'nombre': nombre})
+
+    atadas = 0
+    if cliente is not None and any(c in cambios for c in ('email', 'instagram', 'telefono')):
+        atadas = _atar_ventas_por_contacto(cliente)
+
+    for campo, (_, nuevo) in cambios.items():
+        if campo == 'examen':
+            appt.examen = nuevo
+        else:
+            setattr(cliente, CAMPOS_DEL_CLIENTE[campo][0], nuevo)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # `Client.email` es `unique`: solo pasa si otro guardo ese correo entre la comprobacion de
+        # arriba y este commit.
+        db.session.rollback()
+        raise ErrorDeAccion('Ese correo se lo acaban de poner a otro cliente. Volvé a abrir la '
+                            'ficha para ver con quién choca.', 'email') from None
+
+    rotulos = {**{c: v[1] for c, v in CAMPOS_DEL_CLIENTE.items()}, 'examen': EXAMEN[0]}
+    detalle = '; '.join(f'{rotulos[c]}: {_para_la_bitacora(a)} → {_para_la_bitacora(n)}'
+                        for c, (a, n) in cambios.items())
+    extra = (f' {atadas} venta(s) quedaron atadas al cliente por id, para no perderlas con el '
+             'cambio de contacto.' if atadas else '')
+    BookingService.log_lead_event(appt.id, usuario.id, 'datos_editados',
+                                  f'{usuario.username} corrigió los datos del lead: {detalle}.{extra}')
+
+    return {'id': appt.id, 'cambios': {c: n for c, (_, n) in cambios.items()},
+            'ventas_atadas': atadas}
 
 
 # --- Registro de eventos ----------------------------------------------------------------------

@@ -33,9 +33,14 @@ def _solo_roles_con_acceso():
         return jsonify({'message': 'Forbidden'}), 403
 
 
+# Los permisos cuyo nombre no se lee como un verbo en la frase del 403.
+_EN_PALABRAS = {'editar_datos': 'corregir los datos del cliente'}
+
+
 def sin_permiso(accion):
     """403 con el nombre de la accion: el frontend ya sabia que no podia, esto lo explica."""
-    return jsonify({'message': f'Tu rol no puede {accion} desde la ficha del lead.',
+    return jsonify({'message': f'Tu rol no puede {_EN_PALABRAS.get(accion, accion)} desde la '
+                               'ficha del lead.',
                     'accion': accion}), 403
 
 

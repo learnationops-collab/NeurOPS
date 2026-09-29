@@ -98,7 +98,7 @@ def test_la_direccion_puede_todo_incluido_borrar(client, db, lead, equipo, auth_
         .get_json()['permisos']
 
     assert permisos == {'confirmar': True, 'reportar': True, 'cobrar': True, 'eliminar': True,
-                        'reasignar': True, 'comentar': True}
+                        'editar_datos': True, 'reasignar': True, 'comentar': True}
 
 
 def test_el_closer_borra_la_suya_y_no_la_de_otro(client, db, lead, equipo, auth_headers):

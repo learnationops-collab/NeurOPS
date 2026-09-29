@@ -30,6 +30,16 @@ def _datos():
     return request.get_json(silent=True) or {}
 
 
+def _error_de_accion(e):
+    """El motivo, y cuando lo hay, el campo que lo causo y con quien choca (ver `ErrorDeAccion`)."""
+    cuerpo = {'message': str(e)}
+    if e.campo:
+        cuerpo['campo'] = e.campo
+    if getattr(e, 'choque', None):
+        cuerpo['choque'] = e.choque
+    return jsonify(cuerpo), e.codigo
+
+
 def _ejecutar(appt_id, permiso, accion, exito=200):
     appt, error = _agenda_y_permiso(appt_id, permiso)
     if error:
@@ -37,7 +47,7 @@ def _ejecutar(appt_id, permiso, accion, exito=200):
     try:
         return jsonify(accion(appt, _datos(), current_user)), exito
     except acciones.ErrorDeAccion as e:
-        return jsonify({'message': str(e)}), 400
+        return _error_de_accion(e)
     except Exception as e:
         # Los servicios del mazo levantan Exception con el motivo en el texto (ej. "Fecha de
         # reagenda requerida"): se devuelve tal cual en vez de un 500 sin explicacion.
@@ -97,6 +107,17 @@ def plan_cuotas(appt_id):
 def total(appt_id):
     """El total a pagar que negocio el cliente, del que sale su deuda."""
     return _ejecutar(appt_id, 'cobrar', acciones.total_a_pagar)
+
+
+@bp.route('/<int:appt_id>/datos', methods=['PATCH'])
+def datos_del_lead(appt_id):
+    """Nombre, telefono, correo e instagram del cliente de esta agenda, y el examen de la agenda.
+
+    Es la misma correccion que `PATCH /closer/customers/<id>` con la misma normalizacion, pero con
+    el permiso de la ficha (la direccion y el closer del lead, no cualquier closer) y rechazando
+    lo que esa ruta guarda mal callada: ver `ficha_acciones_service.editar_datos`.
+    """
+    return _ejecutar(appt_id, 'editar_datos', acciones.editar_datos)
 
 
 @bp.route('/<int:appt_id>/evento/<int:evento_id>', methods=['PATCH', 'DELETE'])

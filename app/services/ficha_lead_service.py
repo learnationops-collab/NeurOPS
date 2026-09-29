@@ -309,6 +309,11 @@ def permisos_de(usuario, appt=None):
     permite `DELETE /closer/deck/<id>`: cuando el mazo pase a usar esta ficha, el closer tiene que
     seguir pudiendo limpiar una agenda de prueba propia. Lo que ninguno de los dos hace es borrar
     la agenda de otro.
+
+    Corregir los datos del cliente (`editar_datos`) sigue la misma regla que borrar: la direccion
+    sobre cualquier lead y el closer sobre los suyos. A diferencia de reportar o cobrar —que un
+    closer hace sobre un lead ajeno cuando cubre a un companero—, un nombre o un correo cambiados
+    los ven todas las pantallas y todos los closers, y el cruce de ventas depende de ellos.
     """
     rol = getattr(usuario, 'role', None)
     direccion = rol in ROLES_DIRECCION
@@ -320,6 +325,7 @@ def permisos_de(usuario, appt=None):
         'reportar': direccion or rol == 'closer',
         'cobrar': direccion or rol == 'closer',
         'eliminar': direccion or closer_dueno,
+        'editar_datos': direccion or closer_dueno,
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
     }
