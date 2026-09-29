@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
+import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
@@ -203,21 +203,25 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0 }) => {
 // La misma fila, en hueso: la caja `.row-v6` de verdad (padding, borde, margen de abajo) con la
 // urgencia a la izquierda, nombre y chips al centro y la ganancia a la derecha. Cada hueso va
 // dentro del alto de LÍNEA del texto que reemplaza, no del alto de la letra, que es lo que ocupa el
-// texto real: la fila en hueso mide 84 px, como la de verdad con los chips en un solo renglón. Las
-// barras de 62 px de antes quedaban 15 px cortas por fila, y la lista crecía al llegar los datos.
+// texto real: la fila en hueso mide 84,25 px, como la de verdad con los chips en un solo renglón.
+// Las barras de 62 px de antes quedaban 15 px cortas por fila, y la lista crecía al llegar los datos.
+//
+// El nombre va en un `Renglon` y no con márgenes: los 4,5 px de abajo del hueso colapsaban con los
+// 6 de arriba de `.chips-v6` y la fila quedaba en 79,5 (ver `Renglon` en Huesos.jsx).
 const HuesoFila = ({ paso }) => (
     <div className="row-v6" aria-hidden="true"
         style={{ pointerEvents: 'none', animationDelay: `${escalonDe(paso)}ms` }}>
         {/* La caja de urgencia (`.time-v6`): 104 px de ancho mínimo y 35 de alto. */}
         <Hueso alto={35} ancho={104} radio={10} paso={paso} style={{ flex: 'none' }} />
         <div className="rmain-v6">
-            {/* El nombre: 16 px de letra en una línea de 24. */}
-            <Hueso alto={15} ancho="42%" paso={paso} style={{ margin: '4.5px 0' }} />
-            {/* Los chips (`.chip-v6`): 24 px de alto, 6 por debajo del nombre. */}
+            {/* El nombre: 16 px de letra en un renglón de 24. */}
+            <Renglon alto={24}><Hueso alto={15} ancho="42%" paso={paso} /></Renglon>
+            {/* Los chips (`.chip-v6`), 6 por debajo del nombre: 9,5 px de letra en un renglón de
+                14,25, 4 + 4 de padding y el borde, 24,25 en total. */}
             <div className="chips-v6">
-                <Hueso alto={24} ancho={96} radio={6} paso={paso} />
-                <Hueso alto={24} ancho={70} radio={6} paso={paso} />
-                <Hueso alto={24} ancho={124} radio={6} paso={paso} />
+                <Hueso alto={24.25} ancho={96} radio={6} paso={paso} />
+                <Hueso alto={24.25} ancho={70} radio={6} paso={paso} />
+                <Hueso alto={24.25} ancho={124} radio={6} paso={paso} />
             </div>
         </div>
         {/* La ganancia (`.earn-v6`): el rótulo en una línea de 12 y la cifra en una de 25,5. */}
@@ -393,14 +397,16 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     if (loading) {
         return (
             <Esqueleto rotulo="Cargando seguimientos…" className="space-y-6">
-                {/* Meta del día. Cada hueso dentro del alto de línea de lo que reemplaza: la cifra
-                    (`text-4xl`, línea de 40), el renglón de "te faltan" (24: es un span suelto y
-                    manda el renglón del div) y la barra (8, con 8 de margen). */}
+                {/* Meta del día, 110 px como la real. Cada hueso dentro del alto de línea de lo que
+                    reemplaza: la cifra (`text-4xl`, línea de 40), el renglón de "te faltan" (24: es
+                    un span suelto y manda el renglón del div) y la barra (8, con 8 de margen). El
+                    renglón va en una caja y no con márgenes: los 7 px de abajo del hueso se fundían
+                    con los 8 de arriba de la barra y la tarjeta quedaba en 103. */}
                 <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 flex items-center gap-6 flex-wrap" aria-hidden="true">
                     <Hueso alto={32} ancho={84} style={{ margin: '4px 0' }} />
                     <div className="flex-1 min-w-[180px]">
                         <b className="text-sm font-black text-white block">Objetivo de seguimientos del día</b>
-                        <Hueso alto={10} ancho="36%" style={{ margin: '7px 0' }} />
+                        <Renglon alto={24}><Hueso alto={10} ancho="36%" /></Renglon>
                         <Hueso alto={8} radio={999} style={{ marginTop: 8 }} />
                     </div>
                 </div>

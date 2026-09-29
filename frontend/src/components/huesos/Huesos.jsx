@@ -36,6 +36,26 @@ export const Hueso = ({ alto = 14, ancho, radio, paso = 0, style, className }) =
 );
 
 /**
+ * El renglón de un texto, con su hueso centrado adentro.
+ *
+ * Un texto real ocupa el alto de su LÍNEA (la letra por el interlineado: 16 px de letra son 24 de
+ * renglón), y el hueso que lo reemplaza es más bajo que eso para que se lea como texto. La
+ * diferencia no puede ir en márgenes: el hueso es un bloque, y los márgenes verticales de dos
+ * bloques hermanos colapsan —queda el mayor, no la suma—, así que el esqueleto salía más corto
+ * que lo que reemplazaba y todo lo de abajo saltaba al llegar los datos (4,75 px por fila en
+ * Seguimientos, 8,5 por tarjeta en el kanban). Una caja del alto exacto del renglón no depende de
+ * con quién esté al lado.
+ *
+ * En columna para que un hueso sin `ancho` ocupe todo el renglón, como el bloque que era.
+ */
+export const Renglon = ({ alto, children, style }) => (
+    <div aria-hidden="true"
+        style={{ height: alto, display: 'flex', flexDirection: 'column', justifyContent: 'center', ...style }}>
+        {children}
+    </div>
+);
+
+/**
  * El envoltorio de un esqueleto. Lleva el `role="status"` con el rótulo, que es lo único que el
  * spinner hacía bien: sin él, un lector de pantalla no se entera de que la pantalla está
  * cargando —los huesos son decorativos y van todos con `aria-hidden`—.
