@@ -46,9 +46,9 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  *
  * Va montada SIN `MainLayout` (mismo patrón que el mazo del closer y el panel de contratación):
  * tiene su propio dock fijo abajo y el de la app quedaba encima, superpuesto pixel a pixel. A
- * cambio, la salida la ofrece esta pantalla: "Volver a mi sesión" si es una simulación (ver
- * `revertImpersonation`, que existe justamente para las sub-apps sin MainLayout) y, si no, la
- * vuelta al lugar de trabajo de cada rol.
+ * cambio, la salida la ofrece esta pantalla: la vuelta al lugar de trabajo de cada rol y, si es
+ * una simulación, además "Volver a mi sesión" (ver `revertImpersonation`, que existe justamente
+ * para las sub-apps sin MainLayout).
  *
  * ## Modo embebido
  *
@@ -406,7 +406,16 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         <h1 className="t-h1">{titulo}</h1>
                     </div>
                     <div className="tope-meta" style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
-                        {user?.is_impersonating ? (
+                        {/* La vuelta al lugar de trabajo va SIEMPRE, también simulando. Antes era
+                            una u otra: simulando a un closer, la única salida de esta pantalla era
+                            terminar la simulación, y no había cómo volver a su mazo. */}
+                        {salida && (
+                            <Link to={salida.to} className="btn btn--linea btn--sm">
+                                <ArrowLeft size={15} />
+                                {salida.label}
+                            </Link>
+                        )}
+                        {user?.is_impersonating && (
                             <button type="button" className="btn btn--linea btn--sm" disabled={saliendo}
                                 title="Volver a tu sesión original"
                                 onClick={async () => {
@@ -421,11 +430,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                                 <Ghost size={15} />
                                 {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
                             </button>
-                        ) : salida && (
-                            <Link to={salida.to} className="btn btn--linea btn--sm">
-                                <ArrowLeft size={15} />
-                                {salida.label}
-                            </Link>
                         )}
                     </div>
                 </header>
