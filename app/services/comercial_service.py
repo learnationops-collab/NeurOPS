@@ -666,29 +666,42 @@ class ComercialService:
         (ver `CloserFollowUpService._cartera_items`, que arregló ese bug). Se reusan sus piezas en
         vez de rearmar el cálculo: la deuda, la próxima cuota y el desglose de pagos de un cliente
         tienen que dar lo mismo en las dos pantallas.
+
+        **Todo en lote.** Esas piezas consultaban cliente por cliente: 5.682 consultas y 8,3 s
+        para los 520 clientes de la base local, y la tabla "se queda pegada" (pedido del usuario,
+        29/sep/2026). Ahora se leen de una `CarteraEnLote` —las mismas piezas, leyendo de otro
+        lado— y la cantidad de consultas ya no depende de cuántos clientes haya.
         """
-        from app.services.closer_followup_service import CloserFollowUpService
+        from app.services.closer_followup_service import CarteraEnLote, CloserFollowUpService
 
         de_quien, pedido = ComercialService._atribucion_de_ventas(closer_id)
         permitidos = ComercialService._vendedores_permitidos(de_quien, pedido)
 
         ventas_por_cliente = CloserFollowUpService._resolve_sales_and_clients()
-
-        filas = []
+        propias_de = {}
         for cid, ventas in ventas_por_cliente.items():
             propias = [v for v in ventas
                        if (v.email_vendedor or '').strip().lower() in permitidos]
-            if not propias:
-                continue
-            cliente = Client.query.get(cid)
+            if propias:
+                propias_de[cid] = propias
+
+        # El cliente comprado que nunca tuvo cita recibe su ancla, como siempre; se crean antes de
+        # leer el lote porque cada una hace commit (ver `_anclar_clientes_sin_cita`).
+        CloserFollowUpService._anclar_clientes_sin_cita(list(propias_de), ventas_por_cliente)
+        # `cita_exacta=False`: la tabla no muestra nada de la cita, la necesita solo para armar el
+        # item, así que entre dos citas empatadas en `start_time` da igual cuál.
+        lote = CarteraEnLote(list(propias_de), cita_exacta=False)
+
+        filas = []
+        for cid, propias in propias_de.items():
+            cliente = lote.clientes.get(cid)
             if not cliente:
                 continue
             # `appt` es solo para los campos de display; cualquier cita del cliente sirve.
-            appt = (Appointment.query.filter_by(client_id=cid)
-                    .order_by(Appointment.start_time.desc()).first())
+            appt = lote.ultima_cita.get(cid)
             if not appt:
                 appt = CloserFollowUpService._ensure_appointment_for_client(cliente)
-            item = CloserFollowUpService._build_cartera_item(cid, cliente, appt, ventas_por_cliente)
+            item = CloserFollowUpService._build_cartera_item(cid, cliente, appt, ventas_por_cliente, lote=lote)
 
             propias.sort(key=lambda v: v.date or v.created_at or datetime.min)
             vendedor = de_quien.get((propias[0].email_vendedor or '').strip().lower())

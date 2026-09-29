@@ -11,15 +11,32 @@ Lo que se fija acá son las dos mitades del arreglo:
     es donde un cálculo reescrito da un número plausible pero distinto.
 """
 import itertools
-from datetime import datetime
+from datetime import date, datetime
 
+import pytest
 from flask import g
+from freezegun import freeze_time
 from sqlalchemy import event, func
 
-from app.models import Client, FinancialSale
-from app.services.closer_followup_service import CloserFollowUpService
+from app.models import Appointment, Client, Enrollment, FinancialSale, InstallmentPlan, Payment, Program, User
+from app.services.closer_followup_service import CarteraEnLote, CloserFollowUpService
+from app.services.comercial_service import ComercialService
 
+HOY = '2026-09-29 15:00:00'
 _n = itertools.count(1)
+
+
+@pytest.fixture()
+def vendedor(make_user):
+    return make_user(role='closer', username='vendedor', email='vendedor@neuro.com')
+
+
+@pytest.fixture()
+def programa(db):
+    p = Program(name='Residency Roadmap', price=1500.0)
+    db.session.add(p)
+    db.session.commit()
+    return p
 
 
 def cliente(db, **campos):
@@ -39,6 +56,43 @@ def venta(db, *, mail=None, ig=None, telefono=None, client_id=None, tipo='RR - P
     db.session.add(v)
     db.session.commit()
     return v
+
+
+def cita(db, closer, cli, cuando=datetime(2026, 8, 1, 15, 0)):
+    a = Appointment(closer_id=closer.id, client_id=cli.id, start_time=cuando,
+                    closer_result='Show up', closer_processed=True)
+    db.session.add(a)
+    db.session.commit()
+    return a
+
+
+def inscripcion(db, cli, prog, pagos=(), fecha=datetime(2026, 8, 1)):
+    """`pagos` son (monto, status)."""
+    e = Enrollment(client_id=cli.id, program_id=prog.id, enrollment_date=fecha)
+    db.session.add(e)
+    db.session.commit()
+    for monto, status in pagos:
+        db.session.add(Payment(enrollment_id=e.id, amount=monto, status=status, date=fecha))
+    db.session.commit()
+    return e
+
+
+def cuota(db, appt, numero=1, monto=300.0, vence=date(2026, 10, 15), estado='pendiente'):
+    c = InstallmentPlan(appointment_id=appt.id, client_id=appt.client_id, numero_cuota=numero,
+                        monto=monto, fecha_vencimiento=vence, estado=estado)
+    db.session.add(c)
+    db.session.commit()
+    return c
+
+
+def comprador(db, closer, prog, **campos):
+    """Un cliente completo: venta, cita, inscripción con un pago y una cuota pendiente."""
+    cli = cliente(db, **campos)
+    venta(db, mail=cli.email)
+    appt = cita(db, closer, cli)
+    inscripcion(db, cli, prog, pagos=[(400.0, 'completed')])
+    cuota(db, appt)
+    return cli
 
 
 def contar_consultas(db, fn, *args):
@@ -157,3 +211,228 @@ def test_el_cruce_no_consulta_una_vez_por_venta(db):
     _, muchas = contar_consultas(db, CloserFollowUpService._resolve_sales_and_clients)
 
     assert muchas == pocas == 2
+
+
+# --- La tabla Clientes en lote ------------------------------------------------------------------
+
+@freeze_time(HOY)
+def _compradores(db, closer_id, programa_id, cuantos):
+    # Por id: `contar_consultas` vacía la sesión y deja sueltos los objetos de los fixtures.
+    closer, prog = db.session.get(User, closer_id), db.session.get(Program, programa_id)
+    for _ in range(cuantos):
+        comprador(db, closer, prog)
+
+
+@freeze_time(HOY)
+def test_la_tabla_clientes_no_hace_una_consulta_por_cliente(db, vendedor, programa):
+    ids = vendedor.id, programa.id
+    _compradores(db, *ids, 3)
+    filas, pocas = contar_consultas(db, ComercialService.clientes)
+    assert len(filas) == 3
+    _compradores(db, *ids, 12)
+    filas, muchas = contar_consultas(db, ComercialService.clientes)
+
+    assert len(filas) == 15
+    assert muchas == pocas
+    assert muchas < 40
+
+
+@freeze_time(HOY)
+def test_acotada_a_un_closer_tampoco_crece_con_sus_clientes(db, vendedor, programa):
+    ids = vendedor.id, programa.id
+    _compradores(db, *ids, 2)
+    _, pocas = contar_consultas(db, ComercialService.clientes, ids[0])
+    _compradores(db, *ids, 8)
+    filas, muchas = contar_consultas(db, ComercialService.clientes, ids[0])
+
+    assert len(filas) == 10
+    assert muchas == pocas
+
+
+def _items(db, ids):
+    """(con lote, de a uno) para cada cliente: los dos caminos de `_build_cartera_item`."""
+    ventas = CloserFollowUpService._resolve_sales_and_clients()
+    lote = CarteraEnLote(ids)
+    pares = {}
+    for cid in ids:
+        cli = Client.query.get(cid)
+        appt = CloserFollowUpService._ultima_cita_de(cid)
+        pares[cid] = (CloserFollowUpService._build_cartera_item(cid, cli, appt, ventas, lote=lote),
+                      CloserFollowUpService._build_cartera_item(cid, cli, appt, ventas))
+    return pares
+
+
+@freeze_time(HOY)
+def test_sin_total_negociado_la_deuda_sale_del_precio_del_programa(db, vendedor, programa):
+    cli = cliente(db, total_amount=None)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli)
+    # El pago pendiente no cuenta: la deuda se mide contra lo cobrado de verdad.
+    inscripcion(db, cli, programa, pagos=[(500.0, 'completed'), (200.0, 'pending')])
+
+    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
+
+    assert con_lote['deuda'] == de_a_uno['deuda'] == 1000.0
+    assert con_lote == de_a_uno
+
+
+@freeze_time(HOY)
+def test_con_varias_inscripciones_se_suma_cada_programa(db, vendedor, programa):
+    otro = Program(name='Ace Learners', price=1000.0)
+    db.session.add(otro)
+    db.session.commit()
+    cli = cliente(db, total_amount=None)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli)
+    inscripcion(db, cli, programa, pagos=[(1500.0, 'completed')], fecha=datetime(2026, 3, 1))
+    inscripcion(db, cli, otro, pagos=[(100.0, 'completed'), (150.0, 'completed')],
+                fecha=datetime(2026, 7, 1))
+
+    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
+
+    assert con_lote['deuda'] == 750.0
+    # La fecha de ingreso es la de la inscripción más reciente, no la de la primera.
+    assert con_lote['enrollment_date'] == '2026-07-01T00:00:00'
+    assert con_lote == de_a_uno
+
+
+@freeze_time(HOY)
+def test_el_total_negociado_manda_sobre_el_precio_de_los_programas(db, vendedor, programa):
+    cli = cliente(db, total_amount=2000.0)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli)
+    inscripcion(db, cli, programa, pagos=[(300.0, 'completed')])
+    inscripcion(db, cli, programa, pagos=[(200.0, 'completed'), (999.0, 'failed')])
+
+    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
+
+    assert con_lote['deuda'] == 1500.0
+    assert con_lote == de_a_uno
+
+
+@freeze_time(HOY)
+def test_sin_inscripciones_no_debe_nada_aunque_tenga_total(db, vendedor):
+    cli = cliente(db, total_amount=1000.0)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli)
+
+    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
+
+    assert con_lote['deuda'] == 0.0
+    assert con_lote['proxima_cuota'] is None
+    assert con_lote == de_a_uno
+
+
+@freeze_time(HOY)
+def test_cuota_pendiente_contra_sin_cronograma(db, vendedor, programa):
+    con_plan = cliente(db, total_amount=None)
+    venta(db, mail=con_plan.email)
+    appt = cita(db, vendedor, con_plan)
+    inscripcion(db, con_plan, programa, pagos=[(500.0, 'completed')])
+    cuota(db, appt, numero=1, vence=date(2026, 9, 1), estado='pagado')
+    vencida = cuota(db, appt, numero=2, vence=date(2026, 9, 20))
+    cuota(db, appt, numero=3, vence=date(2026, 10, 20))
+
+    sin_plan = cliente(db, total_amount=None)
+    venta(db, mail=sin_plan.email)
+    cita(db, vendedor, sin_plan)
+    inscripcion(db, sin_plan, programa, pagos=[(500.0, 'completed')])
+
+    pares = _items(db, [con_plan.id, sin_plan.id])
+
+    cuota_plan = pares[con_plan.id][0]['proxima_cuota']
+    assert (cuota_plan['id'], cuota_plan['vencida'], cuota_plan['sin_plan']) == (vencida.id, True, False)
+    cuota_sin = pares[sin_plan.id][0]['proxima_cuota']
+    assert (cuota_sin['sin_plan'], cuota_sin['monto']) == (True, 1000.0)
+    assert all(con_lote == de_a_uno for con_lote, de_a_uno in pares.values())
+
+
+@freeze_time(HOY)
+def test_dos_cuotas_que_vencen_el_mismo_dia_las_desempata_la_base(db, vendedor, programa):
+    cli = cliente(db, total_amount=None)
+    venta(db, mail=cli.email)
+    appt = cita(db, vendedor, cli)
+    inscripcion(db, cli, programa)
+    cuota(db, appt, numero=2, monto=250.0, vence=date(2026, 10, 1))
+    cuota(db, appt, numero=1, monto=300.0, vence=date(2026, 10, 1))
+
+    lote = CarteraEnLote([cli.id])
+
+    assert lote.cuota_pendiente[cli.id].id == CloserFollowUpService._cuota_pendiente_de(cli.id).id
+
+
+@freeze_time(HOY)
+def test_el_programa_es_el_de_la_ultima_venta_por_correo_o_instagram(db, vendedor):
+    cli = cliente(db, instagram='@luci')
+    venta(db, mail=cli.email, tipo='AL - Completo', fecha=datetime(2026, 1, 1))
+    # La más nueva cruza por instagram, y cuenta aunque esté anulada: así lo resolvía siempre.
+    venta(db, mail='otro@x.com', ig='luci', tipo='SI - Seña', fecha=datetime(2026, 6, 1), estado='Anulada')
+    cita(db, vendedor, cli)
+
+    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
+
+    assert con_lote['programa_code'] == 'SI'
+    assert con_lote == de_a_uno
+
+
+@freeze_time(HOY)
+def test_dos_ventas_del_mismo_dia_con_programas_distintos_las_desempata_la_base(db, vendedor):
+    cli = cliente(db)
+    venta(db, mail=cli.email, tipo='RR - Completo', fecha=datetime(2026, 6, 1))
+    venta(db, mail=cli.email, tipo='AL - Upsell', fecha=datetime(2026, 6, 1))
+    cita(db, vendedor, cli)
+
+    lote = CarteraEnLote([cli.id])
+
+    assert lote.programa[cli.id] == CloserFollowUpService._client_program_code(cli.id)
+
+
+@freeze_time(HOY)
+def test_la_ultima_cita_empatada_la_desempata_la_base(db, vendedor, make_user):
+    otro = make_user(role='closer', username='otro_closer')
+    cli = cliente(db)
+    venta(db, mail=cli.email)
+    cita(db, vendedor, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    cita(db, otro, cli, cuando=datetime(2026, 8, 1, 15, 0))
+
+    lote = CarteraEnLote([cli.id])
+
+    assert lote.ultima_cita[cli.id].id == CloserFollowUpService._ultima_cita_de(cli.id).id
+
+
+@freeze_time(HOY)
+def test_el_cliente_sin_cita_recibe_su_ancla_una_sola_vez(db, vendedor, programa):
+    cli = cliente(db)
+    venta(db, mail=cli.email, fecha=datetime(2026, 5, 4))
+    inscripcion(db, cli, programa, pagos=[(400.0, 'completed')])
+    comprador(db, vendedor, programa)
+    cid = cli.id
+
+    primera = ComercialService.clientes()
+    anclas = Appointment.query.filter_by(client_id=cid).all()
+    segunda = ComercialService.clientes()
+
+    assert [(a.origin, a.closer_id, a.start_time) for a in anclas] == [
+        ('Venta histórica sin agenda', vendedor.id, datetime(2026, 5, 4))]
+    assert Appointment.query.filter_by(client_id=cid).count() == 1
+    assert primera == segunda
+    assert {f['client_id'] for f in primera} >= {cid}
+
+
+@freeze_time(HOY)
+def test_el_pedido_que_crea_un_ancla_tampoco_relee_venta_por_venta(db, vendedor, programa):
+    """El commit del ancla vence las ventas ya leídas: sin releerlas juntas, cada una se volvía a
+    pedir sola al armar su fila."""
+    ids = vendedor.id, programa.id
+
+    def con_un_cliente_sin_cita(cuantos):
+        cli = cliente(db)
+        venta(db, mail=cli.email)
+        _compradores(db, *ids, cuantos)
+        _, consultas = contar_consultas(db, ComercialService.clientes)
+        return consultas
+
+    pocas = con_un_cliente_sin_cita(2)
+    muchas = con_un_cliente_sin_cita(10)
+
+    assert muchas == pocas

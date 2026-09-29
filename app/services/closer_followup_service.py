@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
@@ -50,6 +51,51 @@ def parse_reminder_time(valor):
         except ValueError:
             continue
     return None
+
+
+# Tope de ids por `IN (...)` en las lecturas en lote. SQLite compilado antes de la 3.32 no acepta
+# más de 999 parámetros por sentencia; 900 deja margen y con la cartera actual (~550 clientes)
+# sigue siendo una sola tanda.
+TANDA_IN = 900
+
+# La forma mínima de un Enrollment que necesita `_deuda_de` (`.id` y `.program`), para calcular
+# la deuda en lote sin cargar la entidad entera de cada inscripción.
+_Inscripcion = namedtuple('_Inscripcion', 'id program')
+
+
+def _en_tandas(ids, tam=TANDA_IN):
+    ids = list(ids)
+    for i in range(0, len(ids), tam):
+        yield ids[i:i + tam]
+
+
+def _deuda_de(total_amount, inscripciones, pagado):
+    """La cuenta de `_client_debt`, aparte de cómo se leyeron los datos: la usan la lectura
+    cliente por cliente y la lectura en lote (`CarteraEnLote`), y así no pueden dar distinto.
+
+    `inscripciones` son las del cliente en el orden de la consulta original (id ascendente) y
+    `pagado` es {enrollment_id: suma de pagos completados}, en el orden del GROUP BY. El orden
+    importa aunque parezca que no: las sumas son de floats."""
+    if not inscripciones:
+        return 0.0
+    if total_amount is not None:
+        total_paid = sum(pagado.values())
+        return round(max(0.0, float(total_amount) - total_paid), 2)
+    total_debt = 0.0
+    for e in inscripciones:
+        if not e.program:
+            continue
+        paid = pagado.get(e.id, 0.0)
+        total_debt += max(0.0, (e.program.price or 0.0) - paid)
+    return round(total_debt, 2)
+
+
+def _codigo_de_programa(tipo_pago):
+    """AL/RR/SI a partir del prefijo de `FinancialSale.tipo_pago`, o None."""
+    if not tipo_pago:
+        return None
+    code = tipo_pago.split('-')[0].strip().upper()
+    return code if code in PROGRAM_CODE_NAMES else None
 
 
 class CloserFollowUpService:
@@ -153,6 +199,42 @@ class CloserFollowUpService:
         return appt
 
     @staticmethod
+    def _ultima_cita_de(client_id):
+        """La cita más reciente del cliente (por `start_time`), o None."""
+        return Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).first()
+
+    @staticmethod
+    def _anclar_clientes_sin_cita(client_ids, sales_by_client):
+        """Crea la cita ancla (`_ensure_appointment_for_client`) de los clientes de la lista que
+        no tienen ninguna cita, en el mismo orden en que las creaba el recorrido de a un cliente.
+        Un id que no es de ningún cliente se saltea, como antes.
+
+        Va ANTES de leer la cartera en lote (`CarteraEnLote`) y no en medio del recorrido:
+        `_ensure_appointment_for_client` hace commit, y el commit vence todo lo que la sesión ya
+        tenía cargado — si el lote se hubiera leído antes, cada cliente y cada cita se volverían
+        a pedir de a uno al tocarlos, que es justo el N+1 que el lote viene a sacar. Lo único
+        leído antes son las ventas de `sales_by_client`: si se creó alguna ancla, se releen
+        todas juntas acá en vez de una consulta por venta al tocarlas después."""
+        from app.models import Client
+
+        ids_ventas = [s.id for cid in client_ids for s in sales_by_client.get(cid, [])]
+        con_cita = set()
+        for tanda in _en_tandas(client_ids):
+            con_cita.update(cid for (cid,) in db.session.query(Appointment.client_id)
+                            .filter(Appointment.client_id.in_(tanda)).distinct())
+        creadas = 0
+        for cid in client_ids:
+            if cid in con_cita:
+                continue
+            client = Client.query.get(cid)
+            if client:
+                CloserFollowUpService._ensure_appointment_for_client(client)
+                creadas += 1
+        if creadas:
+            for tanda in _en_tandas(ids_ventas):
+                FinancialSale.query.filter(FinancialSale.id.in_(tanda)).all()
+
+    @staticmethod
     def _effective_tipo(a, has_sale=None):
         """Categoría del seguimiento: la explícitamente etiquetada, o derivada del resultado
         real de la llamada si el closer nunca llegó a programar un seguimiento para esta cita
@@ -213,9 +295,12 @@ class CloserFollowUpService:
         return q
 
     @staticmethod
-    def _client_debt(client_id):
+    def _client_debt(client_id, lote=None):
         """Deuda real pendiente del cliente: precio negociado menos total pagado, sobre sus
         inscripciones.
+
+        Con `lote` (una `CarteraEnLote` que ya incluye a este cliente) lee de ahí en vez de
+        consultar; la cuenta es la misma (`_deuda_de`).
 
         `Client.total_amount` manda sobre `Program.price` cuando el closer lo cargó — mismo
         criterio que ya usa `SalesConsistencyService.validate_next_payment_type` para "lo que
@@ -227,6 +312,8 @@ class CloserFollowUpService:
         (reportado por el usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900")."""
         if not client_id:
             return 0.0
+        if lote is not None:
+            return lote.deuda(client_id)
         from app.models import Client
         client = Client.query.get(client_id)
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
@@ -237,35 +324,23 @@ class CloserFollowUpService:
             .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed') \
             .group_by(Payment.enrollment_id).all()
         paid_map = {eid: float(total or 0) for eid, total in paid_rows}
-        if client and client.total_amount is not None:
-            total_paid = sum(paid_map.values())
-            return round(max(0.0, float(client.total_amount) - total_paid), 2)
-        total_debt = 0.0
-        for e in enrollments:
-            if not e.program:
-                continue
-            paid = paid_map.get(e.id, 0.0)
-            total_debt += max(0.0, (e.program.price or 0.0) - paid)
-        return round(total_debt, 2)
+        return _deuda_de(client.total_amount if client else None, enrollments, paid_map)
 
     @staticmethod
-    def _client_enrollment_date(client_id):
+    def _client_enrollment_date(client_id, lote=None):
         """Fecha de ingreso real del cliente al programa (Enrollment más reciente) — distinta
         de la fecha de la cita/agenda. None si el cliente nunca se inscribió formalmente."""
         if not client_id:
             return None
+        if lote is not None:
+            return lote.fecha_inscripcion.get(client_id)
         enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
         return enrollment.enrollment_date if enrollment else None
 
     @staticmethod
-    def _client_program_code(client_id):
-        """Codigo de programa (AL/RR/SI) resuelto desde la ultima venta oficial del cliente en FinancialSale."""
-        if not client_id:
-            return None
-        from app.models import Client
-        client = Client.query.get(client_id)
-        if not client:
-            return None
+    def _ultima_venta_de(client):
+        """La venta más reciente del cliente en FinancialSale (de cualquier estado), cruzada por
+        email o instagram. None si no tiene ninguno de los dos o no hay venta."""
         filters = []
         if client.email:
             filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
@@ -274,11 +349,21 @@ class CloserFollowUpService:
             filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
         if not filters:
             return None
-        sale = FinancialSale.query.filter(or_(*filters)).order_by(FinancialSale.date.desc()).first()
-        if not sale or not sale.tipo_pago:
+        return FinancialSale.query.filter(or_(*filters)).order_by(FinancialSale.date.desc()).first()
+
+    @staticmethod
+    def _client_program_code(client_id, lote=None):
+        """Codigo de programa (AL/RR/SI) resuelto desde la ultima venta oficial del cliente en FinancialSale."""
+        if not client_id:
             return None
-        code = sale.tipo_pago.split('-')[0].strip().upper()
-        return code if code in PROGRAM_CODE_NAMES else None
+        if lote is not None:
+            return lote.programa.get(client_id)
+        from app.models import Client
+        client = Client.query.get(client_id)
+        if not client:
+            return None
+        sale = CloserFollowUpService._ultima_venta_de(client)
+        return _codigo_de_programa(sale.tipo_pago if sale else None)
 
     @staticmethod
     def _dias_retraso(fecha_seguimiento, reference_date=None):
@@ -346,19 +431,27 @@ class CloserFollowUpService:
         return data
 
     @staticmethod
-    def _proxima_cuota(client_id, deuda_val):
+    def _cuota_pendiente_de(client_id):
+        """La primera cuota pendiente del cliente por fecha de vencimiento, o None."""
+        from app.models import InstallmentPlan
+
+        return InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
+            .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+
+    @staticmethod
+    def _proxima_cuota(client_id, deuda_val, lote=None):
         """La cuota pendiente más próxima a vencer, o el pseudo-objeto `sin_plan` cuando el
         cliente debe pero nunca se le armó un cronograma (ventas históricas declaradas sin pasar
         por el armador de cuotas). None cuando no hay nada que cobrar.
 
         Vivía copiada en `_build_cartera_item` y en `get_client_lead_stage`, y faltaba en
         `_serialize` — que es justamente de donde sale la lista que el closer mira todos los días."""
-        from app.models import InstallmentPlan
-
         if not client_id:
             return None
-        cuota = InstallmentPlan.query.filter_by(client_id=client_id, estado='pendiente') \
-            .order_by(InstallmentPlan.fecha_vencimiento.asc()).first()
+        if lote is not None:
+            cuota = lote.cuota_pendiente.get(client_id)
+        else:
+            cuota = CloserFollowUpService._cuota_pendiente_de(client_id)
         if cuota:
             return {
                 'id': cuota.id,
@@ -590,11 +683,15 @@ class CloserFollowUpService:
         return sales_by_client
 
     @staticmethod
-    def _build_cartera_item(cid, client, appt, sales_by_client):
+    def _build_cartera_item(cid, client, appt, sales_by_client, lote=None):
         """Arma el dict de un cliente ya comprado — deuda, próxima cuota, historial de pagos y
         desglose por tipo — compartido por `_cerrada_pool_items` y `_cartera_items`. `appt` es
         solo para los campos de display (origen, examen, fecha de la última llamada); ninguno de
-        los dos casos de uso decide "es mío" a partir de ella acá adentro."""
+        los dos casos de uso decide "es mío" a partir de ella acá adentro.
+
+        `lote` es una `CarteraEnLote` con este cliente adentro: quien arma cientos de items de
+        una vez la pasa para que nada de esto consulte cliente por cliente. Sin ella, cada pieza
+        hace su propia consulta, como siempre."""
         from app.services.sheets_service import SheetsService
 
         days_since_call = (date.today() - appt.start_time.date()).days if appt.start_time else None
@@ -602,13 +699,16 @@ class CloserFollowUpService:
         # El recordatorio de cobro vive acá: la próxima cuota pendiente de este cliente (la
         # más próxima a vencer primero), para que el closer sepa exactamente qué y cuándo
         # cobrar sin tener que abrir el historial completo del cliente.
-        deuda_val = CloserFollowUpService._client_debt(cid)
-        enrollment_dt = CloserFollowUpService._client_enrollment_date(cid)
+        deuda_val = CloserFollowUpService._client_debt(cid, lote)
+        enrollment_dt = CloserFollowUpService._client_enrollment_date(cid, lote)
         # Incluye el caso "debe pero nunca se le armó el plan de cuotas" (`sin_plan`), muy común
         # en ventas históricas declaradas sin pasar por el armador de cronograma. Reportado por
         # el usuario: "todos los que deben dinero [deberían] tener cuotas pendientes" — sin esto
         # esos clientes se veían como "sin cuotas pendientes" pese a deber.
-        proxima_cuota = CloserFollowUpService._proxima_cuota(cid, deuda_val)
+        proxima_cuota = CloserFollowUpService._proxima_cuota(cid, deuda_val, lote)
+        # Una vez: antes se pedía dos veces (código y nombre), con dos consultas idénticas.
+        programa_code = CloserFollowUpService._client_program_code(cid, lote)
+        closer = lote.closer_de(appt) if lote is not None else appt.closer
 
         # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
         # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
@@ -650,13 +750,13 @@ class CloserFollowUpService:
             # Solo relevante cuando el item llegó al pool por ser huérfano de un closer dado
             # de baja (mismo criterio que `_serialize` usa para el resto del módulo) — deja
             # claro que no es un lead propio.
-            'owner_closer_name': appt.closer.username if (appt.closer and appt.closer.is_active is False) else None,
+            'owner_closer_name': closer.username if (closer and closer.is_active is False) else None,
             'closer_id': appt.closer_id,
-            'closer_name': appt.closer.username if appt.closer else None,
+            'closer_name': closer.username if closer else None,
             'enrollment_date': enrollment_dt.isoformat() if enrollment_dt else None,
             'deuda': deuda_val,
-            'programa_code': CloserFollowUpService._client_program_code(cid),
-            'programa_nombre': PROGRAM_CODE_NAMES.get(CloserFollowUpService._client_program_code(cid)),
+            'programa_code': programa_code,
+            'programa_nombre': PROGRAM_CODE_NAMES.get(programa_code),
             'proxima_cuota': proxima_cuota,
             # En qué momento del cobro está: el modal del cliente abre el paso correspondiente
             # y la lista pinta el chip con el mismo texto, sin volver a deducirlo cada una por
@@ -1101,3 +1201,191 @@ class CloserFollowUpService:
         # anterior se comería el primer aviso del nuevo.
         if reminder_enabled is not None or reminder_time is not None:
             appointment.followup_reminder_sent_at = None
+
+
+class CarteraEnLote:
+    """Todo lo que `_build_cartera_item` necesita de N clientes, leído en un puñado de consultas.
+
+    Por qué existe
+    --------------
+    La tabla Clientes de Revisar arma un item por cliente comprado, y cada item consultaba de a
+    uno: el cliente, su última cita, sus inscripciones, la suma de sus pagos, su próxima cuota,
+    dos veces su última venta y el closer de la cita. Con 520 clientes eran 5.682 consultas y
+    8,3 s en la base local; en Railway, con Postgres del otro lado de la red, bastante más. Es lo
+    que reportó el usuario (29/sep/2026): "en clientes se tarda un rato, se queda pegado".
+
+    Acá cada tabla se lee una vez (en tandas de `TANDA_IN` ids), y las piezas de
+    `CloserFollowUpService` leen de este objeto cuando se lo pasan. Las cuentas NO se reescriben:
+    la deuda es la misma `_deuda_de`, la cuota el mismo armado del dict, el programa el mismo
+    `_codigo_de_programa`. Lo único que cambia es de dónde salen los datos.
+
+    Qué registro se elige donde el original hacía `.first()`
+    --------------------------------------------------------
+    Los `ORDER BY` son los mismos de las consultas originales y los resuelve la base, así los
+    NULL caen donde los pone cada motor (al final en SQLite, al principio de un DESC en
+    Postgres). Lo delicado son los EMPATES, que el `.first()` resolvía como le tocara:
+      · Última cita (`start_time DESC`): SQLite recorre al revés el índice de `start_time`, así
+        que entre dos citas a la misma hora gana la de id mayor, y ese es el desempate de acá.
+        En la base local hay 52 clientes con la última cita empatada. Con `cita_exacta=True` a
+        esos se les pregunta a la base lo mismo que antes, de a uno: "Mi cartera" y la cola de
+        cobro muestran la cita, y la cola decide el dueño con ella. La tabla Clientes no usa
+        ningún dato de la cita, así que ahí no hace falta.
+      · Próxima cuota (`fecha_vencimiento ASC`) y última venta (`date DESC`): SQLite ordena con
+        un árbol temporal que respeta el orden de lectura, así que gana el id menor. Si la
+        primera cuota empata en fecha con otra, o la última venta empata con otra que da un
+        programa distinto (2 clientes en la base local), se le pregunta a la base lo mismo que
+        antes.
+    Lo que no está empatado sale igual por construcción, y lo empatado lo sigue decidiendo la
+    base como antes (en Postgres el orden entre empatados depende del plan, así que tampoco
+    antes era fijo).
+    """
+
+    def __init__(self, client_ids, cita_exacta=True):
+        from app.models import Client
+
+        ids = list(dict.fromkeys(client_ids))
+        self.clientes = {}
+        self.ultima_cita = {}
+        self.fecha_inscripcion = {}
+        self.cuota_pendiente = {}
+        self.programa = {}
+        self._inscripciones = {}
+        self._pagado = {}
+        self._closers = {}
+        if not ids:
+            return
+
+        for tanda in _en_tandas(ids):
+            for cliente in Client.query.filter(Client.id.in_(tanda)):
+                self.clientes[cliente.id] = cliente
+        self._leer_citas(ids, cita_exacta)
+        self._leer_inscripciones(ids)
+        self._leer_cuotas(ids)
+        self._leer_programas()
+
+    def _leer_citas(self, ids, cita_exacta):
+        elegida, empatadas = {}, set()
+        for tanda in _en_tandas(ids):
+            filas = (db.session.query(Appointment.client_id, Appointment.id, Appointment.start_time)
+                     .filter(Appointment.client_id.in_(tanda))
+                     .order_by(Appointment.client_id, Appointment.start_time.desc(), Appointment.id.desc()))
+            for cid, aid, inicio in filas:
+                if cid not in elegida:
+                    elegida[cid] = (aid, inicio)
+                elif inicio == elegida[cid][1]:
+                    empatadas.add(cid)
+        if cita_exacta:
+            for cid in empatadas:
+                del elegida[cid]
+
+        por_id = {}
+        for tanda in _en_tandas([aid for aid, _ in elegida.values()]):
+            for cita in Appointment.query.filter(Appointment.id.in_(tanda)):
+                por_id[cita.id] = cita
+        for cid, (aid, _) in elegida.items():
+            self.ultima_cita[cid] = por_id.get(aid)
+        if cita_exacta:
+            for cid in empatadas:
+                self.ultima_cita[cid] = CloserFollowUpService._ultima_cita_de(cid)
+
+        closer_ids = {c.closer_id for c in self.ultima_cita.values() if c}
+        for tanda in _en_tandas(closer_ids):
+            for usuario in User.query.filter(User.id.in_(tanda)):
+                self._closers[usuario.id] = usuario
+
+    def _leer_inscripciones(self, ids):
+        por_cliente = {}
+        for tanda in _en_tandas(ids):
+            filas = (db.session.query(Enrollment.client_id, Enrollment.id, Enrollment.program_id,
+                                      Enrollment.enrollment_date)
+                     .filter(Enrollment.client_id.in_(tanda))
+                     .order_by(Enrollment.client_id, Enrollment.enrollment_date.desc()))
+            for cid, eid, program_id, fecha in filas:
+                if cid not in por_cliente:
+                    # La primera por fecha descendente es la de `_client_enrollment_date`. Solo
+                    # importa la fecha, así que un empate da igual.
+                    self.fecha_inscripcion[cid] = fecha
+                por_cliente.setdefault(cid, []).append((eid, program_id))
+        if not por_cliente:
+            return
+
+        programas = {p.id: p for p in Program.query.all()}
+        pagado = {}
+        for tanda in _en_tandas(sorted(eid for lista in por_cliente.values() for eid, _ in lista)):
+            for eid, total in (db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
+                               .filter(Payment.enrollment_id.in_(tanda), Payment.status == 'completed')
+                               .group_by(Payment.enrollment_id)):
+                pagado[eid] = float(total or 0)
+        for cid, lista in por_cliente.items():
+            # Por id: el orden en que `_client_debt` las lee (por el índice de client_id) y el
+            # del GROUP BY de sus pagos. Son sumas de floats, el orden no es decorativo.
+            lista.sort()
+            self._inscripciones[cid] = [_Inscripcion(eid, programas.get(pid)) for eid, pid in lista]
+            self._pagado[cid] = {eid: pagado[eid] for eid, _ in lista if eid in pagado}
+
+    def _leer_cuotas(self, ids):
+        from app.models import InstallmentPlan
+
+        empatadas = set()
+        for tanda in _en_tandas(ids):
+            filas = (InstallmentPlan.query
+                     .filter(InstallmentPlan.client_id.in_(tanda), InstallmentPlan.estado == 'pendiente')
+                     .order_by(InstallmentPlan.client_id, InstallmentPlan.fecha_vencimiento.asc(),
+                               InstallmentPlan.id.asc()))
+            for cuota in filas:
+                primera = self.cuota_pendiente.get(cuota.client_id)
+                if primera is None:
+                    self.cuota_pendiente[cuota.client_id] = cuota
+                elif primera.fecha_vencimiento == cuota.fecha_vencimiento:
+                    empatadas.add(cuota.client_id)
+        for cid in empatadas:
+            self.cuota_pendiente[cid] = CloserFollowUpService._cuota_pendiente_de(cid)
+
+    def _leer_programas(self):
+        """El programa de cada cliente, de su última venta cruzada por email o instagram (de
+        cualquier estado, como `_client_program_code`). Se leen todas las ventas una vez,
+        ordenadas como la consulta original, y a cada cliente le toca la primera que cruza."""
+        por_email, por_ig = {}, {}
+        filas = (db.session.query(FinancialSale.date, FinancialSale.tipo_pago,
+                                  func.lower(FinancialSale.mail_cliente),
+                                  func.lower(func.replace(FinancialSale.instagram, '@', '')))
+                 .order_by(FinancialSale.date.desc(), FinancialSale.id.asc()))
+        for pos, (fecha, tipo_pago, mail, ig) in enumerate(filas):
+            if mail is not None:
+                por_email.setdefault(mail, []).append((pos, fecha, tipo_pago))
+            if ig is not None:
+                por_ig.setdefault(ig, []).append((pos, fecha, tipo_pago))
+
+        for cid, cliente in self.clientes.items():
+            # Las mismas claves que arma `_ultima_venta_de`, incluido el caso raro de un email
+            # o instagram que queda vacío después del strip (cruza con las ventas vacías).
+            candidatas = {}
+            if cliente.email:
+                for pos, fecha, tipo_pago in por_email.get(cliente.email.strip().lower(), ()):
+                    candidatas[pos] = (fecha, tipo_pago)
+            if cliente.instagram:
+                for pos, fecha, tipo_pago in por_ig.get(cliente.instagram.strip().lstrip('@').lower(), ()):
+                    candidatas[pos] = (fecha, tipo_pago)
+            if not candidatas:
+                self.programa[cid] = None
+                continue
+            orden = sorted(candidatas)
+            fecha_tope = candidatas[orden[0]][0]
+            codigos = {_codigo_de_programa(candidatas[p][1]) for p in orden if candidatas[p][0] == fecha_tope}
+            if len(codigos) == 1:
+                self.programa[cid] = codigos.pop()
+            else:
+                venta = CloserFollowUpService._ultima_venta_de(cliente)
+                self.programa[cid] = _codigo_de_programa(venta.tipo_pago if venta else None)
+
+    def deuda(self, client_id):
+        cliente = self.clientes.get(client_id)
+        return _deuda_de(cliente.total_amount if cliente else None,
+                         self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
+
+    def closer_de(self, cita):
+        """El User de la cita, ya leído. Una cita que no salió del lote (la ancla que crea
+        `_ensure_appointment_for_client` a último momento) cae a la relación, como antes."""
+        if cita.closer_id in self._closers:
+            return self._closers[cita.closer_id]
+        return cita.closer
