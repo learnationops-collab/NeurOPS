@@ -530,6 +530,28 @@ describe('los pagos del historial', () => {
         }
     });
 
+    it('si el backend rechaza el borrado, la fila vuelve a como estaba y dice por qué', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+            const onAccion = vi.fn().mockRejectedValue(new Error('Ese pago no es de este lead.'));
+            await abrirPagos(usuario, conPagos(), onAccion);
+            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
+            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+            await act(async () => { vi.advanceTimersByTime(5000); });
+            await act(async () => { vi.advanceTimersByTime(20000); });
+
+            expect(onAccion).toHaveBeenCalledWith('borrar_pago', { pago_id: 881 });
+            // Nada de «Borrado · Deshacer»: el pago sigue ahí, con su papelera.
+            expect(screen.queryByText('Borrado')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Deshacer/ })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Borrar el pago de \$300/ })).toBeInTheDocument();
+            expect(screen.getByRole('alert')).toHaveTextContent('Ese pago no es de este lead.');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('«Deshacer» a tiempo no borra nada', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         try {

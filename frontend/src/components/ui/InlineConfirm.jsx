@@ -151,6 +151,13 @@ const InlineConfirm = ({
         setCorriendo(true);
         try {
             await accion();
+        } catch {
+            // Si la acción falla no se borró nada, y la barra no puede seguir diciendo «Eliminado»
+            // con su «Deshacer»: vuelve a reposo, con el ítem todavía en su lugar. El motivo lo
+            // muestra quien pasó `onConfirm`, que es el que sabe dónde decirlo. Antes el rechazo
+            // quedaba sin atrapar (esto corre desde un `setTimeout`) y la fila seguía «Borrada»
+            // sin límite de tiempo: en la ficha, un pago que seguía en la lista y en la base.
+            setFase('idle');
         } finally {
             setCorriendo(false);
         }

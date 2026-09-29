@@ -98,6 +98,19 @@ const FilaPago = ({
         }
     };
 
+    // El rechazo NO se traga: `InlineConfirm` lo usa para volver a reposo. Antes un `.catch` vacío
+    // lo convertía en éxito, y la fila se quedaba diciendo «Borrado» con su «Deshacer» aunque el
+    // pago seguía en la lista y en la base. El motivo se dice debajo de la fila.
+    const borrar = async () => {
+        setError(null);
+        try {
+            await onBorrar?.();
+        } catch (err) {
+            setError(mensajeDeError(err));
+            throw err;
+        }
+    };
+
     return (
         <div className="fi-pago" data-editando={editando || undefined}>
             <div className="fi-sec-fila">
@@ -125,11 +138,13 @@ const FilaPago = ({
                                 label="Borrar" title={`Borrar el pago ${cual}`}
                                 confirmLabel="Sí, borrar" doneLabel="Borrado"
                                 disabled={guardando}
-                                onConfirm={() => onBorrar?.()?.catch?.(() => {})} />
+                                onConfirm={borrar} />
                         </>
                     )}
                 </span>
             </div>
+
+            {!editando && <MotivoDelFallo motivo={error} />}
 
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
