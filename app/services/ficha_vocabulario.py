@@ -19,7 +19,8 @@ from app import db
 from app.models import FichaOpcion
 
 # Grupos que aceptan opciones nuevas creadas desde la ficha.
-GRUPOS_ABIERTOS = ('como_viene', 'dolores', 'motivos_descarte', 'motivos_baja')
+GRUPOS_ABIERTOS = ('como_viene', 'dolores', 'motivos_descarte', 'motivos_cancelacion',
+                   'motivos_baja')
 
 # `Appointment.confirmation_contact_status` es String(20): una clave mas larga se truncaria en la
 # base y la opcion dejaria de coincidir con su propia lista al volver a leerla.
@@ -96,6 +97,23 @@ MOTIVOS_DESCARTE = [
     ]},
 ]
 
+MOTIVOS_CANCELACION = [
+    {'titulo': 'Se le cruzo algo', 'tono': 'warning', 'opciones': [
+        {'clave': 'sin_tiempo_imprevisto', 'label': 'Sin tiempo o imprevisto'},
+        {'clave': 'problema_de_salud', 'label': 'Problema de salud'},
+    ]},
+    {'titulo': 'Interés', 'tono': 'info', 'opciones': [
+        {'clave': 'ya_no_le_interesa', 'label': 'Ya no le interesa'},
+        {'clave': 'lo_va_a_pensar', 'label': 'Lo va a pensar'},
+    ]},
+    {'titulo': 'Económicos', 'tono': 'error', 'opciones': [
+        {'clave': 'problema_economico', 'label': 'Problema económico'},
+    ]},
+    {'titulo': 'Sin motivo', 'tono': 'idle', 'opciones': [
+        {'clave': 'no_dio_motivo', 'label': 'No dio motivo'},
+    ]},
+]
+
 MOTIVOS_BAJA = [
     {'titulo': 'Económicos', 'tono': 'error', 'opciones': [
         {'clave': 'no_puede_pagar', 'label': 'No puede pagar'},
@@ -139,6 +157,7 @@ _DE_FABRICA = {
     'como_viene': COMO_VIENE,
     'dolores': DOLORES,
     'motivos_descarte': MOTIVOS_DESCARTE,
+    'motivos_cancelacion': MOTIVOS_CANCELACION,
     'motivos_baja': MOTIVOS_BAJA,
 }
 
@@ -236,6 +255,7 @@ def vocabulario(closers=None):
         'como_viene': grupos_de('como_viene', extras),
         'dolores': grupos_de('dolores', extras),
         'motivos_descarte': grupos_de('motivos_descarte', extras),
+        'motivos_cancelacion': grupos_de('motivos_cancelacion', extras),
         'motivos_baja': grupos_de('motivos_baja', extras),
         'pre_call': list(PRE_CALL),
         'post_call': list(POST_CALL),

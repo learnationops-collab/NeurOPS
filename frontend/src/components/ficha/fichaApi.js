@@ -43,6 +43,8 @@ const RUTAS = {
 
     // Agenda.
     reprogramar: (appt, p) => api.post(`/ficha/${appt}/reprogramar`, p),
+    // Cancelar no es descartar: la cita no se hace pero el lead sigue en el embudo.
+    cancelar: (appt, p) => api.post(`/ficha/${appt}/cancelar`, p),
     descartar: (appt, p) => api.post(`/ficha/${appt}/descartar`, p),
     eliminar: (appt) => api.delete(`/ficha/${appt}`),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),

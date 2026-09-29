@@ -73,6 +73,11 @@ def descartar(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.descartar)
 
 
+@bp.route('/<int:appt_id>/cancelar', methods=['POST'])
+def cancelar(appt_id):
+    return _ejecutar(appt_id, 'reportar', acciones.cancelar)
+
+
 @bp.route('/<int:appt_id>/closer', methods=['PATCH'])
 def reasignar(appt_id):
     return _ejecutar(appt_id, 'reasignar', acciones.reasignar)

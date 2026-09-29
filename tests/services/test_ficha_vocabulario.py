@@ -118,8 +118,8 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
     bloque = voc.vocabulario()
 
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
-                           'motivos_baja', 'pre_call', 'post_call', 'tipos_pago', 'medios_pago',
-                           'canales_seguimiento', 'closers'}
+                           'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
+                           'tipos_pago', 'medios_pago', 'canales_seguimiento', 'closers'}
 
 
 def test_los_estados_de_pre_y_post_call_se_reusan_del_dashboard_comercial(db):

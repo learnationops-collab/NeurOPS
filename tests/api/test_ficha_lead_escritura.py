@@ -402,6 +402,30 @@ def test_una_nota_vacia_no_pasa(client, db, lead, equipo, auth_headers):
 
 # --- Eliminar ---------------------------------------------------------------------------------
 
+def test_cancelar_no_es_lo_mismo_que_descartar(client, db, lead, equipo, auth_headers):
+    """Cancelar dice que ESTA cita no se hace; descartar saca al lead del embudo.
+
+    Si cancelar marcara `No Lead`, un lead que solo se corrio de fecha quedaria contado como
+    perdido y el embudo mentiria.
+    """
+    r = client.post(url(lead, '/cancelar'),
+                    json={'motivo': 'Sin tiempo o imprevisto', 'fecha_seguimiento': '2026-10-10'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    assert lead.closer_result == 'Cancelado'
+    assert lead.closer_result not in ('No Lead', 'Lead Perdido')
+    assert lead.fecha_seguimiento == '2026-10-10'
+
+
+def test_cancelar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
+    """«Cancelo» sin motivo es el dato que despues no le sirve a nadie."""
+    r = client.post(url(lead, '/cancelar'), json={}, headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert lead.closer_result == 'Pendiente'
+
+
 def test_una_agenda_la_borra_su_closer_o_la_direccion(client, db, lead, equipo, auth_headers):
     """Corregir un estado y borrar la fila no son la misma responsabilidad: el setter que la
     genero corrige su pre call pero no la borra, y un closer solo borra la suya. El dueño si,

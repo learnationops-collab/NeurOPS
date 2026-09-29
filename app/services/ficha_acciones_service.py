@@ -286,6 +286,25 @@ def descartar(appt, datos, usuario):
     return {'id': appt.id, 'status': status, 'motivo': motivo}
 
 
+# --- Cancelacion ------------------------------------------------------------------------------
+
+def cancelar(appt, datos, usuario):
+    """La llamada no va a ocurrir: el lead aviso que no puede.
+
+    No es lo mismo que descartar. Descartar saca al lead del embudo —no califica o se perdio—;
+    cancelar dice que ESTA cita no se hace, y el lead puede seguir vivo. Por eso admite dejar un
+    seguimiento en la misma accion, que es lo que el closer hace el 90% de las veces.
+
+    `process_agenda` con `Cancelado` ademas borra el evento de Google Calendar: si la cita no va a
+    pasar, la agenda del closer tiene que quedar libre.
+    """
+    motivo = _texto(datos, 'motivo', obligatorio=True)
+    _process_agenda(appt, usuario, {'status': 'Cancelado', 'note': motivo,
+                                    'fecha_seguimiento': datos.get('fecha_seguimiento')})
+    db.session.commit()
+    return {'id': appt.id, 'status': 'Cancelado', 'motivo': motivo}
+
+
 # --- Reasignar el closer ----------------------------------------------------------------------
 
 def reasignar(appt, datos, usuario):
