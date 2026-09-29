@@ -4,6 +4,7 @@
 // La última fila nunca se tipea: absorbe la diferencia para que la suma cierre exacto contra el
 // total (mismo criterio que el backend). Mostrarla como input invitaría a desbalancear el plan.
 
+import { Equal } from 'lucide-react';
 import { cuadre, moneda, ESTADOS_CUOTA } from './planCuotas';
 
 const Rotulo = ({ children }) => (
@@ -81,9 +82,8 @@ export default function CronogramaCuotas({
 
       <div
         style={{
-          display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'baseline',
-          justifyContent: 'space-between', paddingTop: 'var(--space-3)',
-          borderTop: '1px solid var(--border-subtle)',
+          display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'center',
+          paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)',
         }}
       >
         <span style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'baseline' }}>
@@ -97,8 +97,12 @@ export default function CronogramaCuotas({
             {estado.mensaje}
           </small>
         </span>
+        {/* Una herramienta sobre la suma, no un guardado: va pegada a la cifra que corrige, en
+            la píldora con contorno de la ficha. Era un `.ln-btn` y se veía como texto suelto en
+            mayúsculas (ver `PlanCuotasForm`). */}
         {onRepartir && !soloLectura && (
-          <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" onClick={onRepartir}>
+          <button type="button" className="pastilla pastilla--sm" onClick={onRepartir}>
+            <Equal aria-hidden="true" />
             Repartir en partes iguales
           </button>
         )}

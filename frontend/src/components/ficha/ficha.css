@@ -139,6 +139,31 @@
 .dc-shell .fi-cal-sem{text-align:center;padding:var(--s1) 0;font-size:12px;
   color:var(--text-muted-40)}
 
+/* ---------- Control segmentado ----------
+   La cantidad de cuotas del plan (29/09/2026: «no me gusta como se ven esos botones»). Estaba
+   armada con `.ln-chip`, y dentro de la ficha una clase sola del DS pierde contra
+   `.dc-shell button{background:none;border:0;padding:0}` de `comercial.css` —elemento + clase
+   (0,1,1) le gana a una clase (0,1,0)—: los números quedaban sueltos, sin borde ni aire, y el
+   elegido era una barrita rosa del ancho de un dígito. Estas reglas cuelgan de `.dc-shell` para
+   ganarle a esa, y ponen el relleno explícito.
+
+   El elegido va en blanco lleno con texto tinta, como la pestaña activa de `.tabs` del tablero:
+   con el riel hundido detrás se distingue sin leer el número. El magenta queda para el botón de
+   guardar, que es el único acento de la pantalla. La marca es un elemento aparte para que
+   framer-motion la pueda correr de una opción a la otra (`layoutId`). */
+.dc-shell .fi-seg{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px;
+  border-radius:var(--radius-pill);background:var(--hundido);border:1px solid var(--border-main);
+  max-width:100%}
+.dc-shell .fi-seg-op{position:relative;isolation:isolate;min-width:44px;height:36px;
+  padding:0 var(--s3);display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-pill);color:var(--text-muted);font-size:14px;font-weight:700;
+  font-variant-numeric:tabular-nums;transition:color .16s ease}
+.dc-shell .fi-seg-op:hover{color:var(--text-on-surface)}
+.dc-shell .fi-seg-op[aria-pressed="true"]{color:var(--on-inverso)}
+.dc-shell .fi-seg-op:focus-visible{box-shadow:var(--focus-ring)}
+.dc-shell .fi-seg-marca{position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:var(--text-on-surface)}
+
 /* ---------- Tarjeta de acción ---------- */
 .dc-shell .fi-accion{position:relative;isolation:isolate;overflow:hidden;
   display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;

@@ -1,4 +1,5 @@
-// El editor del plan de cuotas: total, cantidad en píldoras, cronograma editable y cuadre.
+// El editor del plan de cuotas: total, cantidad en un control segmentado, cronograma editable y
+// cuadre.
 //
 // Vive aparte del `SubVista` que lo envolvía porque ahora se monta en DOS lugares: la acción
 // «Armar plan de cuotas» y, en línea, la sección «Plan de cuotas» del historial — que es donde el
@@ -8,8 +9,14 @@
 // Dos montajes, UN editor. Es la diferencia entre tener el plan en dos lugares y tener dos
 // verdades sobre el plan: la aritmética la hace `planCuotas.js` (testeada aparte) y el guardado
 // es la misma acción `guardar_plan` con el mismo payload.
+//
+// Los botones son los de la ficha (`.btn`, `.pastilla`, `.fi-seg`) y no los `.ln-*` del design
+// system: dentro de `.dc-shell` una clase sola del DS pierde contra
+// `.dc-shell button{background:none;border:0;padding:0}` y el botón se queda sin forma — que es
+// exactamente lo que se veía (29/09/2026): «GUARDAR PLAN DE 1 CUOTA» como texto suelto.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import CronogramaCuotas from './CronogramaCuotas';
 import {
   CANTIDADES_SUGERIDAS, redimensionar, repartirParejo, sumarMeses, moneda, cuadre,
@@ -40,6 +47,38 @@ const Rotulo = ({ children }) => (
     {children}
   </small>
 );
+
+/**
+ * La cantidad de cuotas: un control segmentado, con el elegido en blanco lleno.
+ *
+ * La marca del elegido se corre de un número al otro (`layoutId`) en vez de apagarse en uno y
+ * prenderse en otro: así se ve qué cambió al tocar. Con movimiento reducido, salta sin animar.
+ * El `layoutId` lleva un id propio porque el editor se puede montar en el historial y en Acciones.
+ */
+function CantidadDeCuotas({ actual, onElegir }) {
+  const reducido = useReducedMotion();
+  const marca = useId();
+  return (
+    <div className="fi-seg" role="group" aria-label="Cantidad de cuotas">
+      {CANTIDADES_SUGERIDAS.map((n) => {
+        const activo = n === actual;
+        return (
+          <button key={n} type="button" className="fi-seg-op" aria-pressed={activo}
+            onClick={() => onElegir(n)}>
+            {activo && (
+              <motion.span className="fi-seg-marca" aria-hidden="true"
+                {...(reducido ? {} : {
+                  layoutId: `fi-seg-cuotas-${marca}`,
+                  transition: { type: 'spring', bounce: 0.18, duration: 0.36 },
+                })} />
+            )}
+            {n}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * `children` recibe `{ boton }`: el botón de guardar ya armado, con su estado y su texto. Así cada
@@ -80,7 +119,7 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
   const boton = (
     <button
       type="button"
-      className="ln-btn ln-btn--cta ln-btn--sm"
+      className="btn btn--cta"
       disabled={guardando || filas.length === 0 || sinFecha}
       title={sinFecha ? 'Cada cuota necesita su fecha de cobro' : undefined}
       onClick={guardar}
@@ -113,30 +152,9 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
         </small>
       </div>
 
-      <div className="ln-field-wrap">
+      <div className="ln-field-wrap" style={{ alignItems: 'flex-start' }}>
         <Rotulo>Cantidad de cuotas</Rotulo>
-        <div className="ln-btn-row" role="group" aria-label="Cantidad de cuotas">
-          {CANTIDADES_SUGERIDAS.map((n) => {
-            const activo = n === filas.length;
-            return (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={activo}
-                onClick={() => elegirCantidad(n)}
-                className="ln-chip ln-chip--sm"
-                style={{
-                  cursor: 'pointer',
-                  background: activo ? 'var(--brand-secondary)' : 'transparent',
-                  borderColor: activo ? 'var(--brand-secondary)' : 'var(--border-control)',
-                  color: activo ? 'var(--ink)' : 'var(--text-on-surface)',
-                }}
-              >
-                {n}
-              </button>
-            );
-          })}
-        </div>
+        <CantidadDeCuotas actual={filas.length} onElegir={elegirCantidad} />
       </div>
 
       <CronogramaCuotas
