@@ -308,6 +308,18 @@ export const TABLAS = {
     },
 };
 
+/**
+ * La dimensión que un equipo NO puede agruparse a sí mismo.
+ *
+ * Un closer ve solo sus propias filas (`alcance_de` le fija el alcance a él mismo, pida lo que
+ * pida), así que "agrupar por closer" le arma un único grupo con todo adentro: ocupa lugar en el
+ * menú y no reparte nada. Lo mismo con un setter y "agrupar por setter".
+ *
+ * No es al revés: un setter SÍ agrupa por closer —sus agendas generadas se reparten entre varios—
+ * y la dirección conserva las dos, porque para ella sí reparten.
+ */
+export const DIMENSION_PROPIA = { closers: 'closer', setters: 'setter' };
+
 export const TABLAS_POR_ROL = {
     // "Clientes" es la cartera: a quién le vendió y cómo va con los pagos. Es la única de las
     // cinco que NO se acota al período (ver `ComercialService.clientes`), y va tercera porque se

@@ -512,6 +512,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             datos={datosVigentes}
                             cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
+                            puedeElegirEquipo={!!contexto.puede_elegir_equipo}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
                             onAbrirFila={abrirFila} />
                     )}

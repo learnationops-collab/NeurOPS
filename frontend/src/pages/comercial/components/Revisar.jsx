@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 import { Cargando, fmt } from './Shared';
-import { TABLAS, TABLAS_POR_ROL } from './tablasDef';
+import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista from './RevisarLista';
@@ -75,7 +75,7 @@ const TotalesTira = ({ items, alcance }) => (
 );
 
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
-    filtroInicial, onOlvidarFiltro }) => {
+    filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -173,7 +173,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
     const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
-    const dimension = (def.agrupables || []).find(d => d.key === agrupacion) || null;
+    // Quien ve solo sus propias filas no puede agruparse por sí mismo: sería un grupo único con
+    // todo adentro. La dirección conserva todas las dimensiones (ver `DIMENSION_PROPIA`).
+    const agrupables = useMemo(
+        () => (def.agrupables || []).filter(d => puedeElegirEquipo || d.key !== DIMENSION_PROPIA[rol]),
+        [def, puedeElegirEquipo, rol]);
+    const dimension = agrupables.find(d => d.key === agrupacion) || null;
 
     const limpiar = () => {
         setFacetas({});
@@ -342,7 +347,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
                 {/* Agrupar por: la dimensión sale de `def.agrupables`, así que cada tabla ofrece
                     las suyas y agregar un criterio nuevo es una línea en `tablasDef.js`. */}
-                {(def.agrupables || []).length > 0 && (
+                {agrupables.length > 0 && (
                     <div style={{ position: 'relative' }}>
                         <button type="button"
                             className={`pastilla${dimension ? ' pastilla--on' : ''}`}
@@ -359,7 +364,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                                     onClick={() => { setAgrupacion(null); setMenu(null); }}>
                                     <span className="trunc">Sin agrupar</span>
                                 </button>
-                                {def.agrupables.map(d => (
+                                {agrupables.map(d => (
                                     <button key={d.key} type="button" className="menu-item"
                                         role="menuitemradio" aria-checked={agrupacion === d.key}
                                         onClick={() => { setAgrupacion(d.key); setMenu(null); }}>
