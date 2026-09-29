@@ -19,6 +19,7 @@ import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
+import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
@@ -284,6 +285,9 @@ const CloserWorkflowPage = () => {
 
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
+    // Si `counts` ya vino del servidor alguna vez. Los ceros de arriba son el valor inicial, no un
+    // "no hay nada": hasta que llegan, "Tu siguiente paso" va en hueso (ver EsqueletoSiguientePaso).
+    const [countsCargados, setCountsCargados] = useState(false);
 
     // "Quiero procrastinar" (v7): calculadora de "esto vale la pena antes de irte a scrollear",
     // a pedido del usuario (27/ago/2026). Es una simulación editable, no un reporte de datos
@@ -808,6 +812,7 @@ const CloserWorkflowPage = () => {
         try {
             const countsRes = await api.get(`/closer/deck/counts?selected_date=${selectedDate}`);
             setCounts(countsRes.data || { confirmations: 0, calls: 0, seguimientos: 0 });
+            setCountsCargados(true);
         } catch (err) {
             console.error("Error al obtener conteos de deck:", err);
         }
@@ -1966,7 +1971,14 @@ const CloserWorkflowPage = () => {
                     const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
                         <div className="tsprow-v6">
-                            {heroLead ? (
+                            {/* En la primera carga, en hueso: con los contadores todavía en su cero
+                                inicial, las ramas de abajo caían en "todo el día resuelto" mientras el
+                                kanban de al lado decía que estaba cargando. Si la carga termina sin
+                                contadores (falló la consulta), se vuelve a lo de siempre: un hueso que
+                                no se va nunca sería peor. */}
+                            {loading && !countsCargados ? (
+                                <EsqueletoSiguientePaso />
+                            ) : heroLead ? (
                                 <div className="tsp-v6" onClick={() => handleSelectLead(heroLead)}>
                                     <div className="tsp-top-v6">
                                         <span className="tsp-dot-v6"></span>
