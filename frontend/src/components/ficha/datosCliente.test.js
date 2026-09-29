@@ -44,4 +44,15 @@ describe('cambiosDe', () => {
     it('vaciar un dato sí es un cambio: viaja vacío', () => {
         expect(cambiosDe(iniciales, { ...iniciales, instagram: '' })).toEqual({ instagram: '' });
     });
+
+    it('lo que el backend guarda igual no es un cambio: la arroba del instagram, las mayúsculas del correo', () => {
+        const guardado = { ...iniciales, email: 'kevin@example.com', instagram: 'kevin.enc' };
+        expect(cambiosDe(guardado, { ...guardado, instagram: '@kevin.enc' })).toEqual({});
+        expect(cambiosDe(guardado, { ...guardado, instagram: 'kevin.enc@' })).toEqual({});
+        expect(cambiosDe(guardado, { ...guardado, email: 'Kevin@Example.COM' })).toEqual({});
+    });
+
+    it('las mayúsculas del instagram sí son un cambio: el backend las guarda como vienen', () => {
+        expect(cambiosDe(iniciales, { ...iniciales, instagram: 'Kev' })).toEqual({ instagram: 'Kev' });
+    });
 });

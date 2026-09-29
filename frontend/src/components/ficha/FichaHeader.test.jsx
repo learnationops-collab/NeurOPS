@@ -94,6 +94,33 @@ describe('la franja en modo edición', () => {
         expect(api.patch).toHaveBeenCalledWith('/ficha/9012/datos', { nombre: 'Kevin Encalada Mora' });
     });
 
+    it('la arroba del instagram no es un cambio: no viaja ni avisa que se corrigió', async () => {
+        const usuario = userEvent.setup();
+        await abrir(fichaConDeuda);
+        await usuario.click(lapiz());
+        const instagram = screen.getByLabelText('Instagram');
+        await usuario.clear(instagram);
+        await usuario.type(instagram, '@kevin.enc{Enter}');
+
+        expect(api.patch).not.toHaveBeenCalled();
+        expect(screen.queryByText('Datos del lead corregidos.')).not.toBeInTheDocument();
+    });
+
+    it('si el backend no guardó nada porque ya estaba así, el aviso no dice que se corrigió', async () => {
+        // Un 'no tengo' sobre un instagram vacío: el backend lo guarda vacío, o sea como estaba.
+        const usuario = userEvent.setup();
+        await abrir(fichaPrecall);
+        api.patch.mockResolvedValueOnce({ data: { id: 9012, cambios: {}, ventas_atadas: 0 } });
+        await usuario.click(lapiz());
+        const correo = screen.getByLabelText('Correo');
+        await usuario.clear(correo);
+        await usuario.type(correo, 'n/a{Enter}');
+
+        expect(await screen.findByText('No había nada que corregir: los datos ya estaban así.'))
+            .toBeInTheDocument();
+        expect(screen.queryByText('Datos del lead corregidos.')).not.toBeInTheDocument();
+    });
+
     it('guardar sin tocar nada cierra sin pedirle nada al backend', async () => {
         const usuario = userEvent.setup();
         await abrir(fichaPrecall);

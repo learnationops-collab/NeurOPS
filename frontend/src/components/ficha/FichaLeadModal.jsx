@@ -46,7 +46,11 @@ const MENSAJES = {
     descartar: 'Lead descartado.',
     eliminar: 'Lead eliminado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
-    editar_datos: 'Datos del lead corregidos.',
+    // El backend devuelve `cambios` vacío cuando lo escrito, ya normalizado, es lo que había
+    // (un 'no tengo' sobre un instagram vacío, un 'n/a' sobre un correo vacío): no se guardó nada.
+    editar_datos: (r) => (r?.cambios && !Object.keys(r.cambios).length
+        ? 'No había nada que corregir: los datos ya estaban así.'
+        : 'Datos del lead corregidos.'),
     guardar_plan: 'Plan de cuotas guardado.',
     guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
@@ -173,7 +177,10 @@ const FichaLeadModal = ({
                 return resultado;
             }
             await cargar();
-            setAviso({ tono: 'success', texto: MENSAJES[nombre] || 'Guardado.' });
+            // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos`).
+            const mensaje = MENSAJES[nombre];
+            setAviso({ tono: 'success',
+                texto: (typeof mensaje === 'function' ? mensaje(resultado) : mensaje) || 'Guardado.' });
             return resultado;
         } catch (err) {
             setAviso({ tono: 'error', texto: mensajeDeError(err) });

@@ -42,14 +42,31 @@ export const valoresIniciales = (identidad) => {
 };
 
 /**
+ * Cómo compara el backend (`closer_service.normalizar_*`): el correo sin mayúsculas y el
+ * instagram sin las '@' de los bordes. Sin esto, '@kevin.enc' sobre 'kevin.enc' o el mismo correo
+ * en mayúsculas viajaban, el backend no veía ningún cambio y la ficha avisaba "Datos del lead
+ * corregidos." sin haber guardado nada.
+ */
+const COMO_COMPARA = {
+    email: (valor) => valor.toLowerCase(),
+    instagram: (valor) => valor.replace(/^@+|@+$/g, ''),
+};
+
+const paraComparar = (clave, valor) => {
+    const recortado = String(valor ?? '').trim();
+    return COMO_COMPARA[clave] ? COMO_COMPARA[clave](recortado) : recortado;
+};
+
+/**
  * Solo lo que cambió, recortado. Mandar el resto reescribiría datos que nadie tocó y dejaría en
- * la bitácora del lead cambios que no ocurrieron.
+ * la bitácora del lead cambios que no ocurrieron. Viaja lo que se escribió; la normalización de
+ * verdad la hace el backend.
  */
 export const cambiosDe = (iniciales, borrador) => {
     const cambios = {};
     Object.keys(iniciales || {}).forEach((clave) => {
         const nuevo = String(borrador?.[clave] ?? '').trim();
-        if (nuevo !== String(iniciales[clave] ?? '').trim()) cambios[clave] = nuevo;
+        if (paraComparar(clave, nuevo) !== paraComparar(clave, iniciales[clave])) cambios[clave] = nuevo;
     });
     return cambios;
 };
