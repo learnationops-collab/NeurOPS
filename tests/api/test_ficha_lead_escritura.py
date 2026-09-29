@@ -652,6 +652,240 @@ def test_el_setter_no_corrige_el_estado_de_una_agenda(client, db, lead, equipo, 
     assert r.status_code == 403
 
 
+# El resto de la fila de una agenda —fecha y hora, fuente y closer— tambien se corrige desde el
+# historial (pedido del 29/09/2026). `start_time` se guarda en UTC: lo que llega del navegador es
+# la hora local convertida a un instante con zona.
+
+def _agenda_vieja(db, lead, equipo, **campos):
+    datos = {'closer_id': equipo['closer'].id, 'client_id': lead.client_id,
+             'start_time': datetime.utcnow() - timedelta(days=30), 'closer_result': 'Pendiente',
+             **campos}
+    agenda = Appointment(**datos)
+    db.session.add(agenda)
+    db.session.commit()
+    return agenda
+
+
+def test_la_hora_local_de_la_agenda_se_guarda_en_utc(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-15T10:00:00-04:00'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.start_time == datetime(2026, 12, 15, 14, 0)
+    assert r.get_json()['cambios'] == ['fecha']
+
+
+def test_la_fecha_que_manda_el_navegador_en_utc_se_guarda_tal_cual(client, db, lead, equipo,
+                                                                  auth_headers):
+    """`Date.toISOString()` manda la Z y los milisegundos."""
+    r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-15T14:30:00.000Z'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.start_time == datetime(2026, 12, 15, 14, 30)
+
+
+def test_una_fecha_sin_zona_no_se_adivina(client, db, lead, equipo, auth_headers):
+    """Es lo que manda un `datetime-local` crudo: la hora local sin zona. Tomarla por UTC corre
+    la llamada cuatro horas para el mazo y el contador."""
+    antes = lead.start_time
+
+    r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-15T10:00'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert 'zona horaria' in r.get_json()['message']
+    assert lead.start_time == antes
+
+
+@pytest.mark.parametrize('fecha', ['0202-12-15T10:00:00Z', 'mañana a las diez', ''])
+def test_una_fecha_que_no_es_de_una_llamada_no_pasa(client, db, lead, equipo, auth_headers,
+                                                    fecha):
+    antes = lead.start_time
+
+    r = client.patch(url(lead, '/agenda'), json={'fecha': fecha},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert lead.start_time == antes
+
+
+def test_mover_al_futuro_una_llamada_sin_resultado_la_devuelve_al_mazo(client, db, lead, equipo,
+                                                                     auth_headers):
+    """Con `closer_processed` prendido quedaria «Por confirmar» en la ficha pero fuera del mazo:
+    el bug del 08/sep/2026 que el reagendado del mazo ya habia arreglado."""
+    vieja = _agenda_vieja(db, lead, equipo, closer_processed=True)
+    futuro = (datetime.utcnow() + timedelta(days=5)).replace(microsecond=0)
+
+    r = client.patch(f'/api/ficha/{vieja.id}/agenda', json={'fecha': futuro.isoformat() + 'Z'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert vieja.start_time == futuro
+    assert vieja.closer_processed is False
+
+
+def test_corregir_la_fecha_de_una_llamada_con_resultado_no_la_des_reporta(client, db, lead,
+                                                                        equipo, auth_headers):
+    vieja = _agenda_vieja(db, lead, equipo, closer_result='No Show', closer_processed=True)
+
+    r = client.patch(f'/api/ficha/{vieja.id}/agenda',
+                     json={'fecha': (datetime.utcnow() - timedelta(days=29)).isoformat() + 'Z'},
+                     headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert (vieja.closer_result, vieja.closer_processed) == ('No Show', True)
+
+
+def test_no_se_mueve_una_agenda_encima_de_otra_llamada_del_mismo_closer(client, db, lead, equipo,
+                                                                       auth_headers):
+    ocupada = datetime(2026, 12, 20, 15, 0)
+    _agenda_vieja(db, lead, equipo, start_time=ocupada)
+    antes = lead.start_time
+
+    r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-20T15:00:00Z'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert 'misma hora' in r.get_json()['message']
+    assert lead.start_time == antes
+
+
+def test_la_fuente_sale_del_catalogo_y_le_atribuye_la_agenda_al_setter(client, db, lead, equipo,
+                                                                      make_user, auth_headers):
+    """Misma regla que la edicion masiva del Tablero: una fuente que es un setter es suya, y un
+    embudo no es de ningun setter. El sync del tablero la recalcula igual cada vez que corre."""
+    paula = make_user(role='setter', username='Paula', email='paula@neuro.com')
+
+    r = client.patch(url(lead, '/agenda'), json={'fuente': 'Paula'},
+                     headers=auth_headers(equipo['director']))
+    assert r.status_code == 200, r.get_json()
+    assert (lead.origin, lead.setter_id) == ('Paula', paula.id)
+
+    r = client.patch(url(lead, '/agenda'), json={'fuente': 'workshop'},
+                     headers=auth_headers(equipo['director']))
+    assert r.status_code == 200, r.get_json()
+    assert (lead.origin, lead.setter_id) == ('workshop', None)
+
+
+def test_una_fuente_fuera_del_catalogo_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/agenda'), json={'fuente': 'Instagram orgánico'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert 'catálogo' in r.get_json()['message']
+    assert lead.origin == 'vsl'
+
+
+def test_una_fuente_historica_se_conserva_si_no_se_toca(client, db, lead, equipo, auth_headers):
+    """La fila puede quedarse con su fuente vieja; lo que no puede es recibir una nueva inventada."""
+    vieja = _agenda_vieja(db, lead, equipo, origin='Entrevista Diagnóstica Gratuita',
+                          setter_id=equipo['setter'].id)
+
+    r = client.patch(f'/api/ficha/{vieja.id}/agenda',
+                     json={'fuente': 'Entrevista Diagnóstica Gratuita',
+                           'fecha': '2026-08-01T15:00:00Z'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == ['fecha']
+    assert (vieja.origin, vieja.setter_id) == ('Entrevista Diagnóstica Gratuita',
+                                               equipo['setter'].id)
+
+
+def test_se_cambia_el_closer_de_una_agenda(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/agenda'), json={'closer_id': equipo['relevo'].id},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.closer_id == equipo['relevo'].id
+
+
+def test_un_closer_que_no_existe_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/agenda'), json={'closer_id': equipo['setter'].id},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert lead.closer_id == equipo['closer'].id
+
+
+def test_cambiar_el_closer_pide_el_permiso_de_reasignar(client, db, lead, equipo, auth_headers):
+    """Hoy lo tienen los mismos roles que corrigen la agenda; si se separan, esta ruta no puede ser
+    la puerta de atras de la reasignacion."""
+    from app.services.ficha_lead_service import permisos_de as reales
+
+    def sin_reasignar(usuario, appt=None):
+        return {**reales(usuario, appt), 'reasignar': False}
+
+    with patch('app.api.ficha.escritura.permisos_de', side_effect=sin_reasignar):
+        r = client.patch(url(lead, '/agenda'), json={'closer_id': equipo['relevo'].id},
+                         headers=auth_headers(equipo['closer']))
+        assert r.status_code == 403
+        assert lead.closer_id == equipo['closer'].id
+
+        r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-15T14:00:00Z'},
+                         headers=auth_headers(equipo['closer']))
+        assert r.status_code == 200, r.get_json()
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_reporta_no_corrige_una_agenda(client, db, lead, equipo, auth_headers, rol):
+    antes = lead.start_time
+
+    r = client.patch(url(lead, '/agenda'), json={'fecha': '2026-12-15T14:00:00Z'},
+                     headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert lead.start_time == antes
+
+
+def test_un_pedido_sin_nada_que_corregir_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.patch(url(lead, '/agenda'), json={'nota': 'nada de la agenda'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+
+
+def test_la_correccion_de_la_agenda_queda_en_la_bitacora(client, db, lead, equipo, auth_headers):
+    client.patch(url(lead, '/agenda'),
+                 json={'fecha': '2026-12-15T14:00:00Z', 'fuente': 'workshop',
+                       'closer_id': equipo['relevo'].id},
+                 headers=auth_headers(equipo['director']))
+
+    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
+                                          action_type='agenda_corregida').one()
+    # La hora va en la zona de quien corrigio (La Paz por defecto): 14:00 UTC son las 10:00.
+    assert '15/12/2026 10:00' in evento.description
+    assert 'fuente vsl → workshop' in evento.description
+    assert 'closer vendedor → relevo' in evento.description
+
+
+def test_mover_la_agenda_mueve_su_fila_del_tablero(client, db, lead, equipo, auth_headers):
+    """El sync del Tablero hacia las citas busca la cita a ±12 h de la fecha de la fila y le pisa
+    hora y fuente. Si la fila se quedara con la fecha vieja, la proxima sincronizacion crearia
+    una SEGUNDA cita a la hora vieja."""
+    from app.models import FinancialAgenda
+    from app.services.booking_service import BookingService
+
+    espejo = FinancialAgenda(nombre='vsl', lead='Ana Gomez', closer='vendedor', mail='ana@x.com',
+                             instagram='ana.g', whatsapp='+59171234567', estado='Pendiente',
+                             date=lead.start_time, fecha_meet=lead.start_time.isoformat())
+    db.session.add(espejo)
+    db.session.commit()
+    nueva = (lead.start_time + timedelta(days=3)).replace(microsecond=0)
+
+    r = client.patch(url(lead, '/agenda'), json={'fecha': nueva.isoformat() + 'Z',
+                                                 'fuente': 'workshop'},
+                     headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert (espejo.date, espejo.nombre) == (nueva, 'workshop')
+
+    BookingService.sync_financial_agenda_to_appointment(espejo)
+    assert Appointment.query.filter_by(client_id=lead.client_id).count() == 1
+    assert (lead.start_time, lead.origin) == (nueva, 'workshop')
+
+
 # El programa de un cliente vive en el prefijo de `tipo_pago`. Asignarlo es reetiquetar sus
 # ventas, porque es de ahi que lo leen el libro comercial, el plan de cuotas y la comision.
 

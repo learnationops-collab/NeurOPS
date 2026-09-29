@@ -120,7 +120,17 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
                            'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
                            'tipos_pago', 'medios_pago', 'programas', 'canales_seguimiento',
-                           'closers'}
+                           'fuentes', 'closers'}
+
+
+def test_las_fuentes_son_el_catalogo_del_tablero_de_agendas(db):
+    """Dos catalogos de fuentes se desincronizan, y el embudo del workshop clasifica por este
+    texto: contaria distinto segun desde donde se corrigio la agenda."""
+    from app.services.fuente_service import FUENTES_CANONICAS
+
+    claves = [o['clave'] for g in voc.fuentes_disponibles() for o in g['opciones']]
+
+    assert sorted(claves) == sorted(FUENTES_CANONICAS)
 
 
 def test_los_programas_salen_del_mismo_mapa_que_traduce_el_tipo_de_pago(db):

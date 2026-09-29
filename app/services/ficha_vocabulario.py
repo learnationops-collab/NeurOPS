@@ -253,6 +253,37 @@ def programas_disponibles():
     return [{'clave': codigo, 'label': nombre} for codigo, nombre in PROGRAM_CODE_NAMES.items()]
 
 
+# Como se lee cada fuente de embudo en el desplegable. El valor que se guarda es la clave tal cual
+# (`Appointment.origin`), que es lo que leen el Tablero de Agendas, el embudo del workshop y el
+# sync con n8n: la etiqueta es solo para que 'workshop_landing' no se lea como un nombre de
+# variable.
+ETIQUETAS_FUENTE = {
+    'workshop': 'Workshop en vivo',
+    'workshop_landing': 'Workshop · grabación',
+    'vsl': 'VSL',
+    'setting': 'Setting · sin setter identificado',
+    'Desconocido': 'Desconocido',
+}
+
+
+def fuentes_disponibles():
+    """Las fuentes que se le pueden poner a una agenda desde el historial, en dos grupos.
+
+    Es el catalogo oficial (`fuente_service.FUENTES_CANONICAS`, 20/08/2026) que ya ofrecen el
+    selector del Tablero de Agendas y su edicion masiva, y no una lista propia: dos catalogos de
+    fuentes se desincronizan y el embudo del workshop, que clasifica por este texto, contaria
+    distinto segun desde donde se corrigio la agenda. Los setters van aparte porque una agenda con
+    su nombre de fuente se les atribuye (ver `ficha_agendas_service._setter_de_la_fuente`).
+    """
+    from app.services.fuente_service import FUENTES_CANONICAS, SETTERS
+
+    embudos = [{'clave': f, 'label': ETIQUETAS_FUENTE.get(f, f)}
+               for f in FUENTES_CANONICAS if f not in SETTERS]
+    setters = [{'clave': s, 'label': s} for s in SETTERS]
+    return [{'titulo': 'Embudos', 'tono': 'info', 'opciones': embudos},
+            {'titulo': 'Setters', 'tono': 'success', 'opciones': setters}]
+
+
 def vocabulario(closers=None):
     """El bloque `vocabulario` completo de `GET /api/ficha/lead`.
 
@@ -276,6 +307,7 @@ def vocabulario(closers=None):
         'medios_pago': list(MEDIOS_PAGO),
         'programas': programas_disponibles(),
         'canales_seguimiento': list(CANALES_SEGUIMIENTO),
+        'fuentes': fuentes_disponibles(),
         'closers': closers if closers is not None else closers_disponibles(),
     }
 

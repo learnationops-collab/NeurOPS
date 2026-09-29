@@ -1,0 +1,238 @@
+"""Correcciones de una agenda desde el historial de la ficha: su fecha, su fuente y su closer.
+
+Pedido del usuario (29/09/2026): «En las agendas deberia poder modificar lo que se ve de las
+agendas: la fecha, la hora, los estados, la fuente...». Los estados ya se corrigen en la fila con
+`ficha_acciones_service.estado_agenda`; esto es el resto de lo que la fila muestra.
+
+Vive aparte de `ficha_acciones_service.py` porque mover una cita no es cambiar un campo suelto:
+de `start_time` dependen el estado derivado de la agenda, el mazo del closer y el espejo en el
+Tablero de Agendas, y lo que se decidio con cada uno queda escrito aca (ver `editar_agenda`).
+
+Convencion horaria (la de todo el sistema, ver `agenda_time_service`): `start_time` se guarda en
+UTC naive. El frontend convierte la hora local que la persona ve y escribe a un instante con zona,
+y aca se lo pasa a UTC.
+"""
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import func, or_
+
+from app import db
+from app.models import Appointment, User
+from app.services.ficha_acciones_service import ErrorDeAccion, closer_activo
+
+# Los tres datos de la fila que se corrigen aca. La lista es cerrada: un PATCH que trae otra cosa
+# no hace nada con ella.
+CAMPOS = ('fecha', 'fuente', 'closer_id')
+
+# A que distancia de la hora de la cita se busca su fila en el Tablero de Agendas: la misma
+# ventana con la que `BookingService.sync_appointment_to_financial_agenda` decide que una fila ES
+# esta cita y no otra agenda cualquiera del mismo lead.
+VENTANA_ESPEJO = timedelta(hours=36)
+
+# Primer año en el que puede caer una agenda de verdad. Un `datetime-local` con el año mal tipeado
+# («0202») pasa cualquier parser y dejaria la llamada en otro siglo.
+PRIMER_ANIO = 2020
+
+
+def _instante_utc(valor):
+    """'2026-10-01T14:00:00.000Z' -> datetime UTC naive, que es como se guarda `start_time`.
+
+    Se exige la zona. El `datetime-local` del navegador da la hora LOCAL sin zona, y tomarla por
+    UTC corre la llamada cuatro horas para todo el resto del sistema (el mazo, el contador, el
+    calendario): prefiero un 400 que diga por que a una hora corrida en silencio.
+    """
+    texto = valor.strip() if isinstance(valor, str) else ''
+    if not texto:
+        raise ErrorDeAccion('Falta la fecha y la hora de la llamada.')
+    try:
+        instante = datetime.fromisoformat(texto.replace('Z', '+00:00'))
+    except ValueError:
+        raise ErrorDeAccion('La fecha no se entiende: tiene que ser "AAAA-MM-DDTHH:MM" con su '
+                            'zona horaria.') from None
+    if instante.tzinfo is None:
+        raise ErrorDeAccion('La fecha llegó sin zona horaria, y sin ella no se sabe a qué hora '
+                            'es la llamada. Volvé a elegirla.')
+    utc = instante.astimezone(timezone.utc).replace(tzinfo=None)
+    if not PRIMER_ANIO <= utc.year <= datetime.utcnow().year + 2:
+        raise ErrorDeAccion('Esa fecha no parece la de una llamada: revisá el año.')
+    return utc
+
+
+def _fuente(valor, actual):
+    """La fuente pedida si cambia, None si es la misma, `ErrorDeAccion` si no es del catalogo.
+
+    Se ofrece el catalogo oficial de fuentes (`fuente_service.FUENTES_CANONICAS`), que es el mismo
+    del selector del Tablero de Agendas y de su edicion masiva. Los valores historicos que no estan
+    en el catalogo se siguen aceptando SOLO si no cambian: la fila puede conservar su fuente vieja,
+    pero una fuente nueva sale de la lista.
+    """
+    from app.services.fuente_service import FUENTES_CANONICAS
+
+    fuente = valor.strip() if isinstance(valor, str) else ''
+    if not fuente:
+        raise ErrorDeAccion('Elegí la fuente de la lista.')
+    if fuente == (actual or '').strip():
+        return None
+    if fuente not in FUENTES_CANONICAS:
+        raise ErrorDeAccion(f'«{fuente}» no es una fuente del catálogo: elegí una de la lista.')
+    return fuente
+
+
+def _setter_de_la_fuente(fuente):
+    """El setter al que se le atribuye una agenda con esta fuente, o None.
+
+    Misma regla que la edicion masiva del Tablero (`_sincronizar_fuente_con_cita`): si la fuente
+    es un setter del equipo la agenda es suya, y si es un embudo no es de ningun setter. No es una
+    preferencia de esta pantalla: el sync del tablero (`sync_financial_agenda_to_appointment`)
+    recalcula `setter_id` desde la fuente cada vez que corre, asi que otra regla aca duraria hasta
+    la proxima sincronizacion.
+    """
+    setter = User.query.filter(func.lower(User.username) == fuente.lower(),
+                               User.role == 'setter').first()
+    return setter.id if setter else None
+
+
+def _choque(appt, closer_id, inicio):
+    """Otra llamada SIN RESOLVER del mismo closer a esa misma hora, si la hay.
+
+    Es el criterio de `BookingService.create_appointment` (y de `POST /closer/appointments`): una
+    cita ya resuelta por el closer, cancelada o reprogramada no ocupa el horario.
+    """
+    return Appointment.query.filter(
+        Appointment.id != appt.id,
+        Appointment.closer_id == closer_id,
+        Appointment.start_time == inicio,
+        Appointment.closer_processed.is_(False),
+        or_(Appointment.result.is_(None), Appointment.result == '',
+            Appointment.result.notin_(['Cancelada', 'Reprogramada'])),
+    ).first()
+
+
+def _espejo_en_el_tablero(appt):
+    """La fila del Tablero de Agendas (`FinancialAgenda`) que refleja esta cita, o None.
+
+    Se busca ANTES de mover la cita y con la hora vieja, que es la que la fila todavia tiene. El
+    sync del tablero hacia las citas (`sync_financial_agenda_to_appointment`, que corre con cada
+    webhook de n8n y con la resincronizacion masiva) busca la cita del lead a ±12 h de la fecha de
+    la fila, y le pisa la hora, la fuente y el closer con los de la fila. Si la fila se quedara con
+    la fecha vieja, la correccion duraria hasta la proxima sincronizacion — o, si la cita se movio
+    mas de 12 horas, el sync no la encontraria y crearia una SEGUNDA cita a la hora vieja.
+
+    Se reusa `sync_appointment_to_financial_agenda`, que es como cualquier escritura del mazo
+    encuentra (o crea) esa fila. Su respaldo cuando no hay una fila en la ventana es "la agenda
+    mas reciente del mismo lead": esa es otra llamada, y a esa no se la mueve.
+    """
+    from app.services.booking_service import BookingService
+
+    if not appt.start_time:
+        return None
+    try:
+        espejo = BookingService.sync_appointment_to_financial_agenda(appt)
+    except Exception:
+        # El cruce es por texto libre y falla en leads sin contacto: no puede tumbar la correccion.
+        return None
+    if not espejo or not espejo.date or abs(espejo.date - appt.start_time) > VENTANA_ESPEJO:
+        return None
+    return espejo
+
+
+def _en_la_zona(dt, zona):
+    import pytz
+
+    if not dt:
+        return 'sin fecha'
+    return pytz.UTC.localize(dt).astimezone(zona).strftime('%d/%m/%Y %H:%M')
+
+
+def editar_agenda(appt, datos, usuario):
+    """Corrige la fecha y hora, la fuente y/o el closer de UNA agenda del cliente.
+
+    Solo se tocan los campos que vienen en el pedido. Lo que se decidio con lo que depende de
+    `start_time`:
+
+      · El estado de la agenda no se guarda: lo deriva `derivar_estado` de los resultados y de la
+        hora. Mover al futuro una llamada sin resultado la vuelve «Por confirmar» sola.
+      · `closer_processed`, en cambio, es una marca guardada: es lo que saca la cita del mazo del
+        closer. Si la llamada queda en el futuro y sin resultado, se apaga — una llamada que no
+        ocurrio no puede estar reportada, y con la marca prendida la cita quedaria «Por confirmar»
+        en la ficha pero fuera del mazo, que es el bug del 08/sep/2026 que `deck_escritura_service`
+        ya arreglo para el reagendado. Una llamada CON resultado conserva su marca: corregirle la
+        fecha no la des-reporta.
+      · Los avisos por WhatsApp no dependen de esta hora: `followup_reminder_sent_at` y
+        `followup_reminder_time` son del SEGUIMIENTO (`fecha_seguimiento`), y
+        `pre_call_reminder_at` es una fecha que el closer elige a mano. No hay bandera que resetear.
+      · El espejo en el Tablero de Agendas se mueve con la cita (ver `_espejo_en_el_tablero`).
+      · El evento de Google Calendar NO se mueve: no hay una funcion que lo actualice, y el evento
+        vive en el calendario de quien lo creo. Es lo mismo que hace el reagendado del closer
+        (`PATCH /closer/appointments/<id>`).
+      · No se marca `is_rescheduled`: esto corrige un dato mal cargado, no reprograma la llamada.
+        Reprogramar crea otra agenda y tiene su propia accion.
+
+    Queda una entrada en la bitacora del lead con cada valor anterior, con las horas en la zona de
+    quien corrigio.
+    """
+    from app.services.closer_agendas_service import derivar_estado
+    from app.services.user_time_service import zona_del_usuario
+
+    if not any(campo in datos for campo in CAMPOS):
+        raise ErrorDeAccion('No hay nada que guardar.')
+
+    inicio = _instante_utc(datos.get('fecha')) if 'fecha' in datos else appt.start_time
+    fuente = _fuente(datos.get('fuente'), appt.origin) if 'fuente' in datos else None
+    closer = appt.closer
+    if datos.get('closer_id') not in (None, ''):
+        closer = closer_activo(datos['closer_id'])
+
+    cambia_fecha = inicio != appt.start_time
+    cambia_closer = closer is not None and closer.id != appt.closer_id
+    if not (cambia_fecha or fuente or cambia_closer):
+        return {'id': appt.id, 'cambios': []}
+
+    if (cambia_fecha or cambia_closer) and inicio is not None:
+        otra = _choque(appt, closer.id, inicio)
+        if otra:
+            nombre = otra.client.full_name if otra.client else 'otro lead'
+            raise ErrorDeAccion(f'{closer.username} ya tiene una llamada sin resolver con '
+                                f'{nombre} a esa misma hora.')
+
+    espejo = _espejo_en_el_tablero(appt)
+    zona = zona_del_usuario(usuario)
+    cambios, bitacora = [], []
+
+    if cambia_fecha:
+        bitacora.append(f'fecha {_en_la_zona(appt.start_time, zona)} → '
+                        f'{_en_la_zona(inicio, zona)} ({zona.zone})')
+        appt.start_time = inicio
+        cambios.append('fecha')
+        if derivar_estado(appt, datetime.utcnow()) in ('por_confirmar', 'confirmada'):
+            appt.closer_processed = False
+        if espejo:
+            espejo.date = inicio
+            espejo.fecha_meet = inicio.isoformat()
+
+    if fuente:
+        bitacora.append(f'fuente {appt.origin or "sin fuente"} → {fuente}')
+        appt.origin = fuente
+        appt.setter_id = _setter_de_la_fuente(fuente)
+        cambios.append('fuente')
+        if espejo:
+            espejo.nombre = fuente
+
+    if cambia_closer:
+        anterior = appt.closer.username if appt.closer else 'sin asignar'
+        bitacora.append(f'closer {anterior} → {closer.username}')
+        appt.closer_id = closer.id
+        cambios.append('closer')
+        if espejo:
+            espejo.closer = closer.username
+
+    db.session.commit()
+
+    from app.services.booking_service import BookingService
+    BookingService.log_lead_event(
+        appt.id, usuario.id, 'agenda_corregida',
+        f'{usuario.username} corrigió la agenda desde el historial de la ficha: '
+        + '; '.join(bitacora) + '.')
+
+    return {'id': appt.id, 'cambios': cambios, 'fecha': appt.start_time.isoformat(),
+            'fuente': appt.origin, 'closer_id': appt.closer_id}

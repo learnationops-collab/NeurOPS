@@ -456,6 +456,18 @@ def test_el_historial_trae_las_agendas_del_cliente_con_su_chip(client, db, lead,
     assert chips == {lead.id: 'Próxima', vieja.id: 'No show'}
 
 
+def test_cada_agenda_del_historial_trae_con_que_corregirla(client, db, lead, equipo, auth_headers):
+    """La fila se corrige en el sitio (`PATCH /ficha/<id>/agenda`): el editor arranca con el closer
+    y la fuente que la agenda tiene, y ofrece el catalogo oficial de fuentes, no una lista propia."""
+    datos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id).get_json()
+
+    agenda = datos['historial']['agendas'][0]
+    assert (agenda['closer_id'], agenda['fuente']) == (equipo['closer'].id, 'vsl')
+    grupos = {g['titulo']: [o['clave'] for o in g['opciones']] for g in datos['vocabulario']['fuentes']}
+    assert grupos == {'Embudos': ['workshop', 'workshop_landing', 'vsl', 'setting', 'Desconocido'],
+                      'Setters': ['Elias', 'Paula', 'Ivan']}
+
+
 def test_la_bitacora_del_lead_viaja_en_el_historial(client, db, lead, equipo, auth_headers):
     """Con las MISMAS claves que las otras secciones del historial: `fecha` y `detalle`.
 

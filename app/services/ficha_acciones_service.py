@@ -336,11 +336,20 @@ def cancelar(appt, datos, usuario):
 
 # --- Reasignar el closer ----------------------------------------------------------------------
 
-def reasignar(appt, datos, usuario):
-    nuevo_id = datos.get('closer_id')
-    nuevo = User.query.filter_by(id=nuevo_id, role='closer').first() if nuevo_id else None
+def closer_activo(closer_id):
+    """El closer al que se le puede pasar una agenda, o `ErrorDeAccion`.
+
+    Aparte de `reasignar` porque la edicion de una agenda del historial tambien cambia el closer
+    (`ficha_agendas_service.editar_agenda`), y los dos tienen que aceptar exactamente a los mismos.
+    """
+    nuevo = User.query.filter_by(id=closer_id, role='closer').first() if closer_id else None
     if not nuevo or nuevo.is_active is False:
         raise ErrorDeAccion('El closer elegido no existe o no está activo.')
+    return nuevo
+
+
+def reasignar(appt, datos, usuario):
+    nuevo = closer_activo(datos.get('closer_id'))
     if appt.closer_id == nuevo.id:
         raise ErrorDeAccion('Este lead ya es de ese closer.')
 

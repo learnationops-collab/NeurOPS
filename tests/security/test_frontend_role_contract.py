@@ -234,6 +234,9 @@ ESCRITURAS = [
     # 5/08/2026): el `closer` de este test no es el de la agenda y pasa igual.
     ('PATCH', '/datos', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                          'triage': 403, 'setter': 403}),
+    # Corregir la fecha, la fuente o el closer de una agenda es reportar, como su estado.
+    ('PATCH', '/agenda', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                          'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los tres que NO pueden y al final el rol de
     # direccion que si. Que `admin` tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.
     ('DELETE', '', {'closer': 403, 'triage': 403, 'setter': 403, 'director_comercial': 200}),

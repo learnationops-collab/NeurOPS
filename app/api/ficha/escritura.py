@@ -151,6 +151,34 @@ def agenda(appt_id):
     return _ejecutar(appt_id, 'confirmar', acciones.crear_agenda, exito=201)
 
 
+@bp.route('/<int:appt_id>/agenda', methods=['PATCH'])
+def editar_agenda(appt_id):
+    """La fecha, la fuente y el closer de ESTA agenda, corregidos desde el historial.
+
+    El permiso es `reportar`, el mismo con el que se corrige el estado en la misma fila. Cambiarle
+    el closer es ademas reasignar y ese permiso se pide aparte: hoy lo tienen los mismos roles,
+    pero si mañana se separan, esta ruta no puede ser la puerta de atras de la reasignacion.
+    """
+    from app.services import ficha_agendas_service
+
+    appt, error = _agenda_y_permiso(appt_id, 'reportar')
+    if error:
+        return error
+    datos = _datos()
+    otro_closer = datos.get('closer_id') not in (None, '') \
+        and str(datos['closer_id']) != str(appt.closer_id)
+    if otro_closer and not permisos_de(current_user, appt)['reasignar']:
+        return sin_permiso('reasignar')
+    try:
+        return jsonify(ficha_agendas_service.editar_agenda(appt, datos, current_user)), 200
+    except acciones.ErrorDeAccion as e:
+        return jsonify({'message': str(e)}), 400
+    except Exception as e:
+        # Mismo trato que `_ejecutar`: un motivo en el texto en vez de un 500 sin explicacion.
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 400
+
+
 @bp.route('/<int:appt_id>/programa', methods=['PATCH'])
 def programa(appt_id):
     """El programa que compro el cliente, escrito donde el resto del sistema lo lee."""

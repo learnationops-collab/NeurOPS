@@ -78,6 +78,9 @@ def historial(appts, ahora):
                         'pre_call': pre_call_de(a),
                         'post_call': post_call_de(estado, False, False),
                         'closer': a.closer.username if a.closer else None,
+                        # El id y no solo el nombre: es con lo que la fila arranca elegido el
+                        # closer cuando se corrige la agenda (`PATCH /ficha/<id>/agenda`).
+                        'closer_id': a.closer_id,
                         'fuente': a.origin or None})
         if a.fecha_seguimiento or a.seguimiento_sub:
             seguimientos.append({
