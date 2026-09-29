@@ -18,5 +18,10 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{js,jsx}"],
     css: false,
     restoreMocks: true,
+    // Los 5 s por defecto no alcanzan con la suite entera en paralelo: el PRIMER test de cada
+    // archivo pesado (la ficha, la cabecera, el wizard de Resultado) paga la carga del componente
+    // y con la máquina ocupada pasaba de 5 s sin que nada estuviera roto. Se repitió con tres
+    // tests distintos el 29/09/2026. Un test colgado de verdad sigue saltando, 10 s después.
+    testTimeout: 15000,
   },
 });
