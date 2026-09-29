@@ -53,7 +53,8 @@ from app.models import (
     AssistantApplication, AssistantClarityWeight, BugReport, BugReportMessage,
     PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion,
     PlaybookOption, PlaybookLessonProgress, PlaybookCompletion,
-    ReporteDirector, ReporteDirectorPersona, WorkshopGoals, WorkshopAction
+    ReporteDirector, ReporteDirectorPersona, WorkshopGoals, WorkshopAction,
+    FichaOpcion
 )
 
 def safe(text):
@@ -229,6 +230,10 @@ def actualizar(target='local'):
             JobApplicationVote,
             AssistantApplication, BugReport, PlaybookModule, WorkshopAction,
             ReporteDirector,
+            # Las opciones de vocabulario que el equipo agrega desde la ficha. Cuelga de `users`
+            # (quién la creó). Hasta que la migración llegue a producción se saltea sola por
+            # la guarda de "no existe en producción", sin vaciar la del destino.
+            FichaOpcion,
 
             # Dependencia Nivel 2
             Lead, Ad, WorkshopTemplateSent, UserViewSetting,
