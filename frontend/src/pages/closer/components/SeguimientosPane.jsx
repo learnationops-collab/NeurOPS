@@ -13,7 +13,22 @@ const TIPOS = {
     no_tomada: { label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones', icon: '📵', cls: 'rose' }
 };
 
+// De los tres tipos, «Asignados para hoy» muestra SOLO cobros (pedido del usuario, 29/sep/2026:
+// "en los seguimientos, deja solo los cobros y el pool sin fecha asignada"). El pool conserva los
+// tres, que es de donde se elige a quién seguir.
+//
+// Los otros dos no desaparecen del sistema: siguen asignados y, cuando venzan, siguen trabando el
+// reporte del día (`CloserService.get_previous_days_pending`). Esconderlos del todo dejaba al
+// closer bloqueado por algo que ya no podía ver en ninguna parte, así que queda una línea al pie
+// que los cuenta y los despliega. Aparece sólo cuando hay alguno.
+const TIPO_PRINCIPAL = 'cerrada';
+const TIPOS_SECUNDARIOS = Object.keys(TIPOS).filter(t => t !== TIPO_PRINCIPAL);
+
 const money = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
+
+/** Texto sobre el que busca el pool. Mismo criterio que la lista de Revisar del tablero. */
+const textoDeItem = (item) => [item.lead_name, item.instagram, item.phone, item.programa_nombre,
+    item.examen, item.origin].filter(Boolean).join(' ').toLowerCase();
 
 // Estado activo del botón de pool — usa el mismo color por tipo que sus chips (rose/amber/emerald)
 // para que se note con claridad cuál está seleccionado, en vez de un violeta genérico que casi no
@@ -224,6 +239,11 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     const [poolItems, setPoolItems] = useState([]);
     const [poolLoading, setPoolLoading] = useState(false);
     const [poolFilters, setPoolFilters] = useState({ sub: '', days_since: '', programa: '', deuda: '' });
+    // Buscador del pool: filtra en el cliente sobre lo que ya llegó, sin volver a pedir. Es una
+    // lista de decenas de filas, no de miles: ir al backend por cada letra sería peor.
+    const [poolQuery, setPoolQuery] = useState('');
+    // Los seguimientos de llamadas asignados para hoy, escondidos salvo que se pidan.
+    const [verSecundarios, setVerSecundarios] = useState(false);
 
     // La pantalla completa de "Cargando seguimientos..." solo tiene sentido cuando no hay nada que
     // mostrar todavía (primer render o cambio de día). En una recarga por acción, la lista se
@@ -318,6 +338,9 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     const togglePool = (tipo) => {
         setOpenPool(prev => (prev === tipo ? null : tipo));
         setPoolFilters({ sub: '', days_since: '', programa: '', deuda: '' });
+        // El buscador se limpia con los demás filtros: arrastrarlo entre categorías dejaba la
+        // lista nueva vacía sin motivo visible.
+        setPoolQuery('');
     };
 
     // "Llamadas cerradas" abre el modal de seguimiento de cobro (segventa: deuda, plan de
@@ -334,14 +357,21 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
         );
     }
 
-    const itemsHoy = [...grouped.no_tomada, ...grouped.tomada, ...grouped.cerrada];
+    // Lo que se muestra arriba: cobros, y el resto sólo si se pidió verlo.
+    const tiposHoy = verSecundarios ? Object.keys(TIPOS) : [TIPO_PRINCIPAL];
+    const ocultos = TIPOS_SECUNDARIOS.reduce((s, tipo) => s + grouped[tipo].length, 0);
+    const itemsHoy = tiposHoy.flatMap(tipo => grouped[tipo]);
     const totalHoy = itemsHoy.length;
     // Ganancia potencial total de "Asignados para hoy" — suma de la de cada fila (ver
-    // `estimateEarning`). "En cada uno y en total", pedido explícito del usuario.
-    const totalPotencial = Object.keys(TIPOS).reduce(
+    // `estimateEarning`). "En cada uno y en total", pedido explícito del usuario. Cuenta lo que
+    // se ve: un total que incluyera lo escondido no cerraría con las filas de abajo.
+    const totalPotencial = tiposHoy.reduce(
         (sum, tipo) => sum + grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0),
         0
     );
+    // El pool, ya filtrado por el buscador.
+    const q = poolQuery.trim().toLowerCase();
+    const poolVisibles = q ? poolItems.filter(item => textoDeItem(item).includes(q)) : poolItems;
 
     return (
         <div className="space-y-6">
@@ -386,7 +416,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                     // siendo Kanban, esta pestaña ya no). Título de cada bloque grande y en negrita
                     // ("números grandes, títulos grandes" — mismo pedido de diseño general).
                     <div className="space-y-7">
-                        {Object.keys(TIPOS).map((tipo, i) => {
+                        {tiposHoy.map((tipo, i) => {
                             const subtotal = grouped[tipo].reduce((s, item) => s + estimateEarning(item, tipo, earnings), 0);
                             return (
                                 <div key={tipo}>
@@ -410,11 +440,25 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                     ) : (
                                         <div className="text-center py-5 text-emerald-400 text-xs font-bold">✓ Nada pendiente</div>
                                     )}
-                                    {i < Object.keys(TIPOS).length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
+                                    {i < tiposHoy.length - 1 && <div className="mt-7 border-b" style={{ borderColor: 'var(--v6-bd)' }} />}
                                 </div>
                             );
                         })}
                     </div>
+                )}
+
+                {/* La salida para lo que no se muestra. Sin esto, un seguimiento de llamada
+                    asignado para hoy quedaba invisible hasta que vencía y trababa el reporte. */}
+                {ocultos > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => setVerSecundarios(v => !v)}
+                        className="w-full text-center pt-2 text-[11px] font-bold text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                    >
+                        {verSecundarios
+                            ? 'Ocultar los seguimientos de llamadas'
+                            : `Hay ${ocultos} seguimiento${ocultos === 1 ? '' : 's'} de llamadas asignado${ocultos === 1 ? '' : 's'} para hoy · ver`}
+                    </button>
                 )}
             </div>
 
@@ -455,6 +499,14 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                 {openPool && (
                     <div className="space-y-3 pt-2">
                         <div className="flex flex-wrap gap-2">
+                            <input
+                                type="search"
+                                value={poolQuery}
+                                onChange={(e) => setPoolQuery(e.target.value)}
+                                placeholder="Buscar por nombre, @ig, teléfono…"
+                                aria-label="Buscar en el pool"
+                                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 placeholder:text-slate-600 min-w-[220px] flex-1"
+                            />
                             <select
                                 value={poolFilters.days_since}
                                 onChange={(e) => setPoolFilters(prev => ({ ...prev, days_since: e.target.value }))}
@@ -492,14 +544,27 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
 
                         {poolLoading ? (
                             <div className="flex justify-center py-8"><Loader2 className="animate-spin text-violet-500" size={24} /></div>
-                        ) : poolItems.length === 0 ? (
-                            <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">Sin leads en esta categoría con estos filtros.</div>
-                        ) : (
-                            <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-                                {poolItems.map(item => (
-                                    <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} onClick={() => openLead(item, openPool)} />
-                                ))}
+                        ) : poolVisibles.length === 0 ? (
+                            <div className="text-center py-8 text-slate-500 text-xs font-bold uppercase">
+                                {q && poolItems.length > 0
+                                    ? `Ninguno de los ${poolItems.length} coincide con «${poolQuery.trim()}».`
+                                    : 'Sin leads en esta categoría con estos filtros.'}
                             </div>
+                        ) : (
+                            <>
+                                {/* Cuántos quedaron a la vista de cuántos hay: sin esto el buscador
+                                    esconde filas sin decir que las escondió. */}
+                                {q && (
+                                    <div className="text-[11px] font-bold text-slate-500">
+                                        {`${poolVisibles.length} de ${poolItems.length}`}
+                                    </div>
+                                )}
+                                <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                                    {poolVisibles.map(item => (
+                                        <SeguimientoRow key={item.id} item={item} tipo={openPool} earnings={earnings} onClick={() => openLead(item, openPool)} />
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
