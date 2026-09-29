@@ -97,7 +97,12 @@ api.interceptors.response.use(
         // Fallo de servidor o de red en una petición que modifica estado: ofrece el
         // botón "Reportar error" reactivo (widget de feedback) con el contexto técnico
         // ya armado, sin tocar los cientos de toast.error(...) existentes por página.
-        const isServerOrNetworkError = !error.response || error.response.status >= 500;
+        // Una petición CANCELADA no es un fallo: la cancela a propósito quien la hizo (la ficha
+        // del lead aborta su carga al cerrarse o al cambiar de lead, y en desarrollo el doble
+        // montaje de StrictMode lo hace en cada apertura). Sin respuesta, caía como "error de
+        // red" y el widget ofrecía reportar "Algo falló en la última acción" sin que nada fallara.
+        const isCanceled = error.code === 'ERR_CANCELED' || axios.isCancel(error);
+        const isServerOrNetworkError = !isCanceled && (!error.response || error.response.status >= 500);
         if (isServerOrNetworkError && !error.config?.skipBugReport) {
             triggerBugReport({
                 message: error.response?.data?.message || error.message,
