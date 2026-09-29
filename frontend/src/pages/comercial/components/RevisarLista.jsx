@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
@@ -32,6 +32,9 @@ import { fmt } from './Shared';
  * `usePaginaProgresiva`: entran 40 filas y el resto llega al bajar. Por eso el pie de la lista no
  * dice "cargando más datos" —no hay ninguna petición— sino que muestra los huesos de las filas que
  * están por dibujarse.
+ *
+ * Agrupada, los grupos arrancan cerrados y lo que se pagina es cada grupo abierto, con su propio
+ * pie: la lista entera no se pagina (ver `ListaAgrupable`).
  */
 
 /** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
@@ -258,27 +261,35 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
     const quieto = useReducedMotion();
     const esTarjetas = modo === 'tarjetas';
 
-    // Se pagina el arreglo COMPLETO y después se agrupa el prefijo: `agruparPor` saca los grupos en
-    // el orden en el que aparece su primera fila, así que agregar filas al final agrega grupos al
-    // final y nunca reordena los que ya estaban. Agrupar primero y paginar los grupos habría hecho
-    // saltar la lista entera en cada página.
-    const { pagina, hayMas, pie, dibujadas } = usePaginaProgresiva(visibles);
-    // Qué filas ya entraron, para que la vista agrupada dibuje sólo esas sin que sus subtotales
-    // dejen de contar el grupo entero. Es un `Set` por identidad: las filas son los mismos objetos
-    // que `visibles`, así que no hace falta una clave.
-    const enPagina = useMemo(() => (hayMas ? new Set(pagina) : null), [hayMas, pagina]);
+    // El paginado de la lista entera es sólo para la lista SUELTA. Agrupada, los grupos arrancan
+    // cerrados y cada uno abierto pagina sus propias filas (ver `ListaAgrupable`): un pie global
+    // quedaba a la vista debajo de los encabezados cerrados y cargaba todas las páginas sin dibujar
+    // nada. Con `null` el hook no pagina ni pide pie, y al desagrupar vuelve a la primera página.
+    const { pagina, hayMas, pie, dibujadas } = usePaginaProgresiva(dimension ? null : visibles);
 
-    // Agrupada, el escalonado se cuenta dentro de cada grupo (`ListaAgrupable` llama a
-    // `renderFilas` una vez por grupo y no sabe de índices globales). Es una aproximación: el tope
-    // de `escalonDe` la vuelve irrelevante, porque ningún grupo escalona más de 12 filas.
-    const renderFilas = (filas) => (esTarjetas
+    // Agrupada, `desde` son las filas del GRUPO que ya estaban: el escalonado se cuenta dentro de
+    // la tanda que llega a ese grupo, igual que en la lista suelta se cuenta dentro de la página.
+    const renderFilas = (filas, desde) => (esTarjetas
         ? (
             <div style={{ padding: 'var(--s4)' }}>
-                <Tarjetas def={def} filas={filas} onAbrirFila={onAbrirFila} />
+                <Tarjetas def={def} filas={filas} onAbrirFila={onAbrirFila} desde={desde} />
             </div>
         )
         : <Filas def={def} filas={filas} plantilla={plantilla} onAbrirFila={onAbrirFila}
-            quieto={quieto} />);
+            desde={desde} quieto={quieto} />);
+
+    // El pie de un grupo abierto: los mismos huesos que el de la lista suelta, pero sin su propia
+    // `.tabla` —ya está adentro de la de `ListaAgrupable`— y, en tarjetas, con el mismo relleno
+    // lateral que la grilla de arriba para que los huesos caigan debajo de las columnas reales.
+    const renderPie = () => (esTarjetas
+        ? (
+            <div className="tarjetas" style={{ padding: '0 var(--s4) var(--s4)' }}>
+                {Array.from({ length: 2 }, (_, i) => <HuesoTarjeta key={i} paso={i} />)}
+            </div>
+        )
+        : Array.from({ length: 3 }, (_, i) => (
+            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+        )));
 
     const cuerpo = () => {
         if (dimension) {
@@ -288,11 +299,11 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo }
                         sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
                         la lista en cinco tablas en vez de una repartida. */}
                     {!esTarjetas && <Encabezado def={def} plantilla={plantilla} />}
-                    {/* `filas` son TODAS las filtradas y `enPagina` recorta lo que se dibuja:
-                        así los subtotales de cada grupo cierran con la tira de arriba desde el
-                        primer momento, y lo que va llegando al bajar son las filas. */}
+                    {/* `filas` son TODAS las filtradas: así los subtotales de cada grupo cierran
+                        con la tira de arriba aunque el grupo esté cerrado, y lo que va llegando al
+                        bajar dentro de un grupo abierto son sus filas. */}
                     <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
-                        enPagina={enPagina} formatoMonto={fmt.money} />
+                        renderPie={renderPie} formatoMonto={fmt.money} />
                 </>
             );
         }

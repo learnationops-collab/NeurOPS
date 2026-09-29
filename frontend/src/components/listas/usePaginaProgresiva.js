@@ -17,6 +17,11 @@ import { useCallback, useEffect, useState } from 'react';
  * Se ajusta durante el render y no en un efecto por lo mismo que los filtros de `Revisar`: es el
  * patrón de React para "recalcular estado cuando cambia una entrada", y un efecto habría dibujado
  * un cuadro con la página vieja del filtro nuevo.
+ *
+ * Hay uno por lista que se ve bajando: la lista suelta de Revisar tiene uno, y agrupada tiene uno
+ * por grupo ABIERTO (`ListaAgrupable`), porque con los grupos cerrados no hay una sola lista que
+ * bajar sino varias. Con `filas` en `null` el hook se apaga —no pagina ni pide pie—, que es lo que
+ * hace la lista entera mientras está agrupada.
  */
 
 export const TAMANO_PAGINA = 40;
