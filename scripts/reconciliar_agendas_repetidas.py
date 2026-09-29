@@ -31,6 +31,12 @@ else:
 # siempre (mismo criterio que scripts/backfill_show_up_por_venta.py).
 os.environ['DISABLE_REMINDER_SCHEDULER'] = 'true'
 
+# El hook de sincronización en vivo recalcula el embudo del taller en CADA commit, y
+# `calcular_prefill` tarda cerca de un minuto por taller: marcando de a una fila, esta
+# pasada se iba a horas (se midió: 75 segundos por marca). Se apaga acá y se recalcula
+# una sola vez al final, con el resync de siempre.
+os.environ['DISABLE_WORKSHOP_LIVE_SYNC'] = 'true'
+
 from app import create_app, db                              # noqa: E402
 from app.models import FinancialAgenda                      # noqa: E402
 from app.services import agenda_dedup_service as dedup      # noqa: E402
@@ -47,6 +53,20 @@ def main():
     args = parse_args()
     app = create_app()
     with app.app_context():
+        # Por defecto SQLAlchemy EXPIRA todos los objetos de la sesión en cada commit, y
+        # esta pasada commitea por cada marca sobre una lista de cientos de agendas que
+        # sigue recorriendo después. Con los objetos expirados, cada lectura de un atributo
+        # dispara su propio SELECT: la conexión queda "idle in transaction" con miles de
+        # consultas diminutas y el recorrido pasa a tardar MINUTOS por marca. Acá las filas
+        # se cargan una vez y no cambian debajo, así que conservarlas es correcto.
+        #
+        # Va por `configure` y no asignando el atributo: `db.session` es un scoped_session,
+        # o sea un proxy, y `db.session.expire_on_commit = False` se lo guarda el proxy sin
+        # llegar nunca a la sesión real — parece que funciona y no hace nada.
+        db.session.remove()
+        db.session.configure(expire_on_commit=False)
+        assert db.session().expire_on_commit is False, 'no se desactivó el expire_on_commit'
+
         agendas = (FinancialAgenda.query
                    .filter(FinancialAgenda.date >= args.desde,
                            FinancialAgenda.duplicada_de_id.is_(None))
@@ -102,6 +122,9 @@ def main():
         if args.apply:
             print(f"\nListo: {marcadas} agenda(s) marcadas como repetidas.")
             print("Se deshacen una por una desde el panel de Duplicados del libro de agendas.")
+            print("FALTA UN PASO: correr `python scripts/resync_workshop_events.py --apply`.")
+            print("El recálculo del embudo quedó apagado durante la pasada, así que los")
+            print("números de los talleres todavía cuentan las agendas que se acaban de marcar.")
         else:
             print(f"\n{marcadas} agenda(s) se marcarían.")
             print("Para aplicarlo: python scripts/reconciliar_agendas_repetidas.py --apply")
