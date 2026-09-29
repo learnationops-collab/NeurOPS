@@ -158,9 +158,9 @@ def crear_pago(appt_id):
     return _ejecutar(appt_id, 'cobrar', pagos.crear, exito=201)
 
 
-@bp.route('/<int:appt_id>/pago/<int:pago_id>', methods=['PATCH'])
+@bp.route('/<int:appt_id>/pago/<int:pago_id>', methods=['PATCH', 'DELETE'])
 def pago(appt_id, pago_id):
-    """Corrige un pago del cliente desde el historial. Mismo permiso que cargarlo.
+    """Corrige o borra un pago del cliente desde el historial. Mismo permiso que cargarlo.
 
     El id del pago sale SOLO de la URL, nunca del cuerpo: el servicio comprueba que ese pago sea de
     este lead, y un id que viajara en el JSON se podria cambiar sin cambiar la ruta.
@@ -169,7 +169,8 @@ def pago(appt_id, pago_id):
 
     from app.services import ficha_pagos_service as pagos
 
-    return _ejecutar(appt_id, 'cobrar', partial(pagos.corregir, pago_id=pago_id))
+    accion = pagos.borrar if request.method == 'DELETE' else pagos.corregir
+    return _ejecutar(appt_id, 'cobrar', partial(accion, pago_id=pago_id))
 
 
 @bp.route('/<int:appt_id>/evento/<int:evento_id>', methods=['PATCH', 'DELETE'])

@@ -247,6 +247,9 @@ ESCRITURAS = [
                        'triage': 403, 'setter': 403}),
     ('PATCH', '/pago/1', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                           'triage': 403, 'setter': 403}),
+    # El lead de prueba no tiene pagos: el 400 es «Ese pago no existe», nada se borra.
+    ('DELETE', '/pago/1', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                           'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los tres que NO pueden y al final el rol de
     # direccion que si. Que `admin` tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.
     ('DELETE', '', {'closer': 403, 'triage': 403, 'setter': 403, 'director_comercial': 200}),

@@ -1652,6 +1652,131 @@ def test_quien_no_cobra_no_corrige_pagos(client, db, lead, programas, equipo, au
     assert venta.monto == 400.0
 
 
+def borrar(client, lead, venta_id, usuario, auth_headers):
+    return client.delete(url(lead, f'/pago/{venta_id}'), headers=auth_headers(usuario))
+
+
+def test_borrar_un_pago_se_lleva_la_venta_y_su_espejo(client, db, lead, programas, equipo,
+                                                      auth_headers):
+    """Una cuota cargada dos veces: se borra la repetida y la deuda vuelve a contar una sola."""
+    _declarada(db, lead, 'RR - Parcial', 400.0, datetime(2026, 9, 1, 10, 0))
+    repetida = _declarada(db, lead, 'RR - Cuota', 200.0, datetime(2026, 9, 10, 10, 0))
+    id_repetida = repetida.id
+
+    r = borrar(client, lead, id_repetida, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert db.session.get(FinancialSale, id_repetida) is None
+    assert [p.amount for p in Payment.query.all()] == [400.0]
+    assert Enrollment.query.count() == 1   # le quedan pagos: la inscripcion sigue
+    cuerpo = r.get_json()
+    assert (cuerpo['borrado'], cuerpo['espejo'], cuerpo['deuda']) == (True, True, 600.0)
+
+
+def test_borrar_el_unico_pago_no_deja_una_inscripcion_vacia_cobrando_todo(client, db, lead,
+                                                                          programas, equipo,
+                                                                          auth_headers):
+    """Una venta cargada al lead equivocado: sin ella, el cliente no debe el programa entero."""
+    venta = _declarada(db, lead)
+
+    r = borrar(client, lead, venta.id, equipo['director'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert (FinancialSale.query.count(), Payment.query.count(), Enrollment.query.count()) == (0, 0, 0)
+    assert r.get_json()['deuda'] == 0.0
+
+
+def test_borrar_un_pago_de_la_hoja_lo_excluye_de_una_resincronizacion(client, db, lead, programas,
+                                                                      equipo, auth_headers):
+    """Como el borrado de Operaciones: sin la marca, forzar la sincronizacion lo resucitaria."""
+    from app.models import ExcludedSale
+
+    venta = _declarada(db, lead)
+    venta.marca_temporal = '10/09/2026 15:32:07'
+    db.session.commit()
+
+    borrar(client, lead, venta.id, equipo['closer'], auth_headers)
+
+    assert [e.marca_temporal for e in ExcludedSale.query.all()] == ['10/09/2026 15:32:07']
+
+
+def test_una_marca_de_la_hoja_compartida_no_se_excluye(client, db, lead, programas, equipo,
+                                                       auth_headers):
+    """La resincronizacion saca de la hoja TODAS las filas con esa marca: se llevaria la otra."""
+    from app.models import ExcludedSale
+
+    venta = _declarada(db, lead)
+    otra = _venta(lead, 'RR - Cuota', 100.0, datetime(2026, 9, 2))
+    venta.marca_temporal = otra.marca_temporal = '10/09/2026 15:32:07'
+    db.session.add(otra)
+    db.session.commit()
+
+    r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert ExcludedSale.query.count() == 0
+
+
+def test_borrar_un_pago_sin_espejo_no_toca_la_deuda_y_lo_dice(client, db, lead, inscripto,
+                                                              equipo, auth_headers):
+    venta = _venta(lead, 'RR - Seña', 100.0, datetime(2026, 7, 20))
+    db.session.add(venta)
+    db.session.commit()
+
+    r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['espejo'] is False
+    assert Payment.query.one().amount == 400.0
+    evento = LeadEventLog.query.filter_by(action_type='pago_borrado').one()
+    assert 'RR - Seña · $100.00 · Stripe · 2026-07-20' in evento.description
+    assert 'la deuda no cambió' in evento.description
+
+
+def test_borrar_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
+                                                          auth_headers):
+    venta = _declarada(db, lead)
+    base = 'app.services.sheets_service'
+    with patch(f'{base}.SheetsService.update_in_sheets') as hoja, \
+            patch(f'{base}.requests.post') as post, \
+            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n:
+        r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
+
+    assert r.status_code == 200, r.get_json()
+    for automatizacion in (hoja, post, n8n):
+        automatizacion.assert_not_called()
+
+
+def test_no_se_borra_el_pago_de_otro_lead(client, db, lead, programas, equipo, auth_headers):
+    ajeno = FinancialSale(mail_cliente='otro@x.com', tipo_pago='RR - Cuota', monto=100.0,
+                          estado='Completada', date=datetime(2026, 9, 1))
+    db.session.add(ajeno)
+    db.session.commit()
+
+    r = borrar(client, lead, ajeno.id, equipo['director'], auth_headers)
+
+    assert r.status_code == 400
+    assert 'no es de este lead' in r.get_json()['message']
+    assert db.session.get(FinancialSale, ajeno.id) is not None
+
+
+def test_un_pago_que_no_existe_no_se_borra(client, db, lead, programas, equipo, auth_headers):
+    r = borrar(client, lead, 999, equipo['closer'], auth_headers)
+
+    assert r.status_code == 400
+    assert r.get_json()['message'] == 'Ese pago no existe.'
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_cobra_no_borra_pagos(client, db, lead, programas, equipo, auth_headers, rol):
+    venta = _declarada(db, lead)
+
+    r = borrar(client, lead, venta.id, equipo[rol], auth_headers)
+
+    assert r.status_code == 403
+    assert FinancialSale.query.count() == 1 and Payment.query.count() == 1
+
+
 # --- Nota del equipo --------------------------------------------------------------------------
 
 def test_cualquiera_de_los_cinco_roles_puede_comentar(client, db, lead, equipo, auth_headers):
@@ -1787,6 +1912,7 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
                                               'metodo_pago': 'Stripe', 'programa_code': 'RR',
                                               'tipo': 'cuota'}),
         client.patch(url(lead, '/pago/1'), json={'monto': 1}),
+        client.delete(url(lead, '/pago/1')),
         client.post(url(lead, '/nota'), json={'texto': 'x'}),
         client.delete(url(lead)),
         client.post('/api/ficha/vocabulario/dolores/opciones', json={'label': 'x'}),

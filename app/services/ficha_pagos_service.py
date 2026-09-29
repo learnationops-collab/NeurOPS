@@ -1,4 +1,4 @@
-"""Los pagos de un cliente, cargados y corregidos a mano desde el historial de la ficha.
+"""Los pagos de un cliente, cargados, corregidos y borrados a mano desde el historial de la ficha.
 
 Pedido del usuario (29/09/2026): «En los pagos tambien deberia ser facil crear y modificar pagos,
 sin automatizaciones. Solo es para modificar en caso de haber algun error».
@@ -37,7 +37,8 @@ Google Sheets: la sincronizacion hoja -> base de ventas esta apagada (`sync_from
 'disabled' sin `force`), asi que ninguna sincronizacion automatica pisa lo que se carga aca. Una
 resincronizacion FORZADA (`?force=true`) vacia `financial_sales` y la rehace desde la hoja: se
 llevaria los pagos cargados aca, igual que las correcciones de cualquier otra pantalla de la app
-que no escribe en la hoja.
+que no escribe en la hoja. Borrar si deja la marca de exclusion (`ExcludedSale`) que ya usa el
+borrado de Operaciones, para que esa resincronizacion no resucite el pago borrado.
 """
 import math
 from datetime import date, datetime, time, timedelta
@@ -448,3 +449,57 @@ def corregir(appt, datos, usuario, pago_id=None):
             '; '.join(bitacora) + ('; su registro en inscripciones se corrigió igual' if espejo
                                    else '; sin registro en inscripciones: la deuda no cambió'))
     return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
+
+
+# --- Borrar un pago ---------------------------------------------------------------------------
+
+def _excluir_de_la_hoja(venta):
+    """Marca la fila de la hoja como excluida, para que una resincronizacion forzada no la traiga
+    de vuelta. Es lo que ya hace el borrado de Operaciones (`DELETE /public/financial-sales/<id>`).
+
+    La exclusion es por `marca_temporal` y la resincronizacion saca de la hoja TODAS las filas con
+    esa marca: si otra venta que sigue viva la comparte, excluirla se llevaria tambien a esa. En
+    ese caso no se marca, y lo peor que pasa es que una resincronizacion forzada resucite esta.
+    Una venta cargada desde la ficha no tiene marca (nunca estuvo en la hoja) y no hay nada que
+    excluir.
+    """
+    from app.models import ExcludedSale
+
+    marca = (venta.marca_temporal or '').strip()
+    if not marca:
+        return
+    compartida = FinancialSale.query.filter(FinancialSale.marca_temporal == venta.marca_temporal,
+                                            FinancialSale.id != venta.id).first()
+    if compartida is None and not ExcludedSale.query.filter_by(
+            marca_temporal=venta.marca_temporal).first():
+        db.session.add(ExcludedSale(marca_temporal=venta.marca_temporal))
+
+
+def borrar(appt, datos, usuario, pago_id=None):
+    """Borra un pago cargado por error: la venta y su espejo en la deuda.
+
+    No se puede deshacer —no hay endpoint que devuelva una venta borrada—, y por eso la ficha
+    difiere el pedido durante la ventana de «Deshacer» de `InlineConfirm`. La bitacora guarda el
+    pago entero (tipo, monto, medio y fecha), que es lo que haria falta para volver a cargarlo.
+
+    Si la inscripcion del espejo queda sin pagos, se borra con el: dejarla haria que la ficha
+    mostrara como deudor de todo el programa a quien no pago nada (ver `_soltar_si_quedo_vacia`).
+    Sin espejo, se borra la venta sola y la deuda no cambia; la respuesta lo dice.
+    """
+    venta, espejo = _venta_y_espejo(appt, pago_id)
+    resumen, borrado = _resumen(venta), venta.id
+
+    _excluir_de_la_hoja(venta)
+    if espejo is not None:
+        inscripcion = espejo.enrollment
+        db.session.delete(espejo)
+        db.session.flush()
+        _soltar_si_quedo_vacia(inscripcion)
+    db.session.delete(venta)
+    db.session.commit()
+
+    _anotar(appt, usuario, 'pago_borrado', f'borró el pago #{borrado}',
+            resumen + ('; también su registro en inscripciones' if espejo
+                       else '; no tenía registro en inscripciones: la deuda no cambió'))
+    return {'id': borrado, 'borrado': True, 'espejo': espejo is not None,
+            'deuda': CloserFollowUpService._client_debt(appt.client_id)}
