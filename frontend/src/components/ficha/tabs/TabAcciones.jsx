@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  CalendarDays, Check, CheckCircle2, Clock, Pencil, XCircle, AlertTriangle, X,
+  CalendarDays, Check, CheckCircle2, Clock, Pencil, XCircle, X,
 } from 'lucide-react';
 import { TarjetaAccion } from '../acciones/piezas';
 import { soloDia } from '../piezas/fecha';
@@ -14,36 +14,38 @@ import { SubVistaPago, SubVistaSeguimiento, SubVistaBaja } from '../acciones/Sub
 import { moneda } from '../acciones/planCuotas';
 
 // El orden y los tonos son los del mockup (`fcAcciones`).
+//
+// Sin texto de éxito propio: el que se muestra lo pone el cascarón (`MENSAJES` en
+// `FichaLeadModal`), que es el que sabe qué pasó. Cuando cada uno ponía el suyo, guardar el plan
+// dejaba DOS avisos idénticos apilados.
 const ACCIONES = [
-  { modo: 'plan', label: 'Armar plan de cuotas', tono: 'info', icono: CalendarDays, accion: 'guardar_plan', ok: 'Plan de cuotas guardado.' },
-  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: CheckCircle2, accion: 'registrar_pago', ok: 'Pago registrado.' },
-  { modo: 'seg', label: 'Registrar seguimiento', tono: 'warning', icono: Clock, accion: 'registrar_seguimiento', ok: 'Seguimiento agendado.' },
-  { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: XCircle, accion: 'dar_de_baja', ok: 'Baja registrada.' },
+  { modo: 'plan', label: 'Armar plan de cuotas', tono: 'info', icono: CalendarDays, accion: 'guardar_plan' },
+  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: CheckCircle2, accion: 'registrar_pago' },
+  { modo: 'seg', label: 'Registrar seguimiento', tono: 'warning', icono: Clock, accion: 'registrar_seguimiento' },
+  { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: XCircle, accion: 'dar_de_baja' },
 ];
 
-export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar = true }) {
+export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
   const reducido = useReducedMotion();
   const [modo, setModo] = useState('menu');
-  const [aviso, setAviso] = useState(null);
-  const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
   const puedeCobrar = puedeEditar && ficha?.permisos?.cobrar !== false;
   const definicion = ACCIONES.find((a) => a.modo === modo);
 
-  const volver = () => { setModo('menu'); setError(null); };
+  const volver = () => setModo('menu');
 
   const guardar = async (payload) => {
     if (!definicion) return;
     setGuardando(true);
-    setError(null);
     try {
+      // `onAccion` ya recarga la ficha y deja el aviso —de éxito o de error— en el cascarón.
+      // Volver a recargar acá era pedir la ficha dos veces por cada guardado.
       await onAccion(definicion.accion, payload);
-      await onRecargar?.();
-      setAviso(definicion.ok);
       setModo('menu');
-    } catch (e) {
-      setError(e?.response?.data?.error || e?.message || 'No se pudo guardar');
+    } catch {
+      // El aviso de error ya está puesto. Se vuelve del `catch` para que la sub-vista se quede
+      // abierta con lo que el closer cargó, en vez de mandarlo al menú a empezar de nuevo.
     } finally {
       setGuardando(false);
     }
@@ -59,22 +61,6 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {aviso && (
-        <div className="ln-alert ln-alert--success" role="status">
-          <span className="ln-alert-ico"><CheckCircle2 /></span>
-          <span className="ln-alert-body"><span className="ln-alert-title">{aviso}</span></span>
-          <button type="button" className="ln-alert-x" aria-label="Descartar el aviso" onClick={() => setAviso(null)}>
-            <X />
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="ln-alert ln-alert--error" role="alert">
-          <span className="ln-alert-ico"><AlertTriangle /></span>
-          <span className="ln-alert-body"><span className="ln-alert-title">{error}</span></span>
-        </div>
-      )}
-
         {modo === 'menu' ? (
           <motion.div key="menu" {...animar} className="ln-grid" style={{ gridTemplateColumns: 'minmax(220px, 1fr) minmax(0, 2fr)', gap: 'var(--space-6)' }}>
             <TarjetaDeuda
@@ -91,7 +77,7 @@ export default function TabAcciones({ ficha, onAccion, onRecargar, puedeEditar =
                   tono={a.tono}
                   icono={a.icono}
                   label={a.label}
-                  onClick={puedeCobrar ? () => { setAviso(null); setModo(a.modo); } : undefined}
+                  onClick={puedeCobrar ? () => setModo(a.modo) : undefined}
                 />
               ))}
             </div>
