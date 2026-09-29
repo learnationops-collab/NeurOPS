@@ -31,6 +31,15 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
             const item = nav?.querySelector('[aria-current="page"]');
             if (!nav || !item) return;
             setIndicador({ '--w': `${item.offsetWidth}px`, '--x': `${item.offsetLeft}px` });
+
+            // En un teléfono el dock no entra y scrollea de costado: sin esto la sección activa
+            // podía quedar cortada contra el borde, justo la única con el nombre a la vista.
+            const dock = nav.parentElement;
+            if (!dock || dock.scrollWidth <= dock.clientWidth) return;
+            const ini = nav.offsetLeft + item.offsetLeft;
+            const fin = ini + item.offsetWidth;
+            if (ini < dock.scrollLeft) dock.scrollLeft = ini - 8;
+            else if (fin > dock.scrollLeft + dock.clientWidth) dock.scrollLeft = fin - dock.clientWidth + 8;
         };
         const id = requestAnimationFrame(medir);
         window.addEventListener('resize', medir);
