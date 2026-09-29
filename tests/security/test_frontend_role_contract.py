@@ -242,6 +242,9 @@ ESCRITURAS = [
                              'triage': 403, 'setter': 403}),
     ('PATCH', '/seguimiento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                'triage': 403, 'setter': 403}),
+    # Cargar un pago a mano desde el historial es cobrar, como el plan de cuotas.
+    ('POST', '/pago', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                       'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los tres que NO pueden y al final el rol de
     # direccion que si. Que `admin` tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.
     ('DELETE', '', {'closer': 403, 'triage': 403, 'setter': 403, 'director_comercial': 200}),

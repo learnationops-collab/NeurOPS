@@ -145,6 +145,19 @@ def datos_del_lead(appt_id):
     return _ejecutar(appt_id, 'editar_datos', acciones.editar_datos)
 
 
+@bp.route('/<int:appt_id>/pago', methods=['POST'])
+def crear_pago(appt_id):
+    """Carga a mano un pago que nunca se registro, desde la seccion Pagos del historial.
+
+    No es el `POST /venta` de arriba: ese DECLARA una venta y dispara todo lo que una venta
+    implica (Sheets, n8n, avisos, Show up). Este solo corrige el registro: la venta y su espejo en
+    la deuda (ver `ficha_pagos_service`). El permiso es `cobrar`, el mismo del resto del cobro.
+    """
+    from app.services import ficha_pagos_service as pagos
+
+    return _ejecutar(appt_id, 'cobrar', pagos.crear, exito=201)
+
+
 @bp.route('/<int:appt_id>/evento/<int:evento_id>', methods=['PATCH', 'DELETE'])
 def evento(appt_id, evento_id):
     """Reescribe o borra una fila del registro de eventos de este lead.

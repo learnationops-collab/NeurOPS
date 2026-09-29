@@ -15,7 +15,7 @@ import pytest
 
 from app.models import (
     Appointment, Client, ClientComment, Comment, Enrollment, FinancialSale, InstallmentPlan,
-    LeadEventLog, Notification, Payment, Program,
+    LeadEventLog, Notification, Payment, PaymentMethod, Program,
 )
 
 
@@ -1296,6 +1296,136 @@ def test_un_setter_no_cobra(client, db, lead, equipo, auth_headers):
     assert r.status_code == 403
 
 
+# --- Pagos cargados y corregidos a mano -------------------------------------------------------
+#
+# Pedido del usuario (29/09/2026): «en los pagos tambien deberia ser facil crear y modificar pagos,
+# sin automatizaciones. Solo es para modificar en caso de haber algun error». Un pago vive en la
+# venta (`FinancialSale`, de donde sale lo «Pagado») y en su espejo (`Payment`, de donde sale la
+# deuda): cada correccion mueve las dos, y ninguna pasa por el camino de una venta declarada.
+
+@pytest.fixture()
+def programas(db, lead):
+    """Los programas activos que resuelve `SheetsService.resolve_program`, y el total negociado."""
+    rr = Program(name='Residency Roadmap v3', price=1500.0)
+    al = Program(name='Ace Learner v3', price=500.0)
+    db.session.add_all([rr, al, PaymentMethod(name='Stripe'), PaymentMethod(name='Hotmart')])
+    lead.client.total_amount = 1000.0
+    db.session.commit()
+    return {'RR': rr, 'AL': al}
+
+
+PAGO = {'fecha': '2026-09-15', 'monto': 300, 'metodo_pago': 'Stripe', 'programa_code': 'RR',
+        'tipo': 'cuota'}
+
+
+def test_cargar_un_pago_crea_la_venta_y_su_espejo_en_la_deuda(client, db, lead, programas, equipo,
+                                                              auth_headers):
+    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 201, r.get_json()
+    venta = FinancialSale.query.one()
+    assert (venta.tipo_pago, venta.monto, venta.metodo_pago) == ('RR - Cuota', 300.0, 'Stripe')
+    assert venta.date == datetime(2026, 9, 15)
+    assert venta.client_id == lead.client_id and venta.estado == 'Completada'
+    # El vendedor es el closer dueño de la agenda, no la direccion que cargo el pago.
+    assert venta.email_vendedor == 'vendedor@neuro.com'
+    espejo = Payment.query.one()
+    assert (espejo.amount, espejo.payment_type, espejo.status) == (300.0, 'installment', 'completed')
+    assert espejo.date == datetime(2026, 9, 15)
+    assert espejo.payment_method.name == 'Stripe'
+    assert espejo.enrollment.program_id == programas['RR'].id
+    cuerpo = r.get_json()
+    assert cuerpo['espejo'] is True
+    assert cuerpo['deuda'] == 700.0   # 1000 negociados - 300 cargados
+
+
+def test_el_pago_cargado_se_lee_en_el_historial_con_su_id(client, db, lead, programas, equipo,
+                                                          auth_headers):
+    creado = client.post(url(lead, '/pago'), json=PAGO,
+                         headers=auth_headers(equipo['closer'])).get_json()
+
+    cobro = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
+                       headers=auth_headers(equipo['closer'])).get_json()['cobro']
+
+    assert [(p['id'], p['tipo'], p['programa_code']) for p in cobro['pagos']] == \
+        [(creado['id'], 'cuota', 'RR')]
+    assert (cobro['pagado'], cobro['deuda']) == (300.0, 700.0)
+
+
+def test_cargar_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
+                                                          auth_headers):
+    """Ni Sheets, ni n8n, ni el aviso de seña convertida, ni Show up, ni el total negociado, ni
+    cuotas del plan marcadas como pagadas: solo se corrige el registro."""
+    cuota = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                            numero_cuota=1, monto=300.0, fecha_vencimiento=date(2026, 9, 15))
+    db.session.add(cuota)
+    db.session.commit()
+    base = 'app.services.sheets_service'
+    with patch(f'{base}.SheetsService.post_to_sheets') as venta_declarada, \
+            patch(f'{base}.requests.post') as hoja, \
+            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n, \
+            patch('app.services.closer_service.CloserService.check_and_notify_down_payment_conversion') as sena, \
+            patch('app.services.closer_service.CloserService.mark_sale_appointment_as_show_up') as show_up:
+        r = client.post(url(lead, '/pago'), json={**PAGO, 'tipo': 'completo', 'monto': 1500},
+                        headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201, r.get_json()
+    for automatizacion in (venta_declarada, hoja, n8n, sena, show_up):
+        automatizacion.assert_not_called()
+    assert lead.client.total_amount == 1000.0   # un Completo declarado lo pisaria con 1500
+    assert InstallmentPlan.query.get(cuota.id).estado == 'pendiente'
+    assert lead.closer_result == 'Pendiente'
+    assert Notification.query.count() == 0
+
+
+def test_el_pago_cargado_queda_en_la_bitacora(client, db, lead, programas, equipo, auth_headers):
+    client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['closer']))
+
+    evento = LeadEventLog.query.filter_by(appointment_id=lead.id, action_type='pago_cargado').one()
+    assert 'RR - Cuota · $300.00 · Stripe · 2026-09-15' in evento.description
+    assert 'la deuda lo cuenta' in evento.description
+
+
+def test_sin_un_programa_activo_el_pago_queda_y_avisa_que_la_deuda_no_lo_cuenta(client, db, lead,
+                                                                                 equipo,
+                                                                                 auth_headers):
+    """El espejo cuelga de una inscripcion a un `Program` activo: sin el, la venta queda cargada y
+    la respuesta lo dice, en vez de dar por hecho que la deuda se movio."""
+    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 201, r.get_json()
+    assert r.get_json()['espejo'] is False
+    assert FinancialSale.query.count() == 1 and Payment.query.count() == 0
+    evento = LeadEventLog.query.filter_by(action_type='pago_cargado').one()
+    assert 'la deuda no lo cuenta' in evento.description
+
+
+@pytest.mark.parametrize('cambio', [
+    {'monto': 0}, {'monto': -50}, {'monto': 'mucho'}, {'monto': True}, {'monto': None},
+    {'fecha': '2026-13-01'}, {'fecha': '15/09/2026'}, {'fecha': ''}, {'fecha': '2099-01-01'},
+    {'fecha': '2019-12-31'},
+    {'programa_code': 'ZZ'}, {'programa_code': None},
+    {'tipo': 'regalo'}, {'tipo': ['cuota']},
+    {'metodo_pago': 'Tarjeta de regalo'}, {'metodo_pago': ''},
+])
+def test_un_pago_mal_cargado_no_se_guarda(client, db, lead, programas, equipo, auth_headers,
+                                          cambio):
+    r = client.post(url(lead, '/pago'), json={**PAGO, **cambio},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message']
+    assert FinancialSale.query.count() == 0 and Payment.query.count() == 0
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_cobra_no_carga_pagos(client, db, lead, programas, equipo, auth_headers, rol):
+    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert FinancialSale.query.count() == 0
+
+
 # --- Nota del equipo --------------------------------------------------------------------------
 
 def test_cualquiera_de_los_cinco_roles_puede_comentar(client, db, lead, equipo, auth_headers):
@@ -1427,6 +1557,9 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         client.patch(url(lead, '/seguimiento'), json={'realizado': True}),
         client.put(url(lead, '/plan-cuotas'), json={'total': 1, 'num_cuotas': 1}),
         client.post(url(lead, '/baja'), json={'motivo': 'x'}),
+        client.post(url(lead, '/pago'), json={'fecha': '2026-09-01', 'monto': 1,
+                                              'metodo_pago': 'Stripe', 'programa_code': 'RR',
+                                              'tipo': 'cuota'}),
         client.post(url(lead, '/nota'), json={'texto': 'x'}),
         client.delete(url(lead)),
         client.post('/api/ficha/vocabulario/dolores/opciones', json={'label': 'x'}),
