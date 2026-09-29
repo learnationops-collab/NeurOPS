@@ -28,8 +28,12 @@ import './ficha.css';
 
 /* `TabResultado` y `TabAcciones` las escribe otro agente en su propio worktree.
    `import.meta.glob` devuelve `{}` cuando no hay coincidencias — con un `import()`
-   literal, un archivo ausente rompe el build entero en vez de faltar una pestaña. */
-const MODULOS_TAB = import.meta.glob('./tabs/Tab*.jsx');
+   literal, un archivo ausente rompe el build entero en vez de faltar una pestaña.
+
+   Los `*.test.jsx` quedan afuera a propósito: `Tab*.jsx` también los agarra, y cada uno
+   entraba al build de producción como un chunk propio de ~500 kB con vitest y testing-library
+   adentro, que nadie carga nunca. */
+const MODULOS_TAB = import.meta.glob(['./tabs/Tab*.jsx', '!./tabs/*.test.jsx']);
 const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 
 const MENSAJES = {
