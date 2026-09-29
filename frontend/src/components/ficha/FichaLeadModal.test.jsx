@@ -125,6 +125,27 @@ describe('onAccion pega en el endpoint correcto', () => {
             { closer_id: 8, closer: 'Valentina' });
     });
 
+    it('corregir una agenda del historial parchea ESA agenda y no la abierta', async () => {
+        const usuario = userEvent.setup();
+        await abrir({
+            ...fichaAlDia,
+            historial: { ...fichaAlDia.historial, agendas: [{
+                id: 555, fecha: '2026-08-02T21:30:00', fuente: 'vsl', closer: 'Jean Carlo',
+                closer_id: 7, chip: { label: 'Asistió', tone: 'success' },
+            }] },
+            vocabulario: { ...fichaAlDia.vocabulario, fuentes: [{ titulo: 'Embudos', opciones: [
+                { clave: 'vsl', label: 'VSL' }, { clave: 'workshop', label: 'Workshop en vivo' },
+            ] }] },
+        });
+        await usuario.click(screen.getByRole('button', { name: /^Agendas/ }));
+        await usuario.click(screen.getByRole('button', { name: /Corregir fecha, fuente y closer/ }));
+        await usuario.selectOptions(screen.getByLabelText('Fuente de la agenda'), 'workshop');
+        await usuario.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(api.patch).toHaveBeenCalledWith('/ficha/555/agenda', { fuente: 'workshop' });
+        expect(await screen.findByText('Agenda corregida.')).toBeInTheDocument();
+    });
+
     it('enviar una nota postea en la ruta de notas y limpia el campo', async () => {
         const usuario = userEvent.setup();
         await abrir(fichaPrecall);

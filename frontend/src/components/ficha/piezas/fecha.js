@@ -35,13 +35,19 @@ export const soloDia = (v) => fechaLegible(v, { conHora: false });
  * arma el `Date` tal cual, y un ISO sin zona el navegador lo toma como hora LOCAL: la ficha
  * mostraba la hora UTC como si fuera la de La Paz, cuatro horas corrida respecto del mazo y del
  * contador. `parseUtcIso` es la conversión que usa el resto de la app para esta misma columna.
+ *
+ * El día se arma a mano (`2 oct 2026`, como `_fecha_larga` del backend) y no con
+ * `toLocaleDateString('es-AR')`, que da «2 de oct de 2026»: con la hora al lado no entraba en la
+ * columna de la fecha y se partía en dos renglones.
  */
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const dos = (n) => String(n).padStart(2, '0');
+
 export const instanteLegible = (v) => {
     if (v === null || v === undefined || v === '') return null;
     const d = parseUtcIso(String(v));
     if (!d) return String(v);
-    const dia = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
-    return `${dia} · ${d.toTimeString().slice(0, 5)}`;
+    return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()} · ${dos(d.getHours())}:${dos(d.getMinutes())}`;
 };
 
 export default fechaLegible;

@@ -1,0 +1,199 @@
+import React, { useId, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ChevronDown, Pencil } from 'lucide-react';
+import { instanteLegible } from '../piezas/fecha';
+import {
+    datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
+} from '../../../utils/datetime';
+
+/**
+ * Una fila de la sección «Agendas» del historial, con su editor en el sitio.
+ *
+ * Pedido del usuario (29/09/2026): «En las agendas debería poder modificar lo que se ve de las
+ * agendas: la fecha, la hora, los estados, la fuente...». Los estados ya se corregían con los dos
+ * desplegables de la fila (`children`, que siguen ahí); el lápiz abre debajo el resto: fecha y
+ * hora, fuente y —si el rol puede reasignar— el closer. Se guarda con UN pedido
+ * (`editar_agenda`) y solo con lo que cambió, así la bitácora dice exactamente qué se tocó.
+ *
+ * La hora que se ve y se escribe es la de quien mira: `start_time` viaja en UTC, se muestra con
+ * `instanteLegible` y se manda convertida con `datetimeLocalToUtcIso`. Al lado del campo se dice en
+ * qué reloj está, porque el closer y la dirección no siempre están en el mismo país.
+ */
+
+/** Las opciones de la fuente, con la actual agregada si es un valor histórico fuera del catálogo. */
+const gruposDeFuente = (grupos, actual) => {
+    const conocidas = new Set(grupos.flatMap(g => (g.opciones || []).map(o => o.clave)));
+    if (!actual || conocidas.has(actual)) return grupos;
+    // Una fuente vieja se sigue mostrando como está; lo que no se puede es ELEGIR una fuera del
+    // catálogo (mismo criterio que el backend).
+    return [{ titulo: 'Actual', opciones: [{ clave: actual, label: `${actual} (fuera del catálogo)` }] },
+        ...grupos];
+};
+
+const etiquetaDeFuente = (grupos, clave) => grupos
+    .flatMap(g => g.opciones || [])
+    .find(o => o.clave === clave)?.label || clave;
+
+/** Un `<select>` con la flecha que `.ln-field` le saca (`appearance:none`). */
+const Desplegable = ({ id, etiqueta, valor, onCambiar, disabled, children }) => (
+    <span className="ln-field" style={{ height: 44, position: 'relative' }}>
+        <select id={id} value={valor} disabled={disabled} aria-label={etiqueta}
+            onChange={(e) => onCambiar(e.target.value)} style={{ paddingRight: 24 }}>
+            {children}
+        </select>
+        <ChevronDown aria-hidden="true" style={{ position: 'absolute', right: 14, pointerEvents: 'none' }} />
+    </span>
+);
+
+const FilaAgenda = ({
+    agenda, fuentes = [], closers = [], puedeEditar = false, puedeReasignar = false, onEditar,
+    children = null,
+}) => {
+    const reducido = useReducedMotion();
+    const ids = useId();
+    const [editando, setEditando] = useState(false);
+    const [guardando, setGuardando] = useState(false);
+    const [cuando, setCuando] = useState('');
+    const [fuente, setFuente] = useState('');
+    const [closerId, setCloserId] = useState('');
+
+    const cuandoInicial = toDatetimeLocalValue(agenda.fecha);
+    const grupos = gruposDeFuente(fuentes, agenda.fuente);
+    // El closer actual va siempre en la lista aunque ya no esté activo: sin él, el desplegable
+    // arrancaría mostrando a otro y parecería que la agenda es de ese.
+    const opcionesCloser = closers.some(c => String(c.id) === String(agenda.closer_id)) || !agenda.closer_id
+        ? closers
+        : [{ id: agenda.closer_id, nombre: agenda.closer || 'Closer actual', pista: 'Inactivo' }, ...closers];
+    const conCloser = puedeReasignar && opcionesCloser.length > 0;
+
+    const abrir = () => {
+        setCuando(cuandoInicial);
+        setFuente(agenda.fuente || '');
+        setCloserId(agenda.closer_id != null ? String(agenda.closer_id) : '');
+        setEditando(true);
+    };
+
+    // Solo viaja lo que cambió: la bitácora del backend dice exactamente qué se tocó, y un campo
+    // que no se tocó no puede fallar (una fuente vieja fuera del catálogo, por ejemplo).
+    const cambios = {};
+    if (editando) {
+        if (cuando && cuando !== cuandoInicial) cambios.fecha = datetimeLocalToUtcIso(cuando);
+        if (fuente && fuente !== (agenda.fuente || '')) cambios.fuente = fuente;
+        if (conCloser && closerId && closerId !== String(agenda.closer_id ?? '')) {
+            cambios.closer_id = Number(closerId);
+        }
+    }
+    const hayCambios = Object.keys(cambios).length > 0;
+
+    const guardar = async () => {
+        if (!hayCambios) return;
+        setGuardando(true);
+        try {
+            await onEditar?.(cambios);
+            setEditando(false);
+        } catch {
+            // El aviso del cascarón ya dice por qué (ej. el closer tiene otra llamada a esa hora):
+            // el editor se queda abierto con lo elegido, para corregir sin volver a empezar.
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    const fecha = instanteLegible(agenda.fecha) || '—';
+    const quien = [agenda.fuente ? etiquetaDeFuente(fuentes, agenda.fuente) : null, agenda.closer]
+        .filter(Boolean).join(' · ') || agenda.detalle || 'Sin detalle';
+
+    return (
+        <div className="fi-agenda" data-editando={editando || undefined}>
+            <div className="fi-sec-fila fi-agenda-fila">
+                <span className="t-sm mut num">{fecha}</span>
+                {/* El nombre largo («Entrevista Diagnóstica Gratuita con la Dra. …») se corta con
+                    puntos suspensivos y se lee entero al pasar el mouse o al abrir el editor. */}
+                <span className="t-sm trunc" title={quien}>{quien}</span>
+                <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    {children}
+                    {puedeEditar && (
+                        <button type="button" className="ibtn ibtn--sm"
+                            aria-expanded={editando}
+                            aria-controls={`${ids}-editor`}
+                            aria-label={`Corregir fecha, fuente y closer de la agenda del ${fecha}`}
+                            title="Corregir fecha, fuente y closer"
+                            onClick={() => (editando ? setEditando(false) : abrir())}>
+                            <Pencil />
+                        </button>
+                    )}
+                </span>
+            </div>
+
+            {editando && (
+                <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
+                    role="group" aria-label={`Corregir la agenda del ${fecha}`}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setEditando(false); }}
+                    {...(reducido ? {} : {
+                        initial: { opacity: 0, y: -6 },
+                        animate: { opacity: 1, y: 0 },
+                        transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
+                    })}>
+                    <div className="fi-agenda-campos">
+                        <div className="fi-campo">
+                            <div className="fi-campo-cab">
+                                <label className="t-rotulo" htmlFor={`${ids}-cuando`}>Fecha y hora</label>
+                                <small className="t-cap mut">En tu hora · {viewerTimezoneLabel()}</small>
+                            </div>
+                            <span className="ln-field" style={{ height: 44 }}>
+                                <input id={`${ids}-cuando`} type="datetime-local" value={cuando}
+                                    disabled={guardando} autoFocus
+                                    onChange={(e) => setCuando(e.target.value)} />
+                            </span>
+                        </div>
+
+                        <div className="fi-campo">
+                            <label className="t-rotulo" htmlFor={`${ids}-fuente`}>Fuente</label>
+                            <Desplegable id={`${ids}-fuente`} etiqueta="Fuente de la agenda" valor={fuente}
+                                disabled={guardando} onCambiar={setFuente}>
+                                {!agenda.fuente && <option value="">Sin fuente · elegí una</option>}
+                                {grupos.map(g => (
+                                    <optgroup key={g.titulo} label={g.titulo}>
+                                        {(g.opciones || []).map(o => (
+                                            <option key={o.clave} value={o.clave}>{o.label}</option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </Desplegable>
+                        </div>
+
+                        {conCloser && (
+                            <div className="fi-campo">
+                                <label className="t-rotulo" htmlFor={`${ids}-closer`}>Closer</label>
+                                <Desplegable id={`${ids}-closer`} etiqueta="Closer de la agenda" valor={closerId}
+                                    disabled={guardando} onCambiar={setCloserId}>
+                                    {!agenda.closer_id && <option value="">Sin asignar</option>}
+                                    {opcionesCloser.map(c => (
+                                        <option key={c.id} value={String(c.id)}>
+                                            {c.pista ? `${c.nombre} · ${c.pista}` : c.nombre}
+                                        </option>
+                                    ))}
+                                </Desplegable>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="fi-agenda-pie">
+                        <button type="button" className="btn btn--linea" disabled={guardando}
+                            onClick={() => setEditando(false)}>
+                            Cancelar
+                        </button>
+                        <button type="button" className="btn btn--cta" disabled={guardando || !hayCambios}
+                            title={hayCambios ? undefined : 'Todavía no cambiaste nada'}
+                            onClick={guardar}>
+                            {guardando && <span className="ln-spinner" />}
+                            Guardar cambios
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </div>
+    );
+};
+
+export default FilaAgenda;

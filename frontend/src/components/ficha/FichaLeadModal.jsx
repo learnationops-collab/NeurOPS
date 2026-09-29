@@ -56,6 +56,7 @@ const MENSAJES = {
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
     estado_agenda: 'Estado de la agenda corregido.',
     crear_agenda: 'Agenda creada.',
+    editar_agenda: 'Agenda corregida.',
     editar_evento: 'Evento reescrito.',
     borrar_evento: 'Evento borrado del registro.',
     registrar_pago: 'Pago registrado.',

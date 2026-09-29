@@ -5,6 +5,7 @@ import { datetimeLocalToUtcIso } from '../../../utils/datetime';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import InlineConfirm from '../../ui/InlineConfirm';
+import FilaAgenda from '../historial/FilaAgenda';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -189,15 +190,16 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
 };
 
 /**
- * La sección «Agendas»: todas las llamadas del cliente, con su estado corregible en la fila y un
- * formulario para agendar otra.
+ * La sección «Agendas»: todas las llamadas del cliente, con su estado corregible en la fila, un
+ * lápiz para corregir la fecha, la fuente y el closer (`FilaAgenda`), y un formulario para agendar
+ * otra.
  *
  * Se corrige acá y no saltando al reporte de la llamada porque son dos cosas distintas: reportar
  * es contar cómo fue la llamada, y esto es arreglar un dato que quedó mal cargado en CUALQUIERA
  * de las agendas del cliente — incluida la de hace tres meses, que es justamente la que ninguna
  * otra pantalla deja tocar.
  */
-const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, onAccion }) => {
+const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, onAccion }) => {
     const [agregando, setAgregando] = useState(false);
     const [cuando, setCuando] = useState(hoyMasUnDia);
     const [ocupada, setOcupada] = useState(null);
@@ -235,25 +237,27 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, onAccion }) => {
 
     return (
         <>
+            {/* La fila y su editor de fecha, fuente y closer viven en `FilaAgenda`; los dos
+                desplegables de estado se le pasan de hijos y se quedan como estaban. */}
             {agendas.length ? agendas.map((a) => (
-                <div key={a.id} className="fi-sec-fila" style={{ gridTemplateColumns: '110px minmax(0,1fr) auto' }}>
-                    <span className="t-sm mut">{instanteLegible(a.fecha) || '—'}</span>
-                    <span className="t-sm trunc">{a.detalle}</span>
-                    <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                        {puedeEditar ? (
-                            <>
-                                <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
-                                    valor={a.pre_call} opciones={preCall}
-                                    disabled={ocupada === `${a.id}:pre_call`}
-                                    onCambiar={(v) => corregir(a.id, 'pre_call', v)} />
-                                <SelectorEstado etiqueta={`Post call de la agenda del ${instanteLegible(a.fecha)}`}
-                                    valor={a.post_call} opciones={postCall}
-                                    disabled={ocupada === `${a.id}:post_call`}
-                                    onCambiar={(v) => corregir(a.id, 'post_call', v)} />
-                            </>
-                        ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} />}
-                    </span>
-                </div>
+                <FilaAgenda key={a.id} agenda={a} fuentes={vocabulario?.fuentes || []}
+                    closers={vocabulario?.closers || []}
+                    puedeEditar={puedeEditar} puedeReasignar={puedeReasignar}
+                    // El tercer argumento apunta la acción a ESTA agenda, no a la que abrió la ficha.
+                    onEditar={(cambios) => onAccion?.('editar_agenda', cambios, a.id)}>
+                    {puedeEditar ? (
+                        <>
+                            <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
+                                valor={a.pre_call} opciones={preCall}
+                                disabled={ocupada === `${a.id}:pre_call`}
+                                onCambiar={(v) => corregir(a.id, 'pre_call', v)} />
+                            <SelectorEstado etiqueta={`Post call de la agenda del ${instanteLegible(a.fecha)}`}
+                                valor={a.post_call} opciones={postCall}
+                                disabled={ocupada === `${a.id}:post_call`}
+                                onCambiar={(v) => corregir(a.id, 'post_call', v)} />
+                        </>
+                    ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} />}
+                </FilaAgenda>
             )) : <Vacio texto="Este lead todavía no tiene ninguna agenda." />}
 
             {puedeEditar && (
@@ -369,6 +373,8 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
     // Corregir el estado de una agenda es reportar, no cobrar: es el mismo permiso con el que la
     // ruta lo comprueba.
     const puedeReportar = puedeEditar && ficha?.permisos?.reportar !== false;
+    // Cambiarle el closer a una agenda es reasignarla: la ruta pide ese permiso aparte.
+    const puedeReasignar = puedeReportar && ficha?.permisos?.reasignar !== false;
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     // `como_viene` llega como {clave, label}; la clave es la que busca en el vocabulario.
     const claveComoViene = conf.como_viene?.clave ?? conf.como_viene;
@@ -419,7 +425,8 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                     : 'Sin agendas'}>
                 <Agendas agendas={agendas} vocabulario={ficha?.vocabulario}
                     closerId={ficha?.identidad?.closer?.id}
-                    puedeEditar={puedeReportar} onAccion={onAccion} />
+                    puedeEditar={puedeReportar} puedeReasignar={puedeReasignar}
+                    onAccion={onAccion} />
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Plan de cuotas" resumen={resumenCuotas}>

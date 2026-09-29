@@ -55,6 +55,9 @@ const RUTAS = {
     // cliente, no solo la que la ficha tiene abierta: el id viaja en la URL (ver `onAccion`).
     estado_agenda: (appt, p) => api.patch(`/ficha/${appt}/estado`, p),
     crear_agenda: (appt, p) => api.post(`/ficha/${appt}/agenda`, p),
+    // La fecha (instante UTC), la fuente y/o el closer de CUALQUIER agenda del cliente; solo
+    // viaja lo que cambió.
+    editar_agenda: (appt, p) => api.patch(`/ficha/${appt}/agenda`, p),
     // El id del evento va en la URL: `editar_evento` y `borrar_evento` lo sacan del payload.
     editar_evento: (appt, p) => api.patch(`/ficha/${appt}/evento/${p.evento_id}`, { detalle: p.detalle }),
     borrar_evento: (appt, p) => api.delete(`/ficha/${appt}/evento/${p.evento_id}`),

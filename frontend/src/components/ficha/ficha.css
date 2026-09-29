@@ -201,6 +201,24 @@
   .dc-shell .fi-sec-fila{grid-template-columns:1fr;gap:var(--s1)}
 }
 
+/* ---------- Agenda del historial: la fila y su editor en el sitio ----------
+   La fila tiene la fecha con hora, que no entra en los 110 px de las demás secciones sin partirse
+   en dos renglones. El borde lo lleva el envoltorio y no la fila, para que el editor abierto
+   quede dentro de la misma franja que la agenda que corrige. */
+.dc-shell .fi-agenda{border-top:1px solid var(--border-subtle)}
+.dc-shell .fi-agenda > .fi-agenda-fila{border-top:0;grid-template-columns:150px minmax(0,1fr) auto}
+.dc-shell .fi-agenda[data-editando] .ibtn{color:var(--text-on-surface);
+  border-color:var(--border-control)}
+.dc-shell .fi-agenda-editor{display:grid;gap:var(--s4);margin-bottom:var(--s4);padding:var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-main)}
+.dc-shell .fi-agenda-campos{display:grid;gap:var(--s3) var(--s4);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+.dc-shell .fi-agenda-editor optgroup{background:var(--brand-navy);color:var(--text-muted)}
+.dc-shell .fi-agenda-pie{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--s3)}
+@media (max-width:640px){
+  .dc-shell .fi-agenda > .fi-agenda-fila{grid-template-columns:1fr}
+}
+
 /* ---------- Cabecera del modal ---------- */
 /* Dos filas fijas: el nombre con sus botones arriba, los datos abajo.
    Compartir la fila entre el nombre y los datos parecia mas compacto, pero el ancho que
