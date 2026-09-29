@@ -34,6 +34,45 @@ const Fila = ({ a, b, c = null, chip = null }) => (
 
 const Vacio = ({ texto }) => <p className="t-cap mut40" style={{ paddingTop: 'var(--s3)' }}>{texto}</p>;
 
+const Cifra = ({ rotulo, valor, color = undefined }) => (
+    <div style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+        <small className="t-rotulo">{rotulo}</small>
+        <span className="t-sm trunc" style={{ fontWeight: 700, color }}>{valor}</span>
+    </div>
+);
+
+/**
+ * Los cuatro datos del cobro, arriba del historial y sin abrir nada: el programa, cuánto va a
+ * pagar en total, cuánto pagó y cuánto falta.
+ *
+ * El total faltaba y es el que ordena a los otros dos: un historial que muestra pagos y cuotas
+ * pero no contra qué total se están pagando no dice si el cliente va bien o mal. Se VE acá y se
+ * EDITA en Acciones, el mismo reparto que el plan de cuotas y por el mismo motivo — dos lugares
+ * donde tocar el mismo número serían dos verdades sobre él.
+ */
+const ResumenCobro = ({ cobro, irA }) => {
+    const deuda = Number(cobro?.deuda) || 0;
+    const alDia = deuda < 0.01;
+    return (
+        <div className="fi-sec" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s4)',
+            alignItems: 'center', justifyContent: 'space-between', padding: 'var(--s4) var(--s6)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s6)', minWidth: 0 }}>
+                <Cifra rotulo="Programa" valor={cobro?.programa_nombre || 'Sin programa'}
+                    color={cobro?.programa_nombre ? undefined : 'var(--text-muted)'} />
+                <Cifra rotulo="Total a pagar"
+                    valor={cobro?.total == null ? 'Sin definir' : plata(cobro.total)}
+                    color={cobro?.total == null ? 'var(--text-muted)' : undefined} />
+                <Cifra rotulo="Pagado" valor={plata(cobro?.pagado)} />
+                <Cifra rotulo="Debe" valor={alDia ? 'Al día' : plata(deuda)}
+                    color={alDia ? 'var(--success)' : 'var(--error)'} />
+            </div>
+            <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
+                Editar el cobro
+            </button>
+        </div>
+    );
+};
+
 /**
  * Historial: secciones colapsables con el resumen en la cabecera.
  *
@@ -74,8 +113,15 @@ const TabHistorial = ({ ficha, irA }) => {
 
     const totalPagado = pagos.reduce((x, p) => x + (Number(p.monto) || 0), 0);
 
+    // La banda del cobro es de un cliente: un lead que todavía no compró no tiene nada que poner
+    // ahí y la franja quedaría en cuatro guiones.
+    const esCliente = pagos.length > 0 || cuotas.length > 0 || cobro.total != null
+        || (Number(cobro.deuda) || 0) > 0;
+
     return (
         <div style={{ display: 'grid', gap: 'var(--s3)' }}>
+            {esCliente && <ResumenCobro cobro={cobro} irA={irA} />}
+
             <SeccionColapsable titulo="Confirmación"
                 resumen={[etapaLabel && `Etapa: ${etapaLabel}`, comoViene?.label || 'Sin estado']
                     .filter(Boolean).join(' · ')}>
@@ -112,7 +158,18 @@ const TabHistorial = ({ ficha, irA }) => {
                             </button>
                         </div>
                     </>
-                ) : <Vacio texto="Sin plan de cuotas armado." />}
+                ) : (
+                    <>
+                        <Vacio texto="Sin plan de cuotas armado." />
+                        {/* El botón sólo existía si YA había un plan, así que el caso que más lo
+                            necesita —no hay ninguno— era el único sin salida. */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
+                            <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
+                                Armar el plan
+                            </button>
+                        </div>
+                    </>
+                )}
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Seguimientos"
