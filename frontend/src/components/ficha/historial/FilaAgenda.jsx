@@ -1,10 +1,11 @@
 import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ChevronDown, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
 import {
     datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
 } from '../../../utils/datetime';
+import Desplegable from './Desplegable';
 
 /**
  * Una fila de la sección «Agendas» del historial, con su editor en el sitio.
@@ -33,17 +34,6 @@ const gruposDeFuente = (grupos, actual) => {
 const etiquetaDeFuente = (grupos, clave) => grupos
     .flatMap(g => g.opciones || [])
     .find(o => o.clave === clave)?.label || clave;
-
-/** Un `<select>` con la flecha que `.ln-field` le saca (`appearance:none`). */
-const Desplegable = ({ id, etiqueta, valor, onCambiar, disabled, children }) => (
-    <span className="ln-field" style={{ height: 44, position: 'relative' }}>
-        <select id={id} value={valor} disabled={disabled} aria-label={etiqueta}
-            onChange={(e) => onCambiar(e.target.value)} style={{ paddingRight: 24 }}>
-            {children}
-        </select>
-        <ChevronDown aria-hidden="true" style={{ position: 'absolute', right: 14, pointerEvents: 'none' }} />
-    </span>
-);
 
 const FilaAgenda = ({
     agenda, fuentes = [], closers = [], puedeEditar = false, puedeReasignar = false, onEditar,
