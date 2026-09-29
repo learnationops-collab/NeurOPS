@@ -25,7 +25,7 @@ aprendió contra datos reales — en particular `_names_compatible`, que evita e
 dos personas distintas a través de un registro con el mail de otra.
 """
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app import db
 from app.models import Appointment, Client, FinancialAgenda
@@ -57,6 +57,12 @@ HORAS_MISMA_REUNION = 2
 # Cuánto después de la hora de la reunión se sigue considerando que "todavía no pasó".
 # Cubre al lead que reagenda apenas el closer no aparece o apenas cuelga sin avanzar.
 HORAS_GRACIA_REUNION = 1
+
+# Qué tan cerca tienen que estar dos reuniones para ser "la misma hora" y no una
+# reprogramación. Con tolerancia amplia se confundirían las dos cosas; en los datos reales
+# los duplicados exactos caen al mismo minuto, así que alcanza con un margen chico para
+# absorber el redondeo de Calendly.
+MINUTOS_MISMA_HORA = 5
 
 
 def _senales(agenda):
@@ -155,12 +161,32 @@ def motivo_probable(grupo):
     return 'volvio_a_agendar'
 
 
-def sugerir_conservada(grupo):
+def identidades_con_venta():
+    """Todas las identidades (mail e instagram normalizados) que tienen alguna venta.
+
+    Una sola consulta para lo que si no es una por candidato. La usa el backfill, que
+    evalúa cientos de pares: contra el proxy público esas consultas sueltas lo volvían
+    inviable (tardaba minutos por marca).
+    """
+    from app.models import FinancialSale
+
+    conocidas = set()
+    for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+        for valor in (_normalize_email(mail), _normalize_instagram(ig)):
+            if valor:
+                conocidas.add(valor)
+    return conocidas
+
+
+def sugerir_conservada(grupo, ventas_conocidas=None):
     """Cuál de las filas del grupo conviene conservar.
 
     Manda lo que ya ocurrió: una agenda con venta cargada, después una con resultado real
     del closer, y recién si ninguna tiene historia, la de la reunión más reciente — que en
     una reprogramación es la que vale.
+
+    `ventas_conocidas` es el conjunto que devuelve `identidades_con_venta()`: cuando se
+    pasa, saber si hay venta no cuesta una consulta por candidato.
     """
     from app.models import FinancialSale
 
@@ -169,18 +195,193 @@ def sugerir_conservada(grupo):
         mail = _normalize_email(a.mail)
         if not ig and not mail:
             return False
+        if ventas_conocidas is not None:
+            return bool((mail and mail in ventas_conocidas) or (ig and ig in ventas_conocidas))
         consulta = FinancialSale.query
         if mail:
             return consulta.filter(db.func.lower(FinancialSale.mail_cliente) == mail).count() > 0
         return consulta.filter(
             db.func.lower(db.func.replace(FinancialSale.instagram, '@', '')) == ig).count() > 0
 
+    # Los dos últimos criterios son el desempate y tienen que ser deterministas: con tres
+    # filas idénticas (mismo día, misma hora, mismo estado) `max` devolvía la primera de la
+    # lista, así que comparar A con B y después A con C daba ganadoras distintas. Cuando
+    # todo lo demás empata gana la MÁS VIEJA, que es la original; las otras son la copia.
     return max(grupo, key=lambda a: (
         tiene_venta(a),
         not _sin_resolver(a),
         a.date is not None,
-        a.date or a.created_at,
+        a.date or datetime.min,
+        -(a.created_at.timestamp() if a.created_at else 0),
+        -a.id if a.id else 0,
     ))
+
+
+def _nombre_utilizable(nombre):
+    """True si el nombre identifica a alguien, o sea si sirve para corroborar una fusión."""
+    from app.services.client_dedup_service import _GENERIC_NAMES, _normalize_name
+    limpio = _normalize_name(nombre)
+    return bool(limpio) and limpio not in _GENERIC_NAMES and len(limpio) > 2
+
+
+def _comparte_senal(a, b):
+    """True si dos agendas comparten mail, instagram o teléfono normalizados."""
+    for norm, campo in ((_normalize_email, 'mail'), (_normalize_instagram, 'instagram'),
+                        (_normalize_phone, 'whatsapp')):
+        va, vb = norm(getattr(a, campo)), norm(getattr(b, campo))
+        if va and va == vb:
+            return True
+    return False
+
+
+def _hermanas_del_mismo_dia(agenda, universo=None):
+    """Las otras agendas vigentes del mismo lead cuya reunión cae el mismo día LOCAL.
+
+    El día es el local de la fuente y no el día UTC: una cita de las 21:00 cae en el día
+    UTC siguiente, y comparando en UTC dos filas de la misma tarde parecerían de días
+    distintos (mismo criterio que usa el deduplicador del webhook).
+    """
+    from app.services.agenda_time_service import limites_dia_origen
+
+    inicio, fin = limites_dia_origen(agenda.date)
+
+    # La base solo acota por día; quién es la misma persona lo decide SIEMPRE Python, con
+    # los mismos normalizadores. Antes la condición de identidad iba en el SQL y ahí había
+    # que reescribir a mano lo que hacen esos normalizadores: el `replace` de la columna no
+    # recorta espacios ni cubre todos los separadores, así que un instagram guardado con un
+    # espacio al final o un teléfono con un guion raro no matcheaba. Comparado contra los
+    # datos reales, el SQL perdía 2 de 102 pares que Python sí reconoce.
+    #
+    # `universo` evita incluso esa consulta: el backfill trae todo una vez y compara en
+    # memoria. Preguntando por cada agenda eran miles de viajes y contra el proxy público
+    # de Railway la conexión se caía a mitad del recorrido.
+    if universo is None:
+        universo = FinancialAgenda.query.filter(
+            FinancialAgenda.duplicada_de_id.is_(None),
+            FinancialAgenda.date >= inicio,
+            FinancialAgenda.date <= fin,
+        ).all()
+
+    candidatas = [c for c in universo
+                  if c.id != agenda.id and c.duplicada_de_id is None
+                  and c.date and inicio <= c.date <= fin
+                  and _comparte_senal(agenda, c)]
+    # El nombre decide al final: el mismo teléfono aparece compartido entre familiares y el
+    # mismo mail tipeado por otra persona. Sin este resguardo se fusionan dos leads reales.
+    #
+    # Y acá se exige un nombre DE VERDAD en las dos, no el `_names_compatible` a secas:
+    # esa función devuelve True cuando alguno de los dos está vacío o es genérico, así que
+    # sobre una fila sin nombre el resguardo se apaga solo y quedarían unidas por el puro
+    # teléfono. Para una fusión AUTOMÁTICA eso es demasiado: en producción hay 1069 agendas
+    # sin `lead` (todas anteriores a julio, ninguna en el período que esto toca hoy). Sin
+    # nombre no se decide solo — el par igual aparece en el panel para que lo mire alguien.
+    hermanas = [c for c in candidatas
+                if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
+                and _names_compatible(agenda.lead, c.lead)]
+    # Orden explícito: `decidir_reconciliacion` corta el recorrido en cuanto la que sobra
+    # es la propia agenda, así que el orden decide qué par se evalúa. Sin esto la consulta
+    # devolvía las filas en el orden que quisiera Postgres y el resultado no era
+    # reproducible — dos corridas sobre los mismos datos podían resolver pares distintos.
+    hermanas.sort(key=lambda c: (c.created_at is not None, c.created_at, c.id))
+    return hermanas
+
+
+def reconciliar(agenda, actor_id=None, simular=False, universo=None, ventas_conocidas=None):
+    """Hace cumplir la regla: un lead no puede tener dos agendas el mismo día a la misma hora.
+
+    La definió Kerwin el 28/09/2026 mirando el libro:
+
+      · mismo día y MISMA hora  -> no existe tal cosa, es la misma reunión cargada dos
+        veces. Se conserva la fila con más historia y la otra se marca.
+      · mismo día y otra hora   -> es una REPROGRAMACIÓN, no una segunda llamada: queda una
+        sola agenda, la que trae la hora vigente (la de alta más reciente).
+      · días distintos          -> puede ser una segunda llamada de verdad (reagendó, o no
+        se llegó a hacer la presentación). No se toca.
+
+    Corre después de crear una agenda, en las vías que la crean. Devuelve las filas que
+    marcó, vacía si no había nada que reconciliar. Con `simular=True` no escribe: devuelve
+    las decisiones (conservada, sobrante, motivo) que tomaría.
+    """
+    decisiones = decidir_reconciliacion(agenda, universo=universo,
+                                        ventas_conocidas=ventas_conocidas)
+    if simular:
+        return decisiones
+
+    marcadas = []
+    for conservada, sobrante, motivo in decisiones:
+        try:
+            descartar(conservada, sobrante, actor_id, motivo=motivo)
+            marcadas.append(sobrante)
+            logger.info('[AGENDA UNICA] %s -> se conserva #%s y se marca #%s (%s)',
+                        agenda.lead, conservada.id, sobrante.id, motivo)
+        except ValueError as e:
+            logger.info('[AGENDA UNICA] no se pudo reconciliar #%s con #%s: %s',
+                        agenda.id, sobrante.id, e)
+    return marcadas
+
+
+def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
+    """Qué haría `reconciliar` con esta agenda, sin tocar nada.
+
+    Devuelve una lista de (conservada, sobrante, motivo). Existe aparte para que el
+    dry-run del script de backfill muestre exactamente la misma decisión que se va a
+    aplicar: si la simulación tuviera su propia copia de las reglas, mentiría en cuanto
+    una de las dos cambiara.
+    """
+    if not agenda or not agenda.date or agenda.duplicada_de_id is not None:
+        return []
+
+    decisiones = []
+    for hermana in _hermanas_del_mismo_dia(agenda, universo=universo):
+        if hermana.duplicada_de_id is not None:
+            continue
+        distancia = abs((hermana.date - agenda.date).total_seconds())
+
+        if distancia <= MINUTOS_MISMA_HORA * 60:
+            conservada = _conservar_misma_reunion(agenda, hermana)
+            motivo = 'automático: misma persona, mismo día y misma hora'
+        elif _sin_resolver(hermana) and _sin_resolver(agenda):
+            # Reprogramación: manda la hora que se cargó último. Si alguna de las dos ya
+            # se resolvió no aplica: una llamada que de verdad ocurrió no es la hora vieja
+            # de la otra, ahí son dos agendas distintas y no se toca ninguna.
+            conservada = max([agenda, hermana],
+                             key=lambda a: (a.created_at is not None, a.created_at))
+            motivo = 'automático: reprogramación del mismo día'
+        else:
+            continue
+
+        sobrante = hermana if conservada is agenda else agenda
+        decisiones.append((conservada, sobrante, motivo))
+        if sobrante is agenda:
+            # La recién llegada fue la que sobró: no tiene sentido seguir comparándola.
+            break
+
+    return decisiones
+
+
+# Campos que la fila que se conserva HEREDA de la repetida cuando ella no los tiene.
+# Sin esto, conservar la original significaría perder el resultado que el closer cargó
+# sobre la copia.
+_VACIOS = {'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
+CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
+
+
+def _esta_vacio(valor):
+    return (valor or '').strip().lower() in _VACIOS
+
+
+def _conservar_misma_reunion(a, b):
+    """De dos filas que son la MISMA reunión, cuál sobrevive: la ORIGINAL.
+
+    Manda la fecha de alta más vieja, y no quién tiene el resultado del closer. Suena al
+    revés hasta que se mira lo que pasó el 08/07/2026: la copia era el espejo de la cita,
+    dado de alta DOS SEMANAS después de la original, y como traía 'Show Up' el criterio
+    viejo la elegía a ella. Conservarla movía la agenda —y su venta de 750 USD— a la
+    ventana de otro taller, porque el embudo atribuye por fecha de alta.
+
+    El resultado del closer no se pierde: `descartar` se lo pasa a la que sobrevive.
+    """
+    return min([a, b], key=lambda x: (x.created_at or datetime.max, x.id or 0))
 
 
 def cita_de(agenda):
@@ -193,11 +394,20 @@ def cita_de(agenda):
         return None
     ig = _normalize_instagram(agenda.instagram)
     mail = _normalize_email(agenda.mail)
+    tel = _normalize_phone(agenda.whatsapp)
     condiciones = []
     if mail:
         condiciones.append(db.func.lower(Client.email) == mail)
     if ig:
         condiciones.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig)
+    if tel:
+        # El teléfono como tercera señal: una agenda que llegó con mail 'N/A' e instagram
+        # 'N/A' no tiene con qué encontrar su cita, y sin cita el descarte no puede saber
+        # que la que iba a cancelar es la misma de la fila que se conserva.
+        columna = Client.phone
+        for sep in (' ', '-', '(', ')', '+', '.'):
+            columna = db.func.replace(columna, sep, '')
+        condiciones.append(columna.like('%' + tel))
     if not condiciones:
         return None
 
@@ -282,6 +492,16 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
         cita = cita_de(duplicada)
         cita_conservada = cita_de(conservada)
         ya_cancelada = bool(cita and (cita.result or '').strip().lower().startswith('cancel'))
+        # Guarda dura: si la cita cae a la misma hora que la reunión de la fila que se
+        # CONSERVA, es su cita, y cancelarla apagaría la llamada que queríamos dejar viva.
+        # No alcanza con comparar contra `cita_de(conservada)`: cuando la conservada tiene
+        # la identidad rota (mail 'N/A', instagram 'N/A') esa búsqueda devuelve None y el
+        # resguardo de abajo no se entera de que las dos filas son la misma reunión.
+        es_la_cita_de_la_conservada = bool(
+            cita and conservada.date
+            and abs((cita.start_time - conservada.date).total_seconds()) <= MINUTOS_MISMA_HORA * 60)
+        if es_la_cita_de_la_conservada:
+            cita = None
         # Solo se guarda el estado previo de la cita que este descarte cancela DE VERDAD.
         # Dos agendas repetidas pueden apuntar a la misma cita: si la segunda volviera a
         # anotar el snapshot, guardaría 'Cancelado' —lo que dejó la primera— y al deshacer
@@ -293,6 +513,26 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
             cita.result = 'Cancelado'
             logger.info('[DEDUP AGENDAS] cita #%s cancelada por descartar la agenda #%s',
                         cita.id, duplicada.id)
+
+    # La que sobrevive se queda con lo mejor de las dos. Si no, descartar la copia tira el
+    # dato que solo ella tenía: el resultado que el closer cargó ahí, el mail que en la
+    # original llegó 'N/A', el closer asignado. Se anota el valor previo para que
+    # `restaurar` deje todo como estaba.
+    heredado = {}
+    for campo in CAMPOS_HEREDABLES:
+        nuevo = getattr(duplicada, campo, None)
+        if _esta_vacio(getattr(conservada, campo, None)) and not _esta_vacio(nuevo):
+            heredado[campo] = getattr(conservada, campo, None)
+            setattr(conservada, campo, nuevo)
+    # El estado solo se hereda si el de la copia es un resultado REAL de la llamada y el de
+    # la conservada todavía no lo es: un 'Pendiente' nunca debe pisar un 'Show Up'.
+    if _sin_resolver(conservada) and not _sin_resolver(duplicada):
+        heredado['estado'] = conservada.estado
+        conservada.estado = duplicada.estado
+    if heredado:
+        snapshot['heredado'] = heredado
+        logger.info('[AGENDA UNICA] #%s hereda de #%s: %s',
+                    conservada.id, duplicada.id, ', '.join(heredado))
 
     duplicada.duplicada_de_id = conservada.id
     duplicada.descartada_at = datetime.utcnow()
@@ -315,6 +555,15 @@ def restaurar(agenda):
         if cita:
             cita.result = snapshot.get('result_previo')
             cita.closer_result = snapshot.get('closer_result_previo')
+
+    # Devolver lo que la conservada heredó de esta fila: si no, deshacer dejaría las dos
+    # con el mismo dato y ya no se sabría cuál era de quién.
+    heredado = snapshot.get('heredado') or {}
+    if heredado:
+        conservada = FinancialAgenda.query.get(snapshot.get('conservada_id'))
+        if conservada:
+            for campo, previo in heredado.items():
+                setattr(conservada, campo, previo)
 
     agenda.duplicada_de_id = None
     agenda.descartada_at = None

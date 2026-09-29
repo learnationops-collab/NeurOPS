@@ -791,13 +791,31 @@ class BookingService:
         from sqlalchemy import func
         ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
         mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-        
+        # El mail sintetico que `find_or_create_client` le pone al Client que llego sin
+        # correo ('no-email-<hex>@neurops.com') no identifica a nadie: la agenda de ese
+        # mismo lead tiene mail='N/A', asi que comparar uno contra otro no matchea NUNCA y
+        # el espejo terminaba creando una segunda fila para la misma reunion. El resto del
+        # archivo ya lo trata como ausente (lineas 145, 210, 223); aca faltaba.
+        if mail_clean and 'no-email-' in mail_clean:
+            mail_clean = None
+
         filters = []
         if mail_clean:
             filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
         if ig_clean:
             filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            
+        # El telefono como tercera señal, comparando solo digitos: el mail llega 'N/A' muy
+        # seguido y el instagram a veces trae el nombre escrito en vez del handle, asi que
+        # sin esto el espejo no reconocia la agenda que ya existia y creaba una segunda
+        # fila para la MISMA reunion (28/09/2026: 67 pares asi desde julio).
+        tel_cliente = ''.join(c for c in str(client.phone or '') if c.isdigit())
+        if len(tel_cliente) >= 9:
+            columna_tel = FinancialAgenda.whatsapp
+            for sep in (' ', '-', '(', ')', '+', '.'):
+                columna_tel = func.replace(columna_tel, sep, '')
+            filters.append(columna_tel.like('%' + tel_cliente[-9:]))
+
+
         agenda = None
         # `misma_cita` distingue "esta agenda ES esta cita" (cayo en la ventana de +/-36h)
         # de "es otra agenda cualquiera del mismo lead" (el respaldo de abajo, que agarra
@@ -823,6 +841,23 @@ class BookingService:
                 agenda = (FinancialAgenda.query
                           .filter(vigente, or_(*filters))
                           .order_by(FinancialAgenda.date.desc()).first())
+
+        if not agenda and appt.start_time:
+            # Ultimo recurso antes de crear: ¿ya hay una agenda para una llamada a ESTA
+            # misma hora, a nombre de esta persona? Cuando ninguna de las tres señales
+            # coincide (el Client quedo con una identidad distinta de la que trae la
+            # agenda) esto es lo unico que evita una segunda fila para la misma reunion.
+            from app.services.client_dedup_service import _names_compatible
+            margen = timedelta(minutes=5)
+            for fila in FinancialAgenda.query.filter(
+                    FinancialAgenda.duplicada_de_id.is_(None),
+                    FinancialAgenda.date >= appt.start_time - margen,
+                    FinancialAgenda.date <= appt.start_time + margen).all():
+                if _names_compatible(client.full_name, fila.lead):
+                    agenda, misma_cita = fila, True
+                    print(f"[SYNC] La cita {appt.id} ya tenia agenda #{fila.id} a la misma "
+                          f"hora ({fila.lead}); se reusa en vez de crear otra.")
+                    break
 
         # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
         mapped_state = 'Pendiente'
@@ -907,7 +942,9 @@ class BookingService:
                 raw_data={"created_by_sync": True, "fuente": fuente}
             )
             db.session.add(agenda)
+            recien_creada = True
         else:
+            recien_creada = False
             # Actualizar datos de existente
             agenda.nombre = fuente
             agenda.closer = closer_name
@@ -918,6 +955,14 @@ class BookingService:
             
         try:
             db.session.flush()
+            if recien_creada:
+                # Ultima red: si aun asi quedo una hermana a la misma hora, se resuelve
+                # sola en vez de dejar dos llamadas con la misma persona en el libro.
+                from app.services import agenda_dedup_service
+                try:
+                    agenda_dedup_service.reconciliar(agenda)
+                except Exception as e:
+                    print(f"[AGENDA UNICA] fallo la reconciliacion del espejo: {e}")
             return agenda
         except Exception as e:
             print(f"[SYNC ERROR] No se pudo guardar la FinancialAgenda: {e}")

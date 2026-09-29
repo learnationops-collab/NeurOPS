@@ -37,6 +37,7 @@ talleres viejos sin motivo).
 """
 from datetime import datetime, timedelta
 import logging
+import os
 
 from sqlalchemy import event, inspect
 
@@ -121,6 +122,15 @@ def register_workshop_live_sync(app):
 
     @event.listens_for(db.session, 'before_commit')
     def _sync_before_commit(session):
+        if os.environ.get('DISABLE_WORKSHOP_LIVE_SYNC', '').lower() == 'true':
+            # Valvula para los backfills. `calcular_prefill` es N+1 y tarda cerca de un
+            # minuto por taller: en un script que toca cientos de agendas de a una, esto
+            # recalcula el mismo snapshot una vez por fila y la pasada pasa de minutos a
+            # horas. Los scripts que la usan tienen que correr el resync al final --
+            # scripts/resync_workshop_events.py --apply -- o los numeros quedan viejos.
+            session.info.pop(_KEY_FECHAS, None)
+            session.info.pop(_KEY_TALLERES, None)
+            return
         # Lo que quedo pendiente se flushea ahora (y se anota, via before_flush)
         # para que `calcular_prefill` ya vea la agenda/venta/taller nuevo.
         session.flush()

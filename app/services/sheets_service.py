@@ -369,6 +369,11 @@ class SheetsService:
 
     @staticmethod
     def _rebuild_agendas(data_list):
+        # OJO si alguna vez se reactiva esto (hoy los dos puntos de entrada contestan
+        # "deshabilitada en favor de n8n": app/api/sheets.py y el endpoint /sync de
+        # financial_agendas.py): el DELETE de abajo vacia la tabla entera y la reconstruye
+        # desde la hoja, asi que se llevaria puestas las marcas de agenda duplicada
+        # (`duplicada_de_id`) y todo lo que el equipo haya resuelto en el panel.
         try:
             db.session.query(FinancialAgenda).delete()
             objects = []
