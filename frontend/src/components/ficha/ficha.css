@@ -219,6 +219,20 @@
   .dc-shell .fi-agenda > .fi-agenda-fila{grid-template-columns:1fr}
 }
 
+/* ---------- Seguimiento del historial ----------
+   La misma franja que una agenda: el borde en el envoltorio y el editor adentro, con las clases
+   `.fi-agenda-editor/-campos/-pie` tal cual. Lo propio es el estado: un control segmentado chico
+   («Pendiente | Realizado») en vez de un desplegable, porque son dos valores y se tienen que leer
+   sin abrir nada. Es el `.fi-seg` del plan de cuotas a la altura de la fila. */
+.dc-shell .fi-seguimiento{border-top:1px solid var(--border-subtle)}
+.dc-shell .fi-seguimiento > .fi-sec-fila{border-top:0}
+.dc-shell .fi-seguimiento[data-editando] .ibtn{color:var(--text-on-surface);
+  border-color:var(--border-control)}
+.dc-shell .fi-seg--sm{padding:3px}
+.dc-shell .fi-seg--sm .fi-seg-op{height:28px;min-width:0;padding:0 var(--s3);font-size:12px}
+.dc-shell .fi-seg-op:disabled{cursor:default}
+.dc-shell .fi-seg-op:disabled:not([aria-pressed="true"]){opacity:.5}
+
 /* ---------- Cabecera del modal ---------- */
 /* Dos filas fijas: el nombre con sus botones arriba, los datos abajo.
    Compartir la fila entre el nombre y los datos parecia mas compacto, pero el ancho que

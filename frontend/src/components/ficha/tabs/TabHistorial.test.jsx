@@ -38,6 +38,12 @@ const VOCABULARIO = {
         ] },
         { titulo: 'Setters', tono: 'success', opciones: [{ clave: 'Paula', label: 'Paula' }] },
     ],
+    // `ficha_vocabulario.tipos_seguimiento()`: los grupos de la pestaña Seguimientos del closer.
+    tipos_seguimiento: [
+        { clave: 'no_tomada', label: 'Llamadas no tomadas', desc: 'No shows, cancelaciones y reprogramaciones' },
+        { clave: 'tomada', label: 'Llamadas tomadas', desc: 'Asistieron y quedó una decisión o una 2ª llamada' },
+        { clave: 'cerrada', label: 'Llamadas cerradas', desc: 'Clientes: cobranza, renovación y upsell' },
+    ],
 };
 
 const ficha = (agendas = [AGENDA], extra = {}) => ({
@@ -174,5 +180,117 @@ describe('corregir una agenda en la fila', () => {
         expect(screen.queryByRole('button', { name: /Corregir fecha, fuente y closer/ }))
             .not.toBeInTheDocument();
         expect(screen.getByText('VSL · Jean Carlo')).toBeInTheDocument();
+    });
+});
+
+// Pedido del 29/09/2026: «En los seguimientos deberían poder crearse seguimientos y cambiar el
+// estado de los seguimientos». Un seguimiento vive en su agenda (uno por agenda).
+const SEGUIMIENTO = {
+    agenda_id: 71, agenda_fecha: HORA_UTC, fecha: '2026-10-06', canal: null,
+    nota: 'Lo habla con la esposa', tipo: 'tomada', realizado: false, intento: 2,
+};
+const OTRA_AGENDA = {
+    ...AGENDA, id: 64, fecha: '2026-09-20T15:00:00', chip: { label: 'No show', tone: 'error' },
+    tipo_seguimiento: 'no_tomada',
+};
+
+const conSeguimientos = (seguimientos = [SEGUIMIENTO], agendas = [AGENDA, OTRA_AGENDA], extra = {}) => ({
+    ...ficha(agendas),
+    historial: { ...fichaPrecall.historial, agendas, seguimientos },
+    ...extra,
+});
+
+const abrirSeguimientos = async (usuario, f = conSeguimientos(), onAccion = vi.fn().mockResolvedValue({})) => {
+    render(<TabHistorial ficha={f} onAccion={onAccion} />);
+    await usuario.click(screen.getByRole('button', { name: /^Seguimientos/ }));
+    return onAccion;
+};
+
+describe('los seguimientos del historial', () => {
+    const estado = () => screen.getByRole('group', { name: /Estado del seguimiento/ });
+    const editor = () => screen.getByRole('group', { name: /Corregir el seguimiento/ });
+
+    it('la fila dice el día, la nota, el tipo, el intento y de qué agenda es', async () => {
+        const usuario = userEvent.setup();
+        await abrirSeguimientos(usuario);
+
+        expect(screen.getByText('6 oct 2026')).toBeInTheDocument();
+        expect(screen.getByText('Lo habla con la esposa')).toBeInTheDocument();
+        expect(screen.getByText(`Llamadas tomadas · Seguimiento 2 de 4 · de la agenda del ${enLocal(HORA_UTC)}`))
+            .toBeInTheDocument();
+        expect(within(estado()).getByRole('button', { name: 'Pendiente' }))
+            .toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('marcarlo realizado manda solo el estado, apuntado a la agenda del seguimiento', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirSeguimientos(usuario);
+        await usuario.click(within(estado()).getByRole('button', { name: 'Realizado' }));
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_seguimiento', { realizado: true }, 71);
+    });
+
+    it('si el backend rechaza el cambio de estado, vuelve a como estaba', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('No se pudo'));
+        await abrirSeguimientos(usuario, conSeguimientos(), onAccion);
+        await usuario.click(within(estado()).getByRole('button', { name: 'Realizado' }));
+
+        expect(within(estado()).getByRole('button', { name: 'Pendiente' }))
+            .toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('el lápiz corrige día, tipo y nota, y manda solo lo que cambió', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirSeguimientos(usuario);
+        await usuario.click(screen.getByRole('button', { name: /Corregir día, tipo y nota/ }));
+
+        expect(within(editor()).getByLabelText('Día del contacto')).toHaveValue('2026-10-06');
+        expect(within(editor()).getByRole('button', { name: 'Guardar cambios' })).toBeDisabled();
+        await usuario.selectOptions(within(editor()).getByLabelText('Tipo de seguimiento'), 'cerrada');
+        // La explicación del tipo elegido, con las palabras de la pestaña del closer.
+        expect(within(editor()).getByText('Clientes: cobranza, renovación y upsell')).toBeInTheDocument();
+        const nota = within(editor()).getByLabelText('Nota');
+        await usuario.clear(nota);
+        await usuario.type(nota, 'Cobrar la cuota');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_seguimiento',
+            { tipo: 'cerrada', nota: 'Cobrar la cuota' }, 71);
+        expect(screen.queryByRole('group', { name: /Corregir el seguimiento/ })).not.toBeInTheDocument();
+    });
+
+    it('Escape cierra el editor del seguimiento y no llega a cerrar la ficha', async () => {
+        const usuario = userEvent.setup();
+        const cerrarFicha = vi.fn();
+        document.addEventListener('keydown', cerrarFicha);
+        await abrirSeguimientos(usuario);
+        await usuario.click(screen.getByRole('button', { name: /Corregir día, tipo y nota/ }));
+        await usuario.keyboard('{Escape}');
+        document.removeEventListener('keydown', cerrarFicha);
+
+        expect(screen.queryByRole('group', { name: /Corregir el seguimiento/ })).not.toBeInTheDocument();
+        expect(cerrarFicha).not.toHaveBeenCalled();
+    });
+
+    it('un pendiente con el día pasado se marca atrasado, también en el resumen', async () => {
+        const usuario = userEvent.setup();
+        await abrirSeguimientos(usuario, conSeguimientos([
+            { ...SEGUIMIENTO, fecha: '2020-01-10' },
+            { ...SEGUIMIENTO, agenda_id: 64, fecha: '2099-03-02', intento: 1 },
+        ]));
+
+        expect(screen.getByText('Atrasado')).toBeInTheDocument();
+        expect(screen.getByText('2 seguimientos · 1 atrasado · próximo 2 mar 2099')).toBeInTheDocument();
+    });
+
+    it('quien no puede reportar ve el estado pero no lo corrige', async () => {
+        const usuario = userEvent.setup();
+        await abrirSeguimientos(usuario, conSeguimientos([{ ...SEGUIMIENTO, realizado: true }],
+            [AGENDA, OTRA_AGENDA], { permisos: { ...fichaPrecall.permisos, reportar: false } }));
+
+        expect(screen.getByText('Realizado')).toBeInTheDocument();
+        expect(screen.queryByRole('group', { name: /Estado del seguimiento/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Corregir día, tipo y nota/ })).not.toBeInTheDocument();
     });
 });

@@ -50,4 +50,17 @@ export const instanteLegible = (v) => {
     return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()} · ${dos(d.getHours())}:${dos(d.getMinutes())}`;
 };
 
+/**
+ * Un DÍA sin hora ('AAAA-MM-DD', como `fecha_seguimiento`): `2 oct 2026`.
+ *
+ * Se lee el texto y no un `Date`: el día de un seguimiento no es un instante, y pasarlo por el
+ * huso de quien mira solo puede correrlo. Mismo formato a mano que `instanteLegible`.
+ */
+export const diaLegible = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
+    if (!partes || !MESES[Number(partes[2]) - 1]) return String(v);
+    return `${Number(partes[3])} ${MESES[Number(partes[2]) - 1]} ${partes[1]}`;
+};
+
 export default fechaLegible;

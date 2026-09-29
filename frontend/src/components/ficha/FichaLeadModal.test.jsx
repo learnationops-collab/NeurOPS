@@ -146,6 +146,22 @@ describe('onAccion pega en el endpoint correcto', () => {
         expect(await screen.findByText('Agenda corregida.')).toBeInTheDocument();
     });
 
+    it('marcar realizado un seguimiento parchea el de SU agenda, no el de la abierta', async () => {
+        const usuario = userEvent.setup();
+        await abrir({
+            ...fichaAlDia,
+            historial: { ...fichaAlDia.historial, seguimientos: [{
+                agenda_id: 555, agenda_fecha: '2026-08-02T21:30:00', fecha: '2026-08-05',
+                nota: 'Recordarle la cuota', tipo: 'cerrada', realizado: false, intento: 1,
+            }] },
+        });
+        await usuario.click(screen.getByRole('button', { name: /^Seguimientos/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Realizado' }));
+
+        expect(api.patch).toHaveBeenCalledWith('/ficha/555/seguimiento', { realizado: true });
+        expect(await screen.findByText('Seguimiento corregido.')).toBeInTheDocument();
+    });
+
     it('enviar una nota postea en la ruta de notas y limpia el campo', async () => {
         const usuario = userEvent.setup();
         await abrir(fichaPrecall);

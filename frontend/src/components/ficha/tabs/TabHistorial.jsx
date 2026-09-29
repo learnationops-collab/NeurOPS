@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Pencil } from 'lucide-react';
-import { fechaLegible as fecha, instanteLegible, SeccionColapsable } from '../piezas';
+import { diaLegible, fechaLegible as fecha, instanteLegible, SeccionColapsable } from '../piezas';
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import InlineConfirm from '../../ui/InlineConfirm';
 import FilaAgenda from '../historial/FilaAgenda';
+import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -290,6 +291,43 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
 };
 
 /**
+ * La sección «Seguimientos»: el seguimiento de cada agenda del cliente, con su estado corregible
+ * en la fila y un lápiz para el día, el tipo y la nota (`FilaSeguimiento`).
+ *
+ * Un seguimiento vive en su agenda —uno por agenda—, así que cada corrección viaja con el id de
+ * ESA agenda y no con el de la que abrió la ficha. Cuando el cliente tiene más de una agenda, la
+ * fila dice de cuál es.
+ */
+const Seguimientos = ({ seguimientos, agendas, vocabulario, puedeEditar, onAccion }) => {
+    const tipos = vocabulario?.tipos_seguimiento || [];
+    return seguimientos.length
+        ? seguimientos.map((s, i) => (
+            <FilaSeguimiento key={s.agenda_id ?? `${s.fecha}-${i}`} seguimiento={s} tipos={tipos}
+                mostrarAgenda={agendas.length > 1}
+                // Sin el id de su agenda no hay a dónde mandar la corrección (datos viejos).
+                puedeEditar={puedeEditar && s.agenda_id != null}
+                onCorregir={(cambios) => onAccion?.('corregir_seguimiento', cambios, s.agenda_id)} />
+        ))
+        : <Vacio texto="No se registró ningún seguimiento." />;
+};
+
+/** «2 seguimientos · 1 atrasado · próximo 9 oct 2026»: lo que importa, sin abrir la sección. */
+const resumenDeSeguimientos = (seguimientos) => {
+    if (!seguimientos.length) return 'Sin seguimientos';
+    const estados = seguimientos.map(s => ({ s, estado: estadoDeSeguimiento(s) }));
+    const atrasados = estados.filter(e => e.estado.clave === 'atrasado').length;
+    const proximo = estados
+        .filter(e => e.estado.clave === 'pendiente' && e.s.fecha)
+        .map(e => String(e.s.fecha).slice(0, 10))
+        .sort()[0];
+    return [
+        `${seguimientos.length} ${seguimientos.length === 1 ? 'seguimiento' : 'seguimientos'}`,
+        atrasados ? `${atrasados} ${atrasados === 1 ? 'atrasado' : 'atrasados'}` : null,
+        proximo ? `próximo ${diaLegible(proximo)}` : null,
+    ].filter(Boolean).join(' · ');
+};
+
+/**
  * La sección «Plan de cuotas»: la tabla de siempre, y el editor en línea al tocar «Editar».
  *
  * Se monta cerrado. Abrir el editor de entrada haría que leer el plan —que es para lo que se abre
@@ -434,14 +472,11 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                     puedeEditar={puedeCobrar} />
             </SeccionColapsable>
 
-            <SeccionColapsable titulo="Seguimientos"
-                resumen={seguimientos.length
-                    ? `${seguimientos.length} ${seguimientos.length === 1 ? 'registrado' : 'registrados'}`
-                        + (seguimientos[0]?.fecha ? ` · último ${fecha(seguimientos[0].fecha)}` : '')
-                    : 'Sin seguimientos'}>
-                {seguimientos.length
-                    ? seguimientos.map((s, i) => <Fila key={`${s.fecha}-${i}`} a={fecha(s.fecha)} b={s.nota} c={s.canal} />)
-                    : <Vacio texto="No se registró ningún seguimiento." />}
+            <SeccionColapsable titulo="Seguimientos" resumen={resumenDeSeguimientos(seguimientos)}>
+                {/* Mismo permiso que corregir una agenda: es la misma ruta de reportar. */}
+                <Seguimientos seguimientos={seguimientos} agendas={agendas}
+                    vocabulario={ficha?.vocabulario} puedeEditar={puedeReportar}
+                    onAccion={onAccion} />
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Pagos"

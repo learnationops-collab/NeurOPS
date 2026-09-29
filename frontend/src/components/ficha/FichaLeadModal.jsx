@@ -61,6 +61,7 @@ const MENSAJES = {
     estado_agenda: 'Estado de la agenda corregido.',
     crear_agenda: 'Agenda creada.',
     editar_agenda: 'Agenda corregida.',
+    corregir_seguimiento: 'Seguimiento corregido.',
     editar_evento: 'Evento reescrito.',
     borrar_evento: 'Evento borrado del registro.',
     registrar_pago: 'Pago registrado.',

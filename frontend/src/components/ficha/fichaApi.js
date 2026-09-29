@@ -58,6 +58,9 @@ const RUTAS = {
     // La fecha (instante UTC), la fuente y/o el closer de CUALQUIER agenda del cliente; solo
     // viaja lo que cambió.
     editar_agenda: (appt, p) => api.patch(`/ficha/${appt}/agenda`, p),
+    // El estado (`realizado`), el día, el tipo y/o la nota del seguimiento de CUALQUIER agenda del
+    // cliente: un seguimiento vive en su agenda, así que el id que viaja es el de esa agenda.
+    corregir_seguimiento: (appt, p) => api.patch(`/ficha/${appt}/seguimiento`, p),
     // El id del evento va en la URL: `editar_evento` y `borrar_evento` lo sacan del payload.
     editar_evento: (appt, p) => api.patch(`/ficha/${appt}/evento/${p.evento_id}`, { detalle: p.detalle }),
     borrar_evento: (appt, p) => api.delete(`/ficha/${appt}/evento/${p.evento_id}`),
