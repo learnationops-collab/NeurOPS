@@ -19,6 +19,7 @@ import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
+import { escalonDe } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import ComisionMesCard from './components/ComisionMesCard';
 import LeadEditModal from './components/LeadEditModal';
@@ -1209,8 +1210,11 @@ const CloserWorkflowPage = () => {
         return { atrasadas, hoy, reportadas: reportedTodayCalls };
     }, [filteredAgendas, selectedDate, reportedTodayCalls]);
 
-    // Renderizar una tarjeta individual del Kanban de confirmación (v6)
-    const renderKanbanCard = (a, phase) => {
+    // Renderizar una tarjeta individual del Kanban de confirmación (v6).
+    // `orden` es su lugar en la fila de entrada: el renglón del tablero por la cantidad de
+    // columnas, más la columna. Así entran de a una, de izquierda a derecha y de arriba abajo, con
+    // el mismo escalón (`escalonDe`) que el esqueleto que ocupaba su lugar.
+    const renderKanbanCard = (a, phase, orden = 0) => {
         const isViewed = selectedLead?.id === a.id;
 
         // Un referido manual se crea sin fecha real de cita (todavía no se acordó una) —
@@ -1264,6 +1268,7 @@ const CloserWorkflowPage = () => {
             <div 
                 key={a.id} 
                 className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
+                style={{ animationDelay: `${escalonDe(orden)}ms` }}
                 onClick={() => handleSelectLead(a)}
             >
                 <div
@@ -2196,13 +2201,15 @@ const CloserWorkflowPage = () => {
                                         {confirmationsPipeline.porConfirmar.length > 0 && (
                                             <>
                                                 <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.16)' }}></span>Sin contactar</div>
-                                                {confirmationsPipeline.porConfirmar.map(a => renderKanbanCard(a, 'por_confirmar'))}
+                                                {/* Orden de entrada: renglón × 2 columnas + columna (ver renderKanbanCard). */}
+                                                {confirmationsPipeline.porConfirmar.map((a, i) => renderKanbanCard(a, 'por_confirmar', i * 2))}
                                             </>
                                         )}
                                         {confirmationsPipeline.conversando.length > 0 && (
                                             <>
                                                 <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px rgba(96,165,250,.16)' }}></span>Conversando</div>
-                                                {confirmationsPipeline.conversando.map(a => renderKanbanCard(a, 'conversando'))}
+                                                {/* Mismo carril que "Sin contactar": sigue contando desde ahí. */}
+                                                {confirmationsPipeline.conversando.map((a, i) => renderKanbanCard(a, 'conversando', (confirmationsPipeline.porConfirmar.length + i) * 2))}
                                             </>
                                         )}
                                     </div>
@@ -2217,7 +2224,7 @@ const CloserWorkflowPage = () => {
                                     </div>
                                     <div className="kbody-v6">
                                         {confirmationsPipeline.confirmado.length > 0 ? (
-                                            confirmationsPipeline.confirmado.map(a => renderKanbanCard(a, 'confirmado'))
+                                            confirmationsPipeline.confirmado.map((a, i) => renderKanbanCard(a, 'confirmado', i * 2 + 1))
                                         ) : (
                                             <div className="kempty-v6">Sin leads confirmados.</div>
                                         )}
@@ -2304,7 +2311,8 @@ const CloserWorkflowPage = () => {
                                         </div>
                                         <div className="kbody-v6">
                                             {callsPipeline.atrasadas.length > 0 ? (
-                                                callsPipeline.atrasadas.map(a => renderKanbanCard(a, 'call'))
+                                                /* Orden de entrada: renglón × 3 columnas + columna. */
+                                                callsPipeline.atrasadas.map((a, i) => renderKanbanCard(a, 'call', i * 3))
                                             ) : (
                                                 <div className="kempty-v6 done-v6">✓ Ninguna atrasada</div>
                                             )}
@@ -2319,7 +2327,7 @@ const CloserWorkflowPage = () => {
                                         </div>
                                         <div className="kbody-v6">
                                             {callsPipeline.hoy.length > 0 ? (
-                                                callsPipeline.hoy.map(a => renderKanbanCard(a, 'call'))
+                                                callsPipeline.hoy.map((a, i) => renderKanbanCard(a, 'call', i * 3 + 1))
                                             ) : (
                                                 <div className="kempty-v6">Sin llamadas hoy.</div>
                                             )}
@@ -2334,7 +2342,7 @@ const CloserWorkflowPage = () => {
                                         </div>
                                         <div className="kbody-v6">
                                             {callsPipeline.reportadas.length > 0 ? (
-                                                callsPipeline.reportadas.map(a => renderKanbanCard(a, 'call_done'))
+                                                callsPipeline.reportadas.map((a, i) => renderKanbanCard(a, 'call_done', i * 3 + 2))
                                             ) : (
                                                 <div className="kempty-v6">Todavía ninguna reportada.</div>
                                             )}

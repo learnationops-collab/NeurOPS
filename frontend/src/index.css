@@ -994,9 +994,25 @@ header.top-v6 {
 }
 /* Sin borde a propósito (pedido del usuario, "que sean sin bordes"): la separación entre
    tarjetas la da la sombra + el fondo más claro que el hueco entre ellas, no un trazo. Entra con
-   una animación breve al aparecer (`cardRiseIn`), calcada del `riseIn` de la referencia visual. */
+   una animación breve al aparecer (`cardRiseIn`), calcada del `riseIn` de la referencia visual.
+
+   Escalonada (29/sep/2026): cada tarjeta trae su `animation-delay` desde el componente, con el
+   mismo `escalonDe` que el esqueleto del kanban, así las tarjetas entran de a una con el mismo
+   ritmo que los huesos que reemplazan. Recorrido de 12 px y curva que frena al final, como las
+   filas de Revisar: con 8 px y `ease` la tarjeta aparecía casi en su lugar y el escalón no se veía.
+
+   El relleno es `backwards` y no `both`: el primero deja la tarjeta invisible durante su retraso,
+   que es lo que hace falta para escalonar; el segundo además la dejaba clavada en el último cuadro
+   al terminar, y una animación rellenada le gana a cualquier regla normal, así que el
+   `translateY(-2px)` del hover no se aplicaba nunca. Con `backwards`, al terminar, vuelve a mandar
+   el CSS de siempre.
+
+   La animación va en CSS y no con framer-motion como en Revisar a propósito: la tarjeta ya tenía
+   su entrada acá y un `transition: .18s` sobre todas las propiedades. Sumarle framer era tener dos
+   fuentes para el mismo `transform`, que es lo que en `listas.css` dejaba la flecha a mitad de
+   camino. */
 @keyframes cardRiseIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1017,12 +1033,19 @@ header.top-v6 {
   cursor: pointer;
   transition: .18s;
   text-align: left;
-  animation: cardRiseIn .35s ease both;
+  animation: cardRiseIn .34s cubic-bezier(.22, 1, .36, 1) backwards;
 }
 .kcard-v6:hover {
   background: rgba(255,63,164,.07);
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 10px 22px rgba(255,63,164,.18);
   transform: translateY(-2px);
+}
+/* Con «reducir movimiento» la tarjeta está desde el primer cuadro, sin subir ni esperar su turno,
+   y el hover cambia de color sin moverse. Lo mismo que hacen los huesos (`huesos.css`) y las
+   tarjetas de Revisar (`listas.css`). */
+@media (prefers-reduced-motion: reduce) {
+  .kcard-v6 { animation: none; }
+  .kcard-v6:hover { transform: none; }
 }
 /* Hora/cuenta regresiva en la esquina superior derecha: números grandes y en negrita, solo
    texto de color, sin caja/fondo (pedido explícito del usuario, 29/ago/2026). Reserva un
