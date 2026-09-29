@@ -17,10 +17,13 @@ import { Check, X } from 'lucide-react';
 const StepperFicha = ({ pasos = [], onPaso = null, ayuda = null, rotulo = null, deshabilitado = false }) => {
     if (!pasos.length) return null;
 
-    // El riel verde llega hasta el último paso alcanzado, medido sobre el 80% que
-    // ocupa el tramo entre el primer y el último punto.
+    // El riel verde llega hasta el último paso alcanzado. El porcentaje se mide sobre el
+    // riel y no sobre el contenedor: `.fi-stepper-riel` ya arranca y termina en el centro
+    // del primer y del último punto. Acá decía 80 —el ancho del riel expresado en el
+    // contenedor— y ese 80 se contaba dos veces: con los cinco pasos alcanzados el verde
+    // se quedaba a un paso entero del último punto, que es lo que se veía en la ficha.
     const ultimo = pasos.reduce((acc, p, i) => (['hecho', 'actual', 'alerta'].includes(p.estado) ? i : acc), 0);
-    const avance = `${(ultimo / Math.max(1, pasos.length - 1)) * 80}%`;
+    const avance = `${(ultimo / Math.max(1, pasos.length - 1)) * 100}%`;
 
     const marca = (paso, i) => {
         if (paso.estado === 'alerta') return <X size={16} />;
