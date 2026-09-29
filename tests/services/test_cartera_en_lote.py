@@ -114,6 +114,24 @@ def contar_consultas(db, fn, *args):
     return resultado, consultas[0]
 
 
+def espiar(monkeypatch, nombre, responder):
+    """Cambia la consulta de a uno `CloserFollowUpService.<nombre>` por un espía que anota con qué
+    se la llamó y contesta `responder(argumento)`. Devuelve la lista de llamadas.
+
+    Es para los empates. En SQLite el desempate en memoria del lote ya elige el mismo registro que
+    la base, así que comparar contra la consulta real no se entera si el lote deja de preguntarle
+    — y esa pregunta es justo lo que cubre a Postgres, donde el orden entre empatados depende del
+    plan. Por eso el espía contesta a propósito el registro que el lote NO elegiría solo."""
+    llamadas = []
+
+    def espia(argumento):
+        llamadas.append(argumento)
+        return responder(argumento)
+
+    monkeypatch.setattr(CloserFollowUpService, nombre, staticmethod(espia))
+    return llamadas
+
+
 # --- Cruce venta -> cliente (`_resolve_sales_and_clients`) -------------------------------------
 
 def _dueno(venta_):
@@ -180,6 +198,16 @@ def test_con_el_correo_repetido_gana_el_mismo_cliente_que_la_consulta_de_antes(d
     v = venta(db, mail='ana@x.com')
 
     de_antes = Client.query.filter(func.lower(Client.email) == 'ana@x.com').first()
+    assert _dueno(v) == de_antes.id == primero.id
+
+
+def test_con_el_instagram_repetido_gana_el_mismo_cliente_que_la_consulta_de_antes(db):
+    """El gemelo del correo repetido: el índice de instagram también se queda con el primero."""
+    primero = cliente(db, email=None, instagram='@Ana.IG')
+    cliente(db, email=None, instagram='ana.ig')
+    v = venta(db, mail=None, ig='ana.ig')
+
+    de_antes = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == 'ana.ig').first()
     assert _dueno(v) == de_antes.id == primero.id
 
 
@@ -348,17 +376,27 @@ def test_cuota_pendiente_contra_sin_cronograma(db, vendedor, programa):
 
 
 @freeze_time(HOY)
-def test_dos_cuotas_que_vencen_el_mismo_dia_las_desempata_la_base(db, vendedor, programa):
+def test_dos_cuotas_que_vencen_el_mismo_dia_las_desempata_la_base(db, vendedor, programa, monkeypatch):
     cli = cliente(db, total_amount=None)
     venta(db, mail=cli.email)
     appt = cita(db, vendedor, cli)
     inscripcion(db, cli, programa)
     cuota(db, appt, numero=2, monto=250.0, vence=date(2026, 10, 1))
-    cuota(db, appt, numero=1, monto=300.0, vence=date(2026, 10, 1))
+    # Solo, el lote se quedaría con la de id menor (la de arriba).
+    la_de_la_base = cuota(db, appt, numero=1, monto=300.0, vence=date(2026, 10, 1))
+    # Sin empate no hay nada que preguntar.
+    en_orden = cliente(db, total_amount=None)
+    appt_orden = cita(db, vendedor, en_orden)
+    primera = cuota(db, appt_orden, numero=1, vence=date(2026, 10, 1))
+    cuota(db, appt_orden, numero=2, vence=date(2026, 11, 1))
+    preguntas = espiar(monkeypatch, '_cuota_pendiente_de',
+                       lambda cid: db.session.get(InstallmentPlan, la_de_la_base.id))
 
-    lote = CarteraEnLote([cli.id])
+    lote = CarteraEnLote([cli.id, en_orden.id])
 
-    assert lote.cuota_pendiente[cli.id].id == CloserFollowUpService._cuota_pendiente_de(cli.id).id
+    assert preguntas == [cli.id]
+    assert lote.cuota_pendiente[cli.id].id == la_de_la_base.id
+    assert lote.cuota_pendiente[en_orden.id].id == primera.id
 
 
 @freeze_time(HOY)
@@ -376,28 +414,52 @@ def test_el_programa_es_el_de_la_ultima_venta_por_correo_o_instagram(db, vendedo
 
 
 @freeze_time(HOY)
-def test_dos_ventas_del_mismo_dia_con_programas_distintos_las_desempata_la_base(db, vendedor):
+def test_dos_ventas_del_mismo_dia_con_programas_distintos_las_desempata_la_base(db, vendedor, monkeypatch):
     cli = cliente(db)
+    # Solo, el lote se quedaría con la de id menor: RR.
     venta(db, mail=cli.email, tipo='RR - Completo', fecha=datetime(2026, 6, 1))
-    venta(db, mail=cli.email, tipo='AL - Upsell', fecha=datetime(2026, 6, 1))
-    cita(db, vendedor, cli)
+    la_de_la_base = venta(db, mail=cli.email, tipo='AL - Upsell', fecha=datetime(2026, 6, 1))
+    # Empatadas pero con el mismo programa: da igual cuál gane, no se pregunta.
+    mismo_programa = cliente(db)
+    venta(db, mail=mismo_programa.email, tipo='SI - Seña', fecha=datetime(2026, 6, 1))
+    venta(db, mail=mismo_programa.email, tipo='SI - Saldo', fecha=datetime(2026, 6, 1))
+    # Sin empate tampoco.
+    en_orden = cliente(db)
+    venta(db, mail=en_orden.email, tipo='AL - Completo', fecha=datetime(2026, 1, 1))
+    venta(db, mail=en_orden.email, tipo='RR - Upsell', fecha=datetime(2026, 6, 1))
+    preguntas = espiar(monkeypatch, '_ultima_venta_de',
+                       lambda cli_: db.session.get(FinancialSale, la_de_la_base.id))
 
-    lote = CarteraEnLote([cli.id])
+    lote = CarteraEnLote([cli.id, mismo_programa.id, en_orden.id])
 
-    assert lote.programa[cli.id] == CloserFollowUpService._client_program_code(cli.id)
+    assert [c.id for c in preguntas] == [cli.id]
+    assert [lote.programa[c.id] for c in (cli, mismo_programa, en_orden)] == ['AL', 'SI', 'RR']
 
 
 @freeze_time(HOY)
-def test_la_ultima_cita_empatada_la_desempata_la_base(db, vendedor, make_user):
+def test_la_ultima_cita_empatada_la_desempata_la_base(db, vendedor, make_user, monkeypatch):
     otro = make_user(role='closer', username='otro_closer')
     cli = cliente(db)
     venta(db, mail=cli.email)
-    cita(db, vendedor, cli, cuando=datetime(2026, 8, 1, 15, 0))
-    cita(db, otro, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    la_de_la_base = cita(db, vendedor, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    # Solo, el lote se quedaría con la de id mayor (esta).
+    sin_preguntar = cita(db, otro, cli, cuando=datetime(2026, 8, 1, 15, 0))
+    en_orden = cliente(db)
+    cita(db, vendedor, en_orden, cuando=datetime(2026, 7, 1, 15, 0))
+    ultima = cita(db, vendedor, en_orden, cuando=datetime(2026, 8, 1, 15, 0))
+    preguntas = espiar(monkeypatch, '_ultima_cita_de',
+                       lambda cid: db.session.get(Appointment, la_de_la_base.id))
 
-    lote = CarteraEnLote([cli.id])
+    lote = CarteraEnLote([cli.id, en_orden.id])
 
-    assert lote.ultima_cita[cli.id].id == CloserFollowUpService._ultima_cita_de(cli.id).id
+    assert preguntas == [cli.id]
+    assert lote.ultima_cita[cli.id].id == la_de_la_base.id
+    assert lote.ultima_cita[en_orden.id].id == ultima.id
+    # La tabla Clientes no usa la cita (`cita_exacta=False`): ahí no se pregunta nada.
+    del preguntas[:]
+    sin_exacta = CarteraEnLote([cli.id, en_orden.id], cita_exacta=False)
+    assert preguntas == []
+    assert sin_exacta.ultima_cita[cli.id].id == sin_preguntar.id
 
 
 @freeze_time(HOY)
