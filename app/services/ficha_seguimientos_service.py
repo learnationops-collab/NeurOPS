@@ -77,7 +77,9 @@ def _dia(valor):
 
 
 def _tipo(valor):
-    if valor not in TIPOS_SEGUIMIENTO:
+    # El `isinstance` va primero: una lista en el JSON haría fallar el `in` con un TypeError en
+    # inglés en vez de este motivo.
+    if not isinstance(valor, str) or valor not in TIPOS_SEGUIMIENTO:
         raise ErrorDeAccion('Elegí el tipo de seguimiento de la lista.')
     return valor
 

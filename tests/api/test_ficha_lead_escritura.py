@@ -1004,6 +1004,21 @@ def test_un_seguimiento_mal_pedido_no_se_agenda(client, db, lead, equipo, auth_h
     assert (lead.fecha_seguimiento, lead.seguimiento_tipo) == (None, None)
 
 
+@pytest.mark.parametrize('metodo', ['put', 'patch'])
+def test_un_tipo_que_no_es_texto_se_rechaza_con_un_motivo_en_castellano(client, db, lead, equipo,
+                                                                        auth_headers, metodo):
+    """Una lista en el `in` del diccionario es un TypeError: sin la guarda, la ruta devolvía
+    «unhashable type: 'list'» como motivo."""
+    lead.seguimiento_tipo = 'tomada'
+    db.session.commit()
+
+    r = getattr(client, metodo)(seguimiento(lead), json={'fecha': '2026-10-06', 'tipo': ['tomada']},
+                                headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message'] == 'Elegí el tipo de seguimiento de la lista.'
+
+
 @pytest.mark.parametrize('rol', ['setter', 'triage'])
 def test_quien_no_reporta_no_agenda_seguimientos(client, db, lead, equipo, auth_headers, rol):
     r = client.put(seguimiento(lead), json={'fecha': '2026-10-06', 'tipo': 'tomada'},
