@@ -313,13 +313,31 @@ def test_el_cobro_reusa_la_deuda_y_la_etapa_que_ya_calcula_el_closer(client, db,
     assert cobro['programa_nombre'] == 'Residency Roadmap'
     assert cobro['etapa']['clave'] == 'cuota_proxima'
     assert [c['monto'] for c in cobro['cuotas']] == [600.0]
-    assert cobro['pagos'] == [{'fecha': '2026-08-01T00:00:00', 'medio': 'Stripe',
-                               'monto': 400.0, 'tipo': 'parcial'}]
+    venta = FinancialSale.query.one()
+    assert cobro['pagos'] == [{'id': venta.id, 'fecha': '2026-08-01T00:00:00', 'medio': 'Stripe',
+                               'monto': 400.0, 'tipo': 'parcial', 'tipo_pago': 'RR - Parcial',
+                               'programa_code': 'RR'}]
     assert cobro['ultimo_pago'] == '2026-08-01T00:00:00'
     assert cobro['estado_pagos']['balance_remaining'] == 600.0
     # El total negociado viaja crudo: es el numero del que sale la deuda y el que la ficha deja
     # corregir.
     assert cobro['total'] == 1000.0
+
+
+def test_un_pago_viejo_sin_programa_viaja_con_su_id_y_su_tipo(client, db, comprador, equipo,
+                                                              auth_headers):
+    """281 de las 897 ventas de la base local llegan sin prefijo: el editor del pago tiene que
+    arrancar sin programa, no con uno adivinado, y con el tipo que el texto si dice."""
+    vieja = FinancialSale(mail_cliente='luis@x.com', tipo_pago='Con Seña', monto=100.0,
+                          metodo_pago='Otro', estado='Completada', date=datetime(2026, 7, 1))
+    db.session.add(vieja)
+    db.session.commit()
+
+    pagos = abrir(client, auth_headers, equipo['closer'], client_id=comprador.id).get_json()['cobro']['pagos']
+
+    assert pagos[0] == {'id': vieja.id, 'fecha': '2026-07-01T00:00:00', 'medio': 'Otro',
+                        'monto': 100.0, 'tipo': 'seña', 'tipo_pago': 'Con Seña',
+                        'programa_code': None}
 
 
 def test_un_cliente_sin_total_cargado_no_se_lo_inventa(client, db, comprador, equipo, auth_headers):
