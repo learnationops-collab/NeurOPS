@@ -4,7 +4,17 @@ import { fechaLegible as fecha, SeccionColapsable } from '../piezas';
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
 
-const TONO_CUOTA = { pagada: 'success', vencida: 'error', pendiente: 'idle' };
+// El estado de una cuota tal como lo manda `InstallmentPlan.to_dict()`: 'pendiente', 'pagado' y
+// 'vencido' (que no es una columna — lo deriva de una cuota pendiente con la fecha pasada). Acá
+// estaban escritos en femenino ('pagada', 'vencida'), así que ninguna cuota encontraba su tono ni
+// se contaba en el resumen: un plan cobrado entero se leía "0 pagadas" con todos los chips grises.
+const CUOTA = {
+    pendiente: { label: 'Pendiente', tone: 'idle' },
+    pagado: { label: 'Pagada', tone: 'success' },
+    vencido: { label: 'Vencida', tone: 'error' },
+};
+
+const chipDeCuota = (estado) => CUOTA[String(estado || '').toLowerCase()] || CUOTA.pendiente;
 
 const Chip = ({ label, tono = 'idle' }) => (
     <span className="chip" style={{ '--c': `var(--${tono})` }}>{label}</span>
@@ -58,8 +68,8 @@ const TabHistorial = ({ ficha, irA }) => {
         ? 'Sin plan'
         : [
             `${cuotas.length} ${cuotas.length === 1 ? 'cuota' : 'cuotas'} de ${plata(cuotas[0].monto)}`,
-            `${cuenta('pagada')} pagada${cuenta('pagada') === 1 ? '' : 's'}`,
-            cuenta('vencida') ? `${cuenta('vencida')} vencida${cuenta('vencida') === 1 ? '' : 's'}` : null,
+            `${cuenta('pagado')} pagada${cuenta('pagado') === 1 ? '' : 's'}`,
+            cuenta('vencido') ? `${cuenta('vencido')} vencida${cuenta('vencido') === 1 ? '' : 's'}` : null,
         ].filter(Boolean).join(' · ');
 
     const totalPagado = pagos.reduce((x, p) => x + (Number(p.monto) || 0), 0);
@@ -92,10 +102,9 @@ const TabHistorial = ({ ficha, irA }) => {
                 {cuotas.length ? (
                     <>
                         {cuotas.map((c, i) => (
-                            <Fila key={c.id ?? i} a={fecha(c.fecha)} b={`Cuota ${c.numero ?? i + 1}`}
-                                c={plata(c.monto)}
-                                chip={{ label: c.estado || 'Pendiente',
-                                    tone: TONO_CUOTA[(c.estado || '').toLowerCase()] || 'idle' }} />
+                            <Fila key={c.id ?? i} a={fecha(c.fecha_vencimiento || c.fecha)}
+                                b={`Cuota ${c.numero_cuota ?? c.numero ?? i + 1}`}
+                                c={plata(c.monto)} chip={chipDeCuota(c.estado)} />
                         ))}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
                             <button type="button" className="btn btn--linea btn--sm" onClick={() => irA?.('acciones')}>
