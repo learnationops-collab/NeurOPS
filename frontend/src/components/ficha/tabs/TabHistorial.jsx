@@ -8,6 +8,7 @@ import InlineConfirm from '../../ui/InlineConfirm';
 import FilaAgenda from '../historial/FilaAgenda';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 import AgendarSeguimiento from '../historial/AgendarSeguimiento';
+import FilaPago from '../historial/FilaPago';
 
 const plata = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
 
@@ -322,6 +323,29 @@ const Seguimientos = ({ seguimientos, agendas, vocabulario, puedeEditar, onAccio
     );
 };
 
+/**
+ * La sección «Pagos»: los pagos del cliente, cada uno corregible y borrable en la fila
+ * (`FilaPago`).
+ *
+ * Es para arreglar un error de carga, no para cobrar: cobrar una cuota es «Registrar pago» en
+ * Acciones, que declara la venta y dispara lo que una venta implica. Lo de acá corrige el registro
+ * —la venta y lo que cuenta la deuda— y nada más.
+ */
+const Pagos = ({ pagos, vocabulario, puedeEditar, onAccion }) => {
+    const medios = vocabulario?.medios_pago_venta || [];
+    const programas = vocabulario?.programas || [];
+    const tipos = vocabulario?.tipos_pago_venta || [];
+    if (!pagos.length) return <Vacio texto="Todavía no entró ningún pago." />;
+    return pagos.map((p, i) => (
+        <FilaPago key={p.id ?? `${p.fecha}-${i}`} pago={p} medios={medios} programas={programas}
+            tipos={tipos}
+            // Sin el id de su venta no hay a dónde mandar la corrección (datos viejos).
+            puedeEditar={puedeEditar && p.id != null}
+            onCorregir={(cambios) => onAccion?.('corregir_pago', { pago_id: p.id, ...cambios })}
+            onBorrar={() => onAccion?.('borrar_pago', { pago_id: p.id })} />
+    ));
+};
+
 /** «2 seguimientos · 1 atrasado · próximo 9 oct 2026»: lo que importa, sin abrir la sección. */
 const resumenDeSeguimientos = (seguimientos) => {
     if (!seguimientos.length) return 'Sin seguimientos';
@@ -494,9 +518,9 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                 resumen={pagos.length
                     ? `${pagos.length} ${pagos.length === 1 ? 'pago' : 'pagos'} · ${plata(totalPagado)} en total`
                     : 'Sin pagos'}>
-                {pagos.length
-                    ? pagos.map((p, i) => <Fila key={`${p.fecha}-${i}`} a={fecha(p.fecha)} b={p.medio} c={plata(p.monto)} />)
-                    : <Vacio texto="Todavía no entró ningún pago." />}
+                {/* Mismo permiso que el resto del cobro: es la misma ruta de cobrar. */}
+                <Pagos pagos={pagos} vocabulario={ficha?.vocabulario} puedeEditar={puedeCobrar}
+                    onAccion={onAccion} />
             </SeccionColapsable>
 
             {/* Los eventos del log solo aparecen si el backend los manda: son ruido

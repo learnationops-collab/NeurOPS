@@ -186,6 +186,44 @@ describe('onAccion pega en el endpoint correcto', () => {
         expect(await screen.findByText('Seguimiento agendado.')).toBeInTheDocument();
     });
 
+    describe('corregir un pago del historial', () => {
+        const conVocabularioDePagos = {
+            ...fichaAlDia,
+            vocabulario: { ...fichaAlDia.vocabulario,
+                medios_pago_venta: [{ clave: 'Stripe', label: 'Stripe' }, { clave: 'Hotmart', label: 'Hotmart' }],
+                programas: [{ clave: 'RR', label: 'Residency Roadmap' }],
+                tipos_pago_venta: [{ clave: 'seña', label: 'Seña' }, { clave: 'cuota', label: 'Cuota' }] },
+        };
+        const corregirMonto = async (usuario) => {
+            await usuario.click(screen.getByRole('button', { name: /^Pagos/ }));
+            await usuario.click(screen.getByRole('button', { name: /Corregir el pago/ }));
+            const monto = screen.getByLabelText('Monto');
+            await usuario.clear(monto);
+            await usuario.type(monto, '900');
+            await usuario.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+        };
+
+        it('parchea ESE pago, con el id en la URL y no en el cuerpo', async () => {
+            const usuario = userEvent.setup();
+            await abrir(conVocabularioDePagos);
+            api.patch.mockResolvedValueOnce({ data: { id: 881, espejo: true, deuda: 100 } });
+            await corregirMonto(usuario);
+
+            expect(api.patch).toHaveBeenCalledWith('/ficha/9012/pago/881', { monto: 900 });
+            expect(await screen.findByText('Pago corregido: la deuda se recalculó.')).toBeInTheDocument();
+        });
+
+        it('sin registro en inscripciones, el aviso dice que la deuda no cambió', async () => {
+            // Decir «se recalculó» sería mentirle a quien está mirando un «Debe» que no se movió.
+            const usuario = userEvent.setup();
+            await abrir(conVocabularioDePagos);
+            api.patch.mockResolvedValueOnce({ data: { id: 881, espejo: false, deuda: 0 } });
+            await corregirMonto(usuario);
+
+            expect(await screen.findByText(/la deuda no cambió/)).toBeInTheDocument();
+        });
+    });
+
     it('enviar una nota postea en la ruta de notas y limpia el campo', async () => {
         const usuario = userEvent.setup();
         await abrir(fichaPrecall);

@@ -236,7 +236,9 @@ export const fichaConDeuda = {
             { id: 1, numero: 1, monto: 500, fecha: '2026-10-25', estado: 'pendiente' },
             { id: 2, numero: 2, monto: 500, fecha: '2026-11-25', estado: 'pendiente' },
         ],
-        pagos: [{ fecha: '25 sep 2026', medio: 'Stripe · seña de ingreso', monto: 1000, tipo: 'sena' }],
+        // `ficha_lead_service._cobro`: el id es el de la venta, con el que se corrige o se borra.
+        pagos: [{ id: 881, fecha: '2026-09-25T00:00:00', medio: 'Stripe', monto: 1000, tipo: 'seña',
+            tipo_pago: 'RR - Seña', programa_code: 'RR' }],
         estado_pagos: { al_dia: false, vencidas: 0 },
     },
 };

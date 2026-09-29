@@ -74,6 +74,11 @@ const RUTAS = {
     guardar_total: (appt, p) => api.patch(`/ficha/${appt}/total`, p),
     guardar_programa: (appt, p) => api.patch(`/ficha/${appt}/programa`, p),
     registrar_pago: (appt, p) => api.post(`/ficha/${appt}/venta`, p),
+    // La corrección a mano de un pago desde el historial: NO es `registrar_pago`, que declara una
+    // venta y dispara todo lo que una venta implica. Estas corrigen el registro y nada más. El id
+    // del pago va en la URL y no viaja en el cuerpo.
+    corregir_pago: (appt, { pago_id: pagoId, ...cambios }) => api.patch(`/ficha/${appt}/pago/${pagoId}`, cambios),
+    borrar_pago: (appt, p) => api.delete(`/ficha/${appt}/pago/${p.pago_id}`),
     registrar_seguimiento: (appt, p) => api.post(`/ficha/${appt}/seguimiento`, p),
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),
 

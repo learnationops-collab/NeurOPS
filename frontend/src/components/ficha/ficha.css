@@ -233,6 +233,14 @@
 .dc-shell .fi-seg-op:disabled{cursor:default}
 .dc-shell .fi-seg-op:disabled:not([aria-pressed="true"]){opacity:.5}
 
+/* ---------- Pago del historial ----------
+   La misma franja que un seguimiento: el borde en el envoltorio, el editor adentro con las clases
+   `.fi-agenda-editor/-campos/-pie`, y el lápiz resaltado mientras su editor está abierto. */
+.dc-shell .fi-pago{border-top:1px solid var(--border-subtle)}
+.dc-shell .fi-pago > .fi-sec-fila{border-top:0}
+.dc-shell .fi-pago[data-editando] .ibtn{color:var(--text-on-surface);
+  border-color:var(--border-control)}
+
 /* ---------- Cabecera del modal ---------- */
 /* Dos filas fijas: el nombre con sus botones arriba, los datos abajo.
    Compartir la fila entre el nombre y los datos parecia mas compacto, pero el ancho que

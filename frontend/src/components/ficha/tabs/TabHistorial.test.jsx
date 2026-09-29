@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TabHistorial from './TabHistorial';
 import { fichaPrecall } from '../__fixtures__/ficha';
@@ -306,6 +306,210 @@ describe('los seguimientos del historial', () => {
         expect(screen.queryByRole('group', { name: /Estado del seguimiento/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Corregir día, tipo y nota/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agendar seguimiento' })).not.toBeInTheDocument();
+    });
+});
+
+// Pedido del 29/09/2026: «en los pagos también debería ser fácil crear y modificar pagos, sin
+// automatizaciones». Cada pago del historial se corrige y se borra en la fila.
+const PAGO = {
+    id: 881, fecha: '2026-09-15T00:00:00', medio: 'Stripe', monto: 300, tipo: 'cuota',
+    tipo_pago: 'RR - Cuota', programa_code: 'RR',
+};
+// Una venta vieja: sin prefijo de programa, sin tipo reconocible y con un medio fuera de la lista.
+const VIEJO = {
+    id: 640, fecha: '2025-03-02T00:00:00', medio: 'Binance', monto: 450.5, tipo: null,
+    tipo_pago: 'Ace Learner', programa_code: null,
+};
+// `ficha_vocabulario`: los medios y los tipos de una venta, y los programas.
+const VOCABULARIO_PAGOS = {
+    ...VOCABULARIO,
+    medios_pago_venta: [
+        { clave: 'Stripe', label: 'Stripe' }, { clave: 'Hotmart', label: 'Hotmart' },
+        { clave: 'Otro', label: 'Otro' },
+    ],
+    programas: [{ clave: 'RR', label: 'Residency Roadmap' }, { clave: 'AL', label: 'Ace Learners' }],
+    tipos_pago_venta: [
+        { clave: 'completo', label: 'Completo' }, { clave: 'cuota', label: 'Cuota' },
+        { clave: 'seña', label: 'Seña' },
+    ],
+};
+
+const conPagos = (pagos = [PAGO], extra = {}) => ({
+    ...fichaPrecall,
+    vocabulario: VOCABULARIO_PAGOS,
+    cobro: { ...fichaPrecall.cobro, pagos, programa_code: 'RR', pagado: 300 },
+    ...extra,
+});
+
+const abrirPagos = async (usuario, f = conPagos(), onAccion = vi.fn().mockResolvedValue({})) => {
+    render(<TabHistorial ficha={f} onAccion={onAccion} />);
+    await usuario.click(screen.getByRole('button', { name: /^Pagos/ }));
+    return onAccion;
+};
+
+describe('los pagos del historial', () => {
+    const editor = () => screen.getByRole('group', { name: /Corregir el pago/ });
+    const lapiz = (nombre = /Corregir el pago de \$300/) => screen.getByRole('button', { name: nombre });
+
+    it('la fila dice el día, el tipo, el programa, el medio y el monto', async () => {
+        const usuario = userEvent.setup();
+        await abrirPagos(usuario);
+
+        // Dentro de la fila: «$300» también es lo «Pagado» de la franja de arriba.
+        const fila = screen.getByText('Residency Roadmap · Stripe').closest('.fi-pago');
+        expect(within(fila).getByText('15 sep 2026')).toBeInTheDocument();
+        expect(within(fila).getByText('Cuota')).toBeInTheDocument();
+        expect(within(fila).getByText('$300')).toBeInTheDocument();
+    });
+
+    it('un pago viejo se muestra como está escrito, con sus centavos', async () => {
+        const usuario = userEvent.setup();
+        await abrirPagos(usuario, conPagos([VIEJO]));
+
+        expect(screen.getByText('Ace Learner')).toBeInTheDocument();
+        expect(screen.getByText('Sin programa · Binance')).toBeInTheDocument();
+        expect(screen.getByText('$450,5')).toBeInTheDocument();
+    });
+
+    it('el lápiz abre el editor con lo que el pago tiene hoy y guarda solo lo que cambió', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario);
+        await usuario.click(lapiz());
+
+        expect(within(editor()).getByLabelText('Fecha del pago')).toHaveValue('2026-09-15');
+        expect(within(editor()).getByLabelText('Monto')).toHaveValue(300);
+        expect(within(editor()).getByLabelText('Medio de pago')).toHaveValue('Stripe');
+        expect(within(editor()).getByLabelText('Programa del pago')).toHaveValue('RR');
+        expect(within(editor()).getByLabelText('Tipo de pago')).toHaveValue('cuota');
+        // Dice lo que hace y lo que no: «sin automatizaciones» es lo que se pidió.
+        expect(within(editor()).getByText(/No escribe en Google Sheets ni le avisa a nadie/))
+            .toBeInTheDocument();
+        expect(within(editor()).getByRole('button', { name: 'Guardar cambios' })).toBeDisabled();
+
+        const monto = within(editor()).getByLabelText('Monto');
+        await usuario.clear(monto);
+        await usuario.type(monto, '350');
+        await usuario.selectOptions(within(editor()).getByLabelText('Tipo de pago'), 'completo');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_pago', { pago_id: 881, monto: 350, tipo: 'completo' });
+        expect(screen.queryByRole('group', { name: /Corregir el pago/ })).not.toBeInTheDocument();
+    });
+
+    it('un medio viejo fuera de la lista se muestra y no viaja si no se toca', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario, conPagos([VIEJO]));
+        await usuario.click(lapiz(/Corregir el pago de \$450,5/));
+
+        expect(within(editor()).getByLabelText('Medio de pago')).toHaveValue('Binance');
+        expect(within(editor()).getByRole('option', { name: /Binance \(fuera de la lista\)/ }))
+            .toBeInTheDocument();
+        // El tipo que el texto no dice se ofrece elegirlo, con lo que tiene escrito.
+        expect(within(editor()).getByRole('option', { name: 'Ace Learner · elegí uno' })).toBeInTheDocument();
+        const monto = within(editor()).getByLabelText('Monto');
+        await usuario.clear(monto);
+        await usuario.type(monto, '400');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_pago', { pago_id: 640, monto: 400 });
+    });
+
+    it('cambiarle el tipo a un pago sin programa pide elegir el programa', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario, conPagos([VIEJO]));
+        await usuario.click(lapiz(/Corregir el pago de \$450,5/));
+        await usuario.selectOptions(within(editor()).getByLabelText('Tipo de pago'), 'cuota');
+
+        const guardar = within(editor()).getByRole('button', { name: 'Guardar cambios' });
+        expect(guardar).toBeDisabled();
+        expect(guardar).toHaveAttribute('title', expect.stringMatching(/Elegí también el programa/));
+        await usuario.selectOptions(within(editor()).getByLabelText('Programa del pago'), 'AL');
+        await usuario.click(guardar);
+
+        expect(onAccion).toHaveBeenCalledWith('corregir_pago',
+            { pago_id: 640, programa_code: 'AL', tipo: 'cuota' });
+    });
+
+    it('un monto en cero no se guarda', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario);
+        await usuario.click(lapiz());
+        const monto = within(editor()).getByLabelText('Monto');
+        await usuario.clear(monto);
+        await usuario.type(monto, '0');
+
+        const guardar = within(editor()).getByRole('button', { name: 'Guardar cambios' });
+        expect(guardar).toBeDisabled();
+        expect(guardar).toHaveAttribute('title', 'El monto tiene que ser mayor que cero');
+        expect(onAccion).not.toHaveBeenCalled();
+    });
+
+    it('si el backend rechaza, el editor se queda abierto con lo cargado', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('Ese pago no es de este lead.'));
+        await abrirPagos(usuario, conPagos(), onAccion);
+        await usuario.click(lapiz());
+        await usuario.selectOptions(within(editor()).getByLabelText('Medio de pago'), 'Hotmart');
+        await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(within(editor()).getByLabelText('Medio de pago')).toHaveValue('Hotmart');
+    });
+
+    it('Escape cierra el editor del pago y no llega a cerrar la ficha', async () => {
+        const usuario = userEvent.setup();
+        const cerrarFicha = vi.fn();
+        document.addEventListener('keydown', cerrarFicha);
+        await abrirPagos(usuario);
+        await usuario.click(lapiz());
+        await usuario.keyboard('{Escape}');
+        document.removeEventListener('keydown', cerrarFicha);
+
+        expect(screen.queryByRole('group', { name: /Corregir el pago/ })).not.toBeInTheDocument();
+        expect(cerrarFicha).not.toHaveBeenCalled();
+        expect(lapiz()).toHaveFocus();
+    });
+
+    it('borrar pregunta en su lugar y manda el pedido recién cuando vence el deshacer', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+            const onAccion = await abrirPagos(usuario);
+            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
+            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+
+            expect(onAccion).not.toHaveBeenCalled();
+            await act(async () => { vi.advanceTimersByTime(5000); });
+            expect(onAccion).toHaveBeenCalledWith('borrar_pago', { pago_id: 881 });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('«Deshacer» a tiempo no borra nada', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+            const onAccion = await abrirPagos(usuario);
+            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
+            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+            await usuario.click(screen.getByRole('button', { name: /Deshacer/ }));
+            await act(async () => { vi.advanceTimersByTime(6000); });
+
+            expect(onAccion).not.toHaveBeenCalled();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('quien no puede cobrar ve los pagos pero no los corrige ni los borra', async () => {
+        const usuario = userEvent.setup();
+        await abrirPagos(usuario, conPagos([PAGO], {
+            permisos: { ...fichaPrecall.permisos, cobrar: false },
+        }));
+
+        expect(screen.getByText('Residency Roadmap · Stripe')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Corregir el pago/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Borrar el pago/ })).not.toBeInTheDocument();
     });
 });
 

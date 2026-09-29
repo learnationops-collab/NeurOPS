@@ -66,6 +66,15 @@ const MENSAJES = {
     editar_evento: 'Evento reescrito.',
     borrar_evento: 'Evento borrado del registro.',
     registrar_pago: 'Pago registrado.',
+    // Un pago corregido mueve también la deuda... cuando el backend encuentra su registro en
+    // inscripciones (`espejo`). Si no lo encuentra corrige solo la venta, y decir «la deuda se
+    // recalculó» sería mentirle a quien está mirando un «Debe» que no se movió.
+    corregir_pago: (r) => (r?.espejo === false
+        ? 'Pago corregido. No se encontró su registro en inscripciones, así que la deuda no cambió.'
+        : 'Pago corregido: la deuda se recalculó.'),
+    borrar_pago: (r) => (r?.espejo === false
+        ? 'Pago borrado. No tenía registro en inscripciones: la deuda no cambió.'
+        : 'Pago borrado: la deuda se recalculó.'),
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: 'Baja registrada.',
     enviar_nota: 'Nota enviada.',
@@ -184,7 +193,7 @@ const FichaLeadModal = ({
                 return resultado;
             }
             await cargar();
-            // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos`).
+            // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos` y `corregir_pago`).
             const mensaje = MENSAJES[nombre];
             setAviso({ tono: 'success',
                 texto: (typeof mensaje === 'function' ? mensaje(resultado) : mensaje) || 'Guardado.' });
