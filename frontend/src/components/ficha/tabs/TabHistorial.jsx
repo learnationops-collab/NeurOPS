@@ -173,7 +173,11 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
                             title="Reescribir este evento" onClick={() => abrir(e)}>
                             <Pencil size={14} />
                         </button>
-                        <InlineConfirm compacto label="Borrar" title="Borrar este evento"
+                        {/* `alto`/`corner`/`tamIcono` le ponen al botón el uniforme del
+                            `.ibtn` de al lado —círculo de 40px con el ícono a 17— para que la
+                            fila no termine en un lápiz redondo seguido de un rectángulo. */}
+                        <InlineConfirm compacto alto={40} corner={999} tamIcono={17}
+                            label="Borrar" title="Borrar este evento"
                             confirmLabel="Sí, borrar" doneLabel="Borrado"
                             onConfirm={() => borrar(e.id)} />
                     </>
