@@ -217,7 +217,12 @@ describe('TabAcciones', () => {
     expect(screen.getByRole('button', { name: 'Armar plan de cuotas' })).toBeInTheDocument();
   });
 
-  it('registrar un pago valida el monto y manda registrar_pago', async () => {
+  it('registrar un pago valida el monto y lo manda en el idioma de la ruta de venta', async () => {
+    // Las claves NO son las del formulario (monto/fecha/medio) sino las de
+    // `POST /ficha/<id>/venta`, que pasa por `SheetsService.post_to_sheets`: `tipo_pago`,
+    // `monto`, `metodo_pago` y `marca_temporal`. Este test pedía las del formulario, que es
+    // justamente el contrato que no existía — sin `tipo_pago` la ruta respondía
+    // «Falta tipo_pago (ej. "RR - Parcial")» y el cobro no se registraba nunca.
     const user = userEvent.setup();
     const p = props(fichaConDeuda);
     render(<TabAcciones {...p} />);
@@ -226,10 +231,31 @@ describe('TabAcciones', () => {
     await user.type(screen.getByLabelText('Monto'), '500');
     await user.click(screen.getByRole('button', { name: 'Stripe' }));
     await user.click(screen.getByRole('button', { name: /^Registrar pago$/ }));
-    expect(p.onAccion).toHaveBeenCalledWith('registrar_pago', expect.objectContaining({
-      monto: 500, medio: 'Stripe', programa_code: 'AL',
-    }));
-    expect(screen.getByRole('status')).toHaveTextContent('Pago registrado.');
+    expect(p.onAccion).toHaveBeenCalledWith('registrar_pago', {
+      tipo_pago: 'AL - Cuota',
+      monto: 500,
+      metodo_pago: 'Stripe',
+      // La fecha arranca en hoy: se comprueba la forma, no el día, o el test caduca mañana.
+      marca_temporal: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
+    // El aviso de «Pago registrado.» lo pone el cascarón (`MENSAJES` en `FichaLeadModal`), no
+    // esta pestaña: cuando lo ponían los dos salían dos avisos idénticos apilados. Lo que sí le
+    // toca a la pestaña es volver al menú de las cuatro acciones.
+    expect(await screen.findByRole('button', { name: 'Armar plan de cuotas' })).toBeInTheDocument();
+  });
+
+  it('sin programa no se ofrece el formulario de pago, y se dice por qué', async () => {
+    // Un cobro se declara como «programa – Cuota»: sin el prefijo no hay `tipo_pago` que mandar.
+    // Se avisa acá en vez de dejar que la ruta lo rechace después de cargar todo.
+    const user = userEvent.setup();
+    const sinPrograma = {
+      ...fichaConDeuda,
+      cobro: { ...fichaConDeuda.cobro, programa_code: null, programa_nombre: null },
+    };
+    render(<TabAcciones {...props(sinPrograma)} />);
+    await user.click(screen.getByRole('button', { name: 'Registrar pago' }));
+    expect(screen.getByText(/no tiene programa asignado/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Monto')).toBeNull();
   });
 
   it('el plan de cuotas arranca del plan existente y avisa cuando no cuadra', async () => {
