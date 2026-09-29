@@ -98,6 +98,22 @@ def seguimiento(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.seguimiento)
 
 
+@bp.route('/<int:appt_id>/seguimiento', methods=['PUT'])
+def agendar_seguimiento(appt_id):
+    """Agenda el seguimiento de ESTA agenda desde el historial, o reemplaza el que tiene.
+
+    Es otra cosa que el `POST` de arriba, que es «Registrar seguimiento» de Acciones: un
+    seguimiento de cobro con canal, que pasa por el guardado del mazo. Este elige el tipo, apunta
+    a cualquier agenda del cliente y no toca el mazo (ver `ficha_seguimientos_service`).
+
+    El permiso es `reportar`, el mismo con el que se corrige la agenda en la misma sección y con
+    el que el árbol de reporte de la llamada programa un seguimiento de cualquier tipo.
+    """
+    from app.services import ficha_seguimientos_service as seguimientos
+
+    return _ejecutar(appt_id, 'reportar', seguimientos.agendar)
+
+
 @bp.route('/<int:appt_id>/plan-cuotas', methods=['PUT'])
 def plan_cuotas(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.plan_cuotas)

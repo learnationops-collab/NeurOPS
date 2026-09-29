@@ -901,6 +901,119 @@ def test_mover_la_agenda_mueve_su_fila_del_tablero(client, db, lead, equipo, aut
     assert (lead.start_time, lead.origin) == (nueva, 'workshop')
 
 
+# --- Seguimientos del historial ---------------------------------------------------------------
+#
+# Pedido del 29/09/2026: los seguimientos se crean y se les cambia el estado desde el historial.
+# Un seguimiento vive en columnas de su agenda (uno por agenda), y la ruta apunta a ESA agenda.
+
+def seguimiento(appt):
+    return f'/api/ficha/{appt.id}/seguimiento'
+
+
+def test_se_agenda_un_seguimiento_sobre_una_agenda_vieja_del_mismo_cliente(client, db, lead,
+                                                                         equipo, auth_headers):
+    vieja = _agenda_vieja(db, lead, equipo, closer_result='Show up', closer_processed=True)
+
+    r = client.put(seguimiento(vieja),
+                   json={'fecha': '2026-10-06', 'tipo': 'tomada', 'nota': '  Lo habla con la esposa '},
+                   headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert (vieja.fecha_seguimiento, vieja.seguimiento_tipo, vieja.seguimiento_sub) == \
+        ('2026-10-06', 'tomada', 'Lo habla con la esposa')
+    assert (vieja.seguimiento_realizado, vieja.seguimiento_intento) == (False, 1)
+    assert r.get_json()['reemplazado'] is False
+    # La agenda que abrió la ficha no se tocó.
+    assert lead.fecha_seguimiento is None
+
+
+def test_el_seguimiento_agendado_le_aparece_al_closer_en_su_pestana(client, db, lead, equipo,
+                                                                   auth_headers):
+    """Lo que importa de agendarlo: que el closer dueño de la agenda lo vea ese día, en el grupo
+    del tipo elegido, con la nota que se escribió."""
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    vieja = _agenda_vieja(db, lead, equipo, closer_result='No Show', closer_processed=True)
+    client.put(seguimiento(vieja), json={'fecha': '2026-10-06', 'tipo': 'cerrada',
+                                         'nota': 'Cobrar la segunda cuota'},
+               headers=auth_headers(equipo['director']))
+
+    del_dia = CloserFollowUpService.get_today_grouped(equipo['closer'].id, '2026-10-06')
+
+    assert [(s['id'], s['seguimiento_sub']) for s in del_dia['cerrada']] == \
+        [(vieja.id, 'Cobrar la segunda cuota')]
+    assert del_dia['no_tomada'] == [] and del_dia['tomada'] == []
+    # El día anterior todavía no le toca.
+    assert CloserFollowUpService.get_today_grouped(equipo['closer'].id, '2026-10-05')['cerrada'] == []
+
+
+def test_agendar_un_seguimiento_no_saca_la_llamada_del_mazo_ni_inventa_un_contacto(
+        client, db, lead, equipo, auth_headers):
+    """El guardado del mazo marca la agenda como procesada con cualquier campo de seguimiento;
+    por aca no se pasa por ahi: la llamada de mañana seguiria sin ocurrir, fuera del mazo."""
+    r = client.put(seguimiento(lead), json={'fecha': '2026-10-06', 'tipo': 'no_tomada'},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert lead.closer_processed is False
+    assert (lead.closer_result, lead.result) == ('Pendiente', 'conversando')
+    # «Seguimientos hechos hoy» y la meta diaria salen de un contacto real, no de esto.
+    assert (lead.last_contact_outcome, lead.last_contact_at) == (None, None)
+
+
+def test_agendar_sobre_una_agenda_con_seguimiento_lo_reemplaza_y_queda_en_la_bitacora(
+        client, db, lead, equipo, auth_headers):
+    vieja = _agenda_vieja(db, lead, equipo, closer_result='No Show', closer_processed=True,
+                          fecha_seguimiento='2026-09-20', seguimiento_tipo='no_tomada',
+                          seguimiento_sub='No show: no contestó', seguimiento_intento=3,
+                          followup_reminder_enabled=True, followup_reminder_time='10:00')
+
+    r = client.put(seguimiento(vieja), json={'fecha': '2026-10-06', 'tipo': 'tomada'},
+                   headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['reemplazado'] is True
+    # Es un seguimiento nuevo: la cadencia arranca del primer contacto, sin nota heredada.
+    assert (vieja.seguimiento_intento, vieja.seguimiento_sub) == (1, None)
+    # El aviso por WhatsApp se pide por seguimiento: el del anterior no se hereda.
+    assert vieja.followup_reminder_enabled is False
+    evento = LeadEventLog.query.filter_by(appointment_id=vieja.id,
+                                          action_type='seguimiento_agendado').one()
+    assert 'direccion agendó un seguimiento' in evento.description
+    assert '2026-10-06 · pendiente · Llamadas tomadas' in evento.description
+    assert 'reemplaza al que tenía la agenda (2026-09-20 · pendiente · Llamadas no tomadas · ' \
+           '«No show: no contestó»)' in evento.description
+
+
+@pytest.mark.parametrize('datos', [
+    {},
+    {'fecha': '2026-10-06'},                                   # sin tipo
+    {'fecha': '2026-10-06', 'tipo': 'urgente'},                # tipo que no existe
+    {'fecha': '2026-10-06T10:00', 'tipo': 'tomada'},           # un instante, no un día
+    {'fecha': 'la semana que viene', 'tipo': 'tomada'},
+    {'fecha': '0202-10-06', 'tipo': 'tomada'},                 # año mal tipeado
+    {'fecha': '2026-02-30', 'tipo': 'tomada'},
+    {'fecha': '2026-10-06', 'tipo': 'tomada', 'nota': 'x' * 256},
+    {'fecha': '2026-10-06', 'tipo': 'tomada', 'nota': ['una', 'lista']},
+])
+def test_un_seguimiento_mal_pedido_no_se_agenda(client, db, lead, equipo, auth_headers, datos):
+    r = client.put(seguimiento(lead), json=datos, headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 400
+    assert r.get_json()['message']
+    assert (lead.fecha_seguimiento, lead.seguimiento_tipo) == (None, None)
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_reporta_no_agenda_seguimientos(client, db, lead, equipo, auth_headers, rol):
+    r = client.put(seguimiento(lead), json={'fecha': '2026-10-06', 'tipo': 'tomada'},
+                   headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert r.get_json()['accion'] == 'reportar'
+    assert lead.fecha_seguimiento is None
+
+
 # El programa de un cliente vive en el prefijo de `tipo_pago`. Asignarlo es reetiquetar sus
 # ventas, porque es de ahi que lo leen el libro comercial, el plan de cuotas y la comision.
 
@@ -1147,6 +1260,7 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         client.post(url(lead, '/descartar'), json={'motivo': 'x'}),
         client.patch(url(lead, '/closer'), json={'closer_id': 1}),
         client.post(url(lead, '/seguimiento'), json={'fecha': '2026-10-01'}),
+        client.put(url(lead, '/seguimiento'), json={'fecha': '2026-10-01', 'tipo': 'tomada'}),
         client.put(url(lead, '/plan-cuotas'), json={'total': 1, 'num_cuotas': 1}),
         client.post(url(lead, '/baja'), json={'motivo': 'x'}),
         client.post(url(lead, '/nota'), json={'texto': 'x'}),
