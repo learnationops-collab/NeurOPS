@@ -468,6 +468,84 @@ def test_cada_agenda_del_historial_trae_con_que_corregirla(client, db, lead, equ
                       'Setters': ['Elias', 'Paula', 'Ivan']}
 
 
+def test_cada_seguimiento_del_historial_dice_de_que_agenda_es(client, db, lead, equipo,
+                                                             auth_headers):
+    """Un seguimiento vive en columnas de su agenda: sin el id, la fila no tiene por donde
+    corregirse (`PATCH /ficha/<id>/seguimiento`) ni puede decir de cual llamada cuelga."""
+    vieja = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                        start_time=datetime(2026, 9, 1, 15, 0), closer_result='No Show',
+                        closer_processed=True, fecha_seguimiento='2026-09-04',
+                        seguimiento_tipo='no_tomada', seguimiento_sub='No show: no contestó',
+                        seguimiento_intento=2, seguimiento_realizado=False)
+    db.session.add(vieja)
+    db.session.commit()
+
+    seguimientos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
+        .get_json()['historial']['seguimientos']
+
+    assert seguimientos == [{'agenda_id': vieja.id, 'agenda_fecha': '2026-09-01T15:00:00',
+                             'fecha': '2026-09-04', 'canal': None,
+                             'nota': 'No show: no contestó', 'tipo': 'no_tomada',
+                             'realizado': False, 'intento': 2}]
+
+
+def test_un_seguimiento_programado_sin_fecha_ni_nota_tambien_se_lista(client, db, lead, equipo,
+                                                                      auth_headers):
+    """Es lo que deja «Programar seguimiento» sin fecha: el closer lo ve en su pool como «Asignar
+    fecha», así que la ficha no puede decir que no hay ninguno."""
+    lead.seguimiento_tipo = 'tomada'
+    db.session.commit()
+
+    seguimientos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
+        .get_json()['historial']['seguimientos']
+
+    assert [(s['agenda_id'], s['tipo'], s['fecha']) for s in seguimientos] == \
+        [(lead.id, 'tomada', None)]
+
+
+def test_el_tipo_de_un_seguimiento_sin_tipo_escrito_sale_de_la_llamada(client, db, lead, equipo,
+                                                                       auth_headers):
+    """Mismo criterio que la pestaña Seguimientos del closer (`_effective_tipo`): un no show que
+    nunca se clasificó cae en «Llamadas no tomadas»."""
+    vieja = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                        start_time=datetime.utcnow() - timedelta(days=5), closer_result='No Show',
+                        closer_processed=True, fecha_seguimiento='2026-10-01')
+    db.session.add(vieja)
+    db.session.commit()
+
+    seguimientos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
+        .get_json()['historial']['seguimientos']
+
+    assert [s['tipo'] for s in seguimientos] == ['no_tomada']
+
+
+def test_cada_agenda_trae_con_que_tipo_se_le_agenda_un_seguimiento(client, db, lead, equipo,
+                                                                  auth_headers):
+    asistio = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                          start_time=datetime.utcnow() - timedelta(days=3),
+                          closer_result='Show up', closer_processed=True)
+    no_vino = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                          start_time=datetime.utcnow() - timedelta(days=9),
+                          closer_result='No Show', closer_processed=True)
+    db.session.add_all([asistio, no_vino])
+    db.session.commit()
+
+    agendas = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
+        .get_json()['historial']['agendas']
+
+    tipos = {a['id']: a['tipo_seguimiento'] for a in agendas}
+    # La llamada de mañana todavía no dice nada: un lead que no compró es recuperación.
+    assert tipos == {lead.id: 'no_tomada', asistio.id: 'tomada', no_vino.id: 'no_tomada'}
+
+
+def test_a_un_cliente_que_ya_compro_se_le_agenda_cobranza(client, db, comprador, equipo,
+                                                         auth_headers):
+    agendas = abrir(client, auth_headers, equipo['director'], client_id=comprador.id) \
+        .get_json()['historial']['agendas']
+
+    assert [a['tipo_seguimiento'] for a in agendas] == ['cerrada']
+
+
 def test_la_bitacora_del_lead_viaja_en_el_historial(client, db, lead, equipo, auth_headers):
     """Con las MISMAS claves que las otras secciones del historial: `fecha` y `detalle`.
 

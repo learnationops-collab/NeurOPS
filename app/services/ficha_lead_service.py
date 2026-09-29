@@ -376,7 +376,7 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
         'resultado': _resultado(appt, ventas, estado_libro, confirmacion['cerrada'], deuda,
                                 tipos_vendidos, con_seguimiento),
         'cobro': _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt),
-        'historial': secciones.historial(appts, ahora),
+        'historial': secciones.historial(appts, ahora, tiene_venta=bool(ventas)),
         'formulario': secciones.formulario(client),
         'comunicacion': {'notas': secciones.notas(client, appt), 'equipo': secciones.equipo()},
         'permisos': permisos_de(usuario, appt),

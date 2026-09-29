@@ -58,11 +58,35 @@ _CHIP_AGENDA = {
 }
 
 
-def historial(appts, ahora):
+def tiene_seguimiento(appt):
+    """Si esta agenda tiene un seguimiento registrado.
+
+    Un seguimiento no es una fila propia: vive en columnas de `Appointment`, UNO por agenda (ver
+    `ficha_seguimientos_service`). Cuenta como registrado si tiene fecha, nota o tipo. El tipo
+    solo, sin fecha ni nota, es un seguimiento de verdad: es lo que deja «Programar seguimiento»
+    sin fecha, y el closer lo ve en el pool de su pestaña Seguimientos como «Asignar fecha».
+
+    La misma regla decide qué filas lista el historial y sobre qué agenda hay algo que corregir:
+    si fueran dos, la ficha podría mostrar un seguimiento que la corrección dice que no existe.
+    """
+    return bool(appt.fecha_seguimiento or appt.seguimiento_sub or appt.seguimiento_tipo)
+
+
+def historial(appts, ahora, tiene_venta=False):
+    """Agendas, seguimientos y bitácora de TODAS las agendas del cliente.
+
+    `tiene_venta` es el «¿este cliente ya compró?» que la ficha resolvió una sola vez con su cruce
+    de ventas. Con él se clasifica cada seguimiento como lo clasifica la pestaña Seguimientos del
+    closer (`CloserFollowUpService._effective_tipo`) sin una consulta a las ventas por agenda.
+    """
+    from app.services.closer_followup_service import CloserFollowUpService
     from app.services.comercial_service import post_call_de, pre_call_de
 
     agendas, seguimientos = [], []
     for a in appts:
+        # El tipo con el que un seguimiento de esta agenda cae en la pestaña Seguimientos: el que
+        # tiene escrito o, si nunca se le programó uno, el que se deduce de cómo fue la llamada.
+        tipo_efectivo = CloserFollowUpService._effective_tipo(a, has_sale=tiene_venta)
         estado = estado_de_agenda(a, ahora)
         if a.start_time and a.start_time > ahora and estado in ('por_confirmar', 'confirmada'):
             label, tono = 'Próxima', 'info'
@@ -81,14 +105,26 @@ def historial(appts, ahora):
                         # El id y no solo el nombre: es con lo que la fila arranca elegido el
                         # closer cuando se corrige la agenda (`PATCH /ficha/<id>/agenda`).
                         'closer_id': a.closer_id,
-                        'fuente': a.origin or None})
-        if a.fecha_seguimiento or a.seguimiento_sub:
+                        'fuente': a.origin or None,
+                        # Con qué tipo arranca «Agendar seguimiento» sobre esta agenda. Si la
+                        # llamada no dice nada (todavía no pasó, o fue una venta), un cliente
+                        # que ya compró es cobranza y el resto, recuperación.
+                        'tipo_seguimiento': tipo_efectivo
+                        or ('cerrada' if tiene_venta else 'no_tomada')})
+        if tiene_seguimiento(a):
             seguimientos.append({
-                'fecha': a.fecha_seguimiento,
+                # De qué agenda es: con ese id se corrige (`PATCH /ficha/<id>/seguimiento`), y
+                # la fecha es para que la fila diga de cuál de las llamadas del cliente cuelga.
+                'agenda_id': a.id,
+                'agenda_fecha': _iso(a.start_time),
+                'fecha': a.fecha_seguimiento or None,
                 # No hay columna de canal: los seguimientos se registran sin medio. Se devuelve
                 # None en vez de inventar "WhatsApp", que es lo que mas se usa pero no es un dato.
                 'canal': None,
                 'nota': a.seguimiento_sub or None,
+                # None cuando no lo dicen ni la columna ni la llamada; la fila lo muestra «sin
+                # tipo» en vez de adivinar uno.
+                'tipo': tipo_efectivo,
                 'realizado': bool(a.seguimiento_realizado),
                 'intento': a.seguimiento_intento or 1,
             })
