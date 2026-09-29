@@ -33,11 +33,13 @@ const VistaTarjetas = ({ filas, clave, titulo, subtitulo, chips, campos, onAbrir
         {filas.map((fila, i) => (
             <motion.button key={clave(fila)} type="button" className="reg-tarjeta"
                 aria-label={`Abrir ${titulo(fila)}`}
-                initial={quieto ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                // Recorrido y curva como la fila de la tabla, más un poco de escala: una tarjeta
+                // es un bloque, y crecer apenas es lo que la hace leerse como "llegando".
+                initial={quieto ? false : { opacity: 0, y: 14, scale: .98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={quieto
                     ? { duration: 0 }
-                    : { duration: .22, ease: 'easeOut', delay: escalonDe(i - desde) / 1000 }}
+                    : { duration: .36, ease: [.22, 1, .36, 1], delay: escalonDe(i - desde) / 1000 }}
                 onClick={() => onAbrir(fila)}>
                 <span className="reg-tarjeta-cab">
                     <span className="reg-tarjeta-nom">

@@ -9,13 +9,23 @@ import './huesos.css';
  * está viniendo, así que al llegar los datos no hay salto: ése es el punto, y por eso un hueso
  * que NO coincide con lo que carga es peor que el spinner.
  *
- * `paso` es el lugar del hueso en la fila de entrada. Está topeado (`TOPE_ESCALON`) porque el
- * escalonado acumulado no puede crecer sin límite: una tabla de 40 huesos a 45 ms cada uno
- * tardaría casi dos segundos en terminar de dibujarse, más de lo que tarda el fetch.
+ * `paso` es el lugar del hueso en la fila de entrada. El mismo escalón lo usan las filas y las
+ * tarjetas reales cuando llegan los datos, así que el esqueleto y la lista entran con el mismo
+ * ritmo.
+ *
+ * El ritmo es deliberadamente perceptible. Con 45 ms y tope en 12, las doce primeras filas
+ * entraban en medio segundo y el resto de golpe: técnicamente escalonado, pero a simple vista
+ * era un bloque apareciendo. El pedido fue "que cargue uno por uno, aunque sea más lento". Con
+ * 60 ms y tope en 24, lo que entra en pantalla a la vez (unas quince filas) aparece de a una,
+ * y la primera fila sigue estando a la vista en 60 ms: se ve el movimiento sin esperar el dato.
+ *
+ * El tope sigue haciendo falta. Sin él, la fila 40 de una página entraría 2,4 s tarde y la 500
+ * medio minuto después. Con 24, todo lo que está por debajo del borde de la ventana termina de
+ * entrar en menos de un segundo y medio, antes de que nadie llegue a scrollear hasta ahí.
  */
 
-const PASO_MS = 45;
-const TOPE_ESCALON = 12;
+const PASO_MS = 60;
+const TOPE_ESCALON = 24;
 
 /** El retraso de entrada del elemento número `i`, ya topeado. Lo usan también las filas reales. */
 export const escalonDe = (i, paso = PASO_MS) => Math.min(Math.max(i, 0), TOPE_ESCALON) * paso;

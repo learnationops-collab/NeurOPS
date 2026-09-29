@@ -159,18 +159,22 @@ const Encabezado = ({ def, plantilla }) => (
 );
 
 /* Cada fila entra por su cuenta, escalonada dentro de la página que está entrando (`desde`).
-   El escalonado va topeado en `escalonDe`: 500 filas a 45 ms acumulados serían 22 segundos de
-   animación. Las filas ya montadas no vuelven a animarse porque la `key` es estable, así que al
-   llegar la página siguiente sólo se mueven las nuevas. */
+   El escalonado va topeado en `escalonDe` (ver ahí los números). Las filas ya montadas no vuelven
+   a animarse porque la `key` es estable, así que al llegar la página siguiente sólo se mueven las
+   nuevas.
+
+   El recorrido es de 12 px y la curva frena al final: con 6 px y 0,2 s la fila aparecía casi en
+   su lugar y el escalonado no se percibía, que era justo lo que se había pedido ver. */
+const ENTRADA_FILA = { duration: .34, ease: [.22, 1, .36, 1] };
 const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto }) => filas.map((fila, i) => (
     <motion.div key={claveDe(fila)} className="tabla-fila"
         role="button" tabIndex={0} style={{ '--cols': plantilla }}
         aria-label={`Abrir ${fila.cliente}`}
-        initial={quieto ? false : { opacity: 0, y: 6 }}
+        initial={quieto ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={quieto
             ? { duration: 0 }
-            : { duration: .2, ease: 'easeOut', delay: escalonDe(i - desde) / 1000 }}
+            : { ...ENTRADA_FILA, delay: escalonDe(i - desde) / 1000 }}
         onClick={() => onAbrirFila(fila)}
         onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
