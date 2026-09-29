@@ -51,8 +51,13 @@ def main():
                    .filter(FinancialAgenda.date >= args.desde,
                            FinancialAgenda.duplicada_de_id.is_(None))
                    .order_by(FinancialAgenda.created_at).all())
+        # Quién tiene venta, de una sola consulta. Preguntándolo por candidato eran cientos
+        # de consultas contra el proxy público y el backfill tardaba minutos por marca.
+        ventas = dedup.identidades_con_venta()
+
         modo = 'APLICANDO' if args.apply else 'DRY-RUN (no se escribió nada)'
-        print(f"--- {len(agendas)} agendas vigentes desde {args.desde} · {modo} ---")
+        print(f"--- {len(agendas)} agendas vigentes desde {args.desde} · {modo} "
+              f"· {len(ventas)} identidades con venta ---")
 
         # De la más nueva a la más vieja: al resolver un choque queremos que la fila que
         # sobra sea, en igualdad de condiciones, la que llegó después.
@@ -74,7 +79,7 @@ def main():
                 # Mismo cálculo que el modo real, no una copia: `simular` devuelve las
                 # decisiones sin escribirlas.
                 for conservada, sobrante, motivo in dedup.reconciliar(
-                        agenda, simular=True, universo=agendas):
+                        agenda, simular=True, universo=agendas, ventas_conocidas=ventas):
                     if sobrante.id in ya_resueltas or conservada.id in ya_resueltas:
                         continue
                     ya_resueltas.add(sobrante.id)
@@ -84,7 +89,7 @@ def main():
                     marcadas += 1
                 continue
 
-            for sobrante in dedup.reconciliar(agenda, universo=agendas):
+            for sobrante in dedup.reconciliar(agenda, universo=agendas, ventas_conocidas=ventas):
                 print(f"  {(agenda.lead or '')[:28]:<28} marcada #{sobrante.id} "
                       f"({sobrante.descartada_motivo})")
                 marcadas += 1

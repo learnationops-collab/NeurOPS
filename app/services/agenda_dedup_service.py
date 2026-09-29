@@ -161,12 +161,32 @@ def motivo_probable(grupo):
     return 'volvio_a_agendar'
 
 
-def sugerir_conservada(grupo):
+def identidades_con_venta():
+    """Todas las identidades (mail e instagram normalizados) que tienen alguna venta.
+
+    Una sola consulta para lo que si no es una por candidato. La usa el backfill, que
+    evalúa cientos de pares: contra el proxy público esas consultas sueltas lo volvían
+    inviable (tardaba minutos por marca).
+    """
+    from app.models import FinancialSale
+
+    conocidas = set()
+    for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+        for valor in (_normalize_email(mail), _normalize_instagram(ig)):
+            if valor:
+                conocidas.add(valor)
+    return conocidas
+
+
+def sugerir_conservada(grupo, ventas_conocidas=None):
     """Cuál de las filas del grupo conviene conservar.
 
     Manda lo que ya ocurrió: una agenda con venta cargada, después una con resultado real
     del closer, y recién si ninguna tiene historia, la de la reunión más reciente — que en
     una reprogramación es la que vale.
+
+    `ventas_conocidas` es el conjunto que devuelve `identidades_con_venta()`: cuando se
+    pasa, saber si hay venta no cuesta una consulta por candidato.
     """
     from app.models import FinancialSale
 
@@ -175,6 +195,8 @@ def sugerir_conservada(grupo):
         mail = _normalize_email(a.mail)
         if not ig and not mail:
             return False
+        if ventas_conocidas is not None:
+            return bool((mail and mail in ventas_conocidas) or (ig and ig in ventas_conocidas))
         consulta = FinancialSale.query
         if mail:
             return consulta.filter(db.func.lower(FinancialSale.mail_cliente) == mail).count() > 0
@@ -264,7 +286,7 @@ def _hermanas_del_mismo_dia(agenda, universo=None):
     return hermanas
 
 
-def reconciliar(agenda, actor_id=None, simular=False, universo=None):
+def reconciliar(agenda, actor_id=None, simular=False, universo=None, ventas_conocidas=None):
     """Hace cumplir la regla: un lead no puede tener dos agendas el mismo día a la misma hora.
 
     La definió Kerwin el 28/09/2026 mirando el libro:
@@ -280,7 +302,8 @@ def reconciliar(agenda, actor_id=None, simular=False, universo=None):
     marcó, vacía si no había nada que reconciliar. Con `simular=True` no escribe: devuelve
     las decisiones (conservada, sobrante, motivo) que tomaría.
     """
-    decisiones = decidir_reconciliacion(agenda, universo=universo)
+    decisiones = decidir_reconciliacion(agenda, universo=universo,
+                                        ventas_conocidas=ventas_conocidas)
     if simular:
         return decisiones
 
@@ -297,7 +320,7 @@ def reconciliar(agenda, actor_id=None, simular=False, universo=None):
     return marcadas
 
 
-def decidir_reconciliacion(agenda, universo=None):
+def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
     """Qué haría `reconciliar` con esta agenda, sin tocar nada.
 
     Devuelve una lista de (conservada, sobrante, motivo). Existe aparte para que el
@@ -315,7 +338,7 @@ def decidir_reconciliacion(agenda, universo=None):
         distancia = abs((hermana.date - agenda.date).total_seconds())
 
         if distancia <= MINUTOS_MISMA_HORA * 60:
-            conservada = sugerir_conservada([agenda, hermana])
+            conservada = sugerir_conservada([agenda, hermana], ventas_conocidas)
             motivo = 'automático: misma persona, mismo día y misma hora'
         elif _sin_resolver(hermana) and _sin_resolver(agenda):
             # Reprogramación: manda la hora que se cargó último. Si alguna de las dos ya
