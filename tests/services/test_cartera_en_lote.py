@@ -482,6 +482,41 @@ def test_el_cliente_sin_cita_recibe_su_ancla_una_sola_vez(db, vendedor, programa
 
 
 @freeze_time(HOY)
+def test_el_ancla_no_toma_la_venta_de_otro_por_tener_los_dos_el_instagram_vacio(db, vendedor, make_user):
+    """El cliente solo tiene correo. La búsqueda de su venta comparaba también el instagram, y con
+    el del cliente vacío la condición quedaba `instagram == ''`: encontraba la venta más vieja de
+    cualquiera sin instagram, y el ancla salía con la fecha y el closer de esa."""
+    make_user(role='closer', username='ajeno', email='ajeno@neuro.com')
+    venta(db, mail='otra.persona@x.com', ig='', fecha=datetime(2025, 12, 5), vendedor='ajeno@neuro.com')
+    cli = cliente(db, instagram=None)
+    venta(db, mail=cli.email, fecha=datetime(2026, 2, 3))
+
+    ancla = CloserFollowUpService._ensure_appointment_for_client(cli)
+
+    assert (ancla.closer_id, ancla.start_time) == (vendedor.id, datetime(2026, 2, 3))
+
+
+@freeze_time(HOY)
+def test_el_ancla_sin_correo_ni_instagram_no_cruza_con_ventas_vacias(db, vendedor, make_user):
+    """Sin correo ni instagram la venta se encuentra por `client_id`, que es como está enlazada (5
+    clientes así en la copia de producción). Sin ese enlace tampoco, el ancla va al closer comodín
+    'otro' como cuando la venta no aparece; nunca a la del primero que dejó vacíos esos dos datos.
+    Se crea igual: sin ella el cobro no tiene dónde guardarse."""
+    otro = make_user(role='closer', username='otro', email='otro@neuro.com', is_active=False)
+    make_user(role='closer', username='ajeno', email='ajeno@neuro.com')
+    venta(db, mail='', ig='', fecha=datetime(2025, 12, 5), vendedor='ajeno@neuro.com')
+    enlazado = cliente(db, email='  ', instagram='@')
+    venta(db, mail='suyo@x.com', client_id=enlazado.id, fecha=datetime(2026, 6, 16))
+    suelto = cliente(db, email=None, instagram=None, phone='11 5555-1234')
+
+    del_enlazado = CloserFollowUpService._ensure_appointment_for_client(enlazado)
+    del_suelto = CloserFollowUpService._ensure_appointment_for_client(suelto)
+
+    assert (del_enlazado.closer_id, del_enlazado.start_time) == (vendedor.id, datetime(2026, 6, 16))
+    assert (del_suelto.closer_id, del_suelto.start_time) == (otro.id, datetime(2026, 9, 29, 15, 0))
+
+
+@freeze_time(HOY)
 def test_el_pedido_que_crea_un_ancla_tampoco_relee_venta_por_venta(db, vendedor, programa):
     """El commit del ancla vence las ventas ya leídas: sin releerlas juntas, cada una se volvía a
     pedir sola al armar su fila."""

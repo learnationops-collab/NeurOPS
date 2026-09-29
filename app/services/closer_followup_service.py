@@ -159,12 +159,20 @@ class CloserFollowUpService:
         if appt:
             return appt
 
-        sale = FinancialSale.query.filter(
-            or_(
-                func.lower(FinancialSale.mail_cliente) == (client.email or '').strip().lower(),
-                func.lower(func.replace(FinancialSale.instagram, '@', '')) == (client.instagram or '').strip().lstrip('@').lower()
-            )
-        ).order_by(FinancialSale.date.asc()).first()
+        # El correo y el instagram entran solo si al cliente no le quedan vacíos. Antes iban los
+        # dos siempre, y a un cliente sin instagram le quedaba `instagram == ''`: encontraba la
+        # venta más vieja de CUALQUIERA sin instagram (15 en la base local, la primera de
+        # 2025-12-05) y el ancla salía con la fecha y el closer de esa, que en la cola de cobro
+        # deciden el dueño. La venta enlazada por `client_id` entra siempre: es la única forma de
+        # encontrar la de un cliente sin correo ni instagram (5 en la base local).
+        email = (client.email or '').strip().lower()
+        instagram = (client.instagram or '').strip().lstrip('@').lower()
+        filtros = [FinancialSale.client_id == client.id]
+        if email:
+            filtros.append(func.lower(FinancialSale.mail_cliente) == email)
+        if instagram:
+            filtros.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == instagram)
+        sale = FinancialSale.query.filter(or_(*filtros)).order_by(FinancialSale.date.asc()).first()
 
         closer = CloserFollowUpService._resolve_closer_for_email_vendedor(sale.email_vendedor) if sale else None
         if not closer:
