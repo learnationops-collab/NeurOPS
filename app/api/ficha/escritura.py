@@ -188,6 +188,12 @@ def pago(appt_id, pago_id):
     return _ejecutar(appt_id, 'cobrar', partial(accion, pago_id=pago_id))
 
 
+@bp.route('/<int:appt_id>/evento', methods=['POST'])
+def crear_evento(appt_id):
+    """Agrega a mano una fila al registro de eventos. Mismo permiso que reescribirlas y borrarlas."""
+    return _ejecutar(appt_id, 'reportar', acciones.crear_evento, exito=201)
+
+
 @bp.route('/<int:appt_id>/evento/<int:evento_id>', methods=['PATCH', 'DELETE'])
 def evento(appt_id, evento_id):
     """Reescribe o borra una fila del registro de eventos de este lead.

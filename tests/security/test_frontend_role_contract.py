@@ -256,6 +256,8 @@ ESCRITURAS = [
                                 'triage': 403, 'setter': 403}),
     ('DELETE', '/plan-cuotas', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                 'triage': 403, 'setter': 403}),
+    ('POST', '/evento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                         'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los dos que NO pueden y al final uno que si.
     # Ese `closer` no es el de la agenda: cualquier closer borra (pedido del 29/09/2026). Que la
     # direccion tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.

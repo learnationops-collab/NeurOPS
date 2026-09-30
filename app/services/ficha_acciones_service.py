@@ -785,6 +785,23 @@ def editar_evento(appt, datos, usuario):
     return {'id': evento.id, 'detalle': evento.description}
 
 
+def crear_evento(appt, datos, usuario):
+    """Agrega a mano una fila al registro de eventos de esta agenda.
+
+    Pedido del usuario (29/09/2026): "que los demás datos de las pestañas de historial también se
+    puedan eliminar o crear nuevos". Queda con quien la escribe como autor y con su propio tipo
+    (`nota_manual`), para que se distinga de lo que registra el sistema solo.
+    """
+    from app.models import LeadEventLog
+
+    texto = _texto(datos, 'detalle', obligatorio=True)
+    evento = LeadEventLog(appointment_id=appt.id, user_id=usuario.id, action_type='nota_manual',
+                          description=texto)
+    db.session.add(evento)
+    db.session.commit()
+    return {'id': evento.id, 'detalle': evento.description}
+
+
 def borrar_evento(appt, datos, usuario):
     """Saca una fila del registro. No se puede deshacer: la fila se borra, no se marca."""
     evento = _evento_del_lead(appt, datos.get('evento_id'))

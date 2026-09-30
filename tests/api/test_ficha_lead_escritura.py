@@ -2338,3 +2338,22 @@ def test_borrar_un_plan_que_no_existe_da_400(client, db, lead, equipo, auth_head
 
     assert r.status_code == 400
     assert 'no tiene plan de cuotas' in r.get_json()['message']
+
+
+def test_agregar_un_evento_al_registro(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/evento'), json={'detalle': 'Llamó la mamá para preguntar por el pago'},
+                    headers=auth_headers(equipo['relevo']))
+
+    assert r.status_code == 201, r.get_json()
+    evento = LeadEventLog.query.filter_by(action_type='nota_manual').one()
+    assert (evento.appointment_id, evento.user_id) == (lead.id, equipo['relevo'].id)
+    eventos = _leer(client, lead, equipo['closer'], auth_headers)['historial']['eventos']
+    assert eventos[0]['detalle'] == 'Llamó la mamá para preguntar por el pago'
+    assert eventos[0]['autor'] == 'relevo'
+
+
+def test_un_evento_vacio_no_se_agrega(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/evento'), json={'detalle': '   '}, headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert LeadEventLog.query.filter_by(action_type='nota_manual').count() == 0
