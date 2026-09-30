@@ -116,6 +116,10 @@ ESTADO_CARTERA = [
     # primero hay que armárselo. Confundirlos deja plata sin agenda de cobro.
     {'key': 'sin_plan', 'label': 'Sin cronograma', 'tone': 'warning'},
     {'key': 'al_dia', 'label': 'Al día', 'tone': 'success'},
+    # Se fue del programa (`baja_service`): no debe nada y no se le cobra, pero lo que pagó es de la
+    # cartera. No es "Al día" —no terminó de pagar— y la tabla lo saca del listado por defecto:
+    # se lo ve en su propio filtro.
+    {'key': 'baja', 'label': 'Dado de baja', 'tone': 'idle'},
 ]
 
 TIPOS_PAGO = [
@@ -771,6 +775,10 @@ class ComercialService:
                 'cuota_fecha': cuota['fecha_vencimiento'] if cuota else None,
                 'cuota_vencida': bool(cuota and cuota['vencida']),
                 'cuota_numero': cuota['numero_cuota'] if cuota else None,
+                # `{fecha, fecha_legible, motivo, por}` o None. La fila viaja igual —lo que pagó es
+                # de la cartera y la tabla tiene un filtro "Dados de baja"—, pero el listado por
+                # defecto la deja afuera (ver `tablasDef.js`).
+                'baja': item['baja'],
             })
 
         ComercialService._con_academia(filas)
@@ -779,6 +787,8 @@ class ComercialService:
 
     @staticmethod
     def _estado_cartera(item):
+        if item.get('baja'):
+            return 'baja'
         cuota = item['proxima_cuota']
         if not cuota:
             return 'al_dia'
@@ -789,12 +799,17 @@ class ComercialService:
     @staticmethod
     def totales_clientes(filas):
         """Los totales van rotulados "a hoy" en la pantalla: son un saldo, no un flujo del
-        período (ver `clientes`)."""
+        período (ver `clientes`).
+
+        Un dado de baja no debe nada, pero tampoco está "al día": se cuenta aparte. Lo que pagó sí
+        entra en `pagado`, que es plata cobrada."""
         con_deuda = [f for f in filas if f['deuda'] > 0.01]
         vencidas = [f for f in filas if f['cuota_vencida']]
+        bajas = [f for f in filas if f.get('baja')]
         return {
             'clientes': len(filas),
-            'al_dia': len(filas) - len(con_deuda),
+            'al_dia': len(filas) - len(con_deuda) - len(bajas),
+            'bajas': len(bajas),
             'con_deuda': len(con_deuda),
             'deuda': round(sum(f['deuda'] for f in filas), 2),
             'vencidas': len(vencidas),
