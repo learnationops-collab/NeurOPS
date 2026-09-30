@@ -43,6 +43,9 @@ _ETIQUETAS = {
     'descartado': ('Descartado', 'error'),
     'venta_con_deuda': ('Venta · con deuda', 'warning'),
     'venta_al_dia': ('Cliente al día', 'success'),
+    # Dejó una seña y todavía no pagó completo ni hizo un split: es una reserva, no una venta
+    # (misma regla que el close rate, `REAL_SALE_TIPOS`).
+    'sena': ('Seña · falta completar', 'warning'),
     # Compró y se fue (`baja_service`): no debe nada, pero tampoco está "al día".
     'dado_de_baja': ('Dado de baja', 'idle'),
 }
@@ -57,12 +60,15 @@ _POR_DEFECTO = {
     'sin_reportar': 'resultado',
     'reportada_sin_resultado': 'resultado',
     'venta_con_deuda': 'acciones',
+    # Lo que falta es cobrar el resto, y eso se registra en Acciones.
+    'sena': 'acciones',
     # En Acciones está la marca de la baja y el «Revertir baja»: es lo que se viene a mirar.
     'dado_de_baja': 'acciones',
 }
 
 
-def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja=False):
+def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja=False,
+           solo_sena=False):
     if not estado_agenda:
         return 'sin_agenda'
     if descartado:
@@ -79,12 +85,14 @@ def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, ba
     if baja:
         return 'dado_de_baja'
     if tiene_venta or deuda > UMBRAL_DEUDA:
+        if solo_sena:
+            return 'sena'
         return 'venta_con_deuda' if deuda > UMBRAL_DEUDA else 'venta_al_dia'
     return estado_agenda
 
 
 def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=False, deuda=0.0,
-                    descartado=None, baja=False):
+                    descartado=None, baja=False, solo_sena=False):
     """`{clave, etiqueta, tono, pestanas, pestana_por_defecto}` del lead.
 
     `estado_agenda` es lo que devuelve `derivar_estado` para la agenda vigente, o None cuando el
@@ -95,11 +103,15 @@ def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=Fal
 
     `baja` dice si el cliente está dado de baja (`baja_service`): la llamada fue una venta, así que
     no es un descarte, y no debe nada pero tampoco está al día — es 'dado_de_baja'.
+
+    `solo_sena` dice que lo único que pagó es una seña: sigue siendo cliente para cobrarle el resto
+    (`tiene_venta` abre Acciones y Fulfillment), pero no se lo llama venta — es 'sena'.
     """
     deuda = float(deuda or 0.0)
     if descartado is None:
         descartado = estado_agenda in _DESCARTE
-    clave = _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja)
+    clave = _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja,
+                   solo_sena)
 
     etiqueta, tono = _ETIQUETAS.get(clave, (str(clave), 'idle'))
     visibles = {

@@ -69,6 +69,26 @@ def test_una_venta_al_dia_se_abre_en_historial():
         == ('venta_al_dia', 'hist')
 
 
+def test_quien_solo_dejo_sena_no_es_una_venta_y_abre_donde_se_cobra():
+    # Con o sin deuda cargada: una seña es una reserva (misma regla que el close rate).
+    for deuda in (900.0, 0.0):
+        assert clave_y_pestana(estado_agenda='show_up', tiene_venta=True, deuda=deuda,
+                               solo_sena=True) == ('sena', 'acciones')
+
+
+def test_la_sena_conserva_las_pestanas_de_cliente():
+    pestanas = resolver_estado(estado_agenda='show_up', tiene_venta=True, deuda=900.0,
+                               solo_sena=True)['pestanas']
+    assert {'acciones', 'ful'} <= set(pestanas)
+
+
+def test_la_baja_y_la_llamada_por_delante_ganan_a_la_sena():
+    assert clave_y_pestana(estado_agenda='show_up', tiene_venta=True, solo_sena=True,
+                           baja=True)[0] == 'dado_de_baja'
+    assert clave_y_pestana(estado_agenda='confirmada', tiene_venta=True, solo_sena=True)[0] \
+        == 'confirmada'
+
+
 def test_un_lead_descartado_se_abre_en_historial():
     assert clave_y_pestana(estado_agenda='lead_perdido') == ('descartado', 'hist')
     assert clave_y_pestana(estado_agenda='no_lead') == ('descartado', 'hist')
