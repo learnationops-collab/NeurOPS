@@ -94,6 +94,31 @@ def sin_baja():
     return ~Appointment.client.has(Client.baja_at.isnot(None))
 
 
+def seguimiento_en_pie():
+    """Condición SQL «el seguimiento de esta agenda sigue en las listas», para filtrar `Appointment`.
+
+    De un cliente dado de baja se cae todo lo que estaba pendiente de ANTES de la baja: el cobro
+    que había agendado, el pool, lo vencido. Queda lo que alguien pidió al darlo de baja o
+    después, a sabiendas de que ya no es un cobro:
+
+      · el recontacto que se agenda al dar la baja («¿Agendás un seguimiento a futuro?»), que vive
+        en la agenda con `seguimiento_sub = 'Baja: …'`;
+      · un seguimiento que se escribió en una agenda después de la baja (`updated_at` posterior),
+        p. ej. uno agendado desde el historial de la ficha. Esconderlo sería dejar a quien lo pidió
+        esperando un aviso que nunca llega.
+
+    Los clientes que no están de baja no se ven afectados.
+    """
+    from sqlalchemy import and_, or_
+    from app.models import Appointment
+
+    pendiente_de_antes = Appointment.client.has(and_(
+        Client.baja_at.isnot(None),
+        or_(Appointment.updated_at.is_(None), Appointment.updated_at < Client.baja_at)))
+    return or_(~pendiente_de_antes,
+               Appointment.seguimiento_sub.like(f'{PREFIJO_SEGUIMIENTO}%'))
+
+
 def dar_de_baja(client, motivo, usuario, cuando=None):
     """Marca la baja. Devuelve True si el cliente no estaba de baja.
 

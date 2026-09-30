@@ -301,7 +301,12 @@ class CloserFollowUpService:
                     Appointment.closer_processed == False,
                     or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
                 )
-            )
+            ),
+            # De un cliente dado de baja se cae lo que estaba pendiente de antes de la baja (ver
+            # `baja_service.seguimiento_en_pie`): el cobro que tenía agendado ya no es trabajo de
+            # nadie. Acá y no en cada lista, porque de esta consulta salen los seguimientos del
+            # día, el pool, el contador del dashboard, el bloqueo del reporte y los avisos.
+            baja_service.seguimiento_en_pie()
         )
         if closer_id:
             # Estrictamente propias — a diferencia de `_cerrada_pool_items` (que sí reparte las
@@ -572,7 +577,11 @@ class CloserFollowUpService:
             Appointment.fecha_seguimiento <= selected_date_str,
             Appointment.followup_reminder_enabled.is_(True),
             Appointment.followup_reminder_time.isnot(None),
-            Appointment.followup_reminder_time != ''
+            Appointment.followup_reminder_time != '',
+            # Por un cliente dado de baja no sale ningún aviso, ni siquiera por el recontacto que
+            # la lista del día sí muestra: el aviso lo había armado alguien para cobrarle, y el
+            # WhatsApp no dice que ya no se le cobra. Más estricto que `_base_query` a propósito.
+            baja_service.sin_baja()
         )
         items = q.order_by(Appointment.fecha_seguimiento.asc()).all()
 
@@ -866,6 +875,10 @@ class CloserFollowUpService:
             client = lote.clientes.get(cid)
             if not client:
                 continue
+            # Un cliente dado de baja ya no se cobra: sale de la cola. Se lo sigue viendo en la
+            # tabla Clientes, en su propio filtro, y en su ficha.
+            if baja_service.esta_de_baja(client):
+                continue
             appt = lote.ultima_cita.get(cid)
             if not appt:
                 continue
@@ -915,6 +928,9 @@ class CloserFollowUpService:
         for cid in propios:
             client = lote.clientes.get(cid)
             if not client:
+                continue
+            # Mismo criterio que la cola de cobro: la baja se ve en la tabla Clientes, no acá.
+            if baja_service.esta_de_baja(client):
                 continue
             # `appt` es solo para los campos de display (origen, examen, fecha de la última
             # llamada) — cualquier cita del cliente sirve, sea o no de este closer.
