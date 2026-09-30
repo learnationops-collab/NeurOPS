@@ -59,8 +59,8 @@ const WorkshopFunnelView = ({
               ayuda: 'Cuántas llamadas de venta quedaron efectivamente agendadas. Suma la clase en vivo y la grabación: el detalle de cada una está más abajo.' },
             { label: 'Asistencia cita (show up)', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show up en cita', detail: 'Asistieron a la llamada de ventas',
               ayuda: 'De las llamadas agendadas, a cuántas la persona realmente se presentó. La diferencia con el paso anterior son los "no show".' },
-            { label: 'Ventas cerradas (compradores)', value: e.sales, rate: pct(e.sales), sub: 'Tasa de cierre global', detail: 'Leads compradores únicos (Seña, Split Pay o Completo).',
-              ayuda: 'Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo cuentan Seña, Split Pay y pago Completo — cuotas, renovaciones y upsells quedan afuera.' }
+            { label: 'Ventas cerradas (compradores)', value: e.sales, rate: pct(e.sales), sub: 'Tasa de cierre global', detail: 'Leads compradores únicos (Split Pay o Completo).',
+              ayuda: 'Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo cuentan Split Pay y pago Completo. Una seña es una reserva, no una venta: suma al cash del taller pero no hace compradora a nadie. Cuotas, renovaciones y upsells quedan afuera.' }
         ];
     }, [selectedEvent]);
 

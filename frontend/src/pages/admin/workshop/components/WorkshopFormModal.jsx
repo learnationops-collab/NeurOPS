@@ -190,7 +190,7 @@ const WorkshopFormModal = ({
                                             <span className="field-control"><input type="number" {...field('show_up_sales_call')} /></span>
                                         </label>
                                         <label className="form-field">
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Ventas (compradores) <InfoTooltip label="Ventas (compradores)" text="Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo Seña, Split Pay y pago Completo." /></span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Ventas (compradores) <InfoTooltip label="Ventas (compradores)" text="Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo Split Pay y pago Completo: una seña es una reserva, no una venta." /></span>
                                             <span className="field-control"><input type="number" {...field('sales')} /></span>
                                         </label>
                                         <label className="form-field wide">

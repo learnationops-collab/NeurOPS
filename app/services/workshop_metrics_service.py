@@ -31,7 +31,10 @@ from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, e
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
 
-ESTADOS_DE_VENTA = ['cierre', 'seña', 'sena', 'completo', 'ganado', 'venta', 'vendido', 'completado']
+# Estados de la hoja de agendas que marcan a la persona como compradora cuando la venta todavia no
+# esta cargada. 'seña'/'sena' ya no: una seña es una reserva, no un cierre (pedido del usuario,
+# 30/09/2026: "el close rate no debe tomar señas").
+ESTADOS_DE_VENTA = ['cierre', 'completo', 'ganado', 'venta', 'vendido', 'completado']
 
 
 def _tz(timezone_str):
@@ -290,18 +293,30 @@ def _agrupar_por_persona(agendas, claves_ya_contadas):
     return list(grupos.values()) + sueltas
 
 
-def _es_venta_valida(sale):
-    """Solo Seña, Split Pay y Completo. Cuotas, renovaciones y upsells no."""
+def _tipo_simple(sale):
     from app.api.public.financial_sales import split_tipo_pago
     if not sale or not sale.tipo_pago:
-        return False
+        return ''
     _, simple = split_tipo_pago(sale.tipo_pago)
-    tp = (simple or '').lower().strip()
+    return (simple or '').lower().strip()
+
+
+def _es_cierre(sale):
+    """Solo Split Pay y Completo: lo que convierte a la persona en compradora y entra en el close
+    rate del taller. La seña es una reserva, no un cierre."""
+    tp = _tipo_simple(sale)
     if any(ex in tp for ex in ['cuota', 'renovac', 'upsell']):
         return False
-    return ('seña' in tp or 'sena' in tp
-            or 'parcial' in tp or 'split' in tp or 'primer pago' in tp
+    return ('parcial' in tp or 'split' in tp or 'primer pago' in tp
             or 'completo' in tp or 'pif' in tp or 'full' in tp)
+
+
+def _es_venta_valida(sale):
+    """Lo que suma al cash del taller: Seña, Split Pay y Completo. Cuotas, renovaciones y upsells
+    no. La seña es plata que el taller trajo aunque todavía no sea un cierre (ver `_es_cierre`)."""
+    tp = _tipo_simple(sale)
+    return _es_cierre(sale) or (('seña' in tp or 'sena' in tp)
+                                and not any(ex in tp for ex in ['cuota', 'renovac', 'upsell']))
 
 
 def _ventas_de(agendas, compradores_ya_contados):
@@ -318,6 +333,10 @@ def _ventas_de(agendas, compradores_ya_contados):
     agendas tuvieran chance de cerrar. Una venta solo cuenta si es igual o
     posterior a la agenda que la trajo (con 1 dia de margen por huso horario)
     (12/sep/2026).
+
+    Compradora es quien pagó completo o hizo split pay: la seña suma a `ventas` (y por lo tanto al
+    cash del taller) pero no hace compradora a nadie, así que no entra en `sales` ni en el close
+    rate del taller (30/09/2026).
     """
     compradores = set()
     ventas = set()
@@ -349,11 +368,12 @@ def _ventas_de(agendas, compradores_ya_contados):
             s for s in FinancialSale.query.filter(or_(*condiciones)).all()
             if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
         ]
-        if validas:
+        ventas.update(validas)
+        if any(_es_cierre(s) for s in validas):
             compradores.add(clave)
-            ventas.update(validas)
         elif any(st in (a.estado or '').lower().strip() for st in ESTADOS_DE_VENTA):
-            # La agenda quedo marcada como cerrada aunque la venta no este cargada
+            # La agenda quedo marcada como cerrada aunque la venta real no este cargada (puede
+            # haber solo una seña cargada: la hoja dice que despues se cerro)
             compradores.add(clave)
 
     return compradores, ventas
