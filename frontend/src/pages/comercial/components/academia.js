@@ -77,6 +77,8 @@ export const AYUDA_ACADEMIA = {
     actividad: 'Activo: le vimos actividad en los últimos 7 días (tenía racha, o subió alguno de sus '
         + 'contadores: horas, lecciones, ejecuciones, pomodoros o sesiones). Inactivo: tiene cuenta pero '
         + 'no vimos nada en esa semana. Sin acceso: ninguno de sus correos tiene cuenta en la Academia. '
+        + 'Sin correo: solo tenemos el correo que inventa NeurOPS, así que no hay con qué buscarlo. '
+        + 'Sin datos: todavía no se lo consultó (o la Academia dio error). '
         + 'La Academia no informa la fecha de su última actividad: se deduce comparando los datos de '
         + 'una lectura con los de la anterior, así que es tan precisa como la sincronización.',
     horas: 'Horas de estudio acumuladas que registra la Academia.',

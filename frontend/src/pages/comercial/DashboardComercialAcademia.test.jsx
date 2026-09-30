@@ -44,7 +44,7 @@ const FILA = {
     tipo: 'cliente', id: 1, client_id: 1, cliente: 'Alumno 1', closer: 'Nerina', programa: 'ACE',
     fecha: '2026-09-10', pagado: 100, deuda: 0, cobros: 1, cuota_monto: null, cuota_fecha: null,
     cuota_vencida: false, estado: { key: 'al_dia', label: 'Al día', tone: 'success' },
-    academia: { estado: { key: 'sin_datos', label: 'Sin datos todavía', tone: 'idle' } },
+    academia: { estado: { key: 'sin_datos', label: 'Sin datos', tone: 'idle' } },
 };
 
 const montar = () => render(

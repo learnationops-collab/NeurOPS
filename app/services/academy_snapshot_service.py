@@ -124,8 +124,10 @@ ESTADO_ACADEMIA = [
     {'key': 'activo', 'label': 'Activo', 'tone': 'success'},
     {'key': 'inactivo', 'label': 'Inactivo', 'tone': 'warning'},
     {'key': 'sin_acceso', 'label': 'Sin acceso', 'tone': 'error'},
-    {'key': 'sin_correo', 'label': 'Sin correo real', 'tone': 'idle'},
-    {'key': 'sin_datos', 'label': 'Sin datos todavía', 'tone': 'idle'},
+    # Cortos a proposito: es el chip de una columna angosta de Revisar, y el mas comun. Lo que
+    # significa cada uno esta en la ayuda de la columna (`AYUDA_ACADEMIA.actividad`).
+    {'key': 'sin_correo', 'label': 'Sin correo', 'tone': 'idle'},
+    {'key': 'sin_datos', 'label': 'Sin datos', 'tone': 'idle'},
 ]
 _CHIPS = {e['key']: e for e in ESTADO_ACADEMIA}
 

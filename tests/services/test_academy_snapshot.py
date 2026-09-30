@@ -225,7 +225,7 @@ def test_un_id_ya_guardado_no_se_pisa(db, cliente):
 def test_sin_foto_el_bloque_dice_sin_datos_y_no_trae_numeros(db):
     bloque = snap.bloque_de(None, AHORA)
 
-    assert bloque['estado'] == {'key': 'sin_datos', 'label': 'Sin datos todavía', 'tone': 'idle'}
+    assert bloque['estado'] == {'key': 'sin_datos', 'label': 'Sin datos', 'tone': 'idle'}
     assert bloque['horas'] is None and bloque['sincronizado'] is None
 
 

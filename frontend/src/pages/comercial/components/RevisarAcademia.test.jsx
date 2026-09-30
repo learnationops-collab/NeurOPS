@@ -12,7 +12,7 @@ import Revisar from './Revisar';
  * totales cuenta sobre lo mismo que se ve.
  */
 
-const ESTADOS = { activo: 'Activo', inactivo: 'Inactivo', sin_acceso: 'Sin acceso', sin_datos: 'Sin datos todavía' };
+const ESTADOS = { activo: 'Activo', inactivo: 'Inactivo', sin_acceso: 'Sin acceso', sin_datos: 'Sin datos' };
 const academia = (key, extra = {}) => ({
     estado: { key, label: ESTADOS[key], tone: key === 'activo' ? 'success' : 'idle' },
     horas: null, progreso: null, lecciones: null, lecciones_total: null, ejecuciones: null, racha: null,
