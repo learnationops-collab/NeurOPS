@@ -377,6 +377,15 @@ describe('venta: cobro de una cuota del plan ya armado', () => {
     const fila = resumen(recorrer(guion, contexto), contexto).find((f) => f.label === 'Cuota que se paga');
     expect(fila.valor).toBe('Cuota 2 · vence 10 oct · $500');
   });
+
+  it('pagar la última cuota también pregunta cuál es y la marca pagada', () => {
+    // El wizard solo la preguntaba si quedaba saldo: la última quedaba pendiente con la deuda en 0.
+    const ultima = { ...guion, venta_montos: { precio_total: '1500', monto: '500' } };
+    const r = recorrer(ultima, contexto);
+    expect(saldoVenta(r, contexto)).toBe(0);
+    expect(claves(ultima, contexto)).toContain('venta_cuota');
+    expect(construirPayload(r, contexto).datos.cuota_cobrada).toEqual({ cuota_id: 42, estado: 'pagado', monto: 500 });
+  });
 });
 
 describe('venta: a quién se le atribuye', () => {

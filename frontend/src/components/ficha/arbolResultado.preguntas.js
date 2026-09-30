@@ -281,14 +281,16 @@ export const PREGUNTAS = [
     clave: 'medio_pago', hito: 'deuda', campo: 'metodo_pago', tipo: 'opciones',
     enunciado: '¿Por dónde entró la plata?', opciones: opts(MEDIOS_PAGO, 'info'), cuando: esVenta,
   },
-  { // ← wizard `pickCuota`
+  { // ← wizard `pickCuota`. El wizard solo la preguntaba si quedaba saldo, y pagar la ÚLTIMA cuota
+    // dejaba esa cuota pendiente en el plan con la deuda ya en cero: se pregunta siempre que se
+    // cobre una Cuota de un plan que ya existe.
     clave: 'venta_cuota', hito: 'deuda', tipo: 'formulario', enunciado: '¿Cuál cuota se está pagando?',
     ayuda: 'Elegí cualquier pendiente: podés adelantar una futura o pagar una vencida.',
     campos: [{
       campo: 'selectedCuotaId', label: 'Cuota que se paga', tipo: 'cuota', requerido: true,
       falta: 'Elegí la cuota que se paga', resumir: cuotaElegida,
     }],
-    cuando: (r, c) => esVenta(r) && !esCompleto(r) && quedaSaldo(r, c) && cobraCuotaExistente(r, c),
+    cuando: (r, c) => esVenta(r) && cobraCuotaExistente(r, c),
   },
   { // ← wizard `installmentCount`
     clave: 'venta_num_cuotas', hito: 'deuda', tipo: 'formulario',
