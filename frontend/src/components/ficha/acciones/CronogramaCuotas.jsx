@@ -11,8 +11,10 @@ const Rotulo = ({ children }) => (
   <small className="ln-field-label" style={{ letterSpacing: '.08em', textTransform: 'uppercase' }}>{children}</small>
 );
 
+// `fechasFijas`: las fechas se calculan solas (plan mensual por día de pago) y solo se tocan los
+// montos, como en el paso «¿Qué día de cada mes paga?» del wizard de venta.
 export default function CronogramaCuotas({
-  total, filas, onCambiar, onRepartir, conEstado = false, soloLectura = false,
+  total, filas, onCambiar, onRepartir, conEstado = false, soloLectura = false, fechasFijas = false,
 }) {
   const estado = cuadre(total, filas);
   const cambiar = (i, parche) => onCambiar(filas.map((f, j) => (j === i ? { ...f, ...parche } : f)));
@@ -35,7 +37,7 @@ export default function CronogramaCuotas({
               <input
                 type="date"
                 value={fila.fecha || ''}
-                disabled={soloLectura}
+                disabled={soloLectura || fechasFijas}
                 aria-label={`Fecha de cobro de la cuota ${i + 1}`}
                 onChange={(e) => cambiar(i, { fecha: e.target.value })}
               />

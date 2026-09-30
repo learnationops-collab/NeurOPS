@@ -51,7 +51,13 @@ const MENSAJES = {
     recordatorio_previo: 'Recordatorio guardado.',
     cerrar_confirmacion: 'Confirmación cerrada: el lead está 100% confirmado.',
     reportar_resultado: 'Resultado reportado.',
-    registrar_venta: 'Venta registrada.',
+    // La venta del árbol de «Resultado» también da el acceso a la Academia si se pidió: se dice
+    // qué pasó con él, porque «se creó la cuenta» significa que al cliente le llegó un email.
+    registrar_venta: (r) => {
+        if (r?.academia?.creada) return 'Venta registrada. Se le creó la cuenta en la Academia y le llegó un email para activar su contraseña.';
+        if (r?.academia) return 'Venta registrada y acceso a la Academia actualizado.';
+        return 'Venta registrada.';
+    },
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
     descartar: 'Lead descartado.',

@@ -2,8 +2,10 @@
 // saber cómo se dibuja un monto o un grupo de píldoras: solo pide «pintá estos campos».
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Minus, Plus, X } from 'lucide-react';
 import { SelectorFecha } from './piezas';
+import { fechaCorta } from '../arbolResultado.venta';
+import { moneda } from './planCuotas';
 
 // La `.pastilla` de la ficha, con la elegida en blanco lleno (`.fi-elegible`, en `ficha.css`).
 // Era un `.ln-chip` y dentro de `.dc-shell` perdía el borde y el aire: se leía como una palabra
@@ -30,12 +32,74 @@ const Rotulo = ({ children, id }) => (
   </small>
 );
 
-export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] }) {
+// De dónde salió el dato, como en el wizard de venta: lo que vino de la agenda se revisa, lo que
+// no, se carga. Es lo que le dice al closer cuál de las pantallas tiene que mirar con atención.
+const ORIGENES = {
+  agenda: { texto: '✓ Traído de la agenda', color: 'var(--success)' },
+  vos: { texto: '● Este lo cargás vos', color: 'var(--warning)' },
+  corregido: { texto: '✎ Corregido por vos', color: 'var(--info)' },
+};
+
+const Origen = ({ origen }) => (ORIGENES[origen] ? (
+  <small className="ln-t-caption" style={{ color: ORIGENES[origen].color }}>{ORIGENES[origen].texto}</small>
+) : null);
+
+const ESTADO_CUOTA = { vencido: 'Vencida', pendiente: 'Pendiente' };
+
+export default function CampoArbol({
+  campo, respuestas, onCambio, cuotas = [], autoFocus = false, onEnter = null, origen = null,
+}) {
   const valor = respuestas[campo.campo];
   const set = (v) => onCambio({ [campo.campo]: v });
   const idRotulo = `campo-${campo.campo}`;
+  // Enter confirma el paso, como «Siguiente» en el wizard: en una pregunta por pantalla el closer
+  // espera poder seguir con el teclado. En un párrafo no, ahí Enter es un salto de línea.
+  const alEnter = onEnter ? (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    onEnter();
+  } : undefined;
 
   if (campo.tipo === 'mapa') return null; // lo pinta el cronograma de cuotas
+
+  if (campo.tipo === 'contador') {
+    const minimo = campo.minimo ?? 1;
+    const maximo = campo.maximo ?? 12;
+    const n = Math.max(minimo, Math.min(maximo, Math.trunc(Number(valor) || minimo)));
+    return (
+      <div className="ln-field-wrap" role="group" aria-labelledby={idRotulo}>
+        <Rotulo id={idRotulo}>{campo.label}</Rotulo>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          {/* `.ibtn` y no `.ln-iconbtn`: dentro de `.dc-shell` el del DS pierde el borde. */}
+          <button type="button" className="ibtn" aria-label="Una cuota menos"
+            disabled={n <= minimo} onClick={() => set(n - 1)}><Minus /></button>
+          <b className="ln-t-h2 ln-mono" aria-live="polite" style={{ minWidth: '2ch', textAlign: 'center' }}>{n}</b>
+          <button type="button" className="ibtn" aria-label="Una cuota más"
+            disabled={n >= maximo} onClick={() => set(n + 1)}><Plus /></button>
+        </div>
+        {campo.atajos?.length > 0 && (
+          <div className="ln-btn-row">
+            {campo.atajos.map((k) => (
+              <Pildora key={k} activo={n === k} onClick={() => set(k)}>{`${k} cuotas`}</Pildora>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (campo.tipo === 'dia_mes') {
+    return (
+      <div className="ln-field-wrap" role="group" aria-labelledby={idRotulo}>
+        <Rotulo id={idRotulo}>{campo.label}</Rotulo>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 'var(--space-1)', maxWidth: 360 }}>
+          {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
+            <Pildora key={dia} activo={Number(valor) === dia} onClick={() => set(dia)}>{dia}</Pildora>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (campo.tipo === 'booleano') {
     // La estructura es la del design system: el input nativo queda invisible encima y lo que se
@@ -126,23 +190,43 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
 
   if (campo.tipo === 'cuota') {
     if (!cuotas.length) return null;
+    // Una fila por cuota pendiente, como la tabla del wizard: se elige tocando la fila. Elegirla
+    // trae su monto a «cobrado hoy» si todavía no se había cargado nada.
     return (
-      <div className="ln-field-wrap">
+      <div className="ln-field-wrap" role="radiogroup" aria-labelledby={idRotulo}>
         <Rotulo id={idRotulo}>{campo.label}</Rotulo>
-        <span className="ln-field">
-          <select
-            value={valor || ''}
-            aria-labelledby={idRotulo}
-            onChange={(e) => set(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">Sin elegir</option>
-            {cuotas.map((c) => (
-              <option key={c.id} value={c.id}>
-                {`Cuota ${c.numero_cuota} · ${c.fecha_vencimiento} · ${c.monto} · ${c.estado}`}
-              </option>
-            ))}
-          </select>
-        </span>
+        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          {cuotas.map((c) => {
+            const elegida = valor === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={elegida}
+                onClick={() => onCambio({
+                  [campo.campo]: c.id,
+                  ...(respuestas.monto ? {} : { monto: String(c.monto) }),
+                })}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 'var(--space-3)', textAlign: 'left',
+                  padding: 'var(--space-3) var(--space-4)', cursor: 'pointer',
+                  borderRadius: 'var(--radius-control)', color: 'var(--text-on-surface)',
+                  background: elegida ? 'var(--info-surface)' : 'var(--bg-element)',
+                  border: `1px solid ${elegida ? 'var(--info)' : 'var(--border-control)'}`,
+                }}
+              >
+                <b className="ln-t-body" style={{ minWidth: 72 }}>{`Cuota ${c.numero_cuota}`}</b>
+                <span className="ln-t-body-sm" style={{ flex: 1 }}>{`Vence ${fechaCorta(c.fecha_vencimiento)}`}</span>
+                <b className="ln-t-body">{moneda(c.monto)}</b>
+                <small className="ln-t-caption" style={{ color: c.estado === 'vencido' ? 'var(--error)' : 'var(--text-muted)', minWidth: 64 }}>
+                  {ESTADO_CUOTA[c.estado] || c.estado}
+                </small>
+                {elegida && <Check size={16} aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -170,10 +254,18 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
   }
 
   if (campo.tipo === 'fecha') {
+    // Sin `sinMinimo` el selector no deja elegir antes de hoy, que es lo que se quiere para un
+    // seguimiento; la fecha de una venta de ayer sí tiene que poder ser ayer.
     return (
       <div className="ln-field-wrap">
         <Rotulo id={idRotulo}>{campo.label}</Rotulo>
-        <SelectorFecha valor={valor || ''} onChange={set} presets={campo.presets || []} />
+        <SelectorFecha
+          valor={valor || ''}
+          onChange={set}
+          presets={campo.presets || []}
+          etiqueta={campo.label}
+          minimo={campo.sinMinimo ? null : undefined}
+        />
       </div>
     );
   }
@@ -196,11 +288,14 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
           value={valor ?? ''}
           aria-labelledby={idRotulo}
           aria-required={campo.requerido ? 'true' : undefined}
+          autoFocus={autoFocus}
+          onKeyDown={alEnter}
           onChange={(e) => set(campo.tipo === 'entero' && e.target.value !== ''
             ? Number(e.target.value) : e.target.value)}
         />
         {campo.tipo === 'monto' && <span className="ln-unit">USD</span>}
       </span>
+      <Origen origen={origen} />
     </div>
   );
 }

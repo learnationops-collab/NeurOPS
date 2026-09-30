@@ -1,0 +1,48 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../services/api', () => ({
+  default: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+}));
+
+import api from '../../services/api';
+import { ACCIONES, ejecutarAccion, ejecutarConsulta } from './fichaApi';
+import { construirPayload, estadoInicial, responder } from './arbolResultado';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  ['get', 'patch', 'post', 'put', 'delete'].forEach((m) => api[m].mockResolvedValue({ data: { ok: true } }));
+});
+
+describe('el árbol de «Resultado» habla en acciones que la ficha conoce', () => {
+  // La pestaña armaba la venta como la acción `venta`, que no estaba en el mapa de rutas: cada
+  // venta fallaba con «Acción de ficha desconocida» antes de salir del navegador, y los tests de
+  // la pestaña no lo veían porque reemplazan `onAccion` por un doble.
+  it('una venta sale por una acción del mapa de rutas', () => {
+    let r = estadoInicial();
+    r = responder(r, 'res', { res: 'asistio' });
+    r = responder(r, 'decisor', { with_decision_maker: true });
+    r = responder(r, 'oferta', { offer_presented: true });
+    r = responder(r, 'cierre', { cierre: true });
+    expect(ACCIONES).toContain(construirPayload(r, {}).accion);
+  });
+
+  it('un resultado sin venta también', () => {
+    const r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
+    expect(ACCIONES).toContain(construirPayload(r, {}).accion);
+  });
+});
+
+describe('rutas de la venta', () => {
+  it('registrar la venta postea el payload entero en la ruta de venta de esa agenda', async () => {
+    const payload = { venta: { tipo_pago: 'RR - parcial', monto: 500 }, plan_cuotas: { total: 1500 } };
+    await ejecutarAccion('registrar_venta', 9012, payload);
+    expect(api.post).toHaveBeenCalledWith('/ficha/9012/venta', payload);
+  });
+
+  it('el estado de pago del programa se lee de su propia ruta, con el programa como parámetro', async () => {
+    api.get.mockResolvedValue({ data: { total_paid: 500, sales_count: 1 } });
+    const estado = await ejecutarConsulta('estado_venta', 9012, { params: { programa: 'RR' } });
+    expect(api.get).toHaveBeenCalledWith('/ficha/9012/estado-venta', { params: { programa: 'RR' } });
+    expect(estado).toEqual({ total_paid: 500, sales_count: 1 });
+  });
+});

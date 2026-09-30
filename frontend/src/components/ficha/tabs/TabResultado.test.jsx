@@ -85,54 +85,140 @@ describe('TabResultado', () => {
     const [accion, datos] = p.onAccion.mock.calls[0];
     expect(accion).toBe('reportar_resultado');
     expect(datos.deck).toMatchObject({ seguimiento_sub: 'Reprogramó sin fecha', seguimiento_tipo: 'no_tomada' });
-    expect(p.onRecargar).toHaveBeenCalled();
+    // `onAccion` ya recarga la ficha: la pestaña no la vuelve a pedir.
+    expect(p.onRecargar).not.toHaveBeenCalled();
     expect(p.irA).not.toHaveBeenCalled();
   });
 
-  it('una venta con deuda dispara la acción `venta` y lleva a la pestaña Acciones', async () => {
+  it('después de guardar no queda un botón para registrar lo mismo otra vez', async () => {
     const user = userEvent.setup();
     render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Reagenda' }));
+    await user.click(screen.getByRole('button', { name: 'No dio motivo' }));
+    await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
+
+    expect(await screen.findByText('Resultado guardado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Guardar el resultado/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Empezar de nuevo/ })).toBeNull();
+  });
+
+  it('una venta con deuda recorre el wizard entero dentro de la pestaña y lleva a Acciones', async () => {
+    const user = userEvent.setup();
+    const onConsultar = vi.fn().mockResolvedValue({
+      program_price: 1500, total_paid: 0, balance_remaining: 1500, sales_count: 0,
+      allowed_types: { cuota: { ok: false, reason: 'No tiene un Parcial previo' } },
+    });
+    render(<TabResultado {...p} onConsultar={onConsultar} />);
     await user.click(screen.getByRole('button', { name: 'Asistió' }));
     await user.click(screen.getByRole('button', { name: /Sí, con decisor/ }));
     await user.click(screen.getByRole('button', { name: /Sí, se presentó/ }));
     await user.click(screen.getByRole('button', { name: /Sí, cerró/ }));
-    await user.click(screen.getByRole('button', { name: /Queda deuda/ }));
-    await user.click(screen.getByRole('button', { name: /Ninguno/ }));
-    await user.click(screen.getByRole('button', { name: /Residency Roadmap/ }));
-    await user.click(screen.getByRole('button', { name: /Parcial/ }));
 
-    // los datos del lead vienen precargados de la ficha
-    expect(screen.getByLabelText('Nombre')).toHaveValue('Kevin Álvarez');
+    // Cada dato del comprador en su pantalla: el de la agenda viene precargado y se confirma.
+    expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+    expect(screen.getByText('Venta · paso 1 de 15')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nombre y apellido')).toHaveValue('Kevin Álvarez');
+    expect(screen.getByText('✓ Traído de la agenda')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    expect(screen.getByLabelText('Instagram')).toHaveValue('kevinalvarez');
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    // Enter confirma el paso, como «Siguiente» en el wizard.
     expect(screen.getByLabelText('Email')).toHaveValue('kevin@mail.com');
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.type(screen.getByLabelText('Email'), '{Enter}');
+    expect(screen.getByRole('heading', { name: '¿Su teléfono?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    expect(screen.getByRole('heading', { name: '¿Su documento de identidad?' })).toBeInTheDocument();
+    expect(screen.getByText('● Este lo cargás vos')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Documento de identidad'), '30111222');
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
 
-    await user.type(screen.getByLabelText('Precio total del programa'), '2000');
+    await user.click(screen.getByRole('button', { name: /Residency Roadmap/ }));
+    expect(onConsultar).toHaveBeenCalledWith('estado_venta', { params: { programa: 'RR' } });
+    // El historial del cliente avisa sobre el tipo que no sigue la secuencia, sin esconderlo.
+    expect(await screen.findByText('No tiene un Parcial previo')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Parcial \(primer pago\)/ }));
+
+    // El precio del programa se propone solo y el saldo se ve mientras se tipea.
+    expect(screen.getByLabelText('Precio total')).toHaveValue(1500);
     await user.type(screen.getByLabelText('Cobrado hoy'), '500');
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByText('$1,000')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
     await user.click(screen.getByRole('button', { name: 'Stripe' }));
 
-    // el cronograma aparece y cuadra contra el saldo
-    expect(screen.getByText(/Saldo a financiar/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Te deben $1,000. ¿En cuántas cuotas?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '2 cuotas' }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, todos los meses el mismo día/ }));
+    await user.click(screen.getByRole('button', { name: '15' }));
     expect(screen.getByRole('status')).toHaveTextContent('Cuadra con el total');
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ })); // venta_meta (fecha precargada)
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ })); // venta_extras
-    await user.click(screen.getByRole('button', { name: 'Se lo pedí, no dejó' }));
-    await user.click(screen.getByRole('button', { name: /^Continuar$/ })); // referidos
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // examen, precargado
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // fecha, hoy
+    await user.click(screen.getByRole('button', { name: /^Completada/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // notas
+    await user.click(screen.getByRole('button', { name: /Sí le pedí, no me dio/ }));
+    expect(screen.getByRole('heading', { name: '¿Le das acceso a la Academia?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Sí, darle acceso/ }));
 
     expect(screen.getByRole('heading', { name: /Revisá la venta/ })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Avisar por la automatización/ })).toBeChecked();
     await user.click(screen.getByRole('button', { name: /Registrar la venta/ }));
 
     const [accion, datos] = p.onAccion.mock.calls[0];
-    expect(accion).toBe('venta');
-    expect(datos.venta).toMatchObject({ tipo_pago: 'RR - parcial', monto: 500, precio_total: 2000, metodo_pago: 'Stripe' });
-    expect(datos.plan_cuotas).toMatchObject({ total: 2000, num_cuotas: 1 });
+    expect(accion).toBe('registrar_venta');
+    expect(datos.venta).toMatchObject({
+      tipo_pago: 'RR - parcial', monto: 500, precio_total: 1500, metodo_pago: 'Stripe',
+      documento_identidad: '30111222', mail_cliente: 'kevin@mail.com', instagram: 'kevinalvarez',
+    });
+    expect(datos.plan_cuotas).toMatchObject({ total: 1500, cobrado_hoy: 500, num_cuotas: 2, montos: [500, 500] });
+    expect(datos.plan_cuotas.fechas.every((f) => f.endsWith('-15'))).toBe(true);
+    expect(datos.acceso_academia).toEqual({ programa_code: 'RR', tipo_venta: 'parcial', email: 'kevin@mail.com' });
     expect(p.irA).toHaveBeenCalledWith('acciones');
-    // Recorre el wizard de venta ENTERO: una veintena de clics y dos campos tipeados letra por
-    // letra. Solo tarda unos 2 s, pero con la suite completa en paralelo (y más con pytest
-    // corriendo al lado) pasaba los 5 s por defecto y fallaba sin que nada estuviera roto. El
-    // tope es de este test, no global, para que un test corto que se cuelgue siga saltando rápido.
-  }, 20000);
+    // Recorre el wizard de venta ENTERO: una treintena de clics y dos campos tipeados letra por
+    // letra. Con la suite completa en paralelo (y más con pytest corriendo al lado) pasaba los
+    // 5 s por defecto y fallaba sin que nada estuviera roto. El tope es de este test, no global,
+    // para que un test corto que se cuelgue siga saltando rápido.
+  }, 30000);
+
+  it('un aviso posterior a la venta queda a la vista y no salta de pestaña', async () => {
+    const user = userEvent.setup();
+    const conAvisos = props(fichaAgendaVencida, {
+      onAccion: vi.fn().mockResolvedValue({ status: 'success', avisos: ['La venta se guardó, pero el plan de cuotas no: ya tiene cuotas pagadas'] }),
+    });
+    render(<TabResultado {...conAvisos} />);
+    await user.click(screen.getByRole('button', { name: 'Asistió' }));
+    await user.click(screen.getByRole('button', { name: /Sí, con decisor/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, se presentó/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, cerró/ }));
+    for (let i = 0; i < 5; i += 1) {
+      await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    }
+    await user.click(screen.getByRole('button', { name: /Ace Learner/ }));
+    await user.click(screen.getByRole('button', { name: /Seña/ }));
+    await user.type(screen.getByLabelText('Precio total'), '1000');
+    await user.type(screen.getByLabelText('Cobrado hoy'), '100');
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    await user.click(screen.getByRole('button', { name: 'PayPal' }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // 1 cuota
+    await user.click(screen.getByRole('button', { name: /No, fechas distintas/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // fechas
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // examen
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // fecha
+    await user.click(screen.getByRole('button', { name: /^Pendiente/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // notas
+    await user.click(screen.getByRole('button', { name: /No le pedí/ }));
+    await user.click(screen.getByRole('button', { name: /No por ahora/ }));
+    await user.click(screen.getByRole('button', { name: /Registrar la venta/ }));
+
+    expect(await screen.findByText(/el plan de cuotas no/)).toBeInTheDocument();
+    expect(screen.getByText('Queda un saldo de $900')).toBeInTheDocument();
+    expect(conAvisos.irA).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /Ir a Acciones/ }));
+    expect(conAvisos.irA).toHaveBeenCalledWith('acciones');
+  }, 30000);
 
   it('en modo seguimiento arranca por la cadencia y no por la llamada', () => {
     render(<TabResultado {...props(fichaEnSeguimiento)} />);
@@ -151,8 +237,7 @@ describe('TabResultado', () => {
     await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
     await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
     await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
-    const aviso = screen.getByRole('status');
-    expect(aviso).toHaveTextContent('El cliente ya tenía una seña sin plan');
+    expect(await screen.findByText('El cliente ya tenía una seña sin plan')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Descartar el aviso' }));
     expect(screen.queryByText(/seña sin plan/)).toBeNull();
   });

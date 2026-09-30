@@ -12,7 +12,10 @@
 //   · `POST /closer/deck/referrals/manual` (2057) → bloque `referidos`
 // `respuestas` va crudo al final: si mañana aparece un campo nuevo, el backend lo tiene igual.
 
-import { repartirCuotas } from './acciones/planCuotas';
+import {
+  esVenta, esCompleto, esCuota, esRenovacionOUpsell, pagadoAntes, saldoPrevio, quedaSaldo, armaPlan,
+  cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas,
+} from './arbolResultado.venta';
 
 const num = (v) => (v === '' || v === undefined || v === null ? undefined : parseFloat(v));
 const sinArroba = (v) => (v ? String(v).replace(/@/g, '').trim() : '');
@@ -177,17 +180,23 @@ function bloqueDeck(r, contexto) {
   return base;
 }
 
-/** El bloque `venta`: exactamente lo que hoy arma `buildSalePayload()`. */
+/**
+ * El bloque `venta`: exactamente lo que hoy arma `buildSalePayload()`, más `vendedor_id` (el closer
+ * elegido en la lista; el backend lo traduce a `email_vendedor`, que es lo que lee la comisión).
+ */
 function bloqueVenta(r, contexto) {
   const ahora = contexto.ahora || new Date();
   return {
+    ...(r.vendedor_id ? { vendedor_id: r.vendedor_id } : {}),
     email_vendedor: r.email_vendedor || '',
     nombre_cliente: r.nombre_cliente || '',
     telefono: sinMas(r.telefono),
     mail_cliente: r.mail_cliente || '',
     tipo_pago: `${r.programa} - ${r.tipo_pago_simple}`,
     monto: num(r.monto) ?? 0,
-    precio_total: num(r.precio_total),
+    // En un pago completo el precio ES lo cobrado (así lo toma `post_to_sheets`): mandar el precio
+    // de lista que se precarga haría que un PIF con descuento quedara debiendo la diferencia.
+    precio_total: esCompleto(r) ? undefined : num(r.precio_total),
     segundo_pago: r.segundo_pago || '',
     metodo_pago: r.metodo_pago || '',
     examen: `${r.examen_lead || ''}${r.notas ? ` | ${r.notas}` : ''}`,
@@ -206,41 +215,35 @@ function bloqueVenta(r, contexto) {
 /**
  * El plan de cuotas a crear. Se replica el criterio de hoy: «cobrado hoy» incluye todo lo que el
  * cliente ya había pagado antes (si no, el saldo se recalcula sobre el total completo y se le
- * cobra de más), y el plan solo se crea si el total supera lo cobrado.
+ * cobra de más), y el plan solo se crea si queda saldo. Las fechas y los montos son los mismos
+ * que el closer vio en el cronograma: antes, en modo mensual, viajaban vacías y el backend las
+ * calculaba desde hoy, sin el día de pago que se había elegido.
  */
 function bloquePlan(r, contexto) {
-  if (r.tipo_pago_simple === 'completo') return null;
-  const total = num(r.precio_total);
-  if (!total) return null;
-  const pagadoAntes = contexto.estadoPagos?.total_paid || 0;
-  const cobradoHoy = pagadoAntes + (num(r.monto) || 0);
-  if (total <= cobradoHoy) return null;
-  const cantidad = Math.max(1, Math.trunc(Number(r.num_cuotas) || 1));
+  if (!armaPlan(r, contexto)) return null;
   return {
-    total,
-    cobrado_hoy: cobradoHoy,
-    num_cuotas: cantidad,
-    fechas: Array.from({ length: cantidad }, (_, i) => r.cuotaFechas?.[i + 1] || null),
-    montos: repartirCuotas(cantidad, Math.max(0, total - cobradoHoy), r.cuotaMontos),
+    total: num(r.precio_total),
+    cobrado_hoy: pagadoAntes(contexto) + (num(r.monto) || 0),
+    num_cuotas: cantidadCuotas(r),
+    fechas: fechasCuotas(r, contexto.ahora || new Date()),
+    montos: montosCuotas(r, contexto),
     programa_code: r.programa,
   };
 }
 
 function payloadVenta(r, contexto) {
-  const esCuota = (r.tipo_pago_simple || '').toLowerCase() === 'cuota';
-  const saldoPrevio = contexto.estadoPagos?.balance_remaining || 0;
-  const esRenovacionOUpsell = ['Renovacion', 'Upsell'].includes(r.tipo_pago_simple);
+  const saldo = saldoPrevio(contexto);
   return {
     venta: bloqueVenta(r, contexto),
     // Renovación/Upsell con saldo: primero una Cuota que lo liquida, y solo si eso funciona
     // se registra la venta principal (mismo orden que hoy, handleRegisterSale 1650-1659).
-    liquidar_saldo: esRenovacionOUpsell && !!r.settleBalanceWithSale && saldoPrevio > 0
-      ? { monto: saldoPrevio, tipo_pago: `${r.programa} - Cuota`, comentario: 'Liquidación de saldo previo a Renovación/Upsell' }
+    liquidar_saldo: esRenovacionOUpsell(r) && r.settleBalanceWithSale === true && saldo > 0
+      ? { monto: saldo, tipo_pago: `${r.programa} - Cuota`, comentario: 'Liquidación de saldo previo a Renovación/Upsell' }
       : null,
-    acceso_academia: r.dar_acceso_academia
+    acceso_academia: r.dar_acceso_academia === true
       ? { programa_code: r.programa, tipo_venta: (r.tipo_pago_simple || '').toLowerCase(), email: r.mail_cliente }
       : null,
-    seguimiento_cobro: r.fecha_cobro ? {
+    seguimiento_cobro: r.fecha_cobro && quedaSaldo(r, contexto) ? {
       fecha_seguimiento_cobro: r.fecha_cobro,
       fecha_seguimiento: r.fecha_cobro,
       seguimiento_tipo: 'cerrada',
@@ -251,10 +254,10 @@ function payloadVenta(r, contexto) {
     agenda: { with_decision_maker: r.with_decision_maker ?? null, offer_presented: r.offer_presented ?? null },
     // Cuota de un plan que ya existía: se marca pagada en vez de recrear el cronograma (eso
     // borraba el historial de cuotas ya cobradas).
-    cuota_cobrada: esCuota && r.selectedCuotaId
+    cuota_cobrada: esCuota(r) && cobraCuotaExistente(r, contexto) && r.selectedCuotaId
       ? { cuota_id: r.selectedCuotaId, estado: 'pagado', monto: num(r.monto) ?? 0 }
       : null,
-    plan_cuotas: esCuota && r.selectedCuotaId ? null : bloquePlan(r, contexto),
+    plan_cuotas: bloquePlan(r, contexto),
     // La venta llegada desde la cadencia de seguimiento cierra primero el seguimiento.
     deck: r.contacto_result === 'cerro'
       ? { closer_notes: notaFinal(r), seguimiento_realizado: true, fecha_seguimiento: null, contact_result: 'cerro' }
@@ -266,12 +269,13 @@ function payloadVenta(r, contexto) {
 
 /**
  * El payload final. Devuelve `{accion, datos}`: `accion` es el nombre que la pestaña le pasa a
- * `onAccion` (`venta` o `reportar_resultado`) y `datos` el cuerpo.
+ * `onAccion` (`registrar_venta` o `reportar_resultado`, las dos de `fichaApi.RUTAS`) y `datos` el
+ * cuerpo. Se llamaba `venta`, un nombre que la ficha no conocía: registrar una venta desde esta
+ * pestaña fallaba con «Acción de ficha desconocida» antes de salir del navegador.
  */
 export function construirPayload(respuestas = {}, contexto = {}) {
   const r = respuestas;
-  const esVenta = r.cierre === true || r.contacto_result === 'cerro';
-  if (esVenta) return { accion: 'venta', datos: payloadVenta(r, contexto) };
+  if (esVenta(r)) return { accion: 'registrar_venta', datos: payloadVenta(r, contexto) };
   return {
     accion: 'reportar_resultado',
     datos: {

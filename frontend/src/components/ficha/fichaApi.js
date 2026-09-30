@@ -105,6 +105,10 @@ const CONSULTAS = {
     // Cómo le va al alumno en la Academia. No viaja en `GET /ficha/lead` porque es una llamada a
     // otro sistema: si fallara, se caería la ficha entera en vez de una pestaña.
     fulfillment: (appt) => api.get(`/ficha/${appt}/fulfillment`),
+    // Cómo viene pagando el cliente el programa que se le está vendiendo (`{params: {programa}}`):
+    // lo que ya pagó, lo que debe y qué tipos de pago siguen la secuencia. Depende del programa
+    // que se elige en medio de la venta, por eso no viaja en la ficha.
+    estado_venta: (appt, config) => api.get(`/ficha/${appt}/estado-venta`, config),
 };
 
 export const ACCIONES = Object.keys(RUTAS);

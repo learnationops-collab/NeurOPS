@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   estadoInicial, reiniciar, responder, actualizar, volverA, preguntaActual, faltantes,
-  puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
-  notaFinal, fechaHoraAIso, TIPOS_PAGO, RAICES,
+  puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, construirPayload,
+  notaFinal, fechaHoraAIso, RAICES,
 } from './arbolResultado';
+
+// La rama de la venta tiene su propio archivo: `arbolResultado.venta.test.js`.
 
 // Recorre el árbol contestando en orden lo que indica `guion` (clave → valores). Falla si el
 // árbol pide una pregunta que el guión no previó: así un cambio de ramas rompe el test en vez de
@@ -30,13 +32,6 @@ const clavesRecorridas = (guion, contexto = {}) => {
   }
   throw new Error('el árbol no terminó en 40 pasos');
 };
-
-const CLIENTE = {
-  nombre_cliente: 'Kevin Álvarez', instagram: '@kevin', mail_cliente: 'kevin@mail.com',
-  telefono: '+54 9 11 5555', documento_identidad: '30111222', email_vendedor: 'jean@neuro.com',
-  setter: 'Elías',
-};
-const META = { examen_lead: 'USMLE Step 1', date: '2026-09-25', sold_in_call: true, estado: 'Completada', notas: 'cerró rápido' };
 
 describe('estado inicial', () => {
   it('arranca con la pregunta raíz y las 4 tarjetas', () => {
@@ -67,214 +62,12 @@ describe('estado inicial', () => {
   });
 });
 
-describe('camino: venta al contado', () => {
-  const guion = {
-    res: { res: 'asistio' },
-    decisor: { with_decision_maker: true },
-    oferta: { offer_presented: true },
-    cierre: { cierre: true },
-    deuda: { deuda: false },
-    up: { up: 'none' },
-    programa: { programa: 'RR' },
-    tipo_pago: { tipo_pago_simple: 'completo' },
-    venta_cliente: CLIENTE,
-    venta_montos: { monto: '2000' },
-    medio_pago: { metodo_pago: 'Stripe' },
-    venta_meta: META,
-    venta_extras: { enviar_webhook: true, dar_acceso_academia: true },
-    referidos: { refs_ask: 'no' },
-  };
-
-  it('recorre exactamente los pasos esperados', () => {
-    expect(clavesRecorridas(guion)).toEqual([
-      'res', 'decisor', 'oferta', 'cierre', 'deuda', 'up', 'programa', 'tipo_pago',
-      'venta_cliente', 'venta_montos', 'medio_pago', 'venta_meta', 'venta_extras', 'referidos',
-    ]);
-  });
-
-  it('no pasa por el paso de cuotas porque no quedó deuda', () => {
-    expect(clavesRecorridas(guion)).not.toContain('venta_cuotas');
-  });
-
-  it('queda completo y es venta sin deuda', () => {
-    const r = recorrer(guion);
-    expect(completo(r)).toBe(true);
-    expect(esVenta(r)).toBe(true);
-    expect(quedaDeuda(r)).toBe(false);
-  });
-
-  it('los hitos quedan en verde hasta Deuda', () => {
-    const h = hitos(recorrer(guion));
-    expect(h.map((x) => x.estado)).toEqual(['hecho', 'hecho', 'hecho', 'hecho', 'pendiente']);
-    expect(h[1].sub).toBe('Asistió · con decisor');
-    expect(h[2].sub).toBe('Venta cerrada');
-    expect(h[3].sub).toBe('Sin deuda');
-    expect(h[4].sub).toBe('Ninguno');
-  });
-
-  it('el payload lleva todos los campos que hoy manda buildSalePayload', () => {
-    const r = recorrer(guion);
-    const { accion, datos } = construirPayload(r, {
-      appointmentId: 77, ahora: new Date(2026, 8, 26, 10, 30, 0), estadoPagos: { total_paid: 0, balance_remaining: 0 },
-    });
-    expect(accion).toBe('venta');
-    expect(datos.venta).toMatchObject({
-      email_vendedor: 'jean@neuro.com',
-      nombre_cliente: 'Kevin Álvarez',
-      telefono: '54 9 11 5555',
-      mail_cliente: 'kevin@mail.com',
-      tipo_pago: 'RR - completo',
-      monto: 2000,
-      metodo_pago: 'Stripe',
-      examen: 'USMLE Step 1 | cerró rápido',
-      instagram: 'kevin',
-      estado: 'Completada',
-      setter: 'Elías',
-      documento_identidad: '30111222',
-      appointment_id: 77,
-      enviar_webhook: true,
-      enviar_mensaje: true,
-      sold_in_call: true,
-    });
-    expect(datos.venta.precio_total).toBeUndefined();
-    expect(datos.venta.marca_temporal).toContain('26');
-    expect(datos.agenda).toEqual({ with_decision_maker: true, offer_presented: true });
-    expect(datos.acceso_academia).toEqual({ programa_code: 'RR', tipo_venta: 'completo', email: 'kevin@mail.com' });
-    expect(datos.plan_cuotas).toBeNull();
-    expect(datos.cuota_cobrada).toBeNull();
-    expect(datos.liquidar_saldo).toBeNull();
-    expect(datos.seguimiento_cobro).toBeNull();
-    expect(datos.referidos).toMatchObject({ pedido: 'no', referralAsked: 'asked', referralCount: 0 });
-    expect(datos.respuestas.res).toBe('asistio');
-  });
-});
-
-describe('camino: venta parcial con plan de cuotas', () => {
-  const guion = {
-    res: { res: 'asistio' },
-    decisor: { with_decision_maker: false },
-    oferta: { offer_presented: true },
-    cierre: { cierre: true },
-    deuda: { deuda: true },
-    up: { up: 'none' },
-    programa: { programa: 'AL' },
-    tipo_pago: { tipo_pago_simple: 'parcial' },
-    venta_cliente: CLIENTE,
-    venta_montos: { precio_total: '2000', monto: '500', segundo_pago: 'resto en 3 cuotas' },
-    medio_pago: { metodo_pago: 'Transferencia Bancaria' },
-    venta_cuotas: { num_cuotas: 3, installmentMode: 'monthly', cuotaFechas: { 1: '2026-10-25', 2: '2026-11-25', 3: '2026-12-25' } },
-    venta_meta: { ...META, fecha_cobro: '2026-10-20' },
-    venta_extras: { enviar_webhook: false },
-    referidos: { refs_ask: 'si', refs_rows: [{ nombre: 'Ana', contacto: '@ana' }, { nombre: 'Beto', contacto: '' }] },
-  };
-
-  it('pasa por el paso de cuotas', () => {
-    expect(clavesRecorridas(guion)).toContain('venta_cuotas');
-  });
-
-  it('el hito de deuda queda en ámbar', () => {
-    const h = hitos(recorrer(guion));
-    expect(h[3]).toMatchObject({ label: 'Deuda', sub: 'Con deuda', estado: 'alerta' });
-    expect(h[1].sub).toBe('Asistió · sin decisor');
-    expect(quedaDeuda(recorrer(guion))).toBe(true);
-  });
-
-  it('el plan reparte el saldo y la última cuota absorbe la diferencia', () => {
-    const { datos } = construirPayload(recorrer(guion), {
-      appointmentId: 5, estadoPagos: { total_paid: 100, balance_remaining: 1400 },
-    });
-    // cobrado_hoy = lo que ya había pagado antes (100) + lo de hoy (500)
-    expect(datos.plan_cuotas).toMatchObject({
-      total: 2000, cobrado_hoy: 600, num_cuotas: 3, programa_code: 'AL',
-      fechas: ['2026-10-25', '2026-11-25', '2026-12-25'],
-    });
-    expect(datos.plan_cuotas.montos.reduce((a, b) => a + b, 0)).toBeCloseTo(1400, 2);
-  });
-
-  it('la fecha de cobro viaja como seguimiento de cobro y el webhook queda apagado', () => {
-    const { datos } = construirPayload(recorrer(guion), { appointmentId: 5 });
-    expect(datos.seguimiento_cobro).toEqual({
-      fecha_seguimiento_cobro: '2026-10-20', fecha_seguimiento: '2026-10-20',
-      seguimiento_tipo: 'cerrada', seguimiento_sub: 'Seguimiento de cobro',
-      seguimiento_intento: 1, seguimiento_realizado: false,
-    });
-    expect(datos.venta.enviar_webhook).toBe(false);
-    expect(datos.venta.enviar_mensaje).toBe(false);
-  });
-
-  it('los referidos con y sin contacto quedan anotados en la nota', () => {
-    const r = recorrer(guion);
-    expect(notaFinal(r)).toContain('1 referido(s) con datos → agenda creada');
-    expect(notaFinal(r)).toContain('Referido(s) sin datos: Beto');
-    const { datos } = construirPayload(r, {});
-    expect(datos.referidos.filas).toHaveLength(2);
-    expect(datos.referidos.referralAsked).toBe('got');
-  });
-});
-
-describe('venta: renovación y upsell', () => {
-  const base = {
-    res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: true },
-    cierre: { cierre: true }, deuda: { deuda: false }, programa: { programa: 'SI' },
-    venta_cliente: CLIENTE, venta_montos: { precio_total: '900', monto: '900' },
-    medio_pago: { metodo_pago: 'PayPal' }, venta_meta: META,
-    venta_extras: { settleBalanceWithSale: true }, referidos: { refs_ask: 'no_pedido' },
-  };
-
-  it('elegir Renovación deja Renovacion como único tipo de pago posible', () => {
-    let r = estadoInicial();
-    r = responder(r, 'res', { res: 'asistio' });
-    r = responder(r, 'decisor', { with_decision_maker: true });
-    r = responder(r, 'oferta', { offer_presented: true });
-    r = responder(r, 'cierre', { cierre: true });
-    r = responder(r, 'deuda', { deuda: false });
-    r = responder(r, 'up', { up: 'Renovación' });
-    r = responder(r, 'programa', { programa: 'SI' });
-    expect(preguntaActual(r).opciones.map((o) => o.valor)).toEqual(['Renovacion']);
-  });
-
-  it('con saldo previo y el checkbox prendido se liquida el saldo antes de la venta', () => {
-    const r = recorrer({ ...base, up: { up: 'Upsell' }, tipo_pago: { tipo_pago_simple: 'Upsell' } });
-    const { datos } = construirPayload(r, { estadoPagos: { total_paid: 500, balance_remaining: 750 } });
-    expect(datos.liquidar_saldo).toEqual({
-      monto: 750, tipo_pago: 'SI - Cuota', comentario: 'Liquidación de saldo previo a Renovación/Upsell',
-    });
-    expect(hitos(r)[4]).toMatchObject({ sub: 'Upsell', estado: 'hecho' });
-  });
-
-  it('sin saldo previo no se liquida nada', () => {
-    const r = recorrer({ ...base, up: { up: 'Renovación' }, tipo_pago: { tipo_pago_simple: 'Renovacion' } });
-    const { datos } = construirPayload(r, { estadoPagos: { total_paid: 0, balance_remaining: 0 } });
-    expect(datos.liquidar_saldo).toBeNull();
-  });
-
-  it('el vocabulario completo de 6 tipos de pago sigue existiendo', () => {
-    expect(TIPOS_PAGO.map((t) => t.valor)).toEqual(['completo', 'parcial', 'Seña', 'Cuota', 'Renovacion', 'Upsell']);
-  });
-});
-
-describe('venta: cobro de una cuota ya existente', () => {
-  it('marca la cuota pagada en vez de recrear el plan', () => {
-    const r = recorrer({
-      res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: true },
-      cierre: { cierre: true }, deuda: { deuda: true }, up: { up: 'none' }, programa: { programa: 'RR' },
-      tipo_pago: { tipo_pago_simple: 'Cuota' }, venta_cliente: CLIENTE,
-      venta_montos: { precio_total: '2000', monto: '500' }, medio_pago: { metodo_pago: 'Stripe' },
-      venta_cuotas: { selectedCuotaId: 42 }, venta_meta: META, venta_extras: {},
-      referidos: { refs_ask: 'no' },
-    });
-    const { datos } = construirPayload(r, { estadoPagos: { total_paid: 1000 } });
-    expect(datos.cuota_cobrada).toEqual({ cuota_id: 42, estado: 'pagado', monto: 500 });
-    expect(datos.plan_cuotas).toBeNull();
-  });
-});
-
 describe('camino: asistió, oferta presentada, no cerró', () => {
   const seguimiento = {
     res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: true },
     cierre: { cierre: false }, nocierre_next: { nocierre_next: 'seguimiento' },
     seguimiento: { fecha_seguimiento: '2026-09-30', followup_reminder_enabled: true, followup_reminder_time: '09:00', notes: 'vuelve el lunes' },
-    referidos: { refs_ask: 'no' },
+    refs_ask: { refs_ask: 'no' },
   };
 
   it('el hito de cierre queda en ámbar con «No cerró»', () => {
@@ -315,7 +108,7 @@ describe('camino: asistió, oferta presentada, no cerró', () => {
     r = actualizar(r, { motivo_descarte: 'objeción de precio insalvable' });
     expect(puedeAvanzar(r)).toBe(true);
     r = responder(r, 'descarte', {});
-    r = responder(r, 'referidos', { refs_ask: 'no' });
+    r = responder(r, 'refs_ask', { refs_ask: 'no' });
     const { datos } = construirPayload(r, {});
     expect(datos.process).toMatchObject({ status: 'Lead Perdido', role: 'closer', note: 'objeción de precio insalvable' });
   });
@@ -334,7 +127,7 @@ describe('camino: asistió sin presentación de oferta', () => {
     expect(faltantes(r)).toEqual(['Completá Nueva fecha']);
     r = actualizar(r, { nueva_fecha_agenda: '2026-10-02', nueva_hora_agenda: '18:30', notes: 'faltó el decisor' });
     r = responder(r, 'segunda_llamada', {});
-    r = responder(r, 'referidos', { refs_ask: 'no_pedido' });
+    r = responder(r, 'refs_ask', { refs_ask: 'no_pedido' });
     expect(completo(r)).toBe(true);
     const { datos } = construirPayload(r, {});
     expect(datos.reagenda).toEqual({ start_time: fechaHoraAIso('2026-10-02', '18:30'), modo: 'segunda_llamada' });
@@ -347,7 +140,7 @@ describe('camino: asistió sin presentación de oferta', () => {
     const r = recorrer({
       res: { res: 'asistio' }, decisor: { with_decision_maker: false }, oferta: { offer_presented: false },
       nopres_next: { nopres_next: 'seguimiento' }, seguimiento: { fecha_seguimiento: '2026-10-01', notes: 'le escribo' },
-      referidos: { refs_ask: 'no' },
+      refs_ask: { refs_ask: 'no' },
     });
     expect(construirPayload(r, {}).datos.deck).toMatchObject({
       seguimiento_tipo: 'tomada', seguimiento_sub: 'Falta agendar 2ª llamada', result: 'Show up',
@@ -367,7 +160,7 @@ describe('camino: no asistió', () => {
   it('pide los 6 motivos y NO pregunta por referidos (no hubo contacto)', () => {
     const claves = clavesRecorridas(guion);
     expect(claves).toEqual(['res', 'noshow_motivo', 'noshow_detalle', 'noshow_next', 'seguimiento']);
-    expect(claves).not.toContain('referidos');
+    expect(claves).not.toContain('refs_ask');
     let r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
     expect(preguntaActual(r).opciones).toHaveLength(6);
     expect(preguntaActual(r).opciones[0].label).toBe('No contestó el mensaje');
@@ -506,7 +299,7 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
     expect(q.opciones.map((o) => o.label)).toEqual([
       'Pidió que no lo contacten', 'Se agotaron los 4 intentos', 'Compró en otro lado', 'Ya no califica']);
     r = responder(r, 'cierre_motivo', { cierre_motivo: 'Pidió que no lo contacten' });
-    r = responder(r, 'referidos', { refs_ask: 'no' });
+    r = responder(r, 'refs_ask', { refs_ask: 'no' });
     expect(completo(r, ctx)).toBe(true);
     const { datos } = construirPayload(r, ctx);
     expect(datos.deck).toMatchObject({ seguimiento_realizado: true, fecha_seguimiento: null });
@@ -520,33 +313,22 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
       modalidad: ['Mensaje'], notes: 'aceptó volver al meet el jueves',
       nueva_fecha_agenda: '2026-10-08', nueva_hora_agenda: '19:00',
     });
-    expect(preguntaActual(r, ctx).clave).toBe('referidos');
-    r = responder(r, 'referidos', { refs_ask: 'si', refs_rows: [{ nombre: 'Lu', contacto: '+5491122' }] });
+    expect(preguntaActual(r, ctx).clave).toBe('refs_ask');
+    r = responder(r, 'refs_ask', { refs_ask: 'si' });
+    expect(preguntaActual(r, ctx).clave).toBe('refs_filas');
+    r = responder(r, 'refs_filas', { refs_rows: [{ nombre: 'Lu', contacto: '+5491122' }] });
+    expect(completo(r, ctx)).toBe(true);
     const { datos } = construirPayload(r, ctx);
+    expect(datos.referidos.filas).toEqual([{ nombre: 'Lu', contacto: '+5491122' }]);
     expect(datos.reagenda).toMatchObject({ modo: 'seguimiento_agendo' });
     expect(datos.deck).toMatchObject({ confirm_status: 'por_confirmar', seguimiento_realizado: true, fecha_seguimiento: null });
   });
 
-  it('«cerró la venta» entra a la rama de venta y cierra antes el seguimiento', () => {
+  it('«cerró la venta» entra a la rama de venta (el recorrido entero está en su propio archivo)', () => {
     let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'cerro' });
     r = responder(r, 'contacto_detalle', { modalidad: ['Llamada'], notes: 'me pasó el comprobante del pago' });
-    expect(preguntaActual(r, ctx).clave).toBe('deuda');
+    expect(preguntaActual(r, ctx).clave).toBe('venta_nombre');
     expect(esVenta(r)).toBe(true);
-    r = responder(r, 'deuda', { deuda: false });
-    r = responder(r, 'up', { up: 'none' });
-    r = responder(r, 'programa', { programa: 'RR' });
-    r = responder(r, 'tipo_pago', { tipo_pago_simple: 'completo' });
-    r = responder(r, 'venta_cliente', CLIENTE);
-    r = responder(r, 'venta_montos', { monto: '2000' });
-    r = responder(r, 'medio_pago', { metodo_pago: 'Stripe' });
-    r = responder(r, 'venta_meta', META);
-    r = responder(r, 'venta_extras', {});
-    r = responder(r, 'referidos', { refs_ask: 'no' });
-    expect(completo(r, ctx)).toBe(true);
-    const { accion, datos } = construirPayload(r, ctx);
-    expect(accion).toBe('venta');
-    expect(datos.deck).toMatchObject({ seguimiento_realizado: true, fecha_seguimiento: null, contact_result: 'cerro' });
-    expect(hitos(r, ctx)[1].sub).toBe('Seguimiento 2 de 4');
   });
 
   it('el paso «¿y ahora qué hacemos?» no aparece si agendó o cerró', () => {
@@ -564,27 +346,31 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
 
 describe('referidos', () => {
   it('se piden cuando hubo contacto real y validan al menos un nombre', () => {
-    let r = recorrer({
-      res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: false },
-      nopres_next: { nopres_next: 'seguimiento' }, seguimiento: { fecha_seguimiento: '2026-10-01' },
-      referidos: {},
-    });
-    // El guión deja `referidos` sin contestar los campos: el paso queda confirmado pero
-    // `validar` del paso ya se probó abajo.
-    expect(r).toBeTruthy();
-
-    r = estadoInicial();
+    let r = estadoInicial();
     r = responder(r, 'res', { res: 'asistio' });
     r = responder(r, 'decisor', { with_decision_maker: true });
     r = responder(r, 'oferta', { offer_presented: false });
     r = responder(r, 'nopres_next', { nopres_next: 'seguimiento' });
     r = responder(r, 'seguimiento', { fecha_seguimiento: '2026-10-01' });
-    expect(preguntaActual(r).clave).toBe('referidos');
-    expect(faltantes(r)).toEqual(['Completá ¿Le pediste referidos?']);
-    r = actualizar(r, { refs_ask: 'si', refs_rows: [{ nombre: '', contacto: '' }] });
+    // Una pregunta por pantalla, como en el wizard: primero si los pidió, después quiénes.
+    expect(preguntaActual(r).clave).toBe('refs_ask');
+    expect(preguntaActual(r).opciones.map((o) => o.valor)).toEqual(['si', 'no', 'no_pedido']);
+    expect(faltantes(r)).toEqual(['Elegí una de las opciones']);
+    r = responder(r, 'refs_ask', { refs_ask: 'si', refs_rows: [{ nombre: '', contacto: '' }] });
+    expect(preguntaActual(r).clave).toBe('refs_filas');
     expect(faltantes(r)).toEqual(['Cargá al menos un referido con nombre']);
     r = actualizar(r, { refs_rows: [{ nombre: 'Ana', contacto: '@ana' }] });
     expect(puedeAvanzar(r)).toBe(true);
+  });
+
+  it('si no dejó referidos no se pide la lista', () => {
+    const r = recorrer({
+      res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: false },
+      nopres_next: { nopres_next: 'seguimiento' }, seguimiento: { fecha_seguimiento: '2026-10-01' },
+      refs_ask: { refs_ask: 'no' },
+    });
+    expect(completo(r)).toBe(true);
+    expect(construirPayload(r, {}).datos.referidos).toMatchObject({ pedido: 'no', filas: [] });
   });
 
   it('«no se lo pedí» deja su propia nota', () => {

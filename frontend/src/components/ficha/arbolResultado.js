@@ -7,8 +7,10 @@
 // El inventario de preguntas y de dónde salió cada rama está en `arbolResultado.preguntas.js`.
 
 import { PREGUNTAS } from './arbolResultado.preguntas';
+import { esVenta, esCompleto, quedaSaldo } from './arbolResultado.venta';
 
 export * from './arbolResultado.preguntas';
+export * from './arbolResultado.venta';
 export { construirPayload, notaFinal, fechaHoraAIso } from './arbolResultado.payload';
 
 // Clave interna donde se anotan los pasos de formulario ya confirmados. Los pasos de opciones no
@@ -182,9 +184,16 @@ export function hitos(respuestas = {}, contexto = {}) {
   const r = respuestas;
   const conDecisor = r.with_decision_maker === undefined || r.with_decision_maker === null
     ? '' : (r.with_decision_maker ? ' · con decisor' : ' · sin decisor');
-  const hayVenta = r.cierre === true || r.contacto_result === 'cerro';
   const cerro = r.cierre === undefined || r.cierre === null
     ? (r.contacto_result === 'cerro' ? true : null) : r.cierre;
+
+  // La deuda y el upsell no se preguntan aparte: salen del tipo de pago (Renovación y Upsell son
+  // su propio hito) y de los montos. Se sabe si queda deuda cuando es un pago completo o cuando
+  // ya se cargaron el precio y lo cobrado.
+  const tipo = esVenta(r) ? r.tipo_pago_simple : undefined;
+  const deudaSabida = !!tipo && (esCompleto(r) || (r[PASOS] || []).includes('venta_montos'));
+  const deuda = deudaSabida ? quedaSaldo(r, contexto) : null;
+  const up = !tipo ? null : ({ Renovacion: 'Renovación', Upsell: 'Upsell' }[tipo] || 'none');
 
   // En la cadencia de seguimiento la llamada ya se reportó: el hito «Resultado» muestra en qué
   // intento va, no «Sin reportar».
@@ -199,8 +208,8 @@ export function hitos(respuestas = {}, contexto = {}) {
     return cerro ? 'Venta cerrada' : 'No cerró';
   };
   const subUpsell = () => {
-    if (r.up === undefined || r.up === null) return 'Renovación o upsell';
-    return r.up === 'none' ? 'Ninguno' : r.up;
+    if (up === null) return 'Renovación o upsell';
+    return up === 'none' ? 'Ninguno' : up;
   };
 
   const definicion = [
@@ -209,8 +218,8 @@ export function hitos(respuestas = {}, contexto = {}) {
     // «Sin oferta» cuenta como hito alcanzado-pero-malo: es un desenlace definitivo de la
     // llamada, no un paso que todavía falte dar (el mockup lo dejaba en gris).
     { clave: 'cierre', label: 'Cierre', sub: subCierre(), alcanzado: cerro !== null || r.offer_presented === false, malo: cerro === false || r.offer_presented === false },
-    { clave: 'deuda', label: 'Deuda', sub: r.deuda === undefined || r.deuda === null ? 'Pendiente' : (r.deuda ? 'Con deuda' : 'Sin deuda'), alcanzado: r.deuda !== undefined && r.deuda !== null, malo: r.deuda === true },
-    { clave: 'upsell', label: 'Upsell', sub: subUpsell(), alcanzado: !!r.up && r.up !== 'none', malo: false },
+    { clave: 'deuda', label: 'Deuda', sub: deuda === null ? 'Pendiente' : (deuda ? 'Con deuda' : 'Sin deuda'), alcanzado: deuda !== null, malo: deuda === true },
+    { clave: 'upsell', label: 'Upsell', sub: subUpsell(), alcanzado: !!up && up !== 'none', malo: false },
   ];
 
   return definicion.map((h) => ({
@@ -243,9 +252,16 @@ export function resumen(respuestas = {}, contexto = {}) {
       return;
     }
     q.campos.forEach((campo) => {
-      const valor = respuestas[campo.campo];
-      if (vacio(valor)) return;
-      filas.push({ clave: `${q.clave}.${campo.campo}`, paso: q.clave, label: campo.label, valor: formatoValor(valor) });
+      const crudo = respuestas[campo.campo];
+      // `resumir` es para lo que en crudo no se lee (un id de cuota, un mapa de montos): el
+      // campo dice cómo contarse. Puede devolver null para no ocupar una fila.
+      if (campo.enResumen === false || (vacio(crudo) && !campo.resumir)) return;
+      let valor;
+      if (campo.resumir) valor = campo.resumir(crudo, respuestas, contexto);
+      else if (campo.etiquetas && campo.etiquetas[String(crudo)]) valor = campo.etiquetas[String(crudo)];
+      else valor = formatoValor(crudo);
+      if (valor === null || valor === undefined || valor === '') return;
+      filas.push({ clave: `${q.clave}.${campo.campo}`, paso: q.clave, label: campo.label, valor });
     });
   });
   return filas;
@@ -263,8 +279,26 @@ function formatoValor(valor) {
   return String(valor);
 }
 
-/** ¿El resultado de este árbol es una venta? Decide si el CTA dispara `venta` o `reportar_resultado`. */
-export const esVenta = (respuestas = {}) => respuestas.cierre === true || respuestas.contacto_result === 'cerro';
+/** ¿Quedó deuda? Decide si al guardar el modal ofrece seguir en la pestaña «Acciones». */
+export const quedaDeuda = (respuestas = {}, contexto = {}) => esVenta(respuestas)
+  && !esCompleto(respuestas) && quedaSaldo(respuestas, contexto);
 
-/** ¿Quedó deuda? Decide si al guardar el modal salta a la pestaña «Acciones». */
-export const quedaDeuda = (respuestas = {}) => esVenta(respuestas) && respuestas.deuda === true;
+// Desde dónde cuenta el progreso de la venta: la primera pregunta de su rama.
+const PRIMERA_DE_LA_VENTA = 'venta_nombre';
+
+/**
+ * «Paso 3 de 17» de la venta, como el contador del wizard. El total cambia mientras se contesta
+ * (si queda saldo aparece el cronograma): se cuenta el camino que HOY es aplicable.
+ */
+export function progresoVenta(respuestas = {}, contexto = {}) {
+  if (!esVenta(respuestas)) return null;
+  const camino = caminoActivo(respuestas, contexto);
+  const desde = camino.findIndex((q) => q.clave === PRIMERA_DE_LA_VENTA);
+  if (desde < 0) return null;
+  const tramo = camino.slice(desde);
+  const actual = preguntaActual(respuestas, contexto);
+  if (!actual) return { paso: tramo.length, total: tramo.length, listo: true };
+  const paso = tramo.findIndex((q) => q.clave === actual.clave);
+  if (paso < 0) return null;
+  return { paso: paso + 1, total: tramo.length, listo: false };
+}

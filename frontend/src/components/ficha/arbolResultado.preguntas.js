@@ -10,7 +10,21 @@
 //     `components/modals/DeclararVentaWizard.jsx` (los pasos de la venta).
 // Cada pregunta lleva anotado su origen en un comentario `← …`.
 //
-// Este archivo es SOLO datos: la lógica de recorrido vive en `arbolResultado.js`.
+// Este archivo es SOLO datos: la lógica de recorrido vive en `arbolResultado.js` y la cuenta de la
+// venta (saldo, cuotas) en `arbolResultado.venta.js`.
+
+import { moneda } from './acciones/planCuotas';
+import {
+  esVenta, esCompleto, esRenovacionOUpsell, saldoPrevio, saldoVenta, quedaSaldo,
+  cobraCuotaExistente, armaPlan, cantidadCuotas, cronogramaEnTexto, fechaCorta, MAXIMO_CUOTAS,
+} from './arbolResultado.venta';
+
+// Cómo se cuenta en la revisión lo que en crudo no se lee.
+const enPlata = (v) => (v === '' || v === undefined || v === null ? null : moneda(v));
+const cuotaElegida = (v, r, c) => {
+  const q = (c.cuotas || []).find((x) => x.id === v);
+  return q ? `Cuota ${q.numero_cuota} · vence ${fechaCorta(q.fecha_vencimiento)} · ${moneda(q.monto)}` : null;
+};
 
 // ← CloserWorkflowPage `root` (2562-2576) + mockup `agAcciones`.
 export const RAICES = [
@@ -40,18 +54,20 @@ export const MOTIVOS_CIERRE_SEGUIMIENTO = [
 
 // ← DeclararVentaWizard `PROGRAMS` (49-53), `METHODS` (54), `PAYMENT_TYPES` (57-64).
 export const PROGRAMAS = [
-  { valor: 'RR', label: 'Residency Roadmap' },
-  { valor: 'AL', label: 'Ace Learner' },
-  { valor: 'SI', label: 'Specialist Initiative' },
+  { valor: 'RR', label: 'Residency Roadmap', sub: 'RR' },
+  { valor: 'AL', label: 'Ace Learner', sub: 'AL' },
+  { valor: 'SI', label: 'Specialist Initiative', sub: 'SI' },
 ];
 export const MEDIOS_PAGO = ['Stripe', 'PayPal', 'Transferencia Bancaria', 'Binance / USDT', 'Hotmart', 'Otro'];
+// `clave` es como los nombra `allowed_types` del backend (todo en minúscula); `valor` es la grafía
+// que viaja en `tipo_pago` («RR - Seña»), la misma de siempre.
 export const TIPOS_PAGO = [
-  { valor: 'completo', label: 'Completo (PIF)', sub: 'paga todo hoy', conDeuda: false },
-  { valor: 'parcial', label: 'Parcial (primer pago)', sub: 'arranca un plan de cuotas', conDeuda: true },
-  { valor: 'Seña', label: 'Seña', sub: 'promesa de pago, sin cronograma todavía', conDeuda: true },
-  { valor: 'Cuota', label: 'Cuota', sub: 'cobra una cuota del plan ya armado', conDeuda: true },
-  { valor: 'Renovacion', label: 'Renovación', sub: 'ya fue alumno, compra de nuevo', up: 'Renovación' },
-  { valor: 'Upsell', label: 'Upsell', sub: 'suma otro programa/mejora', up: 'Upsell' },
+  { valor: 'completo', clave: 'completo', label: 'Completo (PIF)', sub: 'Paga todo hoy' },
+  { valor: 'parcial', clave: 'parcial', label: 'Parcial (primer pago)', sub: 'Arranca un plan de cuotas' },
+  { valor: 'Seña', clave: 'seña', label: 'Seña', sub: 'Promesa de pago, sin cronograma todavía' },
+  { valor: 'Cuota', clave: 'cuota', label: 'Cuota', sub: 'Cobra una cuota del plan ya armado' },
+  { valor: 'Renovacion', clave: 'renovacion', label: 'Renovación', sub: 'Ya fue alumno, compra de nuevo' },
+  { valor: 'Upsell', clave: 'upsell', label: 'Upsell', sub: 'Suma otro programa o una mejora' },
 ];
 export const ESTADOS_VENTA = [
   { valor: 'Completada', label: 'Completada', sub: 'todo en orden', tono: 'success' },
@@ -77,10 +93,31 @@ const vaASeguimiento = (r) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.
   .includes('seguimiento') || r.reag_dejo_fecha === false || r.sig_action === 'next';
 const vaADescartar = (r) => ['perdido', 'descartar', 'no_lead']
   .some((v) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes(v));
-const esVenta = (r) => r.cierre === true || r.contacto_result === 'cerro';
 // Hubo contacto humano real → corresponde preguntar por referidos (misma regla que hoy:
 // `needsRefs` en 3148, y el paso `referralAsked` del wizard de venta).
 const huboContacto = (r) => r.res === 'asistio' || ['contesto', 'agendo', 'cerro'].includes(r.contacto_result);
+
+// Los closers a los que se le puede atribuir la venta: los de la ficha, con el de la agenda
+// primero (es a quien le toca casi siempre). Si la ficha no trae la lista queda solo el de la
+// agenda, y con uno solo la pregunta no se hace.
+function closersDeLaVenta(c = {}) {
+  const deLaAgenda = c.closerAgenda?.id ? c.closerAgenda : null;
+  const lista = (c.closers || []).filter((x) => x && x.id);
+  if (deLaAgenda && !lista.some((x) => x.id === deLaAgenda.id)) lista.push(deLaAgenda);
+  return lista
+    .map((x) => ({
+      valor: x.id,
+      label: x.nombre || 'Sin nombre',
+      sub: deLaAgenda && x.id === deLaAgenda.id ? 'Closer de esta agenda' : (x.pista || null),
+      tono: 'info',
+    }))
+    .sort((a, b) => (b.sub === 'Closer de esta agenda') - (a.sub === 'Closer de esta agenda'));
+}
+
+// El resumen «Así viene este cliente» se muestra mientras carga el estado del programa (con su
+// esqueleto) y después solo si el cliente ya tiene pagos en ese programa, como en el wizard.
+const muestraEstadoCliente = (r, c = {}) => esVenta(r) && !!r.programa
+  && (!!c.cargandoVenta || (Number(c.estadoVenta?.sales_count) || 0) > 0);
 
 const enLlamada = (r, c) => c.modo !== 'seguimiento';
 const enSeguimiento = (r, c) => c.modo === 'seguimiento';
@@ -126,58 +163,93 @@ export const PREGUNTAS = [
   },
 
   // ---------- rama venta ----------
-  { // ← mockup `¿Cómo pagó?`; define si queda saldo (hito «Deuda»)
-    clave: 'deuda', hito: 'deuda', campo: 'deuda', tipo: 'opciones', enunciado: '¿Cómo pagó?',
-    opciones: [
-      { valor: false, label: 'Pago completo', sub: 'No queda saldo', tono: 'success' },
-      { valor: true, label: 'Queda deuda', sub: 'Hay saldo por cobrar', tono: 'warning' },
-    ],
+  // El wizard «Declarar venta» (DeclararVentaWizard), una pregunta por pantalla y en su orden:
+  // primero se confirma cada dato del comprador —el de la agenda viene precargado y se revisa,
+  // no se da por bueno—, después qué compró y cómo paga, el cronograma si queda saldo, los datos
+  // de la venta, los referidos y el acceso a la Academia.
+  { // ← wizard `name`
+    clave: 'venta_nombre', hito: 'cierre', tipo: 'formulario', enunciado: '¿Quién compró?',
+    ayuda: 'Vino de la agenda. Confirmá que esté bien escrito.',
+    campos: [texto('nombre_cliente', 'Nombre y apellido', { requerido: true, precargado: true })],
     cuando: esVenta,
   },
-  { // ← mockup `¿Hay renovación o upsell?` — en el modelo real es el tipo_pago de la venta
-    clave: 'up', hito: 'upsell', campo: 'up', tipo: 'opciones', enunciado: '¿Hay renovación o upsell?',
-    opciones: [
-      { valor: 'Renovación', label: 'Renovación', sub: 'Ya fue alumno', tono: 'success' },
-      { valor: 'Upsell', label: 'Upsell', sub: 'Suma otro programa', tono: 'info' },
-      { valor: 'none', label: 'Ninguno', sub: 'Venta nueva', tono: 'idle' },
-    ],
+  { // ← wizard `instagram`
+    clave: 'venta_instagram', hito: 'cierre', tipo: 'formulario', enunciado: '¿Su Instagram?',
+    ayuda: 'Sin arroba. Se usa para el seguimiento por DM.',
+    campos: [texto('instagram', 'Instagram', { requerido: true, prefijo: '@', precargado: true })],
     cuando: esVenta,
+  },
+  { // ← wizard `email`
+    clave: 'venta_email', hito: 'cierre', tipo: 'formulario', enunciado: '¿Su email?',
+    ayuda: 'Acá le llega el acceso al programa.',
+    campos: [texto('mail_cliente', 'Email', { requerido: true, tipo: 'email', precargado: true })],
+    cuando: esVenta,
+  },
+  { // ← wizard `phone`
+    clave: 'venta_telefono', hito: 'cierre', tipo: 'formulario', enunciado: '¿Su teléfono?',
+    ayuda: 'Con código de país, para WhatsApp.',
+    campos: [texto('telefono', 'Teléfono', { tipo: 'tel', precargado: true })],
+    cuando: esVenta,
+  },
+  { // ← wizard `document`
+    clave: 'venta_documento', hito: 'cierre', tipo: 'formulario', enunciado: '¿Su documento de identidad?',
+    ayuda: 'DNI, NIE o pasaporte. Es el único dato que no trae la agenda.',
+    campos: [texto('documento_identidad', 'Documento de identidad', { precargado: true })],
+    cuando: esVenta,
+  },
+  { // ← wizard `closer`: la comisión va a quien se elija acá. Con una sola opción no hay nada
+    // que elegir: la venta va al closer de la agenda.
+    clave: 'venta_closer', hito: 'cierre', campo: 'vendedor_id', tipo: 'opciones',
+    enunciado: '¿A quién se le atribuye la venta?', ayuda: 'La comisión va a este closer.',
+    opciones: (r, c) => closersDeLaVenta(c),
+    cuando: (r, c) => esVenta(r) && closersDeLaVenta(c).length > 1,
   },
   { // ← wizard `program`
     clave: 'programa', hito: 'cierre', campo: 'programa', tipo: 'opciones', enunciado: '¿Qué programa compró?',
     opciones: PROGRAMAS.map((p) => ({ ...p, tono: 'info' })), cuando: esVenta,
   },
-  { // ← wizard `paymentType`. Se acotan las opciones con lo ya contestado, pero el vocabulario
-    // completo de 6 tipos se conserva: sin deuda igual puede ser Renovación o Upsell.
-    clave: 'tipo_pago', hito: 'cierre', campo: 'tipo_pago_simple', tipo: 'opciones',
-    enunciado: '¿Qué tipo de pago es?',
-    opciones: (r) => TIPOS_PAGO.filter((t) => {
-      if (r.up === 'Renovación') return t.valor === 'Renovacion';
-      if (r.up === 'Upsell') return t.valor === 'Upsell';
-      return t.conDeuda === undefined ? false : t.conDeuda === !!r.deuda;
-    }).map((t) => ({ ...t, tono: 'info' })),
+  { // ← wizard `clientSummary`: solo si ya tiene pagos en ese programa
+    clave: 'venta_estado_cliente', hito: 'cierre', tipo: 'formulario', enunciado: 'Así viene este cliente',
+    ayuda: 'Ya tiene pagos registrados en este programa: el resto de la venta se ajusta solo.',
+    campos: [{ campo: 'estado_cliente', label: 'Estado de pagos', tipo: 'estado_cliente', enResumen: false }],
+    validar: (r, c) => (c.cargandoVenta ? ['Esperá a que cargue cómo viene pagando'] : []),
+    cuando: muestraEstadoCliente,
+  },
+  { // ← wizard `paymentType`. `allowed_types` AVISA, no esconde ni bloquea: si el historial del
+    // cliente está mal cargado, el closer tiene que poder declarar la venta real igual (caso real
+    // de Emilia Collantes, ver `fetchSaleClientState` en CloserWorkflowPage).
+    clave: 'tipo_pago', hito: 'deuda', campo: 'tipo_pago_simple', tipo: 'opciones', enunciado: '¿Cómo paga?',
+    opciones: (r, c) => TIPOS_PAGO.map((t) => {
+      const regla = c.estadoVenta?.allowed_types?.[t.clave];
+      return { ...t, tono: 'info', aviso: regla && regla.ok === false ? regla.reason : null };
+    }),
     cuando: esVenta,
   },
-  { // ← wizard name/instagram/email/phone/document/closer + el `setter` de buildSalePayload
-    clave: 'venta_cliente', hito: 'cierre', tipo: 'formulario', enunciado: '¿A quién le vendiste?',
-    ayuda: 'Lo que ya sabemos viene precargado de la agenda.',
-    campos: [
-      texto('nombre_cliente', 'Nombre', { requerido: true }),
-      texto('instagram', 'Instagram', { requerido: true, prefijo: '@' }),
-      texto('mail_cliente', 'Email', { requerido: true, tipo: 'email' }),
-      texto('telefono', 'Teléfono', { tipo: 'tel' }),
-      texto('documento_identidad', 'Documento de identidad'),
-      texto('email_vendedor', 'Closer que vendió (email)', { requerido: true, tipo: 'email' }),
-      texto('setter', 'Setter'),
+  { // ← el checkbox «Liquidar el saldo pendiente» del paso `paymentType`, como pregunta propia
+    clave: 'liquidar', hito: 'deuda', campo: 'settleBalanceWithSale', tipo: 'opciones',
+    enunciado: (r, c) => `Todavía debe ${moneda(saldoPrevio(c))} del programa. ¿Lo liquidás junto con esta venta?`,
+    ayuda: 'Se registra primero una Cuota por ese saldo y, si sale bien, la venta nueva.',
+    opciones: [
+      { valor: true, label: 'Sí, liquidarlo', sub: 'Cuota por el saldo + la venta nueva', tono: 'success' },
+      { valor: false, label: 'No, solo la venta nueva', sub: 'El saldo sigue pendiente', tono: 'idle' },
     ],
-    cuando: esVenta,
+    cuando: (r, c) => esVenta(r) && esRenovacionOUpsell(r)
+      && !!c.estadoVenta?.can_settle_balance_with_installment && saldoPrevio(c) > 0.009,
   },
-  { // ← wizard `amounts`: precio_total + monto + segundo_pago (comentario que viaja a Sheets)
-    clave: 'venta_montos', hito: 'deuda', tipo: 'formulario', enunciado: '¿Cuánta plata entró?',
+  { // ← wizard `amounts` (precio total + cobrado hoy) y, en un pago completo, el monto del paso
+    // `method`. El comentario del cobro viaja a Sheets como `segundo_pago`.
+    clave: 'venta_montos', hito: 'deuda', tipo: 'formulario',
+    enunciado: (r) => (esCompleto(r) ? '¿Cuánto cobraste?' : 'Precio total y cuánto cobrás hoy'),
+    ayuda: (r) => (esCompleto(r) ? null : 'El saldo se calcula solo.'),
     campos: (r) => [
-      ...(r.tipo_pago_simple === 'completo' ? [] : [{ campo: 'precio_total', label: 'Precio total del programa', tipo: 'monto', requerido: true }]),
-      { campo: 'monto', label: 'Cobrado hoy', tipo: 'monto', requerido: true, minimo: 0.01 },
-      texto('segundo_pago', 'Comentario / segundo pago'),
+      ...(esCompleto(r) ? [] : [{
+        campo: 'precio_total', label: 'Precio total', tipo: 'monto', requerido: true, minimo: 0.01, resumir: enPlata,
+      }]),
+      {
+        campo: 'monto', label: esCompleto(r) ? 'Monto cobrado' : 'Cobrado hoy', tipo: 'monto',
+        requerido: true, minimo: 0.01, resumir: enPlata,
+      },
+      texto('segundo_pago', 'Comentario del cobro (opcional)'),
     ],
     cuando: esVenta,
   },
@@ -185,40 +257,85 @@ export const PREGUNTAS = [
     clave: 'medio_pago', hito: 'deuda', campo: 'metodo_pago', tipo: 'opciones',
     enunciado: '¿Por dónde entró la plata?', opciones: opts(MEDIOS_PAGO, 'info'), cuando: esVenta,
   },
-  { // ← wizard pickCuota | installmentCount + installmentMode + installmentDay/Dates + cuotaMontos
-    clave: 'venta_cuotas', hito: 'deuda', tipo: 'formulario', enunciado: '¿Cómo queda el saldo?',
-    ayuda: 'La última cuota absorbe la diferencia para que la suma cierre exacto.',
-    campos: [
-      { campo: 'selectedCuotaId', label: 'Cuota del plan que se está cobrando', tipo: 'cuota' },
-      { campo: 'num_cuotas', label: 'Cantidad de cuotas', tipo: 'entero', minimo: 1 },
-      {
-        campo: 'installmentMode', label: 'Fechas', tipo: 'opcion', opciones: ['monthly', 'custom'],
-        etiquetas: { monthly: 'Mensual', custom: 'A mano' },
-      },
-      { campo: 'dia_de_pago', label: 'Día de pago mensual', tipo: 'entero' },
-      { campo: 'cuotaFechas', label: 'Fechas por cuota', tipo: 'mapa' },
-      { campo: 'cuotaMontos', label: 'Montos por cuota', tipo: 'mapa' },
-    ],
-    cuando: (r) => esVenta(r) && r.deuda === true && r.tipo_pago_simple !== 'completo',
+  { // ← wizard `pickCuota`
+    clave: 'venta_cuota', hito: 'deuda', tipo: 'formulario', enunciado: '¿Cuál cuota se está pagando?',
+    ayuda: 'Elegí cualquier pendiente: podés adelantar una futura o pagar una vencida.',
+    campos: [{
+      campo: 'selectedCuotaId', label: 'Cuota que se paga', tipo: 'cuota', requerido: true,
+      falta: 'Elegí la cuota que se paga', resumir: cuotaElegida,
+    }],
+    cuando: (r, c) => esVenta(r) && !esCompleto(r) && quedaSaldo(r, c) && cobraCuotaExistente(r, c),
   },
-  { // ← wizard exam/saleMeta/estado/notas + el `fecha_cobro` que hoy guarda handleRegisterSale
-    clave: 'venta_meta', hito: 'cierre', tipo: 'formulario', enunciado: 'Datos de la venta',
+  { // ← wizard `installmentCount`
+    clave: 'venta_num_cuotas', hito: 'deuda', tipo: 'formulario',
+    enunciado: (r, c) => `Te deben ${moneda(saldoVenta(r, c))}. ¿En cuántas cuotas?`,
+    ayuda: 'Después definís cuándo se cobran.',
+    campos: [{
+      campo: 'num_cuotas', label: 'Cantidad de cuotas', tipo: 'contador', requerido: true,
+      minimo: 1, maximo: MAXIMO_CUOTAS, atajos: [2, 3, 4, 6],
+      resumir: (v, r) => `${cantidadCuotas(r)} ${cantidadCuotas(r) === 1 ? 'cuota' : 'cuotas'}`,
+    }],
+    cuando: armaPlan,
+  },
+  { // ← wizard `installmentMode`
+    clave: 'venta_modo_cuotas', hito: 'deuda', campo: 'installmentMode', tipo: 'opciones',
+    enunciado: '¿El pago es mensual?', ayuda: 'Si es mensual solo elegís el día y el resto se calcula solo.',
+    opciones: [
+      { valor: 'monthly', label: 'Sí, todos los meses el mismo día', sub: 'Elegís un día y listo', tono: 'info' },
+      { valor: 'custom', label: 'No, fechas distintas', sub: 'Cargás cada fecha a mano', tono: 'info' },
+    ],
+    cuando: armaPlan,
+  },
+  { // ← wizard `installmentDay`
+    clave: 'venta_dia_pago', hito: 'deuda', tipo: 'formulario', enunciado: '¿Qué día de cada mes paga?',
+    ayuda: 'Si el mes no tiene ese día, se cobra el último. Podés ajustar el monto de cada cuota abajo.',
     campos: [
-      texto('examen_lead', 'Examen que rinde'),
-      { campo: 'date', label: 'Fecha de la venta', tipo: 'fecha', requerido: true },
-      { campo: 'sold_in_call', label: '¿Cerró en la llamada?', tipo: 'booleano' },
-      { campo: 'estado', label: 'Estado de la venta', tipo: 'opcion', opciones: ESTADOS_VENTA.map((e) => e.valor) },
-      { campo: 'notas', label: 'Notas u observaciones', tipo: 'parrafo' },
-      { campo: 'fecha_cobro', label: 'Próximo seguimiento de cobro', tipo: 'fecha' },
+      { campo: 'dia_de_pago', label: 'Día de pago', tipo: 'dia_mes', requerido: true, resumir: (v) => `El ${v} de cada mes` },
+      { campo: 'cuotaMontos', label: 'Cronograma', tipo: 'cronograma', resumir: (v, r, c) => cronogramaEnTexto(r, c) },
+    ],
+    cuando: (r, c) => armaPlan(r, c) && r.installmentMode === 'monthly',
+  },
+  { // ← wizard `installmentDates`
+    clave: 'venta_fechas_cuotas', hito: 'deuda', tipo: 'formulario', enunciado: '¿Cuándo cobrás cada cuota?',
+    ayuda: 'Estas fechas son las que te van a aparecer en seguimientos. La última cuota se ajusta sola para que la suma cierre.',
+    campos: [{ campo: 'cuotaFechas', label: 'Cronograma', tipo: 'cronograma', resumir: (v, r, c) => cronogramaEnTexto(r, c) }],
+    cuando: (r, c) => armaPlan(r, c) && r.installmentMode === 'custom',
+  },
+  { // ← wizard `exam`
+    clave: 'venta_examen', hito: 'cierre', tipo: 'formulario', enunciado: '¿Qué examen rinde?',
+    ayuda: 'Define el grupo y el contenido que recibe.',
+    campos: [texto('examen_lead', 'Examen', { precargado: true })],
+    cuando: esVenta,
+  },
+  { // ← wizard `saleMeta`
+    clave: 'venta_fecha', hito: 'cierre', tipo: 'formulario', enunciado: '¿Cuándo se cerró?',
+    ayuda: 'Y si la firma fue dentro de la llamada.',
+    campos: [
+      // Sin piso: una venta de ayer que se reporta hoy tiene que poder fecharse ayer.
+      {
+        campo: 'date', label: 'Fecha de la venta', tipo: 'fecha', requerido: true, sinMinimo: true,
+        presets: [{ label: 'Hoy', dias: 0 }, { label: 'Ayer', dias: -1 }],
+      },
+      {
+        campo: 'sold_in_call', label: '¿Cerró en la llamada?', tipo: 'opcion', opciones: [true, false],
+        etiquetas: { true: 'Sí, en el Meet', false: 'No, fuera de la llamada' },
+      },
     ],
     cuando: esVenta,
   },
-  { // ← wizard `review`: los tres checkboxes de la pantalla de revisión
-    clave: 'venta_extras', hito: 'cierre', tipo: 'formulario', enunciado: 'Antes de registrar',
-    campos: [
-      { campo: 'enviar_webhook', label: 'Avisar por la automatización (n8n)', tipo: 'booleano' },
-      { campo: 'dar_acceso_academia', label: 'Dar acceso a la Academia con este email', tipo: 'booleano' },
-      { campo: 'settleBalanceWithSale', label: 'Liquidar el saldo anterior con esta venta', tipo: 'booleano' },
+  { // ← wizard `estado`
+    clave: 'venta_estado', hito: 'cierre', campo: 'estado', tipo: 'opciones', enunciado: '¿Estado de la venta?',
+    opciones: ESTADOS_VENTA, cuando: esVenta,
+  },
+  { // ← wizard `notas` + el `fecha_cobro` que guardaba `handleRegisterSale` como seguimiento de cobro
+    clave: 'venta_notas', hito: 'cierre', tipo: 'formulario', enunciado: 'Notas u observaciones',
+    ayuda: 'Opcional: objeciones, detalles del cierre, lo que sirva después.',
+    campos: (r, c) => [
+      { campo: 'notas', label: 'Notas', tipo: 'parrafo' },
+      ...(quedaSaldo(r, c) ? [{
+        campo: 'fecha_cobro', label: 'Próximo seguimiento de cobro (opcional)', tipo: 'fecha',
+        presets: [{ label: 'En 1 semana', dias: 7 }, { label: 'En 1 mes', meses: 1 }],
+      }] : []),
     ],
     cuando: esVenta,
   },
@@ -360,19 +477,33 @@ export const PREGUNTAS = [
     campos: [{ campo: 'motivo_descarte', label: 'Motivo', tipo: 'parrafo', requerido: true, minimoTexto: 3 }],
     cuando: vaADescartar,
   },
-  { // ← overlay de referidos (2276-2348) + pasos referral* del wizard de venta
-    clave: 'referidos', hito: 'upsell', tipo: 'formulario', enunciado: '¿Le pediste referidos?',
-    ayuda: 'Con nombre y contacto entran directo a Confirmaciones.',
-    campos: [
-      {
-        campo: 'refs_ask', label: '¿Le pediste referidos?', tipo: 'opcion', requerido: true,
-        opciones: ['si', 'no', 'no_pedido'],
-        etiquetas: { si: 'Sí, dejó referidos', no: 'Se lo pedí, no dejó', no_pedido: 'No se lo pedí' },
-      },
-      { campo: 'refs_rows', label: 'Referidos', tipo: 'filas', columnas: ['nombre', 'contacto'] },
+  { // ← overlay de referidos (2276-2348) + paso `referralAsked` del wizard de venta
+    clave: 'refs_ask', hito: 'upsell', campo: 'refs_ask', tipo: 'opciones', enunciado: '¿Le pediste un referido?',
+    ayuda: (r) => (esVenta(r) ? 'El mejor momento para pedirlo ya pasó. Contá qué salió.' : null),
+    opciones: [
+      { valor: 'si', label: 'Sí le pedí y me dio', sub: 'Cargamos los contactos', tono: 'success' },
+      { valor: 'no', label: 'Sí le pedí, no me dio', sub: 'Queda registrado igual', tono: 'warning' },
+      { valor: 'no_pedido', label: 'No le pedí', sub: 'La próxima', tono: 'idle' },
     ],
-    validar: (r) => (r.refs_ask === 'si' && !(r.refs_rows || []).some((f) => (f.nombre || '').trim())
-      ? ['Cargá al menos un referido con nombre'] : []),
     cuando: huboContacto,
+  },
+  { // ← pasos `referralCount` + `referralContacts` del wizard: una fila por referido
+    clave: 'refs_filas', hito: 'upsell', tipo: 'formulario', enunciado: 'Nombre y contacto de cada referido',
+    ayuda: 'Con nombre y contacto entran directo a Confirmaciones como una llamada nueva.',
+    campos: [{ campo: 'refs_rows', label: 'Referidos', tipo: 'filas', columnas: ['nombre', 'contacto'] }],
+    validar: (r) => (!(r.refs_rows || []).some((f) => (f.nombre || '').trim())
+      ? ['Cargá al menos un referido con nombre'] : []),
+    cuando: (r, c) => huboContacto(r, c) && r.refs_ask === 'si',
+  },
+  { // ← el checkbox «Dar acceso a la Academia» de la revisión del wizard, como pregunta propia:
+    // es una decisión que no se puede tomar por omisión (apagado por defecto en el wizard).
+    clave: 'venta_academia', hito: 'upsell', campo: 'dar_acceso_academia', tipo: 'opciones',
+    enunciado: '¿Le das acceso a la Academia?',
+    ayuda: (r) => `Con el email ${r.mail_cliente || '(sin email)'}. Sí, si esta venta arranca o renueva su acceso real al programa; no hace falta en una venta de prueba o en la Cuota de alguien que ya entra.`,
+    opciones: (r) => [
+      { valor: true, label: 'Sí, darle acceso', sub: `Crea o renueva su usuario con ${r.mail_cliente || 'su email'}`, tono: 'success' },
+      { valor: false, label: 'No por ahora', sub: 'Se le puede dar después', tono: 'idle' },
+    ],
+    cuando: esVenta,
   },
 ];
