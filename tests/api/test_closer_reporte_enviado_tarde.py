@@ -113,6 +113,19 @@ def test_la_imagen_del_dia_queda_como_antes(app, db, closer):
     assert 'enviado el' not in html
 
 
+def test_la_tabla_de_reportes_marca_el_que_llego_tarde(client, db, closer, make_user, auth_headers):
+    director = make_user(role='director_comercial', username='mario')
+    reporte(db, closer, date(2026, 9, 29), datetime(2026, 9, 30, 15, 0))
+    reporte(db, closer, date(2026, 9, 30), datetime(2026, 9, 30, 20, 0))
+
+    r = client.get('/api/public/closer-reports', headers=auth_headers(director))
+
+    assert r.status_code == 200
+    por_dia = {x['date']: x for x in r.get_json()['reports']}
+    assert (por_dia['2026-09-29']['late'], por_dia['2026-09-29']['sent_day']) == (True, '30/09')
+    assert (por_dia['2026-09-30']['late'], por_dia['2026-09-30']['sent_day']) == (False, None)
+
+
 @freeze_time('2026-09-30 15:00:00')
 def test_mandar_el_de_ayer_desde_el_mazo_llega_a_discord_como_atrasado(
         client, db, closer, auth_headers, monkeypatch):

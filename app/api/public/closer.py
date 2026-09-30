@@ -482,9 +482,14 @@ def get_public_closer_reports():
     
     reports = []
     for r in pagination.items:
+        tarde = r.enviado_tarde()
         reports.append({
             "id": r.id,
             "date": r.date.isoformat(),
+            # El reporte de ayer mandado hoy: `date` sigue siendo el día reportado; esto dice cuándo
+            # llegó, para que la tabla no lo muestre como uno más del día.
+            "late": tarde,
+            "sent_day": r.enviado_en_su_zona().strftime('%d/%m') if tarde else None,
             "closer_id": r.closer_id,
             "closer_name": r.closer.username if r.closer else "Unknown",
             "slots": r.slots,

@@ -292,7 +292,15 @@ const CloserReportsTable = ({ closers }) => {
 
                                 return (
                                     <tr key={r.id} className="hover:bg-slate-800/20 transition-colors group">
-                                        <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">{r.date}</td>
+                                        <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">
+                                            {r.date}
+                                            {/* El de ayer mandado hoy: cuenta en su día, pero llegó tarde. */}
+                                            {r.late && (
+                                                <small className="block mt-0.5 text-[9px] font-bold text-amber-400 whitespace-nowrap" title="Reporte mandado después del día que reporta">
+                                                    enviado el {r.sent_day}
+                                                </small>
+                                            )}
+                                        </td>
                                         <td className="p-4 text-xs font-bold text-white uppercase italic">{r.closer_name}</td>
                                         <td className="p-4 text-xs font-black text-white tabular-nums text-center">{r.slots || 0}</td>
                                         <td className="p-4 text-xs font-black text-violet-400 tabular-nums text-center">{r.confirmations_done || 0}</td>
