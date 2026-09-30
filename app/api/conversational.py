@@ -244,11 +244,19 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         FinancialAgenda.date <= end_dt
     ).all()
 
-    # Ventas del período
-    sales_all = FinancialSale.query.filter(
-        FinancialSale.date >= start_dt,
-        FinancialSale.date <= end_dt
-    ).all()
+    # Ventas del período: solo cierres de verdad (pago completo o split pay) y vigentes. Antes era
+    # cada fila de FinancialSale —señas, cuotas, renovaciones, anuladas—, así que la "tasa de
+    # cierre" por mensaje contaba reservas y cobros de ventas viejas como cierres (30/09/2026).
+    from app.services.closer_service import REAL_SALE_TIPOS
+    from app.services.sheets_service import SheetsService
+    sales_all = [
+        s for s in FinancialSale.query.filter(
+            FinancialSale.date >= start_dt,
+            FinancialSale.date <= end_dt
+        ).all()
+        if SheetsService.parse_tipo_pago(s.tipo_pago)[1] in REAL_SALE_TIPOS
+        and (s.estado or '').strip().lower() in ('', 'completada', 'confirmada')
+    ]
 
     # Mapas de atribución por mensaje
     agendas_per_msg = {}

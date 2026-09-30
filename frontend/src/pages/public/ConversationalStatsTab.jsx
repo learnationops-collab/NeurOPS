@@ -695,7 +695,7 @@ const ConversationalStatsTab = () => {
                   <StatTooltip
                     label="Ventas Generadas"
                     value={fmt(kpis.total_ventas)}
-                    calculation="Ventas totales originadas a partir de las agendas del periodo."
+                    calculation="Ventas originadas a partir de las agendas del periodo: solo pago completo o split pay. Las señas, cuotas y renovaciones no cuentan."
                   >
                     {fmt(kpis.total_ventas)}
                   </StatTooltip>
@@ -704,7 +704,7 @@ const ConversationalStatsTab = () => {
                   Tasa de cierre: <StatTooltip
                     label="Tasa de Cierre"
                     value={`${kpis.venta_rate_from_agendas}%`}
-                    calculation="Porcentaje de agendas completadas que se concretaron en ventas. Fórmula: (Ventas / Agendas) * 100"
+                    calculation="Porcentaje de agendas que se concretaron en ventas (pago completo o split pay; una seña no es una venta). Fórmula: (Ventas / Agendas) * 100"
                   >
                     {kpis.venta_rate_from_agendas}%
                   </StatTooltip>
