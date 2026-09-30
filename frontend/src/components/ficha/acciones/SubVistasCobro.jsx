@@ -1,7 +1,8 @@
 // Las tres sub-vistas simples del cobro: registrar pago, registrar seguimiento y dar de baja.
 // Las tres son formularios chicos, así que comparten `FormularioSimple` y su validación.
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { SubVista, DesplegableAgrupado } from './piezas';
 import FormularioSimple from './FormularioSimple';
 
@@ -101,6 +102,37 @@ export function SubVistaSeguimiento({ ficha, onVolver, onGuardar, guardando }) {
   );
 }
 
+/**
+ * Sí o no, en el control segmentado de la ficha (`.fi-seg`, el de «Pendiente | Realizado» del
+ * historial). Eran dos `.ln-chip` y dentro de `.dc-shell` perdían el borde y el aire: dos palabras
+ * sueltas con un bloque magenta detrás de la elegida. La marca se corre de una a la otra
+ * (`layoutId`) y con movimiento reducido salta sin animar.
+ */
+function SiNo({ valor, onElegir, etiqueta }) {
+  const reducido = useReducedMotion();
+  const marca = useId();
+  return (
+    <div className="fi-seg" role="group" aria-label={etiqueta}>
+      {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map((o) => {
+        const activo = valor === o.v;
+        return (
+          <button key={o.l} type="button" className="fi-seg-op" aria-pressed={activo}
+            onClick={() => onElegir(o.v)}>
+            {activo && (
+              <motion.span className="fi-seg-marca" aria-hidden="true"
+                {...(reducido ? {} : {
+                  layoutId: `fi-seg-sino-${marca}`,
+                  transition: { type: 'spring', bounce: 0.18, duration: 0.36 },
+                })} />
+            )}
+            {o.l}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const MOTIVOS_BAJA_POR_DEFECTO = [
   { titulo: 'Económicos', tono: 'error', opciones: ['No puede pagar', 'Perdió ingresos', 'Le parece caro'] },
   { titulo: 'Tiempo y examen', tono: 'warning', opciones: ['No tiene tiempo para estudiar', 'Posterga el examen', 'Ya rindió el examen'] },
@@ -143,29 +175,12 @@ export function SubVistaBaja({ ficha, onVolver, onGuardar, guardando }) {
           />
         </div>
 
-        <div className="ln-field-wrap">
+        {/* `flex-start` para que la columna del campo no estire el control a todo el ancho. */}
+        <div className="ln-field-wrap" style={{ alignItems: 'flex-start' }}>
           <small className="ln-field-label" style={{ letterSpacing: '.08em', textTransform: 'uppercase' }}>
             ¿Agendás un seguimiento a futuro?
           </small>
-          <div className="ln-btn-row" role="group" aria-label="¿Agendás un seguimiento a futuro?">
-            {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map((o) => (
-              <button
-                key={o.l}
-                type="button"
-                aria-pressed={agenda === o.v}
-                onClick={() => setAgenda(o.v)}
-                className="ln-chip ln-chip--sm"
-                style={{
-                  cursor: 'pointer',
-                  background: agenda === o.v ? 'var(--brand-secondary)' : 'transparent',
-                  borderColor: agenda === o.v ? 'var(--brand-secondary)' : 'var(--border-control)',
-                  color: agenda === o.v ? 'var(--ink)' : 'var(--text-on-surface)',
-                }}
-              >
-                {o.l}
-              </button>
-            ))}
-          </div>
+          <SiNo valor={agenda} onElegir={setAgenda} etiqueta="¿Agendás un seguimiento a futuro?" />
         </div>
 
         <FormularioSimple
