@@ -1,0 +1,51 @@
+/* ============================================================
+   PESTAÑA FULFILLMENT — lo que el alumno hace en la Academia.
+
+   Archivo propio y no un bloque más de `ficha.css`: es la única pestaña que lo usa, y así una
+   pestaña que cambia no toca el archivo de todas.
+
+   Todo bajo `.dc-shell` como el resto de la ficha: ahí viven los tokens y ahí el CSS global
+   de `index.css` deja de pisar el `font-weight` de span/div/button.
+   ============================================================ */
+
+.dc-shell .ful{display:flex;flex-direction:column;gap:var(--space-4)}
+
+/* De cuándo son los datos, arriba y a la izquierda; «Actualizar» a la derecha. Arriba y no al
+   pie: abajo a la derecha flota el widget de bugs. */
+.dc-shell .ful-consulta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:var(--s3)}
+
+/* Un rótulo con su «i» al lado, alineados por el centro. */
+.dc-shell .ful-rotulo{display:inline-flex;align-items:center;gap:6px;min-width:0}
+
+.dc-shell .ful-seccion{display:grid;gap:var(--s3);align-content:start}
+
+/* El acceso pagado es lo primero que se lee: una franja del color del estado (vigente, por
+   vencer, vencido) a la izquierda. Sombra interior y no `border-left`, para no romper el radio
+   del panel. */
+.dc-shell .ful-acceso{display:grid;gap:var(--s4);box-shadow:inset 3px 0 0 var(--c)}
+.dc-shell .ful-acceso-titulo{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+.dc-shell .ful-acceso-titulo .ln-t-h3{margin:0}
+
+.dc-shell .ful-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:var(--s4) var(--s6)}
+.dc-shell .ful-dato{display:grid;gap:2px;min-width:0}
+/* Un correo largo parte la línea en vez de desbordar la tarjeta. */
+.dc-shell .ful-dato b{overflow-wrap:anywhere}
+
+/* Las cuatro secciones del desempeño: dos columnas si entran, una en un teléfono. */
+.dc-shell .ful-secciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:var(--space-4)}
+.dc-shell .ful-metricas{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));
+  gap:var(--s4)}
+.dc-shell .ful-metrica{display:grid;gap:4px;align-content:start;min-width:0}
+.dc-shell .ful-valor{font-size:20px;font-weight:800;line-height:1.2;color:var(--text-on-surface)}
+
+.dc-shell .ful-barra{display:block;height:6px;margin-top:2px;border-radius:var(--radius-pill);
+  background:var(--border-subtle);overflow:hidden}
+.dc-shell .ful-barra i{display:block;height:100%;border-radius:inherit;
+  background:var(--brand-secondary)}
+
+@media (max-width:640px){
+  .dc-shell .ful-secciones{grid-template-columns:1fr}
+}
