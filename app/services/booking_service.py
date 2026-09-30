@@ -257,8 +257,28 @@ class BookingService:
 
         Las respuestas de la encuesta se DESVINCULAN, no se borran: son del cliente y valen
         aunque la cita desaparezca. El evento de Google Calendar se borra en el mejor esfuerzo:
-        que la agenda del closer quede con un hueco de más no puede impedir borrar la fila."""
+        que la agenda del closer quede con un hueco de más no puede impedir borrar la fila.
+
+        El plan de cuotas tampoco se va con la agenda, y es lo más delicado: `InstallmentPlan`
+        cuelga de la cita con `cascade='all, delete-orphan'`, así que borrar la cita borraba el
+        cronograma del cliente entero, cuotas ya cobradas incluidas —el plan es del CLIENTE, la
+        cita es solo donde quedó colgado—. Se pasa a la cita más reciente que le quede al cliente.
+        Si esta era la única, el borrado se frena: no hay dónde dejar el plan y perderlo no es un
+        efecto aceptable de limpiar una agenda. El registro de eventos de la cita sí se va con
+        ella: cuenta lo que pasó en ESA llamada."""
+        from app.models import InstallmentPlan
+
         try:
+            cuotas = InstallmentPlan.query.filter_by(appointment_id=appt.id).all()
+            if cuotas:
+                otra = BookingService.otra_agenda_del_cliente(appt)
+                if not otra:
+                    return False, ('Es la única agenda de este cliente y de ella cuelga su plan de '
+                                   'cuotas: si se borra, se pierde el plan. Agendá otra llamada '
+                                   'antes de borrar esta.')
+                for cuota in cuotas:
+                    cuota.appointment_id = otra.id
+
             SurveyAnswer.query.filter_by(appointment_id=appt.id).update({'appointment_id': None})
 
             if appt.google_event_id:
@@ -274,6 +294,17 @@ class BookingService:
         except Exception as e:
             db.session.rollback()
             return False, str(e)
+
+    @staticmethod
+    def otra_agenda_del_cliente(appt):
+        """La cita más reciente del mismo cliente que no sea `appt`, o None. Es a donde pasa lo
+        que colgaba de una cita que se borra (ver `eliminar_agenda`)."""
+        if not appt.client_id:
+            return None
+        return (Appointment.query
+                .filter(Appointment.client_id == appt.client_id, Appointment.id != appt.id)
+                .order_by(Appointment.start_time.desc().nullslast(), Appointment.id.desc())
+                .first())
 
     @staticmethod
     def save_survey_answers(client_id, answers_data, appointment_id=None):

@@ -2189,3 +2189,47 @@ def test_un_bloque_de_respuestas_desconocido_no_hace_fallar_el_reporte(client, d
 
     assert r.status_code == 200
     assert lead.closer_result == 'Show up'
+
+
+# --- Borrar una agenda no se lleva el plan de cuotas ---------------------------------------------------
+
+def _otra_agenda(db, lead, equipo, dias=-10):
+    otra = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
+                       start_time=datetime.utcnow() + timedelta(days=dias), origin='vsl')
+    db.session.add(otra)
+    db.session.commit()
+    return otra
+
+
+def test_borrar_la_agenda_no_se_lleva_el_plan_de_cuotas(client, db, lead, equipo, auth_headers):
+    """`InstallmentPlan` cuelga de la cita con cascade delete-orphan: borrar la cita borraba el
+    cronograma entero, cuotas cobradas incluidas. Ahora pasa a la otra agenda del cliente."""
+    otra = _otra_agenda(db, lead, equipo)
+    db.session.add_all([
+        InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                        numero_cuota=1, monto=500, fecha_vencimiento=date.today(), estado='pagado'),
+        InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                        numero_cuota=2, monto=500, fecha_vencimiento=date.today() + timedelta(days=30)),
+    ])
+    db.session.commit()
+
+    r = client.delete(url(lead), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    cuotas = InstallmentPlan.query.filter_by(client_id=lead.client_id).order_by(InstallmentPlan.numero_cuota).all()
+    assert [(c.numero_cuota, c.estado, c.appointment_id) for c in cuotas] == [
+        (1, 'pagado', otra.id), (2, 'pendiente', otra.id)]
+
+
+def test_la_unica_agenda_con_plan_de_cuotas_no_se_borra(client, db, lead, equipo, auth_headers):
+    db.session.add(InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id,
+                                   programa_code='RR', numero_cuota=1, monto=500,
+                                   fecha_vencimiento=date.today()))
+    db.session.commit()
+
+    r = client.delete(url(lead), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'plan de cuotas' in r.get_json()['message']
+    assert db.session.get(Appointment, lead.id) is not None
+    assert InstallmentPlan.query.filter_by(appointment_id=lead.id).count() == 1
