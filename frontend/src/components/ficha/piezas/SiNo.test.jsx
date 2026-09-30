@@ -5,9 +5,10 @@ import userEvent from '@testing-library/user-event';
 import SiNo from './SiNo';
 
 /**
- * El sí/no lo montan «Dar de baja» y «Canceló». Las pruebas de Acciones lo reemplazan por el
- * doble de `piezasStub`, así que el real se prueba acá: que se lea como un grupo con nombre, que
- * diga cuál está elegido con `aria-pressed` y que el elegido tenga la marca de `.fi-seg`.
+ * El sí/no lo montan «Dar de baja», «Canceló» y «Descartar lead». Las pruebas de Acciones lo
+ * reemplazan por el doble de `piezasStub`, así que el real se prueba acá: que se lea como un grupo
+ * con nombre, que diga cuál está elegido con `aria-pressed` y que el elegido tenga la marca de
+ * `.fi-seg`.
  */
 const ConEstado = ({ inicial = true, onElegir = () => {} }) => {
     const [valor, setValor] = useState(inicial);
