@@ -243,24 +243,19 @@ def _payload_de_venta(appt, usuario, datos):
     }
 
 
-def venta(appt, datos, usuario):
-    """Declara una venta o cobra una cuota.
+def _fallo_de_sheets(respuesta):
+    """El motivo si `post_to_sheets` NO guardo la venta, o None.
 
-    Pasa por `SheetsService.post_to_sheets('Ventas_DB', ...)` y no por un atajo propio porque ese es
-    el unico camino que hace TODO lo que una venta implica (Client, validacion de secuencia,
-    FinancialSale, espejo a Enrollment/Payment, marcar la agenda como Show up, webhook a n8n). Una
-    segunda via crearia ventas a medias.
-
-    `liquidar_saldo` es el saldo de una venta anterior que se cobra junto con esta (renovacion o
-    upsell de un cliente que todavia debia). Se manda PRIMERO y como una venta aparte de tipo Cuota,
-    y si falla no se declara la venta nueva: es el orden que ya tiene el wizard del closer, y
-    darlo vuelta dejaria la renovacion registrada con el saldo viejo sin cobrar — es decir, la
-    validacion de secuencia de pagos leyendo un historial que no cierra.
-
-    Devuelve la respuesta de Sheets tal cual (`status`, `warning`, `client_id`): el `warning` es el
-    aviso de la validacion de secuencia, que el closer ve en pantalla, y comerselo aca seria
-    esconderle que la venta quedo con una secuencia rara.
+    `post_to_sheets` no levanta: devuelve `status: 'error'` con el motivo. Responder 201 con eso
+    adentro era decirle al closer "Venta registrada" sobre una venta que no existe.
     """
+    if isinstance(respuesta, dict) and respuesta.get('status') == 'error':
+        return respuesta.get('message') or 'No se pudo registrar la venta.'
+    return None
+
+
+def _declarar(appt, datos, usuario):
+    """Declara una venta (y antes, si se pidio, la Cuota que liquida el saldo viejo)."""
     from app.services.sheets_service import SheetsService
 
     if not datos.get('tipo_pago'):
@@ -276,15 +271,221 @@ def venta(appt, datos, usuario):
         programa = (saldo.get('programa_code')
                     or str(datos['tipo_pago']).split('-')[0].strip().upper())
         liquidacion = SheetsService.post_to_sheets('Ventas_DB', _payload_de_venta(appt, usuario, {
+            # Los datos del cliente son los de la venta: si el closer los corrigio en el camino, la
+            # Cuota que liquida el saldo tiene que quedar a nombre de la misma persona.
+            **{k: datos[k] for k in CAMPOS_DEL_COMPRADOR if datos.get(k)},
             'tipo_pago': f'{programa} - Cuota',
             'monto': saldo['monto'],
             'metodo_pago': saldo.get('metodo_pago') or datos.get('metodo_pago'),
+            'segundo_pago': saldo.get('comentario') or '',
             'enviar_webhook': False,
         }))
+        motivo = _fallo_de_sheets(liquidacion)
+        if motivo:
+            raise ErrorDeAccion(f'No se pudo liquidar el saldo pendiente, así que la venta no se '
+                                f'registró: {motivo}')
 
     resultado_sheets = SheetsService.post_to_sheets('Ventas_DB',
                                                    _payload_de_venta(appt, usuario, datos)) or {}
+    motivo = _fallo_de_sheets(resultado_sheets)
+    if motivo:
+        raise ErrorDeAccion(motivo)
     return {'id': appt.id, 'liquidacion': liquidacion, **resultado_sheets}
+
+
+def venta(appt, datos, usuario):
+    """Declara una venta o cobra una cuota.
+
+    Pasa por `SheetsService.post_to_sheets('Ventas_DB', ...)` y no por un atajo propio porque ese es
+    el unico camino que hace TODO lo que una venta implica (Client, validacion de secuencia,
+    FinancialSale, espejo a Enrollment/Payment, marcar la agenda como Show up, webhook a n8n). Una
+    segunda via crearia ventas a medias.
+
+    `liquidar_saldo` es el saldo de una venta anterior que se cobra junto con esta (renovacion o
+    upsell de un cliente que todavia debia). Se manda PRIMERO y como una venta aparte de tipo Cuota,
+    y si falla no se declara la venta nueva: es el orden que ya tiene el wizard del closer, y
+    darlo vuelta dejaria la renovacion registrada con el saldo viejo sin cobrar — es decir, la
+    validacion de secuencia de pagos leyendo un historial que no cierra.
+
+    Admite dos formas del pedido:
+
+      · plana (`tipo_pago`, `monto`...): el cobro de una cuota desde «Acciones». Es solo la venta.
+      · con un bloque `venta`: el arbol de «Resultado», que declara la venta ENTERA en un solo
+        guardado (ver `_venta_del_arbol`).
+
+    Devuelve la respuesta de Sheets tal cual (`status`, `warning`, `client_id`): el `warning` es el
+    aviso de la validacion de secuencia, que el closer ve en pantalla, y comerselo aca seria
+    esconderle que la venta quedo con una secuencia rara.
+    """
+    if isinstance(datos.get('venta'), dict):
+        return _venta_del_arbol(appt, datos, usuario)
+    return _declarar(appt, datos, usuario)
+
+
+# --- La venta entera, desde el arbol de «Resultado» ---------------------------------------------
+#
+# El wizard «Declarar venta» del mazo registraba una venta con SEIS llamadas encadenadas desde el
+# navegador (la venta, el acceso a la Academia, el seguimiento de cobro, el decisor, la cuota o el
+# plan, los referidos). La ficha no llama `axios` desde las pestanas y la direccion comercial no
+# puede usar `/closer/*`, asi que esas llamadas se hacen aca, en el mismo orden, con los mismos
+# servicios que usaban esas rutas.
+
+# Los campos de una venta tal como los lee `post_to_sheets`. El bloque `venta` del arbol se filtra
+# por esta lista: `post_to_sheets` manda su payload ENTERO a Google Sheets y a n8n, y el plan, el
+# acceso o los referidos no son columnas de la venta.
+CAMPOS_DE_VENTA = (
+    'email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente', 'instagram',
+    'documento_identidad', 'setter', 'tipo_pago', 'monto', 'precio_total', 'segundo_pago',
+    'metodo_pago', 'examen', 'estado', 'marca_temporal', 'enviar_webhook', 'enviar_mensaje',
+    'sold_in_call',
+)
+CAMPOS_DEL_COMPRADOR = ('email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente',
+                        'instagram', 'documento_identidad', 'setter')
+
+# Del bloque `agenda`, `deck` y `seguimiento_cobro` del arbol, lo que se escribe en la agenda.
+CAMPOS_DE_AGENDA_TRAS_LA_VENTA = (
+    'with_decision_maker', 'offer_presented', 'closer_notes', 'contact_result',
+    'seguimiento_realizado', 'fecha_seguimiento', 'fecha_seguimiento_cobro', 'seguimiento_tipo',
+    'seguimiento_sub', 'seguimiento_intento',
+)
+
+
+def _despues_de_la_venta(avisos, que, paso):
+    """Corre un paso posterior a la venta sin dejar que la tumbe.
+
+    Cuando llegan estos pasos la venta ya esta comiteada. Si uno fallara y la ruta respondiera 400,
+    el closer leeria "no se pudo" y la declararia otra vez: una venta duplicada, con su mensaje de
+    n8n duplicado. Se deshace solo ese paso y se avisa cual fue, que es lo que hacia el wizard del
+    mazo con un aviso por cada llamada que fallaba.
+    """
+    import logging
+
+    try:
+        resultado = paso()
+        db.session.commit()
+        return resultado
+    except Exception as e:  # noqa: BLE001 — cualquier fallo de un paso es un aviso, no un 400
+        db.session.rollback()
+        logging.getLogger(__name__).exception('[FICHA VENTA] Fallo un paso posterior a la venta')
+        avisos.append(f'{que}: {e}')
+        return None
+
+
+def _cuota_a_cobrar(appt, bloque):
+    """La cuota del plan que esta venta cobra, validada ANTES de declarar nada.
+
+    Un id de cuota de otro cliente no puede marcarse pagada con la plata de este: se rechaza el
+    pedido entero en vez de registrar la venta y fallar despues.
+    """
+    from app.models import InstallmentPlan
+
+    if not bloque:
+        return None
+    if not isinstance(bloque, dict) or not bloque.get('cuota_id'):
+        raise ErrorDeAccion('`cuota_cobrada` necesita el id de la cuota.')
+    cuota = InstallmentPlan.query.get(bloque['cuota_id'])
+    if not cuota or cuota.client_id != appt.client_id:
+        raise ErrorDeAccion('Esa cuota no es de este cliente.', 'cuota_cobrada')
+    return cuota
+
+
+def _dar_acceso_a_la_academia(client_id, bloque):
+    from app.models import Client
+    from app.services.academy_access_service import AcademyAccessService
+
+    cliente = Client.query.get(client_id) if client_id else None
+    if not cliente:
+        raise ErrorDeAccion('no hay cliente al que darle el acceso')
+    programa = (bloque.get('programa_code') or '').strip().upper()
+    if not programa:
+        raise ErrorDeAccion('falta el programa')
+    resultado = AcademyAccessService.grant_access(cliente, programa,
+                                                  bloque.get('tipo_venta') or 'completo',
+                                                  None, bloque.get('email') or None) or {}
+    return {'creada': bool(resultado.get('was_created'))}
+
+
+def _crear_referidos(appt, usuario, bloque, quien):
+    from app.services.referidos_service import crear_referido
+
+    filas = [f for f in (bloque or {}).get('filas') or []
+             if isinstance(f, dict) and (f.get('nombre') or '').strip()]
+    for fila in filas:
+        crear_referido(usuario, appt.id, fila['nombre'], contacto=fila.get('contacto'),
+                       notas=f'Referido por {quien}')
+    return len(filas)
+
+
+def _venta_del_arbol(appt, datos, usuario):
+    """Declara la venta y todo lo que viene con ella, en el orden del wizard del mazo.
+
+    Primero lo que puede rechazar el pedido entero (un campo que falta, una cuota ajena, el saldo
+    viejo que no se pudo liquidar): hasta ahi no se escribio nada que quede a medias. Despues de la
+    venta, cada paso corre por separado en `_despues_de_la_venta` y lo que falle vuelve en
+    `avisos`, con la venta ya registrada.
+    """
+    venta_ = {k: v for k, v in datos['venta'].items() if k in CAMPOS_DE_VENTA}
+    # A quien se le atribuye la venta se elige de la lista de closers de la ficha, que viaja por
+    # id: el correo (que es lo que lee la comision) se resuelve aca, sin repartir los correos del
+    # equipo a todos los roles que abren la ficha.
+    vendedor_id = datos['venta'].get('vendedor_id')
+    if vendedor_id:
+        vendedor = User.query.filter_by(id=vendedor_id).first()
+        if not vendedor or not vendedor.email:
+            raise ErrorDeAccion('El closer elegido para la venta no existe.', 'vendedor_id')
+        venta_['email_vendedor'] = vendedor.email
+    if datos.get('liquidar_saldo'):
+        venta_['liquidar_saldo'] = datos['liquidar_saldo']
+    cuota = _cuota_a_cobrar(appt, datos.get('cuota_cobrada'))
+
+    resultado = _declarar(appt, venta_, usuario)
+    client_id = resultado.get('client_id') or appt.client_id
+    avisos = []
+
+    # Decisor y oferta (van a las metricas de conversion), el cierre del seguimiento si la venta
+    # llego desde la cadencia, y el seguimiento de cobro: todo es la misma agenda, asi que va en UN
+    # guardado del mazo, en ese orden (el seguimiento de cobro pisa la fecha que el cierre vacia).
+    # En el decisor y la oferta un `None` es "no se pregunto" y no pisa lo que la agenda tenia; en
+    # los otros dos, `fecha_seguimiento: None` es justamente cerrar el seguimiento.
+    cambios = {}
+    for bloque, sin_nulos in ((datos.get('agenda'), True), (datos.get('deck'), False),
+                              (datos.get('seguimiento_cobro'), False)):
+        if isinstance(bloque, dict):
+            cambios.update({k: v for k, v in bloque.items()
+                            if k in CAMPOS_DE_AGENDA_TRAS_LA_VENTA
+                            and not (sin_nulos and v is None)})
+    if cambios:
+        _despues_de_la_venta(avisos, 'No se guardaron el decisor y el seguimiento de la agenda',
+                             lambda: aplicar_cambios(appt, cambios, usuario))
+
+    plan = None
+    if cuota is not None:
+        from app.services.installment_service import InstallmentService
+
+        monto = datos['cuota_cobrada'].get('monto')
+        _despues_de_la_venta(avisos, 'La venta se guardó, pero la cuota no quedó marcada como pagada',
+                             lambda: InstallmentService.update_cuota(cuota, monto=monto,
+                                                                     estado='pagado'))
+    elif isinstance(datos.get('plan_cuotas'), dict):
+        plan = _despues_de_la_venta(avisos, 'La venta se guardó, pero el plan de cuotas no',
+                                    lambda: plan_cuotas(appt, datos['plan_cuotas'], usuario))
+
+    academia = None
+    if isinstance(datos.get('acceso_academia'), dict):
+        academia = _despues_de_la_venta(
+            avisos, 'La venta se guardó, pero no se pudo dar el acceso a la Academia',
+            lambda: _dar_acceso_a_la_academia(client_id, datos['acceso_academia']))
+
+    quien = venta_.get('nombre_cliente') or (appt.client.full_name if appt.client else 'el cliente')
+    referidos = _despues_de_la_venta(avisos, 'La venta se guardó, pero los referidos no',
+                                     lambda: _crear_referidos(appt, usuario, datos.get('referidos'),
+                                                              quien))
+
+    _despues_de_la_venta(avisos, 'No se guardaron las respuestas del reporte en la bitácora',
+                         lambda: _guardar_respuestas_del_arbol(appt, datos.get('respuestas'),
+                                                               usuario))
+    return {**resultado, 'academia': academia, 'referidos': referidos or 0,
+            'cuotas': len(plan['cuotas']) if plan else 0, 'avisos': avisos}
 
 
 # --- Reprogramar ------------------------------------------------------------------------------
