@@ -5,13 +5,15 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  CalendarDays, CheckCircle2, Clock, XCircle,
+  CalendarDays, CheckCircle2, Clock, Undo2, XCircle,
 } from 'lucide-react';
 import { TarjetaAccion } from '../acciones/piezas';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import { soloDia } from '../piezas/fecha';
 import SubVistaPlanCuotas from '../acciones/SubVistaPlanCuotas';
-import { SubVistaPago, SubVistaSeguimiento, SubVistaBaja } from '../acciones/SubVistasCobro';
+import {
+  SubVistaPago, SubVistaSeguimiento, SubVistaBaja, SubVistaRevertirBaja,
+} from '../acciones/SubVistasCobro';
 import { moneda } from '../acciones/planCuotas';
 
 // El orden y los tonos son los del mockup (`fcAcciones`).
@@ -26,13 +28,23 @@ const ACCIONES = [
   { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: XCircle, accion: 'dar_de_baja' },
 ];
 
+// A un cliente ya dado de baja no se lo vuelve a dar de baja: en su lugar está deshacerla.
+const REVERTIR = { modo: 'revertir', label: 'Revertir baja', tono: 'info', icono: Undo2, accion: 'revertir_baja' };
+
+const detalleDeBaja = (baja) => {
+  const cuando = [baja.fecha_legible && `El ${baja.fecha_legible}`, baja.motivo].filter(Boolean).join(' · ');
+  return `${cuando ? `${cuando}. ` : ''}Ya no se le cobra; lo que pagó queda.`;
+};
+
 export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
   const reducido = useReducedMotion();
   const [modo, setModo] = useState('menu');
   const [guardando, setGuardando] = useState(false);
 
   const puedeCobrar = puedeEditar && ficha?.permisos?.cobrar !== false;
-  const definicion = ACCIONES.find((a) => a.modo === modo);
+  const baja = ficha?.identidad?.baja || null;
+  const acciones = baja ? ACCIONES.map((a) => (a.modo === 'baja' ? REVERTIR : a)) : ACCIONES;
+  const definicion = acciones.find((a) => a.modo === modo);
 
   const volver = () => setModo('menu');
 
@@ -66,13 +78,14 @@ export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
           <motion.div key="menu" {...animar} className="ln-grid" style={{ gridTemplateColumns: 'minmax(220px, 1fr) minmax(0, 2fr)', gap: 'var(--space-6)' }}>
             <TarjetaDeuda
               cobro={ficha?.cobro}
+              baja={baja}
               programas={ficha?.vocabulario?.programas}
               puedeEditar={puedeCobrar}
               onGuardarTotal={(total) => onAccion('guardar_total', { total })}
               onGuardarPrograma={(programa_code) => onAccion('guardar_programa', { programa_code })}
             />
             <div className="ln-grid ln-grid-2">
-              {ACCIONES.map((a) => (
+              {acciones.map((a) => (
                 <TarjetaAccion
                   key={a.modo}
                   tono={a.tono}
@@ -94,6 +107,7 @@ export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
             {modo === 'pago' && <SubVistaPago {...comunes} />}
             {modo === 'seg' && <SubVistaSeguimiento {...comunes} />}
             {modo === 'baja' && <SubVistaBaja {...comunes} />}
+            {modo === 'revertir' && <SubVistaRevertirBaja {...comunes} />}
           </motion.div>
         )}
     </div>
@@ -105,7 +119,7 @@ export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
 //
 // El programa y el total son `CamposCobro`, los mismos que monta la franja del historial: el
 // closer corrige donde ve el problema, no donde el menú lo mande.
-function TarjetaDeuda({ cobro, programas, puedeEditar = true, onGuardarTotal, onGuardarPrograma }) {
+function TarjetaDeuda({ cobro, baja = null, programas, puedeEditar = true, onGuardarTotal, onGuardarPrograma }) {
   const reducido = useReducedMotion();
   const deuda = Number(cobro?.deuda) || 0;
   const alDia = deuda < 0.01;
@@ -114,19 +128,28 @@ function TarjetaDeuda({ cobro, programas, puedeEditar = true, onGuardarTotal, on
     ? {}
     : { initial: { opacity: 0, y: -4 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.14, ease: 'easeOut' } };
 
+  // Un dado de baja no debe nada, pero decir «Al día» en verde sería decir que terminó de pagar.
+  const cifra = baja ? 'Dado de baja' : (alDia ? 'Al día' : moneda(deuda));
+  const color = baja ? 'var(--idle)' : (alDia ? 'var(--success)' : 'var(--error)');
+
   return (
     <div className="ln-panel ln-panel--sm">
       <small className="ln-t-eyebrow ln-muted">Deuda</small>
       {/* La cifra se remonta con su valor: corregir el total la cambia, y el parpadeo es lo que
           avisa que ese era el número que estaba mal. */}
       <motion.p
-        key={deuda}
+        key={cifra}
         {...animar}
         className="ln-t-display"
-        style={{ color: alDia ? 'var(--success)' : 'var(--error)', margin: 'var(--space-2) 0 var(--space-4)' }}
+        style={{ color, margin: baja ? 'var(--space-2) 0 var(--space-1)' : 'var(--space-2) 0 var(--space-4)' }}
       >
-        {alDia ? 'Al día' : moneda(deuda)}
+        {cifra}
       </motion.p>
+      {baja && (
+        <p className="ln-t-body-sm ln-muted" style={{ margin: '0 0 var(--space-4)' }}>
+          {detalleDeBaja(baja)}
+        </p>
+      )}
 
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
         <CampoPrograma cobro={cobro} programas={programas} puedeEditar={puedeEditar}

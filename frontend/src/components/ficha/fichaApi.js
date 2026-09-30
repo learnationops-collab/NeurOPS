@@ -89,6 +89,8 @@ const RUTAS = {
     borrar_pago: (appt, p) => api.delete(`/ficha/${appt}/pago/${p.pago_id}`),
     registrar_seguimiento: (appt, p) => api.post(`/ficha/${appt}/seguimiento`, p),
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),
+    // Deshace la baja: el cliente vuelve a deber y a las listas de cobro. No lleva cuerpo.
+    revertir_baja: (appt) => api.post(`/ficha/${appt}/revertir-baja`, {}),
 
     // Comunicación.
     enviar_nota: (appt, p) => api.post(`/ficha/${appt}/nota`, p),

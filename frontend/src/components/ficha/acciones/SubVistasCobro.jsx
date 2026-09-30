@@ -1,5 +1,6 @@
-// Las tres sub-vistas simples del cobro: registrar pago, registrar seguimiento y dar de baja.
-// Las tres son formularios chicos, así que comparten `FormularioSimple` y su validación.
+// Las sub-vistas simples del cobro: registrar pago, registrar seguimiento, dar de baja y
+// revertirla. Las tres primeras son formularios chicos, así que comparten `FormularioSimple` y
+// su validación; revertir no pide nada, solo que se entienda lo que hace.
 
 import { useMemo, useState } from 'react';
 import { SubVista, DesplegableAgrupado, SiNo } from './piezas';
@@ -164,6 +165,36 @@ export function SubVistaBaja({ ficha, onVolver, onGuardar, guardando }) {
             fecha_seguimiento: agenda ? valores.fecha : null,
           })}
         />
+      </div>
+    </SubVista>
+  );
+}
+
+// Revertir la baja es seguro porque la baja no borró nada: la deuda sale de lo negociado menos lo
+// pagado y el plan de cuotas quedó como estaba, así que vuelven exactos. Se dice antes de hacerlo
+// porque tiene una consecuencia que se ve en otro lado: el cliente vuelve a la cola de cobro.
+export function SubVistaRevertirBaja({ ficha, onVolver, onGuardar, guardando }) {
+  const baja = ficha?.identidad?.baja || null;
+  const desde = [baja?.fecha_legible && `el ${baja.fecha_legible}`, baja?.motivo, baja?.por && `por ${baja.por}`]
+    .filter(Boolean).join(' · ');
+
+  return (
+    <SubVista
+      titulo="Revertir baja"
+      onVolver={onVolver}
+      acciones={(
+        <button type="button" className="btn btn--cta" disabled={guardando} onClick={() => onGuardar({})}>
+          {guardando && <span className="ln-spinner" />}
+          Revertir baja
+        </button>
+      )}
+    >
+      <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+        {desde && <p className="ln-t-body-sm">Se dio de baja {desde}.</p>}
+        <p className="ln-t-body-sm ln-muted">
+          Al revertirla vuelve a deber lo que debía, con su plan de cuotas tal como estaba, y
+          vuelve a aparecer en las listas de cobro. Lo que ya pagó no cambia.
+        </p>
       </div>
     </SubVista>
   );

@@ -108,7 +108,11 @@ const MENSAJES = {
         ? 'Pago borrado. No tenía registro en inscripciones: la deuda no cambió.'
         : 'Pago borrado: la deuda se recalculó.'),
     registrar_seguimiento: 'Seguimiento agendado.',
-    dar_de_baja: 'Baja registrada.',
+    dar_de_baja: 'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.',
+    // El monto viene del backend, ya recalculado: es la deuda que vuelve.
+    revertir_baja: (r) => (Number(r?.deuda) > 0.009
+        ? `Baja revertida: vuelve a deber $${Number(r.deuda).toLocaleString('es-AR', { maximumFractionDigits: 2 })} y vuelve a las listas de cobro.`
+        : 'Baja revertida: vuelve a las listas de cobro.'),
     enviar_nota: 'Nota enviada.',
 };
 

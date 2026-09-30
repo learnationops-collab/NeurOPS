@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
+import FranjaBaja from './piezas/FranjaBaja';
 import { instanteLegible, soloDia } from './piezas/fecha';
 import { opciones } from './estadoFicha';
 import { mensajeDeError } from './fichaApi';
@@ -331,6 +332,9 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                     </div>
                 </div>
             )}
+
+            {/* Se fue del programa: se ve desde cualquier pestaña, no solo desde el cobro. */}
+            {!editando && <FranjaBaja baja={id.baja} />}
         </div>
     );
 };
