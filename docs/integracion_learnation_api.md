@@ -326,4 +326,11 @@ Mientras tanto, la ficha avisa en pantalla los dos números ambiguos (puntos 3 y
 > **9. Historial completo de accesos.**
 > La doc dice que `/users/{id}/products` es el historial de membresías, pero en los alumnos que consultamos vino una sola asignación. ¿Aparecen las archivadas? Si no, pedimos incluirlas con `archived_at`, y en cada una el `payment_type` con el que se asignó (total, cuota o seña), que hoy solo vuelve en la respuesta del POST.
 >
+> **10. Poder quitar un acceso.**
+> Desde la ficha de NeurOPS ya se puede dar, renovar y quitar el acceso de un alumno. Para quitarlo, como la API no tiene cómo, le reasignamos el producto con `expires_at` = hoy. Nos serviría un endpoint explícito, por ejemplo `DELETE /users/{id}/products/{assignment_id}` o `POST /users/{id}/products/{assignment_id}/revoke`, que corte el acceso en el momento y deje la asignación en el historial marcada como revocada (con fecha y motivo). También confirmar qué pasa hoy con un `expires_at` de hoy: ¿vence en el acto o al terminar el día?
+>
 > ¡Gracias!
+
+### Dar, renovar y quitar desde la ficha (30/09/2026)
+
+La pestaña Fulfillment tiene los botones «Dar acceso», «Renovar acceso» y «Quitar acceso» (`app/services/ficha_academia.py`, permiso `cobrar`). Los tres usan la única escritura que tiene la Academia, `POST /users/{id}/products` con `expires_at`: dar crea la cuenta si no existe (el mismo camino de alta que la venta, `grant_access`), renovar la reasigna por el id del alumno sin tocar su correo, y **quitar la reasigna con vencimiento hoy** porque no hay un endpoint para revocar (pedido 10). Cada cambio queda en el historial del lead y en el hilo del cliente.
