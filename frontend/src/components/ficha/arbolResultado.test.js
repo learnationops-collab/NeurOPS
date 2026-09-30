@@ -636,6 +636,39 @@ describe('reiniciar, volver y limpieza de ramas', () => {
     expect(preguntaActual(r).clave).toBe('noshow_motivo');
     expect(r.noshow_motivo).toBeUndefined();
   });
+
+  describe('«Corregir» desde la revisión', () => {
+    // Es el «Guardar y volver» del wizard de venta: corregir un dato no obliga a rehacer todo lo
+    // que viene después, salvo que la corrección cambie de rama.
+    const guion = {
+      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'Imprevisto del lead' },
+      reag_dejo_fecha: { reag_dejo_fecha: false },
+      seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
+    };
+
+    it('un formulario corregido vuelve derecho a la revisión', () => {
+      let r = volverA(recorrer(guion), 'seguimiento');
+      expect(preguntaActual(r).clave).toBe('seguimiento');
+      r = responder(r, 'seguimiento', { notes: 'le pido fecha para el jueves' });
+      expect(completo(r)).toBe(true);
+      expect(r.notes).toBe('le pido fecha para el jueves');
+    });
+
+    it('volver a elegir lo mismo en una pregunta de opciones conserva lo que seguía', () => {
+      let r = volverA(recorrer(guion), 'reag_motivo');
+      expect(preguntaActual(r).clave).toBe('reag_motivo');
+      r = responder(r, 'reag_motivo', { reag_motivo: 'Imprevisto del lead' });
+      expect(completo(r)).toBe(true);
+      expect(r.reag_dejo_fecha).toBe(false);
+    });
+
+    it('elegir otra cosa sí borra la rama vieja y sigue desde ahí', () => {
+      let r = volverA(recorrer(guion), 'reag_dejo_fecha');
+      r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: true });
+      expect(preguntaActual(r).clave).toBe('reag_fecha');
+      expect(completo(r)).toBe(false);
+    });
+  });
 });
 
 describe('resumen de revisión', () => {

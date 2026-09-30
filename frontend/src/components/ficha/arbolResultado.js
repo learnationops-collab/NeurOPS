@@ -14,6 +14,9 @@ export { construirPayload, notaFinal, fechaHoraAIso } from './arbolResultado.pay
 // Clave interna donde se anotan los pasos de formulario ya confirmados. Los pasos de opciones no
 // la necesitan: se consideran contestados cuando su campo tiene valor.
 const PASOS = '_pasos';
+// Lo que tenía una pregunta de opciones antes de que «Corregir» la reabriera: si se vuelve a
+// elegir lo mismo, el resto del camino sigue valiendo y no hay que contestarlo de nuevo.
+const ANTES = '_antes';
 
 export const estadoInicial = () => ({ [PASOS]: [] });
 export const reiniciar = () => estadoInicial();
@@ -104,25 +107,46 @@ export const puedeAvanzar = (respuestas = {}, contexto = {}) => faltantes(respue
 // --- transiciones ------------------------------------------------------------------------
 
 /**
- * Contesta un paso: mezcla los valores, lo marca como hecho y borra lo que quedaba aguas abajo.
- * Se limpia ANTES de mezclar para que responder de nuevo una pregunta temprana no arrastre las
- * respuestas de la rama vieja (si no, cambiar «Asistió» por «Canceló» dejaba el decisor colgado).
+ * Contesta un paso: mezcla los valores y lo marca como hecho.
+ *
+ * Una pregunta de opciones que CAMBIA de respuesta borra lo que quedaba aguas abajo, antes de
+ * mezclar: la rama vieja no puede quedar colgada (cambiar «Asistió» por «Canceló» dejaba el
+ * decisor puesto). Si la respuesta es la misma que tenía —el closer tocó «Corregir» y eligió lo
+ * mismo— o el paso es un formulario, el resto del camino sigue valiendo: es el «Guardar y volver»
+ * del wizard de venta, que corregía un dato sin obligar a rehacer los veinte pasos que siguen.
+ * Lo que un dato corregido vuelve aplicable (más saldo → cronograma) se pregunta igual, porque
+ * `preguntaActual` busca el primer paso aplicable sin contestar.
  */
 export function responder(respuestas = {}, clave, valores = {}) {
   const idx = indiceDe(clave);
   if (idx < 0) return respuestas;
-  const limpio = { ...respuestas };
-  const pasos = (respuestas[PASOS] || []).filter((p) => {
-    const i = indiceDe(p);
-    return i >= 0 && i <= idx;
-  });
-  PREGUNTAS.slice(idx + 1).forEach((q) => {
-    // Solo se limpian los campos de las preguntas de opciones: son de una sola pregunta cada
-    // una. Los campos de formulario se comparten a propósito entre pasos (hoy `notes` es el
-    // mismo textarea en «qué pasó» y en «ángulo del seguimiento»).
-    if (q.tipo !== 'formulario') delete limpio[q.campo];
-  });
-  return { ...limpio, ...valores, [PASOS]: [...new Set([...pasos, clave])] };
+  const q = PREGUNTAS[idx];
+  const { [ANTES]: antes = {}, ...limpio } = respuestas;
+  const previo = q.tipo === 'formulario' ? undefined
+    : (Object.prototype.hasOwnProperty.call(antes, q.campo) ? antes[q.campo] : respuestas[q.campo]);
+  const cambiaLaRama = q.tipo !== 'formulario' && previo !== undefined && previo !== null
+    && previo !== valores[q.campo];
+
+  let pasos = respuestas[PASOS] || [];
+  if (cambiaLaRama) {
+    pasos = pasos.filter((p) => {
+      const i = indiceDe(p);
+      return i >= 0 && i <= idx;
+    });
+    PREGUNTAS.slice(idx + 1).forEach((siguiente) => {
+      // Solo se limpian los campos de las preguntas de opciones: son de una sola pregunta cada
+      // una. Los campos de formulario se comparten a propósito entre pasos (hoy `notes` es el
+      // mismo textarea en «qué pasó» y en «ángulo del seguimiento»).
+      if (siguiente.tipo !== 'formulario') delete limpio[siguiente.campo];
+    });
+  }
+  const restantes = Object.fromEntries(Object.entries(antes).filter(([k]) => k !== q.campo));
+  return {
+    ...limpio,
+    ...valores,
+    ...(Object.keys(restantes).length && !cambiaLaRama ? { [ANTES]: restantes } : {}),
+    [PASOS]: [...new Set([...pasos, clave])],
+  };
 }
 
 /** Edición de campos sin confirmar el paso (lo que se tipea mientras el formulario está abierto). */
@@ -134,7 +158,13 @@ export function volverA(respuestas = {}, clave) {
   if (idx < 0) return respuestas;
   const q = PREGUNTAS[idx];
   const limpio = { ...respuestas, [PASOS]: (respuestas[PASOS] || []).filter((p) => p !== clave) };
-  if (q.tipo !== 'formulario') delete limpio[q.campo];
+  if (q.tipo !== 'formulario') {
+    // Se recuerda lo que tenía para saber, al contestar, si el closer cambió de rama o no.
+    if (respuestas[q.campo] !== undefined) {
+      limpio[ANTES] = { ...(respuestas[ANTES] || {}), [q.campo]: respuestas[q.campo] };
+    }
+    delete limpio[q.campo];
+  }
   return limpio;
 }
 
