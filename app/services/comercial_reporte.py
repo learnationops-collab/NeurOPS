@@ -14,8 +14,10 @@ Dos cosas distintas viven acá:
   3. Guardar y consultar el registro de gestión (`ReporteDirector`).
 
 Sobre "reportó / no reportó": para un closer se sabe la HORA, porque `CloserDailyReport` guarda
-cuándo se envió. Para un setter solo se sabe si cargó o no (`SetterDailyStats` no tiene marca de
-tiempo), así que su chip dice "Reportó" sin hora en vez de inventar una.
+cuándo se envió -en UTC; se muestra en la zona del closer-. Para un setter solo se sabe si cargó o
+no (`SetterDailyStats` no tiene marca de tiempo), así que su chip dice "Reportó" sin hora en vez de
+inventar una. Un closer puede mandar el reporte de ayer: ese reporte cuenta en el día que reporta,
+y su chip y su celda dicen además cuándo llegó ("Reportó el 30/09 · 09:15").
 
 "Incompleto" no es un estado que alguien marque: es que la persona reportó pero todavía le
 quedan llamadas del día, ya pasadas, sin resultado. Es exactamente el mismo criterio de
@@ -28,12 +30,19 @@ from app.models import CloserDailyReport, ReporteDirector, ReporteDirectorPerson
 from app.services.comercial_service import ROL_CLOSERS, ROL_SETTERS, ComercialService
 
 
-def _estado_reporte(reporto_a_las, reporto, tiene_pendientes_vencidas):
-    """El chip de estado del reporte de una persona, con el tono del design system."""
+def _estado_reporte(reporto_a_las, reporto, tiene_pendientes_vencidas, dia=None):
+    """El chip de estado del reporte de una persona, con el tono del design system.
+
+    `reporto_a_las` es la hora de envío en la zona de la persona. Si llegó un día después de `dia`
+    (el reporte de ayer, mandado hoy) el chip lo dice con la fecha: "Reportó 09:15" a secas se
+    leería como que reportó ese mismo día a la mañana."""
     if not reporto:
         return {'key': 'sin_reportar', 'label': 'Sin reportar', 'tone': 'error'}
     hora = reporto_a_las.strftime('%H:%M') if reporto_a_las else None
-    etiqueta = 'Reportó {}'.format(hora) if hora else 'Reportó'
+    if hora and dia and reporto_a_las.date() > dia:
+        etiqueta = 'Reportó el {} · {}'.format(reporto_a_las.strftime('%d/%m'), hora)
+    else:
+        etiqueta = 'Reportó {}'.format(hora) if hora else 'Reportó'
     if tiene_pendientes_vencidas:
         return {'key': 'incompleto', 'label': '{} · incompleto'.format(etiqueta), 'tone': 'warning'}
     return {'key': 'reporto', 'label': etiqueta, 'tone': 'success'}
@@ -97,7 +106,8 @@ def dia_del_equipo(fecha=None):
             'grupo': ROL_CLOSERS,
             'resumen': '{} llamadas · {} ventas · {} no show · {} sin resultado'.format(
                 resumen['realizadas'], resumen['ventas'], resumen['no_show'], resumen['pendientes']),
-            'estado': _estado_reporte(reporte.created_at if reporte else None, bool(reporte), bool(vencidas)),
+            'estado': _estado_reporte(reporte.enviado_en_su_zona() if reporte else None, bool(reporte),
+                                      bool(vencidas), dia),
             'actividad': _actividad_de_closer(suyas),
         })
 
@@ -232,7 +242,14 @@ def _fila_constancia(miembro, grupo, fechas, reportes, dias_con_actividad, dias_
             sin_cargar += 1
         else:
             estado = 'sin_actividad'
-        celdas.append({'fecha': clave, **_celda(estado)})
+        celda = {'fecha': clave, **_celda(estado)}
+        # El reporte de ayer mandado hoy cuenta en su día (ya lo hace: se guarda con esa fecha),
+        # pero la celda dice cuándo llegó. Solo los closers tienen hora de envío.
+        if reporte is not None and hasattr(reporte, 'enviado_tarde') and reporte.enviado_tarde():
+            celda['tarde'] = True
+            celda['label'] = '{} · enviado el {}'.format(
+                celda['label'], reporte.enviado_en_su_zona().strftime('%d/%m'))
+        celdas.append(celda)
     return {**miembro, 'grupo': grupo, 'celdas': celdas, 'reportados': reportados,
             'esperados': esperados, 'sin_cargar': sin_cargar, 'tasa': _tasa(reportados, esperados)}
 
