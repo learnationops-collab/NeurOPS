@@ -132,7 +132,7 @@ export const AYUDA_ACCESO = {
   sena: 'La Academia tiene este acceso marcado como reserva (seña): un acceso de cortesía corto hasta que complete el pago.',
   correo: 'El correo con el que entra a la Academia. Es la única forma de cruzarlo con NeurOPS: la Academia no busca por teléfono.',
   telefono: 'El teléfono que tiene cargado la Academia. No sirve para encontrarlo, pero conviene que coincida con el de acá: es por donde se le escribe.',
-  consultado: 'Estos datos se le piden a la Academia en vivo cada vez que abrís esta pestaña (o tocás Actualizar); no se guardan en NeurOPS.',
+  consultado: 'Estos datos se le piden a la Academia en vivo cada vez que abrís esta pestaña (o tocás Actualizar). NeurOPS guarda una copia para poder filtrar y ordenar la tabla Clientes por la actividad en la Academia.',
 };
 
 /** Vigente, por vencer o vencido: el semáforo del acceso, con el tono del design system. */
