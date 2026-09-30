@@ -13,6 +13,7 @@ import { estadoInicial, responder, preguntaActual, completo, construirPayload } 
 
 const LLAMADA = {};
 const CADENCIA = (intento, seguimientoTipo) => ({ modo: 'seguimiento', intento, seguimientoTipo });
+const COBRO = (intento) => ({ modo: 'cobro', intento, seguimientoTipo: 'cerrada' });
 
 export const GUIONES = {
   asistio_sin_cierre_seguimiento: {
@@ -143,6 +144,33 @@ export const GUIONES = {
       }],
       ['refs_ask', { refs_ask: 'si' }],
       ['refs_filas', { refs_rows: [{ nombre: 'Lu Pérez', contacto: '+5491122334455' }] }],
+    ],
+  },
+  // El seguimiento de cobro de un cliente (el `segventa` del mazo de main).
+  cobro_no_respondio: {
+    contexto: COBRO(1),
+    pasos: [
+      ['contacto_result', { contacto_result: 'no_resp' }],
+      ['contacto_detalle', { notes: 'Le recordé la cuota de octubre, visto sin respuesta' }],
+      ['cobro_fecha', {
+        fecha_seguimiento: '2026-10-02', followup_reminder_enabled: true, followup_reminder_time: '10:00',
+      }],
+    ],
+  },
+  cobro_conversando: {
+    contexto: COBRO(2),
+    pasos: [
+      ['contacto_result', { contacto_result: 'contesto' }],
+      ['contacto_detalle', { notes: 'Cobra el viernes y transfiere el lunes a primera hora' }],
+      ['cobro_fecha', { fecha_seguimiento: '2026-10-06', followup_reminder_enabled: false }],
+      ['refs_ask', { refs_ask: 'no_pedido' }],
+    ],
+  },
+  cobro_no_va_a_pagar: {
+    contexto: COBRO(3),
+    pasos: [
+      ['contacto_result', { contacto_result: 'no_paga' }],
+      ['contacto_detalle', { notes: 'Dice que no va a seguir y que no paga el resto' }],
     ],
   },
 };

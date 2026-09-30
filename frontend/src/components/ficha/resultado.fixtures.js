@@ -93,6 +93,17 @@ export const fichaEnSeguimiento = {
   },
 };
 
+// El cliente con deuda, en su seguimiento de cobro: el árbol arranca por «¿qué pasó con el cobro?».
+export const fichaEnCobro = {
+  ...fichaConDeuda,
+  resultado: {
+    ...fichaConDeuda.resultado,
+    seguimiento_activo: true,
+    seguimiento_intento: 1,
+    seguimiento_tipo: 'cerrada',
+  },
+};
+
 // Respuestas del árbol que producen una venta parcial con plan de cuotas (el caso más completo).
 export const respuestasVentaParcial = {
   _pasos: ['venta_cliente', 'venta_montos', 'venta_cuotas', 'venta_meta', 'venta_extras', 'referidos'],

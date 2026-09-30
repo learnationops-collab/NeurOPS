@@ -29,7 +29,7 @@ import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
-  ventaDirecta, anterior, elegida, RAICES,
+  ventaDirecta, anterior, elegida, fechaCorta, RAICES,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -54,10 +54,12 @@ const ICONOS = {
   asistio: CheckCircle2, no_asistio: XCircle, cancelo: CalendarX, reagenda: CalendarClock,
 };
 
-const hoyIso = () => {
+const enDias = (dias) => {
   const d = new Date();
+  d.setDate(d.getDate() + dias);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+const hoyIso = () => enDias(0);
 
 // Los datos que ya sabemos no se vuelven a pedir: vienen precargados y el closer los confirma.
 // Ojo: acá NO se precargan los campos de las preguntas de opciones (programa, medio de pago,
@@ -127,6 +129,7 @@ function useEstadoVenta(ficha, programa, onConsultar) {
 
 export default function TabResultado({
   ficha, onAccion, onConsultar = null, irA, puedeEditar = true, arrancarEnVenta = false,
+  seguimientoPedido = null,
 }) {
   const reducido = useReducedMotion();
   const precarga = useMemo(() => precargar(ficha), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -144,8 +147,13 @@ export default function TabResultado({
 
   const contexto = useMemo(() => {
     const res = ficha?.resultado || {};
+    // Qué se reporta: la llamada (las cuatro tarjetas), la cadencia de seguimiento de un lead que
+    // no compró, o el seguimiento de cobro de un cliente. El mazo sabe desde qué columna se abrió
+    // la ficha (`seguimientoPedido`) y eso gana; si no, lo dice el seguimiento vivo de la agenda.
+    const cobro = seguimientoPedido === 'cobro'
+      || (!seguimientoPedido && res.seguimiento_activo && res.seguimiento_tipo === 'cerrada');
     return {
-      modo: res.seguimiento_activo ? 'seguimiento' : 'llamada',
+      modo: cobro ? 'cobro' : (seguimientoPedido || res.seguimiento_activo ? 'seguimiento' : 'llamada'),
       intento: res.seguimiento_intento || 1,
       seguimientoTipo: res.seguimiento_tipo || null,
       appointmentId: ficha?.identidad?.appointment_id ?? null,
@@ -156,7 +164,7 @@ export default function TabResultado({
       closerAgenda: ficha?.identidad?.closer || null,
       cuotas: ficha?.cobro?.cuotas || [],
     };
-  }, [ficha, venta.estado, venta.cargando]);
+  }, [ficha, venta.estado, venta.cargando, seguimientoPedido]);
 
   // El precio del programa se propone solo, como en el wizard, sin pisar lo que el closer ya
   // escribió. Si cambia de programa, se cambia la propuesta, no un número tipeado a mano. Y si el
@@ -224,7 +232,10 @@ export default function TabResultado({
       // puede fallar sin deshacerla. Los dos avisos tienen que llegar al closer: si no, se queda
       // sin saber que hay algo para revisar.
       const avisos = [respuesta?.warning, ...(respuesta?.avisos || [])].filter(Boolean);
-      setHecho({ venta: fueVenta, conDeuda, saldo: fueVenta ? saldoVenta(respuestas, contexto) : 0, avisos });
+      setHecho({
+        venta: fueVenta, conDeuda, saldo: fueVenta ? saldoVenta(respuestas, contexto) : 0, avisos,
+        seguimiento: cierreDelSeguimiento(respuestas, contexto),
+      });
       // Si quedó saldo y no hay nada que leer acá, el trabajo sigue en «Acciones».
       if (conDeuda && !avisos.length) irA?.('acciones');
     } catch (e) {
@@ -258,14 +269,14 @@ export default function TabResultado({
 
       {progreso && !hecho && <ProgresoVenta progreso={progreso} reducido={reducido} />}
 
-        {/* Las 4 tarjetas grandes son la entrada al reporte de la LLAMADA. En la cadencia de
-            seguimiento la llamada ya se reportó: ahí se entra derecho por «¿qué pasó con este
-            contacto?», que es la pregunta que el árbol pone primera en ese modo. */}
+        {/* Las 4 tarjetas grandes son la entrada al reporte de la LLAMADA. En un seguimiento la
+            llamada ya se reportó: ahí se entra derecho por «¿qué pasó con este contacto?» (o «con
+            el cobro»), que es la pregunta que el árbol pone primera en esos modos. */}
         {hecho ? (
           <motion.section key="hecho" {...animar} aria-label="Guardado">
             <Hecho hecho={hecho} irA={irA} onAvisoCerrado={() => setHecho((h) => ({ ...h, avisos: [] }))} />
           </motion.section>
-        ) : !arrancado(respuestas) && contexto.modo !== 'seguimiento' ? (
+        ) : !arrancado(respuestas) && contexto.modo === 'llamada' ? (
           <motion.section key="raices" {...animar} aria-label="¿Qué pasó con esta llamada?">
             <h3 className="ln-t-h3">¿Qué pasó con esta llamada?</h3>
             <div className="ln-grid ln-grid-4" style={{ marginTop: 'var(--space-4)' }}>
@@ -314,6 +325,12 @@ export default function TabResultado({
           </motion.section>
         ) : (
           <motion.section key={pregunta.clave} {...animar} aria-live="polite">
+            {contexto.modo === 'cobro' && pregunta.clave === 'contacto_result' && (
+              <ResumenCobro
+                cobro={ficha?.cobro}
+                onPagoDeCuota={(cuota) => elegir('contacto_result', pagoDeCuota(cuota, ficha))}
+              />
+            )}
             <Pregunta
               reducido={reducido}
               pregunta={pregunta}
@@ -525,11 +542,18 @@ function BotonAnterior({ onClick, reducido, disabled = false }) {
 function valoresDeOpcion(pregunta, opcion, contexto, respuestas) {
   const base = { [pregunta.campo]: opcion.valor };
   if (pregunta.clave === 'sig_action' && opcion.valor === 'next') {
-    const dias = [0, 3, 7, 14][Math.min(3, contexto.intento || 1)];
-    const d = new Date();
-    d.setDate(d.getDate() + dias);
-    base.fecha_seguimiento = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    base.fecha_seguimiento = enDias([0, 3, 7, 14][Math.min(3, contexto.intento || 1)]);
   }
+  // El cobro sigue: como el mazo, el próximo intento se propone a 3 días y con el aviso por
+  // WhatsApp prendido. No se pisa lo que el closer ya había puesto.
+  if (pregunta.clave === 'contacto_result' && contexto.modo === 'cobro'
+    && ['no_resp', 'contesto'].includes(opcion.valor)) {
+    if (!respuestas.fecha_seguimiento) base.fecha_seguimiento = enDias(3);
+    if (respuestas.followup_reminder_enabled === undefined) base.followup_reminder_enabled = true;
+    if (!respuestas.followup_reminder_time) base.followup_reminder_time = '09:00';
+  }
+  // Lo que se cobra en un seguimiento no se cerró en la llamada (el mazo abría la venta así).
+  if (pregunta.clave === 'contacto_result' && opcion.valor === 'pago') base.sold_in_call = false;
   if (pregunta.clave === 'refs_ask' && opcion.valor === 'si' && !(respuestas.refs_rows || []).length) {
     base.refs_rows = [{ nombre: '', contacto: '' }];
   }
@@ -568,6 +592,97 @@ function OpcionGrande({ opcion, activa, onClick, reducido }) {
       )}
     </motion.button>
   );
+}
+
+// --- seguimiento de cobro ------------------------------------------------------------------
+
+// «Pagó» con la cuota ya elegida: el programa, el tipo Cuota, la cuota y su monto. Esas preguntas
+// quedan contestadas (se ven en la revisión y «Anterior» vuelve a ellas); el resto de la venta se
+// pregunta igual. Era «Reportar pago» en cada cuota del seguimiento de cobro del mazo.
+function pagoDeCuota(cuota, ficha) {
+  return {
+    contacto_result: 'pago',
+    sold_in_call: false,
+    programa: cuota.programa_code || ficha?.cobro?.programa_code || undefined,
+    tipo_pago_simple: 'Cuota',
+    selectedCuotaId: cuota.id,
+    monto: String(cuota.monto ?? ''),
+  };
+}
+
+const TONO_CUOTA = { pagado: 'var(--success)', vencido: 'var(--error)', pendiente: 'var(--warning)' };
+const ESTADO_CUOTA = { pagado: 'Pagada', vencido: 'Vencida', pendiente: 'Pendiente' };
+
+// Lo que el mazo mostraba arriba del seguimiento de un cliente: el programa, lo que debe y el plan
+// de cuotas, cada pendiente con su «Pagó esta».
+function ResumenCobro({ cobro, onPagoDeCuota }) {
+  const deuda = Number(cobro?.deuda) || 0;
+  const cuotas = cobro?.cuotas || [];
+  return (
+    <div className="ln-panel ln-panel--sm" style={{ display: 'grid', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-8)' }}>
+        <span style={{ display: 'grid', gap: 'var(--space-1)' }}>
+          <small className="ln-t-caption ln-muted">Programa</small>
+          <b className="ln-t-body">{cobro?.programa_nombre || 'Sin datos'}</b>
+        </span>
+        <span style={{ display: 'grid', gap: 'var(--space-1)' }}>
+          <small className="ln-t-caption ln-muted">Deuda pendiente</small>
+          <b className="ln-t-body ln-mono" style={{ color: deuda > 0.009 ? 'var(--error)' : 'var(--success)' }}>
+            {deuda > 0.009 ? moneda(deuda) : 'Al día'}
+          </b>
+        </span>
+      </div>
+      {cuotas.length > 0 && (
+        <div style={{ display: 'grid', gap: 'var(--space-2)' }} aria-label="Plan de cuotas" role="list">
+          <small className="ln-t-eyebrow ln-muted">Plan de cuotas</small>
+          {cuotas.map((c) => (
+            <div
+              key={c.id}
+              role="listitem"
+              style={{
+                display: 'grid', gridTemplateColumns: 'minmax(70px, auto) 1fr auto minmax(96px, auto)',
+                gap: 'var(--space-3)', alignItems: 'center',
+              }}
+            >
+              <b className="ln-t-body-sm">{`Cuota ${c.numero_cuota}`}</b>
+              <small className="ln-t-caption ln-muted">
+                {`vence ${fechaCorta(c.fecha_vencimiento)} · `}
+                <span style={{ color: TONO_CUOTA[c.estado] || 'inherit' }}>{ESTADO_CUOTA[c.estado] || c.estado}</span>
+              </small>
+              <b className="ln-t-body-sm ln-mono">{moneda(c.monto)}</b>
+              {c.estado === 'pagado' ? <span /> : (
+                <button type="button" className="btn btn--linea btn--sm" onClick={() => onPagoDeCuota(c)}>
+                  Pagó esta
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Lo que dice la confirmación de un seguimiento: no es el «Resultado guardado» de una llamada,
+// sino qué quedó y para cuándo. `null` en una llamada o en una venta, que tienen su propio texto.
+function cierreDelSeguimiento(r, contexto) {
+  if (contexto.modo === 'llamada' || esVenta(r)) return null;
+  if (r.contacto_result === 'no_paga') {
+    return { linea: 'Seguimiento de cobro cerrado', detalle: 'Avisó que no va a pagar: salió de la cola de cobros.' };
+  }
+  if (r.contacto_result === 'agendo') {
+    return { linea: 'Seguimiento guardado', detalle: 'Vuelve a Confirmaciones con la fecha nueva.' };
+  }
+  if (r.sig_action === 'close') {
+    return { linea: 'Seguimiento cerrado', detalle: `Motivo: ${r.cierre_motivo}.` };
+  }
+  const que = contexto.modo === 'cobro' ? 'intento de cobro' : 'seguimiento';
+  return {
+    linea: 'Seguimiento guardado',
+    detalle: r.fecha_seguimiento
+      ? `El próximo ${que} queda para el ${fechaCorta(r.fecha_seguimiento)}.`
+      : `El próximo ${que} queda sin fecha, en el pool del equipo.`,
+  };
 }
 
 // --- piezas de la venta ---------------------------------------------------------------------
@@ -754,8 +869,8 @@ function Revision({
 // El «guardado» ya lo dice el aviso del cascarón (`MENSAJES` en FichaLeadModal): repetirlo acá
 // serían dos avisos iguales apilados. Este panel dice lo que sigue.
 function Hecho({ hecho, irA, onAvisoCerrado }) {
-  let linea = 'Resultado guardado';
-  let detalle = 'Ya podés cerrar la ficha.';
+  let linea = hecho.seguimiento?.linea || 'Resultado guardado';
+  let detalle = hecho.seguimiento?.detalle || 'Ya podés cerrar la ficha.';
   if (hecho.venta && hecho.conDeuda) {
     linea = `Queda un saldo de ${moneda(hecho.saldo)}`;
     detalle = 'El cobro sigue en «Acciones»: el plan, los pagos y los seguimientos.';

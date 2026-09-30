@@ -235,10 +235,11 @@ def _guardar_respuestas_del_arbol(appt, respuestas, usuario):
 # (2a llamada, reagenda con fecha, «contesto y agendo»). La ficha manda las tres juntas —ya
 # resueltas por `construirPayload`— y aca se hacen en el mismo orden, con los mismos servicios.
 
-# Por donde se entra al arbol: las cuatro tarjetas de la llamada, o ninguna en la cadencia de
-# seguimiento, donde manda lo que paso con el contacto.
+# Por donde se entra al arbol: las cuatro tarjetas de la llamada, o ninguna en un seguimiento,
+# donde manda lo que paso con el contacto. `no_paga` es del seguimiento de cobro de un cliente
+# («No va a pagar»: sale de la cola). «Cerro» y «Pago» no estan: son ventas y van por la de venta.
 RESULTADOS_DEL_ARBOL = ('asistio', 'no_asistio', 'cancelo', 'reagenda')
-CONTACTOS_DE_SEGUIMIENTO = ('no_resp', 'contesto', 'agendo')
+CONTACTOS_DE_SEGUIMIENTO = ('no_resp', 'contesto', 'agendo', 'no_paga')
 
 # Lo que el reporte escribe en la agenda por el guardado del mazo. Lista cerrada: el bloque viene
 # del navegador y el mazo acepta mas claves (la etapa de confirmacion, el recordatorio previo) que
@@ -247,7 +248,7 @@ CAMPOS_DEL_REPORTE = (
     'closer_notes', 'result', 'confirm_status', 'with_decision_maker', 'offer_presented',
     'contact_result', 'fecha_seguimiento', 'seguimiento_tipo', 'seguimiento_sub',
     'seguimiento_intento', 'seguimiento_realizado', 'followup_reminder_enabled',
-    'followup_reminder_time',
+    'followup_reminder_time', 'fecha_seguimiento_cobro',
 )
 # Los unicos estados que el arbol manda por `process`: los dos descartes.
 DESCARTES = ('Lead Perdido', 'No Lead')

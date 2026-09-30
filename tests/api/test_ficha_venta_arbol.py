@@ -187,6 +187,22 @@ def test_la_venta_desde_la_cadencia_cierra_el_seguimiento_y_deja_el_de_cobro(cli
     assert lead.last_contact_outcome == 'cerro'
 
 
+def test_pago_en_el_seguimiento_de_cobro_lo_da_por_hecho(client, db, lead, equipo, auth_headers):
+    """«Pagó» del cobro de un cliente: la cuota se registra y el seguimiento queda hecho."""
+    lead.seguimiento_tipo = 'cerrada'
+    lead.fecha_seguimiento = '2026-09-28'
+    lead.seguimiento_realizado = False
+    db.session.commit()
+
+    r, _ = declarar(client, auth_headers, equipo['closer'], lead, venta_del_arbol(
+        deck={'closer_notes': 'transfirió la cuota de octubre', 'seguimiento_realizado': True,
+              'fecha_seguimiento': None, 'contact_result': 'pago'}))
+
+    assert r.status_code == 201
+    assert (lead.seguimiento_realizado, lead.fecha_seguimiento) == (True, None)
+    assert lead.last_contact_outcome == 'pago'
+
+
 def test_el_plan_de_cuotas_se_arma_con_las_fechas_y_montos_elegidos(client, db, lead, equipo,
                                                                    auth_headers):
     r, _ = declarar(client, auth_headers, equipo['closer'], lead, venta_del_arbol(

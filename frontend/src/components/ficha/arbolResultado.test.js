@@ -347,6 +347,76 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
   });
 });
 
+describe('seguimiento de cobro (modo cobro)', () => {
+  // El `segventa` del mazo de main: un cliente que ya compró y debe.
+  const ctx = { modo: 'cobro', intento: 1, seguimientoTipo: 'cerrada' };
+
+  it('arranca preguntando qué pasó con el cobro, con las cuatro salidas del mazo', () => {
+    const q = preguntaActual(estadoInicial(), ctx);
+    expect(q.clave).toBe('contacto_result');
+    expect(q.enunciado).toBe('¿Qué pasó con el cobro?');
+    expect(q.opciones.map((o) => o.label)).toEqual(['No respondió', 'Estamos conversando', 'Pagó', 'No va a pagar']);
+    expect(anterior(estadoInicial(), ctx)).toBeNull();
+    expect(hitos(estadoInicial(), ctx)[1].sub).toBe('Seguimiento de cobro');
+  });
+
+  it('si no respondió pide qué sucedió y la fecha del próximo intento, sin modalidad', () => {
+    let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'no_resp' });
+    expect(preguntaActual(r, ctx).clave).toBe('contacto_detalle');
+    expect(faltantes(r, ctx)).toEqual(['Qué sucedió exactamente (mínimo 10 caracteres, llevás 0)']);
+    r = responder(r, 'contacto_detalle', { notes: 'le recordé la cuota, no contestó' });
+    expect(preguntaActual(r, ctx).clave).toBe('cobro_fecha');
+    expect(faltantes(r, ctx)).toEqual(['Elegí la fecha del próximo intento de cobro']);
+    r = responder(r, 'cobro_fecha', { fecha_seguimiento: '2026-10-02', followup_reminder_enabled: true, followup_reminder_time: '09:00' });
+    expect(completo(r, ctx)).toBe(true);
+    const { accion, datos } = construirPayload(r, ctx);
+    expect(accion).toBe('reportar_resultado');
+    expect(datos.deck).toMatchObject({
+      contact_result: 'no_resp', seguimiento_realizado: false, seguimiento_intento: 2,
+      fecha_seguimiento: '2026-10-02', fecha_seguimiento_cobro: '2026-10-02', seguimiento_tipo: 'cerrada',
+      followup_reminder_enabled: true, followup_reminder_time: '09:00',
+    });
+  });
+
+  it('si siguen conversando también pide los referidos', () => {
+    const r = recorrer({
+      contacto_result: { contacto_result: 'contesto' },
+      contacto_detalle: { notes: 'transfiere el lunes a primera hora' },
+      cobro_fecha: { fecha_seguimiento: '2026-10-06' },
+      refs_ask: { refs_ask: 'no' },
+    }, ctx);
+    expect(completo(r, ctx)).toBe(true);
+    expect(construirPayload(r, ctx).datos.deck.closer_notes).toContain('Se pidieron referidos, no dejó.');
+  });
+
+  it('«No va a pagar» cierra el seguimiento con su motivo y sin fecha', () => {
+    const r = recorrer({
+      contacto_result: { contacto_result: 'no_paga' },
+      contacto_detalle: { notes: 'no sigue y no paga el resto' },
+    }, ctx);
+    expect(construirPayload(r, ctx).datos.deck).toMatchObject({
+      contact_result: 'no_paga', seguimiento_realizado: true, fecha_seguimiento: null,
+      closer_notes: 'no sigue y no paga el resto | Motivo de cierre: No va a pagar',
+    });
+  });
+
+  it('«Pagó» sigue a la venta y el guardado cierra el seguimiento', () => {
+    let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'pago' });
+    r = responder(r, 'contacto_detalle', { notes: 'me mandó el comprobante de la cuota' });
+    expect(esVenta(r)).toBe(true);
+    expect(preguntaActual(r, ctx).clave).toBe('venta_nombre');
+    expect(hitos(r, ctx)[2].sub).toBe('Venta cerrada');
+    const { accion, datos } = construirPayload(r, ctx);
+    expect(accion).toBe('registrar_venta');
+    expect(datos.deck).toMatchObject({ contact_result: 'pago', seguimiento_realizado: true, fecha_seguimiento: null });
+  });
+
+  it('la cadencia de un lead que no compró no se entera del cobro', () => {
+    const q = preguntaActual(estadoInicial(), { modo: 'seguimiento', intento: 2 });
+    expect(q.opciones.map((o) => o.valor)).toEqual(['no_resp', 'contesto', 'agendo', 'cerro']);
+  });
+});
+
 describe('referidos', () => {
   it('se piden cuando hubo contacto real y validan al menos un nombre', () => {
     let r = estadoInicial();

@@ -64,7 +64,10 @@ export function notaFinal(r = {}) {
   } else if (r.refs_ask === 'no_pedido') {
     refs = ' | No se pidieron referidos.';
   }
-  const cierre = r.sig_action === 'close' && r.cierre_motivo ? ` | Motivo de cierre: ${r.cierre_motivo}` : '';
+  // «No va a pagar» del cobro cierra el seguimiento con su propio motivo, como hacía el mazo.
+  const motivo = r.contacto_result === 'no_paga' ? 'No va a pagar'
+    : (r.sig_action === 'close' && r.cierre_motivo) || null;
+  const cierre = motivo ? ` | Motivo de cierre: ${motivo}` : '';
   // Sin texto libre la nota empezaba con el separador («| Se pidieron referidos…»).
   return `${prefijo}${r.notes || ''}${cierre}${refs}`.trim().replace(/^\|\s*/, '');
 }
@@ -151,6 +154,25 @@ function bloqueDeck(r, contexto) {
     return {
       ...base, confirm_status: 'por_confirmar', result: 'Pendiente', contact_result: r.contacto_result,
       seguimiento_realizado: true, fecha_seguimiento: null,
+    };
+  }
+  // Seguimiento de cobro: el cliente avisó que no va a pagar y sale de la cola.
+  if (contexto.modo === 'cobro' && r.contacto_result === 'no_paga') {
+    return { ...base, contact_result: r.contacto_result, seguimiento_realizado: true, fecha_seguimiento: null };
+  }
+  // Seguimiento de cobro: no respondió o siguen conversando. Sigue vivo en la cola de cobros con la
+  // fecha del próximo intento, que el mazo guardaba también como fecha de cobro.
+  if (contexto.modo === 'cobro' && ['no_resp', 'contesto'].includes(r.contacto_result)) {
+    return {
+      ...base,
+      contact_result: r.contacto_result,
+      seguimiento_realizado: false,
+      seguimiento_intento: Math.min(4, (contexto.intento || 1) + 1),
+      fecha_seguimiento: r.fecha_seguimiento || null,
+      fecha_seguimiento_cobro: r.fecha_seguimiento || null,
+      seguimiento_tipo: 'cerrada',
+      followup_reminder_enabled: !!r.followup_reminder_enabled,
+      followup_reminder_time: r.followup_reminder_time || null,
     };
   }
   // Cadencia de seguimiento: se cierra.
@@ -274,9 +296,10 @@ function payloadVenta(r, contexto) {
       ? { cuota_id: r.selectedCuotaId, estado: 'pagado', monto: num(r.monto) ?? 0 }
       : null,
     plan_cuotas: bloquePlan(r, contexto),
-    // La venta llegada desde la cadencia de seguimiento cierra primero el seguimiento.
-    deck: r.contacto_result === 'cerro'
-      ? { closer_notes: notaFinal(r), seguimiento_realizado: true, fecha_seguimiento: null, contact_result: 'cerro' }
+    // La venta llegada desde la cadencia de seguimiento (o el cobro del seguimiento de un cliente)
+    // cierra primero el seguimiento.
+    deck: ['cerro', 'pago'].includes(r.contacto_result)
+      ? { closer_notes: notaFinal(r), seguimiento_realizado: true, fecha_seguimiento: null, contact_result: r.contacto_result }
       : null,
     referidos: bloqueReferidos(r),
     respuestas: r,

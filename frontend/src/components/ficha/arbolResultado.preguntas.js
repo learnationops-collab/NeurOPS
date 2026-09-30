@@ -84,6 +84,15 @@ export const RESULTADOS_CONTACTO = [
   { valor: 'agendo', label: 'Contestó y agendó', sub: 'Vuelve al meet', tono: 'success' },
   { valor: 'cerro', label: 'Cerró la venta', sub: 'Registrar pago', tono: 'success' },
 ];
+// ← paso `segventa` (seguimiento de un cliente que ya compró): «¿Qué pasó con el cobro?». Van en
+// el mismo campo que el resultado del contacto porque son lo mismo —lo que pasó al contactarlo—
+// y el backend lo guarda en el mismo lugar (`contact_result`).
+export const RESULTADOS_COBRO = [
+  { valor: 'no_resp', label: 'No respondió', sub: 'Lo intenté, no contestó', tono: 'error' },
+  { valor: 'contesto', label: 'Estamos conversando', sub: 'Quedamos en seguir hablando', tono: 'info' },
+  { valor: 'pago', label: 'Pagó', sub: 'Registrar el cobro', tono: 'success' },
+  { valor: 'no_paga', label: 'No va a pagar', sub: 'Sale de la cola de cobros', tono: 'error' },
+];
 
 const si = { valor: true, label: 'Sí', tono: 'success' };
 const no = { valor: false, label: 'No', tono: 'error' };
@@ -97,8 +106,8 @@ const vaADescartar = (r) => ['perdido', 'descartar', 'no_lead']
   .some((v) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes(v));
 // Hubo contacto humano real → corresponde preguntar por referidos (misma regla que hoy:
 // `needsRefs` en 3148, y el paso `referralAsked` del wizard de venta).
-const huboContacto = (r) => r.res === 'asistio' || ['contesto', 'agendo', 'cerro'].includes(r.contacto_result)
-  || r.venta_directa === true;
+const huboContacto = (r) => r.res === 'asistio'
+  || ['contesto', 'agendo', 'cerro', 'pago'].includes(r.contacto_result) || r.venta_directa === true;
 
 // Los closers a los que se le puede atribuir la venta: los de la ficha, con el de la agenda
 // primero (es a quien le toca casi siempre). Si la ficha no trae la lista queda solo el de la
@@ -122,9 +131,14 @@ function closersDeLaVenta(c = {}) {
 const muestraEstadoCliente = (r, c = {}) => esVenta(r) && !!r.programa
   && (!!c.cargandoVenta || (Number(c.estadoVenta?.sales_count) || 0) > 0);
 
-// La venta directa no reporta la llamada ni el contacto: entra derecho a los datos de la venta.
-const enLlamada = (r, c) => c.modo !== 'seguimiento' && r.venta_directa !== true;
+// Tres formas de entrar al árbol: la llamada (las cuatro tarjetas), la cadencia de seguimiento de
+// un lead que no compró (`seguimiento`) y el seguimiento de cobro de un cliente (`cobro`). La venta
+// directa no reporta ni la llamada ni el contacto: entra derecho a los datos de la venta.
+const CADENCIAS = ['seguimiento', 'cobro'];
+const enLlamada = (r, c) => !CADENCIAS.includes(c.modo) && r.venta_directa !== true;
+const enCadencia = (r, c) => CADENCIAS.includes(c.modo) && r.venta_directa !== true;
 const enSeguimiento = (r, c) => c.modo === 'seguimiento' && r.venta_directa !== true;
+const enCobro = (r, c) => c.modo === 'cobro' && r.venta_directa !== true;
 
 export const PREGUNTAS = [
   // ---------- tronco de la llamada ----------
@@ -132,21 +146,27 @@ export const PREGUNTAS = [
     clave: 'res', hito: 'resultado', campo: 'res', tipo: 'opciones', destacada: true,
     enunciado: '¿Qué pasó con esta llamada?', opciones: RAICES, cuando: enLlamada,
   },
-  { // ← seg (3120): ¿Qué pasó con este contacto?
+  { // ← seg (3120): ¿Qué pasó con este contacto? · segventa (3405): ¿Qué pasó con el cobro?
     clave: 'contacto_result', hito: 'resultado', campo: 'contacto_result', tipo: 'opciones',
-    enunciado: '¿Qué pasó con este contacto?', opciones: RESULTADOS_CONTACTO, cuando: enSeguimiento,
+    enunciado: (r, c) => (c.modo === 'cobro' ? '¿Qué pasó con el cobro?' : '¿Qué pasó con este contacto?'),
+    ayuda: (r, c) => (c.modo === 'cobro' ? 'Ya compró: el foco es cobrar lo que debe.' : null),
+    opciones: (r, c) => (c.modo === 'cobro' ? RESULTADOS_COBRO : RESULTADOS_CONTACTO),
+    cuando: enCadencia,
   },
-  { // ← seg: modalidad (≥1) + notas (≥10) + nueva fecha si agendó
-    clave: 'contacto_detalle', hito: 'resultado', tipo: 'formulario', enunciado: '¿Cómo fue el contacto?',
-    campos: (r) => [
+  { // ← seg: modalidad (≥1) + notas (≥10) + nueva fecha si agendó · segventa: solo qué sucedió
+    clave: 'contacto_detalle', hito: 'resultado', tipo: 'formulario',
+    enunciado: (r, c) => (c.modo === 'cobro' ? '¿Qué sucedió exactamente?' : '¿Cómo fue el contacto?'),
+    campos: (r, c) => (c.modo === 'cobro' ? [
+      { campo: 'notes', label: 'Qué sucedió exactamente', tipo: 'parrafo', requerido: true, minimoTexto: 10 },
+    ] : [
       { campo: 'modalidad', label: 'Modalidad', tipo: 'multiple', opciones: MODALIDADES, requerido: true },
       { campo: 'notes', label: 'Qué le dijiste y qué respondió', tipo: 'parrafo', requerido: true, minimoTexto: 10 },
       ...(r.contacto_result === 'agendo' ? [
         { campo: 'nueva_fecha_agenda', label: 'Nueva fecha', tipo: 'fecha', requerido: true },
         { campo: 'nueva_hora_agenda', label: 'Nueva hora', tipo: 'hora', requerido: true },
       ] : []),
-    ],
-    cuando: enSeguimiento,
+    ]),
+    cuando: enCadencia,
   },
   { // ← decisor (2579): with_decision_maker
     clave: 'decisor', hito: 'resultado', campo: 'with_decision_maker', tipo: 'opciones',
@@ -461,6 +481,22 @@ export const PREGUNTAS = [
     clave: 'cierre_motivo', hito: 'resultado', campo: 'cierre_motivo', tipo: 'opciones',
     enunciado: '¿Por qué se cierra el seguimiento?', opciones: opts(MOTIVOS_CIERRE_SEGUIMIENTO, 'error'),
     cuando: (r) => r.sig_action === 'close',
+  },
+  { // ← segventa: «¿Cuándo es el siguiente seguimiento de cobro?» + aviso por WhatsApp. Si no
+    // pagó ni dijo que no va a pagar, el cobro sigue: la fecha es obligatoria, como en el mazo.
+    clave: 'cobro_fecha', hito: 'resultado', tipo: 'formulario',
+    enunciado: '¿Cuándo es el siguiente seguimiento de cobro?',
+    ayuda: 'Puede ser hoy mismo si quedaste en volver a escribirle más tarde.',
+    campos: [
+      {
+        campo: 'fecha_seguimiento', label: 'Fecha del próximo intento de cobro', tipo: 'fecha', requerido: true,
+        falta: 'Elegí la fecha del próximo intento de cobro',
+        presets: [{ label: 'Hoy', dias: 0 }, { label: 'Mañana', dias: 1 }, { label: 'En 3 días', dias: 3 }, { label: 'En 1 semana', dias: 7 }],
+      },
+      { campo: 'followup_reminder_enabled', label: 'Avisarme por WhatsApp', tipo: 'booleano' },
+      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora' },
+    ],
+    cuando: (r, c) => enCobro(r, c) && ['no_resp', 'contesto'].includes(r.contacto_result),
   },
 
   // ---------- destinos comunes ----------

@@ -227,7 +227,7 @@ export function hitos(respuestas = {}, contexto = {}) {
   const conDecisor = r.with_decision_maker === undefined || r.with_decision_maker === null
     ? '' : (r.with_decision_maker ? ' · con decisor' : ' · sin decisor');
   const cerro = r.cierre === undefined || r.cierre === null
-    ? (r.contacto_result === 'cerro' || r.venta_directa === true ? true : null) : r.cierre;
+    ? (['cerro', 'pago'].includes(r.contacto_result) || r.venta_directa === true ? true : null) : r.cierre;
 
   // La deuda y el upsell no se preguntan aparte: salen del tipo de pago (Renovación y Upsell son
   // su propio hito) y de los montos. Se sabe si queda deuda cuando es un pago completo o cuando
@@ -239,9 +239,10 @@ export function hitos(respuestas = {}, contexto = {}) {
 
   // En la cadencia de seguimiento la llamada ya se reportó: el hito «Resultado» muestra en qué
   // intento va, no «Sin reportar».
-  const enCadencia = contexto.modo === 'seguimiento' || !!r.contacto_result;
+  const enCadencia = ['seguimiento', 'cobro'].includes(contexto.modo) || !!r.contacto_result;
   const subResultado = () => {
     if (r.venta_directa === true) return 'Venta directa';
+    if (contexto.modo === 'cobro') return 'Seguimiento de cobro';
     if (enCadencia) return `Seguimiento ${contexto.intento || 1} de 4`;
     if (!r.res) return 'Sin reportar';
     return `${ETIQUETA_RES[r.res] || r.res}${conDecisor}`;

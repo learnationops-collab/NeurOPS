@@ -648,5 +648,123 @@
         ]
       }
     }
+  },
+  "cobro_no_respondio": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "no_resp",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Le recordé la cuota de octubre, visto sin respuesta",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "contact_result": "no_resp",
+        "seguimiento_realizado": false,
+        "seguimiento_intento": 2,
+        "fecha_seguimiento": "2026-10-02",
+        "fecha_seguimiento_cobro": "2026-10-02",
+        "seguimiento_tipo": "cerrada",
+        "followup_reminder_enabled": true,
+        "followup_reminder_time": "10:00"
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle",
+          "cobro_fecha"
+        ],
+        "contacto_result": "no_resp",
+        "notes": "Le recordé la cuota de octubre, visto sin respuesta",
+        "fecha_seguimiento": "2026-10-02",
+        "followup_reminder_enabled": true,
+        "followup_reminder_time": "10:00"
+      }
+    }
+  },
+  "cobro_conversando": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "contesto",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Cobra el viernes y transfiere el lunes a primera hora | No se pidieron referidos.",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "contact_result": "contesto",
+        "seguimiento_realizado": false,
+        "seguimiento_intento": 3,
+        "fecha_seguimiento": "2026-10-06",
+        "fecha_seguimiento_cobro": "2026-10-06",
+        "seguimiento_tipo": "cerrada",
+        "followup_reminder_enabled": false,
+        "followup_reminder_time": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": "no_pedido",
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle",
+          "cobro_fecha",
+          "refs_ask"
+        ],
+        "contacto_result": "contesto",
+        "notes": "Cobra el viernes y transfiere el lunes a primera hora",
+        "fecha_seguimiento": "2026-10-06",
+        "followup_reminder_enabled": false,
+        "refs_ask": "no_pedido"
+      }
+    }
+  },
+  "cobro_no_va_a_pagar": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "no_paga",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Dice que no va a seguir y que no paga el resto | Motivo de cierre: No va a pagar",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "contact_result": "no_paga",
+        "seguimiento_realizado": true,
+        "fecha_seguimiento": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle"
+        ],
+        "contacto_result": "no_paga",
+        "notes": "Dice que no va a seguir y que no paga el resto"
+      }
+    }
   }
 }

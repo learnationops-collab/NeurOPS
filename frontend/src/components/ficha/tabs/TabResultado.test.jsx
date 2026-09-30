@@ -7,7 +7,13 @@ vi.mock('../acciones/piezas', () => import('../acciones/piezasStub.jsx'));
 
 import TabResultado from './TabResultado';
 import TabAcciones from './TabAcciones';
-import { fichaAgendaVencida, fichaConDeuda, fichaEnSeguimiento } from '../resultado.fixtures';
+import { fichaAgendaVencida, fichaConDeuda, fichaEnSeguimiento, fichaEnCobro } from '../resultado.fixtures';
+
+const enDias = (dias) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const props = (ficha, extra = {}) => ({
   ficha,
@@ -336,6 +342,62 @@ describe('TabResultado', () => {
     await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
     expect(screen.getByRole('alert')).toHaveTextContent('el backend dijo no');
     expect(rotas.irA).not.toHaveBeenCalled();
+  });
+});
+
+describe('TabResultado · seguimiento de cobro', () => {
+  // El `segventa` del mazo de main: el cliente ya compró y el seguimiento es para cobrarle.
+  it('abre en «¿Qué pasó con el cobro?» con el programa, la deuda y el plan de cuotas', () => {
+    render(<TabResultado {...props(fichaEnCobro)} />);
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con el cobro?' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Asistió' })).toBeNull();
+    expect(screen.getByText('Ace Learner')).toBeInTheDocument();
+    expect(screen.getByText('$1,500')).toBeInTheDocument();
+    const plan = screen.getByRole('list', { name: 'Plan de cuotas' });
+    expect(within(plan).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(plan).getAllByRole('button', { name: 'Pagó esta' })).toHaveLength(3);
+  });
+
+  it('«No respondió» propone el próximo intento a 3 días y lo guarda como seguimiento de cobro', async () => {
+    const user = userEvent.setup();
+    const p = props(fichaEnCobro);
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: /No respondió/ }));
+    expect(screen.getByRole('heading', { name: '¿Qué sucedió exactamente?' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Qué sucedió exactamente'), 'Le recordé la cuota, no contestó');
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByRole('heading', { name: '¿Cuándo es el siguiente seguimiento de cobro?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
+
+    const [accion, datos] = p.onAccion.mock.calls[0];
+    expect(accion).toBe('reportar_resultado');
+    expect(datos.contacto_result).toBe('no_resp');
+    expect(datos.deck).toMatchObject({
+      seguimiento_tipo: 'cerrada', seguimiento_intento: 2, fecha_seguimiento_cobro: enDias(3),
+      followup_reminder_enabled: true, followup_reminder_time: '09:00',
+    });
+    expect(await screen.findByText('Seguimiento guardado')).toBeInTheDocument();
+  });
+
+  it('«Pagó esta» en una cuota sigue a la venta con esa cuota ya elegida', async () => {
+    const user = userEvent.setup();
+    render(<TabResultado {...props(fichaEnCobro)} />);
+    await user.click(within(screen.getByRole('list', { name: 'Plan de cuotas' })).getAllByRole('button', { name: 'Pagó esta' })[1]);
+    await user.type(screen.getByLabelText('Qué sucedió exactamente'), 'Me pasó el comprobante de la cuota 2');
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+  });
+
+  it('el mazo pide el cobro aunque la agenda no tenga el seguimiento vivo', () => {
+    render(<TabResultado {...props(fichaConDeuda)} seguimientoPedido="cobro" />);
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con el cobro?' })).toBeInTheDocument();
+  });
+
+  it('abierto desde un seguimiento sin cobrar, entra por la cadencia y no por las tarjetas', () => {
+    render(<TabResultado {...props(fichaAgendaVencida)} seguimientoPedido="contacto" />);
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con este contacto?' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Asistió' })).toBeNull();
   });
 });
 

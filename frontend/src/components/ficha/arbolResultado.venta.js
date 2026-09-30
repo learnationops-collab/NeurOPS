@@ -14,7 +14,7 @@ import { moneda, repartirCuotas, round2, sumarMeses } from './acciones/planCuota
 // Tres puertas a la venta: cerró en la llamada, cerró en la cadencia de seguimiento, o la venta
 // directa (`venta_directa`): una renovación, un upsell, una cuota o una venta cerrada por fuera,
 // que no sale de reportar ESTA llamada. Es lo que era «Registrar venta / pago» del historial.
-export const esVenta = (r = {}) => r.cierre === true || r.contacto_result === 'cerro'
+export const esVenta = (r = {}) => r.cierre === true || ['cerro', 'pago'].includes(r.contacto_result)
   || r.venta_directa === true;
 
 export const esCompleto = (r = {}) => r.tipo_pago_simple === 'completo';

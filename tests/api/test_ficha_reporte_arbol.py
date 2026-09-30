@@ -62,6 +62,21 @@ def en_seguimiento(db, lead):
     return lead
 
 
+@pytest.fixture()
+def en_cobro(db, lead):
+    """Un cliente que ya compro, en el seguimiento de cobro de lo que debe."""
+    lead.closer_result = 'Show up'
+    lead.closer_processed = True
+    lead.seguimiento_tipo = 'cerrada'
+    lead.seguimiento_sub = 'Seguimiento de cobro'
+    lead.seguimiento_intento = 1
+    lead.seguimiento_realizado = False
+    lead.fecha_seguimiento = '2026-09-29'
+    lead.fecha_seguimiento_cobro = '2026-09-29'
+    db.session.commit()
+    return lead
+
+
 def reportar(client, auth_headers, usuario, appt, caso, **cambios):
     pedido = copy.deepcopy(REPORTES[caso])
     assert pedido['accion'] == 'reportar_resultado'
@@ -85,8 +100,9 @@ def comentarios(appt):
 
 # --- Todos los caminos del arbol pasan ---------------------------------------------------------
 
-CASOS_DE_LA_LLAMADA = [c for c in REPORTES if not c.startswith('cadencia_')]
+CASOS_DE_LA_LLAMADA = [c for c in REPORTES if not c.startswith(('cadencia_', 'cobro_'))]
 CASOS_DE_LA_CADENCIA = [c for c in REPORTES if c.startswith('cadencia_')]
+CASOS_DEL_COBRO = [c for c in REPORTES if c.startswith('cobro_')]
 
 
 @pytest.mark.parametrize('caso', CASOS_DE_LA_LLAMADA)
@@ -105,6 +121,14 @@ def test_cada_camino_de_la_cadencia_se_guarda(client, db, en_seguimiento, equipo
     assert r.status_code == 200, r.get_json()
 
 
+@pytest.mark.parametrize('caso', CASOS_DEL_COBRO)
+def test_cada_camino_del_cobro_se_guarda(client, db, en_cobro, equipo, auth_headers, caso):
+    r = reportar(client, auth_headers, equipo['closer'], en_cobro, caso)
+
+    assert r.status_code == 200, r.get_json()
+    assert 'reporte_arbol' in acciones(en_cobro)
+
+
 def test_el_contrato_cubre_todas_las_ramas_sin_venta():
     """Un camino nuevo del arbol tiene que entrar al contrato, o nadie comprueba que se guarde."""
     assert set(REPORTES) == {
@@ -114,6 +138,7 @@ def test_el_contrato_cubre_todas_las_ramas_sin_venta():
         'cancelo_reagendar_con_fecha', 'cancelo_seguimiento', 'cancelo_no_lead',
         'reagenda_con_fecha', 'reagenda_sin_fecha',
         'cadencia_no_respondio', 'cadencia_se_cierra', 'cadencia_contesto_y_agendo',
+        'cobro_no_respondio', 'cobro_conversando', 'cobro_no_va_a_pagar',
     }
 
 
@@ -279,6 +304,34 @@ def test_contesto_y_agendo_mueve_la_llamada_y_la_devuelve_a_confirmaciones(clien
     assert r.get_json()['referidos'] == 1
     referido = Appointment.query.filter(Appointment.id != lead.id).one()
     assert 'Referido durante el seguimiento de Ana Gomez.' in referido.closer_notes
+
+
+# --- El seguimiento de cobro -------------------------------------------------------------------
+
+def test_si_no_respondio_el_cobro_sigue_con_la_fecha_nueva_y_su_aviso(client, db, en_cobro, equipo,
+                                                                     auth_headers):
+    """Lo que hacia el mazo de main: suma un intento, la fecha va tambien como fecha de cobro y el
+    seguimiento sigue siendo de cobro (`cerrada`)."""
+    lead = en_cobro
+    r = reportar(client, auth_headers, equipo['closer'], lead, 'cobro_no_respondio')
+
+    assert r.status_code == 200
+    assert (lead.seguimiento_intento, lead.seguimiento_realizado) == (2, False)
+    assert (str(lead.fecha_seguimiento), str(lead.fecha_seguimiento_cobro)) == ('2026-10-02', '2026-10-02')
+    assert lead.seguimiento_tipo == 'cerrada'
+    assert lead.last_contact_outcome == 'no_resp'
+    assert (lead.followup_reminder_enabled, str(lead.followup_reminder_time)[:5]) == (True, '10:00')
+    assert lead.closer_result == 'Show up'
+
+
+def test_si_no_va_a_pagar_sale_de_la_cola_con_el_motivo(client, db, en_cobro, equipo, auth_headers):
+    lead = en_cobro
+    r = reportar(client, auth_headers, equipo['closer'], lead, 'cobro_no_va_a_pagar')
+
+    assert r.status_code == 200
+    assert (lead.seguimiento_realizado, lead.fecha_seguimiento) == (True, None)
+    assert lead.last_contact_outcome == 'no_paga'
+    assert lead.closer_notes.endswith('| Motivo de cierre: No va a pagar')
 
 
 # --- Lo que no pasa ----------------------------------------------------------------------------
