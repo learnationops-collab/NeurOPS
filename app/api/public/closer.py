@@ -133,6 +133,24 @@ def submit_public_closer_report():
     return jsonify({"message": "Reporte de closer guardado exitosamente"}), 201
 
 
+DIAS_SEMANA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+
+
+def _cuando_se_envio(report):
+    """De qué día es el reporte y, si se mandó después, cuándo: lo que dicen la imagen y el
+    mensaje de Discord. `leyenda` queda en None para un reporte mandado el mismo día."""
+    dia = report.date
+    dia_reportado = '{} {}'.format(DIAS_SEMANA[dia.weekday()], dia.strftime('%d/%m'))
+    tarde = report.enviado_tarde()
+    enviado_el = report.enviado_en_su_zona().strftime('%d/%m') if tarde else None
+    return {
+        'tarde': tarde,
+        'dia_reportado': dia_reportado,
+        'enviado_el': enviado_el,
+        'leyenda': 'Reporte del {} · enviado el {}'.format(dia_reportado, enviado_el) if tarde else None,
+    }
+
+
 def _prepare_report_data(report):
     """Calcula y estructura las métricas del reporte diario de un closer para la imagen única
     que se manda a Discord (KISS & DRY) — pensada como el resumen ejecutivo que un director de
@@ -143,6 +161,7 @@ def _prepare_report_data(report):
     los totales que sí reflejan ese trabajo real."""
     closer_name = report.closer.username if report.closer else "Closer"
     date_str = report.date.strftime('%d/%m/%Y')
+    envio = _cuando_se_envio(report)
 
     def safe_percent(part, total):
         # Capado a 100%: reportes viejos con datos manuales inconsistentes (ej. ventas cargadas
@@ -228,6 +247,12 @@ def _prepare_report_data(report):
     return {
         "closer_name": closer_name,
         "date_str": date_str,
+        # Un reporte mandado al día siguiente (el de ayer) tiene que decir de qué día es y cuándo
+        # se mandó: sin esto, en Discord se lee como el reporte de hoy.
+        "late": envio['tarde'],
+        "report_day_label": envio['dia_reportado'],
+        "sent_date_str": envio['enviado_el'],
+        "late_label": envio['leyenda'],
         "general": {
             "slots": slots_totales,
             "slots_available_pct": slots_available_pct,
@@ -301,6 +326,21 @@ def _prepare_report_data(report):
     }
 
 
+def _mensaje_discord(datos):
+    """El texto que acompaña la imagen en Discord. Un reporte mandado tarde lo dice en una línea
+    aparte, con el día reportado y el día del envío."""
+    lineas = [
+        "🎯 **NUEVO REPORTE DIARIO DE CLOSER**",
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"👤 **Closer:** `{datos['closer_name']}`",
+        f"📅 **Fecha:** `{datos['date_str']}`",
+    ]
+    if datos['late']:
+        lineas.append(f"⏰ **Enviado tarde:** {datos['late_label']}")
+    lineas += ["━━━━━━━━━━━━━━━━━━━━━━━━", "@everyone"]
+    return "\n".join(lineas)
+
+
 def _trigger_closer_report_discord(report):
     """Envía el reporte diario del closer a Discord con un embed formateado y una única imagen
     renderizada (resumen del día + reflexión en la misma tarjeta — antes eran dos imágenes
@@ -322,22 +362,12 @@ def _trigger_closer_report_discord(report):
             print("[Discord Closer] No webhook URL configured in environment or database.")
             return
 
-        closer_name = report.closer.username if report.closer else "Closer"
-        date_str = report.date.strftime('%d/%m/%Y')
-
         # Obtener los datos estructurados del reporte y generar la imagen única
         img_data = _prepare_report_data(report)
         img_buffer = ImageService.generate_closer_report_card(img_data)
 
         # Payload para Discord
-        content = (
-            f"🎯 **NUEVO REPORTE DIARIO DE CLOSER**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Closer:** `{closer_name}`\n"
-            f"📅 **Fecha:** `{date_str}`\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"@everyone"
-        )
+        content = _mensaje_discord(img_data)
 
         json_payload = {
             "content": content,

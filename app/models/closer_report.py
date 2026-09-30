@@ -99,3 +99,20 @@ class CloserDailyReport(db.Model):
 
     closer = db.relationship('User', foreign_keys=[closer_id], overlaps="closer_daily_reports_rel")
     __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_report_date_uc'),)
+
+    def enviado_en_su_zona(self):
+        """Cuándo se envió, en la zona del closer (datetime con zona), o None si no se sabe.
+
+        `created_at` está en UTC naive, como toda la base: un reporte mandado a las 21:00 de La
+        Paz ya es el día siguiente en UTC, así que comparar su fecha UTC con `date` marcaría como
+        atrasado un reporte mandado a tiempo."""
+        if not self.created_at:
+            return None
+        import pytz
+        from app.services.user_time_service import zona_del_usuario
+        return pytz.UTC.localize(self.created_at).astimezone(zona_del_usuario(self.closer))
+
+    def enviado_tarde(self):
+        """Si se mandó un día después del que reporta (p. ej. el de ayer, mandado hoy)."""
+        enviado = self.enviado_en_su_zona()
+        return bool(enviado and self.date and enviado.date() > self.date)

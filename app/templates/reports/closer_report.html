@@ -89,6 +89,14 @@
             color: var(--slate-400);
         }
 
+        /* Reporte mandado al día siguiente: de qué día es y cuándo se mandó, bajo la fecha */
+        .late-str {
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--gold-400);
+        }
+
         /* Hero: cash collected del día, lo primero que quiere ver un director de ventas */
         .hero {
             display: flex;
@@ -410,13 +418,16 @@
             <div class="logo-text">NeurOPS Performance System</div>
             <h1 class="closer-name">{{ closer_name }}</h1>
         </div>
-        <div class="date-str">{{ date_str }}</div>
+        <div style="text-align: right;">
+            <div class="date-str">{{ date_str }}</div>
+            {% if late %}<div class="late-str">⏰ {{ late_label }}</div>{% endif %}
+        </div>
     </div>
 
     <!-- HERO: lo primero que un director de ventas quiere ver -->
     <div class="hero">
         <div>
-            <div class="hero-label">💰 Cash Collected Hoy</div>
+            <div class="hero-label">💰 Cash Collected {% if late %}del {{ report_day_label }}{% else %}Hoy{% endif %}</div>
             <div class="hero-cash">${{ sales.totals.cash }}</div>
         </div>
         <div class="hero-sales">
@@ -648,7 +659,7 @@
     </div>
 
     <div class="footer">
-        NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+        {% if late %}NEUROPS PERFORMANCE SYSTEM • REPORTE DEL {{ date_str }} • ENVIADO EL {{ sent_date_str }}{% else %}NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}{% endif %}
     </div>
 </body>
 
