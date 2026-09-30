@@ -794,6 +794,48 @@ def borrar_evento(appt, datos, usuario):
     return {'id': borrado, 'borrado': True}
 
 
+# --- Borrar el plan de cuotas ----------------------------------------------------------------
+
+def _plural(n, palabra):
+    return f'{n} {palabra}' + ('' if n == 1 else 's')
+
+
+def borrar_plan(appt, datos, usuario):
+    """Borra el plan de cuotas entero del cliente, desde el historial.
+
+    Pedido del usuario (29/09/2026): "que los demás datos de las pestañas de historial también se
+    puedan eliminar o crear nuevos". Es el plan que muestra el historial: TODAS las cuotas del
+    cliente, las marcadas como pagadas incluidas —un plan armado mal se rehace de cero—.
+
+    Lo que NO toca: los pagos. Una cuota «pagada» es solo la marca en el cronograma; el dinero
+    cobrado vive en la sección Pagos (`FinancialSale` y su espejo en `Payment`), así que lo pagado
+    y la deuda quedan igual. Sin plan, la próxima cuota del cliente pasa a «sin cronograma» si
+    todavía debe (`CloserFollowUpService._proxima_cuota`).
+    """
+    from app.models import InstallmentPlan
+    from app.services.booking_service import BookingService
+
+    if not appt.client_id:
+        raise ErrorDeAccion('Esta agenda no tiene cliente: no hay plan de cuotas que borrar.')
+    cuotas = InstallmentPlan.query.filter_by(client_id=appt.client_id).all()
+    if not cuotas:
+        raise ErrorDeAccion('Este cliente no tiene plan de cuotas.')
+
+    pagadas = sum(1 for c in cuotas if (c.estado or '').lower() == 'pagado')
+    total = round(sum(c.monto or 0 for c in cuotas), 2)
+    for cuota in cuotas:
+        db.session.delete(cuota)
+    db.session.commit()
+
+    detalle = f'{_plural(len(cuotas), "cuota")} por ${total:,.0f}'
+    if pagadas:
+        detalle += f', {_plural(pagadas, "marcada")} como pagada'
+    BookingService.log_lead_event(
+        appt.id, usuario.id, 'plan_borrado',
+        f'{usuario.username} borró el plan de cuotas desde el historial de la ficha: {detalle}.')
+    return {'borradas': len(cuotas), 'pagadas': pagadas}
+
+
 # --- Estado de una agenda ---------------------------------------------------------------------
 
 def estado_agenda(appt, datos, usuario):

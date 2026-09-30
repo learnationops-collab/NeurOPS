@@ -2308,3 +2308,33 @@ def test_despues_de_borrarlo_se_le_puede_agendar_otro(client, db, lead, equipo, 
 
     assert r.status_code == 200, r.get_json()
     assert vieja.seguimiento_realizado is False and vieja.fecha_seguimiento == '2026-10-09'
+
+
+def test_borrar_el_plan_saca_todas_las_cuotas_y_no_toca_lo_pagado(client, db, lead, equipo,
+                                                                auth_headers):
+    db.session.add_all([
+        InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                        numero_cuota=1, monto=500, fecha_vencimiento=date.today(), estado='pagado'),
+        InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
+                        numero_cuota=2, monto=700, fecha_vencimiento=date.today() + timedelta(days=30)),
+    ])
+    db.session.commit()
+    antes = _leer(client, lead, equipo['closer'], auth_headers)['cobro']
+
+    r = client.delete(url(lead, '/plan-cuotas'), headers=auth_headers(equipo['relevo']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json() == {'borradas': 2, 'pagadas': 1}
+    assert InstallmentPlan.query.filter_by(client_id=lead.client_id).count() == 0
+    despues = _leer(client, lead, equipo['closer'], auth_headers)['cobro']
+    assert despues['cuotas'] == []
+    assert (despues['pagado'], despues['deuda']) == (antes['pagado'], antes['deuda'])
+    registro = LeadEventLog.query.filter_by(appointment_id=lead.id, action_type='plan_borrado').one()
+    assert '2 cuotas por $1,200' in registro.description and '1 marcada como pagada' in registro.description
+
+
+def test_borrar_un_plan_que_no_existe_da_400(client, db, lead, equipo, auth_headers):
+    r = client.delete(url(lead, '/plan-cuotas'), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'no tiene plan de cuotas' in r.get_json()['message']

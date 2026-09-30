@@ -136,6 +136,13 @@ def plan_cuotas(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.plan_cuotas)
 
 
+@bp.route('/<int:appt_id>/plan-cuotas', methods=['DELETE'])
+def borrar_plan(appt_id):
+    """Borra el plan de cuotas entero del cliente, desde el historial. Es cobrar, como armarlo.
+    Los pagos no se tocan (ver `ficha_acciones_service.borrar_plan`)."""
+    return _ejecutar(appt_id, 'cobrar', acciones.borrar_plan)
+
+
 @bp.route('/<int:appt_id>/total', methods=['PATCH'])
 def total(appt_id):
     """El total a pagar que negocio el cliente, del que sale su deuda."""
