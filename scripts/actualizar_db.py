@@ -1,6 +1,11 @@
+import glob
 import os
+import sqlite3
 import sys
 import tempfile
+from datetime import datetime
+from urllib.parse import urlparse
+
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, make_transient
 from dotenv import load_dotenv
@@ -11,6 +16,12 @@ if os.path.basename(current_dir) == 'scripts':
     sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
 else:
     sys.path.append(current_dir)
+
+# `create_app()` arranca el scheduler de recordatorios por WhatsApp salvo que esto diga 'true', y
+# el script lo llama dos veces (acá y en `normalizar_closers`). Correrlo sin la variable dejaba un
+# scheduler vivo leyendo la copia recién hecha de producción: los seguimientos de clientes reales,
+# con sus teléfonos. Hasta ahora dependía de acordarse de exportarla a mano.
+os.environ['DISABLE_REMINDER_SCHEDULER'] = 'true'
 
 # BUG real encontrado (27/ago/2026): `config.py` calcula `SQLALCHEMY_DATABASE_URI` a nivel de
 # módulo, en el momento en que se importa por primera vez — no en el momento en que Flask arma
@@ -57,6 +68,9 @@ from app.models import (
     FichaOpcion
 )
 
+# Respaldos de la SQLite local que se conservan (el más viejo se borra).
+RESPALDOS_A_CONSERVAR = 3
+
 def safe(text):
     """Texto imprimible en la consola de Windows (cp1252). Los mensajes de error de SQLAlchemy
     incluyen las filas que fallaron, y ahí aparecen emojis y acentos de datos reales: sin esto
@@ -68,6 +82,46 @@ def safe(text):
 # Sin keepalives el proxy público de Railway corta las conexiones que tardan.
 _KEEPALIVE = dict(keepalives=1, keepalives_idle=30, keepalives_interval=10,
                   keepalives_count=5, connect_timeout=30)
+# Producción no se escribe nunca: cualquier INSERT/UPDATE/DELETE en esta sesión falla en el
+# servidor, no depende de que el código se porte bien.
+_SOLO_LECTURA = '-c default_transaction_read_only=on'
+
+
+def _identidad(url):
+    """(motor, host, puerto, base) de una URL, para comparar bases sin mirar credenciales."""
+    u = urlparse(str(url))
+    motor = u.scheme.split('+')[0]
+    if motor == 'sqlite':
+        ruta = str(url).split(':///', 1)[-1]
+        return ('sqlite', os.path.normcase(os.path.abspath(ruta)) if ruta else ':memory:', None, None)
+    motor = 'postgresql' if motor in ('postgres', 'postgresql') else motor
+    return (motor, (u.hostname or '').lower(), u.port or 5432, u.path.lstrip('/'))
+
+
+def _misma_base(url_a, url_b):
+    return _identidad(url_a) == _identidad(url_b)
+
+
+def _respaldar_sqlite(ruta):
+    """Copia la SQLite local a `respaldos/` antes de pisarla y deja solo las últimas.
+
+    La base local puede tener cosas que producción no (usuarios de prueba, datos a medio probar).
+    Se usa la API de backup de SQLite y no una copia del archivo: es consistente aunque el
+    servidor de desarrollo la tenga abierta.
+    """
+    carpeta = os.path.join(os.path.dirname(ruta), 'respaldos')
+    os.makedirs(carpeta, exist_ok=True)
+    base = os.path.splitext(os.path.basename(ruta))[0]
+    destino = os.path.join(carpeta, f'{base}-{datetime.now():%Y%m%d-%H%M%S}.db')
+    origen, copia = sqlite3.connect(ruta), sqlite3.connect(destino)
+    try:
+        origen.backup(copia)
+    finally:
+        copia.close()
+        origen.close()
+    for viejo in sorted(glob.glob(os.path.join(carpeta, f'{base}-*.db')))[:-RESPALDOS_A_CONSERVAR]:
+        os.remove(viejo)
+    return destino
 
 
 def _columnas(conn, tabla):
@@ -101,7 +155,7 @@ class CopiadorPostgres:
     def _conectar(self):
         import psycopg2
         if self.origen is None or self.origen.closed:
-            self.origen = psycopg2.connect(self.origen_url, **_KEEPALIVE)
+            self.origen = psycopg2.connect(self.origen_url, options=_SOLO_LECTURA, **_KEEPALIVE)
             self.origen.set_session(readonly=True)
         if self.destino is None or self.destino.closed:
             self.destino = psycopg2.connect(self.destino_url, **_KEEPALIVE)
@@ -199,7 +253,16 @@ def actualizar(target='local'):
 
     app = create_app()
     with app.app_context():
+        destino_url = db.engine.url.render_as_string(hide_password=False)
+        # El destino se vacía tabla por tabla: si por un .env mal copiado apunta a la misma base
+        # que producción, esto borraría producción. Se compara host, puerto y base, no el texto
+        # de la URL (la misma base puede escribirse con otro usuario o con `postgres://`).
+        if _misma_base(destino_url, prod_url):
+            print("Error: el destino es la MISMA base que producción. No se copia nada.")
+            return False
         print(f"--- Iniciando actualización limpia desde producción hacia [{target_name}] ---")
+        if db.engine.dialect.name == 'sqlite' and db.engine.url.database:
+            print(f"Respaldo previo de la base local: {_respaldar_sqlite(db.engine.url.database)}")
         try:
             from flask_migrate import upgrade as db_upgrade
             print("Asegurando estructura de tablas con migraciones...")
@@ -208,7 +271,8 @@ def actualizar(target='local'):
             print(f"Advertencia al ejecutar migraciones previa a la sincronización: {mig_err}")
         
         # Motor de base de datos de producción
-        prod_engine = create_engine(prod_url)
+        prod_engine = create_engine(prod_url, pool_pre_ping=True,
+                                    connect_args={'options': _SOLO_LECTURA, **_KEEPALIVE})
         ProdSession = sessionmaker(bind=prod_engine)
         prod_session = ProdSession()
 
@@ -268,8 +332,7 @@ def actualizar(target='local'):
         # limpieza global previa sobra — y además es justo la que deja tablas vacías cuando la
         # copia posterior falla.
         usar_copy = db.engine.dialect.name == 'postgresql'
-        copiador = CopiadorPostgres(
-            prod_url, db.engine.url.render_as_string(hide_password=False)) if usar_copy else None
+        copiador = CopiadorPostgres(prod_url, destino_url) if usar_copy else None
 
         # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
         if not usar_copy:
