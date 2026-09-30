@@ -2,7 +2,7 @@
 // saber cómo se dibuja un monto o un grupo de píldoras: solo pide «pintá estos campos».
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { Plus, X } from 'lucide-react';
+import { Check, Plus, X } from 'lucide-react';
 import { SelectorFecha } from './piezas';
 
 // La `.pastilla` de la ficha, con la elegida en blanco lleno (`.fi-elegible`, en `ficha.css`).
@@ -38,15 +38,21 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
   if (campo.tipo === 'mapa') return null; // lo pinta el cronograma de cuotas
 
   if (campo.tipo === 'booleano') {
+    // La estructura es la del design system: el input nativo queda invisible encima y lo que se
+    // ve es `.ln-check`. Sin ese hermano la casilla no se dibujaba y el aviso por WhatsApp del
+    // seguimiento se prendía a ciegas.
     return (
-      <label className="ln-choice" style={{ cursor: 'pointer' }}>
+      <label className="ln-choice" style={{ display: 'block' }}>
         <input
           type="checkbox"
           className="ln-choice-input"
           checked={valor === true}
           onChange={(e) => set(e.target.checked)}
         />
-        <span className="ln-choice-text"><span className="ln-choice-label">{campo.label}</span></span>
+        <span className="ln-choice-label">
+          <span className="ln-check" aria-hidden="true"><Check /></span>
+          <span className="ln-choice-text">{campo.label}</span>
+        </span>
       </label>
     );
   }
