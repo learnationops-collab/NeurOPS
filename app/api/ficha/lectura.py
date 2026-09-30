@@ -55,7 +55,13 @@ def fulfillment(appt_id):
         return sin_permiso('cobrar')
 
     ventas = ficha_lead_service._ventas_del_cliente(client)
-    return jsonify(ficha_fulfillment_service.fulfillment(client, ventas)), 200
+    datos = ficha_fulfillment_service.fulfillment(client, ventas)
+    # Lo que la pestana ya pago en peticiones queda como la foto de la Academia de este cliente,
+    # que es lo que leen las tablas Clientes y Ventas (ver `academy_snapshot_service`). No cambia
+    # la respuesta y nunca la rompe.
+    from app.services import academy_snapshot_service
+    academy_snapshot_service.guardar_desde_fulfillment(client, datos)
+    return jsonify(datos), 200
 
 
 @bp.route('/<int:appt_id>/estado-venta', methods=['GET'])
