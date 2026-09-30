@@ -1,11 +1,11 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowDown, ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
 import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
-import { fmt } from './Shared';
+import { Tip, fmt } from './Shared';
 
 /**
  * Cómo se dibujan las filas de Revisar: como tabla o como tarjetas, sueltas o repartidas en grupos.
@@ -157,9 +157,38 @@ const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
    y desmonta y vuelve a montar todo su subárbol: con la lista abierta eso perdía el foco y la
    posición del scroll en cada tecla del buscador. */
 
-const Encabezado = ({ def, plantilla }) => (
+/**
+ * El encabezado. Una columna con `orden` es un botón que la ordena (de mayor a menor, de menor a
+ * mayor, y de vuelta al orden de la tabla); el orden vive en `Revisar`, junto al filtro, y acá solo
+ * se muestra y se pide. Una columna con `ayuda` lleva su "i" al lado del rótulo, afuera del botón:
+ * un elemento que se enfoca adentro de otro no se puede alcanzar bien con el teclado.
+ *
+ * Debajo de 900px el encabezado no se ve (la tabla se apila): ahí se ordena con "Ordenar".
+ */
+const RotuloOrden = { desc: 'de mayor a menor', asc: 'de menor a mayor' };
+
+const Encabezado = ({ def, plantilla, orden, onOrdenar }) => (
     <div className="tabla-cab" style={{ '--cols': plantilla }}>
-        {def.cols.map(c => <span key={c.key}>{c.header}</span>)}
+        {def.cols.map(c => {
+            const ordenable = !!(c.orden && onOrdenar);
+            const dir = orden?.key === c.key ? orden.dir : null;
+            if (!ordenable && !c.ayuda) return <span key={c.key}>{c.header}</span>;
+            return (
+                <span key={c.key} className="cab-celda">
+                    {ordenable ? (
+                        <button type="button" className={`cab-orden${dir ? ' cab-orden--on' : ''}`}
+                            onClick={() => onOrdenar(c.key)}
+                            aria-label={`Ordenar por ${c.ordenLabel || c.header}${dir
+                                ? `, ahora ${RotuloOrden[dir]}` : ''}`}>
+                            {c.header}
+                            <ArrowDown size={11} aria-hidden="true"
+                                className={dir === 'asc' ? 'cab-flecha cab-flecha--asc' : 'cab-flecha'} />
+                        </button>
+                    ) : c.header}
+                    {c.ayuda && <Tip texto={c.ayuda} titulo={c.ordenLabel || c.header} />}
+                </span>
+            );
+        })}
     </div>
 );
 
@@ -259,8 +288,15 @@ export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 
     </Esqueleto>
 );
 
+/**
+ * `orden` y `onOrdenar` son del encabezado (ver `Encabezado`). `variante` entra en la `key` del
+ * envoltorio junto al modo y la dimensión: al cambiar el orden la lista se vuelve a montar y las
+ * filas entran de nuevo, escalonadas, en su nuevo lugar. Es la misma señal que ya da agrupar o pasar
+ * a tarjetas —"esto es otra vista"—, y además vuelve a la primera página, que es donde está lo que
+ * se acaba de pedir ver primero.
+ */
 const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, gruposElegidos,
-    onElegirGrupo }) => {
+    onElegirGrupo, orden = null, onOrdenar = null, variante = '' }) => {
     const quieto = useReducedMotion();
     const esTarjetas = modo === 'tarjetas';
 
@@ -301,7 +337,9 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
                     {/* Agrupada y en tabla, el encabezado va UNA vez arriba de todos los grupos:
                         sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
                         la lista en cinco tablas en vez de una repartida. */}
-                    {!esTarjetas && <Encabezado def={def} plantilla={plantilla} />}
+                    {!esTarjetas && (
+                        <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar} />
+                    )}
                     {/* `filas` son TODAS las filtradas: así los subtotales de cada grupo cierran
                         con la tira de arriba aunque el grupo esté cerrado, y lo que va llegando al
                         bajar dentro de un grupo abierto son sus filas. */}
@@ -316,7 +354,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
         }
         return (
             <div className="tabla">
-                <Encabezado def={def} plantilla={plantilla} />
+                <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar} />
                 <Filas def={def} filas={pagina} plantilla={plantilla} onAbrirFila={onAbrirFila}
                     desde={dibujadas} quieto={quieto} />
             </div>
@@ -324,7 +362,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
     };
 
     return (
-        <motion.div key={`${modo}-${dimension?.key || 'suelta'}`}
+        <motion.div key={`${modo}-${dimension?.key || 'suelta'}-${variante}`}
             initial={quieto ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={quieto ? { duration: 0 } : { duration: .2, ease: 'easeOut' }}>

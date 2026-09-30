@@ -181,12 +181,14 @@ export const TABLAS = {
         // equipo las confunde. Lo que antes enumeraba el texto (programa, forma de pago, medio de
         // cobro) son las columnas de al lado: describirlas en el tooltip era repetir la pantalla.
         ayuda: 'Las ventas cobradas en el período.',
+        // `orden` hace la columna ordenable (ver `ordenFilas.js`); `ordenLabel` es como se nombra en
+        // el menú "Ordenar", donde el encabezado corto no alcanza para saber qué se ordena.
         cols: [
-            { key: 'fecha', header: 'Venta', width: '0.8fr' },
+            { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha, ordenLabel: 'Fecha de la venta' },
             { key: 'cliente', header: 'Cliente', width: '1.9fr' },
             { key: 'programa', header: 'Programa', width: '1.3fr' },
             { key: 'tipo_pago', header: 'Pago', width: '1.1fr' },
-            { key: 'monto', header: 'Monto', width: '1fr' },
+            { key: 'monto', header: 'Monto', width: '1fr', orden: (f) => f.monto, ordenLabel: 'Monto' },
             { key: 'closer', header: 'Closer', width: '0.9fr' },
             { key: 'ver', header: '', width: '0.4fr' },
         ],
@@ -265,9 +267,10 @@ export const TABLAS = {
             { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'programa', header: 'Programa', width: '1.2fr' },
             { key: 'closer', header: 'Closer', width: '0.8fr' },
-            { key: 'pagado', header: 'Pagado', width: '0.8fr' },
-            { key: 'deuda', header: 'Debe', width: '0.8fr' },
-            { key: 'cuota', header: 'Próxima cuota', width: '1.3fr' },
+            { key: 'pagado', header: 'Pagado', width: '0.8fr', orden: (f) => f.pagado, ordenLabel: 'Pagado' },
+            { key: 'deuda', header: 'Debe', width: '0.8fr', orden: (f) => f.deuda, ordenLabel: 'Deuda' },
+            { key: 'cuota', header: 'Próxima cuota', width: '1.3fr', orden: (f) => f.cuota_fecha,
+                ordenLabel: 'Fecha de la próxima cuota' },
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
