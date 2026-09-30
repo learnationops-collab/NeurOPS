@@ -47,9 +47,11 @@ export default function FormularioSimple({
         </div>
       )}
 
-      {/* El widget de bugs flota abajo a la derecha: se le dejan sus ~168 px. */}
-      <div className="ln-btn-row" style={{ justifyContent: 'flex-end', paddingRight: 168 }}>
-        <button type="button" className="ln-btn ln-btn--cta" disabled={faltan.length > 0 || guardando} onClick={onGuardar}>
+      {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja sus ~168 px. El
+          botón es el `.btn--cta` de la ficha: el `.ln-btn` del DS perdía el relleno y el borde
+          contra `.dc-shell button` y se veía como texto suelto (ver `PlanCuotasForm`). */}
+      <div className="fi-botonera">
+        <button type="button" className="btn btn--cta" disabled={faltan.length > 0 || guardando} onClick={onGuardar}>
           {guardando && <span className="ln-spinner" />}
           {cta}
         </button>
