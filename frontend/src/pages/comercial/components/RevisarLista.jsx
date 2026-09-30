@@ -6,6 +6,7 @@ import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
 import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
 import { Tip, fmt } from './Shared';
+import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 
 /**
  * Cómo se dibujan las filas de Revisar: como tabla o como tarjetas, sueltas o repartidas en grupos.
@@ -129,6 +130,51 @@ const Celda = ({ fila, col }) => {
             );
         case 'mensajes':
             return <span className="celda celda--num">{fmt.num(fila.mensajes)}</span>;
+        // --- La Academia (ver `academia.js`). `fila.academia` es null en una venta sin cliente.
+        case 'academia': {
+            // El estado y, debajo, desde cuándo: la última actividad que se le vio, o por qué no
+            // hay datos todavía.
+            const a = fila.academia;
+            if (!a) return <span className="celda mut40">—</span>;
+            const sub = a.ultima_actividad
+                ? `actividad ${haceCuanto(a.ultima_actividad)}`
+                : (a.error && !a.sincronizado ? 'la Academia dio error' : null);
+            return (
+                <>
+                    <ChipTono chip={a.estado} />
+                    {sub && <span className="celda-sub" title={a.error || undefined}>{sub}</span>}
+                </>
+            );
+        }
+        case 'ac_horas':
+            return <span className="celda celda--num">{formatoAcademia.horas(fila.academia?.horas)}</span>;
+        case 'ac_progreso':
+            return <span className="celda celda--num">{formatoAcademia.progreso(fila.academia?.progreso)}</span>;
+        case 'ac_lecciones':
+            return (
+                <span className="celda celda--num">
+                    {formatoAcademia.lecciones(fila.academia?.lecciones, fila.academia?.lecciones_total)}
+                </span>
+            );
+        case 'ac_ejecuciones':
+            return <span className="celda celda--num">{formatoAcademia.ejecuciones(fila.academia?.ejecuciones)}</span>;
+        case 'ac_racha':
+            return <span className="celda celda--num">{formatoAcademia.racha(fila.academia?.racha)}</span>;
+        case 'ac_frescura': {
+            // De cuándo es el dato. Viejo se pinta como aviso: con la sincronización andando no
+            // debería pasar de unas horas.
+            const a = fila.academia;
+            const cuando = a?.sincronizado || a?.intentado;
+            if (!cuando) return <span className="celda mut40">—</span>;
+            const viejo = diasDesde(cuando) > DIAS_DATO_VIEJO;
+            return (
+                <span className="celda num" style={viejo ? { color: 'var(--warning)' } : undefined}
+                    title={a.error ? `El último intento dio error: ${a.error}` : undefined}>
+                    {haceCuanto(cuando)}
+                    {a.error && a.sincronizado && <span className="celda-sub">no se pudo renovar</span>}
+                </span>
+            );
+        }
         case 'ver':
             return <span className="celda-ver"><ArrowRight size={14} /></span>;
         default:
@@ -137,7 +183,7 @@ const Celda = ({ fila, col }) => {
 };
 
 /** Las columnas que se leen como un chip de estado: en una tarjeta van arriba, no en la lista de datos. */
-const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado']);
+const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado', 'academia']);
 /** Y estas ya están en el encabezado de la tarjeta o no son un dato. */
 const COLS_FUERA = new Set(['cliente', 'ver']);
 

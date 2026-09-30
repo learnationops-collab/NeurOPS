@@ -921,6 +921,13 @@
 .dc-shell .cab-orden--on .cab-flecha{opacity:1;color:var(--brand-secondary)}
 .dc-shell .cab-flecha--asc{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.dc-shell .cab-flecha{transition:none}}
+
+/* La linea de frescura de la Academia, arriba de sus columnas (AcademiaBarra.jsx). */
+.dc-shell .academia-barra{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2);
+  margin-bottom:var(--s3);padding:var(--s2) var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle);color:var(--text-muted)}
+.dc-shell .academia-barra > svg{flex-shrink:0;color:var(--brand-secondary)}
+.dc-shell .academia-barra b{color:var(--text-on-surface);font-weight:800}
 .dc-shell .tabla-fila{min-height:52px;width:100%;text-align:left;border-bottom:1px solid var(--border-subtle);
   transition:background-color .16s ease}
 .dc-shell .tabla-fila:last-child{border-bottom:0}

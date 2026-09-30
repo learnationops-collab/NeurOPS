@@ -51,10 +51,14 @@ export const siguienteOrden = (actual, key) => {
     return actual.dir === 'desc' ? { key, dir: 'asc' } : null;
 };
 
-/** Las columnas por las que se puede ordenar, sin repetir. */
+/**
+ * Las columnas por las que se puede ordenar, sin repetir: las de los DOS juegos de columnas de la
+ * tabla (el de siempre y el de la Academia), para que "Ordenar" ofrezca todo aunque en pantalla
+ * esté uno solo.
+ */
 export const columnasOrdenables = (def) => {
     const vistas = new Set();
-    return [...(def?.cols || [])].filter(c => {
+    return [...(def?.cols || []), ...(def?.colsAcademia || [])].filter(c => {
         if (!c.orden || vistas.has(c.key)) return false;
         vistas.add(c.key);
         return true;

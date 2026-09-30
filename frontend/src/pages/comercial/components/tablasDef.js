@@ -15,6 +15,8 @@
  * devuelve `faceta.de(fila)`.
  */
 
+import { AGRUPABLE_ACADEMIA, CHIP_ACADEMIA, COLS_ACADEMIA, FACETAS_ACADEMIA } from './academia';
+
 /**
  * El estado con el que el panel Estados cuenta cada agenda.
  *
@@ -131,6 +133,11 @@ export const duplicadasDe = (filas) => {
     return mapa;
 };
 
+// Columnas que están en los dos juegos de columnas de su tabla: el de siempre y el de la Academia.
+const COL_FECHA_VENTA = { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha,
+    ordenLabel: 'Fecha de la venta' };
+const COL_VER = { key: 'ver', header: '', width: '0.4fr' };
+
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cinco.
 //
 // El `ayuda` de cada tabla es lo que se lee en el tooltip del "i", y va al MÍNIMO: alcanza con lo
@@ -184,13 +191,22 @@ export const TABLAS = {
         // `orden` hace la columna ordenable (ver `ordenFilas.js`); `ordenLabel` es como se nombra en
         // el menú "Ordenar", donde el encabezado corto no alcanza para saber qué se ordena.
         cols: [
-            { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha, ordenLabel: 'Fecha de la venta' },
+            COL_FECHA_VENTA,
             { key: 'cliente', header: 'Cliente', width: '1.9fr' },
             { key: 'programa', header: 'Programa', width: '1.3fr' },
             { key: 'tipo_pago', header: 'Pago', width: '1.1fr' },
             { key: 'monto', header: 'Monto', width: '1fr', orden: (f) => f.monto, ordenLabel: 'Monto' },
             { key: 'closer', header: 'Closer', width: '0.9fr' },
-            { key: 'ver', header: '', width: '0.4fr' },
+            COL_VER,
+        ],
+        // Las mismas filas con las columnas de la Academia (ver `academia.js`): el selector
+        // "Venta · Academia" de la barra pasa de un juego al otro.
+        vistaBase: 'Venta',
+        colsAcademia: [
+            COL_FECHA_VENTA,
+            { key: 'cliente', header: 'Cliente', width: '1.7fr' },
+            ...COLS_ACADEMIA,
+            COL_VER,
         ],
         facetas: [
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
@@ -205,17 +221,20 @@ export const TABLAS = {
                 de: (f) => (f.sena_estado
                     ? (f.sena_estado.label ?? SENA_ESTADO[f.sena_estado] ?? f.sena_estado)
                     : null) },
+            ...FACETAS_ACADEMIA,
             { key: 'dia', label: 'Día del cobro', de: (f) => diaDe(f.fecha), oculta: true },
         ],
         chips: [
             { key: 'todas', label: 'Todas', filtro: () => true },
             { key: 'completo', label: 'Pago completo', filtro: (f) => f.tipo_pago.key === 'completo' },
             { key: 'parcial', label: 'Split Pay', filtro: (f) => f.tipo_pago.key === 'parcial' },
+            CHIP_ACADEMIA,
         ],
         agrupables: [
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
+            AGRUPABLE_ACADEMIA,
         ],
     },
     leads: {
@@ -271,23 +290,35 @@ export const TABLAS = {
             { key: 'deuda', header: 'Debe', width: '0.8fr', orden: (f) => f.deuda, ordenLabel: 'Deuda' },
             { key: 'cuota', header: 'Próxima cuota', width: '1.3fr', orden: (f) => f.cuota_fecha,
                 ordenLabel: 'Fecha de la próxima cuota' },
-            { key: 'ver', header: '', width: '0.4fr' },
+            COL_VER,
+        ],
+        // Pedido del 30/09/2026: encontrar a los alumnos que están cumpliendo con sus actividades
+        // en la Academia. Mismas filas, otras columnas (ver `academia.js`).
+        vistaBase: 'Cobro',
+        colsAcademia: [
+            { key: 'cliente', header: 'Cliente', width: '1.6fr' },
+            { key: 'closer', header: 'Closer', width: '0.8fr' },
+            ...COLS_ACADEMIA,
+            COL_VER,
         ],
         facetas: [
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
+            ...FACETAS_ACADEMIA,
         ],
         chips: [
             { key: 'todos', label: 'Todos', filtro: () => true },
             { key: 'con_deuda', label: 'Con deuda', filtro: (f) => f.deuda > 0.01 },
             { key: 'vencida', label: 'Cuota vencida', filtro: (f) => f.cuota_vencida },
             { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 },
+            CHIP_ACADEMIA,
         ],
         agrupables: [
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'estado', label: 'Estado', de: (f) => f.estado.label },
+            AGRUPABLE_ACADEMIA,
         ],
     },
     generadas: {

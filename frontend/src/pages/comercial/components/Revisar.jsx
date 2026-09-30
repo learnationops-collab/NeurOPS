@@ -10,6 +10,8 @@ import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
+import AcademiaBarra, { SelectorColumnas } from './AcademiaBarra';
+import { itemTotalAcademia } from './academia';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
 
@@ -81,6 +83,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [agrupacion, setAgrupacion] = useState(null);
     // `{ key, dir }` de la columna por la que se ordena, o null para el orden de la tabla.
     const [orden, setOrden] = useState(null);
+    // Qué juego de columnas se ve: el de siempre o el de la Academia (solo Clientes y Ventas, las
+    // tablas con `colsAcademia`). Son las mismas filas y el mismo filtro: cambia qué se muestra.
+    const [columnas, setColumnas] = useState('base');
     const barra = useRef(null);
 
     // Lista o tarjetas, con la elección recordada. La clave es por tabla: mirar las agendas como
@@ -132,6 +137,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         // existe en Leads. El orden, por lo mismo: "por monto" no existe en Clientes.
         setAgrupacion(null);
         setOrden(null);
+        setColumnas('base');
     }
 
     /**
@@ -183,10 +189,18 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         setMenu(null);
         setOrden(o => (col ? { key: col.key, dir: o?.key === col.key && o.dir === 'desc' ? 'asc' : 'desc' }
             : null));
+        // Ordenar por horas de estudio sin ver las horas no se puede comprobar: se muestran sus
+        // columnas.
+        if (col?.academia) setColumnas('academia');
     };
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
-    const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
+    const conAcademia = columnas === 'academia' && !!def.colsAcademia;
+    // La definición que se DIBUJA: la de la tabla con el juego de columnas elegido. Filtros, chips,
+    // facetas y totales siguen leyendo `def`, que es la misma para los dos juegos.
+    const defVista = useMemo(() => (conAcademia ? { ...def, cols: def.colsAcademia } : def),
+        [def, conAcademia]);
+    const plantilla = defVista.cols.map(c => `minmax(0,${c.width})`).join(' ');
     // Quien ve solo sus propias filas no puede agruparse por sí mismo: sería un grupo único con
     // todo adentro. La dirección conserva todas las dimensiones (ver `DIMENSION_PROPIA`).
     const agrupables = useMemo(
@@ -244,6 +258,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     color: 'var(--text-on-surface)', hint: 'cash / ventas' },
                 { label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', hint: 'sin fees de pasarela' },
+                itemTotalAcademia(filtradas),
             ];
         }
 
@@ -268,6 +283,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     hint: `${vencidas.length} ${vencidas.length === 1 ? 'cuota' : 'cuotas'}` },
                 { label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
                     color: 'var(--success)', hint: 'desde siempre' },
+                itemTotalAcademia(filtradas),
             ];
         }
 
@@ -343,7 +359,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             {def.chips.map(c => (
                                 <button key={c.key} type="button" className="menu-item"
                                     role="menuitemradio" aria-checked={chipActivo === c.key}
-                                    onClick={() => { setChip(c.key); setMenu(null); }}>
+                                    onClick={() => {
+                                        setChip(c.key);
+                                        // "Activos en la Academia" sin sus columnas mostraría
+                                        // una lista que no dice por qué entró cada fila.
+                                        if (c.academia) setColumnas('academia');
+                                        setMenu(null);
+                                    }}>
                                     <span className="trunc">{c.label}</span>
                                     <span className="cuenta">{filtradas.filter(c.filtro).length}</span>
                                 </button>
@@ -406,6 +428,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     onAlternar={() => setMenu(m => (m === 'ordenar' ? null : 'ordenar'))}
                     onElegir={elegirOrden} />
 
+                {def.colsAcademia && (
+                    <SelectorColumnas base={def.vistaBase} academia={conAcademia} onCambiar={setColumnas} />
+                )}
+
                 {/* Lista o tarjetas. Dos posiciones, no un menú: es una sola decisión. */}
                 <div className="seg" role="group" aria-label="Forma de ver la lista">
                     <button type="button" aria-pressed={modoVista === 'lista'}
@@ -460,9 +486,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 </div>
             )}
 
-            {cargando ? <EsqueletoRevisar def={def} plantilla={plantilla} modo={modoVista}
+            {cargando ? <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista}
                 totales={totales.length} /> : (
                 <>
+                    {conAcademia && <AcademiaBarra filas={filas} />}
                     <TotalesTira items={totales} alcance={alcanceTexto} />
 
                     {visibles.length === 0 ? (
@@ -480,11 +507,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             </div>
                         </div>
                     ) : (
-                        <RevisarLista def={def} visibles={visibles} plantilla={plantilla}
+                        <RevisarLista def={defVista} visibles={visibles} plantilla={plantilla}
                             onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista}
                             gruposElegidos={gruposElegidos} onElegirGrupo={elegirGrupo}
                             orden={orden} onOrdenar={ordenar}
-                            variante={orden ? `${orden.key}-${orden.dir}` : ''} />
+                            variante={`${columnas}-${orden ? `${orden.key}-${orden.dir}` : ''}`} />
                     )}
                 </>
             )}
