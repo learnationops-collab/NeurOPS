@@ -106,8 +106,11 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
             </button>
           </div>
         ))}
-        <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" onClick={() => set([...filas, {}])}>
-          <Plus /> Agregar otro
+        {/* Una herramienta del campo, no un guardado: la pastilla con contorno, como «Repartir en
+            partes iguales». Con `alignSelf` no se estira a todo el ancho de la columna. */}
+        <button type="button" className="pastilla pastilla--sm" style={{ alignSelf: 'flex-start' }}
+          onClick={() => set([...filas, {}])}>
+          <Plus aria-hidden="true" /> Agregar otro
         </button>
       </div>
     );
