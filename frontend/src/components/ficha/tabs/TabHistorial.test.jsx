@@ -779,3 +779,56 @@ describe('agendar un seguimiento desde el historial', () => {
         expect(within(formulario()).getByRole('alert')).toHaveTextContent('No se pudo');
     });
 });
+
+describe('eliminar una agenda desde el historial', () => {
+    const papelera = () => screen.getByRole('button', { name: /Eliminar la agenda del/ });
+
+    it('la papelera abre un modal de la página, no el confirm del navegador', async () => {
+        const nativo = vi.spyOn(window, 'confirm');
+        const usuario = userEvent.setup();
+        const onAccion = await abrirAgendas(usuario, ficha([AGENDA, { ...AGENDA, id: 72 }]));
+        await usuario.click(screen.getAllByRole('button', { name: /Eliminar la agenda del/ })[0]);
+
+        const dialogo = screen.getByRole('alertdialog', { name: '¿Eliminar esta agenda?' });
+        expect(within(dialogo).getByText(enLocal(HORA_UTC))).toBeInTheDocument();
+        expect(nativo).not.toHaveBeenCalled();
+        // Nada se borra hasta confirmar, y el foco arranca en «Cancelar».
+        expect(onAccion).not.toHaveBeenCalled();
+        expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus();
+
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar agenda' }));
+
+        // Apuntado a ESA agenda, no a la que abrió la ficha.
+        expect(onAccion).toHaveBeenCalledWith('eliminar_agenda', {}, 71);
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('si el backend rechaza, el motivo se ve adentro del modal y el modal sigue abierto', async () => {
+        const usuario = userEvent.setup();
+        const rechazo = Object.assign(new Error('x'), {
+            response: { data: { message: 'Es la única agenda de este cliente y de ella cuelga su plan de cuotas.' } },
+        });
+        await abrirAgendas(usuario, ficha(), vi.fn().mockRejectedValue(rechazo));
+        await usuario.click(papelera());
+        const dialogo = screen.getByRole('alertdialog');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar agenda' }));
+
+        expect(within(dialogo).getByRole('alert')).toHaveTextContent('plan de cuotas');
+        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('con una sola agenda el modal lo avisa', async () => {
+        const usuario = userEvent.setup();
+        await abrirAgendas(usuario);
+        await usuario.click(papelera());
+
+        expect(screen.getByRole('alertdialog')).toHaveTextContent('Es la única agenda de este lead.');
+    });
+
+    it('sin el permiso de eliminar no hay papelera', async () => {
+        const usuario = userEvent.setup();
+        await abrirAgendas(usuario, ficha([AGENDA], { permisos: { ...fichaPrecall.permisos, eliminar: false } }));
+
+        expect(screen.queryByRole('button', { name: /Eliminar la agenda del/ })).not.toBeInTheDocument();
+    });
+});

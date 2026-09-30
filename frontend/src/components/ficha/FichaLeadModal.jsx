@@ -40,7 +40,7 @@ const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 // los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
-    'corregir_pago', 'borrar_pago', 'agregar_pago']);
+    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda']);
 
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
@@ -55,6 +55,7 @@ const MENSAJES = {
     cancelar: 'Cancelación registrada.',
     descartar: 'Lead descartado.',
     eliminar: 'Lead eliminado.',
+    eliminar_agenda: 'Agenda eliminada.',
     reasignar_closer: 'Lead pasado al closer elegido.',
     // El backend devuelve `cambios` vacío cuando lo escrito, ya normalizado, es lo que había
     // (un 'no tengo' sobre un instagram vacío, un 'n/a' sobre un correo vacío): no se guardó nada.
@@ -126,12 +127,18 @@ const FichaLeadModal = ({
     const [pestana, setPestana] = useState(null);
     const mov = useMovimiento();
     const fijada = useRef(false);   // la pestaña por defecto se respeta al abrir, no en cada recarga
+    // La agenda en la que quedó anclada la ficha cuando se borró aquella con la que se abrió (ver
+    // `eliminar_agenda`). Es una ref y no estado a propósito: cambiarla no tiene que volver a
+    // correr el efecto de apertura, que resetea la pestaña y sacaría a la persona del Historial.
+    const ancla = useRef(null);
 
     const cargar = useCallback(async (signal) => {
         setCargando(true);
         setError(null);
         try {
-            const datos = await obtenerFicha({ appointmentId, clientId, signal });
+            const datos = await obtenerFicha({
+                appointmentId: ancla.current ?? appointmentId, clientId, signal,
+            });
             setFicha(datos);
             return datos;
         } catch (err) {
@@ -146,6 +153,7 @@ const FichaLeadModal = ({
     useEffect(() => {
         const ac = new AbortController();
         fijada.current = false;
+        ancla.current = null;   // otro lead: el ancla del anterior no aplica
         setPestana(null);
         cargar(ac.signal);
         return () => ac.abort();
@@ -200,6 +208,15 @@ const FichaLeadModal = ({
             if (nombre === 'eliminar') {
                 onCerrar?.();
                 return resultado;
+            }
+            // Borrar desde el historial la agenda con la que está abierta la ficha: se sigue en la
+            // que le queda al cliente, y si no le queda ninguna, el lead ya no tiene ficha.
+            if (nombre === 'eliminar_agenda' && appt === ficha?.identidad?.appointment_id) {
+                if (!resultado?.agenda_siguiente) {
+                    onCerrar?.();
+                    return resultado;
+                }
+                ancla.current = resultado.agenda_siguiente;
             }
             await cargar();
             // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos` y

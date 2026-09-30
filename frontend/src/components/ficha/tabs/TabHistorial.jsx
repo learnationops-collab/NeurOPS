@@ -203,7 +203,7 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
  * de las agendas del cliente — incluida la de hace tres meses, que es justamente la que ninguna
  * otra pantalla deja tocar.
  */
-const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, onAccion }) => {
+const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, puedeBorrar, onAccion }) => {
     const [agregando, setAgregando] = useState(false);
     const [cuando, setCuando] = useState(hoyMasUnDia);
     const [ocupada, setOcupada] = useState(null);
@@ -248,7 +248,9 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
                     closers={vocabulario?.closers || []}
                     puedeEditar={puedeEditar} puedeReasignar={puedeReasignar}
                     // El tercer argumento apunta la acción a ESTA agenda, no a la que abrió la ficha.
-                    onEditar={(cambios) => onAccion?.('editar_agenda', cambios, a.id)}>
+                    onEditar={(cambios) => onAccion?.('editar_agenda', cambios, a.id)}
+                    puedeBorrar={puedeBorrar} unica={agendas.length === 1}
+                    onBorrar={() => onAccion?.('eliminar_agenda', {}, a.id)}>
                     {puedeEditar ? (
                         <>
                             <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
@@ -457,6 +459,8 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
     const puedeReportar = puedeEditar && ficha?.permisos?.reportar !== false;
     // Cambiarle el closer a una agenda es reasignarla: la ruta pide ese permiso aparte.
     const puedeReasignar = puedeReportar && ficha?.permisos?.reasignar !== false;
+    // Borrar es su propio permiso (la dirección y cualquier closer, no el setter ni triage).
+    const puedeBorrar = puedeEditar && ficha?.permisos?.eliminar === true;
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     // `como_viene` llega como {clave, label}; la clave es la que busca en el vocabulario.
     const claveComoViene = conf.como_viene?.clave ?? conf.como_viene;
@@ -508,7 +512,7 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                 <Agendas agendas={agendas} vocabulario={ficha?.vocabulario}
                     closerId={ficha?.identidad?.closer?.id}
                     puedeEditar={puedeReportar} puedeReasignar={puedeReasignar}
-                    onAccion={onAccion} />
+                    puedeBorrar={puedeBorrar} onAccion={onAccion} />
             </SeccionColapsable>
 
             <SeccionColapsable titulo="Plan de cuotas" resumen={resumenCuotas}>

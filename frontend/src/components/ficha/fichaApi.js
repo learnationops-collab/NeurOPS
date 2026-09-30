@@ -47,6 +47,9 @@ const RUTAS = {
     cancelar: (appt, p) => api.post(`/ficha/${appt}/cancelar`, p),
     descartar: (appt, p) => api.post(`/ficha/${appt}/descartar`, p),
     eliminar: (appt) => api.delete(`/ficha/${appt}`),
+    // La misma puerta que `eliminar`, apuntada a una agenda del historial y no al lead entero:
+    // la ficha sigue abierta en la agenda que le quede al cliente (ver FichaLeadModal).
+    eliminar_agenda: (appt) => api.delete(`/ficha/${appt}`),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
     // Los datos del cliente (nombre, teléfono, correo, instagram) y el examen de la agenda,
     // corregidos en el lugar desde la cabecera. Viaja solo lo que cambió.

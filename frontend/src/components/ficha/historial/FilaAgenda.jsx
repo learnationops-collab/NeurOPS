@@ -1,11 +1,12 @@
 import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
 import {
     datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
 } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
+import ModalConfirmacion from '../../ui/ModalConfirmacion';
 import Desplegable from './Desplegable';
 import MotivoDelFallo from './MotivoDelFallo';
 
@@ -21,6 +22,12 @@ import MotivoDelFallo from './MotivoDelFallo';
  * La hora que se ve y se escribe es la de quien mira: `start_time` viaja en UTC, se muestra con
  * `instanteLegible` y se manda convertida con `datetimeLocalToUtcIso`. Al lado del campo se dice en
  * qué reloj está, porque el closer y la dirección no siempre están en el mismo país.
+ *
+ * La papelera borra la agenda, con un modal de la página que pide confirmación (pedido del
+ * usuario, 29/09/2026: "no se pueden eliminar agendas desde el historial, eso también debe poder
+ * hacerlo cualquiera, y que muestre un modal de confirmación de la página, no del navegador"). Es
+ * un modal y no el «¿Seguro?» en el lugar de `InlineConfirm` que usan los pagos porque borrar una
+ * agenda se lleva su registro de eventos y no hay deshacer: el diálogo dice qué se borra.
  */
 
 /** Las opciones de la fuente, con la actual agregada si es un valor histórico fuera del catálogo. */
@@ -39,7 +46,7 @@ const etiquetaDeFuente = (grupos, clave) => grupos
 
 const FilaAgenda = ({
     agenda, fuentes = [], closers = [], puedeEditar = false, puedeReasignar = false, onEditar,
-    children = null,
+    puedeBorrar = false, unica = false, onBorrar, children = null,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -50,6 +57,7 @@ const FilaAgenda = ({
     const [fuente, setFuente] = useState('');
     const [closerId, setCloserId] = useState('');
     const [error, setError] = useState(null);
+    const [borrando, setBorrando] = useState(false);
 
     const cuandoInicial = toDatetimeLocalValue(agenda.fecha);
     const grupos = gruposDeFuente(fuentes, agenda.fuente);
@@ -134,8 +142,29 @@ const FilaAgenda = ({
                             <Pencil />
                         </button>
                     )}
+                    {puedeBorrar && (
+                        <button type="button" className="ibtn ibtn--sm ibtn--borrar"
+                            aria-haspopup="dialog"
+                            aria-label={`Eliminar la agenda del ${fecha}`}
+                            title="Eliminar agenda"
+                            onClick={() => setBorrando(true)}>
+                            <Trash2 />
+                        </button>
+                    )}
                 </span>
             </div>
+
+            {borrando && (
+                <ModalConfirmacion titulo="¿Eliminar esta agenda?"
+                    confirmar="Eliminar agenda" confirmando="Eliminando…"
+                    onConfirmar={() => onBorrar?.()} onCerrar={() => setBorrando(false)}>
+                    <span><strong>{fecha}</strong>{quien ? ` · ${quien}` : ''}</span>
+                    <span>
+                        Se borra con su registro de eventos. No se puede deshacer.
+                        {unica && ' Es la única agenda de este lead.'}
+                    </span>
+                </ModalConfirmacion>
+            )}
 
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
