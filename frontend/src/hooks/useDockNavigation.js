@@ -46,7 +46,9 @@ const useDockNavigation = () => {
         if (isCloser) {
             return [
                 { id: 'step-1', icon: Layers, label: '1. Agendas del Día', path: '/closer/deck?step=confirmations' },
-                { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/sales/new' },
+                // La venta se declara en la ficha: el mazo abre con el buscador listo para
+                // elegir al cliente (antes era una página aparte, /closer/sales/new).
+                { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/deck?venta=1' },
                 { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/closer/report' },
                 // "Mis datos" es el dashboard comercial acotado a este closer: los mismos
                 // paneles que ve la direccion, con sus agendas y sus ventas (ver

@@ -19,7 +19,6 @@ import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
 import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
-import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
@@ -370,16 +369,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/closer/sales/new"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserNewSalePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* La venta se declara en la ficha del cliente, con el mismo recorrido que la venta de
+                una llamada: el mazo abre el buscador para elegir a quién. */}
+            <Route path="/closer/sales/new" element={<Navigate replace to="/closer/deck?venta=1" />} />
             <Route
               path="/closer/appointments/new"
               element={

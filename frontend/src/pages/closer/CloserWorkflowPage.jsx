@@ -7,7 +7,7 @@ import {
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
-    Compass, Sparkles
+    Compass, Sparkles, DollarSign
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +25,7 @@ import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
+import { agendaParaVender, mensajeDeError } from '../../components/ficha/fichaApi';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -75,6 +76,23 @@ const CloserWorkflowPage = () => {
     const [showOperatorControls, setShowOperatorControls] = useState(false);
 
     const activeStep = searchParams.get('step') || 'confirmations';
+
+    // «Declarar venta» del dock (antes la página /closer/sales/new) llega con `?venta=1`: el closer
+    // elige al cliente en el buscador y la ficha se abre en «Registrar una venta». El parámetro se
+    // saca de la URL al leerlo, para que recargar no vuelva a pedir a quién se le vendió.
+    const pideVenta = searchParams.get('venta') === '1';
+    const [paraVender, setParaVender] = useState(pideVenta);
+    if (pideVenta && !paraVender) setParaVender(true);
+    const buscadorRef = useRef(null);
+    useEffect(() => {
+        if (!pideVenta) return;
+        const sinVenta = new URLSearchParams(searchParams);
+        sinVenta.delete('venta');
+        setSearchParams(sinVenta, { replace: true });
+    }, [pideVenta, searchParams, setSearchParams]);
+    useEffect(() => {
+        if (paraVender) buscadorRef.current?.focus();
+    }, [paraVender]);
 
     // Atajo 'w' para Acceso Simulado (operador). CloserWorkflowPage corre fuera de
     // MainLayout (para que los modales fixed funcionen standalone), por lo que no
@@ -451,6 +469,11 @@ const CloserWorkflowPage = () => {
         setShowSearchResults(false);
         setSearchQuery('');
 
+        if (paraVender) {
+            abrirParaVender(lead);
+            return;
+        }
+
         if (!lead.id) {
             // Sin Client todavía (lead sintético desde FinancialAgenda, sin fila propia en la
             // base local) — no hay etapa que resolver, se abre la ficha simple de siempre.
@@ -521,6 +544,26 @@ const CloserWorkflowPage = () => {
         } catch (err) {
             console.error("Error al resolver la etapa del lead:", err);
             toast.error("Error al abrir el lead");
+        } finally {
+            setResolviendoLead(false);
+        }
+    };
+
+    // La ficha del cliente elegido, lista para vender: en la agenda que devuelve el backend (la
+    // suya más reciente o, si no tenía ninguna, una creada para la venta), en «Registrar una venta».
+    const abrirParaVender = async (lead) => {
+        if (!lead.id) {
+            toast.error('Este lead todavía no tiene ficha: no hay dónde registrarle la venta.');
+            return;
+        }
+        setResolviendoLead(true);
+        try {
+            const { appointment_id: agenda } = await agendaParaVender(lead.id);
+            setParaVender(false);
+            handleSelectLead({ id: agenda, fase: 'venta' });
+        } catch (err) {
+            console.error('Error al abrir la ficha para la venta:', err);
+            toast.error(mensajeDeError(err));
         } finally {
             setResolviendoLead(false);
         }
@@ -961,6 +1004,9 @@ const CloserWorkflowPage = () => {
         } else if (lead.fase === 'hist') {
             setModalStep('hist');
             setModalFlowLabel('Historial');
+        } else if (lead.fase === 'venta') {
+            setModalStep('venta');
+            setModalFlowLabel('Venta');
         } else {
             setModalStep('root');
             setModalFlowLabel('Reporte de llamada');
@@ -975,6 +1021,7 @@ const CloserWorkflowPage = () => {
     // la que abrio, y eso gana sobre "donde el backend cree que hay trabajo": alguien que esta
     // confirmando no quiere caer en Resultado. `segventa` es un cliente que ya compro, asi que
     // va derecho al cobro. `hist` es un cliente sin agenda activa buscado desde el buscador.
+    // `venta` viene de «Declarar venta» y abre en Resultado, en la venta.
     const pestanaDeLaFicha = modalStep === 'confirm' ? 'conf'
         : modalStep === 'segventa' ? 'acciones'
             : modalStep === 'hist' ? 'hist'
@@ -1300,7 +1347,8 @@ const CloserWorkflowPage = () => {
                                 : <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>}
                             <input
                                 id="q"
-                                placeholder="Buscar lead por nombre, @IG o examen…"
+                                ref={buscadorRef}
+                                placeholder={paraVender ? '¿A quién le vendiste? Nombre, @IG o email…' : 'Buscar lead por nombre, @IG o examen…'}
                                 autoComplete="off"
                                 aria-busy={resolviendoLead}
                                 value={searchQuery}
@@ -1355,7 +1403,7 @@ const CloserWorkflowPage = () => {
                                                         {l.instagram ? `@${l.instagram.replace('@', '')}` : 'Sin Instagram'} • {l.phone || 'Sin Teléfono'} • {appt?.examen || 'Sin Examen'}
                                                     </div>
                                                 </div>
-                                                {appt?.id && (
+                                                {appt?.id && !paraVender && (
                                                     <button
                                                         type="button"
                                                         title="Abrir la última agenda directamente"
@@ -1479,6 +1527,31 @@ const CloserWorkflowPage = () => {
                         </button>
                     </div>
                 </div>
+                {/* Mientras dura, el buscador elige a quién se le vende y no qué lead abrir: se
+                    dice acá, pegado al buscador, y no en un aviso que se va solo. */}
+                {paraVender && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.16, ease: 'easeOut' }}
+                        role="status"
+                        className="max-w-7xl w-full mx-auto px-6 pb-3 flex flex-wrap items-center gap-3 text-xs"
+                    >
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                            <DollarSign size={14} aria-hidden="true" className="shrink-0" />
+                            <span>
+                                <b className="text-emerald-200">Declarar una venta.</b> Buscá al cliente y se abre su ficha en «Registrar una venta».
+                            </span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setParaVender(false)}
+                            className="px-2 py-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                    </motion.div>
+                )}
             </header>
 
             {/* Área de Trabajo Principal */}
@@ -2259,6 +2332,7 @@ const CloserWorkflowPage = () => {
                     appointmentId={selectedLead.id > 0 ? selectedLead.id : null}
                     clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
                     pestanaInicial={pestanaDeLaFicha}
+                    abrirEnVenta={modalStep === 'venta'}
                     onCerrar={() => setSelectedLead(null)}
                     onCambio={alCambiarLaFicha}
                 />
