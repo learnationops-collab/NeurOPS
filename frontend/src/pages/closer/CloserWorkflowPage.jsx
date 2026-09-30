@@ -1019,13 +1019,18 @@ const CloserWorkflowPage = () => {
 
     // Con que pestaña abre la ficha. El mazo ya sabe a que vino el closer por la columna desde
     // la que abrio, y eso gana sobre "donde el backend cree que hay trabajo": alguien que esta
-    // confirmando no quiere caer en Resultado. `segventa` es un cliente que ya compro, asi que
-    // va derecho al cobro. `hist` es un cliente sin agenda activa buscado desde el buscador.
-    // `venta` viene de «Declarar venta» y abre en Resultado, en la venta.
+    // confirmando no quiere caer en Resultado. Un seguimiento abre en Resultado, reportandolo:
+    // `seg` es la cadencia de un lead que no compro y `segventa` el cobro de un cliente, con las
+    // preguntas del mazo de main («¿Que paso con el cobro?»). Antes el cobro caia en Acciones,
+    // que registra un pago o agenda otro seguimiento pero no reporta el que se acaba de hacer.
+    // `hist` es un cliente sin agenda activa buscado desde el buscador. `venta` viene de
+    // «Declarar venta» y abre en Resultado, en la venta.
     const pestanaDeLaFicha = modalStep === 'confirm' ? 'conf'
-        : modalStep === 'segventa' ? 'acciones'
-            : modalStep === 'hist' ? 'hist'
-                : 'resultado';
+        : modalStep === 'hist' ? 'hist'
+            : 'resultado';
+    const seguimientoDeLaFicha = modalStep === 'segventa' ? 'cobro'
+        : modalStep === 'seg' ? 'contacto'
+            : null;
 
     // Cada escritura de la ficha puede mover el mazo: un lead reportado sale de la columna de
     // llamadas, uno confirmado cambia de carril. Se recarga la lista y, si el lead se borro, se
@@ -2333,6 +2338,7 @@ const CloserWorkflowPage = () => {
                     clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
                     pestanaInicial={pestanaDeLaFicha}
                     abrirEnVenta={modalStep === 'venta'}
+                    seguimiento={seguimientoDeLaFicha}
                     onCerrar={() => setSelectedLead(null)}
                     onCambio={alCambiarLaFicha}
                 />

@@ -65,6 +65,14 @@ describe('lectura', () => {
         expect(await screen.findByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
     });
 
+    it('un cobro abierto desde Seguimientos cae en Resultado, reportando el cobro', async () => {
+        // Antes caía en Acciones, que registra un pago o agenda otro seguimiento pero no
+        // reporta el que se acaba de hacer.
+        await abrir(fichaConDeuda, { pestanaInicial: 'resultado', seguimiento: 'cobro' });
+        expect(activa()).toBe('Resultado');
+        expect(await screen.findByRole('heading', { name: '¿Qué pasó con el cobro?' })).toBeInTheDocument();
+    });
+
     it('una pestaña pedida que este lead no tiene no deja el panel en blanco', async () => {
         // `fichaAlDia` es un cliente que ya compró: no tiene Confirmación. Pedirla no puede
         // dejar la ficha abierta en una pestaña inexistente.

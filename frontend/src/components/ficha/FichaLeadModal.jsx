@@ -131,6 +131,7 @@ const FichaLeadModal = ({
     onCambio = null,     // se llama después de cada escritura, para que la tabla de atrás se refresque
     pestanaInicial = null,  // el mazo sabe desde qué columna se abrió; gana sobre la del backend
     abrirEnVenta = false,   // «Declarar venta» del dock: Resultado arranca en «Registrar una venta»
+    seguimiento = null,     // 'contacto' | 'cobro': se abrió para reportar ese seguimiento
 }) => {
     const [ficha, setFicha] = useState(null);
     const [cargando, setCargando] = useState(true);
@@ -138,6 +139,8 @@ const FichaLeadModal = ({
     const [aviso, setAviso] = useState(null);
     // Se vende una vez: con la venta ya registrada, volver a Resultado no arranca otra.
     const [venderAlAbrir, setVenderAlAbrir] = useState(abrirEnVenta);
+    // Igual con el seguimiento: una vez reportado, Resultado vuelve a leer el de la agenda.
+    const [seguimientoPedido, setSeguimientoPedido] = useState(seguimiento);
     const [pestana, setPestana] = useState(null);
     const mov = useMovimiento();
     const fijada = useRef(false);   // la pestaña por defecto se respeta al abrir, no en cada recarga
@@ -219,6 +222,7 @@ const FichaLeadModal = ({
             const resultado = await ejecutarAccion(nombre, appt, payload);
             onCambio?.(nombre, resultado);
             if (nombre === 'registrar_venta') setVenderAlAbrir(false);
+            if (nombre === 'registrar_venta' || nombre === 'reportar_resultado') setSeguimientoPedido(null);
             // Un lead eliminado no tiene ficha que recargar: se cierra y listo.
             if (nombre === 'eliminar') {
                 onCerrar?.();
@@ -276,7 +280,7 @@ const FichaLeadModal = ({
         switch (pestana) {
             case 'conf': return <TabConfirmacion {...props} />;
             case 'resultado': return TabResultado
-                ? <Suspense fallback={<Esqueleto />}><TabResultado {...props} arrancarEnVenta={venderAlAbrir} /></Suspense>
+                ? <Suspense fallback={<Esqueleto />}><TabResultado {...props} arrancarEnVenta={venderAlAbrir} seguimientoPedido={seguimientoPedido} /></Suspense>
                 : <Faltante label="Resultado" />;
             case 'acciones': return TabAcciones
                 ? <Suspense fallback={<Esqueleto />}><TabAcciones {...props} /></Suspense>
