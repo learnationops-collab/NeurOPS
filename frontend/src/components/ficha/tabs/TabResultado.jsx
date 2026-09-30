@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
-  ArrowRight, History,
+  ArrowRight, History, DollarSign,
 } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import CampoArbol from '../acciones/CampoArbol';
@@ -29,7 +29,7 @@ import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
-  RAICES,
+  ventaDirecta, RAICES,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -270,6 +270,25 @@ export default function TabResultado({
                   onClick={() => elegir('res', { res: o.valor })}
                 />
               ))}
+            </div>
+            {/* La venta que no sale de reportar ESTA llamada: la renovación o el upsell de un
+                cliente, la cuota de su plan, una venta cerrada por WhatsApp. Antes se declaraba
+                desde el historial del cliente, en un wizard aparte; es la misma rama de venta. */}
+            <div className="ln-panel ln-panel--sm fi-venta-directa">
+              <span style={{ display: 'grid', gap: 'var(--space-1)' }}>
+                <b className="ln-t-body">¿Es una venta que no sale de esta llamada?</b>
+                <small className="ln-t-body-sm ln-muted">
+                  Una renovación, un upsell, la cuota de su plan o una venta cerrada por fuera.
+                </small>
+              </span>
+              <motion.button
+                type="button"
+                className="btn btn--linea"
+                whileTap={reducido ? undefined : { scale: 0.97 }}
+                onClick={() => { setError(null); setRespuestas((prev) => ventaDirecta(prev)); }}
+              >
+                <DollarSign /> Registrar una venta
+              </motion.button>
             </div>
           </motion.section>
         ) : listo ? (

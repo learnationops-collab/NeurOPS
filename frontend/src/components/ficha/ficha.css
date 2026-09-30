@@ -427,3 +427,9 @@
    un botón de ícono apagado («Guardar el total a pagar» mientras guarda, «Enviar nota» sin texto)
    se veía igual que uno que se puede tocar. */
 .dc-shell .fi-modal .ibtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- Venta directa ----------
+   La entrada a una venta que no sale de reportar la llamada, debajo de las cuatro tarjetas de
+   «Resultado». Texto a la izquierda y botón a la derecha; en un teléfono el botón baja. */
+.dc-shell .fi-venta-directa{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:var(--space-4);margin-top:var(--space-6)}

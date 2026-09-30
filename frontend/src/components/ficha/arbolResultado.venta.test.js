@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes, puedeAvanzar,
   completo, hitos, resumen, esVenta, quedaDeuda, construirPayload, notaFinal, progresoVenta,
-  saldoVenta, fechasCuotas, TIPOS_PAGO,
+  saldoVenta, fechasCuotas, arrancado, ventaDirecta, TIPOS_PAGO,
 } from './arbolResultado';
 
 // La rama de la venta del árbol de «Resultado»: el wizard «Declarar venta» del mazo, una pregunta
@@ -429,5 +429,74 @@ describe('venta: corregir desde la revisión', () => {
     r = responder(r, 'tipo_pago', { tipo_pago_simple: 'parcial' });
     expect(preguntaActual(r).clave).toBe('venta_montos');
     expect(faltantes(r)).toEqual(['Cargá Precio total']);
+  });
+});
+
+describe('venta directa: la que no sale de reportar esta llamada', () => {
+  // Una renovación, un upsell, la cuota de un plan o una venta cerrada por WhatsApp. Era
+  // «Registrar venta / pago» del historial del cliente, que abría el wizard en otro modal.
+  const renovacion = {
+    ...COMPRADOR,
+    programa: { programa: 'RR' },
+    tipo_pago: { tipo_pago_simple: 'Renovacion' },
+    venta_montos: { precio_total: '1500', monto: '1500' },
+    medio_pago: { metodo_pago: 'Stripe' },
+    ...DATOS_DE_LA_VENTA,
+    venta_fecha: { date: '2026-09-25', sold_in_call: false },
+    refs_ask: { refs_ask: 'no_pedido' },
+    venta_academia: { dar_acceso_academia: true },
+  };
+
+  it('entra derecho a los datos del comprador, sin las preguntas de la llamada', () => {
+    const r = ventaDirecta(INICIAL());
+    expect(arrancado(r)).toBe(true);
+    expect(esVenta(r)).toBe(true);
+    expect(preguntaActual(r).clave).toBe('venta_nombre');
+    expect(progresoVenta(r)).toEqual({ paso: 1, total: 15, listo: false });
+  });
+
+  it('recorre el mismo wizard que la venta de la llamada, con referidos y Academia', () => {
+    let r = ventaDirecta(INICIAL());
+    const vistas = [];
+    for (let i = 0; i < 30 && preguntaActual(r); i += 1) {
+      const q = preguntaActual(r);
+      vistas.push(q.clave);
+      r = responder(r, q.clave, renovacion[q.clave]);
+    }
+    expect(vistas).toEqual([
+      'venta_nombre', 'venta_instagram', 'venta_email', 'venta_telefono', 'venta_documento',
+      'programa', 'tipo_pago', 'venta_montos', 'medio_pago',
+      'venta_examen', 'venta_fecha', 'venta_estado', 'venta_notas', 'refs_ask', 'venta_academia',
+    ]);
+    expect(completo(r)).toBe(true);
+  });
+
+  it('se registra como venta, sin tocar el decisor ni la oferta de la agenda', () => {
+    let r = ventaDirecta(INICIAL());
+    for (let i = 0; i < 30 && preguntaActual(r); i += 1) {
+      r = responder(r, preguntaActual(r).clave, renovacion[preguntaActual(r).clave]);
+    }
+    const { accion, datos } = construirPayload(r, { appointmentId: 88 });
+    expect(accion).toBe('registrar_venta');
+    expect(datos.venta).toMatchObject({ tipo_pago: 'RR - Renovacion', monto: 1500, sold_in_call: false });
+    // `null` es «no se preguntó»: el backend no pisa lo que la agenda ya tenía.
+    expect(datos.agenda).toEqual({ with_decision_maker: null, offer_presented: null });
+    expect(datos.deck).toBeNull();
+    expect(datos.acceso_academia).toMatchObject({ programa_code: 'RR', tipo_venta: 'renovacion' });
+  });
+
+  it('el stepper dice que es una venta directa, cerrada, y la renovación en el upsell', () => {
+    let r = ventaDirecta(INICIAL());
+    r = responder(r, 'venta_nombre', {});
+    const h = hitos(r);
+    expect(h[1]).toMatchObject({ sub: 'Venta directa', estado: 'hecho' });
+    expect(h[2]).toMatchObject({ sub: 'Venta cerrada', estado: 'hecho' });
+    const completa = responder(responder(r, 'programa', { programa: 'RR' }), 'tipo_pago', { tipo_pago_simple: 'Renovacion' });
+    expect(hitos(completa)[4]).toMatchObject({ sub: 'Renovación', estado: 'hecho' });
+  });
+
+  it('también desde una ficha en cadencia de seguimiento, sin pasar por «¿qué pasó con el contacto?»', () => {
+    const ctx = { modo: 'seguimiento', intento: 2 };
+    expect(preguntaActual(ventaDirecta(INICIAL()), ctx).clave).toBe('venta_nombre');
   });
 });

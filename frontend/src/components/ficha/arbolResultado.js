@@ -56,7 +56,15 @@ export function preguntaActual(respuestas = {}, contexto = {}) {
 }
 
 /** ¿Ya se eligió la primera opción? Antes de eso se muestran las 4 tarjetas grandes. */
-export const arrancado = (respuestas = {}) => respuestas.res !== undefined || respuestas.contacto_result !== undefined;
+export const arrancado = (respuestas = {}) => respuestas.res !== undefined
+  || respuestas.contacto_result !== undefined || respuestas.venta_directa === true;
+
+/**
+ * Entra directo a la venta, sin reportar la llamada: una renovación, un upsell, una cuota o una
+ * venta cerrada por fuera. Es lo que hacía «Registrar venta / pago» del historial del cliente, que
+ * abría el wizard aparte; acá es la misma rama de venta del árbol, dentro de la ficha.
+ */
+export const ventaDirecta = (respuestas = {}) => ({ ...respuestas, venta_directa: true });
 
 /** El árbol está completo cuando arrancó y no queda ninguna pregunta aplicable sin contestar. */
 export const completo = (respuestas = {}, contexto = {}) => arrancado(respuestas)
@@ -185,7 +193,7 @@ export function hitos(respuestas = {}, contexto = {}) {
   const conDecisor = r.with_decision_maker === undefined || r.with_decision_maker === null
     ? '' : (r.with_decision_maker ? ' · con decisor' : ' · sin decisor');
   const cerro = r.cierre === undefined || r.cierre === null
-    ? (r.contacto_result === 'cerro' ? true : null) : r.cierre;
+    ? (r.contacto_result === 'cerro' || r.venta_directa === true ? true : null) : r.cierre;
 
   // La deuda y el upsell no se preguntan aparte: salen del tipo de pago (Renovación y Upsell son
   // su propio hito) y de los montos. Se sabe si queda deuda cuando es un pago completo o cuando
@@ -199,6 +207,7 @@ export function hitos(respuestas = {}, contexto = {}) {
   // intento va, no «Sin reportar».
   const enCadencia = contexto.modo === 'seguimiento' || !!r.contacto_result;
   const subResultado = () => {
+    if (r.venta_directa === true) return 'Venta directa';
     if (enCadencia) return `Seguimiento ${contexto.intento || 1} de 4`;
     if (!r.res) return 'Sin reportar';
     return `${ETIQUETA_RES[r.res] || r.res}${conDecisor}`;

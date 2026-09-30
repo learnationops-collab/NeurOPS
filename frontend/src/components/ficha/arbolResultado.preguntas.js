@@ -95,7 +95,8 @@ const vaADescartar = (r) => ['perdido', 'descartar', 'no_lead']
   .some((v) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes(v));
 // Hubo contacto humano real → corresponde preguntar por referidos (misma regla que hoy:
 // `needsRefs` en 3148, y el paso `referralAsked` del wizard de venta).
-const huboContacto = (r) => r.res === 'asistio' || ['contesto', 'agendo', 'cerro'].includes(r.contacto_result);
+const huboContacto = (r) => r.res === 'asistio' || ['contesto', 'agendo', 'cerro'].includes(r.contacto_result)
+  || r.venta_directa === true;
 
 // Los closers a los que se le puede atribuir la venta: los de la ficha, con el de la agenda
 // primero (es a quien le toca casi siempre). Si la ficha no trae la lista queda solo el de la
@@ -119,8 +120,9 @@ function closersDeLaVenta(c = {}) {
 const muestraEstadoCliente = (r, c = {}) => esVenta(r) && !!r.programa
   && (!!c.cargandoVenta || (Number(c.estadoVenta?.sales_count) || 0) > 0);
 
-const enLlamada = (r, c) => c.modo !== 'seguimiento';
-const enSeguimiento = (r, c) => c.modo === 'seguimiento';
+// La venta directa no reporta la llamada ni el contacto: entra derecho a los datos de la venta.
+const enLlamada = (r, c) => c.modo !== 'seguimiento' && r.venta_directa !== true;
+const enSeguimiento = (r, c) => c.modo === 'seguimiento' && r.venta_directa !== true;
 
 export const PREGUNTAS = [
   // ---------- tronco de la llamada ----------

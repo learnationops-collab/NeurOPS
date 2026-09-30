@@ -42,6 +42,25 @@ describe('TabResultado', () => {
     expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
   });
 
+  it('«Registrar una venta» entra al wizard de venta sin reportar la llamada', async () => {
+    // Era «Registrar venta / pago» del historial del cliente, que abría el wizard en otro modal.
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: /Registrar una venta/ }));
+
+    expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+    expect(screen.getByText('Venta · paso 1 de 15')).toBeInTheDocument();
+    expect(within(screen.getByRole('list')).getAllByRole('listitem')[1]).toHaveTextContent('Venta directa');
+
+    await user.click(screen.getByRole('button', { name: /empezar de nuevo/i }));
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
+  });
+
+  it('en la cadencia de seguimiento no se ofrece la venta directa: ahí está «Cerró la venta»', () => {
+    render(<TabResultado {...props(fichaEnSeguimiento)} />);
+    expect(screen.queryByRole('button', { name: /Registrar una venta/ })).toBeNull();
+  });
+
   it('avanza pregunta por pregunta y el stepper se va poniendo al día', async () => {
     const user = userEvent.setup();
     render(<TabResultado {...p} />);
