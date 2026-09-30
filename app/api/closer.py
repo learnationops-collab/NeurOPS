@@ -2100,88 +2100,18 @@ def create_manual_referral():
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
-    from_lead_id = data.get('from_lead_id')
-    lead_name = (data.get('lead_name') or '').strip()
-    contact = (data.get('contact') or '').strip()
-    phone = (data.get('phone') or '').strip() or None
-    instagram = (data.get('instagram') or '').strip().replace('@', '') or None
-    email = (data.get('email') or '').strip() or None
-    notes = (data.get('notes') or '').strip()
-
-    if not from_lead_id:
-        return jsonify({"error": "Selecciona el lead origen del referido"}), 400
-    if not lead_name:
-        return jsonify({"error": "El nombre del referido es obligatorio"}), 400
-
+    # La logica vive en `referidos_service`: la ficha del lead crea referidos con la misma regla
+    # (dueno, origen, aviso en el perfil de quien lo refirio) al declarar una venta.
+    from app.services.referidos_service import ReferidoInvalido, crear_referido
     try:
-        from app.services.booking_service import BookingService
-        from app.models import Client, Appointment, Comment, User, db
-
-        # Resolver lead / cliente origen
-        referrer_client = None
-        origin_appt = Appointment.query.get(from_lead_id)
-        if origin_appt and origin_appt.client:
-            referrer_client = origin_appt.client
-        else:
-            referrer_client = Client.query.get(from_lead_id)
-
-        referrer_name = referrer_client.full_name if referrer_client else f"Lead #{from_lead_id}"
-
-        # El modal "Referido manual" envía teléfono/instagram/correo por separado (los 3
-        # obligatorios ahí). El flujo rápido de "¿le pediste referidos?" durante un seguimiento
-        # sigue enviando un único campo `contact` libre (instagram o teléfono) sin obligar nada
-        # — se clasifica acá como antes, solo cuando no llegaron los campos explícitos.
-        if not phone and not instagram and contact:
-            if '@' in contact or not contact.replace('+', '').replace(' ', '').replace('-', '').isdigit():
-                instagram = contact.replace('@', '').strip()
-            else:
-                phone = contact
-
-        contact_display = contact or ', '.join(filter(None, [phone, f"@{instagram}" if instagram else None, email])) or 'N/A'
-
-        # Crear o buscar cliente referido
-        ref_client = BookingService.find_or_create_client(
-            nombre=lead_name,
-            email=email,
-            instagram=instagram,
-            phone=phone
-        )
-
-        # Crear cita para el referido. closer_id es NOT NULL en la base — un admin/setter
-        # creando el referido a nombre de otro closer no puede dejarlo sin dueño (quedaría
-        # huérfano, invisible en cualquier pool de Seguimientos): hereda el closer del lead que
-        # lo refirió, y si tampoco tiene, cae al mismo fallback ya usado en
-        # BookingService.sync_financial_agenda_to_appointment.
-        closer_id_for_referral = current_user.id if current_user.role == 'closer' else (origin_appt.closer_id if origin_appt else None)
-        if not closer_id_for_referral:
-            fallback_closer = User.query.filter_by(role='closer').first() or User.query.filter_by(role='admin').first()
-            closer_id_for_referral = fallback_closer.id if fallback_closer else current_user.id
-
-        now = datetime.utcnow()
-        appt = Appointment(
-            closer_id=closer_id_for_referral,
-            client_id=ref_client.id,
-            start_time=now,
-            origin=f"Referido de {referrer_name}",
-            last_stage='Nueva',
-            closer_notes=f"Referido por {referrer_name}. Contacto: {contact_display}. Notas: {notes}",
-            closer_processed=False
-        )
-        db.session.add(appt)
-
-        # Dejar comentario en el perfil del cliente origen
-        if referrer_client:
-            comment_text = f"💡 Referencia otorgada: creó un nuevo referido '{lead_name}' ({contact_display}). Contexto: {notes}"
-            comment = Comment(
-                text=comment_text,
-                comment_type='client',
-                associated_id=referrer_client.id,
-                author_id=current_user.id
-            )
-            db.session.add(comment)
-
+        appt = crear_referido(
+            current_user, data.get('from_lead_id'), data.get('lead_name'),
+            contacto=data.get('contact'), phone=data.get('phone'),
+            instagram=data.get('instagram'), email=data.get('email'), notas=data.get('notes'))
         db.session.commit()
         return jsonify({"message": "Referido guardado correctamente", "id": appt.id}), 201
+    except ReferidoInvalido as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
