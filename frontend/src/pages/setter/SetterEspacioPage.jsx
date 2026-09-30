@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Compass, Ghost, Layers, LogOut } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Layers, LogOut } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -35,6 +35,10 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * Va SIN `MainLayout`, igual que el mazo del closer: el dock de la app le quedaría encima del
  * propio. A cambio, este header ofrece lo que daba aquel: el Playbook, la salida de una simulación
  * y cerrar sesión.
+ *
+ * Revisar (el libro de registros del dashboard) NO es una sección del setter: no la necesita
+ * (pedido del 29/09/2026). Por eso "Mis datos" va sin drill-down —no hay lista a la que llevar un
+ * número— y `?step=revisar` de un link viejo cae en Cualificación.
  */
 
 const SECCIONES = [
@@ -44,7 +48,6 @@ const SECCIONES = [
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList,
         tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' }] },
     { id: 'datos', label: 'Mis datos', Icono: BarChart3 },
-    { id: 'revisar', label: 'Revisar', Icono: CheckCircle2 },
 ];
 
 /** Fecha local de hoy (YYYY-MM-DD), la misma que el formulario del reporte pone por defecto. */
@@ -66,15 +69,11 @@ const SetterEspacioPage = () => {
         : seccionActual.tabs?.[0].key ?? null;
 
     /**
-     * Cambia de sección (y de pestaña) sin tocar el resto de la query string.
-     *
-     * `base` es de dónde se parte, y por defecto es la URL de este render. El drill-down de "Mis
-     * datos" pasa otra: escribe su tabla y su filtro (`t`, `f`, `ft`) en la URL y en el mismo clic
-     * pide ir a Revisar, así que la de este render todavía no los tiene. Armando desde ella, este
-     * cambio pisaba al otro y Revisar abría sin ningún filtro.
+     * Cambia de sección (y de pestaña) sin tocar el resto de la query string: el período que
+     * eligió en "Mis datos" (`p`, `vs`) sigue puesto al volver.
      */
-    const irA = useCallback((id, nuevaTab = null, base = params) => {
-        const siguiente = new URLSearchParams(base);
+    const irA = useCallback((id, nuevaTab = null) => {
+        const siguiente = new URLSearchParams(params);
         siguiente.set('step', id);
         if (nuevaTab) siguiente.set('tab', nuevaTab);
         else siguiente.delete('tab');
@@ -186,13 +185,10 @@ const SetterEspacioPage = () => {
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
                     )}
                     {seccion === 'reporte' && tab === 'historial' && <PublicSetterStatsPage embebido />}
-                    {/* "Mis datos" y Revisar son el dashboard comercial, acotado a este setter por
-                        el backend. El drill-down de un dato cambia a Revisar, donde vive la tabla. */}
-                    {seccion === 'datos' && (
-                        <DashboardComercial embebido seccionFija="analizar"
-                            onIrASeccion={(_seccion, urlDelFiltro) => irA('revisar', null, urlDelFiltro)} />
-                    )}
-                    {seccion === 'revisar' && <DashboardComercial embebido seccionFija="revisar" />}
+                    {/* "Mis datos" es el dashboard comercial, acotado a este setter por el backend.
+                        Sin `onIrASeccion`: no hay Revisar al que llevar un dato, así que el
+                        dashboard no ofrece drill-down. */}
+                    {seccion === 'datos' && <DashboardComercial embebido seccionFija="analizar" />}
                 </motion.div>
 
                 <div className="dc-shell dc-shell--embebido">

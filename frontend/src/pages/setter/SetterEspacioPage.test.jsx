@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SetterEspacioPage from './SetterEspacioPage';
@@ -12,8 +12,8 @@ import SetterEspacioPage from './SetterEspacioPage';
  * Cualificación; la única salida era "Volver a mi sesión", que terminaba la simulación.
  *
  * Las secciones se reemplazan por dobles: acá se prueba la navegación del espacio, no las
- * pantallas que monta. El doble del dashboard hace lo mismo que el real en el drill-down: escribe
- * la tabla y el filtro en la URL y, en el mismo clic, le pide al host ir a Revisar.
+ * pantallas que monta. El doble del dashboard dice si el host le dio a dónde llevar un
+ * drill-down (`onIrASeccion`): el setter no ve Revisar, así que no tiene que dárselo.
  */
 
 const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0 }));
@@ -38,22 +38,9 @@ vi.mock('../public/PublicSetterStatsPage', () => ({
     default: ({ embebido }) => <div data-testid="mis-reportes">{embebido ? 'embebido' : 'pagina'}</div>,
 }));
 vi.mock('../comercial/DashboardComercial', () => ({
-    default: function DashboardDoble({ seccionFija, onIrASeccion }) {
-        const [params, setParams] = useSearchParams();
-        const drillDown = () => {
-            const siguiente = new URLSearchParams(params);
-            siguiente.set('t', 'generadas');
-            siguiente.set('f', '{"q":"cualificado"}');
-            siguiente.set('ft', '1');
-            setParams(siguiente, { replace: true });
-            onIrASeccion?.('revisar', siguiente);
-        };
-        return (
-            <div data-testid={`dashboard-${seccionFija}`}>
-                <button type="button" onClick={drillDown}>ver el detalle</button>
-            </div>
-        );
-    },
+    default: ({ seccionFija, onIrASeccion }) => (
+        <div data-testid={`dashboard-${seccionFija}`}>{onIrASeccion ? 'con drill-down' : 'sin drill-down'}</div>
+    ),
 }));
 
 const Ubicacion = () => {
@@ -91,7 +78,7 @@ describe('SetterEspacioPage · un solo dock', () => {
 
         expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
         const secciones = Array.from(dock().querySelectorAll('.dock-item')).map(b => b.getAttribute('aria-label'));
-        expect(secciones).toEqual(['Cualificación', 'Agendas', 'Reporte', 'Mis datos', 'Revisar']);
+        expect(secciones).toEqual(['Cualificación', 'Agendas', 'Reporte', 'Mis datos']);
         expect(itemDelDock('Mis datos')).toHaveAttribute('aria-current', 'page');
 
         // Simulando, "Volver a mi sesión" está, pero ya no es la única salida.
@@ -103,17 +90,20 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(url().get('step')).toBe('cualificacion');
     });
 
-    it('el drill-down de "Mis datos" abre Revisar con el filtro puesto', async () => {
-        await montar('/setter/deck?step=datos&p=mes');
+    it('el setter no ve Revisar, y "Mis datos" va sin drill-down', async () => {
+        // Pedido del 29/09/2026: Revisar no le hace falta al setter. Sin a dónde llevar un dato,
+        // el dashboard muestra los números sin flechas que no lleven a ningún lado.
+        await montar('/setter/deck?step=datos');
 
-        fireEvent.click(screen.getByRole('button', { name: 'ver el detalle' }));
+        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('sin drill-down');
+        expect(screen.queryAllByRole('button', { name: /^Revisar/ })).toHaveLength(0);
+    });
 
-        expect(screen.getByTestId('dashboard-revisar')).toBeInTheDocument();
-        expect(url().get('step')).toBe('revisar');
-        expect(url().get('t')).toBe('generadas');
-        expect(url().get('f')).toBe('{"q":"cualificado"}');
-        expect(url().get('ft')).toBe('1');
-        expect(url().get('p')).toBe('mes');
+    it('un link viejo a Revisar abre Cualificación, no una pantalla vacía', async () => {
+        await montar('/setter/deck?step=revisar');
+
+        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:cualificacion');
+        expect(screen.queryByTestId('dashboard-revisar')).toBeNull();
     });
 
     it('las rutas viejas caen en su sección y pestaña', async () => {

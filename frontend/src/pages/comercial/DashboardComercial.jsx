@@ -60,7 +60,8 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * versiones se fueran separando.
  *
  * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
- * resuelve `onIrASeccion`, con el que el host cambia su propia pestaña.
+ * resuelve `onIrASeccion`, con el que el host cambia su propia pestaña. Un host que no lo pasa no
+ * tiene lista (el espacio del setter, que no ve Revisar), y entonces no hay drill-down.
  *
  * `onAbrirCliente` es la otra salida al host: en la tabla Clientes, una fila NO es una agenda que
  * corregir sino un cliente al que hay que cobrarle, y el modal de corrección de esta pantalla no
@@ -173,8 +174,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
-    // Devuelve la query string que dejó escrita: el drill-down embebido se la pasa al host (ver
-    // `irA`), que también escribe en la URL en el mismo clic y tiene que partir de esta.
     const set = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
         Object.entries(cambios).forEach(([k, v]) => {
@@ -182,7 +181,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             else siguiente.set(k, v);
         });
         setParams(siguiente, { replace: true });
-        return siguiente;
     }, [params, setParams]);
 
     useEffect(() => {
@@ -282,19 +280,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irA = useCallback((cual, filtro) => {
         const limpio = Object.fromEntries(
             Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
-        const siguiente = set({
+        set({
             ...(embebido ? {} : { s: 'revisar' }),
             t: cual,
             f: Object.keys(limpio).length ? JSON.stringify(limpio) : null,
             ft: proximoToken(),
         });
         // Embebido la sección no está en la query string, la elige el host: sin este aviso el
-        // filtro se aplicaba a una tabla que seguía fuera de pantalla. Va con la query string
-        // recién escrita porque un host que guarda su sección en la URL (el espacio del setter)
-        // navega en este mismo clic: armando la suya desde lo que tenía en el render, pisaba el
-        // filtro y Revisar abría sin ninguna condición puesta.
-        if (embebido) onIrASeccion?.('revisar', siguiente);
+        // filtro se aplicaba a una tabla que seguía fuera de pantalla.
+        if (embebido) onIrASeccion?.('revisar');
     }, [set, embebido, onIrASeccion, proximoToken]);
+
+    /**
+     * El drill-down solo existe si hay una lista a la que llegar. Embebido, esa lista es del host:
+     * sin `onIrASeccion` no hay Revisar al que ir (el setter no lo tiene), y cada flecha y cada
+     * número cliqueable llevarían a ninguna parte. Sin `irA`, Analizar y Variabilidad muestran los
+     * números como números.
+     */
+    const irADetalle = embebido && !onIrASeccion ? null : irA;
 
     /**
      * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
@@ -483,13 +486,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
                 <div className="vista">
                     {seccion === 'analizar' && tab === 'dashboard' && (
-                        <Analizar datos={resumen} rol={rol} irA={irA} />
+                        <Analizar datos={resumen} rol={rol} irA={irADetalle} />
                     )}
                     {seccion === 'analizar' && tab === 'comparativas' && contexto.puede_elegir_equipo && (
                         <Comparativas datos={comparativas} irAPersona={irAPersona} />
                     )}
                     {seccion === 'analizar' && tab === 'variabilidad' && (
-                        <Variabilidad datos={variabilidad} rol={rol} irA={irA} />
+                        <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle} />
                     )}
                     {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
                         no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda
