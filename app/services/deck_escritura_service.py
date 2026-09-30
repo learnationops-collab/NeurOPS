@@ -150,6 +150,37 @@ def _registrar_eventos(appt, data, usuario, anterior):
                                       f"{usuario.username} confirmó la cita.")
 
 
+# El resultado del seguimiento de cobro que significa «este cliente se va» (`contact_result`).
+NO_VA_A_PAGAR = 'no_paga'
+
+
+def _baja_si_no_va_a_pagar(appt, usuario, contacto_anterior):
+    """«No va a pagar» en el seguimiento de cobro da de baja al cliente (pedido del 30/09/2026).
+
+    Antes solo cerraba el seguimiento: el cliente seguía debiendo, en la cartera «Con deuda» y en
+    los totales de deuda. Ahora es la misma baja que «Dar de baja» en Acciones (`baja_service`):
+    deuda en 0, fuera de las listas de cobro y de los avisos, lo cobrado queda, y se revierte desde
+    Acciones. Vive acá y no en el árbol de la ficha porque es la regla de negocio de ese resultado,
+    venga del camino que venga.
+
+    Solo cuando el resultado CAMBIA a «No va a pagar»: volver a guardar esa agenda por otra cosa, o
+    después de revertir la baja, no la tiene que volver a dar. Y un cliente que ya estaba de baja
+    conserva el motivo con el que se lo dio.
+    """
+    from app.models import ClientComment
+    from app.services import baja_service
+
+    if appt.last_contact_outcome != NO_VA_A_PAGAR or contacto_anterior == NO_VA_A_PAGAR:
+        return
+    cliente = appt.client
+    if cliente is None or baja_service.esta_de_baja(cliente):
+        return
+    baja_service.dar_de_baja(cliente, 'No va a pagar', usuario)
+    # El mismo texto que deja la baja a mano: el hilo del cliente es donde el equipo la lee.
+    db.session.add(ClientComment(client_id=cliente.id, author_id=usuario.id,
+                                 text=f'Cliente dado de baja por {usuario.username}. Motivo: No va a pagar.'))
+
+
 def aplicar_cambios(appt, data, usuario):
     """Aplica un guardado del mazo sobre `appt` y deja la sesion lista para comitear.
 
@@ -160,9 +191,12 @@ def aplicar_cambios(appt, data, usuario):
     from app.services.booking_service import BookingService
 
     anterior = {'closer_result': appt.closer_result, 'result': appt.result}
+    contacto_anterior = appt.last_contact_outcome
 
     _aplicar_campos(appt, data, usuario)
     _resolver_procesada(appt, data)
+    # Antes de los eventos: la bitácora comitea, y la baja tiene que entrar en ese mismo commit.
+    _baja_si_no_va_a_pagar(appt, usuario, contacto_anterior)
     _registrar_eventos(appt, data, usuario, anterior)
 
     # Espejo a FinancialAgenda (la tabla que mira triage). Nunca puede tumbar el guardado: el
