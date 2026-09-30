@@ -91,7 +91,9 @@ export const RESULTADOS_COBRO = [
   { valor: 'no_resp', label: 'No respondió', sub: 'Lo intenté, no contestó', tono: 'error' },
   { valor: 'contesto', label: 'Estamos conversando', sub: 'Quedamos en seguir hablando', tono: 'info' },
   { valor: 'pago', label: 'Pagó', sub: 'Registrar el cobro', tono: 'success' },
-  { valor: 'no_paga', label: 'No va a pagar', sub: 'Sale de la cola de cobros', tono: 'error' },
+  // Da de baja al cliente (`deck_escritura_service._baja_si_no_va_a_pagar`): se dice ACÁ, antes
+  // de elegirla, porque le pone la deuda en 0 y lo saca de todas las listas de cobro.
+  { valor: 'no_paga', label: 'No va a pagar', sub: 'Se da de baja: deja de deber', tono: 'error' },
 ];
 
 const si = { valor: true, label: 'Sí', tono: 'success' };

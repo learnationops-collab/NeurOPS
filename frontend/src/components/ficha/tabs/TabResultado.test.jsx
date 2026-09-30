@@ -393,6 +393,22 @@ describe('TabResultado · seguimiento de cobro', () => {
     expect(await screen.findByText('Seguimiento guardado')).toBeInTheDocument();
   });
 
+  it('«No va a pagar» avisa antes que da de baja, y al guardar dice que quedó de baja', async () => {
+    // Pedido del 30/09/2026: el backend lo da de baja (deuda en 0, fuera de las listas de cobro).
+    const user = userEvent.setup();
+    const p = props(fichaEnCobro);
+    render(<TabResultado {...p} />);
+    expect(screen.getByRole('button', { name: /No va a pagar/ })).toHaveTextContent('Se da de baja: deja de deber');
+    await user.click(screen.getByRole('button', { name: /No va a pagar/ }));
+    await user.type(screen.getByLabelText('Qué sucedió exactamente'), 'No sigue y no paga el resto');
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
+
+    expect(p.onAccion.mock.calls[0][1].contacto_result).toBe('no_paga');
+    expect(await screen.findByText('Cliente dado de baja')).toBeInTheDocument();
+    expect(screen.getByText(/Si vuelve, la baja se revierte desde Acciones/)).toBeInTheDocument();
+  });
+
   it('«Pagó esta» en una cuota sigue a la venta con esa cuota ya elegida', async () => {
     const user = userEvent.setup();
     render(<TabResultado {...props(fichaEnCobro)} />);

@@ -674,7 +674,11 @@ function ResumenCobro({ cobro, onPagoDeCuota }) {
 function cierreDelSeguimiento(r, contexto) {
   if (contexto.modo === 'llamada' || esVenta(r)) return null;
   if (r.contacto_result === 'no_paga') {
-    return { linea: 'Seguimiento de cobro cerrado', detalle: 'Avisó que no va a pagar: salió de la cola de cobros.' };
+    return {
+      linea: 'Cliente dado de baja',
+      detalle: 'Avisó que no va a pagar: ya no debe nada y salió de las listas de cobro. Lo que pagó '
+        + 'queda. Si vuelve, la baja se revierte desde Acciones.',
+    };
   }
   if (r.contacto_result === 'agendo') {
     return { linea: 'Seguimiento guardado', detalle: 'Vuelve a Confirmaciones con la fecha nueva.' };
