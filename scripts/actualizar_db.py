@@ -1,3 +1,12 @@
+"""Copia producción → la base local (SQLite) o la de staging (PostgreSQL de Railway).
+
+    env/Scripts/python.exe -u scripts/actualizar_db.py --target local
+    env/Scripts/python.exe -u scripts/actualizar_db.py --target staging
+
+Producción se abre en SOLO LECTURA. El destino se reemplaza tabla por tabla, cada una en su propia
+transacción: una tabla que no se pudo copiar queda como estaba, no vacía. Sale con código 1 si
+alguna tabla falló o quedó vacía teniendo filas en producción.
+"""
 import glob
 import os
 import sqlite3
@@ -6,9 +15,8 @@ import tempfile
 from datetime import datetime
 from urllib.parse import urlparse
 
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.orm import sessionmaker, make_transient
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, inspect, select, text
 
 # Añadir el directorio raíz al path para importar la app
 current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -42,34 +50,14 @@ if _target_arg in ('staging', 'testing'):
     if _dest_url:
         os.environ['DATABASE_URL'] = _dest_url
 
-from app import create_app, db
-from app.models import (
-    User, Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, 
-    ManychatAdLead, ManychatLead, LeadAnswer, SetterDailyStats, 
-    CloserDailyStats, CloserDailyReport, DailyReportQuestion, 
-    DailyReportAnswer, Expense, RecurringExpense, Client, Lead,
-    Event, EventGroup, Program, Appointment, Availability, 
-    WeeklyAvailability, SurveyQuestion, SurveyAnswer, Enrollment, 
-    PaymentMethod, Payment, Pipeline, PipelineStage, 
-    UserViewSetting, Notification, Comment, Integration, 
-    PublicRegistration, FinancialSale, FinancialAgenda, 
-    TriageDailyReport, TriageTrackerReport, WorkshopTemplate, 
-    WorkshopButton, WorkshopTemplateSent, WorkshopInteraction,
-    GoogleCalendarToken, UTMLog, LandingTracking, ConversationalMessage,
-    LeadEventLog, ExcludedSale, ClientComment, event_closers,
-    TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving,
-    AlertRule, Alert, ClientMergeLog, CloserAlias, CommentNotification,
-    FeatureToggle, InstallmentPlan, LandingSession, WorkshopEvent, WorkshopLead,
-    JobApplication, JobApplicationVote, ClarityWeight,
-    AssistantApplication, AssistantClarityWeight, BugReport, BugReportMessage,
-    PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion,
-    PlaybookOption, PlaybookLessonProgress, PlaybookCompletion,
-    ReporteDirector, ReporteDirectorPersona, WorkshopGoals, WorkshopAction,
-    FichaOpcion
-)
+from app import create_app, db  # noqa: E402
+from app import models as _modelos  # noqa: E402,F401  (registra todas las tablas en db.metadata)
 
+# Filas por lote al copiar hacia SQLite: la tabla no se materializa entera en memoria.
+LOTE = 2000
 # Respaldos de la SQLite local que se conservan (el más viejo se borra).
 RESPALDOS_A_CONSERVAR = 3
+
 
 def safe(text):
     """Texto imprimible en la consola de Windows (cp1252). Los mensajes de error de SQLAlchemy
@@ -200,11 +188,12 @@ class CopiadorPostgres:
                 with origen.cursor() as cur:
                     cur.copy_expert(
                         f'COPY (SELECT {lista} FROM "{tabla}") TO STDOUT WITH (FORMAT csv)', buf)
+                origen.rollback()  # cierra la transacción de lectura; no deja nada abierto
                 buf.seek(0)
                 with destino.cursor() as cur:
                     # Apaga los triggers de FK durante la carga, así el orden entre tablas deja
                     # de importar. El rol `postgres` de Railway puede; si no, se sigue igual y el
-                    # orden de `modelos` (ya ordenado por dependencias) alcanza.
+                    # orden por dependencias de `db.metadata.sorted_tables` alcanza.
                     try:
                         cur.execute("SET session_replication_role = replica")
                     except psycopg2.Error:
@@ -226,10 +215,45 @@ class CopiadorPostgres:
             raise
 
 
+def _copiar_a_sqlite(prod_engine, tabla, cols_prod):
+    """Reemplaza una tabla de la SQLite local con la de producción. Devuelve cuántas filas copió.
+
+    Antes se leía con el ORM (`query(Model).all()`), que pide TODAS las columnas del modelo: una
+    columna agregada en develop y todavía no desplegada hacía fallar la tabla entera, y como la
+    limpieza global previa ya la había vaciado, quedaba vacía. Ahora se leen las columnas que
+    existen de los dos lados (las nuevas toman su valor por defecto), en lotes, y el borrado y la
+    carga van en la misma transacción: si algo falla, la tabla queda como estaba.
+
+    Se pasa por las columnas de SQLAlchemy y no por SQL crudo porque son ellas las que convierten
+    los tipos de Postgres a lo que SQLite guarda (fechas, JSON, booleanos, decimales).
+    """
+    comunes = [c for c in tabla.columns if c.name in cols_prod]
+    if not comunes:
+        raise RuntimeError(f'{tabla.name}: sin columnas en común entre producción y local')
+    total = 0
+    try:
+        with prod_engine.connect() as origen:
+            filas = origen.execution_options(stream_results=True, yield_per=LOTE).execute(
+                select(*comunes))
+            db.session.execute(tabla.delete())
+            for lote in filas.mappings().partitions(LOTE):
+                db.session.execute(tabla.insert(), [dict(f) for f in lote])
+                total += len(lote)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return total
+
+
+def _contar(conexion, nombre):
+    return conexion.execute(text(f'SELECT COUNT(*) FROM "{nombre}"')).scalar()
+
+
 def actualizar(target='local'):
     load_dotenv()
     prod_url = os.getenv('DATABASE_PRODUCTION')
-    
+
     if not prod_url or "usuario:password" in prod_url:
         print("Error: DATABASE_PRODUCTION no está configurada correctamente en el archivo .env")
         return False
@@ -242,7 +266,7 @@ def actualizar(target='local'):
         os.environ['DATABASE_URL'] = dest_url
         target_name = "Railway Staging (PostgreSQL)"
     else:
-        target_name = "Local (SQLite)"
+        target_name = "Local"
 
     # Cada tabla que no se pudo copiar. El script solía terminar SIEMPRE con "finalizado con
     # éxito" aunque el bucle de copia hubiera impreso un `Error:` por tabla, así que una corrida
@@ -260,206 +284,81 @@ def actualizar(target='local'):
         if _misma_base(destino_url, prod_url):
             print("Error: el destino es la MISMA base que producción. No se copia nada.")
             return False
-        print(f"--- Iniciando actualización limpia desde producción hacia [{target_name}] ---")
-        if db.engine.dialect.name == 'sqlite' and db.engine.url.database:
+        motor, host, _, base = _identidad(destino_url)
+        print(f"--- Actualizando [{target_name}] desde producción ---")
+        print(f"Destino: {motor} {host or ''} {base or ''}".rstrip())
+
+        es_sqlite = db.engine.dialect.name == 'sqlite'
+        if es_sqlite and db.engine.url.database:
             print(f"Respaldo previo de la base local: {_respaldar_sqlite(db.engine.url.database)}")
+
         try:
             from flask_migrate import upgrade as db_upgrade
             print("Asegurando estructura de tablas con migraciones...")
             db_upgrade()
         except Exception as mig_err:
             print(f"Advertencia al ejecutar migraciones previa a la sincronización: {mig_err}")
-        
-        # Motor de base de datos de producción
+
         prod_engine = create_engine(prod_url, pool_pre_ping=True,
                                     connect_args={'options': _SOLO_LECTURA, **_KEEPALIVE})
-        ProdSession = sessionmaker(bind=prod_engine)
-        prod_session = ProdSession()
 
-        modelos = [
-            # Independientes / Base
-            User, EventGroup, Program, WorkshopTemplate, Pipeline, 
-            DailyReportQuestion, Expense, RecurringExpense, 
-            Campaign, ManychatLead, Integration,
-            LandingTracking, ConversationalMessage, ExcludedSale,
-            PaymentMethod, ManychatAdLead,
-            TeamMember, MonthlyPaymentMethodBalance, MonthlySaving, AlertRule,
-            WorkshopEvent, JobApplication, ClarityWeight,
-            AssistantClarityWeight, PlaybookRoadmap, WorkshopGoals,
+        # Todas las tablas de la app, ordenadas por dependencias (FK). Era una lista escrita a mano
+        # que había que acordarse de actualizar con cada modelo nuevo: el 23/09 le faltaban 15 y
+        # el 29/09, `ficha_opciones`. Incluye las tablas de asociación (`event_closers`).
+        tablas = list(db.metadata.sorted_tables)
 
-            # Dependencia Nivel 1
-            Event, WorkshopButton, PipelineStage, Client, AdSet,
-            MarketingBudget, PublicRegistration, GoogleCalendarToken, UTMLog,
-            Availability, WeeklyAvailability, Alert, CloserAlias, FeatureToggle,
-            JobApplicationVote,
-            AssistantApplication, BugReport, PlaybookModule, WorkshopAction,
-            ReporteDirector,
-            # Las opciones de vocabulario que el equipo agrega desde la ficha. Cuelga de `users`
-            # (quién la creó). Hasta que la migración llegue a producción se saltea sola por
-            # la guarda de "no existe en producción", sin vaciar la del destino.
-            FichaOpcion,
-
-            # Dependencia Nivel 2
-            Lead, Ad, WorkshopTemplateSent, UserViewSetting,
-            SurveyQuestion, ClientComment, MonthlyPayroll,
-            ClientMergeLog, WorkshopLead,
-            BugReportMessage, PlaybookLesson, ReporteDirectorPersona,
-
-            # Dependencia Nivel 3
-            Appointment, Enrollment, AdPeriodSpend, LeadAnswer,
-            WorkshopInteraction, SetterDailyStats, CloserDailyStats,
-            CloserDailyReport, TriageDailyReport, TriageTrackerReport,
-            FinancialSale, FinancialAgenda, LeadEventLog, LandingSession,
-            PlaybookQuestion, PlaybookLessonProgress, PlaybookCompletion,
-
-            # Dependencia Nivel 4
-            Payment, SurveyAnswer, Notification, Comment, DailyReportAnswer,
-            InstallmentPlan, CommentNotification,
-            PlaybookOption
-        ]
-
-        # Solo se toca lo que se va a poder copiar. La limpieza y la copia eran dos pasos
-        # independientes, así que una tabla que existe en el destino pero todavía no en
-        # producción (una migración desplegada acá y no allá) se vaciaba en el paso 1 y en el
-        # paso 2 fallaba con "no existe": la tabla quedaba vacía y nadie la volvía a llenar.
+        # Solo se toca lo que se va a poder copiar: una tabla que existe acá pero todavía no en
+        # producción (una migración desplegada en develop y no en main) se deja intacta.
         tablas_prod = set(inspect(prod_engine).get_table_names())
-        ausentes = [m.__tablename__ for m in modelos if m.__tablename__ not in tablas_prod]
+        ausentes = [t.name for t in tablas if t.name not in tablas_prod]
         if ausentes:
             print(f"Omitidas (no existen en producción, se dejan intactas): {', '.join(ausentes)}")
-            modelos = [m for m in modelos if m.__tablename__ in tablas_prod]
+            tablas = [t for t in tablas if t.name in tablas_prod]
 
-        # Con COPY, cada tabla se borra y se recarga dentro de una sola transacción, así que la
-        # limpieza global previa sobra — y además es justo la que deja tablas vacías cuando la
-        # copia posterior falla.
-        usar_copy = db.engine.dialect.name == 'postgresql'
-        copiador = CopiadorPostgres(prod_url, destino_url) if usar_copy else None
-
-        # 1. Limpiar datos locales en orden inverso para evitar violaciones de FK
-        if not usar_copy:
-            print("Limpiando base de datos destino para evitar colisiones UNIQUE...")
-
-            # Primero limpiar tabla de asociación Many-to-Many
-            try:
-                db.session.execute(event_closers.delete())
-                db.session.commit()
-                print("Limpiada tabla event_closers.")
-            except Exception as e:
-                db.session.rollback()
-                print(safe(f"Advertencia al limpiar event_closers: {e}"))
-
-            # Limpiar el resto de modelos. Se hace commit por modelo, no uno solo al final: el
-            # `rollback()` del except deshacía TODOS los borrados acumulados en la transacción, no
-            # solo el que falló. Con una tabla inexistente en local (una migración sin aplicar,
-            # por ejemplo) el borrado quedaba a medias y la copia posterior moría con UNIQUE
-            # constraint sobre tablas que ya se creían vacías.
-            for model in reversed(modelos):
+        if es_sqlite:
+            insp = inspect(prod_engine)
+            cols_prod = {t.name: {c['name'] for c in insp.get_columns(t.name)} for t in tablas}
+            for t in tablas:
+                print(f"Sincronizando {t.name}...", end=" ", flush=True)
                 try:
-                    db.session.query(model).delete()
-                    db.session.commit()
+                    print(f"Ok ({_copiar_a_sqlite(prod_engine, t, cols_prod[t.name])} registros)")
+                except Exception as e:
+                    fallos.append((t.name, safe(e)))
+                    print(safe(f"Error: {e}"))
+        else:
+            copiador = CopiadorPostgres(prod_url, destino_url)
+            try:
+                for t in tablas:
+                    print(f"Sincronizando {t.name}...", end=" ", flush=True)
+                    try:
+                        print(f"Ok ({copiador.copiar(t.name)} registros)")
+                    except Exception as e:
+                        fallos.append((t.name, safe(e)))
+                        print(safe(f"Error: {e}"))
+            finally:
+                copiador.cerrar()
+
+        # Contraste final contra producción: el log por tabla puede mentir por omisión (un error
+        # entre ochenta líneas se pasa por alto). Se cuenta con `COUNT(*)` y no con el ORM, que
+        # pide las columnas del modelo y falla en cuanto producción no tiene alguna.
+        print("Verificando la copia contra producción...")
+        with prod_engine.connect() as origen:
+            for t in tablas:
+                try:
+                    n_prod = _contar(origen, t.name)
+                    n_dest = _contar(db.session, t.name)
                 except Exception as e:
                     db.session.rollback()
-                    print(safe(f"Advertencia al limpiar {model.__tablename__}: {e}"))
-            print("Limpieza de modelos completada.")
-
-        # 2a. Destino PostgreSQL: COPY por tabla, cada una en su propia transacción.
-        if usar_copy:
-            for model in modelos:
-                tabla = model.__tablename__
-                print(f"Sincronizando {tabla}...", end=" ", flush=True)
-                try:
-                    print(f"Ok ({copiador.copiar(tabla)} registros)")
-                except Exception as e:
-                    fallos.append((tabla, safe(e)))
-                    print(safe(f"Error: {e}"))
-
-        # 2b. Destino SQLite: no hay COPY, se copia por ORM.
-        for model in (() if usar_copy else modelos):
-            try:
-                table_name = model.__tablename__
-                print(f"Sincronizando {table_name}...", end=" ", flush=True)
-                
-                # Obtener todos los registros de producción
-                items_prod = prod_session.query(model).all()
-                
-                if not items_prod:
-                    print("Ok (vacia)")
+                    fallos.append((t.name, f"no se pudo verificar: {safe(e)}"))
                     continue
-                
-                for item in items_prod:
-                    # Desasociar del motor de producción y marcar como transitorio
-                    prod_session.expunge(item)
-                    make_transient(item)
-                    db.session.add(item)
-                
-                db.session.commit()
-                print(f"Ok ({len(items_prod)} registros)")
-                
-            except Exception as e:
-                db.session.rollback()
-                # BUG real encontrado (27/ago/2026, causó una pérdida real de datos en testing):
-                # la lectura que falla es la de `prod_session` (línea de arriba), no la de
-                # `db.session` — pero acá solo se hacía rollback del destino. Una vez que
-                # `prod_session` queda en transacción abortada (típico: el modelo local tiene una
-                # columna nueva que producción todavía no tiene, por una migración pendiente de
-                # desplegar ahí), TODAS las consultas siguientes contra `prod_session` fallan
-                # igual — así que cada modelo restante del bucle "falla" con el mismo error,
-                # sin copiar nada. Como la limpieza (paso 1) ya había borrado esas tablas del
-                # destino, el resultado neto es que quedan completamente vacías sin avisar de
-                # forma obvia (el log sigue imprimiendo "Error: ..." por cada una, pero es fácil
-                # no leerlos todos). Sin este rollback, un solo desfasaje de esquema entre local
-                # y producción podía vaciar en cascada todos los modelos sincronizados después.
-                try:
-                    prod_session.rollback()
-                except Exception:
-                    pass
-                fallos.append((model.__tablename__, safe(e)))
-                print(safe(f"Error: {e}"))
+                if n_prod and not n_dest:
+                    fallos.append((t.name, f"quedó VACÍA (producción tiene {n_prod})"))
+                elif n_dest < n_prod:
+                    # Producción sigue recibiendo datos mientras corre la copia, así que un
+                    # faltante de unas pocas filas es deriva normal, no un fallo.
+                    print(f"  {t.name}: {n_dest} de {n_prod} (faltan {n_prod - n_dest}, deriva en vivo)")
+        prod_engine.dispose()
 
-        # Sincronizar event_closers (tabla de asociación Many-to-Many, no tiene modelo propio)
-        try:
-            print("Sincronizando event_closers...", end=" ", flush=True)
-            if usar_copy:
-                print(f"Ok ({copiador.copiar('event_closers')} registros)")
-            else:
-                items_prod = prod_session.execute(event_closers.select()).fetchall()
-                if items_prod:
-                    insert_data = [dict(row._mapping) for row in items_prod]
-                    db.session.execute(event_closers.insert(), insert_data)
-                    db.session.commit()
-                    print(f"Ok ({len(items_prod)} registros)")
-                else:
-                    print("Ok (vacía)")
-        except Exception as e:
-            db.session.rollback()
-            fallos.append(('event_closers', safe(e)))
-            print(f"Error al sincronizar event_closers: {e}")
-
-        # Contraste final contra producción: el log por tabla puede mentir por omisión (una tabla
-        # que se limpió y después falló al copiar imprime su error, pero es fácil no leerlo entre
-        # ochenta líneas). Acá se compara fila a fila y se marca como fallo toda tabla que quedó
-        # vacía teniendo datos en producción.
-        print("Verificando la copia contra producción...")
-        for model in modelos:
-            tabla = model.__tablename__
-            try:
-                n_prod = prod_session.query(model).count()
-                n_dest = db.session.query(model).count()
-            except Exception as e:
-                prod_session.rollback()
-                db.session.rollback()
-                fallos.append((tabla, f"no se pudo verificar: {safe(e)}"))
-                continue
-            if n_prod and not n_dest:
-                fallos.append((tabla, f"quedó VACÍA (producción tiene {n_prod})"))
-            elif n_dest < n_prod:
-                # Producción sigue recibiendo datos mientras corre la copia, así que un faltante
-                # de unas pocas filas es deriva normal, no un fallo.
-                print(f"  {tabla}: {n_dest} de {n_prod} (faltan {n_prod - n_dest}, deriva en vivo)")
-
-        prod_session.close()
-        if copiador is not None:
-            copiador.cerrar()
-        
         # 3. Normalización post-sincronización de closers y alias
         try:
             from scripts.normalizar_closers import normalizar_closers
@@ -467,15 +366,17 @@ def actualizar(target='local'):
         except Exception as norm_err:
             print(f"Error al ejecutar normalización de closers: {norm_err}")
 
-        # 4. Ajustar secuencias en PostgreSQL si el destino es PostgreSQL
-        if db.engine.dialect.name == 'postgresql':
+        # 4. Ajustar secuencias en PostgreSQL: las filas llegan con su `id`, así que la secuencia
+        # queda atrás y el próximo INSERT chocaría con un id que ya existe.
+        if not es_sqlite:
             print("Ajustando secuencias autonumeradas en PostgreSQL...")
-            for model in modelos:
+            for t in tablas:
+                if 'id' not in t.c:
+                    continue
                 try:
-                    table_name = model.__tablename__
-                    db.session.execute(db.text(
-                        f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), COALESCE(MAX(id), 1)) FROM {table_name}"
-                    ))
+                    db.session.execute(text(
+                        f"SELECT setval(pg_get_serial_sequence('{t.name}', 'id'), "
+                        f"COALESCE(MAX(id), 1)) FROM \"{t.name}\""))
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
@@ -490,6 +391,7 @@ def actualizar(target='local'):
 
         print("--- Proceso finalizado con éxito ---")
         return True
+
 
 if __name__ == "__main__":
     import argparse
