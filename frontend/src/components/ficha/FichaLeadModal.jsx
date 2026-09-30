@@ -39,9 +39,10 @@ const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 // Las acciones cuyo editor dice él mismo por qué falló, al lado de su botón (`MotivoDelFallo` en
 // los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
+// El reporte y la venta de «Resultado» también: la pestaña pinta el error sobre su revisión.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
-    'borrar_plan', 'borrar_evento', 'crear_evento']);
+    'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta']);
 
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
