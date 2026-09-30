@@ -133,6 +133,27 @@ export const AYUDA_ACCESO = {
   correo: 'El correo con el que entra a la Academia. Es la única forma de cruzarlo con NeurOPS: la Academia no busca por teléfono.',
   telefono: 'El teléfono que tiene cargado la Academia. No sirve para encontrarlo, pero conviene que coincida con el de acá: es por donde se le escribe.',
   consultado: 'Estos datos se le piden a la Academia en vivo cada vez que abrís esta pestaña (o tocás Actualizar). NeurOPS guarda una copia para poder filtrar y ordenar la tabla Clientes por la actividad en la Academia.',
+  gestionar: 'Dar o renovar le asigna en la Academia el producto que pagó, con el vencimiento que elijas; la asignación anterior queda en su historial. Quitar lo hace vencer hoy: la Academia no permite borrar un acceso, y así deja de entrar. Se puede renovar después.',
+  dar: 'Todavía no tiene cuenta en la Academia: se le crea con este correo y le llega un mail para activar su contraseña. Es el correo con el que va a entrar, así que tiene que ser el real.',
+};
+
+/** 'AAAA-MM-DD' más `n` meses. Un 31 que no existe cae en el último día del mes, como `_add_months`
+ *  del backend (así la sugerencia y los atajos cuentan igual). Trabaja sobre el texto: es un día,
+ *  no un instante, y pasarlo por el huso de quien mira lo correría. */
+export const sumarMeses = (iso, n) => {
+  const [a, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  const total = (m - 1) + n;
+  const anio = a + Math.floor(total / 12);
+  const mes = ((total % 12) + 12) % 12;
+  const ultimo = new Date(Date.UTC(anio, mes + 1, 0)).getUTCDate();
+  const dos = (x) => String(x).padStart(2, '0');
+  return `${anio}-${dos(mes + 1)}-${dos(Math.min(d, ultimo))}`;
+};
+
+/** El día desde el que se cuenta una renovación: el vencimiento que tiene si todavía no pasó, o hoy. */
+export const baseDeRenovacion = (pagado, hoy) => {
+  const vence = String(pagado?.expires_at || '').slice(0, 10);
+  return vence > hoy ? vence : hoy;
 };
 
 /** Vigente, por vencer o vencido: el semáforo del acceso, con el tono del design system. */

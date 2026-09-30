@@ -51,7 +51,7 @@ const FICHA = {
 const abrir = async (payload = PAYLOAD, extra = {}) => {
   const onConsultar = vi.fn().mockResolvedValue(payload);
   const irA = vi.fn();
-  render(<TabFulfillment ficha={FICHA} onConsultar={onConsultar} irA={irA} {...extra} />);
+  render(<TabFulfillment ficha={FICHA} onConsultar={onConsultar} onAccion={vi.fn()} irA={irA} {...extra} />);
   await screen.findByText('Datos de la Academia', { exact: false });
   return { onConsultar, irA };
 };
@@ -134,17 +134,30 @@ describe('TabFulfillment', () => {
     expect(onConsultar).toHaveBeenCalledTimes(2);
   });
 
-  it('avisa cuando la Academia no tiene el producto pagado y manda a Resultado', async () => {
-    const usuario = userEvent.setup();
-    const { irA } = await abrir({
+  it('avisa cuando la Academia no tiene el producto pagado y ofrece darlo ahí mismo', async () => {
+    await abrir({
       ...PAYLOAD, producto_pagado: null, otros_productos: [BIENVENIDA],
       aviso_producto: { codigo: 'sin_producto', motivo: 'La Academia no le tiene asignado Ace Learners.' },
     });
 
     expect(screen.getByText('La Academia no le tiene asignado Ace Learners.')).toBeInTheDocument();
+    // Quien puede cobrar lo da acá: mandarlo a Resultado a registrar un pago era el rodeo.
+    expect(screen.getByText('Asignáselo con «Dar acceso», acá abajo.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dar acceso' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Ir a Resultado' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Otros accesos en la Academia/ })).toBeInTheDocument();
+  });
+
+  it('a quien no puede cobrar, el aviso del producto lo sigue mandando a Resultado', async () => {
+    const usuario = userEvent.setup();
+    const { irA } = await abrir({
+      ...PAYLOAD, producto_pagado: null, otros_productos: [BIENVENIDA],
+      aviso_producto: { codigo: 'sin_producto', motivo: 'La Academia no le tiene asignado Ace Learners.' },
+    }, { ficha: { ...FICHA, permisos: { cobrar: false, reportar: true } } });
+
+    expect(screen.queryByRole('button', { name: 'Dar acceso' })).not.toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: 'Ir a Resultado' }));
     expect(irA).toHaveBeenCalledWith('resultado');
-    expect(screen.getByRole('button', { name: /Otros accesos en la Academia/ })).toBeInTheDocument();
   });
 
   it('sin programa en NeurOPS lo dice, manda a Acciones y no afirma cuál pagó', async () => {

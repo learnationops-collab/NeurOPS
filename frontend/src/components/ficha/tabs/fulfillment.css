@@ -49,6 +49,26 @@
 .dc-shell .ful-barra i{display:block;height:100%;border-radius:inherit;
   background:var(--brand-secondary)}
 
+/* Dar, renovar o quitar el acceso (AccesoAcademia.jsx): al pie de «Lo que pagó», separado por una
+   línea para que se lea como lo que se puede HACER con ese acceso y no como un dato más. */
+.dc-shell .ful-gestion{display:grid;gap:var(--s2);padding-top:var(--s3);
+  border-top:1px solid var(--border-subtle)}
+.dc-shell .ful-gestion-botones{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+.dc-shell .ful-gestion-editor{margin:0}
+/* Una fecha y, a lo sumo, un correo: columnas de hasta 340px en vez de estirarse a todo el ancho
+   de la tarjeta, donde un campo de fecha de 900px se leía como un error de maquetación. */
+.dc-shell .ful-gestion-editor .fi-agenda-campos{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),340px))}
+.dc-shell .ful-plazos{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .ful-plazo--on{border-color:var(--brand-secondary-border);color:var(--text-on-surface);
+  background:var(--brand-secondary-surface)}
+/* En el estado vacío («todavía no es alumno») el botón va debajo del texto, sin línea. El
+   formulario lleva un ancho propio y alineado a la izquierda: heredaba el centrado del bloque, un
+   rótulo quedaba centrado y el otro no, y a 455px los dos botones del pie se partían en dos filas. */
+.dc-shell .vacio-grande .ful-gestion{border-top:0;padding-top:var(--s2);width:min(100%,580px);
+  justify-items:center}
+.dc-shell .vacio-grande .ful-gestion-editor{width:100%;text-align:left}
+
 @media (max-width:640px){
   .dc-shell .ful-secciones{grid-template-columns:1fr}
 }

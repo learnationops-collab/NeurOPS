@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
-import { Aviso, useMovimiento } from './piezas';
+import { Aviso, diaLegible, useMovimiento } from './piezas';
 import { Hueso } from '../huesos/Huesos';
 import { leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
@@ -53,7 +53,8 @@ const TabAcciones = lazyDe('TabAcciones');
 // El reporte y la venta de «Resultado» también: la pestaña pinta el error sobre su revisión.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
-    'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta']);
+    'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
+    'acceso_academia', 'quitar_acceso_academia']);
 
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
@@ -70,6 +71,15 @@ const MENSAJES = {
         if (r?.academia) return 'Venta registrada y acceso a la Academia actualizado.';
         return 'Venta registrada.';
     },
+    // Fulfillment. Una cuenta nueva le manda al alumno un correo para activar su contraseña.
+    acceso_academia: (r) => {
+        const hasta = r?.vence ? ` hasta el ${diaLegible(r.vence)}` : '';
+        if (r?.accion === 'renovado') return `Acceso a la Academia renovado${hasta}.`;
+        return r?.creada
+            ? `Acceso a la Academia dado${hasta}. Se le creó la cuenta y le llegó un correo para activar su contraseña.`
+            : `Acceso a la Academia dado${hasta}.`;
+    },
+    quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
     descartar: 'Lead descartado.',

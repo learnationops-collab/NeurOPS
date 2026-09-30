@@ -91,6 +91,10 @@ const RUTAS = {
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),
     // Deshace la baja: el cliente vuelve a deber y a las listas de cobro. No lleva cuerpo.
     revertir_baja: (appt) => api.post(`/ficha/${appt}/revertir-baja`, {}),
+    // El acceso a la Academia, desde Fulfillment: dar o renovar hasta `vence` (+ `email` si
+    // todavía no es alumno), y quitar (vence hoy; pide `confirmo: true`). Ver `ficha_academia.py`.
+    acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/acceso`, p),
+    quitar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/quitar`, p),
 
     // Comunicación.
     enviar_nota: (appt, p) => api.post(`/ficha/${appt}/nota`, p),

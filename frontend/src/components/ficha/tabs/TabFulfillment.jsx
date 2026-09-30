@@ -28,6 +28,7 @@ import { pestanasVisibles } from '../estadoFicha';
 import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
+import AccesoAcademia from './AccesoAcademia';
 import '../../dashboard/pareja.css';
 import './fulfillment.css';
 
@@ -88,7 +89,10 @@ const ACCION_AVISO = {
 };
 
 function AvisoProducto({ aviso, ficha, irA }) {
-  const accion = ACCION_AVISO[aviso.codigo];
+  // Quien puede cobrar tiene «Dar acceso» en esta misma tarjeta: mandarlo a Resultado a registrar
+  // un pago para eso era el rodeo que el botón vino a sacar.
+  const aca = aviso.codigo === 'sin_producto' && ficha?.permisos?.cobrar;
+  const accion = aca ? null : ACCION_AVISO[aviso.codigo];
   // Solo se ofrece ir a una pestaña que este rol y este lead tienen: el cascarón caería a la
   // primera visible y el botón parecería no hacer nada.
   const puedeIr = accion && irA && pestanasVisibles(ficha).some((p) => p.id === accion.pestana);
@@ -97,6 +101,7 @@ function AvisoProducto({ aviso, ficha, irA }) {
       <span className="ln-alert-ico"><AlertTriangle /></span>
       <span className="ln-alert-body">
         <span className="ln-alert-title">{aviso.motivo}</span>
+        {aca && <span className="ln-alert-desc">Asignáselo con «Dar acceso», acá abajo.</span>}
         {accion?.detalle && <span className="ln-alert-desc">{accion.detalle}</span>}
       </span>
       {puedeIr && (
@@ -110,7 +115,7 @@ function AvisoProducto({ aviso, ficha, irA }) {
 }
 
 /** El acceso que pagó: qué programa, qué producto le corresponde allá y hasta cuándo lo tiene. */
-function AccesoPagado({ datos, ficha, irA }) {
+function AccesoPagado({ datos, ficha, irA, onAccion, onHecho }) {
   const { programa, producto_pagado: p, aviso_producto: aviso, alumno } = datos;
   const estado = estadoAcceso(p);
   const activo = alumno?.producto_activo;
@@ -149,6 +154,7 @@ function AccesoPagado({ datos, ficha, irA }) {
           {`La Academia tiene como producto activo «${activo.name || activo.slug}», no el que pagó.`}
         </small>
       )}
+      <AccesoAcademia datos={datos} ficha={ficha} onAccion={onAccion} onHecho={onHecho} />
     </section>
   );
 }
@@ -230,7 +236,7 @@ const PanelHuesos = () => (
   </div>
 );
 
-export default function TabFulfillment({ ficha, onConsultar, irA }) {
+export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
   const mov = useMovimiento();
   const [datos, setDatos] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -306,14 +312,19 @@ export default function TabFulfillment({ ficha, onConsultar, irA }) {
               ? `No hay ninguna cuenta con ${probados.length === 1 ? 'su correo' : 'ninguno de sus correos'}: ${probados.join(', ')}.`
               : 'No tenemos ningún correo real suyo, y el cruce con la Academia es por correo.'}
             {programa?.nombre ? ` Pagó ${programa.nombre}: ese es el acceso que le corresponde.` : ''}
-            {' '}El acceso se da al registrar un pago en Resultado, respondiendo «Sí» a «¿Le das acceso a la Academia?».
+            {ficha?.permisos?.cobrar
+              ? ' Se lo podés dar acá mismo.'
+              : ' El acceso se da al registrar un pago en Resultado, respondiendo «Sí» a «¿Le das acceso a la Academia?».'}
           </p>
+          <AccesoAcademia datos={datos} ficha={ficha} onAccion={onAccion} onHecho={pedir} />
         </div>
       )}
 
       {datos?.vinculado && alumno && (
         <>
-          <motion.div {...entrar()}><AccesoPagado datos={datos} ficha={ficha} irA={irA} /></motion.div>
+          <motion.div {...entrar()}>
+            <AccesoPagado datos={datos} ficha={ficha} irA={irA} onAccion={onAccion} onHecho={pedir} />
+          </motion.div>
 
           {desempeno ? (
             <div className="ful-secciones pareja">
