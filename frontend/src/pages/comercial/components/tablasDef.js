@@ -47,7 +47,22 @@ export const ESTADO_CARTERA = {
     por_vencer: 'Con deuda',
     sin_plan: 'Sin cronograma',
     al_dia: 'Al día',
+    baja: 'Dado de baja',
 };
+
+/**
+ * ¿Esta fila de Clientes entra en el listado por defecto?
+ *
+ * Un cliente dado de baja no debe nada y ya no se le cobra: la tabla lo deja afuera y lo muestra
+ * en su propio filtro rápido, «Dados de baja» (pedido del usuario, 30/09/2026: «que desaparezcan
+ * de las listas y que se vean en otro filtro»). La fila igual llega del backend, porque lo que
+ * pagó es de la cartera.
+ *
+ * Si alguien pide el estado «Dado de baja» desde el filtro completo, se lo muestra aunque el
+ * filtro rápido siga en el de por defecto: pedirlo y recibir una lista vacía sería contradecirlo.
+ */
+export const entraPorDefecto = (fila, facetas) => !fila.baja
+    || (facetas?.estado || []).includes(ESTADO_CARTERA.baja);
 
 /** En qué terminó una seña. El backend manda la CLAVE en `sena_estado`; la lista muestra esto. */
 export const SENA_ESTADO = {
@@ -307,11 +322,15 @@ export const TABLAS = {
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             ...FACETAS_ACADEMIA,
         ],
+        // El filtro rápido recibe también las facetas activas (ver `entraPorDefecto`). "Activos"
+        // y no "Todos": el listado por defecto deja afuera a los dados de baja.
         chips: [
-            { key: 'todos', label: 'Todos', filtro: () => true },
+            { key: 'todos', label: 'Activos', filtro: entraPorDefecto },
             { key: 'con_deuda', label: 'Con deuda', filtro: (f) => f.deuda > 0.01 },
             { key: 'vencida', label: 'Cuota vencida', filtro: (f) => f.cuota_vencida },
-            { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 },
+            // Un dado de baja no debe, pero no terminó de pagar: no está al día.
+            { key: 'al_dia', label: 'Al día', filtro: (f) => f.deuda <= 0.01 && !f.baja },
+            { key: 'bajas', label: 'Dados de baja', filtro: (f) => !!f.baja },
             CHIP_ACADEMIA,
         ],
         agrupables: [

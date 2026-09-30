@@ -110,6 +110,13 @@ const Celda = ({ fila, col }) => {
             return (
                 <>
                     <ChipTono chip={fila.estado} />
+                    {/* Un dado de baja no tiene nada que cobrar: la bajada dice cuándo y por qué
+                        se fue, que es lo que se viene a buscar en su filtro. */}
+                    {fila.baja && (
+                        <span className="celda-sub">
+                            {[fila.baja.fecha_legible, fila.baja.motivo].filter(Boolean).join(' · ')}
+                        </span>
+                    )}
                     {fila.cuota_monto != null && (
                         <span className="celda-sub num"
                             style={fila.cuota_vencida ? { color: 'var(--error)', fontWeight: 700 } : undefined}>

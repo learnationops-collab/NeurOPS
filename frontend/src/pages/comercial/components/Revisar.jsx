@@ -175,13 +175,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     const chipActivo = chip || def.chips[0].key;
     const rapido = def.chips.find(c => c.key === chipActivo) || def.chips[0];
+    // El filtro rápido recibe también las facetas: el de por defecto de Clientes deja afuera a los
+    // dados de baja salvo que se los pida por estado (ver `entraPorDefecto` en `tablasDef.js`).
+    // Con una flecha y no pasando `rapido.filtro` directo: `Array.filter` le daría el índice.
+    const pasaRapido = (c) => (f) => c.filtro(f, facetas);
     // El orden va DESPUÉS de todo el filtrado (ver `ordenFilas.js`): no cambia qué filas entran,
     // así que los contadores y la tira de totales no se enteran.
     const ordenables = useMemo(() => columnasOrdenables(def), [def]);
     const colOrden = ordenables.find(c => c.key === orden?.key) || null;
     const visibles = useMemo(
-        () => ordenarFilas(filtradas.filter(rapido.filtro), colOrden?.orden, orden?.dir),
-        [filtradas, rapido, colOrden, orden]);
+        () => ordenarFilas(filtradas.filter(f => rapido.filtro(f, facetas)), colOrden?.orden, orden?.dir),
+        [filtradas, rapido, facetas, colOrden, orden]);
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
     // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
     // de la tabla.
@@ -268,9 +272,14 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             const vencidas = filtradas.filter(f => f.cuota_vencida);
             const vencido = vencidas.reduce((a, f) => a + (f.cuota_monto || 0), 0);
             const pagado = filtradas.reduce((a, f) => a + f.pagado, 0);
+            // Un dado de baja no debe nada pero no está "al día": se cuenta aparte. Lo que pagó sí
+            // suma en "cobrado", que es plata que entró (mismo criterio que `totales_clientes`).
+            const bajas = filtradas.filter(f => f.baja).length;
             return [
                 { label: 'clientes', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
-                    hint: `${filtradas.length - conDeuda} al día` },
+                    hint: [`${filtradas.length - conDeuda - bajas} al día`,
+                        bajas ? fmt.plural(bajas, 'de baja', 'de baja') : null]
+                        .filter(Boolean).join(' · ') },
                 // "de esta cartera" y no "a hoy" a secas: el panel Cash de Analizar muestra
                 // otro "por cobrar", atribuido por quién tiene HOY la agenda del cliente y sobre
                 // todos los saldos del sistema. Los dos son correctos y dan distinto; el rótulo
@@ -367,7 +376,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                                         setMenu(null);
                                     }}>
                                     <span className="trunc">{c.label}</span>
-                                    <span className="cuenta">{filtradas.filter(c.filtro).length}</span>
+                                    <span className="cuenta">{filtradas.filter(pasaRapido(c)).length}</span>
                                 </button>
                             ))}
                         </div>
