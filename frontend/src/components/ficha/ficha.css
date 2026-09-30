@@ -417,3 +417,9 @@
   color:var(--text-on-surface);text-decoration:none}
 .dc-shell .fi-wa:hover{color:var(--brand-secondary)}
 .dc-shell .fi-wa svg{color:var(--success);flex-shrink:0}
+
+/* ---------- Botón de ícono ----------
+   El foco del DS (`.dc-shell button:focus-visible`, 0,2,1) le pone 6 px de radio a todo botón y
+   le gana a `.dc-shell .ibtn` (0,2,0): con Tab, el círculo pasaba a un cuadrado redondeado justo
+   cuando el anillo azul lo marcaba. Mismo arreglo que `.btn` y `.pastilla`, solo en la ficha. */
+.dc-shell .fi-modal .ibtn:focus-visible{border-radius:var(--radius-pill)}
