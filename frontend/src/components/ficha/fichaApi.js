@@ -147,6 +147,15 @@ export const mensajeDeError = (err) => err?.response?.data?.message
 export const agendaParaVender = (clientId) => api
     .post(`/ficha/cliente/${clientId}/agenda-de-venta`).then(r => r.data);
 
+/**
+ * Lo mismo para alguien que el buscador no encontró: lo crea (o, si ya estaba con ese email,
+ * Instagram o teléfono, usa el suyo) y da su agenda de venta.
+ * Devuelve `{appointment_id, client_id, nombre, nuevo}`.
+ */
+export const clienteNuevoParaVender = (datos) => api
+    .post('/ficha/cliente-nuevo/agenda-de-venta', datos).then(r => r.data);
+
 export default {
-    obtenerFicha, ejecutarAccion, ejecutarConsulta, agendaParaVender, ACCIONES, mensajeDeError,
+    obtenerFicha, ejecutarAccion, ejecutarConsulta, agendaParaVender, clienteNuevoParaVender,
+    ACCIONES, mensajeDeError,
 };

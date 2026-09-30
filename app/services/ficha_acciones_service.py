@@ -1314,6 +1314,63 @@ def agenda_para_vender(client_id, usuario):
     return appt, True
 
 
+_EMAIL_VALIDO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def _cliente_con_ese_contacto(email, instagram, telefono):
+    """El cliente que ya tiene ese correo, instagram o telefono, en el orden de confianza de
+    `BookingService.create_or_update_client`: el correo identifica, el instagram y el telefono
+    se reciclan entre cuentas."""
+    from sqlalchemy import func
+
+    from app.models import Client
+
+    candidatos = [func.lower(Client.email) == email]
+    if instagram:
+        candidatos.append(func.lower(func.replace(Client.instagram, '@', '')) == instagram.lower())
+    if telefono and len(telefono) >= 8:
+        candidatos.append(Client.phone.like(f'%{telefono[-8:]}%'))
+    for condicion in candidatos:
+        cliente = Client.query.filter(condicion).first()
+        if cliente:
+            return cliente
+    return None
+
+
+def cliente_para_vender(datos, usuario):
+    """`(agenda, cliente, nuevo)` para venderle a alguien que el buscador no encontro.
+
+    `/closer/sales/new` le vendia a cualquiera, estuviera o no en el sistema: el cliente lo creaba
+    la venta misma. En la ficha la venta cuelga de una agenda, asi que el cliente tiene que existir
+    antes. Si el correo, el instagram o el telefono ya son de alguien, es ESE cliente, tal como esta:
+    el buscador no lo encontro porque se lo busco distinto, y renombrarlo con lo que se tipeo aca
+    pisaria su nombre de verdad. Si no, se crea con `BookingService.create_or_update_client`, la
+    misma funcion con la que la venta va a resolver al comprador: crearlo con otra regla dejaria la
+    agenda en un cliente y la venta en otro.
+
+    Nombre y correo son obligatorios. Sin correo el cliente nace con uno inventado (`no-email-…`),
+    la venta lo vuelve a pedir y la Academia no tiene con que darle el acceso.
+    """
+    from app.services.booking_service import BookingService
+
+    nombre = _texto(datos, 'nombre')
+    if not nombre:
+        raise ErrorDeAccion('Falta el nombre del cliente.', 'nombre')
+    email = (datos.get('email') or '').strip().lower()
+    if not _EMAIL_VALIDO.match(email):
+        raise ErrorDeAccion('Falta un email válido.', 'email')
+    instagram = (datos.get('instagram') or '').strip().lstrip('@') or None
+    telefono = (datos.get('telefono') or '').strip() or None
+
+    cliente = _cliente_con_ese_contacto(email, instagram, telefono)
+    nuevo = cliente is None
+    if nuevo:
+        cliente = BookingService.create_or_update_client(
+            {'name': nombre, 'email': email, 'instagram': instagram, 'phone': telefono})
+    appt, _ = agenda_para_vender(cliente.id, usuario)
+    return appt, cliente, nuevo
+
+
 # --- Programa del cliente ---------------------------------------------------------------------
 
 # El prefijo de programa de un `tipo_pago` ("RR - Parcial"), y el hueco que dejan los datos

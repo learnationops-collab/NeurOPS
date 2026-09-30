@@ -92,6 +92,24 @@ def agenda_de_venta(client_id):
     return jsonify({'appointment_id': appt.id, 'creada': creada}), (201 if creada else 200)
 
 
+@bp.route('/cliente-nuevo/agenda-de-venta', methods=['POST'])
+def cliente_nuevo_para_vender():
+    """Venderle a alguien que no esta en el sistema (ver `cliente_para_vender`).
+
+    Es el «¿No está? Registrar cliente nuevo» de «Declarar venta»: la pagina vieja le vendia a
+    cualquiera, este o no cargado. `nuevo` dice si hubo que crear al cliente o si ya existia con
+    ese correo, instagram o telefono (y entonces se abre el suyo). 201 si se creo.
+    """
+    if not permisos_de(current_user)['reportar']:
+        return sin_permiso('reportar')
+    try:
+        appt, cliente, nuevo = acciones.cliente_para_vender(_datos(), current_user)
+    except acciones.ErrorDeAccion as e:
+        return _error_de_accion(e)
+    return jsonify({'appointment_id': appt.id, 'client_id': cliente.id,
+                    'nombre': cliente.full_name, 'nuevo': nuevo}), (201 if nuevo else 200)
+
+
 @bp.route('/<int:appt_id>/reprogramar', methods=['POST'])
 def reprogramar(appt_id):
     return _ejecutar(appt_id, 'confirmar', acciones.reprogramar)

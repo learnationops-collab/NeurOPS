@@ -110,3 +110,71 @@ def test_setter_y_triage_no_venden(client, db, cliente, equipo, auth_headers, ro
 
     assert r.status_code == 403
     assert Appointment.query.filter_by(client_id=cliente.id).count() == 0
+
+
+# --- Un comprador que no esta en el sistema -----------------------------------------------------
+
+def nuevo(client, auth_headers, usuario, **datos):
+    return client.post('/api/ficha/cliente-nuevo/agenda-de-venta', json=datos,
+                       headers=auth_headers(usuario))
+
+
+def test_crea_al_cliente_y_su_agenda_de_venta(client, db, equipo, auth_headers):
+    r = nuevo(client, auth_headers, equipo['closer'], nombre='Bruno Díaz', email=' Bruno@Mail.com ',
+              instagram='@bruno.diaz', telefono='+54 9 11 5555 1234')
+
+    assert r.status_code == 201
+    datos = r.get_json()
+    assert datos['nuevo'] is True
+    creado = db.session.get(Client, datos['client_id'])
+    assert (creado.full_name, creado.email, creado.instagram) == ('Bruno Díaz', 'bruno@mail.com', 'bruno.diaz')
+    agenda = db.session.get(Appointment, datos['appointment_id'])
+    assert (agenda.client_id, agenda.closer_id, agenda.origin) == (creado.id, equipo['closer'].id,
+                                                                  'Venta sin agenda')
+
+
+def test_la_venta_despues_encuentra_al_mismo_cliente(client, db, equipo, auth_headers):
+    """La venta resuelve al comprador con `create_or_update_client`: tiene que caer en este."""
+    from app.services.booking_service import BookingService
+
+    datos = nuevo(client, auth_headers, equipo['closer'], nombre='Bruno Díaz',
+                  email='bruno@mail.com', instagram='bruno.diaz').get_json()
+
+    de_la_venta = BookingService.create_or_update_client(
+        {'name': 'Bruno Díaz', 'email': 'bruno@mail.com', 'instagram': 'bruno.diaz', 'phone': '5491155551234'})
+    assert de_la_venta.id == datos['client_id']
+    assert Client.query.count() == 1
+
+
+@pytest.mark.parametrize('contacto', [{'email': 'ana@x.com'}, {'email': 'otra@x.com', 'instagram': '@ana.g'}])
+def test_si_ya_existe_se_abre_el_suyo_sin_renombrarlo(client, db, cliente, equipo, auth_headers,
+                                                      contacto):
+    """El buscador no lo encontro porque se lo busco distinto: es el mismo cliente."""
+    r = nuevo(client, auth_headers, equipo['closer'], nombre='Anita', **contacto)
+
+    assert r.status_code == 200
+    datos = r.get_json()
+    assert (datos['nuevo'], datos['client_id'], datos['nombre']) == (False, cliente.id, 'Ana Gomez')
+    assert db.session.get(Client, cliente.id).full_name == 'Ana Gomez'
+    assert Client.query.count() == 1
+
+
+@pytest.mark.parametrize('datos,campo', [
+    ({'email': 'bruno@mail.com'}, 'nombre'),
+    ({'nombre': 'Bruno'}, 'email'),
+    ({'nombre': 'Bruno', 'email': 'bruno.mail.com'}, 'email'),
+])
+def test_sin_nombre_o_sin_email_valido_no_crea_nada(client, db, equipo, auth_headers, datos, campo):
+    r = nuevo(client, auth_headers, equipo['closer'], **datos)
+
+    assert r.status_code == 400
+    assert r.get_json()['campo'] == campo
+    assert (Client.query.count(), Appointment.query.count()) == (0, 0)
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_setter_y_triage_no_registran_compradores(client, db, equipo, auth_headers, rol):
+    r = nuevo(client, auth_headers, equipo[rol], nombre='Bruno', email='bruno@mail.com')
+
+    assert r.status_code == 403
+    assert Client.query.count() == 0
