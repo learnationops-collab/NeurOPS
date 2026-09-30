@@ -4,6 +4,10 @@
 // objeto de respuestas y pinta lo que el árbol dice que toca: el stepper de hitos, las 4 tarjetas
 // grandes mientras no hay resultado, una pregunta por pantalla, y al final la revisión.
 // La escritura va SIEMPRE por `onAccion`: esta pestaña nunca llama fetch/axios.
+//
+// Los botones son los de la ficha (`.btn`) y no los `.ln-btn` del design system: dentro de
+// `.dc-shell` una clase sola del DS pierde contra `.dc-shell button{background:none;border:0;
+// padding:0}` y el botón queda como texto suelto en mayúsculas (ver `PlanCuotasForm`).
 
 import { useCallback, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -213,11 +217,12 @@ export default function TabResultado({ ficha, onAccion, onRecargar, irA, puedeEd
           </motion.section>
         )}
 
+      {/* Con contorno y del alto del botón que avanza: es la otra salida del paso, no una etiqueta. */}
       {arrancado(respuestas) && (
         <div className="ln-btn-row" style={{ justifyContent: 'flex-start' }}>
           <button
             type="button"
-            className="ln-btn ln-btn--ghost ln-btn--sm"
+            className="btn btn--linea"
             onClick={() => { setError(null); setRespuestas(precargar(ficha)); }}
           >
             <RotateCcw /> Empezar de nuevo
@@ -292,10 +297,10 @@ function Pregunta({ pregunta, respuestas, contexto, cuotas, pendientes, puede, o
         </div>
       )}
 
-      <div className="ln-btn-row" style={{ justifyContent: 'flex-end', marginTop: 'var(--space-6)' }}>
+      <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
         <button
           type="button"
-          className="ln-btn ln-btn--cta"
+          className="btn btn--cta"
           disabled={!puede}
           onClick={() => onElegir(pregunta.clave, {})}
         >
@@ -424,9 +429,9 @@ function Revision({ respuestas, contexto, guardando, onGuardar, onVolverA, reduc
         </div>
       )}
 
-      {/* El widget de bugs flota abajo a la derecha: la barra deja su margen libre. */}
-      <div className="ln-btn-row" style={{ justifyContent: 'flex-end', marginTop: 'var(--space-6)', paddingRight: 168 }}>
-        <button type="button" className="ln-btn ln-btn--cta" disabled={guardando} onClick={onGuardar}>
+      {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja su margen libre. */}
+      <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
+        <button type="button" className="btn btn--cta" disabled={guardando} onClick={onGuardar}>
           {guardando ? <span className="ln-spinner" /> : <CheckCircle2 />}
           {venta ? 'Registrar la venta' : 'Guardar el resultado'}
         </button>

@@ -378,6 +378,17 @@
 .dc-shell .fi-pie-der{display:flex;flex-wrap:wrap;align-items:center;
   justify-content:flex-end;gap:var(--s3)}
 
+/* ---------- Botonera de un paso ----------
+   La fila del botón que avanza o guarda en Resultado y en los formularios de cobro. Reserva el
+   hueco del widget de bugs igual que `.fi-pie` (era un `paddingRight:168` inline) y lo suelta en
+   pantallas angostas, también como `.fi-pie`: el `.btn` no parte el texto, y en un teléfono
+   «Registrar la venta» no entraba en lo que quedaba al lado del hueco. */
+.dc-shell .fi-botonera{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;
+  gap:var(--s3);padding-right:168px}
+@media (max-width:900px){
+  .dc-shell .fi-botonera{padding-right:0}
+}
+
 /* El telefono de la cabecera abre WhatsApp: se ve como dato, no como boton, pero se
    comporta como enlace. */
 .dc-shell .fi-wa{display:inline-flex;align-items:center;gap:6px;font-weight:600;
