@@ -93,6 +93,22 @@ def test_post_call_resuelve_los_estados_derivados(estado, venta_, seguimiento, e
     assert post_call_de(estado, venta_, seguimiento) == esperado
 
 
+@pytest.mark.parametrize('venta_,sena,seguimiento,esperado', [
+    # Solo una seña: es "Seña", no "Venta".
+    (False, True, False, 'sena'),
+    # La seña dice más que el seguimiento abierto que casi siempre la acompaña.
+    (False, True, True, 'sena'),
+    # Con pago completo o split pay manda la venta, aunque la haya precedido una seña.
+    (True, True, False, 'venta'),
+])
+def test_la_sena_es_un_estado_propio_y_no_una_venta(venta_, sena, seguimiento, esperado):
+    assert post_call_de('show_up', venta_, seguimiento, con_sena=sena) == esperado
+
+
+def test_una_sena_sin_asistencia_no_cambia_el_resultado_de_la_llamada():
+    assert post_call_de('no_show', False, False, con_sena=True) == 'no_show'
+
+
 # --- Filas de agendas ---------------------------------------------------------------------------
 
 @freeze_time(HOY)
@@ -107,6 +123,63 @@ def test_una_agenda_con_venta_cruzada_queda_como_venta(db, marlon):
     assert fila['post_call']['tone'] == 'success'
     assert fila['con_venta'] is True
     assert fila['asistio'] and fila['realizada']
+
+
+@freeze_time(HOY)
+def test_un_split_pay_tambien_es_venta(db, marlon):
+    cli = cliente(db, 'Luciana Paredes', email='luciana@test.local')
+    agenda(db, marlon, cli, closer_result='Show up')
+    venta(db, mail='luciana@test.local', tipo='RR - Parcial')
+
+    assert ComercialService.agendas(DESDE, HASTA)[0]['post_call']['key'] == 'venta'
+
+
+@freeze_time(HOY)
+def test_un_lead_que_solo_dejo_sena_queda_como_sena_y_no_como_venta(db, marlon):
+    """El pedido: "no podemos tomar las señas acá". Antes cualquier fila cruzada marcaba la agenda
+    como Venta, y la seña terminaba contada como cierre en la tabla y en el close rate."""
+    cli = cliente(db, 'Kary Mendez', email='kary@test.local')
+    agenda(db, marlon, cli, closer_result='Show up', seguimiento_tipo='tomada')
+    venta(db, mail='kary@test.local', monto=100.0, tipo='RR - Seña')
+
+    fila = ComercialService.agendas(DESDE, HASTA)[0]
+
+    assert fila['post_call']['key'] == 'sena'
+    assert (fila['con_venta'], fila['con_sena']) == (False, True)
+    # Asistió, y para dejar una seña tuvo que ver la oferta.
+    assert fila['asistio'] and fila['realizada'] and fila['presento']
+
+
+@freeze_time(HOY)
+def test_la_sena_que_despues_se_completo_es_venta(db, marlon):
+    cli = cliente(db, 'Kary Mendez', email='kary@test.local')
+    agenda(db, marlon, cli, closer_result='Show up')
+    venta(db, mail='kary@test.local', monto=100.0, tipo='RR - Seña', fecha=datetime(2026, 9, 3))
+    venta(db, mail='kary@test.local', monto=1900.0, tipo='RR - Completo', fecha=datetime(2026, 9, 10))
+
+    fila = ComercialService.agendas(DESDE, HASTA)[0]
+
+    assert fila['post_call']['key'] == 'venta'
+    assert (fila['con_venta'], fila['con_sena']) == (True, True)
+
+
+@pytest.mark.parametrize('tipo,estado', [
+    ('RR - Cuota', 'Completada'),
+    ('RR - Renovación', 'Completada'),
+    ('AL - Upsell', 'Completada'),
+    # Una venta anulada no cerró nada.
+    ('AL - Completo', 'Cancelada'),
+])
+@freeze_time(HOY)
+def test_solo_pago_completo_y_split_pay_marcan_la_agenda_como_venta(db, marlon, tipo, estado):
+    cli = cliente(db, 'Tomas Ibarra', email='tomas@test.local')
+    agenda(db, marlon, cli, closer_result='Show up')
+    venta(db, mail='tomas@test.local', tipo=tipo, estado=estado)
+
+    fila = ComercialService.agendas(DESDE, HASTA)[0]
+
+    assert fila['post_call']['key'] == 'presento_no_cerro'
+    assert fila['con_venta'] is False
 
 
 @freeze_time(HOY)
@@ -204,6 +277,21 @@ def test_close_rate_se_mide_sobre_los_que_asistieron(db, marlon):
 
     assert (totales['asistieron'], totales['ventas']) == (2, 1)
     assert totales['close_rate'] == 50.0
+
+
+@freeze_time(HOY)
+def test_el_close_rate_no_cuenta_senas_y_el_close_rate_con_senas_si(db, marlon):
+    for i, tipo in enumerate(['AL - Completo', 'RR - Parcial', 'RR - Seña']):
+        cli = cliente(db, f'Asistio {i}', email=f'asistio{i}@test.local')
+        agenda(db, marlon, cli, closer_result='Show up')
+        venta(db, mail=f'asistio{i}@test.local', tipo=tipo)
+    agenda(db, marlon, cliente(db, 'Sin compra'), closer_result='Show up')
+
+    totales = ComercialService.totales_agendas(ComercialService.agendas(DESDE, HASTA))
+
+    assert (totales['asistieron'], totales['ventas'], totales['senas']) == (4, 2, 1)
+    assert totales['close_rate'] == 50.0
+    assert totales['close_rate_con_senas'] == 75.0
 
 
 @freeze_time(HOY)

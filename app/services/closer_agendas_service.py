@@ -252,6 +252,64 @@ def marcar_duplicada(appt):
 class CloserAgendasService:
 
     @staticmethod
+    def _contactos_y_ventas(appts, *extra):
+        """(emails, igs, ids, filas): los contactos de los clientes de `appts` y las filas de
+        `FinancialSale` que cruzan con alguno, leídas en lotes (email, instagram y client_id).
+
+        Cada fila trae `mail_cliente, instagram, client_id` seguidas de las columnas de `extra`.
+        Es la mitad de consulta de `_ventas_por_contacto` y de `_tipos_por_contacto`: las dos
+        cruzan con el MISMO criterio y solo cambian qué miran de cada venta."""
+        emails = {e for e in (_clean_email(a.client.email) for a in appts if a.client) if e}
+        igs = {i for i in (_clean_ig(a.client.instagram) for a in appts if a.client) if i}
+        ids = {a.client_id for a in appts if a.client_id}
+        if not emails and not igs and not ids:
+            return emails, igs, ids, []
+
+        def _chunks(values):
+            values = sorted(values)
+            for i in range(0, len(values), _IN_CHUNK):
+                yield values[i:i + _IN_CHUNK]
+
+        columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id) + extra
+        rows = []
+        for lote in _chunks(emails):
+            rows += db.session.query(*columnas).filter(func.lower(FinancialSale.mail_cliente).in_(lote)).all()
+        for lote in _chunks(igs):
+            rows += db.session.query(*columnas).filter(
+                func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
+        for lote in _chunks(ids):
+            rows += db.session.query(*columnas).filter(FinancialSale.client_id.in_(lote)).all()
+        return emails, igs, ids, rows
+
+    @staticmethod
+    def _tipos_por_contacto(appts):
+        """Qué tipos de pago tiene cada contacto: {email → set}, {instagram → set} y
+        {client_id → set} con el tipo canónico de `SheetsService.parse_tipo_pago` ('completo',
+        'parcial', 'seña', 'cuota'...; 'otro' si no se reconoce).
+
+        Existe porque "tiene una venta cruzada" no alcanza para el close rate: una seña es una
+        reserva y no un cierre, y el cruce de `_ventas_por_contacto` no mira el tipo. Solo cuentan
+        las ventas vigentes, con el mismo criterio que la tabla Ventas del dashboard comercial
+        (`estado` vacío, 'Completada' o 'Confirmada'): una venta anulada no cerró nada."""
+        from app.services.sheets_service import SheetsService
+
+        emails, igs, ids, rows = CloserAgendasService._contactos_y_ventas(
+            appts, FinancialSale.tipo_pago, FinancialSale.estado)
+        por_email, por_ig, por_id = {}, {}, {}
+        for mail, ig, client_id, tipo_pago, estado in rows:
+            if (estado or '').strip().lower() not in ('', 'completada', 'confirmada'):
+                continue
+            tipo = SheetsService.parse_tipo_pago(tipo_pago)[1] or 'otro'
+            mail_c, ig_c = _clean_email(mail), _clean_ig(ig)
+            if mail_c in emails:
+                por_email.setdefault(mail_c, set()).add(tipo)
+            if ig_c in igs:
+                por_ig.setdefault(ig_c, set()).add(tipo)
+            if client_id in ids:
+                por_id.setdefault(client_id, set()).add(tipo)
+        return por_email, por_ig, por_id
+
+    @staticmethod
     def _ventas_por_contacto(appts, identifiers):
         """Cruce en lote cita→venta con el mismo criterio que `CloserFollowUpService.
         _client_has_sale` (email o instagram del cliente contra FinancialSale, más las ventas
@@ -264,30 +322,11 @@ class CloserAgendasService:
         quien ya compró, le ata las ventas por id antes del cambio: sin él, la fila de Revisar y la
         del libro de agendas pasaban de "Venta" a "Presentó, no cerró" mientras la ficha y
         `_client_has_sale` seguían diciendo que compró."""
-        emails = {e for e in (_clean_email(a.client.email) for a in appts if a.client) if e}
-        igs = {i for i in (_clean_ig(a.client.instagram) for a in appts if a.client) if i}
-        ids = {a.client_id for a in appts if a.client_id}
+        emails, igs, ids, rows = CloserAgendasService._contactos_y_ventas(
+            appts, FinancialSale.email_vendedor)
         por_email, por_ig, por_id = {}, {}, {}
-        if not emails and not igs and not ids:
-            return por_email, por_ig, por_id
 
-        def _chunks(values):
-            values = sorted(values)
-            for i in range(0, len(values), _IN_CHUNK):
-                yield values[i:i + _IN_CHUNK]
-
-        columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.email_vendedor,
-                    FinancialSale.client_id)
-        rows = []
-        for lote in _chunks(emails):
-            rows += db.session.query(*columnas).filter(func.lower(FinancialSale.mail_cliente).in_(lote)).all()
-        for lote in _chunks(igs):
-            rows += db.session.query(*columnas).filter(
-                func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
-        for lote in _chunks(ids):
-            rows += db.session.query(*columnas).filter(FinancialSale.client_id.in_(lote)).all()
-
-        for mail, ig, vendedor, client_id in rows:
+        for mail, ig, client_id, vendedor in rows:
             propia = (vendedor or '').strip().lower() in identifiers
             mail_c, ig_c = _clean_email(mail), _clean_ig(ig)
             if mail_c in emails:

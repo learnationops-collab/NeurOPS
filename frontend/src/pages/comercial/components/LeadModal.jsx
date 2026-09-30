@@ -112,7 +112,7 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
         : fila.post_call || fila.estado || fila.tipo_pago;
 
     const derivado = esAgenda
-        && ['venta', 'seguimiento', 'presento_no_cerro'].includes(fila.post_call.key);
+        && ['venta', 'sena', 'seguimiento', 'presento_no_cerro'].includes(fila.post_call.key);
 
     return (
         <div className="scrim"
@@ -226,15 +226,16 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                     </div>
                                 ))}
 
-                                {/* "Venta", "Seguimiento" y "Presentó, no cerró" NO son editables:
-                                    son estados derivados (una venta cruzada por contacto, un
-                                    seguimiento abierto) y fijarlos a mano marcaría una venta que no
-                                    existe en la contabilidad. Se explica en línea para que nadie los
-                                    busque en la lista de arriba. */}
+                                {/* "Venta", "Seña", "Seguimiento" y "Presentó, no cerró" NO son
+                                    editables: son estados derivados (un pago cruzado por contacto,
+                                    un seguimiento abierto) y fijarlos a mano marcaría una venta que
+                                    no existe en la contabilidad. Se explica en línea para que nadie
+                                    los busque en la lista de arriba. */}
                                 {derivado && (
                                     <p className="t-cap mut40">
-                                        «{fila.post_call.label}» sale de los datos, no de un campo: una
-                                        venta cruzada con este contacto, o un seguimiento abierto. Se
+                                        «{fila.post_call.label}» sale de los datos, no de un campo: un
+                                        pago cruzado con este contacto (pago completo o split pay es
+                                        Venta; solo una seña es Seña), o un seguimiento abierto. Se
                                         corrige donde se genera.
                                     </p>
                                 )}

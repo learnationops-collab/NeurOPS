@@ -23,7 +23,10 @@ Definiciones (una sola vez, acá)
                   concluidas"), para que el show up de este tablero y el de "Ver mis datos" den
                   el mismo número.
   · `show_up`     asistieron / realizadas.
-  · `close_rate`  ventas / asistieron.
+  · `close_rate`  ventas / asistieron. "Venta" es una agenda cuyo lead tiene un pago completo o
+                  un split pay (`REAL_SALE_TIPOS`). La seña NO: esa agenda queda como "Seña" y
+                  solo suma en las tasas "con señas" (`close_rate_con_senas`, ver
+                  `closer_service.matriz_de_cierres`).
   · `cash`        suma de `FinancialSale.monto` del período (incluye cuotas y señas: es cash
                   cobrado, no ventas nuevas).
   · `ventas`      solo las filas cuyo tipo canónico es una venta de verdad (completo/parcial);
@@ -75,7 +78,8 @@ PRE_CALL = [
 #   · "Venta" no es un estado de la agenda sino la existencia de una `FinancialSale` cruzada por
 #     contacto. Ponerlo a mano marcaría una venta que no existe en la contabilidad.
 #   · "Seguimiento" lo escribe el flujo de seguimientos del closer, con su tipo y su fecha.
-# Los tres se siguen MOSTRANDO (son estados derivados, ver `post_call_de`), solo que se corrigen
+#   · "Seña" es lo mismo que "Venta" pero con una seña como único pago: tampoco es una columna.
+# Todos se siguen MOSTRANDO (son estados derivados, ver `post_call_de`), solo que se corrigen
 # donde se generan.
 POST_CALL = [
     {'key': 'pendiente', 'label': 'Pendiente', 'tone': 'idle', 'editable': True},
@@ -85,6 +89,9 @@ POST_CALL = [
     {'key': 'cancelo', 'label': 'Canceló', 'tone': 'idle', 'editable': True},
     {'key': 'segunda_llamada', 'label': '2da llamada', 'tone': 'info', 'editable': True},
     {'key': 'venta', 'label': 'Venta', 'tone': 'success', 'editable': False},
+    # El lead dejó una seña y todavía no tiene un pago completo ni un split pay. No es "Venta":
+    # si lo fuera, la tabla, los totales y el close rate contarían una reserva como un cierre.
+    {'key': 'sena', 'label': 'Seña', 'tone': 'warning', 'editable': False},
     {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning', 'editable': False},
     {'key': 'presento_no_cerro', 'label': 'Presentó, no cerró', 'tone': 'warning', 'editable': False},
     {'key': 'otro', 'label': 'Otro estado', 'tone': 'idle', 'editable': False},
@@ -143,7 +150,10 @@ POST_CALL_A_CLOSER_RESULT = {'pendiente': 'Pendiente', 'asistio': 'Show up', 'no
                              'reagendo': 'Reagendado', 'cancelo': 'Cancelado', 'segunda_llamada': '2da call'}
 
 # Post call que cuentan como "la llamada ocurrió y el lead estaba del otro lado".
-ASISTIO = ('asistio', 'venta', 'seguimiento', 'presento_no_cerro', 'segunda_llamada')
+ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro', 'segunda_llamada')
+# Post call que implican que la oferta se presentó aunque nadie haya tildado el campo: no se puede
+# comprar ni dejar una seña sin haber visto el precio.
+PRESENTO = ('venta', 'sena', 'presento_no_cerro')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
 
@@ -231,16 +241,22 @@ def pre_call_de(appt):
     return 'sin_confirmar'
 
 
-def post_call_de(estado, con_venta, con_seguimiento):
+def post_call_de(estado, con_venta, con_seguimiento, con_sena=False):
     """Resultado de la llamada. `estado` es el del libro de agendas (`derivar_estado`).
 
-    Los tres estados derivados salen de acá y no de una columna: una agenda con asistencia es
-    "Venta" si el lead tiene una venta cruzada, "Seguimiento" si quedó un seguimiento abierto, y
-    si no, "Presentó, no cerró" — que es lo que efectivamente pasó cuando alguien asistió y no
-    hay ni venta ni seguimiento."""
+    Los estados derivados salen de acá y no de una columna: una agenda con asistencia es "Venta"
+    si el lead tiene un pago completo o un split pay cruzado, "Seña" si lo único que dejó es una
+    seña, "Seguimiento" si quedó un seguimiento abierto, y si no, "Presentó, no cerró" — que es
+    lo que efectivamente pasó cuando alguien asistió y no hay ni venta ni seguimiento.
+
+    La seña va antes que el seguimiento porque dice más: quien dejó una seña casi siempre tiene
+    además un seguimiento abierto (para completar el pago), y "Seguimiento" escondería que ya
+    hubo un compromiso de compra."""
     if estado == 'show_up':
         if con_venta:
             return 'venta'
+        if con_sena:
+            return 'sena'
         if con_seguimiento:
             return 'seguimiento'
         return 'presento_no_cerro'
@@ -326,9 +342,12 @@ class ComercialService:
 
         # Cruce agenda -> venta en una sola pasada (mismo criterio que el libro de agendas del
         # closer: email o instagram del cliente contra FinancialSale, más las ventas atadas al
-        # cliente por id). El segundo argumento son los identificadores para marcar la venta como
-        # "propia", que acá no hace falta.
-        ventas_email, ventas_ig, ventas_id = CloserAgendasService._ventas_por_contacto(appts, set())
+        # cliente por id), pero sabiendo el TIPO de cada pago: "Venta" es solo un pago completo o
+        # un split pay. Antes cualquier fila cruzada la marcaba como venta, así que un lead que
+        # solo había dejado una seña (o una cuota, o una renovación) contaba como cierre en la
+        # tabla, en los totales y en el close rate.
+        from app.services.closer_service import REAL_SALE_TIPOS
+        tipos_email, tipos_ig, tipos_id = CloserAgendasService._tipos_por_contacto(appts)
 
         hoy = date.today()
         ahora = datetime.utcnow()
@@ -337,11 +356,13 @@ class ComercialService:
             cliente = a.client
             mail = _limpiar_email(cliente.email) if cliente else None
             ig = _limpiar_ig(cliente.instagram) if cliente else None
-            con_venta = (mail in ventas_email) or (ig in ventas_ig) or (a.client_id in ventas_id)
+            tipos = tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
+            con_venta = any(t in REAL_SALE_TIPOS for t in tipos)
+            con_sena = 'seña' in tipos
             con_seguimiento = bool(a.seguimiento_tipo or a.fecha_seguimiento) and not a.seguimiento_realizado
 
             estado = derivar_estado(a, ahora)
-            post = post_call_de(estado, con_venta, con_seguimiento)
+            post = post_call_de(estado, con_venta, con_seguimiento, con_sena=con_sena)
             pre = pre_call_de(a)
 
             # Días sin reportar: solo para una llamada que ya pasó y sigue sin resultado.
@@ -369,9 +390,12 @@ class ComercialService:
                 'estado_libro': estado,
                 'asistio': post in ASISTIO,
                 'realizada': post in REALIZADAS,
-                'presento': post in ('venta', 'presento_no_cerro') or bool(a.offer_presented),
+                'presento': post in PRESENTO or bool(a.offer_presented),
                 'retraso_dias': retraso,
+                # `con_venta`: pago completo o split pay. `con_sena`: dejó una seña (tenga o no,
+                # además, una venta: la seña que después se completó sigue siendo una seña).
                 'con_venta': con_venta,
+                'con_sena': con_sena,
             })
         return filas
 
@@ -543,6 +567,9 @@ class ComercialService:
         realizadas = [f for f in filas if f['realizada']]
         asistieron = [f for f in filas if f['asistio']]
         ventas = [f for f in filas if f['post_call']['key'] == 'venta']
+        # Asistieron y dejaron una seña, sin pago completo ni split pay. No son ventas: entran
+        # solo en `close_rate_con_senas`.
+        senas = [f for f in filas if f['post_call']['key'] == 'sena']
         seguimiento = [f for f in filas if f['post_call']['key'] in ('seguimiento', 'presento_no_cerro')]
         no_show = [f for f in filas if f['post_call']['key'] == 'no_show']
         pendientes = [f for f in filas if f['post_call']['key'] == 'pendiente']
@@ -555,6 +582,8 @@ class ComercialService:
             'show_up': pct(len(asistieron), len(realizadas)),
             'ventas': len(ventas),
             'close_rate': pct(len(ventas), len(asistieron)),
+            'senas': len(senas),
+            'close_rate_con_senas': pct(len(ventas) + len(senas), len(asistieron)),
             'seguimiento': len(seguimiento),
             'no_show': len(no_show),
             'no_show_pct': pct(len(no_show), len(realizadas)),
