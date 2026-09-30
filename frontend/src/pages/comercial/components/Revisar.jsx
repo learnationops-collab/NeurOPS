@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownUp, ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
+import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
@@ -9,6 +9,7 @@ import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
+import MenuOrdenar from './MenuOrdenar';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
 
@@ -176,6 +177,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         () => ordenarFilas(filtradas.filter(rapido.filtro), colOrden?.orden, orden?.dir),
         [filtradas, rapido, colOrden, orden]);
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
+    // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
+    // de la tabla.
+    const elegirOrden = (col) => {
+        setMenu(null);
+        setOrden(o => (col ? { key: col.key, dir: o?.key === col.key && o.dir === 'desc' ? 'asc' : 'desc' }
+            : null));
+    };
 
     const activas = def.facetas.reduce((a, f) => a + (facetas[f.key]?.length || 0), 0);
     const plantilla = def.cols.map(c => `minmax(0,${c.width})`).join(' ');
@@ -394,47 +402,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     </div>
                 )}
 
-                {/* Ordenar: el mismo orden que los encabezados de la tabla, pero también para las
-                    tarjetas y para el celular, donde el encabezado no se ve. Elegir la columna que
-                    ya ordena invierte la dirección; "Orden de la tabla" vuelve al del backend. */}
-                {ordenables.length > 0 && (
-                    <div style={{ position: 'relative' }}>
-                        <button type="button" className={`pastilla${colOrden ? ' pastilla--on' : ''}`}
-                            aria-expanded={menu === 'ordenar'} aria-haspopup="menu"
-                            onClick={() => setMenu(m => (m === 'ordenar' ? null : 'ordenar'))}>
-                            <ArrowDownUp size={15} />
-                            {colOrden
-                                ? `${colOrden.ordenLabel || colOrden.header} ${orden.dir === 'desc' ? '↓' : '↑'}`
-                                : 'Ordenar'}
-                            <ChevronDown size={14} />
-                        </button>
-                        {menu === 'ordenar' && (
-                            <div className="menu" role="menu" aria-label="Ordenar por">
-                                <button type="button" className="menu-item" role="menuitemradio"
-                                    aria-checked={!colOrden}
-                                    onClick={() => { setOrden(null); setMenu(null); }}>
-                                    <span className="trunc">Orden de la tabla</span>
-                                </button>
-                                {ordenables.map(c => (
-                                    <button key={c.key} type="button" className="menu-item"
-                                        role="menuitemradio" aria-checked={orden?.key === c.key}
-                                        onClick={() => {
-                                            setOrden(o => ({ key: c.key,
-                                                dir: o?.key === c.key && o.dir === 'desc' ? 'asc' : 'desc' }));
-                                            setMenu(null);
-                                        }}>
-                                        <span className="trunc">{c.ordenLabel || c.header}</span>
-                                        {orden?.key === c.key && (
-                                            <span className="cuenta">
-                                                {orden.dir === 'desc' ? 'mayor a menor' : 'menor a mayor'}
-                                            </span>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                <MenuOrdenar ordenables={ordenables} orden={orden} abierto={menu === 'ordenar'}
+                    onAlternar={() => setMenu(m => (m === 'ordenar' ? null : 'ordenar'))}
+                    onElegir={elegirOrden} />
 
                 {/* Lista o tarjetas. Dos posiciones, no un menú: es una sola decisión. */}
                 <div className="seg" role="group" aria-label="Forma de ver la lista">
