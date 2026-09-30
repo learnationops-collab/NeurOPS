@@ -32,6 +32,15 @@ class Client(db.Model):
     academy_product_slug = db.Column(db.String(100), nullable=True)
     academy_expires_at = db.Column(db.DateTime, nullable=True)
 
+    # La baja del cliente (ver `app/services/baja_service.py`): se fue del programa. Lo que pagó
+    # sigue contando como cobrado, pero ya no debe nada ni entra en ninguna lista de cobro. Vive
+    # en el cliente y no en sus inscripciones ni en sus cuotas porque la deuda y el cobro son por
+    # persona (`Client.total_amount` es UN total por cliente), y porque así revertirla es borrar
+    # la marca: nada de lo que había se tocó.
+    baja_at = db.Column(db.DateTime, nullable=True, index=True)
+    baja_motivo = db.Column(db.String(255), nullable=True)
+    baja_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
