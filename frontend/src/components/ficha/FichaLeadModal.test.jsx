@@ -68,7 +68,7 @@ describe('lectura', () => {
         // Era la página /closer/sales/new: el mazo abre la ficha del cliente elegido para vender.
         await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
         expect(activa()).toBe('Resultado');
-        expect(await screen.findByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: '¿Quién compró?' }, PRIMERA_CARGA)).toBeInTheDocument();
     });
 
     it('la segunda ficha abierta en Resultado no vuelve a mostrar el esqueleto', async () => {
@@ -88,7 +88,7 @@ describe('lectura', () => {
         // reporta el que se acaba de hacer.
         await abrir(fichaConDeuda, { pestanaInicial: 'resultado', seguimiento: 'cobro' });
         expect(activa()).toBe('Resultado');
-        expect(await screen.findByRole('heading', { name: '¿Qué pasó con el cobro?' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: '¿Qué pasó con el cobro?' }, PRIMERA_CARGA)).toBeInTheDocument();
     });
 
     it('una pestaña pedida que este lead no tiene no deja el panel en blanco', async () => {
