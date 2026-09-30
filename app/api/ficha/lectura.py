@@ -58,6 +58,37 @@ def fulfillment(appt_id):
     return jsonify(ficha_fulfillment_service.fulfillment(client, ventas)), 200
 
 
+@bp.route('/<int:appt_id>/estado-venta', methods=['GET'])
+def estado_venta(appt_id):
+    """Como viene pagando este cliente el programa que se le esta vendiendo (`?programa=RR`).
+
+    Es lo que el wizard de venta del mazo pedia a `/closer/sales/client-state`: cuanto pago, cuanto
+    le falta, cuantas ventas tiene en ese programa y que tipos de pago siguen la secuencia
+    (`allowed_types`, para AVISAR, no para bloquear). No viaja en `GET /ficha/lead` porque depende
+    del programa que el closer elige en medio de la venta, y el de la ficha es el que ya tiene.
+
+    Esa ruta es `/closer/*` y la direccion comercial recibe 403 ahi; por eso esta puerta, con el
+    permiso de declarar la venta. Tampoco crea un cliente al consultar, como hace aquella cuando no
+    le llega un id: aca la agenda ya tiene el suyo.
+    """
+    from app.services.sales_consistency_service import SalesConsistencyService
+
+    appt, client = ficha_lead_service.resolver_lead(appointment_id=appt_id)
+    if not appt:
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    if not ficha_lead_service.permisos_de(current_user, appt)['reportar']:
+        return sin_permiso('reportar')
+
+    programa = (request.args.get('programa') or '').strip().upper()
+    if programa not in SalesConsistencyService.PROGRAM_DEFAULT_TOTALS:
+        return jsonify({'message': f'Programa desconocido: «{programa}».'}), 400
+    client_id = client.id if client else None
+    estado = SalesConsistencyService.get_client_payment_state(client_id, programa)
+    estado['allowed_types'] = SalesConsistencyService.get_allowed_types(client_id, programa)
+    estado['client_id'] = client_id
+    return jsonify(estado), 200
+
+
 @bp.route('/vocabulario', methods=['GET'])
 def vocabulario():
     """Los vocabularios sueltos, sin un lead.
