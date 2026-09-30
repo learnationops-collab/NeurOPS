@@ -108,7 +108,9 @@ export default function TabFulfillment({ ficha, onConsultar }) {
         <div className="ln-alert ln-alert--error" role="alert">
           <span className="ln-alert-ico"><AlertTriangle /></span>
           <span className="ln-alert-body"><span className="ln-alert-title">{error}</span></span>
-          <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" onClick={pedir}>
+          {/* El `.btn` de la ficha: el `.ln-btn` del DS perdía el borde contra `.dc-shell button`
+              y se leía como texto suelto. Chico porque vive dentro del aviso, al lado de una línea. */}
+          <button type="button" className="btn btn--linea btn--sm" onClick={pedir}>
             <RefreshCw />
             Reintentar
           </button>
