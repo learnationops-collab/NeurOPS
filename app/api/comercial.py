@@ -216,6 +216,21 @@ def cliente(client_id):
     return jsonify(ficha), 200
 
 
+@bp.route('/academia/sincronizar', methods=['POST'])
+def sincronizar_academia():
+    """"Actualizar datos de la Academia" en Revisar: corre UN lote de fotos, el mismo del cron.
+
+    Solo la direccion. Cada lote gasta peticiones de un limite que la Academia comparte con
+    produccion y con la ficha de todos los closers: un boton al alcance de todo el equipo, apretado
+    por varios a la vez, dejaria sin Academia a la ficha. Closers y setters ven los datos igual; la
+    frescura la sostiene el cron.
+    """
+    if not _solo_direccion():
+        return jsonify({'message': 'Forbidden'}), 403
+    from app.services import academy_snapshot_service
+    return jsonify(academy_snapshot_service.sincronizar_lote()), 200
+
+
 @bp.route('/agendas/<int:agenda_id>', methods=['DELETE'])
 def eliminar_agenda(agenda_id):
     """Borra una agenda desde el libro de la dirección comercial.

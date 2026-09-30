@@ -113,6 +113,10 @@ def create_app(config_class=Config):
     from app.api.ficha import bp as ficha_api_bp
     app.register_blueprint(ficha_api_bp, url_prefix='/api/ficha')
 
+    # Cron de las fotos de la Academia: sin sesion, con CRON_SECRET (ver app/api/academia.py).
+    from app.api.academia import bp as academia_api_bp
+    app.register_blueprint(academia_api_bp, url_prefix='/api/academia')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n

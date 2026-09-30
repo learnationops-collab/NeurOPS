@@ -167,12 +167,13 @@ def test_compara_en_tiempo_constante_sobre_bytes(ruta_de_cron, monkeypatch):
 CRONS = {
     'sheets': '/api/sheets/cron-sync',
     'seguimientos': '/api/closer/followups/cron/send-reminders',
+    'academia': '/api/academia/cron/sincronizar',
 }
 
 
 @pytest.fixture(params=sorted(CRONS))
 def cron_real(request, monkeypatch):
-    """(url, lista de ejecuciones reales) de un cron con lo externo (Sheets, alertas, WhatsApp) simulado."""
+    """(url, lista de ejecuciones reales) de un cron con lo externo (Sheets, alertas, WhatsApp, Academia) simulado."""
     ejecuciones = []
     if request.param == 'sheets':
         from app.services.alert_service import AlertService
@@ -184,6 +185,14 @@ def cron_real(request, monkeypatch):
 
         monkeypatch.setattr(SheetsService, 'sync_from_sheets', staticmethod(sincronizar))
         monkeypatch.setattr(AlertService, 'evaluate_rules', staticmethod(lambda: 0))
+    elif request.param == 'academia':
+        from app.services import academy_snapshot_service
+
+        def lote(presupuesto=None):
+            ejecuciones.append(presupuesto)
+            return {'procesados': 0}
+
+        monkeypatch.setattr(academy_snapshot_service, 'sincronizar_lote', lote)
     else:
         from app.services.closer_followup_service import CloserFollowUpService
 
@@ -195,7 +204,7 @@ def cron_real(request, monkeypatch):
     return CRONS[request.param], ejecuciones
 
 
-def test_los_dos_crons_reales_quedan_cerrados_sin_CRON_SECRET(client, cron_real):
+def test_los_crons_reales_quedan_cerrados_sin_CRON_SECRET(client, cron_real):
     url, ejecuciones = cron_real
 
     # Antes: sin la variable valia un literal del repositorio y cualquiera que lo conociera pasaba.

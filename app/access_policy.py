@@ -155,6 +155,12 @@ POLITICA = {
 
     # --- Workshops ------------------------------------------------------------------------------------
     ('GET', '/api/workshop/stats/summary'): _p(OPERATOR, MARKETING),
+
+    # --- Dashboard comercial: fotos de la Academia -------------------------------------------------
+    # Gasta peticiones del limite que la Academia comparte con produccion y con la ficha: solo la
+    # direccion (el blueprint lo comprueba tambien en la vista). El cron equivalente,
+    # GET /api/academia/cron/sincronizar, no va aca: se identifica con CRON_SECRET.
+    ('POST', '/api/comercial/academia/sincronizar'): _p(COMERCIAL),
 }
 
 
