@@ -204,7 +204,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // facetas y totales siguen leyendo `def`, que es la misma para los dos juegos.
     const defVista = useMemo(() => (conAcademia ? { ...def, cols: def.colsAcademia } : def),
         [def, conAcademia]);
-    const plantilla = defVista.cols.map(c => `minmax(0,${c.width})`).join(' ');
+    // `min` (px) es el ancho del que una columna no baja (ver `COLS_ACADEMIA`): la que no lo trae
+    // puede angostarse hasta 0 y corta su texto con «…».
+    const plantilla = defVista.cols.map(c => `minmax(${c.min || 0}px,${c.width})`).join(' ');
     // Quien ve solo sus propias filas no puede agruparse por sí mismo: sería un grupo único con
     // todo adentro. La dirección conserva todas las dimensiones (ver `DIMENSION_PROPIA`).
     const agrupables = useMemo(

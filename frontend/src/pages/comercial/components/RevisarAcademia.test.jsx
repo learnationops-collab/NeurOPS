@@ -63,10 +63,34 @@ describe('Revisar · la Academia en Clientes', () => {
         expect(within(fila).getByText('11/12')).toBeInTheDocument();
         expect(within(fila).getByText('67')).toBeInTheDocument();
         expect(within(fila).getByText('5 días')).toBeInTheDocument();
-        expect(within(fila).getByText('hace 3 h')).toBeInTheDocument();
+        // De cuándo es el dato va debajo del estado (la columna «Datos de» no entraba a ~1000px).
+        expect(within(fila).getByText('actividad hace 3 h'))
+            .toHaveAttribute('title', 'Datos de la Academia leído hace 3 h.');
         // La línea de frescura cuenta la tabla entera: cuántos tienen datos y el más viejo.
         expect(screen.getByText(/de 4 clientes con datos de la Academia/)).toBeInTheDocument();
         expect(screen.getByText(/el dato más viejo es de hace 1 día/)).toBeInTheDocument();
+    });
+
+    it('un dato viejo avisa debajo del estado, aunque se sepa la última actividad', () => {
+        // La actividad se deduce de los datos: si hace días que no se renuevan, lo que hay que ver
+        // primero es eso, en color de aviso.
+        const viejo = cliente(5, academia('activo', { horas: 1, ultima_actividad: '2026-09-20T12:00:00Z',
+            sincronizado: '2026-09-24T12:00:00Z' }));
+        render(<Revisar {...props({ datos: { filas: [viejo] } })} />);
+        pasarAAcademia();
+
+        const sub = within(screen.getByRole('button', { name: 'Abrir Alumno 5' })).getByText('leído hace 6 días');
+        expect(sub.style.color).toBe('var(--warning)');
+    });
+
+    it('la tabla de la Academia no tiene columna «Datos de» y sus columnas llevan ancho mínimo', () => {
+        const { container } = render(<Revisar {...props()} />);
+        pasarAAcademia();
+
+        const cabecera = container.querySelector('.tabla-cab');
+        expect(cabecera.textContent).not.toMatch(/Datos de/);
+        // Un rótulo con su «i» no puede quedar en «H…»: la columna tiene un piso en px.
+        expect(cabecera.style.getPropertyValue('--cols')).toMatch(/minmax\(68px,0\.65fr\)/);
     });
 
     it('la faceta "Actividad en la Academia" filtra, y la tira de totales cierra con lo filtrado', () => {

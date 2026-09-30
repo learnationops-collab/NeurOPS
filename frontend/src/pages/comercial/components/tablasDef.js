@@ -151,7 +151,8 @@ export const duplicadasDe = (filas) => {
 // Columnas que están en los dos juegos de columnas de su tabla: el de siempre y el de la Academia.
 const COL_FECHA_VENTA = { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha,
     ordenLabel: 'Fecha de la venta' };
-const COL_VER = { key: 'ver', header: '', width: '0.4fr' };
+// `min`: el botón de la flecha mide 30px y no se puede cortar.
+const COL_VER = { key: 'ver', header: '', width: '0.4fr', min: 32 };
 
 // Definición de cada tabla: columnas, facetas y filtros rápidos. Una sola fuente para las cinco.
 //
@@ -167,9 +168,9 @@ export const TABLAS = {
         ayuda: 'Las llamadas agendadas del período. Tocá una fila para abrir el lead.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
-            { key: 'cliente', header: 'Cliente', width: '1.8fr' },
+            { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'fuente', header: 'Fuente', width: '1fr' },
-            { key: 'closer', header: 'Closer', width: '0.8fr' },
+            { key: 'closer', header: 'Closer', width: '1fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
             { key: 'post_call', header: 'Post call', width: '1.4fr' },
             { key: 'ver', header: '', width: '0.4fr' },
@@ -300,7 +301,7 @@ export const TABLAS = {
         cols: [
             { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'programa', header: 'Programa', width: '1.2fr' },
-            { key: 'closer', header: 'Closer', width: '0.8fr' },
+            { key: 'closer', header: 'Closer', width: '1fr' },
             { key: 'pagado', header: 'Pagado', width: '0.8fr', orden: (f) => f.pagado, ordenLabel: 'Pagado' },
             { key: 'deuda', header: 'Debe', width: '0.8fr', orden: (f) => f.deuda, ordenLabel: 'Deuda' },
             { key: 'cuota', header: 'Próxima cuota', width: '1.3fr', orden: (f) => f.cuota_fecha,
@@ -311,8 +312,10 @@ export const TABLAS = {
         // en la Academia. Mismas filas, otras columnas (ver `academia.js`).
         vistaBase: 'Cobro',
         colsAcademia: [
+            // Sin `min`: se reparten lo que dejan las columnas de la Academia y cortan con «…» (el
+            // nombre entero queda en el `title`). Con 0.8fr un closer de dos palabras no entraba.
             { key: 'cliente', header: 'Cliente', width: '1.6fr' },
-            { key: 'closer', header: 'Closer', width: '0.8fr' },
+            { key: 'closer', header: 'Closer', width: '1.1fr' },
             ...COLS_ACADEMIA,
             COL_VER,
         ],

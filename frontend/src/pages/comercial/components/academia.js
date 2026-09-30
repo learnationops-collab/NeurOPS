@@ -91,22 +91,27 @@ export const AYUDA_ACADEMIA = {
         + 'porque la Academia admite 60 consultas por minuto para todo el equipo.',
 };
 
-/** Las columnas de la Academia. `academia: true` es lo que hace que ordenar por una muestre sus columnas. */
+/** Las columnas de la Academia. `academia: true` es lo que hace que ordenar por una muestre sus columnas.
+ *
+ * `min` es el ancho en px por debajo del cual la columna no se angosta: su rótulo con la «i» de
+ * ayuda (y el chip más largo, en la de Academia). Sin él, a ~1000px de tabla los rótulos quedaban
+ * en «H…» o se montaban sobre la columna de al lado. Cliente y closer no llevan mínimo: se reparten
+ * lo que sobra y cortan con «…». De cuándo es cada dato va debajo del chip de Academia y no en una
+ * columna propia: con ella las nueve columnas no entraban a ese ancho. */
 export const COLS_ACADEMIA = [
-    { key: 'academia', header: 'Academia', width: '1.3fr', academia: true, ayuda: AYUDA_ACADEMIA.actividad,
+    { key: 'academia', header: 'Academia', width: '1.2fr', min: 112, academia: true,
+        ayuda: `${AYUDA_ACADEMIA.actividad} Debajo del estado va de cuándo es el dato: ${AYUDA_ACADEMIA.frescura}`,
         orden: (f) => marca(f.academia?.ultima_actividad), ordenLabel: 'Última actividad en la Academia' },
-    { key: 'ac_horas', header: 'Horas', width: '0.7fr', academia: true, ayuda: AYUDA_ACADEMIA.horas,
+    { key: 'ac_horas', header: 'Horas', width: '0.65fr', min: 68, academia: true, ayuda: AYUDA_ACADEMIA.horas,
         orden: (f) => f.academia?.horas, ordenLabel: 'Horas de estudio' },
-    { key: 'ac_progreso', header: 'Progreso', width: '0.8fr', academia: true, ayuda: AYUDA_ACADEMIA.progreso,
-        orden: (f) => f.academia?.progreso, ordenLabel: 'Progreso en la Academia' },
-    { key: 'ac_lecciones', header: 'Lecciones', width: '0.8fr', academia: true, ayuda: AYUDA_ACADEMIA.lecciones,
-        orden: (f) => f.academia?.lecciones, ordenLabel: 'Lecciones completadas' },
-    { key: 'ac_ejecuciones', header: 'Ejecuciones', width: '0.9fr', academia: true,
+    { key: 'ac_progreso', header: 'Progreso', width: '0.85fr', min: 94, academia: true,
+        ayuda: AYUDA_ACADEMIA.progreso, orden: (f) => f.academia?.progreso, ordenLabel: 'Progreso en la Academia' },
+    { key: 'ac_lecciones', header: 'Lecciones', width: '0.9fr', min: 96, academia: true,
+        ayuda: AYUDA_ACADEMIA.lecciones, orden: (f) => f.academia?.lecciones, ordenLabel: 'Lecciones completadas' },
+    { key: 'ac_ejecuciones', header: 'Ejecuciones', width: '1.05fr', min: 112, academia: true,
         ayuda: AYUDA_ACADEMIA.ejecuciones, orden: (f) => f.academia?.ejecuciones, ordenLabel: 'Ejecuciones entregadas' },
-    { key: 'ac_racha', header: 'Racha', width: '0.7fr', academia: true, ayuda: AYUDA_ACADEMIA.racha,
+    { key: 'ac_racha', header: 'Racha', width: '0.65fr', min: 68, academia: true, ayuda: AYUDA_ACADEMIA.racha,
         orden: (f) => f.academia?.racha, ordenLabel: 'Racha de estudio' },
-    { key: 'ac_frescura', header: 'Datos de', width: '0.8fr', academia: true, ayuda: AYUDA_ACADEMIA.frescura,
-        orden: (f) => marca(f.academia?.sincronizado), ordenLabel: 'Fecha de los datos de la Academia' },
 ];
 
 export const FACETAS_ACADEMIA = [
