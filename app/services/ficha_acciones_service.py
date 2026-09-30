@@ -1498,7 +1498,9 @@ def baja(appt, datos, usuario):
     """
     from app.services import baja_service
 
-    motivo = _texto(datos, 'motivo', obligatorio=True)
+    # Se guarda la etiqueta y no la clave del desplegable: es lo que se lee en el hilo, en el
+    # seguimiento y en la cabecera de la ficha.
+    motivo = baja_service.motivo_legible(_texto(datos, 'motivo', obligatorio=True))
     if appt.client:
         baja_service.dar_de_baja(appt.client, motivo, usuario)
     aplicar_cambios(appt, {

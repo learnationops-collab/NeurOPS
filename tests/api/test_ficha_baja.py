@@ -72,6 +72,36 @@ def test_la_baja_marca_al_cliente_y_la_deuda_pasa_a_cero(client, db, cliente, eq
     assert ClientComment.query.filter(ClientComment.text.like('Cliente dado de baja%')).count() == 1
 
 
+def test_el_motivo_se_guarda_con_su_etiqueta_y_no_con_la_clave(client, db, cliente, equipo,
+                                                                auth_headers):
+    # El desplegable manda la CLAVE de un motivo de fábrica: es lo que llegaba crudo a la cabecera
+    # de la ficha («no_puede_pagar») y al hilo del cliente.
+    r = _dar_de_baja(client, cliente, equipo['closer'], auth_headers, motivo='no_puede_pagar')
+
+    assert r.get_json()['baja']['motivo'] == 'No puede pagar'
+    assert db.session.get(Client, cliente.id).baja_motivo == 'No puede pagar'
+    assert _agenda(cliente).seguimiento_sub == 'Baja: No puede pagar'
+    assert ClientComment.query.filter(ClientComment.text.like('%Motivo: No puede pagar.')).count() == 1
+
+
+def test_un_motivo_escrito_a_mano_queda_tal_cual(client, db, cliente, equipo, auth_headers):
+    # Los de «Otros» viajan como texto: no hay clave que traducir.
+    r = _dar_de_baja(client, cliente, equipo['closer'], auth_headers, motivo='Se mudó a Europa')
+
+    assert r.get_json()['baja']['motivo'] == 'Se mudó a Europa'
+
+
+def test_una_baja_guardada_con_la_clave_se_lee_con_su_etiqueta(db, cliente):
+    # Las que recupera la migración traen la clave del `seguimiento_sub` viejo.
+    from app.services import baja_service
+
+    c = db.session.get(Client, cliente.id)
+    c.baja_at, c.baja_motivo = datetime(2026, 9, 1), 'posterga_examen'
+    db.session.commit()
+
+    assert baja_service.descriptor(c)['motivo'] == 'Posterga el examen'
+
+
 def test_lo_cobrado_no_se_toca(client, db, cliente, equipo, auth_headers):
     _dar_de_baja(client, cliente, equipo['closer'], auth_headers)
 

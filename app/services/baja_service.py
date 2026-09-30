@@ -41,6 +41,21 @@ def esta_de_baja(client):
     return bool(client is not None and getattr(client, 'baja_at', None))
 
 
+def motivo_legible(motivo):
+    """La etiqueta de un motivo de fábrica (`no_puede_pagar` -> «No puede pagar»), o el texto tal cual.
+
+    El desplegable de la baja manda la CLAVE de un motivo de fábrica y el texto de uno agregado en
+    «Otros»: sin traducir, la clave cruda llegaba a la cabecera de la ficha y al hilo del cliente.
+    Solo las de fábrica, a propósito: las de «Otros» ya viajan como texto, y así una lista con
+    muchas bajas no consulta el vocabulario por fila. También cubre las bajas recuperadas por la
+    migración, que traen la clave del `seguimiento_sub` viejo.
+    """
+    from app.services.ficha_vocabulario import MOTIVOS_BAJA
+
+    etiquetas = {o['clave']: o['label'] for g in MOTIVOS_BAJA for o in g['opciones']}
+    return etiquetas.get(motivo, motivo)
+
+
 def descriptor(client):
     """`{fecha, fecha_legible, motivo, por}` de la baja, o None si el cliente no está de baja.
 
@@ -61,7 +76,7 @@ def descriptor(client):
         'fecha': fecha.isoformat(),
         # A mano y no con `strftime('%b')`, que depende del locale del servidor.
         'fecha_legible': f'{fecha.day} {MESES[fecha.month - 1]} {fecha.year}',
-        'motivo': client.baja_motivo or None,
+        'motivo': motivo_legible(client.baja_motivo) or None,
         'por': autor.username if autor else None,
     }
 
