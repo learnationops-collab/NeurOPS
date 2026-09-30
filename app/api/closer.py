@@ -2129,10 +2129,17 @@ def process_closer_card(appt_id):
 
     try:
         db.session.commit()
-        return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+    # «No va a pagar» da de baja, y la baja corta el acceso a la Academia: después del commit,
+    # igual que en la ficha (`_con_accesos_de_bajas`).
+    from app.services import ficha_academia
+    acceso = ficha_academia.quitar_accesos_de_bajas(current_user)
+    respuesta = {"message": "Carta procesada con éxito", "id": appt.id}
+    if acceso:
+        respuesta['acceso_academia'] = acceso
+    return jsonify(respuesta), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['DELETE'])

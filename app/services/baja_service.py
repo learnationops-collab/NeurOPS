@@ -147,8 +147,22 @@ def dar_de_baja(client, motivo, usuario, cuando=None):
     if nueva:
         client.baja_at = cuando or datetime.utcnow()
         client.baja_por_id = getattr(usuario, 'id', None)
+        # La baja también le corta el acceso a la Academia (pedido del 30/09/2026), pero eso es
+        # una llamada a otro sistema y va DESPUÉS del commit, cuando la baja ya quedó guardada:
+        # queda anotado acá y lo hace quien terminó la acción (`ficha_academia.quitar_accesos_de_bajas`).
+        db.session.info.setdefault(_PENDIENTES_ACADEMIA, []).append(client.id)
     client.baja_motivo = ((motivo or '').strip()[:255]) or client.baja_motivo
     return nueva
+
+
+# Clave de `db.session.info` con los clientes que se dieron de baja en este pedido y a los que
+# todavía no se les quitó el acceso a la Academia. La sesión vive lo que dura el pedido.
+_PENDIENTES_ACADEMIA = 'bajas_sin_quitar_academia'
+
+
+def bajas_sin_quitar_academia():
+    """Los ids de los clientes dados de baja en este pedido, y los saca de la lista."""
+    return db.session.info.pop(_PENDIENTES_ACADEMIA, [])
 
 
 def revertir(client):

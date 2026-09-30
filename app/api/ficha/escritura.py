@@ -40,12 +40,27 @@ def _error_de_accion(e):
     return jsonify(cuerpo), e.codigo
 
 
+def _con_accesos_de_bajas(resultado):
+    """Si la acción dio de baja a un cliente, le corta el acceso a la Academia y lo dice.
+
+    Va acá, una vez, y no en cada acción: la baja puede venir de «Dar de baja» o de «No va a pagar»
+    en el reporte, y lo que tiene que pasar después es lo mismo. Corre cuando la acción ya comiteó:
+    si la Academia falla, la baja queda igual y la respuesta trae el motivo en `acceso_academia`.
+    """
+    from app.services import ficha_academia
+
+    acceso = ficha_academia.quitar_accesos_de_bajas(current_user)
+    if acceso and isinstance(resultado, dict):
+        return {**resultado, 'acceso_academia': acceso}
+    return resultado
+
+
 def _ejecutar(appt_id, permiso, accion, exito=200):
     appt, error = _agenda_y_permiso(appt_id, permiso)
     if error:
         return error
     try:
-        return jsonify(accion(appt, _datos(), current_user)), exito
+        resultado = accion(appt, _datos(), current_user)
     except acciones.ErrorDeAccion as e:
         return _error_de_accion(e)
     except Exception as e:
@@ -53,6 +68,7 @@ def _ejecutar(appt_id, permiso, accion, exito=200):
         # reagenda requerida"): se devuelve tal cual en vez de un 500 sin explicacion.
         db.session.rollback()
         return jsonify({'message': str(e)}), 400
+    return jsonify(_con_accesos_de_bajas(resultado)), exito
 
 
 @bp.route('/<int:appt_id>/confirmacion', methods=['PATCH'])

@@ -29,6 +29,7 @@ como «Lo que pagó»): nunca el curso de bienvenida ni un acceso dado a mano.
 Es otro sistema, con un límite de peticiones compartido con producción: un pedido incompleto se
 rechaza acá. Quitar además pide `confirmo: true`, para que ningún cuerpo vacío corte un acceso.
 """
+import logging
 from datetime import datetime, time, timedelta
 
 from app import db
@@ -38,6 +39,8 @@ from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollo
 from app.services.ficha_acciones_service import ErrorDeAccion, _texto
 from app.services.learnation_service import LearnationAPIError, LearnationService
 from app.services.user_time_service import hoy_del_usuario
+
+logger = logging.getLogger(__name__)
 
 # Más lejos que esto es casi seguro un error de tipeo (2207 en vez de 2027).
 MAX_DIAS = 3 * 366
@@ -142,6 +145,54 @@ def acceso(appt, datos, usuario):
                                f'hasta el {_fecha_legible(dia)}.')
     db.session.commit()
     return {'accion': accion, 'vence': dia.isoformat(), 'programa': nombre, 'creada': creada}
+
+
+def quitar_por_baja(client, usuario):
+    """Le corta el acceso a quien se dio de baja: el producto que pagó pasa a vencer hoy.
+
+    Pedido del 30/09/2026: la baja (a mano en Acciones o por «No va a pagar») también le quita el
+    acceso. NUNCA levanta: corre después de que la baja quedó guardada, y un problema de la
+    Academia no la deshace. Lo que pasó vuelve en `{estado, motivo}` para decírselo a quien la dio:
+    `quitado`, `sin_cuenta` (nunca tuvo acceso: no hay nada que cortar) o `no_quitado` (con el
+    motivo, para que lo corte a mano desde Fulfillment).
+    """
+    try:
+        _codigo, nombre, slug = _producto(client)
+        alumno_id = _alumno(client)
+        if not alumno_id:
+            return {'estado': 'sin_cuenta', 'motivo': None}
+        hoy = hoy_del_usuario(usuario)
+        _asignar(alumno_id, slug, hoy)
+    except ErrorDeAccion as e:
+        return {'estado': 'no_quitado', 'motivo': str(e)}
+    except Exception:  # la baja ya está guardada: nada de la Academia puede tumbar el pedido
+        logger.exception('No se pudo quitar el acceso a la Academia del cliente %s', client.id)
+        return {'estado': 'no_quitado', 'motivo': 'No se pudo hablar con la Academia.'}
+
+    client.academy_expires_at = datetime.combine(hoy, time.min)
+    db.session.add(ClientComment(
+        client_id=client.id, author_id=usuario.id,
+        text=f'Se le quitó el acceso a la Academia ({nombre}) por la baja: vence hoy, {_fecha_legible(hoy)}.'))
+    db.session.commit()
+    return {'estado': 'quitado', 'motivo': None, 'vence': hoy.isoformat(), 'programa': nombre}
+
+
+def quitar_accesos_de_bajas(usuario):
+    """Corta el acceso de los clientes dados de baja en este pedido. Va DESPUÉS del commit.
+
+    Devuelve el resultado del primero (una acción da de baja a un cliente), o None si no hubo
+    ninguna baja nueva. Se vuelve a mirar la baja en la base: si el pedido se deshizo después de
+    anotarla, no hay nada que cortar.
+    """
+    from app.models import Client
+    from app.services import baja_service
+
+    resultados = []
+    for cliente_id in dict.fromkeys(baja_service.bajas_sin_quitar_academia()):
+        cliente = db.session.get(Client, cliente_id)
+        if cliente is not None and baja_service.esta_de_baja(cliente):
+            resultados.append(quitar_por_baja(cliente, usuario))
+    return resultados[0] if resultados else None
 
 
 def quitar(appt, datos, usuario):
