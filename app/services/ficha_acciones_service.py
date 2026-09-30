@@ -168,10 +168,18 @@ RESULTADOS = {'asistio': 'Show up', 'no_show': 'No Show', 'cancelo': 'Cancelado'
 def resultado(appt, datos, usuario):
     """Cierra el arbol de reporte de la llamada.
 
-    El resultado va por `process_agenda` (que ademas borra el evento de Google Calendar cuando se
-    cancela y deja el comentario del lead perdido) y los campos del arbol que no son un estado
-    —decisor, oferta, notas, seguimiento— por el write del mazo.
+    Admite dos formas del pedido:
+
+      · con un bloque `deck`: el arbol de «Resultado» de la ficha, que manda cada rama ya resuelta
+        (ver `_resultado_del_arbol`);
+      · plana (`resultado` + campos sueltos): el resultado va por `process_agenda` (que ademas
+        borra el evento de Google Calendar cuando se cancela y deja el comentario del lead
+        perdido) y los campos que no son un estado —decisor, oferta, notas, seguimiento— por el
+        write del mazo.
     """
+    if isinstance(datos.get('deck'), dict):
+        return _resultado_del_arbol(appt, datos, usuario)
+
     clave = _texto(datos, 'resultado', obligatorio=True)
     if clave not in RESULTADOS:
         raise ErrorDeAccion(f'Resultado no admitido: {clave}.')
@@ -217,6 +225,124 @@ def _guardar_respuestas_del_arbol(appt, respuestas, usuario):
         detalle = str(respuestas)[:4000]
     BookingService.log_lead_event(appt.id, usuario.id, 'reporte_arbol',
                                   f'Respuestas del reporte de llamada: {detalle}')
+
+
+# --- El reporte sin venta, desde el arbol de «Resultado» ----------------------------------------
+#
+# El arbol del mazo (`renderActionStepContent` en el CloserWorkflowPage de main) resolvia cada rama
+# con hasta tres llamadas: el guardado del mazo con el resultado y el seguimiento, `process` para
+# descartar (Lead Perdido / No Lead con su motivo) y un PATCH de la agenda para mover la llamada
+# (2a llamada, reagenda con fecha, «contesto y agendo»). La ficha manda las tres juntas —ya
+# resueltas por `construirPayload`— y aca se hacen en el mismo orden, con los mismos servicios.
+
+# Por donde se entra al arbol: las cuatro tarjetas de la llamada, o ninguna en la cadencia de
+# seguimiento, donde manda lo que paso con el contacto.
+RESULTADOS_DEL_ARBOL = ('asistio', 'no_asistio', 'cancelo', 'reagenda')
+CONTACTOS_DE_SEGUIMIENTO = ('no_resp', 'contesto', 'agendo')
+
+# Lo que el reporte escribe en la agenda por el guardado del mazo. Lista cerrada: el bloque viene
+# del navegador y el mazo acepta mas claves (la etapa de confirmacion, el recordatorio previo) que
+# un reporte de llamada no tiene por que tocar.
+CAMPOS_DEL_REPORTE = (
+    'closer_notes', 'result', 'confirm_status', 'with_decision_maker', 'offer_presented',
+    'contact_result', 'fecha_seguimiento', 'seguimiento_tipo', 'seguimiento_sub',
+    'seguimiento_intento', 'seguimiento_realizado', 'followup_reminder_enabled',
+    'followup_reminder_time',
+)
+# Los unicos estados que el arbol manda por `process`: los dos descartes.
+DESCARTES = ('Lead Perdido', 'No Lead')
+
+
+def _reporte_valido(appt, datos):
+    """(deck, nuevo_inicio, descarte) listos para escribir, o `ErrorDeAccion`.
+
+    Todo se valida ANTES de escribir: el guardado del mazo y la bitacora comitean por su cuenta,
+    asi que una fecha mala descubierta a mitad de camino dejaria el reporte a medias.
+    """
+    from app.services.ficha_agendas_service import _instante_utc
+
+    clave = datos.get('resultado')
+    contacto = datos.get('contacto_result')
+    if clave is not None and clave not in RESULTADOS_DEL_ARBOL:
+        raise ErrorDeAccion(f'Resultado no admitido: {clave}.')
+    if clave is None and contacto not in CONTACTOS_DE_SEGUIMIENTO:
+        raise ErrorDeAccion('Falta qué pasó con la llamada o con el contacto.')
+
+    deck = {k: v for k, v in datos['deck'].items() if k in CAMPOS_DEL_REPORTE}
+    # En el decisor y la oferta un `None` es "no se pregunto" —la cadencia de seguimiento no los
+    # vuelve a preguntar— y no pisa lo que se reporto en la llamada.
+    for clave_tri in ('with_decision_maker', 'offer_presented'):
+        if deck.get(clave_tri) is None:
+            deck.pop(clave_tri, None)
+
+    nuevo_inicio = None
+    if datos.get('reagenda'):
+        if not isinstance(datos['reagenda'], dict):
+            raise ErrorDeAccion('`reagenda` tiene que traer la fecha nueva.')
+        nuevo_inicio = _instante_utc(datos['reagenda'].get('start_time'))
+
+    descarte = None
+    if datos.get('process'):
+        pedido = datos['process']
+        if not isinstance(pedido, dict) or pedido.get('status') not in DESCARTES:
+            raise ErrorDeAccion('Un lead se descarta como Lead Perdido o como No Lead.')
+        nota = (pedido.get('note') or '').strip()
+        if not nota:
+            raise ErrorDeAccion('Falta el motivo del descarte.', 'motivo_descarte')
+        descarte = {'status': pedido['status'], 'note': nota}
+
+    if not deck and not nuevo_inicio and not descarte:
+        raise ErrorDeAccion('No hay nada que guardar.')
+    return deck, nuevo_inicio, descarte
+
+
+def _mover_la_llamada(appt, inicio, usuario):
+    """La misma agenda pasa a la hora nueva, como hacia `PATCH /closer/appointments/<id>`.
+
+    No se crea otra agenda (eso es `reprogramar`). La fecha vieja queda en la bitacora: se busco
+    una vez despues de un reagendado y no habia forma de saber cual habia sido.
+    """
+    from app.services.booking_service import BookingService
+
+    anterior = appt.start_time
+    if anterior == inicio:
+        return
+    appt.start_time = inicio
+    antes = anterior.strftime('%d/%m/%Y %H:%M') if anterior else 'sin fecha'
+    BookingService.log_lead_event(appt.id, usuario.id, 'reschedule',
+                                  f"{usuario.username} reagendó la cita: {antes} → "
+                                  f"{inicio.strftime('%d/%m/%Y %H:%M')}.")
+
+
+def _resultado_del_arbol(appt, datos, usuario):
+    """Reporta la llamada (o el contacto de la cadencia) sin venta, en el orden del mazo.
+
+    Primero se mueve la llamada si hay fecha nueva, despues va el guardado del mazo con el
+    resultado y el seguimiento —que es el que escribe `show_up_reported` si el resultado cambio—,
+    despues el descarte y al final los referidos y las respuestas crudas a la bitacora.
+    """
+    deck, nuevo_inicio, descarte = _reporte_valido(appt, datos)
+    if descarte and deck:
+        # El guardado del mazo deja en la bitacora «Estado: …» con el `result` que recibe: sin él
+        # un descarte quedaba anotado como «Pendiente». `process_agenda` lo vuelve a poner igual.
+        deck.setdefault('result', descarte['status'])
+
+    if nuevo_inicio:
+        _mover_la_llamada(appt, nuevo_inicio, usuario)
+    if deck:
+        aplicar_cambios(appt, deck, usuario)
+    if descarte:
+        _process_agenda(appt, usuario, descarte)
+
+    nombre = appt.client.full_name if appt.client and appt.client.full_name else 'el lead'
+    momento = 'el seguimiento' if datos.get('resultado') is None else 'la llamada'
+    # Como en el mazo: sin contacto no hay a quien llamar, asi que solo queda anotado en la nota.
+    referidos = _crear_referidos(appt, usuario, datos.get('referidos'),
+                                 f'Referido durante {momento} de {nombre}.', solo_con_contacto=True)
+    _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
+    db.session.commit()
+    return {'id': appt.id, 'closer_result': appt.closer_result, 'referidos': referidos,
+            'fecha': appt.start_time.isoformat() if appt.start_time else None}
 
 
 # --- Venta ------------------------------------------------------------------------------------
@@ -405,14 +531,20 @@ def _dar_acceso_a_la_academia(client_id, bloque):
     return {'creada': bool(resultado.get('was_created'))}
 
 
-def _crear_referidos(appt, usuario, bloque, quien):
+def _crear_referidos(appt, usuario, bloque, notas, solo_con_contacto=False):
+    """Crea los referidos del bloque del arbol y devuelve cuantos.
+
+    En la venta entra todo el que tenga nombre (el wizard del mazo los agendaba asi). En el reporte
+    de una llamada o un seguimiento, solo el que ademas dejo contacto: el mazo hacia eso, y la nota
+    de la agenda ya dice «Referido(s) sin datos: …» para los otros.
+    """
     from app.services.referidos_service import crear_referido
 
     filas = [f for f in (bloque or {}).get('filas') or []
-             if isinstance(f, dict) and (f.get('nombre') or '').strip()]
+             if isinstance(f, dict) and (f.get('nombre') or '').strip()
+             and (not solo_con_contacto or (f.get('contacto') or '').strip())]
     for fila in filas:
-        crear_referido(usuario, appt.id, fila['nombre'], contacto=fila.get('contacto'),
-                       notas=f'Referido por {quien}')
+        crear_referido(usuario, appt.id, fila['nombre'], contacto=fila.get('contacto'), notas=notas)
     return len(filas)
 
 
@@ -479,7 +611,7 @@ def _venta_del_arbol(appt, datos, usuario):
     quien = venta_.get('nombre_cliente') or (appt.client.full_name if appt.client else 'el cliente')
     referidos = _despues_de_la_venta(avisos, 'La venta se guardó, pero los referidos no',
                                      lambda: _crear_referidos(appt, usuario, datos.get('referidos'),
-                                                              quien))
+                                                              f'Referido por {quien}'))
 
     _despues_de_la_venta(avisos, 'No se guardaron las respuestas del reporte en la bitácora',
                          lambda: _guardar_respuestas_del_arbol(appt, datos.get('respuestas'),

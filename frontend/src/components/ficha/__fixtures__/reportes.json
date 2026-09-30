@@ -1,0 +1,652 @@
+{
+  "asistio_sin_cierre_seguimiento": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "asistio",
+      "contacto_result": null,
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Lo habla con la pareja; vuelvo con el caso de Ana. | Referidos: 1 referido(s) con datos → agenda creada; Referido(s) sin datos: Caro",
+        "with_decision_maker": true,
+        "offer_presented": true,
+        "result": "Show up",
+        "fecha_seguimiento": "2026-10-06",
+        "seguimiento_tipo": "tomada",
+        "seguimiento_sub": "Decisión pendiente · con decisor",
+        "seguimiento_intento": 1,
+        "seguimiento_realizado": false,
+        "followup_reminder_enabled": true,
+        "followup_reminder_time": "09:30"
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": "si",
+        "filas": [
+          {
+            "nombre": "Beto Ruiz",
+            "contacto": "@beto.ruiz"
+          },
+          {
+            "nombre": "Caro",
+            "contacto": ""
+          }
+        ],
+        "referralAsked": "got",
+        "referralCount": 2
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "decisor",
+          "oferta",
+          "cierre",
+          "nocierre_next",
+          "seguimiento",
+          "refs_ask",
+          "refs_filas"
+        ],
+        "res": "asistio",
+        "with_decision_maker": true,
+        "offer_presented": true,
+        "cierre": false,
+        "nocierre_next": "seguimiento",
+        "fecha_seguimiento": "2026-10-06",
+        "followup_reminder_enabled": true,
+        "followup_reminder_time": "09:30",
+        "notes": "Lo habla con la pareja; vuelvo con el caso de Ana.",
+        "refs_ask": "si",
+        "refs_rows": [
+          {
+            "nombre": "Beto Ruiz",
+            "contacto": "@beto.ruiz"
+          },
+          {
+            "nombre": "Caro",
+            "contacto": ""
+          }
+        ]
+      }
+    }
+  },
+  "asistio_sin_cierre_perdido": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "asistio",
+      "contacto_result": null,
+      "motivo": null,
+      "motivo_descarte": "Objeción de precio insalvable",
+      "deck": {
+        "closer_notes": "Se pidieron referidos, no dejó.",
+        "with_decision_maker": true,
+        "offer_presented": true
+      },
+      "process": {
+        "status": "Lead Perdido",
+        "role": "closer",
+        "note": "Objeción de precio insalvable",
+        "with_decision_maker": true,
+        "offer_presented": true
+      },
+      "reagenda": null,
+      "referidos": {
+        "pedido": "no",
+        "filas": [],
+        "referralAsked": "asked",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "decisor",
+          "oferta",
+          "cierre",
+          "nocierre_next",
+          "descarte",
+          "refs_ask"
+        ],
+        "res": "asistio",
+        "with_decision_maker": true,
+        "offer_presented": true,
+        "cierre": false,
+        "nocierre_next": "perdido",
+        "motivo_descarte": "Objeción de precio insalvable",
+        "refs_ask": "no"
+      }
+    }
+  },
+  "asistio_sin_oferta_segunda_llamada": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "asistio",
+      "contacto_result": null,
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Faltó el decisor | No se pidieron referidos.",
+        "with_decision_maker": false,
+        "offer_presented": false,
+        "confirm_status": "por_confirmar",
+        "result": "Pendiente"
+      },
+      "process": null,
+      "reagenda": {
+        "start_time": "2026-10-08T23:30:00.000Z",
+        "modo": "segunda_llamada"
+      },
+      "referidos": {
+        "pedido": "no_pedido",
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "decisor",
+          "oferta",
+          "nopres_next",
+          "segunda_llamada",
+          "refs_ask"
+        ],
+        "res": "asistio",
+        "with_decision_maker": false,
+        "offer_presented": false,
+        "nopres_next": "segunda",
+        "nueva_fecha_agenda": "2026-10-08",
+        "nueva_hora_agenda": "19:30",
+        "notes": "Faltó el decisor",
+        "refs_ask": "no_pedido"
+      }
+    }
+  },
+  "asistio_sin_oferta_descartar": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "asistio",
+      "contacto_result": null,
+      "motivo": null,
+      "motivo_descarte": "No califica: no rinde este año",
+      "deck": {
+        "closer_notes": "No se pidieron referidos.",
+        "with_decision_maker": false,
+        "offer_presented": false
+      },
+      "process": {
+        "status": "Lead Perdido",
+        "role": "closer",
+        "note": "No califica: no rinde este año",
+        "with_decision_maker": false,
+        "offer_presented": false
+      },
+      "reagenda": null,
+      "referidos": {
+        "pedido": "no_pedido",
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "decisor",
+          "oferta",
+          "nopres_next",
+          "descarte",
+          "refs_ask"
+        ],
+        "res": "asistio",
+        "with_decision_maker": false,
+        "offer_presented": false,
+        "nopres_next": "descartar",
+        "motivo_descarte": "No califica: no rinde este año",
+        "refs_ask": "no_pedido"
+      }
+    }
+  },
+  "no_asistio_seguimiento": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "no_asistio",
+      "contacto_result": null,
+      "motivo": "Confundió la fecha",
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Pensó que era mañana",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "result": "No Show",
+        "fecha_seguimiento": "2026-10-02",
+        "seguimiento_tipo": "no_tomada",
+        "seguimiento_sub": "No show: Confundió la fecha",
+        "seguimiento_intento": 1,
+        "seguimiento_realizado": false,
+        "followup_reminder_enabled": false,
+        "followup_reminder_time": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "noshow_motivo",
+          "noshow_detalle",
+          "noshow_next",
+          "seguimiento"
+        ],
+        "res": "no_asistio",
+        "noshow_motivo": "Confundió la fecha",
+        "notes": "Pensó que era mañana",
+        "noshow_next": "seguimiento",
+        "fecha_seguimiento": "2026-10-02"
+      }
+    }
+  },
+  "no_asistio_descartar": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "no_asistio",
+      "contacto_result": null,
+      "motivo": "Bloqueó / desapareció",
+      "motivo_descarte": "No responde hace dos semanas",
+      "deck": {
+        "closer_notes": "Me bloqueó en WhatsApp",
+        "with_decision_maker": null,
+        "offer_presented": null
+      },
+      "process": {
+        "status": "Lead Perdido",
+        "role": "closer",
+        "note": "Bloqueó / desapareció. No responde hace dos semanas",
+        "with_decision_maker": null,
+        "offer_presented": null
+      },
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "noshow_motivo",
+          "noshow_detalle",
+          "noshow_next",
+          "descarte"
+        ],
+        "res": "no_asistio",
+        "noshow_motivo": "Bloqueó / desapareció",
+        "notes": "Me bloqueó en WhatsApp",
+        "noshow_next": "descartar",
+        "motivo_descarte": "No responde hace dos semanas"
+      }
+    }
+  },
+  "cancelo_reagendar_con_fecha": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "cancelo",
+      "contacto_result": null,
+      "motivo": "Sin tiempo / imprevisto",
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Tuvo guardia",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "confirm_status": "por_confirmar",
+        "result": "Pendiente"
+      },
+      "process": null,
+      "reagenda": {
+        "start_time": "2026-10-06T00:00:00.000Z",
+        "modo": "reagenda"
+      },
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "cancel_motivo",
+          "cancel_detalle",
+          "cancel_next",
+          "reag_motivo",
+          "reag_dejo_fecha",
+          "reag_fecha"
+        ],
+        "res": "cancelo",
+        "cancel_motivo": "Sin tiempo / imprevisto",
+        "notes": "Tuvo guardia",
+        "cancel_next": "reagendar",
+        "reag_motivo": "Pidió otro horario",
+        "reag_dejo_fecha": true,
+        "nueva_fecha_agenda": "2026-10-05",
+        "nueva_hora_agenda": "20:00"
+      }
+    }
+  },
+  "cancelo_seguimiento": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "cancelo",
+      "contacto_result": null,
+      "motivo": "Problema económico",
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Le escribo el 3 con la propuesta en cuotas",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "result": "No Show",
+        "fecha_seguimiento": "2026-10-03",
+        "seguimiento_tipo": "no_tomada",
+        "seguimiento_sub": "Cancelación: Problema económico",
+        "seguimiento_intento": 1,
+        "seguimiento_realizado": false,
+        "followup_reminder_enabled": false,
+        "followup_reminder_time": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "cancel_motivo",
+          "cancel_detalle",
+          "cancel_next",
+          "seguimiento"
+        ],
+        "res": "cancelo",
+        "cancel_motivo": "Problema económico",
+        "notes": "Le escribo el 3 con la propuesta en cuotas",
+        "cancel_next": "seguimiento",
+        "fecha_seguimiento": "2026-10-03"
+      }
+    }
+  },
+  "cancelo_no_lead": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "cancelo",
+      "contacto_result": null,
+      "motivo": "Ya no le interesa",
+      "motivo_descarte": "No rinde examen, no califica",
+      "deck": {
+        "closer_notes": "Reporte de llamada",
+        "with_decision_maker": null,
+        "offer_presented": null
+      },
+      "process": {
+        "status": "No Lead",
+        "role": "closer",
+        "note": "No rinde examen, no califica",
+        "with_decision_maker": null,
+        "offer_presented": null
+      },
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "cancel_motivo",
+          "cancel_detalle",
+          "cancel_next",
+          "descarte"
+        ],
+        "res": "cancelo",
+        "cancel_motivo": "Ya no le interesa",
+        "cancel_next": "no_lead",
+        "motivo_descarte": "No rinde examen, no califica"
+      }
+    }
+  },
+  "reagenda_con_fecha": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "reagenda",
+      "contacto_result": null,
+      "motivo": "Imprevisto del lead",
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Reagendado por: Imprevisto del lead",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "confirm_status": "por_confirmar",
+        "result": "Pendiente"
+      },
+      "process": null,
+      "reagenda": {
+        "start_time": "2026-10-07T21:15:00.000Z",
+        "modo": "reagenda"
+      },
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "reag_motivo",
+          "reag_dejo_fecha",
+          "reag_fecha"
+        ],
+        "res": "reagenda",
+        "reag_motivo": "Imprevisto del lead",
+        "reag_dejo_fecha": true,
+        "nueva_fecha_agenda": "2026-10-07",
+        "nueva_hora_agenda": "17:15"
+      }
+    }
+  },
+  "reagenda_sin_fecha": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": "reagenda",
+      "contacto_result": null,
+      "motivo": "No dio motivo",
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "Le pido fecha nueva",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "result": "No Show",
+        "fecha_seguimiento": "2026-10-01",
+        "seguimiento_tipo": "no_tomada",
+        "seguimiento_sub": "Reprogramó sin fecha",
+        "seguimiento_intento": 1,
+        "seguimiento_realizado": false,
+        "followup_reminder_enabled": false,
+        "followup_reminder_time": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "res",
+          "reag_motivo",
+          "reag_dejo_fecha",
+          "seguimiento"
+        ],
+        "res": "reagenda",
+        "reag_motivo": "No dio motivo",
+        "reag_dejo_fecha": false,
+        "fecha_seguimiento": "2026-10-01",
+        "notes": "Le pido fecha nueva"
+      }
+    }
+  },
+  "cadencia_no_respondio": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "no_resp",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "[Modalidad: Mensaje, Llamada] Visto sin respuesta, dos llamadas",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "contact_result": "no_resp",
+        "seguimiento_realizado": false,
+        "seguimiento_intento": 3,
+        "fecha_seguimiento": "2026-10-06",
+        "seguimiento_tipo": "no_tomada",
+        "followup_reminder_enabled": false,
+        "followup_reminder_time": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": null,
+        "filas": [],
+        "referralAsked": "no",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle",
+          "sig_action",
+          "seguimiento"
+        ],
+        "contacto_result": "no_resp",
+        "modalidad": [
+          "Mensaje",
+          "Llamada"
+        ],
+        "notes": "Visto sin respuesta, dos llamadas",
+        "sig_action": "next",
+        "fecha_seguimiento": "2026-10-06"
+      }
+    }
+  },
+  "cadencia_se_cierra": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "contesto",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "[Modalidad: Llamada] Me pidió que no lo contacte más | Motivo de cierre: Pidió que no lo contacten | Se pidieron referidos, no dejó.",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "contact_result": "contesto",
+        "seguimiento_realizado": true,
+        "fecha_seguimiento": null
+      },
+      "process": null,
+      "reagenda": null,
+      "referidos": {
+        "pedido": "no",
+        "filas": [],
+        "referralAsked": "asked",
+        "referralCount": 0
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle",
+          "sig_action",
+          "cierre_motivo",
+          "refs_ask"
+        ],
+        "contacto_result": "contesto",
+        "modalidad": [
+          "Llamada"
+        ],
+        "notes": "Me pidió que no lo contacte más",
+        "sig_action": "close",
+        "cierre_motivo": "Pidió que no lo contacten",
+        "refs_ask": "no"
+      }
+    }
+  },
+  "cadencia_contesto_y_agendo": {
+    "accion": "reportar_resultado",
+    "datos": {
+      "resultado": null,
+      "contacto_result": "agendo",
+      "motivo": null,
+      "motivo_descarte": null,
+      "deck": {
+        "closer_notes": "[Modalidad: Mensaje] Aceptó volver al meet el jueves | Referidos: 1 referido(s) con datos → agenda creada",
+        "with_decision_maker": null,
+        "offer_presented": null,
+        "confirm_status": "por_confirmar",
+        "result": "Pendiente",
+        "contact_result": "agendo",
+        "seguimiento_realizado": true,
+        "fecha_seguimiento": null
+      },
+      "process": null,
+      "reagenda": {
+        "start_time": "2026-10-09T22:00:00.000Z",
+        "modo": "seguimiento_agendo"
+      },
+      "referidos": {
+        "pedido": "si",
+        "filas": [
+          {
+            "nombre": "Lu Pérez",
+            "contacto": "+5491122334455"
+          }
+        ],
+        "referralAsked": "got",
+        "referralCount": 1
+      },
+      "respuestas": {
+        "_pasos": [
+          "contacto_result",
+          "contacto_detalle",
+          "refs_ask",
+          "refs_filas"
+        ],
+        "contacto_result": "agendo",
+        "modalidad": [
+          "Mensaje"
+        ],
+        "notes": "Aceptó volver al meet el jueves",
+        "nueva_fecha_agenda": "2026-10-09",
+        "nueva_hora_agenda": "18:00",
+        "refs_ask": "si",
+        "refs_rows": [
+          {
+            "nombre": "Lu Pérez",
+            "contacto": "+5491122334455"
+          }
+        ]
+      }
+    }
+  }
+}
