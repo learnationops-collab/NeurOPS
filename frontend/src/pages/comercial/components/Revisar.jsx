@@ -74,7 +74,7 @@ const TotalesTira = ({ items, alcance }) => (
 );
 
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
-    filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true }) => {
+    filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -489,7 +489,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             {cargando ? <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista}
                 totales={totales.length} /> : (
                 <>
-                    {conAcademia && <AcademiaBarra filas={filas} />}
+                    {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
                     <TotalesTira items={totales} alcance={alcanceTexto} />
 
                     {visibles.length === 0 ? (

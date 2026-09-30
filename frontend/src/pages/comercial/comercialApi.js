@@ -47,6 +47,11 @@ export const corregirAgenda = (id, campo, valor) =>
 export const marcarAgendaDuplicada = (id) =>
     api.post(`/comercial/agendas/${id}/duplicada`).then(r => r.data);
 
+/** Corre un lote de fotos de la Academia (ver academy_snapshot_service). Solo la direccion: la ruta
+ *  responde 403 al resto. Devuelve el resumen del lote, con `mensaje` listo para mostrar. */
+export const sincronizarAcademia = () =>
+    api.post('/comercial/academia/sincronizar').then(r => r.data);
+
 /** Borra una agenda. Solo la direccion: la ruta responde 403 al resto (ver comercial.py). */
 export const eliminarAgenda = (id) =>
     api.delete(`/comercial/agendas/${id}`).then(r => r.data);

@@ -29,6 +29,7 @@ vi.mock('./comercialApi', () => ({
     corregirAgenda: vi.fn(),
     marcarAgendaDuplicada: vi.fn(),
     eliminarAgenda: vi.fn(),
+    sincronizarAcademia: vi.fn(() => Promise.resolve({ mensaje: 'ok', corte: null })),
 }));
 vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: { id: 7, role: 'setter', is_impersonating: false } }),

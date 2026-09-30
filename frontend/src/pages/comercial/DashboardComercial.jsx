@@ -16,6 +16,7 @@ import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
+import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 
 /**
  * La ficha unificada se pide por agenda o por cliente, así que una fila la puede abrir solo si
@@ -361,6 +362,23 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     }, [filtros, tablaActual, basis]);
 
+    /**
+     * "Actualizar datos de la Academia" (solo la dirección): corre un lote de fotos y vuelve a pedir
+     * la tabla. El mensaje lo arma el backend, que es el que sabe si el lote se cortó por el límite
+     * de la Academia, por un token inválido o porque alcanzó su presupuesto.
+     */
+    const sincronizarAcademia = useCallback(async () => {
+        try {
+            const resultado = await sincronizarAcademiaApi();
+            const aviso = ['401', 'red', 'sin_token'].includes(resultado.corte) ? toast.error
+                : resultado.corte === '429' ? toast : toast.success;
+            aviso(resultado.mensaje);
+            cargarTabla();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudieron actualizar los datos de la Academia');
+        }
+    }, [cargarTabla]);
+
     const corregir = useCallback(async (fila, campo, valor) => {
         try {
             await corregirAgenda(fila.id, campo, valor);
@@ -504,7 +522,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             alcance={alcance} filtroInicial={filtroInicial}
                             puedeElegirEquipo={!!contexto.puede_elegir_equipo}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
-                            onAbrirFila={abrirFila} />
+                            onAbrirFila={abrirFila}
+                            onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
                     )}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (

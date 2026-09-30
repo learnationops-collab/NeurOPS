@@ -28,6 +28,16 @@ EXCEPCIONES = {
                   'el gestor de mensajes del setter, pero un setter no debe poder poner en cero las '
                   'estadisticas de todos: recibe un 403 y el resto del gestor sigue funcionando.',
     },
+    # El dashboard comercial es la misma pantalla para la direccion y para "Mis datos" de closers y
+    # setters, asi que su modulo de API lo alcanzan todos. El boton que corre el lote solo se dibuja
+    # para la direccion (`puede_reportar`).
+    ('POST', '/api/comercial/academia/sincronizar'): {
+        'closer': 'Cada lote gasta del limite de 60 consultas por minuto que la Academia comparte con '
+                  'produccion y con la ficha de todos los closers. El closer ve los datos de la Academia '
+                  'igual; el boton que dispara un lote no se le muestra, y la frescura la sostiene el cron.',
+        'setter': 'Mismo motivo que el closer: el setter ve el dashboard como "Mis datos" y no dispara '
+                  'lotes contra el limite de la Academia; ni siquiera ve las tablas Clientes y Ventas.',
+    },
 }
 
 

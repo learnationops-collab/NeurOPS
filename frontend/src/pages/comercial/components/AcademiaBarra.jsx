@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { GraduationCap } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { GraduationCap, RefreshCw } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Tip, fmt } from './Shared';
 import { DIAS_DATO_VIEJO, diasDesde, haceCuanto, resumenAcademia } from './academia';
@@ -12,11 +12,25 @@ import { DIAS_DATO_VIEJO, diasDesde, haceCuanto, resumenAcademia } from './acade
  * cliente (ver `academia.js`). Sin esta línea un "Inactivo" de hace tres semanas se leería igual que
  * uno de esta mañana. Se cuenta sobre TODAS las filas de la tabla y no sobre lo filtrado: la
  * pregunta es "¿puedo confiar en estos datos?", y un filtro no cambia la respuesta.
+ *
+ * `onSincronizar` llega solo para la dirección (ver `DashboardComercial`): corre un lote de fotos y
+ * recarga la tabla. Cada lote gasta del límite de la Academia que comparte todo el equipo, por eso
+ * el botón queda deshabilitado mientras corre —dos clics seguidos serían dos lotes—.
  */
-const AcademiaBarra = ({ filas }) => {
+const AcademiaBarra = ({ filas, onSincronizar = null }) => {
     const r = useMemo(() => resumenAcademia(filas), [filas]);
     const viejo = r.masViejo && diasDesde(r.masViejo) > DIAS_DATO_VIEJO;
     const quieto = useReducedMotion();
+    const [corriendo, setCorriendo] = useState(false);
+
+    const actualizar = async () => {
+        setCorriendo(true);
+        try {
+            await onSincronizar();
+        } finally {
+            setCorriendo(false);
+        }
+    };
 
     // Entra con un fundido corto al pasar a las columnas de la Academia, que es cuando aparece.
     return (
@@ -46,6 +60,19 @@ const AcademiaBarra = ({ filas }) => {
                     + 'alumno cuando alguien abre la pestaña Fulfillment de su ficha, y una sincronización '
                     + 'automática va renovando las más viejas de a poco (la Academia admite 60 consultas '
                     + 'por minuto para todo el equipo).'} />
+            {onSincronizar && (
+                <button type="button" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
+                    disabled={corriendo} aria-busy={corriendo} onClick={actualizar}>
+                    {/* El ícono gira mientras el lote corre; quieto con reduced-motion. */}
+                    <motion.span style={{ display: 'inline-flex' }}
+                        animate={corriendo && !quieto ? { rotate: 360 } : { rotate: 0 }}
+                        transition={corriendo && !quieto
+                            ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0 }}>
+                        <RefreshCw size={13} aria-hidden="true" />
+                    </motion.span>
+                    {corriendo ? 'Actualizando…' : 'Actualizar datos de la Academia'}
+                </button>
+            )}
         </motion.div>
     );
 };

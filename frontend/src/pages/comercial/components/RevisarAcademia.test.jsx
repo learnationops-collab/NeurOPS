@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Revisar from './Revisar';
 
@@ -120,6 +120,33 @@ describe('Revisar · la Academia en Clientes', () => {
             .toBeInTheDocument();
         expect(screen.getByRole('note', { name: /^Última actividad en la Academia: Activo: le vimos/ }))
             .toBeInTheDocument();
+    });
+});
+
+describe('Revisar · "Actualizar datos de la Academia"', () => {
+    beforeEach(() => { window.localStorage.clear(); });
+
+    it('sin el permiso de la dirección no aparece', () => {
+        render(<Revisar {...props()} />);
+        pasarAAcademia();
+
+        expect(screen.queryByRole('button', { name: /Actualizar datos de la Academia/ })).toBeNull();
+    });
+
+    it('corre un lote por clic y no deja apretarlo de nuevo mientras corre', async () => {
+        let terminar;
+        const sincronizar = vi.fn(() => new Promise((resolver) => { terminar = resolver; }));
+        render(<Revisar {...props({ onSincronizarAcademia: sincronizar })} />);
+        pasarAAcademia();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Actualizar datos de la Academia' }));
+        const ocupado = screen.getByRole('button', { name: 'Actualizando…' });
+        expect(ocupado).toBeDisabled();
+        fireEvent.click(ocupado);
+        expect(sincronizar).toHaveBeenCalledTimes(1);
+
+        await act(async () => { terminar(); });
+        expect(screen.getByRole('button', { name: 'Actualizar datos de la Academia' })).toBeEnabled();
     });
 });
 
