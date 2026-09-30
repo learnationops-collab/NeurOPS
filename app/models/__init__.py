@@ -21,6 +21,7 @@ from .alert import AlertRule, Alert
 from .installment import InstallmentPlan
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
+from .academy_snapshot import AcademySnapshot
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
 from .assistant_application import AssistantApplication, AssistantClarityWeight
@@ -46,7 +47,7 @@ __all__ = [
     'WorkshopGoals', 'WorkshopAction',
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
-    'InstallmentPlan', 'ClientMergeLog', 'FichaOpcion',
+    'InstallmentPlan', 'ClientMergeLog', 'FichaOpcion', 'AcademySnapshot',
     'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight',
