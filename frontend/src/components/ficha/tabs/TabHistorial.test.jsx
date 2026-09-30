@@ -514,58 +514,40 @@ describe('los pagos del historial', () => {
         expect(lapiz()).toHaveFocus();
     });
 
-    it('borrar pregunta en su lugar y manda el pedido recién cuando vence el deshacer', async () => {
-        vi.useFakeTimers({ shouldAdvanceTime: true });
-        try {
-            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-            const onAccion = await abrirPagos(usuario);
-            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
-            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+    it('eliminar abre el modal de la página y manda el pedido al confirmar', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario);
+        await usuario.click(screen.getByRole('button', { name: /Eliminar el pago de \$300/ }));
 
-            expect(onAccion).not.toHaveBeenCalled();
-            await act(async () => { vi.advanceTimersByTime(5000); });
-            expect(onAccion).toHaveBeenCalledWith('borrar_pago', { pago_id: 881 });
-        } finally {
-            vi.useRealTimers();
-        }
+        const dialogo = screen.getByRole('alertdialog', { name: '¿Eliminar este pago?' });
+        expect(onAccion).not.toHaveBeenCalled();
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar pago' }));
+
+        expect(onAccion).toHaveBeenCalledWith('borrar_pago', { pago_id: 881 });
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
 
-    it('si el backend rechaza el borrado, la fila vuelve a como estaba y dice por qué', async () => {
-        vi.useFakeTimers({ shouldAdvanceTime: true });
-        try {
-            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-            const onAccion = vi.fn().mockRejectedValue(new Error('Ese pago no es de este lead.'));
-            await abrirPagos(usuario, conPagos(), onAccion);
-            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
-            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
-            await act(async () => { vi.advanceTimersByTime(5000); });
-            await act(async () => { vi.advanceTimersByTime(20000); });
+    it('si el backend rechaza el borrado, el modal dice por qué y el pago sigue ahí', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockRejectedValue(new Error('Ese pago no es de este lead.'));
+        await abrirPagos(usuario, conPagos(), onAccion);
+        await usuario.click(screen.getByRole('button', { name: /Eliminar el pago de \$300/ }));
+        const dialogo = screen.getByRole('alertdialog');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar pago' }));
 
-            expect(onAccion).toHaveBeenCalledWith('borrar_pago', { pago_id: 881 });
-            // Nada de «Borrado · Deshacer»: el pago sigue ahí, con su papelera.
-            expect(screen.queryByText('Borrado')).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Deshacer/ })).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Borrar el pago de \$300/ })).toBeInTheDocument();
-            expect(screen.getByRole('alert')).toHaveTextContent('Ese pago no es de este lead.');
-        } finally {
-            vi.useRealTimers();
-        }
+        expect(within(dialogo).getByRole('alert')).toHaveTextContent('Ese pago no es de este lead.');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+        expect(screen.getByRole('button', { name: /Eliminar el pago de \$300/ })).toBeInTheDocument();
     });
 
-    it('«Deshacer» a tiempo no borra nada', async () => {
-        vi.useFakeTimers({ shouldAdvanceTime: true });
-        try {
-            const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-            const onAccion = await abrirPagos(usuario);
-            await usuario.click(screen.getByRole('button', { name: /Borrar el pago de \$300/ }));
-            await usuario.click(screen.getByRole('button', { name: 'Sí, borrar' }));
-            await usuario.click(screen.getByRole('button', { name: /Deshacer/ }));
-            await act(async () => { vi.advanceTimersByTime(6000); });
+    it('«Cancelar» en el modal no borra nada', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirPagos(usuario);
+        await usuario.click(screen.getByRole('button', { name: /Eliminar el pago de \$300/ }));
+        await usuario.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }));
 
-            expect(onAccion).not.toHaveBeenCalled();
-        } finally {
-            vi.useRealTimers();
-        }
+        expect(onAccion).not.toHaveBeenCalled();
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
 
     it('quien no puede cobrar ve los pagos pero no los corrige ni los borra', async () => {
@@ -576,7 +558,7 @@ describe('los pagos del historial', () => {
 
         expect(screen.getByText('Residency Roadmap · Stripe')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Corregir el pago/ })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /Borrar el pago/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Eliminar el pago/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agregar pago' })).not.toBeInTheDocument();
     });
 });
@@ -683,7 +665,7 @@ describe('el registro de eventos', () => {
         await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
 
         // Es solo un ícono: sin nombre, el lector anunciaba «botón» a secas.
-        expect(screen.getByRole('button', { name: 'Borrar este evento' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Eliminar este evento' })).toBeInTheDocument();
     });
 });
 
@@ -831,4 +813,26 @@ describe('eliminar una agenda desde el historial', () => {
 
         expect(screen.queryByRole('button', { name: /Eliminar la agenda del/ })).not.toBeInTheDocument();
     });
+});
+
+describe('eliminar un evento del registro', () => {
+    const EVENTO = { id: 5, fecha: '2026-09-20T10:00:00', detalle: 'Llamó dos veces', autor: 'vendedor' };
+    const conEventos = (eventos = [EVENTO]) => ({
+        ...fichaPrecall, historial: { ...fichaPrecall.historial, eventos },
+    });
+
+    it('un evento se elimina desde el modal, apuntado a ese evento', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockResolvedValue({});
+        render(<TabHistorial ficha={conEventos()} onAccion={onAccion} />);
+        await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Eliminar este evento' }));
+
+        const dialogo = screen.getByRole('alertdialog', { name: '¿Eliminar este evento?' });
+        expect(dialogo).toHaveTextContent('Llamó dos veces');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar evento' }));
+        expect(onAccion).toHaveBeenCalledWith('borrar_evento', { evento_id: 5 });
+    });
+
+
 });

@@ -40,7 +40,7 @@ const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 // los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
-    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda']);
+    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_evento']);
 
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',

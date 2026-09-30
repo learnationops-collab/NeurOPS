@@ -1,12 +1,12 @@
 import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
-import InlineConfirm from '../../ui/InlineConfirm';
 import { mensajeDeError } from '../fichaApi';
 import { diaLegible } from '../piezas/fecha';
 import CamposPago, {
     etiquetaDeTipo, faltaParaGuardar, montoExacto, nombreDePrograma,
 } from './CamposPago';
+import BorrarConConfirmacion from './BorrarConConfirmacion';
 import MotivoDelFallo from './MotivoDelFallo';
 
 /**
@@ -15,9 +15,9 @@ import MotivoDelFallo from './MotivoDelFallo';
  * Pedido del usuario (29/09/2026): «en los pagos también debería ser fácil crear y modificar
  * pagos, sin automatizaciones. Solo es para modificar en caso de haber algún error». El lápiz abre
  * debajo la fecha, el monto, el medio, el programa y el tipo; se guarda con UN pedido
- * (`corregir_pago`) y solo con lo que cambió. La papelera es `InlineConfirm`: pregunta en su
- * lugar y difiere el borrado durante la ventana de «Deshacer», porque una vez que el pedido sale
- * no hay endpoint que devuelva el pago.
+ * (`corregir_pago`) y solo con lo que cambió. La papelera abre el modal de confirmación de la
+ * página (`BorrarConConfirmacion`), como todo lo que se elimina en el historial: no hay endpoint
+ * que devuelva el pago, y el modal dice cuál se borra.
  *
  * El backend mueve la venta y su registro en la deuda juntos, y no escribe en Google Sheets ni
  * avisa a nadie: el editor lo dice, porque «sin automatizaciones» es justamente lo que se pidió.
@@ -98,19 +98,6 @@ const FilaPago = ({
         }
     };
 
-    // El rechazo NO se traga: `InlineConfirm` lo usa para volver a reposo. Antes un `.catch` vacío
-    // lo convertía en éxito, y la fila se quedaba diciendo «Borrado» con su «Deshacer» aunque el
-    // pago seguía en la lista y en la base. El motivo se dice debajo de la fila.
-    const borrar = async () => {
-        setError(null);
-        try {
-            await onBorrar?.();
-        } catch (err) {
-            setError(mensajeDeError(err));
-            throw err;
-        }
-    };
-
     return (
         <div className="fi-pago" data-editando={editando || undefined}>
             <div className="fi-sec-fila">
@@ -131,14 +118,12 @@ const FilaPago = ({
                                 onClick={() => (editando ? cerrar() : abrir())}>
                                 <Pencil />
                             </button>
-                            {/* `alto`/`corner`/`tamIcono` le ponen el uniforme del `.ibtn--sm` de al
-                                lado —círculo de 32px con el ícono a 15— para que la fila no termine
-                                en un lápiz redondo seguido de un rectángulo. */}
-                            <InlineConfirm compacto alto={32} corner={999} tamIcono={15}
-                                label="Borrar" title={`Borrar el pago ${cual}`}
-                                confirmLabel="Sí, borrar" doneLabel="Borrado"
-                                disabled={guardando}
-                                onConfirm={borrar} />
+                            <BorrarConConfirmacion etiqueta={`Eliminar el pago ${cual}`}
+                                titulo="¿Eliminar este pago?" confirmar="Eliminar pago"
+                                disabled={guardando} onBorrar={() => onBorrar?.()}>
+                                <span><strong>{montoExacto(p.monto)}</strong> · {dia} · {tipo}</span>
+                                <span>Deja de contar como pagado. No se puede deshacer.</span>
+                            </BorrarConConfirmacion>
                         </>
                     )}
                 </span>

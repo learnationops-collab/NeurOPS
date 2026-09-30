@@ -4,7 +4,7 @@ import { diaLegible, fechaLegible as fecha, instanteLegible, SeccionColapsable }
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
-import InlineConfirm from '../../ui/InlineConfirm';
+import BorrarConConfirmacion from '../historial/BorrarConConfirmacion';
 import FilaAgenda from '../historial/FilaAgenda';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 import AgendarSeguimiento from '../historial/AgendarSeguimiento';
@@ -125,9 +125,8 @@ const SelectorEstado = ({ etiqueta, valor, opciones, disabled, onCambiar }) => (
  * ficha —el total a pagar, el programa, el estado de una agenda— se pueden reescribir o hacer
  * desaparecer desde la misma pantalla que las produjo.
  *
- * El borrado usa `InlineConfirm` y no un `window.confirm`, igual que el resto de lo destructivo
- * de esta app. Ojo: acá la ventana de deshacer es de verdad la única oportunidad — una vez que
- * el pedido sale, la fila se borra y no hay endpoint que la devuelva.
+ * Eliminar pide confirmación en el modal de la página (`BorrarConConfirmacion`), como todo lo que
+ * se elimina en el historial: la fila se borra y no hay endpoint que la devuelva.
  */
 const Eventos = ({ eventos, puedeEditar, onAccion }) => {
     const [editando, setEditando] = useState(null);
@@ -148,9 +147,7 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
         }
     };
 
-    const borrar = (id) => onAccion?.('borrar_evento', { evento_id: id })?.catch?.(() => {});
-
-    return eventos.map((e, i) => (
+    const filas = eventos.map((e, i) => (
         <div key={e.id ?? i} className="fi-sec-fila">
             <span className="t-sm mut">{fecha(e.fecha) || '—'}</span>
             {editando === e.id ? (
@@ -179,18 +176,19 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
                             title="Reescribir este evento" onClick={() => abrir(e)}>
                             <Pencil size={14} />
                         </button>
-                        {/* `alto`/`corner`/`tamIcono` le ponen al botón el uniforme del
-                            `.ibtn` de al lado —círculo de 40px con el ícono a 17— para que la
-                            fila no termine en un lápiz redondo seguido de un rectángulo. */}
-                        <InlineConfirm compacto alto={40} corner={999} tamIcono={17}
-                            label="Borrar" title="Borrar este evento"
-                            confirmLabel="Sí, borrar" doneLabel="Borrado"
-                            onConfirm={() => borrar(e.id)} />
+                        <BorrarConConfirmacion etiqueta="Eliminar este evento" chico={false}
+                            titulo="¿Eliminar este evento?" confirmar="Eliminar evento"
+                            onBorrar={() => onAccion?.('borrar_evento', { evento_id: e.id })}>
+                            <span><strong>{fecha(e.fecha) || 'Sin fecha'}</strong> · {e.autor}</span>
+                            <span>«{e.detalle}»</span>
+                        </BorrarConConfirmacion>
                     </>
                 )}
             </span>
         </div>
     ));
+
+    return filas;
 };
 
 /**

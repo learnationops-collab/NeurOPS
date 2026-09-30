@@ -1,12 +1,12 @@
 import React, { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
 import {
     datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
 } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
-import ModalConfirmacion from '../../ui/ModalConfirmacion';
+import BorrarConConfirmacion from './BorrarConConfirmacion';
 import Desplegable from './Desplegable';
 import MotivoDelFallo from './MotivoDelFallo';
 
@@ -57,7 +57,6 @@ const FilaAgenda = ({
     const [fuente, setFuente] = useState('');
     const [closerId, setCloserId] = useState('');
     const [error, setError] = useState(null);
-    const [borrando, setBorrando] = useState(false);
 
     const cuandoInicial = toDatetimeLocalValue(agenda.fecha);
     const grupos = gruposDeFuente(fuentes, agenda.fuente);
@@ -143,28 +142,18 @@ const FilaAgenda = ({
                         </button>
                     )}
                     {puedeBorrar && (
-                        <button type="button" className="ibtn ibtn--sm ibtn--borrar"
-                            aria-haspopup="dialog"
-                            aria-label={`Eliminar la agenda del ${fecha}`}
-                            title="Eliminar agenda"
-                            onClick={() => setBorrando(true)}>
-                            <Trash2 />
-                        </button>
+                        <BorrarConConfirmacion etiqueta={`Eliminar la agenda del ${fecha}`}
+                            titulo="¿Eliminar esta agenda?" confirmar="Eliminar agenda"
+                            onBorrar={() => onBorrar?.()}>
+                            <span><strong>{fecha}</strong>{quien ? ` · ${quien}` : ''}</span>
+                            <span>
+                                Se borra con su registro de eventos. No se puede deshacer.
+                                {unica && ' Es la única agenda de este lead.'}
+                            </span>
+                        </BorrarConConfirmacion>
                     )}
                 </span>
             </div>
-
-            {borrando && (
-                <ModalConfirmacion titulo="¿Eliminar esta agenda?"
-                    confirmar="Eliminar agenda" confirmando="Eliminando…"
-                    onConfirmar={() => onBorrar?.()} onCerrar={() => setBorrando(false)}>
-                    <span><strong>{fecha}</strong>{quien ? ` · ${quien}` : ''}</span>
-                    <span>
-                        Se borra con su registro de eventos. No se puede deshacer.
-                        {unica && ' Es la única agenda de este lead.'}
-                    </span>
-                </ModalConfirmacion>
-            )}
 
             {editando && (
                 <motion.div id={`${ids}-editor`} className="fi-agenda-editor"
