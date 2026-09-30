@@ -123,6 +123,14 @@ def corregir_seguimiento(appt_id):
     return _ejecutar(appt_id, 'reportar', seguimientos.corregir)
 
 
+@bp.route('/<int:appt_id>/seguimiento', methods=['DELETE'])
+def borrar_seguimiento(appt_id):
+    """Saca el seguimiento de ESTA agenda, desde el historial. Mismo permiso que agendarlo."""
+    from app.services import ficha_seguimientos_service as seguimientos
+
+    return _ejecutar(appt_id, 'reportar', seguimientos.borrar)
+
+
 @bp.route('/<int:appt_id>/plan-cuotas', methods=['PUT'])
 def plan_cuotas(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.plan_cuotas)

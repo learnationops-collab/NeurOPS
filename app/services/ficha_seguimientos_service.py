@@ -211,3 +211,37 @@ def corregir(appt, datos, usuario):
     return {'id': appt.id, 'cambios': cambios, 'realizado': bool(appt.seguimiento_realizado),
             'fecha': appt.fecha_seguimiento, 'tipo': appt.seguimiento_tipo,
             'nota': appt.seguimiento_sub}
+
+
+def borrar(appt, datos, usuario):
+    """Saca el seguimiento de ESTA agenda: deja de verse en el historial y en la pestaña
+    Seguimientos del closer.
+
+    Pedido del usuario (29/09/2026): "que los demás datos de las pestañas de historial también se
+    puedan eliminar o crear nuevos".
+
+    No alcanza con vaciar las columnas, y es lo que no se ve leyendo este archivo: la pestaña del
+    closer también DEDUCE seguimientos (`CloserFollowUpService._effective_tipo`). Una agenda con
+    `closer_result` 'No Show' o 'Canceló', o una vencida que nadie reportó, aparece como «no
+    tomada» aunque no tenga tipo guardado. Vaciar el tipo y la fecha la dejaría volver sola, así
+    que además se marca realizado: lo único que ninguna consulta lista como pendiente
+    (`_base_query` filtra por `seguimiento_realizado`). Agendarle uno nuevo después lo reabre, como
+    siempre (`schedule_followup`).
+
+    El aviso por WhatsApp se apaga con él, y la bitácora guarda el que había.
+    """
+    if not tiene_seguimiento(appt):
+        raise ErrorDeAccion('Esta agenda no tiene ningún seguimiento que borrar.')
+    anterior = _resumen(appt)
+
+    appt.fecha_seguimiento = None
+    appt.seguimiento_tipo = None
+    appt.seguimiento_sub = None
+    appt.seguimiento_intento = 1
+    appt.seguimiento_realizado = True
+    appt.followup_reminder_enabled = False
+    appt.followup_reminder_sent_at = None
+    db.session.commit()
+
+    _anotar(appt, usuario, 'seguimiento_borrado', 'borró el seguimiento', anterior)
+    return {'id': appt.id, 'borrado': True}

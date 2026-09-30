@@ -250,6 +250,10 @@ ESCRITURAS = [
     # El lead de prueba no tiene pagos: el 400 es «Ese pago no existe», nada se borra.
     ('DELETE', '/pago/1', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                            'triage': 403, 'setter': 403}),
+    # Crear y borrar el resto del historial (pedido del 29/09/2026). El lead de prueba no tiene
+    # seguimiento ni plan, asi que quien puede recibe el 400 de «no hay nada que borrar».
+    ('DELETE', '/seguimiento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                                'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los dos que NO pueden y al final uno que si.
     # Ese `closer` no es el de la agenda: cualquier closer borra (pedido del 29/09/2026). Que la
     # direccion tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.

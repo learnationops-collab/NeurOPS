@@ -2259,3 +2259,52 @@ def test_el_registro_de_eventos_de_la_agenda_se_va_con_ella(client, db, lead, eq
 
     assert r.status_code == 200
     assert LeadEventLog.query.filter_by(appointment_id=lead.id).count() == 0
+
+
+# --- Borrar un seguimiento, borrar el plan, agregar un evento (historial) --------------------
+# Pedido del usuario (29/09/2026): "que los demás datos de las pestañas de historial también se
+# puedan eliminar o crear nuevos".
+
+def _leer(client, appt, usuario, auth_headers):
+    return client.get(f'/api/ficha/lead?appointment_id={appt.id}',
+                      headers=auth_headers(usuario)).get_json()
+
+
+def test_borrar_un_seguimiento_lo_saca_del_historial_y_de_la_pestana_del_closer(
+        client, db, lead, equipo, auth_headers):
+    """Con 'No Show' la pestaña del closer lo DEDUCE aunque no tenga tipo guardado: vaciar las
+    columnas no alcanzaba, volvía solo como «no tomada»."""
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    vieja = _con_seguimiento(db, lead, equipo, closer_result='No Show')
+
+    r = client.delete(seguimiento(vieja), headers=auth_headers(equipo['relevo']))
+
+    assert r.status_code == 200, r.get_json()
+    historial = _leer(client, lead, equipo['closer'], auth_headers)['historial']['seguimientos']
+    assert [s for s in historial if s.get('agenda_id') == vieja.id] == []
+    for dia in ('2026-10-06', '2026-10-07'):
+        grupos = CloserFollowUpService.get_today_grouped(equipo['closer'].id, dia)
+        assert all(vieja.id not in [s['id'] for s in grupos[t]] for t in ('no_tomada', 'tomada', 'cerrada'))
+    pool = CloserFollowUpService.get_pool(equipo['closer'].id, tipo='no_tomada')
+    assert vieja.id not in [s['id'] for s in pool]
+    borrado = LeadEventLog.query.filter_by(appointment_id=vieja.id, action_type='seguimiento_borrado').one()
+    assert 'Lo habla con la esposa' in borrado.description
+
+
+def test_borrar_un_seguimiento_que_no_existe_da_400(client, db, lead, equipo, auth_headers):
+    r = client.delete(seguimiento(lead), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert 'no tiene ningún seguimiento' in r.get_json()['message']
+
+
+def test_despues_de_borrarlo_se_le_puede_agendar_otro(client, db, lead, equipo, auth_headers):
+    vieja = _con_seguimiento(db, lead, equipo)
+    client.delete(seguimiento(vieja), headers=auth_headers(equipo['closer']))
+
+    r = client.put(seguimiento(vieja), json={'fecha': '2026-10-09', 'tipo': 'tomada'},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert vieja.seguimiento_realizado is False and vieja.fecha_seguimiento == '2026-10-09'
