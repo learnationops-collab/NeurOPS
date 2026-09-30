@@ -36,6 +36,17 @@ import './ficha.css';
 const MODULOS_TAB = import.meta.glob(['./tabs/Tab*.jsx', '!./tabs/*.test.jsx']);
 const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 
+/* Los `React.lazy` se crean UNA vez, acá, y no por cada ficha que se abre. Un lazy recién creado
+   suspende en su primer render aunque el módulo ya esté cargado, y React 18 no revela el contenido
+   de un Suspense hasta ~500 ms después de haber mostrado el fallback: creado dentro del
+   componente, cada ficha abierta en Resultado o Acciones mostraba el esqueleto medio segundo. */
+const lazyDe = (nombre) => {
+    const l = cargador(nombre);
+    return l ? React.lazy(l) : null;
+};
+const TabResultado = lazyDe('TabResultado');
+const TabAcciones = lazyDe('TabAcciones');
+
 // Las acciones cuyo editor dice él mismo por qué falló, al lado de su botón (`MotivoDelFallo` en
 // los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
@@ -264,15 +275,6 @@ const FichaLeadModal = ({
 
     const irA = useCallback((id) => setPestana(id), []);
     const onRecargar = useCallback(() => cargar(), [cargar]);
-
-    const TabResultado = useMemo(() => {
-        const l = cargador('TabResultado');
-        return l ? React.lazy(l) : null;
-    }, []);
-    const TabAcciones = useMemo(() => {
-        const l = cargador('TabAcciones');
-        return l ? React.lazy(l) : null;
-    }, []);
 
     const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar };
 

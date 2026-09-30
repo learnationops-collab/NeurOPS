@@ -31,6 +31,12 @@ const abrir = async (ficha, props = {}) => {
 
 const activa = () => screen.getByRole('tab', { selected: true }).textContent;
 
+// Resultado y Acciones se cargan con `React.lazy`. La primera vez que una aparece, suspende: se
+// carga el módulo y React 18 no revela un Suspense hasta ~500 ms después de mostrar el fallback.
+// Sumado al render de la venta, pasaba el segundo por defecto de `findByRole` apenas la máquina
+// estaba cargada (la suite entera en paralelo). Esa primera aparición tiene su propio margen.
+const PRIMERA_CARGA = { timeout: 5000 };
+
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe('lectura', () => {
@@ -63,6 +69,18 @@ describe('lectura', () => {
         await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
         expect(activa()).toBe('Resultado');
         expect(await screen.findByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+    });
+
+    it('la segunda ficha abierta en Resultado no vuelve a mostrar el esqueleto', async () => {
+        // El lazy se crea una vez por módulo: si se creara por ficha, cada apertura suspendería
+        // de nuevo y mostraría el esqueleto medio segundo aunque el código ya esté cargado.
+        const primera = await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
+        await screen.findByRole('heading', { name: '¿Quién compró?' }, PRIMERA_CARGA);
+        primera.unmount();
+
+        await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
+        // Sin esperar: Resultado se pinta en el mismo render en que se elige la pestaña.
+        expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
     });
 
     it('un cobro abierto desde Seguimientos cae en Resultado, reportando el cobro', async () => {
