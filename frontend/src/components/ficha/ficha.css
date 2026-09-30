@@ -188,6 +188,13 @@
 .dc-shell .pastilla.fi-elegible[aria-pressed="true"]{background:var(--text-on-surface);
   border-color:var(--text-on-surface);color:var(--on-inverso)}
 
+/* El mismo arreglo que `.fi-seg-op:focus-visible`, para los botones y las pastillas: el foco del
+   DS (`.dc-shell button:focus-visible`, 0,2,1) les pone 6 px de radio y le gana a `.btn` y a
+   `.pastilla` (0,2,0). Con Tab, la píldora pasaba a un rectángulo de esquinas chicas justo
+   cuando el anillo azul la marcaba. Solo dentro del modal de la ficha. */
+.dc-shell .fi-modal .btn:focus-visible,
+.dc-shell .fi-modal .pastilla:focus-visible{border-radius:var(--radius-pill)}
+
 /* ---------- Tarjeta de acción ---------- */
 .dc-shell .fi-accion{position:relative;isolation:isolate;overflow:hidden;
   display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;
