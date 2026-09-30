@@ -53,7 +53,7 @@ Ese codigo se traduce al `product_slug` de la Academia con el mapeo que un admin
 producto pagado del resto (`resolver_producto`, pura). Lo que no se puede resolver —sin programa en
 NeurOPS, programa sin vincular, o la Academia sin ese producto— viaja en `aviso_producto`.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.learnation_service import LearnationAPIError, LearnationService
@@ -225,6 +225,33 @@ def _ahora_iso():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
 
+def sugerencias_de_acceso(client, ventas=None, pagado=None, hoy=None):
+    """Con qué arranca el formulario de dar o renovar el acceso (ver `ficha_academia`).
+
+    El vencimiento es la regla del alta (`compute_default_expiration`: 7 días si lo único que pagó
+    es una seña, 4 meses si no), contada desde el vencimiento que tiene hoy si todavía no pasó:
+    renovarle a alguien al que le quedan dos semanas no puede recortárselas. El correo es el
+    primero con el que se lo buscaría en la Academia (el del cliente o el de sus ventas).
+    """
+    from app.services.academy_access_service import AcademyAccessService
+    from app.services.closer_service import REAL_SALE_TIPOS
+    from app.services.sheets_service import SheetsService
+
+    hoy = hoy or date.today()
+    base = hoy
+    try:
+        vence = date.fromisoformat(str((pagado or {}).get('expires_at') or '')[:10])
+        base = max(hoy, vence)
+    except ValueError:
+        pass
+    # `getattr`: `fulfillment` promete no levantar nunca, y una venta sin tipo es una venta más.
+    tipos = {SheetsService.parse_tipo_pago(getattr(v, 'tipo_pago', None))[1] for v in (ventas or [])}
+    solo_sena = 'seña' in tipos and not any(t in REAL_SALE_TIPOS for t in tipos)
+    dia = AcademyAccessService.compute_default_expiration('seña' if solo_sena else 'completo', base)
+    candidatos = emails_candidatos(client, ventas)
+    return {'vence_sugerido': dia.isoformat(), 'email_sugerido': candidatos[0] if candidatos else None}
+
+
 def fulfillment(client, ventas=None):
     """El bloque completo de la pestana Fulfillment. Nunca levanta: los errores viajan dentro.
 
@@ -248,6 +275,7 @@ def fulfillment(client, ventas=None):
     # Sin alumno no hay productos que separar, pero el programa pagado se muestra igual: es lo que
     # habria que darle de alta.
     vacio['programa'] = resolver_producto(programa_code, mapeo, [])['programa']
+    vacio.update(sugerencias_de_acceso(client, ventas))
 
     alumno_id, email, probados, error = _resolver_alumno(client, ventas)
     if error or not alumno_id:
@@ -260,8 +288,10 @@ def fulfillment(client, ventas=None):
         return {**vacio, 'emails_probados': probados, 'email_usado': email, 'error': _error(e)}
 
     alumno = resumen.get('student') or {}
+    partido = resolver_producto(programa_code, mapeo, productos)
     return {
-        **resolver_producto(programa_code, mapeo, productos),
+        **partido,
+        **sugerencias_de_acceso(client, ventas, partido['producto_pagado']),
         'consultado_en': _ahora_iso(),
         'vinculado': True,
         'alumno': {

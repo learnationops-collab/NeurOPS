@@ -273,6 +273,12 @@ ESCRITURAS = [
     # recibe el 400 de «no esta dado de baja».
     ('POST', '/revertir-baja', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                 'triage': 403, 'setter': 403}),
+    # Dar, renovar y quitar el acceso a la Academia es cobrar. Con el cuerpo vacio quien puede
+    # recibe el 400 de «falta hasta cuándo» / «falta confirmar», sin llegar a llamar a la Academia.
+    ('POST', '/academia/acceso', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                                  'triage': 403, 'setter': 403}),
+    ('POST', '/academia/quitar', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                                  'triage': 403, 'setter': 403}),
     # El borrado es irreversible: se comprueban primero los dos que NO pueden y al final uno que si.
     # Ese `closer` no es el de la agenda: cualquier closer borra (pedido del 29/09/2026). Que la
     # direccion tambien pueda lo fija `tests/api/test_ficha_lead_escritura.py`.
