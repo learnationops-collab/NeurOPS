@@ -15,6 +15,7 @@ from sqlalchemy import func
 from app import db
 from app.models import FinancialSale, User
 from app.services.closer_dashboard_service import CloserDashboardService
+from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
     _limpiar_email, _limpiar_ig, chip, pct,
@@ -39,7 +40,8 @@ METRICAS = {
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
          'desc': 'De las llamadas con resultado, cuántas asistieron.'},
         {'key': 'close_rate', 'label': 'Close rate', 'formato': 'pct', 'suma': False,
-         'desc': 'De los que asistieron, cuántos compraron.'},
+         'desc': 'De los que asistieron, cuántos compraron con pago completo o split pay. '
+                 'Las señas no cuentan.'},
         {'key': 'ticket', 'label': 'Ticket promedio', 'formato': 'money', 'suma': False,
          'desc': 'Cash dividido por las ventas cerradas.'},
         {'key': 'comision', 'label': 'Comisión', 'formato': 'money', 'suma': True,
@@ -324,6 +326,13 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         'presentaciones': presentaciones,
         'presentacion_rate': pct(presentaciones, tot_a['asistieron']),
         'close_presentacion': pct(tot_a['ventas'], presentaciones),
+        # Las cuatro lecturas del cierre —por llamada y por presentación, sin señas (pago
+        # completo + split pay) y con señas— con numerador y denominador de cada una. Es la MISMA
+        # forma que el bloque `cierres` del dashboard del closer (`matriz_de_cierres`), así la
+        # tarjeta que las dibuja es una sola. Acá cada seña es una agenda en "Seña", que por
+        # construcción no tiene venta: no hay nada que descontar para no contarla dos veces.
+        'cierres': matriz_de_cierres(tot_a['ventas'], tot_a['senas'], tot_a['asistieron'],
+                                     presentaciones),
         'estados': estados_de(agendas),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
