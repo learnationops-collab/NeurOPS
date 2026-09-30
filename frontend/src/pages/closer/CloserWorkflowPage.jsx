@@ -646,8 +646,12 @@ const CloserWorkflowPage = () => {
             } else if (stage.stage === 'call') {
                 handleSelectLead({ id: stage.appointment_id, fase: 'call' });
             } else {
-                toast.error('Este cliente no tiene ninguna agenda activa — se abre su historial completo.');
-                setHistoryClientId(lead.id);
+                // Sin agenda activa: la ficha del cliente, abierta en su Historial. Era un modal
+                // de historial aparte, con su propio «Registrar venta / pago» que abría OTRO
+                // modal; en la ficha la venta es «Registrar una venta» de Resultado y el cobro,
+                // «Registrar pago» de Acciones. El id negativo hace que la ficha se pida por
+                // cliente: el backend elige su agenda más reciente.
+                handleSelectLead({ id: -lead.id, client_id: lead.id, fase: 'hist' });
             }
         } catch (err) {
             console.error("Error al resolver la etapa del lead:", err);
@@ -1117,6 +1121,9 @@ const CloserWorkflowPage = () => {
         } else if (lead.fase === 'seg' || (lead.fase === undefined && activeStep === 'seguimientos')) {
             setModalStep(lead.tipo === 'cerrada' ? 'segventa' : 'seg');
             setModalFlowLabel('Seguimiento');
+        } else if (lead.fase === 'hist') {
+            setModalStep('hist');
+            setModalFlowLabel('Historial');
         } else {
             setModalStep('root');
             setModalFlowLabel('Reporte de llamada');
@@ -1130,10 +1137,11 @@ const CloserWorkflowPage = () => {
     // Con que pestaña abre la ficha. El mazo ya sabe a que vino el closer por la columna desde
     // la que abrio, y eso gana sobre "donde el backend cree que hay trabajo": alguien que esta
     // confirmando no quiere caer en Resultado. `segventa` es un cliente que ya compro, asi que
-    // va derecho al cobro.
+    // va derecho al cobro. `hist` es un cliente sin agenda activa buscado desde el buscador.
     const pestanaDeLaFicha = modalStep === 'confirm' ? 'conf'
         : modalStep === 'segventa' ? 'acciones'
-            : 'resultado';
+            : modalStep === 'hist' ? 'hist'
+                : 'resultado';
 
     // Cada escritura de la ficha puede mover el mazo: un lead reportado sale de la columna de
     // llamadas, uno confirmado cambia de carril. Se recarga la lista y, si el lead se borro, se
