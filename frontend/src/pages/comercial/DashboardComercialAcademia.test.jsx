@@ -52,8 +52,11 @@ const montar = () => render(
         <DashboardComercial />
     </MemoryRouter>,
 );
+// Margen para el montaje: el primer test del archivo monta el dashboard entero por primera vez, y
+// con la suite completa corriendo en paralelo eso pasaba el segundo por defecto de `findByRole`
+// (falló 3 de ~8 corridas completas; solo tarda ~600ms).
 const aAcademia = async () => fireEvent.click(
-    await screen.findByRole('button', { name: /Academia$/, pressed: false }));
+    await screen.findByRole('button', { name: /Academia$/, pressed: false }, { timeout: 5000 }));
 
 describe('DashboardComercial · actualizar datos de la Academia', () => {
     beforeEach(() => {
