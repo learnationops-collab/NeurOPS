@@ -400,6 +400,8 @@ def _declarar(appt, datos, usuario):
             # Los datos del cliente son los de la venta: si el closer los corrigio en el camino, la
             # Cuota que liquida el saldo tiene que quedar a nombre de la misma persona.
             **{k: datos[k] for k in CAMPOS_DEL_COMPRADOR if datos.get(k)},
+            # Y la misma agenda: si la venta no se ata a la de la ficha, la Cuota tampoco.
+            **({'appointment_id': datos['appointment_id']} if 'appointment_id' in datos else {}),
             'tipo_pago': f'{programa} - Cuota',
             'monto': saldo['monto'],
             'metodo_pago': saldo.get('metodo_pago') or datos.get('metodo_pago'),
@@ -568,6 +570,12 @@ def _venta_del_arbol(appt, datos, usuario):
         venta_['email_vendedor'] = vendedor.email
     if datos.get('liquidar_saldo'):
         venta_['liquidar_saldo'] = datos['liquidar_saldo']
+    # Una venta directa (una renovacion, la cuota de un plan, una venta cerrada por WhatsApp) no
+    # sale de la llamada de esta agenda: no se la ata. `post_to_sheets` elige la agenda de la venta
+    # como lo hacia `/closer/sales/new`, por fecha y con margenes, en vez de marcar 'Show up' la
+    # llamada que tenga abierta la ficha: un No Show de hace meses o una que todavia no ocurrio.
+    if datos.get('venta_directa') is True:
+        venta_['appointment_id'] = None
     cuota = _cuota_a_cobrar(appt, datos.get('cuota_cobrada'))
 
     resultado = _declarar(appt, venta_, usuario)

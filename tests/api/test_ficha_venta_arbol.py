@@ -348,6 +348,35 @@ def test_si_la_liquidacion_no_se_guardo_no_se_declara_la_renovacion(client, db, 
     assert 'saldo pendiente' in r.get_json()['message']
 
 
+# --- Venta directa --------------------------------------------------------------------------------
+
+def test_la_venta_directa_no_se_ata_a_la_agenda_de_la_ficha(client, db, lead, equipo, auth_headers):
+    """Una renovacion o una venta cerrada por WhatsApp no sale de la llamada de esta agenda:
+    `post_to_sheets` elige la agenda de la venta por fecha, como `/closer/sales/new`, en vez de
+    marcar 'Show up' la que tenga abierta la ficha. Y la Cuota que liquida el saldo, igual."""
+    payload = venta_del_arbol(venta_directa=True, agenda={'with_decision_maker': None,
+                                                          'offer_presented': None},
+                              liquidar_saldo={'monto': 750})
+    payload['venta']['tipo_pago'] = 'RR - Renovacion'
+
+    r, enviado = declarar(client, auth_headers, equipo['closer'], lead, payload)
+
+    assert r.status_code == 201, r.get_json()
+    liquidacion, principal = [llamada[0][1] for llamada in enviado.call_args_list]
+    assert principal['appointment_id'] is None
+    assert liquidacion['appointment_id'] is None
+
+
+def test_la_venta_de_la_llamada_sigue_atada_a_su_agenda(client, db, lead, equipo, auth_headers):
+    payload = venta_del_arbol(liquidar_saldo={'monto': 750})
+    payload['venta']['tipo_pago'] = 'RR - Renovacion'
+
+    r, enviado = declarar(client, auth_headers, equipo['closer'], lead, payload)
+
+    assert r.status_code == 201
+    assert [llamada[0][1]['appointment_id'] for llamada in enviado.call_args_list] == [lead.id] * 2
+
+
 # --- Quien puede --------------------------------------------------------------------------------
 
 @pytest.mark.parametrize('rol', ['setter', 'triage'])

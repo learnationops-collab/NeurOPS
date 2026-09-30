@@ -6,7 +6,7 @@ vi.mock('../../services/api', () => ({
 
 import api from '../../services/api';
 import { ACCIONES, ejecutarAccion, ejecutarConsulta } from './fichaApi';
-import { construirPayload, estadoInicial, responder } from './arbolResultado';
+import { construirPayload, estadoInicial, responder, ventaDirecta } from './arbolResultado';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,5 +44,12 @@ describe('rutas de la venta', () => {
     const estado = await ejecutarConsulta('estado_venta', 9012, { params: { programa: 'RR' } });
     expect(api.get).toHaveBeenCalledWith('/ficha/9012/estado-venta', { params: { programa: 'RR' } });
     expect(estado).toEqual({ total_paid: 500, sales_count: 1 });
+  });
+
+  it('una venta directa avisa que no sale de la llamada de esta agenda', () => {
+    const directa = construirPayload(ventaDirecta(estadoInicial()), {}).datos;
+    const deLaLlamada = construirPayload(responder(estadoInicial(), 'contacto_result', { contacto_result: 'cerro' }), {}).datos;
+    expect(directa.venta_directa).toBe(true);
+    expect(deLaLlamada).not.toHaveProperty('venta_directa');
   });
 });

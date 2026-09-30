@@ -266,6 +266,8 @@ function payloadVenta(r, contexto) {
       seguimiento_realizado: false,
     } : null,
     agenda: { with_decision_maker: r.with_decision_maker ?? null, offer_presented: r.offer_presented ?? null },
+    // No sale de la llamada de esta agenda: el backend no la marca como la agenda de la venta.
+    ...(r.venta_directa === true ? { venta_directa: true } : {}),
     // Cuota de un plan que ya existía: se marca pagada en vez de recrear el cronograma (eso
     // borraba el historial de cuotas ya cobradas).
     cuota_cobrada: esCuota(r) && cobraCuotaExistente(r, contexto) && r.selectedCuotaId
