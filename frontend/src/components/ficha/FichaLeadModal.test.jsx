@@ -58,6 +58,13 @@ describe('lectura', () => {
         expect(activa()).toBe('Historial');
     });
 
+    it('«Declarar venta» abre Resultado derecho en la venta', async () => {
+        // Era la página /closer/sales/new: el mazo abre la ficha del cliente elegido para vender.
+        await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
+        expect(activa()).toBe('Resultado');
+        expect(await screen.findByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+    });
+
     it('una pestaña pedida que este lead no tiene no deja el panel en blanco', async () => {
         // `fichaAlDia` es un cliente que ya compró: no tiene Confirmación. Pedirla no puede
         // dejar la ficha abierta en una pestaña inexistente.

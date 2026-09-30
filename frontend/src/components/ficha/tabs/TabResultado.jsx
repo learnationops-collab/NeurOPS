@@ -126,11 +126,13 @@ function useEstadoVenta(ficha, programa, onConsultar) {
 }
 
 export default function TabResultado({
-  ficha, onAccion, onConsultar = null, irA, puedeEditar = true,
+  ficha, onAccion, onConsultar = null, irA, puedeEditar = true, arrancarEnVenta = false,
 }) {
   const reducido = useReducedMotion();
   const precarga = useMemo(() => precargar(ficha), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [respuestas, setRespuestas] = useState(precarga);
+  // «Declarar venta» del dock abre la ficha para vender: se entra derecho a la venta directa, sin
+  // pasar por las cuatro tarjetas de la llamada («Anterior» vuelve a ellas).
+  const [respuestas, setRespuestas] = useState(() => (arrancarEnVenta ? ventaDirecta(precarga) : precarga));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:
