@@ -212,8 +212,11 @@
 .dc-shell .fi-agenda{border-top:1px solid var(--border-subtle)}
 .dc-shell .fi-agenda > .fi-agenda-fila{border-top:0;grid-template-columns:150px minmax(0,1fr) auto}
 /* La papelera de la agenda se tiñe de rojo recién al apuntarla: en reposo no compite con el lápiz. */
+/* También el «Eliminar el plan» con texto: rojo recién al apuntarlo. */
 .dc-shell .ibtn--borrar:hover,
-.dc-shell .ibtn--borrar:focus-visible{color:var(--error);border-color:var(--error-border)}
+.dc-shell .ibtn--borrar:focus-visible,
+.dc-shell .btn--borrar:hover:not(:disabled),
+.dc-shell .btn--borrar:focus-visible{color:var(--error);border-color:var(--error-border)}
 .dc-shell .fi-agenda[data-editando] .ibtn{color:var(--text-on-surface);
   border-color:var(--border-control)}
 .dc-shell .fi-agenda-editor{display:grid;gap:var(--s4);margin-bottom:var(--s4);padding:var(--s4);

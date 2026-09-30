@@ -815,7 +815,7 @@ describe('eliminar una agenda desde el historial', () => {
     });
 });
 
-describe('eliminar un evento del registro', () => {
+describe('crear y eliminar el resto del historial', () => {
     const EVENTO = { id: 5, fecha: '2026-09-20T10:00:00', detalle: 'Llamó dos veces', autor: 'vendedor' };
     const conEventos = (eventos = [EVENTO]) => ({
         ...fichaPrecall, historial: { ...fichaPrecall.historial, eventos },
@@ -834,5 +834,59 @@ describe('eliminar un evento del registro', () => {
         expect(onAccion).toHaveBeenCalledWith('borrar_evento', { evento_id: 5 });
     });
 
+    it('«Agregar evento» escribe uno nuevo, aunque el registro esté vacío', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockResolvedValue({});
+        render(<TabHistorial ficha={conEventos([])} onAccion={onAccion} />);
+        await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Agregar evento' }));
+        await usuario.type(screen.getByLabelText('Qué pasó'), '  Pidió que lo llamen el lunes  ');
+        await usuario.click(screen.getByRole('button', { name: 'Agregar' }));
 
+        expect(onAccion).toHaveBeenCalledWith('crear_evento', { detalle: 'Pidió que lo llamen el lunes' });
+        expect(screen.queryByLabelText('Qué pasó')).not.toBeInTheDocument();
+    });
+
+    it('si el backend rechaza el evento nuevo, dice por qué y se queda con lo escrito', async () => {
+        const usuario = userEvent.setup();
+        const rechazo = Object.assign(new Error('x'), { response: { data: { message: 'Falta el texto.' } } });
+        render(<TabHistorial ficha={conEventos([])} onAccion={vi.fn().mockRejectedValue(rechazo)} />);
+        await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Agregar evento' }));
+        await usuario.type(screen.getByLabelText('Qué pasó'), 'Algo');
+        await usuario.click(screen.getByRole('button', { name: 'Agregar' }));
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Falta el texto.');
+        expect(screen.getByLabelText('Qué pasó')).toHaveValue('Algo');
+    });
+
+    it('un seguimiento se elimina desde el modal, apuntado a la agenda del seguimiento', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = await abrirSeguimientos(usuario);
+        await usuario.click(screen.getByRole('button', { name: /Eliminar el seguimiento/ }));
+
+        const dialogo = screen.getByRole('alertdialog', { name: '¿Eliminar este seguimiento?' });
+        expect(dialogo).toHaveTextContent('Deja de aparecer en la pestaña Seguimientos del closer.');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar seguimiento' }));
+        expect(onAccion).toHaveBeenCalledWith('borrar_seguimiento', {}, SEGUIMIENTO.agenda_id);
+    });
+
+    it('el plan de cuotas se elimina entero desde el modal, que dice qué arrastra', async () => {
+        const usuario = userEvent.setup();
+        const onAccion = vi.fn().mockResolvedValue({});
+        const cuotas = [
+            { id: 1, numero_cuota: 1, monto: 500, fecha_vencimiento: '2026-10-10', estado: 'pagado' },
+            { id: 2, numero_cuota: 2, monto: 700, fecha_vencimiento: '2026-11-10', estado: 'pendiente' },
+        ];
+        render(<TabHistorial onAccion={onAccion}
+            ficha={{ ...fichaPrecall, cobro: { ...(fichaPrecall.cobro || {}), cuotas } }} />);
+        await usuario.click(screen.getByRole('button', { name: /^Plan de cuotas/ }));
+        await usuario.click(screen.getByRole('button', { name: 'Eliminar el plan' }));
+
+        const dialogo = screen.getByRole('alertdialog', { name: '¿Eliminar el plan de cuotas?' });
+        expect(dialogo).toHaveTextContent('2 cuotas');
+        expect(dialogo).toHaveTextContent('También las marcadas como pagadas');
+        await usuario.click(within(dialogo).getByRole('button', { name: 'Eliminar plan' }));
+        expect(onAccion).toHaveBeenCalledWith('borrar_plan', {});
+    });
 });

@@ -67,6 +67,10 @@ const RUTAS = {
     // `registrar_seguimiento`, el seguimiento de cobro de Acciones.
     agendar_seguimiento: (appt, p) => api.put(`/ficha/${appt}/seguimiento`, p),
     corregir_seguimiento: (appt, p) => api.patch(`/ficha/${appt}/seguimiento`, p),
+    borrar_seguimiento: (appt) => api.delete(`/ficha/${appt}/seguimiento`),
+    // El plan entero del cliente; lo cobrado en Pagos no se toca.
+    borrar_plan: (appt) => api.delete(`/ficha/${appt}/plan-cuotas`),
+    crear_evento: (appt, p) => api.post(`/ficha/${appt}/evento`, { detalle: p.detalle }),
     // El id del evento va en la URL: `editar_evento` y `borrar_evento` lo sacan del payload.
     editar_evento: (appt, p) => api.patch(`/ficha/${appt}/evento/${p.evento_id}`, { detalle: p.detalle }),
     borrar_evento: (appt, p) => api.delete(`/ficha/${appt}/evento/${p.evento_id}`),

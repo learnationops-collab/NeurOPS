@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { diaLegible, fechaLegible as fecha, instanteLegible, SeccionColapsable } from '../piezas';
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
+import { mensajeDeError } from '../fichaApi';
 import PlanCuotasForm from '../acciones/PlanCuotasForm';
 import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import BorrarConConfirmacion from '../historial/BorrarConConfirmacion';
+import MotivoDelFallo from '../historial/MotivoDelFallo';
 import FilaAgenda from '../historial/FilaAgenda';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 import AgendarSeguimiento from '../historial/AgendarSeguimiento';
@@ -118,12 +120,14 @@ const SelectorEstado = ({ etiqueta, valor, opciones, disabled, onCambiar }) => (
 );
 
 /**
- * La sección «Registro de eventos»: la bitácora del lead, reescribible y borrable.
+ * La sección «Registro de eventos»: la bitácora del lead, reescribible, borrable y con eventos
+ * nuevos escritos a mano.
  *
  * Decisión explícita del usuario (29/09/2026), tomada sabiendo lo que cuesta: con esto el
  * registro deja de servir como auditoría. Las entradas que dejan las correcciones de la propia
  * ficha —el total a pagar, el programa, el estado de una agenda— se pueden reescribir o hacer
- * desaparecer desde la misma pantalla que las produjo.
+ * desaparecer desde la misma pantalla que las produjo. Y "que los demás datos de las pestañas de
+ * historial también se puedan eliminar o crear nuevos": «Agregar evento» escribe uno a mano.
  *
  * Eliminar pide confirmación en el modal de la página (`BorrarConConfirmacion`), como todo lo que
  * se elimina en el historial: la fila se borra y no hay endpoint que la devuelva.
@@ -142,6 +146,26 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
             setEditando(null);
         } catch {
             // El aviso del cascarón ya lo dice; el editor se queda con lo tipeado.
+        } finally {
+            setOcupado(null);
+        }
+    };
+
+    // «Agregar evento»: el texto se escribe en el lugar y el motivo de un rechazo se dice al lado
+    // del botón, como en los otros formularios del historial.
+    const [agregando, setAgregando] = useState(false);
+    const [nuevo, setNuevo] = useState('');
+    const [motivo, setMotivo] = useState(null);
+    const agregar = async () => {
+        if (!nuevo.trim()) return;
+        setOcupado('nuevo');
+        setMotivo(null);
+        try {
+            await onAccion?.('crear_evento', { detalle: nuevo.trim() });
+            setNuevo('');
+            setAgregando(false);
+        } catch (err) {
+            setMotivo(mensajeDeError(err));
         } finally {
             setOcupado(null);
         }
@@ -188,7 +212,49 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
         </div>
     ));
 
-    return filas;
+    return (
+        <>
+            {filas.length ? filas : <Vacio texto="Todavía no hay eventos registrados." />}
+            {puedeEditar && (
+                <div style={{ display: 'grid', gap: 'var(--s2)', paddingTop: 'var(--s3)' }}>
+                    {agregando ? (
+                        <div className="fila" role="group" aria-label="Agregar un evento"
+                            style={{ gap: 'var(--s2)', flexWrap: 'wrap' }}>
+                            <span className="ln-field" style={{ height: 34, flex: 1, minWidth: 220 }}>
+                                <input value={nuevo} autoFocus aria-label="Qué pasó"
+                                    placeholder="Qué pasó (ej. llamó para preguntar por el pago)"
+                                    onChange={(ev) => { setNuevo(ev.target.value); setMotivo(null); }}
+                                    onKeyDown={(ev) => {
+                                        if (ev.key === 'Enter') agregar();
+                                        if (ev.key === 'Escape') {
+                                            // Cierra ESTE formulario, no la ficha entera.
+                                            ev.stopPropagation();
+                                            setAgregando(false);
+                                        }
+                                    }} />
+                            </span>
+                            <button type="button" className="btn btn--linea btn--sm"
+                                disabled={ocupado === 'nuevo'} onClick={() => setAgregando(false)}>
+                                Cancelar
+                            </button>
+                            <button type="button" className="btn btn--cta btn--sm"
+                                disabled={ocupado === 'nuevo' || !nuevo.trim()} onClick={agregar}>
+                                Agregar
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button type="button" className="btn btn--linea btn--sm"
+                                onClick={() => { setAgregando(true); setMotivo(null); }}>
+                                Agregar evento
+                            </button>
+                        </div>
+                    )}
+                    <MotivoDelFallo motivo={motivo} />
+                </div>
+            )}
+        </>
+    );
 };
 
 /**
@@ -312,7 +378,8 @@ const Seguimientos = ({ seguimientos, agendas, vocabulario, puedeEditar, onAccio
                         mostrarAgenda={agendas.length > 1}
                         // Sin el id de su agenda no hay a dónde mandar la corrección (datos viejos).
                         puedeEditar={puedeEditar && s.agenda_id != null}
-                        onCorregir={(cambios) => onAccion?.('corregir_seguimiento', cambios, s.agenda_id)} />
+                        onCorregir={(cambios) => onAccion?.('corregir_seguimiento', cambios, s.agenda_id)}
+                        onBorrar={() => onAccion?.('borrar_seguimiento', {}, s.agenda_id)} />
                 ))
                 : <Vacio texto="No se registró ningún seguimiento." />}
             {puedeEditar && (
@@ -430,7 +497,21 @@ const PlanDeCuotas = ({ ficha, cuotas, onAccion, puedeEditar }) => {
                 ))
                 : <Vacio texto="Sin plan de cuotas armado." />}
             {puedeEditar && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s3)',
+                    paddingTop: 'var(--s3)', flexWrap: 'wrap' }}>
+                    {cuotas.length > 0 && (
+                        <BorrarConConfirmacion texto="Eliminar el plan"
+                            titulo="¿Eliminar el plan de cuotas?" confirmar="Eliminar plan"
+                            onBorrar={() => onAccion?.('borrar_plan', {})}>
+                            <span>
+                                <strong>{cuotas.length} {cuotas.length === 1 ? 'cuota' : 'cuotas'}</strong>
+                                {' · '}{plata(cuotas.reduce((x, c) => x + (Number(c.monto) || 0), 0))} en total.
+                            </span>
+                            <span>
+                                También las marcadas como pagadas. Lo cobrado en Pagos no cambia.
+                            </span>
+                        </BorrarConConfirmacion>
+                    )}
                     <button type="button" className="btn btn--linea btn--sm" onClick={() => setEditando(true)}>
                         {cuotas.length ? 'Editar el plan' : 'Armar el plan'}
                     </button>
@@ -536,10 +617,12 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
 
             {/* Los eventos del log solo aparecen si el backend los manda: son ruido
                 para el uso diario y sirven cuando hay que auditar algo. */}
-            {eventos.length > 0 && (
+            {(eventos.length > 0 || puedeReportar) && (
                 <SeccionColapsable titulo="Registro de eventos"
-                    resumen={`${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`
-                        + (eventos[0]?.fecha ? ` · último ${fecha(eventos[0].fecha)}` : '')}>
+                    resumen={eventos.length
+                        ? `${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`
+                            + (eventos[0]?.fecha ? ` · último ${fecha(eventos[0].fecha)}` : '')
+                        : 'Sin eventos'}>
                     <Eventos eventos={eventos} puedeEditar={puedeReportar} onAccion={onAccion} />
                 </SeccionColapsable>
             )}

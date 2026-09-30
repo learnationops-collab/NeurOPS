@@ -4,6 +4,7 @@ import { Pencil } from 'lucide-react';
 import { diaLegible, instanteLegible } from '../piezas/fecha';
 import { localToday } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
+import BorrarConConfirmacion from './BorrarConConfirmacion';
 import Desplegable from './Desplegable';
 import MotivoDelFallo from './MotivoDelFallo';
 
@@ -67,7 +68,7 @@ const EstadoSeguimiento = ({ realizado, cual, disabled, onCambiar }) => {
 };
 
 const FilaSeguimiento = ({
-    seguimiento: s, tipos = [], mostrarAgenda = false, puedeEditar = false, onCorregir,
+    seguimiento: s, tipos = [], mostrarAgenda = false, puedeEditar = false, onCorregir, onBorrar,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -188,6 +189,14 @@ const FilaSeguimiento = ({
                                 onClick={() => (editando ? cerrar() : abrir())}>
                                 <Pencil />
                             </button>
+                            {/* Eliminarlo lo saca también de la pestaña Seguimientos del closer,
+                                aunque la agenda sea un No Show (ver el borrado del backend). */}
+                            <BorrarConConfirmacion etiqueta={`Eliminar el seguimiento ${cual}`}
+                                titulo="¿Eliminar este seguimiento?" confirmar="Eliminar seguimiento"
+                                disabled={enVuelo !== null || guardando} onBorrar={() => onBorrar?.()}>
+                                <span><strong>{fecha}</strong> · {meta}</span>
+                                <span>Deja de aparecer en la pestaña Seguimientos del closer.</span>
+                            </BorrarConConfirmacion>
                         </>
                     ) : (
                         <span className="chip" style={{ '--c': `var(--${estado.tono})` }}>{estado.label}</span>

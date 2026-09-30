@@ -40,7 +40,8 @@ const cargador = (nombre) => MODULOS_TAB[`./tabs/${nombre}.jsx`] || null;
 // los editores en línea del historial). Para ellas el aviso de arriba sería el mismo texto dos
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
-    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_evento']);
+    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
+    'borrar_plan', 'borrar_evento', 'crear_evento']);
 
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
@@ -56,6 +57,9 @@ const MENSAJES = {
     descartar: 'Lead descartado.',
     eliminar: 'Lead eliminado.',
     eliminar_agenda: 'Agenda eliminada.',
+    borrar_seguimiento: 'Seguimiento eliminado.',
+    borrar_plan: 'Plan de cuotas eliminado.',
+    crear_evento: 'Evento agregado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
     // El backend devuelve `cambios` vacío cuando lo escrito, ya normalizado, es lo que había
     // (un 'no tengo' sobre un instagram vacío, un 'n/a' sobre un correo vacío): no se guardó nada.
