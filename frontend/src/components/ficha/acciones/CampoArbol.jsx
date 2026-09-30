@@ -96,9 +96,11 @@ export default function CampoArbol({ campo, respuestas, onCambio, cuotas = [] })
                 />
               </span>
             ))}
+            {/* El `.ibtn` de la ficha: el `.ln-iconbtn` del DS perdía el borde y el fondo contra
+                `.dc-shell button` y la cruz quedaba suelta al lado de los campos. */}
             <button
               type="button"
-              className="ln-iconbtn"
+              className="ibtn"
               aria-label={`Quitar el referido ${i + 1}`}
               onClick={() => set(filas.filter((_, j) => j !== i))}
             >
