@@ -29,7 +29,7 @@ import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
-  ventaDirecta, RAICES,
+  ventaDirecta, anterior, elegida, RAICES,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -186,6 +186,12 @@ export default function TabResultado({
     setError(null);
     setRespuestas((prev) => responder(prev, clave, valores));
   }, []);
+  // «Anterior» reabre la pregunta de antes con lo que tenía puesto: si se vuelve a contestar
+  // igual, el resto del camino sigue contestado (no hay que rehacer los pasos que venían).
+  const volver = anterior(respuestas, contexto) ? () => {
+    setError(null);
+    setRespuestas((prev) => anterior(prev, contexto) ?? prev);
+  } : null;
 
   // Se anima la ENTRADA de cada pantalla, sin `AnimatePresence`: con salida en `mode="wait"` la
   // pregunta siguiente no monta hasta que termina la anterior, y una pregunta que tarda en
@@ -301,6 +307,7 @@ export default function TabResultado({
               onGuardar={guardar}
               onCambiar={cambiar}
               onVolverA={(clave) => setRespuestas((prev) => volverA(prev, clave))}
+              onAnterior={volver}
             />
           </motion.section>
         ) : (
@@ -315,6 +322,7 @@ export default function TabResultado({
               puede={puedeAvanzar(respuestas, contexto)}
               onElegir={elegir}
               onCambiar={cambiar}
+              onAnterior={volver}
               irA={irA}
             />
           </motion.section>
@@ -368,7 +376,8 @@ function ProgresoVenta({ progreso, reducido }) {
 const TIPOS_DE_TEXTO = new Set(['texto', 'email', 'tel', 'monto', 'entero']);
 
 function Pregunta({
-  pregunta, respuestas, precarga, contexto, pendientes, puede, onElegir, onCambiar, irA, reducido,
+  pregunta, respuestas, precarga, contexto, pendientes, puede, onElegir, onCambiar, onAnterior, irA,
+  reducido,
 }) {
   if (pregunta.tipo !== 'formulario') {
     const columnas = pregunta.opciones.length > 2 ? 3 : 2;
@@ -390,7 +399,7 @@ function Pregunta({
               key={String(o.valor)}
               opcion={o}
               reducido={reducido}
-              activa={respuestas[pregunta.campo] === o.valor}
+              activa={elegida(respuestas, pregunta.campo) === o.valor}
               onClick={() => onElegir(pregunta.clave, valoresDeOpcion(pregunta, o, contexto, respuestas))}
             />
           ))}
@@ -411,6 +420,11 @@ function Pregunta({
                 <History /> Ver historial
               </button>
             )}
+          </div>
+        )}
+        {onAnterior && (
+          <div className="fi-botonera" style={{ marginTop: 'var(--space-6)', justifyContent: 'flex-start' }}>
+            <BotonAnterior onClick={onAnterior} reducido={reducido} />
           </div>
         )}
       </>
@@ -471,6 +485,7 @@ function Pregunta({
       )}
 
       <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
+        {onAnterior && <BotonAnterior onClick={onAnterior} reducido={reducido} />}
         <motion.button
           type="button"
           className="btn btn--cta"
@@ -482,6 +497,23 @@ function Pregunta({
         </motion.button>
       </div>
     </>
+  );
+}
+
+// A la izquierda de la botonera, como el «Anterior» del wizard de venta: el avance queda a la
+// derecha, donde el closer ya tiene la mano.
+function BotonAnterior({ onClick, reducido, disabled = false }) {
+  return (
+    <motion.button
+      type="button"
+      className="btn btn--linea"
+      disabled={disabled}
+      whileTap={reducido || disabled ? undefined : { scale: 0.97 }}
+      onClick={onClick}
+      style={{ marginRight: 'auto' }}
+    >
+      <ArrowLeft /> Anterior
+    </motion.button>
   );
 }
 
@@ -623,7 +655,9 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 
 // --- pantalla de revisión -----------------------------------------------------------------
 
-function Revision({ respuestas, contexto, guardando, onGuardar, onCambiar, onVolverA, reducido }) {
+function Revision({
+  respuestas, contexto, guardando, onGuardar, onCambiar, onVolverA, onAnterior, reducido,
+}) {
   const filas = resumen(respuestas, contexto);
   const venta = esVenta(respuestas);
   const saldo = venta ? saldoVenta(respuestas, contexto) : 0;
@@ -697,6 +731,7 @@ function Revision({ respuestas, contexto, guardando, onGuardar, onCambiar, onVol
 
       {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja su margen libre. */}
       <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
+        {onAnterior && <BotonAnterior onClick={onAnterior} reducido={reducido} disabled={guardando} />}
         <motion.button
           type="button"
           className="btn btn--cta"

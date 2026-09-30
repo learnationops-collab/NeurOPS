@@ -178,6 +178,40 @@ export function volverA(respuestas = {}, clave) {
   return limpio;
 }
 
+/**
+ * La pregunta a la que lleva «Anterior»: la última ya contestada antes de la que toca, o antes de
+ * la revisión si el árbol está completo. `null` si no hay ninguna.
+ */
+export function preguntaAnterior(respuestas = {}, contexto = {}) {
+  const camino = caminoActivo(respuestas, contexto);
+  const actual = preguntaActual(respuestas, contexto);
+  const hasta = actual ? camino.findIndex((q) => q.clave === actual.clave) : camino.length;
+  for (let i = hasta - 1; i >= 0; i -= 1) {
+    if (contestada(camino[i], respuestas)) return normalizar(camino[i], respuestas, contexto);
+  }
+  return null;
+}
+
+/**
+ * «Anterior»: reabre la pregunta de antes, con lo que se había contestado todavía puesto. Si se
+ * vuelve a contestar igual, el resto del camino sigue valiendo (ver `responder`). Desde la
+ * primera pregunta de una venta directa vuelve a las cuatro tarjetas de la llamada. `null` si no
+ * hay adónde volver.
+ */
+export function anterior(respuestas = {}, contexto = {}) {
+  const previa = preguntaAnterior(respuestas, contexto);
+  if (previa) return volverA(respuestas, previa.clave);
+  if (respuestas.venta_directa === true) {
+    const { venta_directa: _descartada, ...resto } = respuestas;
+    return resto;
+  }
+  return null;
+}
+
+/** Lo elegido en una pregunta de opciones, aunque «Anterior» o «Corregir» la hayan reabierto. */
+export const elegida = (respuestas = {}, campo) => (respuestas[campo] !== undefined
+  ? respuestas[campo] : respuestas[ANTES]?.[campo]);
+
 // --- hitos del stepper -------------------------------------------------------------------
 
 const ETIQUETA_RES = {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes, puedeAvanzar,
   completo, hitos, resumen, esVenta, quedaDeuda, construirPayload, notaFinal, progresoVenta,
-  saldoVenta, fechasCuotas, arrancado, ventaDirecta, TIPOS_PAGO,
+  saldoVenta, fechasCuotas, arrancado, ventaDirecta, anterior, elegida, TIPOS_PAGO,
 } from './arbolResultado';
 
 // La rama de la venta del árbol de «Resultado»: el wizard «Declarar venta» del mazo, una pregunta
@@ -432,6 +432,48 @@ describe('venta: corregir desde la revisión', () => {
   });
 });
 
+describe('venta: «Anterior»', () => {
+  const guion = {
+    ...LLAMADA, ...COMPRADOR,
+    programa: { programa: 'RR' },
+    tipo_pago: { tipo_pago_simple: 'parcial' },
+    venta_montos: { precio_total: '3000', monto: '1000' },
+    medio_pago: { metodo_pago: 'Stripe' },
+    venta_num_cuotas: { num_cuotas: 2 },
+    venta_modo_cuotas: { installmentMode: 'custom' },
+    venta_fechas_cuotas: { cuotaFechas: { 1: '2026-10-25', 2: '2026-11-25' } },
+    ...DATOS_DE_LA_VENTA,
+    refs_ask: { refs_ask: 'no_pedido' },
+    venta_academia: { dar_acceso_academia: true },
+  };
+  const igual = (r) => {
+    const q = preguntaActual(r);
+    return responder(r, q.clave, q.tipo === 'formulario' ? {} : { [q.campo]: elegida(r, q.campo) });
+  };
+
+  it('se puede volver pregunta por pregunta hasta el principio y rehacerlo igual', () => {
+    const lleno = recorrer(guion);
+    const pasos = progresoVenta(lleno).total;
+    let r = lleno;
+    for (let i = 0; i < pasos; i += 1) r = anterior(r);
+    expect(preguntaActual(r).clave).toBe('venta_nombre');
+    expect(r.nombre_cliente).toBe('Kevin Álvarez');
+    for (let i = 0; i < pasos; i += 1) r = igual(r);
+    expect(completo(r)).toBe(true);
+    expect(construirPayload(r, {})).toEqual(construirPayload(lleno, {}));
+  });
+
+  it('volver al tipo de pago y cambiarlo deja de pedir el cronograma', () => {
+    let r = recorrer(guion);
+    while (preguntaActual(r)?.clave !== 'tipo_pago') r = anterior(r);
+    expect(elegida(r, 'tipo_pago_simple')).toBe('parcial');
+    r = responder(r, 'tipo_pago', { tipo_pago_simple: 'completo' });
+    expect(claves({ ...guion, tipo_pago: { tipo_pago_simple: 'completo' }, venta_montos: { monto: '3000' } }))
+      .not.toContain('venta_num_cuotas');
+    expect(preguntaActual(r).clave).toBe('venta_montos');
+  });
+});
+
 describe('venta directa: la que no sale de reportar esta llamada', () => {
   // Una renovación, un upsell, la cuota de un plan o una venta cerrada por WhatsApp. Era
   // «Registrar venta / pago» del historial del cliente, que abría el wizard en otro modal.
@@ -498,5 +540,13 @@ describe('venta directa: la que no sale de reportar esta llamada', () => {
   it('también desde una ficha en cadencia de seguimiento, sin pasar por «¿qué pasó con el contacto?»', () => {
     const ctx = { modo: 'seguimiento', intento: 2 };
     expect(preguntaActual(ventaDirecta(INICIAL()), ctx).clave).toBe('venta_nombre');
+  });
+
+  it('«Anterior» desde la primera pregunta vuelve a las cuatro tarjetas de la llamada', () => {
+    const r = anterior(ventaDirecta(INICIAL()));
+    expect(arrancado(r)).toBe(false);
+    expect(r.venta_directa).toBeUndefined();
+    const ctx = { modo: 'seguimiento', intento: 2 };
+    expect(preguntaActual(anterior(ventaDirecta(INICIAL()), ctx), ctx).clave).toBe('contacto_result');
   });
 });

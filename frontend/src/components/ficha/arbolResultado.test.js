@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   estadoInicial, reiniciar, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, construirPayload,
-  notaFinal, fechaHoraAIso, RAICES,
+  notaFinal, fechaHoraAIso, anterior, preguntaAnterior, elegida, RAICES,
 } from './arbolResultado';
 
 // La rama de la venta tiene su propio archivo: `arbolResultado.venta.test.js`.
@@ -456,6 +456,68 @@ describe('reiniciar, volver y limpieza de ramas', () => {
       r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: true });
       expect(preguntaActual(r).clave).toBe('reag_fecha');
       expect(completo(r)).toBe(false);
+    });
+  });
+
+  describe('«Anterior»', () => {
+    const guion = {
+      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'Imprevisto del lead' },
+      reag_dejo_fecha: { reag_dejo_fecha: false },
+      seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
+    };
+    // Contesta la pregunta que toca con lo mismo que tenía: la opción que había elegido o el
+    // formulario como quedó.
+    const igual = (r, ctx = {}) => {
+      const q = preguntaActual(r, ctx);
+      return responder(r, q.clave, q.tipo === 'formulario' ? {} : { [q.campo]: elegida(r, q.campo) });
+    };
+
+    it('reabre la pregunta de antes con la opción que se había elegido marcada', () => {
+      let r = responder(estadoInicial(), 'res', { res: 'reagenda' });
+      r = responder(r, 'reag_motivo', { reag_motivo: 'Imprevisto del lead' });
+      expect(preguntaAnterior(r).clave).toBe('reag_motivo');
+      r = anterior(r);
+      expect(preguntaActual(r).clave).toBe('reag_motivo');
+      expect(elegida(r, 'reag_motivo')).toBe('Imprevisto del lead');
+    });
+
+    it('desde la revisión vuelve a la última pregunta, sin perder lo que se escribió', () => {
+      const r = anterior(recorrer(guion));
+      expect(preguntaActual(r).clave).toBe('seguimiento');
+      expect(r.notes).toBe('le pido fecha');
+    });
+
+    it('volver varios pasos y contestar lo mismo lleva de nuevo a la revisión en los mismos pasos', () => {
+      let r = recorrer(guion);
+      for (let i = 0; i < 3; i += 1) r = anterior(r);
+      expect(preguntaActual(r).clave).toBe('reag_motivo');
+      for (let i = 0; i < 3; i += 1) r = igual(r);
+      expect(completo(r)).toBe(true);
+      expect(r).toMatchObject({ reag_motivo: 'Imprevisto del lead', reag_dejo_fecha: false, fecha_seguimiento: '2026-09-29' });
+    });
+
+    it('elegir otra cosa al volver sigue por la rama nueva', () => {
+      let r = anterior(anterior(recorrer(guion)));
+      expect(preguntaActual(r).clave).toBe('reag_dejo_fecha');
+      r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: true });
+      expect(preguntaActual(r).clave).toBe('reag_fecha');
+    });
+
+    it('desde la segunda pregunta vuelve a las cuatro tarjetas, y de ahí no hay adónde volver', () => {
+      let r = responder(estadoInicial(), 'res', { res: 'asistio' });
+      r = anterior(r);
+      expect(arrancado(r)).toBe(false);
+      expect(elegida(r, 'res')).toBe('asistio');
+      expect(anterior(r)).toBeNull();
+      expect(anterior(estadoInicial())).toBeNull();
+    });
+
+    it('en la cadencia de seguimiento la primera pregunta es el tope', () => {
+      const ctx = { modo: 'seguimiento', intento: 2 };
+      expect(anterior(estadoInicial(), ctx)).toBeNull();
+      const r = anterior(responder(estadoInicial(), 'contacto_result', { contacto_result: 'no_resp' }), ctx);
+      expect(preguntaActual(r, ctx).clave).toBe('contacto_result');
+      expect(anterior(r, ctx)).toBeNull();
     });
   });
 });

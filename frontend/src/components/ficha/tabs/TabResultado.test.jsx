@@ -42,6 +42,44 @@ describe('TabResultado', () => {
     expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
   });
 
+  it('«Anterior» vuelve a la pregunta de antes con lo elegido marcado, también desde la revisión', async () => {
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    expect(screen.queryByRole('button', { name: /Anterior/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Reagenda' }));
+    await user.click(screen.getByRole('button', { name: 'No dio motivo' }));
+    await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
+    await user.type(screen.getByLabelText('Ángulo del seguimiento / Notas'), 'le pido fecha nueva');
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByRole('heading', { name: /Revisá el resultado/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+    expect(screen.getByRole('heading', { name: '¿Cuándo lo vas a seguir?' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Ángulo del seguimiento / Notas')).toHaveValue('le pido fecha nueva');
+
+    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+    expect(screen.getByRole('heading', { name: '¿Dejó una fecha nueva?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /No dejó fecha/ })).toHaveAttribute('aria-pressed', 'true');
+
+    // Contestar lo mismo no obliga a rehacer lo que seguía: el formulario sigue lleno.
+    await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByRole('heading', { name: /Revisá el resultado/ })).toBeInTheDocument();
+  });
+
+  it('«Anterior» desde la primera pregunta vuelve a las cuatro tarjetas', async () => {
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Asistió' }));
+    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Registrar una venta/ }));
+    expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+    expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
+  });
+
   it('«Registrar una venta» entra al wizard de venta sin reportar la llamada', async () => {
     // Era «Registrar venta / pago» del historial del cliente, que abría el wizard en otro modal.
     const user = userEvent.setup();
