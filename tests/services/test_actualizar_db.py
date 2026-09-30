@@ -102,8 +102,13 @@ def test_el_respaldo_de_la_base_local_se_hace_y_rota(tmp_path, monkeypatch):
     copia.dispose()
 
 
-def test_el_script_apaga_los_recordatorios_antes_de_armar_la_app():
-    """`create_app()` arranca el scheduler de WhatsApp salvo que esto diga 'true'."""
+def test_el_script_apaga_los_recordatorios_antes_de_armar_la_app(monkeypatch):
+    """`create_app()` arranca el scheduler de WhatsApp salvo que esto diga 'true'. El entorno de
+    los tests ya lo trae puesto: se saca y se vuelve a cargar el script para ver que lo pone él."""
+    import importlib
+
+    monkeypatch.delenv('DISABLE_REMINDER_SCHEDULER', raising=False)
+    importlib.reload(script)
     assert os.environ['DISABLE_REMINDER_SCHEDULER'] == 'true'
 
 
