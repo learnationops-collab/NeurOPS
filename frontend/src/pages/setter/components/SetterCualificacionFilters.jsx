@@ -11,7 +11,10 @@ const SetterCualificacionFilters = ({
     stats,
     showDisqualified,
     setShowDisqualified,
-    activeStep = 'cualificacion'
+    activeStep = 'cualificacion',
+    // El buscador de la lista, al final de la fila. Lo arma quien filtra (el mazo), que es quien
+    // tiene el texto buscado.
+    buscador = null
 }) => {
     return (
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 flex flex-wrap items-center justify-between gap-4">
@@ -119,6 +122,8 @@ const SetterCualificacionFilters = ({
                     {showDisqualified ? 'Ocultar descalificados' : 'Ver descalificados'}
                 </button>
             )}
+
+            {buscador}
         </div>
     );
 };

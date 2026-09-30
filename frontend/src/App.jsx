@@ -22,17 +22,14 @@ import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
-import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
-import SetterWorkflowPage from './pages/setter/SetterWorkflowPage';
+import SetterEspacioPage from './pages/setter/SetterEspacioPage';
 import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
 import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
-import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
-import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
@@ -156,7 +153,8 @@ function App() {
                 comercial la ve completa (todo el equipo, switch Closers/Setters y Reportar) y
                 closers y setters la ven como "Mis datos", acotada a ellos. Quien ve que lo
                 decide el backend a partir de la sesion (ver app/api/comercial.py), no la ruta:
-                estas tres solo cambian donde vive la pantalla dentro de cada dock.
+                estas solo cambian donde vive la pantalla dentro de cada dock. El setter la ve
+                embebida en su espacio (/setter/deck?step=datos); su ruta vieja redirige ahi.
 
                 SIN MainLayout, como /closer/deck y /admin/hiring: la pantalla trae su propio
                 dock fijo abajo y el de la app le quedaba encima, superpuesto pixel a pixel. La
@@ -178,14 +176,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/setter/mis-datos"
-              element={
-                <ProtectedRoute roles={['setter']}>
-                  <DashboardComercial />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/setter/mis-datos" element={<Navigate replace to="/setter/deck?step=datos" />} />
             <Route
               path="/admin/ventas"
               element={
@@ -324,60 +315,23 @@ function App() {
 
 
             {/* Protected Role-Specific Routes */}
-            {/* El dashboard del setter es el comercial, acotado a el por el backend: los mismos
-                paneles que ve la direccion (embudo de entrante a cita, cualificacion, tenacidad
-                del seguimiento) en vez del tablero viejo de KPIs. Sin MainLayout, como
-                /setter/mis-datos, porque la pantalla trae su propio dock. Pedido del usuario. */}
-            <Route
-              path="/setter/dashboard"
-              element={
-                <ProtectedRoute roles={['setter']}>
-                  <DashboardComercial />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/setter/statistics"
-              element={
-                <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <PublicSetterStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/setter/report"
-              element={
-                <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <PublicSetterReportPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            {/* Agendas atribuidas a este setter. La atribución la define la fuente
-                del formulario de Calendly (ver fuente_formulario_service). */}
-            <Route
-              path="/setter/agendas"
-              element={
-                <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <SetterAgendasPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* El espacio del setter: el mazo, las agendas, el reporte y sus datos en UNA pantalla
+                con un solo dock (ver SetterEspacioPage). Sin MainLayout, como el mazo del
+                closer: el dock de la app quedaba encima del propio. Antes eran cinco paginas y
+                "Mis datos" traia otro dock, asi que al entrar a los datos se perdia la vuelta
+                al trabajo. Las rutas viejas redirigen a su seccion para no romper links. */}
             <Route
               path="/setter/deck"
               element={
                 <ProtectedRoute roles={['setter']}>
-                  <MainLayout>
-                    <SetterWorkflowPage />
-                  </MainLayout>
+                  <SetterEspacioPage />
                 </ProtectedRoute>
               }
             />
+            <Route path="/setter/dashboard" element={<Navigate replace to="/setter/deck?step=datos" />} />
+            <Route path="/setter/report" element={<Navigate replace to="/setter/deck?step=reporte" />} />
+            <Route path="/setter/statistics" element={<Navigate replace to="/setter/deck?step=reporte&tab=historial" />} />
+            <Route path="/setter/agendas" element={<Navigate replace to="/setter/deck?step=agendas&tab=historial" />} />
             <Route
               path="/closer/report"
               element={

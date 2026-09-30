@@ -17,6 +17,10 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  *
  * `antes` es lo que va a la izquierda de la navegación, separado por una línea: en el dashboard,
  * el switch Closers/Setters de la dirección.
+ *
+ * Una sección puede traer `marca: { texto, titulo }`: una insignia chica al lado del nombre (el
+ * "✓" del reporte ya enviado). `titulo` es lo que se lee en voz alta, porque el `aria-label` del
+ * botón tapa su contenido.
  */
 const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null }) => {
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
@@ -58,11 +62,13 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
                 {secciones.map((s, i) => (
                     <button key={s.id} type="button" className="dock-item"
                         aria-current={activa === s.id ? 'page' : undefined}
-                        aria-label={s.label} onClick={() => onElegir(s.id)}>
+                        aria-label={s.marca ? `${s.label}, ${s.marca.titulo}` : s.label}
+                        onClick={() => onElegir(s.id)}>
                         <span className="dock-num">{i + 1}</span>
                         <s.Icono size={20} />
                         <span className="dock-label">{s.label}</span>
                         {s.pronto && <span className="dock-pronto">Pronto</span>}
+                        {s.marca && <span className="dock-marca" aria-hidden="true">{s.marca.texto}</span>}
                     </button>
                 ))}
             </div>

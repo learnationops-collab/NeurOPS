@@ -1,0 +1,35 @@
+/* ============================================================================
+   ESPACIO DEL SETTER — la página que envuelve el trabajo del setter y sus datos.
+
+   El header, las pestañas y el dock son islas del sistema del dashboard comercial
+   (`.dc-shell.dc-shell--embebido`, ver comercial.css): así el dock es EL MISMO que
+   el de "Mis datos" y no una copia que se vaya separando. El contenido del medio
+   —el mazo, las agendas, el reporte— NO va dentro de un `.dc-shell`: su reset de
+   botones (`background:none;border:0`) le borraría los estilos de Tailwind.
+   ============================================================================ */
+
+/* El mismo fondo que `--gradient-page` del dashboard: el token vive dentro del
+   shell, y esta página no es un shell. */
+.setter-espacio{
+  min-height:100vh;
+  background:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%) fixed,#020617;
+  color:#e2e8f0;
+  /* El dock es `position:fixed`: sin este colchón tapa el final de cada lista. */
+  padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
+}
+
+/* El ancho y el margen del `.wrap` del dashboard, para que el contenido del mazo
+   y el de "Mis datos" (que embebido toma el ancho de su contenedor) queden
+   alineados al mismo borde. */
+.setter-espacio-wrap{max-width:1340px;margin:0 auto;padding:24px clamp(16px,3vw,22px) 0}
+
+.setter-espacio .tope-acciones{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.setter-espacio .yo{display:flex;align-items:center;gap:8px;min-width:0}
+.setter-espacio .yo-nombre{font-size:13px;font-weight:700;color:var(--text-muted);max-width:140px}
+.setter-espacio .playbook-n{min-width:16px;height:16px;padding:0 4px;border-radius:999px;
+  display:inline-grid;place-items:center;background:var(--brand-secondary);color:var(--on-brand);
+  font-size:9px;font-weight:900;letter-spacing:0}
+
+@media (max-width:640px){
+  .setter-espacio .yo-nombre{display:none}
+}

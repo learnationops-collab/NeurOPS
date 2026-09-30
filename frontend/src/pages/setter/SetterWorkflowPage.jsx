@@ -1,26 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Loader2, Check, Users, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import SetterCualificacionModal from '../../components/modals/SetterCualificacionModal';
 import AgendaManagerModal from '../../components/modals/AgendaManagerModal';
-import SetterHeader from './components/SetterHeader';
 import SetterCualificacionFilters from './components/SetterCualificacionFilters';
 import SetterAgendasList from './components/SetterAgendasList';
 import SetterBulkActionBar from './components/SetterBulkActionBar';
 import SetterCualificacionList from './components/SetterCualificacionList';
 import SetterComisionMesCard from './components/SetterComisionMesCard';
 
-const SetterWorkflowPage = () => {
-    const { user } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
-    
-    // Paso activo: 'cualificacion' | 'agendas'
-    const activeStep = searchParams.get('step') || 'cualificacion';
+/**
+ * El mazo del setter: la cola de cualificación y las agendas del día.
+ *
+ * Ya no es una página: vive dentro del espacio del setter (`SetterEspacioPage`), que es quien
+ * tiene el header, el dock y decide el `paso`. Antes tenía su propio header con dos pestañas
+ * ("Leads cualificados" / "Agendas") y el dock global de la app abajo, y "Mis datos" traía OTRO
+ * dock: al entrar a ver los datos se perdía la navegación del trabajo.
+ *
+ * El espacio monta este componente en el mismo lugar para los dos pasos, así que al ir de
+ * Cualificación a Agendas y volver se conservan el rango de fechas y la búsqueda.
+ */
+const SetterWorkflowPage = ({ paso = 'cualificacion' }) => {
+    const activeStep = paso;
 
     // Estado principal
     const [leads, setLeads] = useState([]);
@@ -59,12 +61,12 @@ const SetterWorkflowPage = () => {
     const [assigningId, setAssigningId] = useState(null);
     const [guardandoIgId, setGuardandoIgId] = useState(null);
 
-    // Cambiar de pestaña
-    const handleStepChange = (newStep) => {
-        setSearchParams({ step: newStep });
+    // Al cambiar de paso lo elegido en el otro deja de tener sentido: la selección masiva y el
+    // lead abierto son de la lista que se dejó de ver.
+    useEffect(() => {
         setSelectedLead(null);
         setSelectedIds(new Set());
-    };
+    }, [activeStep]);
 
     // Cargar leads / agendas de la cola activa
     const fetchLeads = async () => {
@@ -363,87 +365,89 @@ const SetterWorkflowPage = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
-            
-            {/* Header del Espacio de Trabajo con Pestañas (Leads cualificados / Agendas) */}
-            <SetterHeader
-                activeStep={activeStep}
-                onStepChange={handleStepChange}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-            />
+        <div className="text-slate-100">
+            {/* La lista y los modales van separados: los modales son `fixed`, y como hijos
+                directos del `space-y-4` heredaban su margen y quedaban 16px corridos abajo. */}
+            <div className="space-y-4">
+                <SetterComisionMesCard />
 
-            {/* Área de Trabajo Principal (Ancho completo) */}
-            <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                
-                {/* Lista de Leads / Agendas (Ancho completo 12 columnas) */}
-                <div className="lg:col-span-12 space-y-4">
+                {/* Acciones Masivas */}
+                <SetterBulkActionBar
+                    selectedIds={selectedIds}
+                    onClearSelection={() => setSelectedIds(new Set())}
+                    activeStep={activeStep}
+                    submittingBulk={submittingBulk}
+                    onBulkUpdate={handleBulkUpdate}
+                    availableKeywords={availableKeywords}
+                />
 
-                    <SetterComisionMesCard />
+                {/* Filtros de Fecha y Estadísticas. El buscador vivía en el header propio del mazo;
+                    ahora que el header es el del espacio, va con el resto de los filtros de la lista
+                    que filtra (solo la de cualificación: las agendas nunca lo usaron). */}
+                <SetterCualificacionFilters
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
+                    customDate={customDate}
+                    setCustomDate={setCustomDate}
+                    showCalendar={showCalendar}
+                    setShowCalendar={setShowCalendar}
+                    stats={stats}
+                    showDisqualified={showDisqualified}
+                    setShowDisqualified={setShowDisqualified}
+                    activeStep={activeStep}
+                    buscador={activeStep === 'cualificacion' && (
+                        <div className="relative w-full md:w-64">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Buscar por nombre o IG..."
+                                aria-label="Buscar lead por nombre o Instagram"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                            />
+                        </div>
+                    )}
+                />
 
-                    {/* Acciones Masivas */}
-                    <SetterBulkActionBar
-                        selectedIds={selectedIds}
-                        onClearSelection={() => setSelectedIds(new Set())}
-                        activeStep={activeStep}
-                        submittingBulk={submittingBulk}
-                        onBulkUpdate={handleBulkUpdate}
+                {/* Paso Agendas: una sola lista, con la atribución del anuncio adentro */}
+                {activeStep === 'agendas' && (
+                    <SetterAgendasList
+                        agendas={agendasDelMazo}
+                        cargando={loadingAgendas}
+                        onRefrescar={fetchAgendasDelMazo}
+                        onAbrirLead={abrirDetalleAgenda}
                         availableKeywords={availableKeywords}
+                        agendaIgMap={agendaIgMap}
+                        setAgendaIgMap={setAgendaIgMap}
+                        selectedAdsMap={selectedAdsMap}
+                        setSelectedAdsMap={setSelectedAdsMap}
+                        onAsignarAnuncio={handleAssignAdToAgenda}
+                        onGuardarInstagram={handleGuardarInstagram}
+                        assigningId={assigningId}
+                        guardandoIgId={guardandoIgId}
                     />
+                )}
 
-                    {/* Filtros de Fecha y Estadísticas */}
-                    <SetterCualificacionFilters
-                        dateRange={dateRange}
-                        setDateRange={setDateRange}
-                        customDate={customDate}
-                        setCustomDate={setCustomDate}
-                        showCalendar={showCalendar}
-                        setShowCalendar={setShowCalendar}
-                        stats={stats}
-                        showDisqualified={showDisqualified}
-                        setShowDisqualified={setShowDisqualified}
+                {/* Cola de leads cualificados (paso 1) */}
+                {activeStep === 'cualificacion' && (
+                    <SetterCualificacionList
+                        loading={loading}
+                        cualificacionTab={cualificacionTab}
+                        setCualificacionTab={setCualificacionTab}
+                        leadsPorProcesar={leadsPorProcesar}
+                        leadsProcesados={leadsProcesados}
+                        filteredLeads={filteredLeads}
+                        selectedIds={selectedIds}
+                        toggleSelectAll={toggleSelectAll}
+                        toggleSelect={toggleSelect}
+                        selectedLead={selectedLead}
+                        processingId={processingId}
+                        handleSelectLead={handleSelectLead}
+                        handleQuickAction={handleQuickAction}
                         activeStep={activeStep}
                     />
-
-                    {/* Paso Agendas: una sola lista, con la atribución del anuncio adentro */}
-                    {activeStep === 'agendas' && (
-                        <SetterAgendasList
-                            agendas={agendasDelMazo}
-                            cargando={loadingAgendas}
-                            onRefrescar={fetchAgendasDelMazo}
-                            onAbrirLead={abrirDetalleAgenda}
-                            availableKeywords={availableKeywords}
-                            agendaIgMap={agendaIgMap}
-                            setAgendaIgMap={setAgendaIgMap}
-                            selectedAdsMap={selectedAdsMap}
-                            setSelectedAdsMap={setSelectedAdsMap}
-                            onAsignarAnuncio={handleAssignAdToAgenda}
-                            onGuardarInstagram={handleGuardarInstagram}
-                            assigningId={assigningId}
-                            guardandoIgId={guardandoIgId}
-                        />
-                    )}
-
-                    {/* Cola de leads cualificados (paso 1) */}
-                    {activeStep === 'cualificacion' && (
-                        <SetterCualificacionList
-                            loading={loading}
-                            cualificacionTab={cualificacionTab}
-                            setCualificacionTab={setCualificacionTab}
-                            leadsPorProcesar={leadsPorProcesar}
-                            leadsProcesados={leadsProcesados}
-                            filteredLeads={filteredLeads}
-                            selectedIds={selectedIds}
-                            toggleSelectAll={toggleSelectAll}
-                            toggleSelect={toggleSelect}
-                            selectedLead={selectedLead}
-                            processingId={processingId}
-                            handleSelectLead={handleSelectLead}
-                            handleQuickAction={handleQuickAction}
-                            activeStep={activeStep}
-                        />
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Modal del lead en el paso de agendas */}

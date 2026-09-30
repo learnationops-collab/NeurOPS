@@ -18,8 +18,7 @@ import {
     Layers,
     DollarSign,
     UserCheck,
-    GraduationCap,
-    History
+    GraduationCap
 } from 'lucide-react';
 
 /**
@@ -57,19 +56,15 @@ const useDockNavigation = () => {
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {
-            // "Mis Agendas" muestra las citas atribuidas a este setter. La atribución
-            // sale de la fuente del formulario de Calendly (20/ago/2026), no del evento.
+            // El setter trabaja en SU espacio (/setter/deck), que trae su propio dock y no pasa
+            // por MainLayout. Este dock solo lo ve en las pocas páginas que sí lo usan (Sin
+            // anuncio), así que cada entrada lleva a la sección del espacio con el mismo nombre.
             return [
                 { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
-                { id: 'step-2', icon: CalendarDays, label: '2. Mis Agendas', path: '/setter/agendas' },
-                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
-                // Idem para el setter: sus leads entrantes y las agendas que genero.
-                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/mis-datos' },
-                // El historial de sus reportes diarios (y las estadisticas conversacionales).
-                // La ruta existia desde antes pero NO estaba en el dock: solo se llegaba
-                // escribiendo la URL, y desde que se borro el tablero viejo del setter es el
-                // unico lugar donde puede ver, editar o borrar un reporte ya enviado.
-                { id: 'estadisticas', icon: History, label: 'Mis Reportes', path: '/setter/statistics' }
+                { id: 'step-2', icon: CalendarDays, label: '2. Agendas', path: '/setter/deck?step=agendas' },
+                { id: 'step-3', icon: ClipboardList, label: '3. Reporte', path: '/setter/deck?step=reporte' },
+                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/deck?step=datos' },
+                { id: 'step-5', icon: ClipboardCheck, label: '5. Revisar', path: '/setter/deck?step=revisar' }
             ];
         } else if (isTriage) {
             return [

@@ -458,6 +458,11 @@
   border-radius:5px;background:var(--mat-3);
   font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
   color:var(--text-muted-40)}
+/* La insignia de una sección ya resuelta hoy (el "✓" del reporte enviado): el mismo verde de
+   "hecho" del resto del tablero, y chica para no competir con el número. */
+.dc-shell .dock-marca{margin-top:9px;display:inline-grid;place-items:center;width:16px;height:16px;
+  border-radius:var(--radius-pill);background:var(--success);color:var(--on-state);
+  font-size:10px;font-weight:900;line-height:1}
 .dc-shell .dock-ind{position:absolute;top:0;height:100%;border-radius:17px;
   background:var(--mat-3);border-top:1px solid var(--sheen);
   box-shadow:0 2px 12px rgba(0,0,0,.28);
@@ -483,6 +488,7 @@
   .dc-shell .dock-item:not([aria-current="page"]) .dock-label,
   .dc-shell .dock-item:not([aria-current="page"]) .dock-pronto{display:none}
   .dc-shell .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
+  .dc-shell .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
 }
 
 /* ============================================================

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, Send, Calendar, ListChecks, User, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import FunnelChart from '../../components/charts/FunnelChart';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
@@ -43,7 +42,17 @@ const SectionHeader = ({ icon: Icon, title, colorClass }) => (
     </div>
 );
 
-const PublicSetterReportPage = () => {
+/**
+ * El reporte diario del setter.
+ *
+ * Es la pestaña "Reporte del día" de la sección Reporte del espacio del setter
+ * (`SetterEspacioPage`); antes era una página suelta (/setter/report) con su propio título y un
+ * "Volver a Mis Estadísticas". Esa vuelta ahora es la pestaña de al lado, así que acá quedan solo
+ * la fecha, el perfil y el formulario.
+ *
+ * `onEnviado` avisa al espacio que el reporte salió, para que marque la sección como hecha.
+ */
+const PublicSetterReportPage = ({ onEnviado }) => {
     const { user } = useAuth();
     const [setters, setSetters] = useState([]);
     const [questions, setQuestions] = useState([]);
@@ -197,6 +206,7 @@ const PublicSetterReportPage = () => {
         setSubmitting(true);
         try {
             await api.post('/public/setter-report', formData);
+            onEnviado?.(formData.date);
             alert('¡Reporte enviado correctamente! Buen trabajo.');
 
             // Reset scores but keep setter and date
@@ -353,28 +363,13 @@ const PublicSetterReportPage = () => {
     const activeSetterName = setters.find(s => s.id.toString() === formData.setter_id.toString())?.name || 'Setter';
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col p-4 md:p-8 lg:p-12 relative overflow-hidden font-sans">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-900/20 blur-[120px] rounded-full" />
-            <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-teal-900/10 blur-[100px] rounded-full" />
+        <div className="text-slate-200 flex flex-col relative font-sans">
+            <div className="w-full z-10 space-y-10">
+                {/* La fecha y el perfil del reporte. El título y la vuelta al historial los pone
+                    el espacio del setter. */}
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <p className="text-slate-400 font-medium text-lg">Hola, <span className="text-slate-200 font-bold">{activeSetterName}</span> 👋 — así cerraste el día.</p>
 
-            <div className="w-full max-w-[98%] mx-auto z-10 space-y-10">
-                {/* Dashboard Header */}
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="space-y-6 flex flex-col">
-                        <Link to="/setter/statistics" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-full border border-slate-800 w-max self-start shadow-xl">
-                            <ArrowLeft size={16} />
-                            <span className="font-black uppercase tracking-widest text-[10px]">Volver a Mis Estadísticas</span>
-                        </Link>
-                        <div className="space-y-1">
-                            <p className="text-teal-400 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS High Performance</p>
-                            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight flex items-center gap-3">
-                                Setter Dashboard <span className="text-slate-700 font-light">/</span> <span className="text-indigo-500 italic">Report</span>
-                            </h1>
-                            <p className="text-slate-400 font-medium text-lg">Welcome back, <span className="text-slate-200 font-bold">{activeSetterName}</span> 👋</p>
-                        </div>
-                    </div>
-                    
                     <div className="flex items-center gap-4 bg-slate-900/80 backdrop-blur-md border border-slate-800 p-4 rounded-[2rem] shadow-2xl">
                         <div className="flex items-center gap-3 px-4 border-r border-slate-800">
                             <Calendar className="text-indigo-400" size={20} />
@@ -630,17 +625,6 @@ const PublicSetterReportPage = () => {
 
                     </form>
                 )}
-
-                <footer className="flex flex-col md:flex-row justify-between items-center py-10 text-slate-500 font-medium text-xs gap-4 border-t border-slate-800">
-                    <div className="flex items-center gap-6">
-                        <Link to="/login" className="hover:text-indigo-400 transition-colors uppercase tracking-[0.1em] font-black">Admin Access</Link>
-                        <span className="text-slate-800">|</span>
-                        <p>© 2026 NeurOPS PERFORMANCE SYSTEM</p>
-                    </div>
-                    <div className="flex items-center gap-2 italic uppercase font-black text-slate-700">
-                        Design Focused • Scalable Results
-                    </div>
-                </footer>
             </div>
         </div>
     );

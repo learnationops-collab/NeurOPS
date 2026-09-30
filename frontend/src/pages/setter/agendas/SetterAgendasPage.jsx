@@ -11,6 +11,14 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { parseUtcIso } from '../../../utils/datetime';
 
+/**
+ * Todas las agendas del setter: las que tienen su fuente, la bandeja de agendas sin dueño y sus
+ * links de agendamiento.
+ *
+ * Es la pestaña "Todas" de la sección Agendas del espacio del setter (`SetterEspacioPage`); antes
+ * era una página suelta (/setter/agendas) con el dock global de la app. El título y la navegación
+ * los pone el espacio, así que acá queda solo la lista y su botón de links.
+ */
 const SetterAgendasPage = () => {
     const [loading, setLoading] = useState(true);
     const [agendas, setAgendas] = useState([]);
@@ -106,161 +114,153 @@ const SetterAgendasPage = () => {
     };
 
     return (
-        <div className="h-screen overflow-y-auto custom-scrollbar pb-32">
-            <div className="flex flex-col items-center justify-start p-12">
-                <div className="w-full max-w-6xl space-y-8 py-12">
-                    {/* Header */}
-                    <header className="flex justify-between items-end border-b border-base pb-8 mb-4">
-                        <div className="space-y-1 text-left">
-                            <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none flex items-center gap-4">
-                                <CalendarDays size={40} className="text-primary mb-1" /> Agendas
-                            </h1>
-                            <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Las agendas cuya fuente sos vos</p>
-                        </div>
+        <div>
+            <div className="w-full space-y-8">
+                {/* Qué es esta lista y sus links: el título grande lo pone el espacio. */}
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] flex items-center gap-2">
+                        <CalendarDays size={14} className="text-primary" /> Las agendas cuya fuente sos vos
+                    </p>
+                    <Button
+                        onClick={() => setIsLinkModalOpen(true)}
+                        variant="primary"
+                        className="h-11 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2"
+                        icon={LinkIcon}
+                    >
+                        Links de Agendamiento
+                    </Button>
+                </div>
 
-                        <div className="flex items-center gap-4">
-                            <Button
-                                onClick={() => setIsLinkModalOpen(true)}
-                                variant="primary"
-                                className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2"
-                                icon={LinkIcon}
+                {/* Agendas de setting sin dueño: se le pregunta al equipo de quién son */}
+                <SetterUnclaimedAgendas agendas={sinAsignar} onResuelta={handleAgendaResuelta} />
+
+                {/* Filters & Table Wrapper */}
+                <div className="space-y-6">
+                    {/* Status Filters */}
+                    <div className="flex bg-surface p-1 rounded-2xl w-fit border border-base">
+                        {[
+                            { id: 'all', label: 'Todas' },
+                            { id: 'pending', label: 'Pendientes' },
+                            { id: 'completed', label: 'Completadas' }
+                        ].map(f => (
+                            <button
+                                key={f.id}
+                                onClick={() => setFilter(f.id)}
+                                className={`
+                                    relative px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300
+                                    ${filter === f.id ? 'text-white' : 'text-muted hover:text-white'}
+                                `}
                             >
-                                Links de Agendamiento
-                            </Button>
-                        </div>
-                    </header>
+                                {filter === f.id && (
+                                    <motion.span
+                                        layoutId="setter-agenda-filter-pill"
+                                        className="absolute inset-0 rounded-xl bg-[#1534ff] shadow-lg shadow-blue-500/20"
+                                        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                                    />
+                                )}
+                                <span className="relative">{f.label}</span>
+                            </button>
+                        ))}
+                    </div>
 
-                    {/* Agendas de setting sin dueño: se le pregunta al equipo de quién son */}
-                    <SetterUnclaimedAgendas agendas={sinAsignar} onResuelta={handleAgendaResuelta} />
-
-                    {/* Filters & Table Wrapper */}
-                    <div className="space-y-6">
-                        {/* Status Filters */}
-                        <div className="flex bg-surface p-1 rounded-2xl w-fit border border-base">
-                            {[
-                                { id: 'all', label: 'Todas' },
-                                { id: 'pending', label: 'Pendientes' },
-                                { id: 'completed', label: 'Completadas' }
-                            ].map(f => (
-                                <button
-                                    key={f.id}
-                                    onClick={() => setFilter(f.id)}
-                                    className={`
-                                        relative px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300
-                                        ${filter === f.id ? 'text-white' : 'text-muted hover:text-white'}
-                                    `}
-                                >
-                                    {filter === f.id && (
-                                        <motion.span
-                                            layoutId="setter-agenda-filter-pill"
-                                            className="absolute inset-0 rounded-xl bg-[#1534ff] shadow-lg shadow-blue-500/20"
-                                            transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                                        />
-                                    )}
-                                    <span className="relative">{f.label}</span>
-                                </button>
-                            ))}
+                    {/* Enhanced Table */}
+                    <Card variant="surface" className="border-base/50 overflow-hidden shadow-xl">
+                        <div className="bg-surface/50 px-6 py-4 border-b border-base flex items-center justify-between">
+                            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <CalendarIcon size={14} className="text-primary" /> Historial de Agendas
+                            </h3>
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span> Total: {agendas.length}
+                            </div>
                         </div>
 
-                        {/* Enhanced Table */}
-                        <Card variant="surface" className="border-base/50 overflow-hidden shadow-xl">
-                            <div className="bg-surface/50 px-6 py-4 border-b border-base flex items-center justify-between">
-                                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                    <CalendarIcon size={14} className="text-primary" /> Historial de Agendas
-                                </h3>
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span> Total: {agendas.length}
+                        {loading ? (
+                            <div className="flex items-center justify-center h-64">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            </div>
+                        ) : agendas.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-16 text-center space-y-4">
+                                <div className="w-16 h-16 rounded-3xl bg-base flex flex-col items-center justify-center border border-white/5">
+                                    <Search size={24} className="text-muted/30" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-white">No hay agendas</p>
+                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest">
+                                        {filter === 'all'
+                                            ? 'Todavía no hay agendas con tu fuente.'
+                                            : `No hay agendas en estado ${filter === 'pending' ? 'Pendiente' : 'Completada'}.`}
+                                    </p>
                                 </div>
                             </div>
-
-                            {loading ? (
-                                <div className="flex items-center justify-center h-64">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                            ) : agendas.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-16 text-center space-y-4">
-                                    <div className="w-16 h-16 rounded-3xl bg-base flex flex-col items-center justify-center border border-white/5">
-                                        <Search size={24} className="text-muted/30" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-bold text-white">No hay agendas</p>
-                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest">
-                                            {filter === 'all'
-                                                ? 'Todavía no hay agendas con tu fuente.'
-                                                : `No hay agendas en estado ${filter === 'pending' ? 'Pendiente' : 'Completada'}.`}
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-surface/30 border-b border-base/50">
-                                                <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer Asignado</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Fecha y Hora</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Estado</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {agendas.map((agenda, idx) => {
-                                                const date = parseUtcIso(agenda.start_time);
-                                                return (
-                                                    <motion.tr
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: idx * 0.05 }}
-                                                        key={agenda.id}
-                                                        className="border-b border-base/30 hover:bg-surface/50 transition-colors group cursor-pointer"
-                                                        onClick={() => handleAgendaClick(agenda)}
-                                                    >
-                                                        <td className="px-6 py-4">
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-surface/30 border-b border-base/50">
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer Asignado</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Fecha y Hora</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest">Estado</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {agendas.map((agenda, idx) => {
+                                            const date = parseUtcIso(agenda.start_time);
+                                            return (
+                                                <motion.tr
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                    key={agenda.id}
+                                                    className="border-b border-base/30 hover:bg-surface/50 transition-colors group cursor-pointer"
+                                                    onClick={() => handleAgendaClick(agenda)}
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-white text-sm">{agenda.lead_name}</span>
+                                                            <span className="text-[10px] text-muted font-mono">{agenda.phone || 'Sin teléfono'}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-[#1534ff]/20 flex items-center justify-center text-[10px] font-bold text-[#1534ff]">
+                                                                {(agenda.closer_name || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="text-sm font-medium text-muted/80">{agenda.closer_name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-1.5 rounded-lg bg-base border border-white/5">
+                                                                <Clock size={14} className="text-primary" />
+                                                            </div>
                                                             <div className="flex flex-col">
-                                                                <span className="font-bold text-white text-sm">{agenda.lead_name}</span>
-                                                                <span className="text-[10px] text-muted font-mono">{agenda.phone || 'Sin teléfono'}</span>
+                                                                <span className="text-sm font-bold text-white/90">
+                                                                    {date ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'}
+                                                                </span>
+                                                                <span className="text-[10px] text-muted font-bold tracking-wider">
+                                                                    {date ? date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                                </span>
                                                             </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 rounded-full bg-[#1534ff]/20 flex items-center justify-center text-[10px] font-bold text-[#1534ff]">
-                                                                    {(agenda.closer_name || '?').charAt(0).toUpperCase()}
-                                                                </div>
-                                                                <span className="text-sm font-medium text-muted/80">{agenda.closer_name}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="p-1.5 rounded-lg bg-base border border-white/5">
-                                                                    <Clock size={14} className="text-primary" />
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-sm font-bold text-white/90">
-                                                                        {date ? date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'Sin fecha'}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-muted font-bold tracking-wider">
-                                                                        {date ? date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <StatusBadge stage={agenda.last_stage} result={agenda.result} />
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <button className="p-2 rounded-xl text-muted opacity-0 group-hover:opacity-100 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                                                                <ArrowRight size={16} />
-                                                            </button>
-                                                        </td>
-                                                    </motion.tr>
-                                                )
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </Card>
-                    </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <StatusBadge stage={agenda.last_stage} result={agenda.result} />
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button className="p-2 rounded-xl text-muted opacity-0 group-hover:opacity-100 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                                            <ArrowRight size={16} />
+                                                        </button>
+                                                    </td>
+                                                </motion.tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
                 </div>
             </div>
 

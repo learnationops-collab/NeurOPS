@@ -22,7 +22,15 @@ import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
 import ConfigurableStatCard from '../../components/shared/ConfigurableStatCard';
 import StatTooltip from '../../components/shared/StatTooltip';
 
-const PublicSetterStatsPage = () => {
+/**
+ * El historial de reportes del setter y sus estadísticas conversacionales.
+ *
+ * Lo ven dos pantallas: el hub de Ventas de la dirección (página completa) y el espacio del
+ * setter, donde es la pestaña "Mis reportes" de la sección Reporte. `embebido` saca lo que es de
+ * página —el fondo, el título y el botón para ir a completar el reporte, que en el espacio es la
+ * pestaña de al lado— y deja el resto igual.
+ */
+const PublicSetterStatsPage = ({ embebido = false }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
     const navigate = useNavigate();
@@ -367,38 +375,46 @@ const PublicSetterStatsPage = () => {
     );
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
+        <div className={embebido
+            ? 'text-slate-200 relative'
+            : 'min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden'}>
             {/* Ambient Background elements */}
-            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
-            <div className="absolute bottom-[-100px] left-[-100px] w-96 h-96 bg-indigo-900/10 rounded-full blur-[100px] opacity-20 pointer-events-none" />
+            {!embebido && (
+                <>
+                    <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-[-100px] left-[-100px] w-96 h-96 bg-indigo-900/10 rounded-full blur-[100px] opacity-20 pointer-events-none" />
+                </>
+            )}
 
-            <div className="max-w-[98%] mx-auto z-10 relative space-y-8">
+            <div className={`${embebido ? 'w-full' : 'max-w-[98%] mx-auto'} z-10 relative space-y-8`}>
                 {/* TOP HEADER */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-800/50">
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
-                                <Layers className="text-white" size={24} />
+                {!embebido && (
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-800/50">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
+                                    <Layers className="text-white" size={24} />
+                                </div>
+                                <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+                                    Performance <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-teal-400">Center</span>
+                                </h1>
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                Performance <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-teal-400">Center</span>
-                            </h1>
+                            <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] ml-1">NeurOPS High Performance Analytics</p>
                         </div>
-                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] ml-1">NeurOPS High Performance Analytics</p>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        {user.role === 'setter' && (
-                            <button
-                                onClick={() => navigate('/setter/report')}
-                                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-colors"
-                            >
-                                <PenTool size={16} />
-                                Completar Reporte Diario
-                            </button>
-                        )}
+                        <div className="flex flex-wrap items-center gap-4">
+                            {user.role === 'setter' && (
+                                <button
+                                    onClick={() => navigate('/setter/report')}
+                                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-colors"
+                                >
+                                    <PenTool size={16} />
+                                    Completar Reporte Diario
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* TABS */}
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit shadow-sm backdrop-blur-sm">
@@ -1092,9 +1108,11 @@ const PublicSetterStatsPage = () => {
                 )}
             </div>
 
-            <div className="text-center pt-20 pb-10">
-                <p className="text-[9px] text-slate-400 font-black tracking-[0.4em] uppercase">NeurOPS Strategic Intelligence Board • © 2026 • AI Powered Dashboard</p>
-            </div>
+            {!embebido && (
+                <div className="text-center pt-20 pb-10">
+                    <p className="text-[9px] text-slate-400 font-black tracking-[0.4em] uppercase">NeurOPS Strategic Intelligence Board • © 2026 • AI Powered Dashboard</p>
+                </div>
+            )}
         </div>
     );
 };

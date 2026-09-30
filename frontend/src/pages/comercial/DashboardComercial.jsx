@@ -70,10 +70,12 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * siempre, que es además lo único que sus permisos le permiten hacer.
  */
 
-/** A dónde vuelve cada rol cuando sale del dashboard. */
+/**
+ * A dónde vuelve cada rol cuando sale del dashboard. El setter no está: nunca lo ve suelto, lo ve
+ * embebido en su espacio, donde la vuelta es el dock (ver `SetterEspacioPage`).
+ */
 const SALIDA = {
     closer: { to: '/closer/deck?step=confirmations', label: 'Volver al mazo' },
-    setter: { to: '/setter/deck?step=cualificacion', label: 'Volver al mazo' },
     director_comercial: { to: '/admin/ventas', label: 'Ir a Ventas' },
     admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
 };
@@ -171,6 +173,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
+    // Devuelve la query string que dejó escrita: el drill-down embebido se la pasa al host (ver
+    // `irA`), que también escribe en la URL en el mismo clic y tiene que partir de esta.
     const set = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
         Object.entries(cambios).forEach(([k, v]) => {
@@ -178,6 +182,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             else siguiente.set(k, v);
         });
         setParams(siguiente, { replace: true });
+        return siguiente;
     }, [params, setParams]);
 
     useEffect(() => {
@@ -277,15 +282,18 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irA = useCallback((cual, filtro) => {
         const limpio = Object.fromEntries(
             Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
-        set({
+        const siguiente = set({
             ...(embebido ? {} : { s: 'revisar' }),
             t: cual,
             f: Object.keys(limpio).length ? JSON.stringify(limpio) : null,
             ft: proximoToken(),
         });
         // Embebido la sección no está en la query string, la elige el host: sin este aviso el
-        // filtro se aplicaba a una tabla que seguía fuera de pantalla.
-        if (embebido) onIrASeccion?.('revisar');
+        // filtro se aplicaba a una tabla que seguía fuera de pantalla. Va con la query string
+        // recién escrita porque un host que guarda su sección en la URL (el espacio del setter)
+        // navega en este mismo clic: armando la suya desde lo que tenía en el render, pisaba el
+        // filtro y Revisar abría sin ninguna condición puesta.
+        if (embebido) onIrASeccion?.('revisar', siguiente);
     }, [set, embebido, onIrASeccion, proximoToken]);
 
     /**
