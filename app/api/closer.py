@@ -1872,10 +1872,10 @@ def get_daily_trend():
 
 
 def _resolve_report_date(current_user, date_str):
-    """Resuelve la fecha calendario (zona horaria del closer) para la que se arma/consulta el
-    reporte diario. Acepta 'YYYY-MM-DD' explícito (para reportar días anteriores); si no viene,
-    o es inválido, cae a "hoy" en la zona horaria del closer. Nunca permite una fecha futura —
-    no hay datos que reportar todavía."""
+    """Resuelve la fecha calendario (zona horaria del closer) del gráfico de 7 días de "Cerrar el
+    día". Es tolerante a propósito: una fecha inválida cae a "hoy" y una futura se capa a hoy,
+    porque solo decide qué barras pintar. Qué día se puede REPORTAR lo decide
+    `_dia_reportable`, que en cambio rechaza todo lo que no sea hoy o ayer."""
     today_local = datetime.now(pytz.timezone(current_user.timezone or 'America/La_Paz')).date()
     if not date_str:
         return today_local
@@ -1886,19 +1886,77 @@ def _resolve_report_date(current_user, date_str):
     return min(parsed, today_local)
 
 
+def _dia_reportable(user, valor):
+    """El día que el closer quiere reportar: hoy o ayer, en SU zona horaria (no la del servidor).
+
+    Sin fecha es hoy, como siempre. Ayer se admite para que un closer que se fue sin cerrar el día
+    lo pueda mandar a la mañana siguiente; más atrás no, porque un reporte de hace una semana ya
+    no es un cierre del día sino una corrección, y eso va por la carga de Operaciones. Una fecha
+    futura tampoco: ese día todavía no tiene nada que reportar.
+
+    Devuelve `(dia, hoy, None)` o `(None, hoy, respuesta_400)` -`hoy` una sola vez, para que la
+    respuesta no pueda mezclar dos "hoy" distintos si el pedido cruza la medianoche-. El 400 trae
+    `today`/`yesterday` para que el frontend se resincronice si su "hoy" (el del navegador) no
+    coincide con el del closer, p. ej. un admin simulando a un closer de otro país justo alrededor
+    de la medianoche."""
+    from app.services.user_time_service import hoy_del_usuario
+    hoy = hoy_del_usuario(user)
+    ayer = hoy - timedelta(days=1)
+    if not valor:
+        return hoy, hoy, None
+    try:
+        dia = datetime.strptime(str(valor), '%Y-%m-%d').date()
+    except ValueError:
+        dia = None
+    if dia in (hoy, ayer):
+        return dia, hoy, None
+    if dia is None:
+        motivo = "Fecha inválida: se espera 'AAAA-MM-DD'."
+    elif dia > hoy:
+        motivo = "Ese día todavía no llegó: solo se puede reportar hoy o ayer."
+    else:
+        motivo = "Solo se puede reportar hoy o ayer."
+    return None, hoy, (jsonify({"error": motivo, "today": hoy.isoformat(), "yesterday": ayer.isoformat()}), 400)
+
+
+def _estado_de_ayer(user, ayer, reporte_de_ayer):
+    """Si ayer quedó sin reportar. Cuenta solo si ayer hubo algo que reportar -tuvo agendas-, que
+    es el mismo criterio con el que la dirección marca un día como "sin cargar" en la constancia
+    (`comercial_reporte.constancia`): un domingo sin agendas no es una deuda, y avisarlo todos los
+    lunes empujaría a mandar reportes vacíos."""
+    from app.services.user_time_service import limites_dia_utc
+    inicio, fin = limites_dia_utc(user, ayer)
+    agendas = Appointment.query.filter(
+        Appointment.closer_id == user.id,
+        Appointment.start_time >= inicio,
+        Appointment.start_time <= fin
+    ).count()
+    return {
+        "date": ayer.isoformat(),
+        "sent": bool(reporte_de_ayer),
+        "agendas": agendas,
+        "unreported": not reporte_de_ayer and agendas > 0,
+    }
+
+
 @bp.route('/deck/daily-report', methods=['GET'])
 @login_required
 def get_daily_report_status():
     """Consulta si ya existe un reporte guardado para el closer autenticado en una fecha dada
-    (por defecto hoy) — permite que el frontend sepa, al elegir un día anterior, si ya se
-    reportó o si todavía falta, y precargar lo que ya se había escrito (referidos/reflexión)."""
+    (hoy por defecto, o ayer — ver `_dia_reportable`) y precarga lo que ya se había escrito
+    (slots/reflexión). Dice además si ayer quedó sin reportar, para el aviso de "Cerrar el día"."""
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
-    day_local = _resolve_report_date(current_user, request.args.get('date'))
+    day_local, hoy, error = _dia_reportable(current_user, request.args.get('date'))
+    if error:
+        return error
+    ayer = hoy - timedelta(days=1)
 
     from app.models import CloserDailyReport
     report = CloserDailyReport.query.filter_by(closer_id=current_user.id, date=day_local).first()
+    reporte_de_ayer = report if day_local == ayer else CloserDailyReport.query.filter_by(
+        closer_id=current_user.id, date=ayer).first()
 
     try:
         activity = CloserService.get_daily_activity_summary(current_user.id, day_local)
@@ -1923,6 +1981,10 @@ def get_daily_report_status():
 
     return jsonify({
         "date": day_local.isoformat(),
+        # El "hoy" del closer según el servidor: el selector Hoy/Ayer se arma con esto y no con el
+        # reloj del navegador, que puede estar en otra zona (admin simulando a un closer).
+        "today": hoy.isoformat(),
+        "yesterday": _estado_de_ayer(current_user, ayer, reporte_de_ayer),
         "sent": bool(report),
         "sent_at": report.created_at.isoformat() if report and getattr(report, 'created_at', None) else None,
         "referrals_sourced": report.referrals_sourced if report else 0,
@@ -1952,13 +2014,16 @@ def send_daily_report():
     en el frontend): se cuentan solos a partir de los referidos con datos reales que ya quedaron
     registrados en el sistema ese día (ver CloserService.get_daily_activity_summary). Lo único
     que el sistema no puede saber por sí solo es la reflexión diaria. Acepta `date` opcional
-    ('YYYY-MM-DD') para reportar un día anterior en vez de hoy — reenviar el mismo día actualiza
-    el reporte existente en vez de duplicarlo (y reenvía a Discord)."""
+    ('YYYY-MM-DD'): hoy o ayer, nada más (ver `_dia_reportable`). El reporte se guarda con la
+    fecha del día REPORTADO, no la del envío; reenviar el mismo día actualiza el reporte
+    existente en vez de duplicarlo (y reenvía a Discord)."""
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
-    day_local = _resolve_report_date(current_user, data.get('date'))
+    day_local, hoy, error = _dia_reportable(current_user, data.get('date'))
+    if error:
+        return error
 
     # Bloqueo de envío si queda trabajo atrasado de días ANTERIORES sin resolver (pedido del
     # usuario) — el admin queda exento (puede reportar en nombre de un closer para destrabar una
@@ -2012,6 +2077,9 @@ def send_daily_report():
     else:
         report = CloserDailyReport(closer_id=current_user.id, date=day_local, **computed)
         db.session.add(report)
+    # Cuándo se envió, a mano: el `onupdate` de la columna no corre si el reenvío no cambió ningún
+    # número, y es lo que la imagen de Discord y la dirección usan para decir "enviado el ...".
+    report.created_at = datetime.utcnow()
 
     try:
         db.session.commit()
@@ -2025,7 +2093,12 @@ def send_daily_report():
     except Exception as e:
         print(f"[Daily Report Discord Error] {e}")
 
-    return jsonify({"message": "Reporte del día enviado con éxito", "report_id": report.id, "date": day_local.isoformat()}), 200
+    return jsonify({
+        "message": "Reporte del día enviado con éxito" if day_local == hoy else "Reporte de ayer enviado con éxito",
+        "report_id": report.id,
+        "date": day_local.isoformat(),
+        "late": day_local != hoy,
+    }), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])

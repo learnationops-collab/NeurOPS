@@ -11,7 +11,7 @@ class CloserDailyReport(db.Model):
     date = db.Column(db.Date, nullable=False)
     is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
     # Cuándo se envió/actualizó este reporte (distinto de `date`, que es el día que reporta —
-    # puede reportarse un día anterior, ver `_resolve_report_date` en app/api/closer.py).
+    # el closer puede mandar el de ayer, ver `_dia_reportable` en app/api/closer.py).
     created_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # --- GENERALES ---
