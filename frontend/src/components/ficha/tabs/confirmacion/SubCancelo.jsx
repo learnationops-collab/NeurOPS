@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { DesplegableAgrupado, SelectorFecha, SubVista } from '../../piezas';
+import { DesplegableAgrupado, SelectorFecha, SiNo, SubVista } from '../../piezas';
 import { grupos } from '../../estadoFicha';
-
-const SINO = [{ label: 'Sí', valor: true }, { label: 'No', valor: false }];
 
 /**
  * El lead canceló la llamada.
@@ -39,20 +37,11 @@ const SubCancelo = ({ ficha, onVolver, onConfirmar, guardando = false }) => {
                 valor={motivo} onChange={setMotivo}
                 onAgregar={() => {}} />
 
-            <div className="fi-campo">
+            {/* El mismo sí/no segmentado que «Dar de baja»: es la misma pregunta. `start` para
+                que la grilla del campo no estire el control a todo el ancho. */}
+            <div className="fi-campo" style={{ justifyItems: 'start' }}>
                 <small className="t-rotulo">¿Agendás un seguimiento a futuro?</small>
-                <div className="fila" style={{ gap: 'var(--s2)' }}>
-                    {SINO.map(o => (
-                        <button key={o.label} type="button" className="pastilla"
-                            aria-pressed={agendar === o.valor}
-                            style={agendar === o.valor
-                                ? { borderColor: 'var(--brand-secondary)', background: 'var(--brand-secondary-surface)' }
-                                : undefined}
-                            onClick={() => setAgendar(o.valor)}>
-                            {o.label}
-                        </button>
-                    ))}
-                </div>
+                <SiNo valor={agendar} onElegir={setAgendar} etiqueta="¿Agendás un seguimiento a futuro?" />
             </div>
 
             {agendar && (
