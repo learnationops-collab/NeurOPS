@@ -5,8 +5,10 @@ import Embudo from './Embudo';
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
 import { EsqueletoTablero, Humo, Tip, fmt, useMontado } from './Shared';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
+import MatrizCierres from '../../../components/dashboard/MatrizCierres';
 import {
-    DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER, destinoToques,
+    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER,
+    destinoToques,
 } from './destinos';
 
 /**
@@ -404,73 +406,43 @@ const PanelEstados = ({ bloque, irA }) => {
 };
 
 /**
- * Las tasas que explican el cierre: la misma cantidad de ventas medida contra tres puntos. La
- * diferencia entre las dos últimas dice cuánto se pierde antes de mostrar la oferta.
+ * El cierre en sus cuatro lecturas: sin señas (pago completo + split pay, el close rate de verdad)
+ * y con señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
+ * dashboard del closer (`MatrizCierres`) sobre el mismo bloque `cierres` del backend.
+ *
+ * Debajo va la tasa de presentación, que es la que explica la distancia entre las dos columnas:
+ * cuánto se pierde antes de mostrar la oferta es un problema distinto de no cerrar.
  */
 const PanelCierre = ({ bloque, irA }) => {
-    const filas = [
-        {
-            label: 'Presentación', cant: bloque.presentaciones, base: bloque.asistieron,
-            n: bloque.presentacion_rate, tone: 'info', destino: D.presentacion_rate,
-            help: `De las ${bloque.asistieron} llamadas con show up, en ${bloque.presentaciones} se `
-                + 'llegó a presentar la oferta. Las otras se cortaron antes.',
-        },
-        {
-            label: 'Cierre por llamada', cant: bloque.cerradas, base: bloque.asistieron,
-            n: bloque.close_rate, tone: 'error', destino: D.close_llamada,
-            help: 'Ventas sobre todas las llamadas a las que el cliente se presentó. Es la medida '
-                + 'central del cierre.',
-        },
-        {
-            label: 'Cierre por presentación', cant: bloque.cerradas, base: bloque.presentaciones,
-            n: bloque.close_presentacion, tone: 'warning', destino: D.close_presentacion,
-            help: 'Ventas sobre las llamadas donde además se llegó a presentar la oferta. Saca del '
-                + 'denominador a las que nunca vieron el precio.',
-        },
-    ];
+    const c = bloque.cierres;
     return (
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
-                ayuda={'La misma cantidad de ventas medida contra tres puntos distintos. La diferencia '
-                    + 'entre las dos últimas dice cuánto se pierde antes de mostrar la oferta.'}>
+                ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
+                    + 'no una venta. La fila "con señas" suma a las que dejaron seña para ver el '
+                    + 'compromiso de compra completo. Las columnas miden lo mismo contra las llamadas '
+                    + 'con show up y contra las presentaciones.'}>
                 <span className="t-cap mut40 num">
                     {bloque.cerradas} de {fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}
                 </span>
             </PanelCab>
         }>
-            {bloque.asistieron === 0
+            {bloque.asistieron === 0 || !c
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
                 : (
-                    <div className="tdatos tdatos--tasas">
-                        <div className="tdatos-cab">
-                            <span>Tasa</span><span>Cant.</span><span>%</span><span />
-                        </div>
-                        {/* El numerador y la tasa llevan a la MISMA lista, que es la del
-                            numerador: la tasa no tiene filas propias. Las tres tasas de este panel
-                            comparten el numerador de a pares a propósito — es de lo que habla el
-                            panel: la misma cantidad medida contra puntos distintos. */}
-                        {filas.map(f => (
-                            <div key={f.label} className="tdatos-fila">
-                                <span className="tdatos-nom">
-                                    <span className="dato-punto" style={{ background: v(f.tone) }} />
-                                    <span className="trunc">{f.label}</span>
-                                </span>
-                                <span className="tdatos-p" style={{ fontSize: 13 }}>
-                                    <MetricaClicable irA={irA} destino={f.destino} vacio={!f.cant}
-                                        detalle={`${f.cant} de ${f.base} · ${f.label}`}>
-                                        {f.cant}
-                                    </MetricaClicable>
-                                    <span style={{ opacity: .6 }}>/{f.base}</span>
-                                </span>
-                                <MetricaClicable irA={irA} destino={f.destino} vacio={!f.cant}
-                                    detalle={`${f.label} · ${fmt.pct(f.n)}`}
-                                    className="tdatos-n" style={{ color: v(f.tone) }}>
-                                    {fmt.pct(f.n)}
-                                </MetricaClicable>
-                                <span><Tip texto={f.help} titulo={f.label} /></span>
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip} />
+                        <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
+                            Presentación:{' '}
+                            <MetricaClicable irA={irA} destino={D.presentacion_rate}
+                                vacio={!bloque.presentaciones}
+                                detalle={`${bloque.presentaciones} de ${bloque.asistieron} · Presentación`}>
+                                {fmt.pct(bloque.presentacion_rate)}
+                            </MetricaClicable>
+                            {' '}· en {bloque.presentaciones} de las {bloque.asistieron} llamadas con
+                            show up se llegó a presentar la oferta.
+                        </p>
+                    </>
                 )}
         </Panel>
     );
@@ -921,9 +893,10 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 procedencia de la lista, que dice exactamente eso. Antes abrian el periodo entero
                 sin filtrar para evitarla, y el precio era que el clic no llevaba a ningun lado. */}
             <Tile label="Close rate" valor={fmt.pct(bloque.close_rate)} color={v('error')}
-                help={'Ventas sobre las llamadas a las que el cliente se presentó. Se cuenta sobre las '
-                    + 'llamadas y no sobre las ventas del período: una venta puede no tener agenda en '
-                    + 'estos días, y una llamada de estos días puede cerrar más tarde.'}
+                help={'Ventas (pago completo o split pay) sobre las llamadas a las que el cliente se '
+                    + 'presentó. Las señas no cuentan: se ven aparte en el panel Cierre. Se cuenta '
+                    + 'sobre las llamadas y no sobre las ventas del período: una venta puede no tener '
+                    + 'agenda en estos días, y una llamada de estos días puede cerrar más tarde.'}
                 delta={deltas.close_rate}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 sub={`${bloque.cerradas} de ${fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}`}

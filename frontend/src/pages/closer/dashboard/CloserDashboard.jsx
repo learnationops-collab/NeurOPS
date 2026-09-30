@@ -8,6 +8,7 @@ import PerformanceKpis from './components/PerformanceKpis';
 import PerformancePendientes from './components/PerformancePendientes';
 import PerformanceFunnel, { ConfirmacionesCard } from './components/PerformanceFunnel';
 import PerformanceQuality from './components/PerformanceQuality';
+import PerformanceCierres from './components/PerformanceCierres';
 import PerformanceSenas from './components/PerformanceSenas';
 import PerformanceMoney from './components/PerformanceMoney';
 import PerformanceActivity from './components/PerformanceActivity';
@@ -170,6 +171,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                 <div className="space-y-4">
                     <PerformanceQuality rings={data.current.rings} funnel={data.current.funnel}
                         confirmaciones={data.current.confirmaciones} irA={irA} />
+                    <PerformanceCierres cierres={data.current.cierres} irA={irA} />
                     {data.current.confirmaciones
                         && <ConfirmacionesCard confirmaciones={data.current.confirmaciones} irA={irA} />}
                     <PerformanceActivity

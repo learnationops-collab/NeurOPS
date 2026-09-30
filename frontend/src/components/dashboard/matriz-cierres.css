@@ -1,0 +1,150 @@
+/* Matriz de cierres (MatrizCierres.jsx): sin / con señas × por llamada / por presentación.
+ *
+ * Como drill.css, sin prefijo de pantalla: vive en el panel Cierre del dashboard comercial (dentro
+ * de `.dc-shell`, con sus tokens) y en el dashboard del closer (Tailwind, `dash-v6`). Todo hereda
+ * tipografía y color del padre; lo único propio son los dos acentos, que cada tablero puede pisar
+ * con `--mc-sin` / `--mc-con`, y el riel de fondo, `--mc-hueco`. */
+
+.mc {
+    --mc-sin: var(--success, #2FBF8F);
+    --mc-con: var(--warning, #D9A441);
+    --mc-hueco: var(--hueco, rgba(148, 163, 184, .18));
+    min-width: 0;
+}
+
+.mc-tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    table-layout: fixed;
+}
+
+.mc-tabla th,
+.mc-tabla td {
+    text-align: left;
+    vertical-align: top;
+    padding: 6px 8px;
+}
+
+.mc-tabla thead th {
+    font-size: 11px;
+    opacity: .7;
+    padding-bottom: 0;
+}
+
+.mc-tabla thead th:first-child,
+.mc-tabla tbody th {
+    width: 30%;
+}
+
+.mc-cab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.mc-tabla tbody th {
+    font-size: 12.5px;
+    padding-top: 10px;
+}
+
+.mc-punto {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex: none;
+    background: var(--mc-acento);
+}
+
+.mc-fila--sin_senas { --mc-acento: var(--mc-sin); }
+.mc-fila--con_senas { --mc-acento: var(--mc-con); }
+
+.mc-celda {
+    animation: mc-entra .36s ease both;
+    animation-delay: calc(var(--mc-orden, 0) * 70ms);
+}
+
+.mc-cifra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mc-pct {
+    font-size: 22px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--mc-acento);
+}
+
+.mc-frac {
+    display: block;
+    font-size: 11px;
+    opacity: .65;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.mc-riel {
+    display: block;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: var(--mc-hueco);
+    overflow: hidden;
+}
+
+.mc-riel > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--mc-acento);
+    transition: width .7s cubic-bezier(.2, .7, .2, 1);
+}
+
+.mc-pie {
+    font-size: 11.5px;
+    opacity: .65;
+    margin: 4px 8px 0;
+    line-height: 1.4;
+}
+
+/* El "i" de respaldo, cuando el tablero no pasa su propio tooltip. */
+.mc-i {
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: 9px;
+    line-height: 1;
+    opacity: .6;
+    cursor: help;
+}
+
+.mc-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@keyframes mc-entra {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mc-celda { animation: none; }
+    .mc-riel > i { transition: none; }
+}
+
+@media (max-width: 480px) {
+    .mc-tabla th,
+    .mc-tabla td { padding: 4px; }
+    .mc-pct { font-size: 18px; }
+}

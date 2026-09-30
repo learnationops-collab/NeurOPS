@@ -85,7 +85,7 @@ describe('el mapa de destinos del drill-down', () => {
         // ("venta" en vez de "Venta") no falla: filtra cero filas y la lista sale vacía. Se
         // detecta chequeando que ningún valor sea una key conocida del vocabulario del backend.
         const KEYS = ['venta', 'no_show', 'cancelo', 'reagendo', 'pendiente', 'asistio',
-            'segunda_llamada', 'seguimiento', 'presento_no_cerro', 'completo', 'parcial', 'cuota',
+            'segunda_llamada', 'seguimiento', 'presento_no_cerro', 'sena', 'completo', 'parcial', 'cuota',
             'seña', 'agendo', 'en_conversacion', 'sin_respuesta', 'descartado', 'vencida',
             'por_vencer', 'sin_plan', 'al_dia', 'confirmada', 'sin_confirmar',
             // Las de `sena_estado`, que el backend manda como clave en la fila.

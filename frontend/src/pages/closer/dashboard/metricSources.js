@@ -352,8 +352,8 @@ export const METRICS = {
     senas_close_promesa: {
         title: 'Asistencias que terminaron en venta o al menos en reserva',
         source: 'derivado',
-        formula: '(ventas + señas) ÷ asistencias',
-        note: 'Mide compromiso de compra total, cerrado o no. Siempre queda por encima del close rate.',
+        formula: '(ventas + señas sin completar) ÷ asistencias',
+        note: 'Mide compromiso de compra total, cerrado o no: es la fila "con señas" de la tarjeta de cierres. Una seña que se completó con un pago del mismo período ya está en las ventas y cuenta una sola vez. No es el close rate: ese no cuenta señas.',
         destino: { tabla: 'ventas',
             filtro: { tipo_pago: [...VENTAS_NUEVAS, 'Depósitos'] },
             de: 'Cierres más reservas',
