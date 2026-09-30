@@ -36,7 +36,26 @@ De ahi el orden de intentos:
 Un token revocado, la Academia caida o un rate limit no son motivo para romperle la ficha al
 closer: vuelven en `error` con el texto que corresponde y la pestana lo muestra. Es la reaccion que
 pide la tabla de errores de la doc (§2: un 401 se avisa, no se reintenta en loop).
+
+## El producto que se muestra es el que PAGO, no el que la Academia tenga primero
+
+La Academia le asigna a todo alumno nuevo su producto gratuito de bienvenida (`learnation-course`
+viene con `is_default_on_registration: true` en `GET /products`), y un alumno puede tener otros
+accesos que alguien le dio a mano. La pestana listaba todo junto y el closer leia como "lo que
+compro" un producto que no pago. Ademas los tres productos pagos traen el mismo `program_name`
+("Bootcamp", el programa INTERNO de la Academia), asi que ese rotulo tampoco servia para
+distinguirlos (comprobado contra la API real el 30/09/2026).
+
+La fuente de verdad es la misma que usa la pestana Acciones para su campo Programa:
+`CloserFollowUpService._client_program_code` (el prefijo AL/RR/SI de la ultima venta del cliente).
+Ese codigo se traduce al `product_slug` de la Academia con el mapeo que un admin configura
+(`AcademyAccessService.get_product_mapping`, el mismo que usa el alta), y con ese slug se separa el
+producto pagado del resto (`resolver_producto`, pura). Lo que no se puede resolver —sin programa en
+NeurOPS, programa sin vincular, o la Academia sin ese producto— viaja en `aviso_producto`.
 """
+from datetime import datetime, timezone
+
+from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
 # `BookingService` inventa un correo cuando el lead llego sin ninguno. No identifica a nadie en la
@@ -126,19 +145,109 @@ def _resolver_alumno(client, ventas):
     return None, None, probados, None
 
 
+# --- El producto que pago ----------------------------------------------------------------------
+
+def _aviso(codigo, motivo):
+    return {'codigo': codigo, 'motivo': motivo}
+
+
+def _el_mas_vigente(candidatos):
+    """De varias asignaciones del MISMO producto (una vieja archivada y la renovacion, p. ej.), la
+    que hoy le da acceso: primero la activa, despues la que vence mas tarde, despues la ultima
+    asignada. Las fechas llegan en ISO 8601 con el mismo formato, asi que se comparan como texto."""
+    return max(candidatos, key=lambda p: (bool(p.get('is_active')), p.get('expires_at') or '',
+                                          p.get('assigned_at') or ''))
+
+
+def resolver_producto(programa_code, mapeo, productos):
+    """Separa, de los productos que el alumno tiene en la Academia, el que pago segun NeurOPS.
+
+    Pura: recibe el codigo de programa (AL/RR/SI, el mismo de Acciones), el mapeo
+    {codigo -> product_slug} y la lista cruda de `GET /users/{id}/products`, y devuelve:
+
+      programa         {codigo, nombre, product_slug} o None si NeurOPS no sabe que pago.
+      producto_pagado  la asignacion de la Academia de ese producto, o None.
+      otros_productos  todo lo demas que tiene en la Academia, en el orden en que llego.
+      aviso_producto   {codigo, motivo} cuando no se pudo resolver, o None.
+
+    Los codigos del aviso son `sin_programa` (NeurOPS no tiene el programa cargado: se arregla en
+    Acciones), `sin_vinculo` (el programa no tiene producto de la Academia en el mapeo: lo arregla
+    un admin) y `sin_producto` (la Academia no le tiene asignado lo que pago). En los tres,
+    `otros_productos` trae la lista entera: nada de lo que tiene se puede presentar como lo pagado.
+    """
+    productos = [p for p in (productos or []) if isinstance(p, dict)]
+    codigo = (programa_code or '').strip().upper() or None
+    if not codigo:
+        return {'programa': None, 'producto_pagado': None, 'otros_productos': productos,
+                'aviso_producto': _aviso(
+                    'sin_programa',
+                    'NeurOPS no tiene cargado qué programa pagó este cliente, así que no se puede '
+                    'saber cuál de sus accesos en la Academia es el que pagó. Cargalo en Acciones, '
+                    'en «Programa».')}
+
+    nombre = PROGRAM_CODE_NAMES.get(codigo, codigo)
+    slug = str((mapeo or {}).get(codigo) or '').strip() or None
+    programa = {'codigo': codigo, 'nombre': nombre, 'product_slug': slug}
+    if not slug:
+        return {'programa': programa, 'producto_pagado': None, 'otros_productos': productos,
+                'aviso_producto': _aviso(
+                    'sin_vinculo',
+                    f'El programa {nombre} no está vinculado a ningún producto de la Academia. Un '
+                    'admin lo vincula en Configuración de Ventas → Integraciones.')}
+
+    propios = [p for p in productos if str(p.get('product_slug') or '').strip().lower() == slug.lower()]
+    if not propios:
+        return {'programa': programa, 'producto_pagado': None, 'otros_productos': productos,
+                'aviso_producto': _aviso(
+                    'sin_producto',
+                    f'La Academia no le tiene asignado {nombre}, que es el programa que pagó: '
+                    'hasta que se lo asignen no ve ese contenido.')}
+
+    pagado = _el_mas_vigente(propios)
+    return {'programa': programa, 'producto_pagado': pagado,
+            'otros_productos': [p for p in productos if p is not pagado], 'aviso_producto': None}
+
+
+def _programa_y_mapeo(client):
+    """(codigo de programa, mapeo) de este cliente, de las MISMAS fuentes que Acciones y el alta.
+
+    El mapeo solo se lee si hay programa: es una consulta, y sin codigo no hay nada que traducir.
+    """
+    from app.services.academy_access_service import AcademyAccessService
+
+    codigo = CloserFollowUpService._client_program_code(getattr(client, 'id', None))
+    return codigo, (AcademyAccessService.get_product_mapping() if codigo else {})
+
+
+def _ahora_iso():
+    """Cuando se le pregunto a la Academia, en UTC con zona: la pestana lo muestra en la hora de
+    quien mira."""
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
 def fulfillment(client, ventas=None):
     """El bloque completo de la pestana Fulfillment. Nunca levanta: los errores viajan dentro.
 
     `vinculado` es la pregunta que la pestana contesta primero —¿este cliente existe como alumno?—
     y separa los tres casos que el closer tiene que poder distinguir de un vistazo: no existe
     (hay que darle el acceso), existe y se le ve el progreso, o no se pudo averiguar.
+
+    `productos` sigue viajando entero y crudo, como siempre; `producto_pagado` y `otros_productos`
+    son la misma lista partida en dos segun el programa que pago (ver `resolver_producto`).
     """
     vacio = {'vinculado': False, 'alumno': None, 'desempeno': None, 'productos': [],
-             'email_usado': None, 'emails_probados': [], 'telefono_coincide': None, 'error': None}
+             'email_usado': None, 'emails_probados': [], 'telefono_coincide': None, 'error': None,
+             'programa': None, 'producto_pagado': None, 'otros_productos': [],
+             'aviso_producto': None, 'consultado_en': _ahora_iso()}
 
     if not client:
         return {**vacio, 'error': {'codigo': None,
                                   'motivo': 'Este lead todavía no es un cliente: no hay alumno que buscar.'}}
+
+    programa_code, mapeo = _programa_y_mapeo(client)
+    # Sin alumno no hay productos que separar, pero el programa pagado se muestra igual: es lo que
+    # habria que darle de alta.
+    vacio['programa'] = resolver_producto(programa_code, mapeo, [])['programa']
 
     alumno_id, email, probados, error = _resolver_alumno(client, ventas)
     if error or not alumno_id:
@@ -152,6 +261,8 @@ def fulfillment(client, ventas=None):
 
     alumno = resumen.get('student') or {}
     return {
+        **resolver_producto(programa_code, mapeo, productos),
+        'consultado_en': _ahora_iso(),
         'vinculado': True,
         'alumno': {
             'id': alumno.get('id') or alumno_id,

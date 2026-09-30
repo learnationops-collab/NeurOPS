@@ -393,6 +393,36 @@ def test_el_fulfillment_devuelve_el_alumno_de_la_academia(client, db, lead, equi
     assert r.get_json()['alumno']['nombre'] == 'Ana Gomez'
 
 
+def test_el_producto_de_fulfillment_es_el_programa_de_acciones(client, db, comprador, equipo,
+                                                               auth_headers):
+    """Pedido del usuario (30/09/2026): en Fulfillment se veian productos que no eran los que el
+    cliente pago. El que manda es el Programa de Acciones, traducido con el mapeo del alta."""
+    from unittest.mock import patch
+
+    from app.models import Integration
+    from app.services import ficha_fulfillment_service as ful
+
+    comprador.learnation_user_id = 87
+    db.session.add(Integration(key='learnation_academy', name='Academia', payload_config={
+        'product_mapping': {'AL': 'ace-learners', 'RR': 'residency-roadmap'}}))
+    db.session.commit()
+    appt = Appointment.query.filter_by(client_id=comprador.id).first()
+    regalo = {'assignment_id': 1, 'product_slug': 'learnation-course', 'is_active': True}
+    pagado = {'assignment_id': 2, 'product_slug': 'residency-roadmap', 'is_active': True}
+
+    with patch.object(ful, 'LearnationService') as academia:
+        academia.get_student_summary.return_value = {'student': {'id': 87}, 'performance': {}}
+        academia.get_student_products.return_value = {'products': [regalo, pagado]}
+        datos = client.get(f'/api/ficha/{appt.id}/fulfillment',
+                           headers=auth_headers(equipo['closer'])).get_json()
+    ficha = abrir(client, auth_headers, equipo['closer'], client_id=comprador.id).get_json()
+
+    assert datos['programa']['codigo'] == ficha['cobro']['programa_code'] == 'RR'
+    assert datos['producto_pagado']['assignment_id'] == 2
+    assert [p['assignment_id'] for p in datos['otros_productos']] == [1]
+    assert datos['aviso_producto'] is None
+
+
 def test_la_academia_caida_no_rompe_la_pestana(client, db, lead, equipo, auth_headers):
     """Un token revocado o un rate limit son un aviso dentro de la respuesta, no un 500."""
     from unittest.mock import patch

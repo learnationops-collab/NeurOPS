@@ -175,3 +175,114 @@ def test_sin_cliente_lo_dice_sin_llamar_a_la_academia(academia):
 
     assert datos['error']['codigo'] is None
     academia.check_user.assert_not_called()
+
+
+# --- El producto que pago ---------------------------------------------------------------------
+#
+# La forma de los productos es la de la API real (30/09/2026). Los tres productos pagos traen el
+# mismo `program_name` ("Bootcamp", el programa interno de la Academia) y todo alumno nuevo recibe
+# `learnation-course` de regalo: ni el orden ni ese rotulo dicen cual es el que pago.
+
+MAPEO = {'AL': 'ace-learners', 'RR': 'residency-roadmap', 'SI': 'residency-roadmap-for-steps'}
+
+
+def asignacion(slug, activo=True, vence='2027-01-14T00:00:00+00:00', asignado='2026-09-14T21:18:38+00:00',
+               id_=1):
+    return {'assignment_id': id_, 'product_id': id_, 'product_name': slug.replace('-', ' ').title(),
+            'product_slug': slug, 'program_name': 'Bootcamp', 'status': 'active' if activo else 'expired',
+            'is_active': activo, 'is_deposit': False, 'expires_at': vence, 'days_remaining': 106 if activo else 0,
+            'assigned_at': asignado}
+
+
+BIENVENIDA = asignacion('learnation-course', vence=None, id_=4)
+AL = asignacion('ace-learners', id_=3)
+RR = asignacion('residency-roadmap', id_=1)
+
+
+def test_el_producto_pagado_se_separa_del_de_bienvenida_y_de_otros_accesos():
+    """El bug del pedido: la pestana mostraba como lo comprado un producto que no pago."""
+    r = ful.resolver_producto('AL', MAPEO, [BIENVENIDA, RR, AL])
+
+    assert r['producto_pagado'] is AL
+    assert r['otros_productos'] == [BIENVENIDA, RR]
+    assert r['programa'] == {'codigo': 'AL', 'nombre': 'Ace Learners', 'product_slug': 'ace-learners'}
+    assert r['aviso_producto'] is None
+
+
+def test_sin_programa_en_neurops_no_se_adivina_cual_pago():
+    """Ni el primero ni el activo: cualquiera de los dos puede ser el de regalo."""
+    r = ful.resolver_producto(None, MAPEO, [AL, BIENVENIDA])
+
+    assert (r['programa'], r['producto_pagado']) == (None, None)
+    assert r['otros_productos'] == [AL, BIENVENIDA]
+    assert r['aviso_producto']['codigo'] == 'sin_programa'
+    assert 'Acciones' in r['aviso_producto']['motivo']
+
+
+def test_un_programa_sin_producto_vinculado_lo_arregla_un_admin():
+    r = ful.resolver_producto('SI', {'AL': 'ace-learners'}, [AL])
+
+    assert r['programa'] == {'codigo': 'SI', 'nombre': 'Specialist Initiative', 'product_slug': None}
+    assert r['producto_pagado'] is None
+    assert r['aviso_producto']['codigo'] == 'sin_vinculo'
+    assert 'Integraciones' in r['aviso_producto']['motivo']
+
+
+def test_la_academia_sin_el_producto_pagado_se_avisa_y_lo_demas_queda_como_otros():
+    r = ful.resolver_producto('RR', MAPEO, [BIENVENIDA, AL])
+
+    assert r['producto_pagado'] is None
+    assert r['otros_productos'] == [BIENVENIDA, AL]
+    assert r['aviso_producto']['codigo'] == 'sin_producto'
+    assert 'Residency Roadmap' in r['aviso_producto']['motivo']
+
+
+def test_de_dos_asignaciones_del_mismo_producto_gana_la_vigente():
+    """Una renovacion deja la asignacion vieja archivada: la que da acceso hoy es la activa."""
+    vieja = asignacion('ace-learners', activo=False, vence='2026-08-01T00:00:00+00:00', id_=10)
+    nueva = asignacion('ace-learners', activo=True, vence='2027-01-14T00:00:00+00:00', id_=11)
+
+    r = ful.resolver_producto('AL', MAPEO, [vieja, nueva])
+
+    assert r['producto_pagado'] is nueva
+    assert r['otros_productos'] == [vieja]
+
+
+def test_el_slug_se_compara_sin_mayusculas_ni_espacios():
+    r = ful.resolver_producto(' al ', {'AL': ' Ace-Learners '}, [AL])
+
+    assert r['producto_pagado'] is AL
+
+
+def test_el_payload_suma_el_producto_pagado_sin_perder_las_claves_de_siempre(academia):
+    """`productos`, `alumno` y `desempeno` los leen otras pantallas: se agregan claves, no se
+    renombra ninguna."""
+    academia.get_student_products.return_value = {'products': [BIENVENIDA, AL]}
+    with patch.object(ful, '_programa_y_mapeo', return_value=('AL', MAPEO)):
+        datos = ful.fulfillment(cliente(learnation_user_id=87), [])
+
+    assert {'vinculado', 'alumno', 'desempeno', 'productos', 'email_usado', 'emails_probados',
+            'telefono_coincide', 'error'} <= set(datos)
+    assert datos['productos'] == [BIENVENIDA, AL]
+    assert datos['producto_pagado'] is AL
+    assert datos['otros_productos'] == [BIENVENIDA]
+    assert datos['programa']['codigo'] == 'AL'
+
+
+def test_sin_alumno_igual_se_dice_que_programa_pago(academia):
+    """Es el producto que habria que darle de alta."""
+    with patch.object(ful, '_programa_y_mapeo', return_value=('RR', MAPEO)):
+        datos = ful.fulfillment(cliente(), [])
+
+    assert datos['vinculado'] is False
+    assert datos['programa']['product_slug'] == 'residency-roadmap'
+    assert (datos['producto_pagado'], datos['aviso_producto']) == (None, None)
+
+
+def test_la_respuesta_dice_cuando_se_le_pregunto_a_la_academia(academia):
+    from datetime import datetime
+
+    datos = ful.fulfillment(cliente(learnation_user_id=87), [])
+
+    # Con zona: la pestana lo pasa a la hora de quien mira.
+    assert datetime.fromisoformat(datos['consultado_en']).utcoffset() is not None
