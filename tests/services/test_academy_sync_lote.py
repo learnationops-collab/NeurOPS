@@ -191,6 +191,20 @@ def test_la_red_caida_corta_el_lote(db, academia):
     assert academia.peticiones == 1
 
 
+def test_una_respuesta_con_otra_forma_de_un_alumno_no_corta_el_lote(db, academia):
+    """Si la Academia cambia la forma de UNA respuesta, ese cliente queda con el error y el resto sigue."""
+    comprador(db, learnation_user_id=1)
+    raro = comprador(db, learnation_user_id=2)
+    normal = academia.doble.get_student_summary.side_effect
+    academia.doble.get_student_summary.side_effect = (
+        lambda alumno_id: ['no', 'es', 'un', 'objeto'] if alumno_id == 2 else normal(alumno_id))
+
+    resumen = lote()
+
+    assert (resumen['procesados'], resumen['errores'], resumen['vinculados'], resumen['corte']) == (2, 1, 1, None)
+    assert foto(raro).error == 'La Academia respondió algo que no se pudo leer.'
+
+
 def test_un_404_de_un_alumno_no_corta_el_lote(db, academia):
     comprador(db, learnation_user_id=1)
     comprador(db, learnation_user_id=2)

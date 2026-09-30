@@ -478,7 +478,13 @@ def sincronizar_lote(presupuesto=None, tope_segundos=TOPE_SEGUNDOS, ahora=None, 
             break
 
         foto = _foto_de(cid, fotos)
-        gastadas, error = _sincronizar_uno(cliente, ventas, foto, candidatos, conocido, ahora)
+        try:
+            gastadas, error = _sincronizar_uno(cliente, ventas, foto, candidatos, conocido, ahora)
+        except Exception:  # una respuesta con otra forma, de UN alumno, no deja sin datos al resto
+            logger.exception('[ACADEMIA] Respuesta inesperada al mirar al cliente %s', cid)
+            gastadas, error = costo_maximo, None
+            _registrar_error(foto, {'codigo': None,
+                                    'motivo': 'La Academia respondió algo que no se pudo leer.'}, ahora)
         usadas += gastadas
         try:
             db.session.commit()
