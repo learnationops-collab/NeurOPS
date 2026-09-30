@@ -49,7 +49,7 @@ export const SelectorFecha = ({ valor, onChange, presets = [], minimo }) => (
   <span data-pieza="selector-fecha">
     <input type="date" value={valor || ''} min={minimo || undefined} onChange={(e) => onChange?.(e.target.value)} />
     {presets.map((p) => (
-      <button key={p.clave || p} type="button" onClick={() => onChange?.(p.valor)}>{p.label || p}</button>
+      <button key={p.clave || p.label || p} type="button" onClick={() => onChange?.(p.valor)}>{p.label || p}</button>
     ))}
   </span>
 );
