@@ -1488,11 +1488,22 @@ def baja(appt, datos, usuario):
     No se toca `closer_result`: la llamada ocurrio y fue una venta, y reescribirla como "Lead
     Perdido" falsearia el historial de la agenda y el embudo. La baja queda como seguimiento
     cerrado mas un comentario en el hilo del cliente, que es donde el equipo la lee.
+
+    Y queda marcada en el cliente (`baja_service.dar_de_baja`): desde ahi no debe nada, sale de
+    las listas de cobro y no dispara avisos. Lo que pago no se toca. Si se pidio un seguimiento a
+    futuro, es el unico suyo que sigue apareciendo (ver `baja_service.seguimiento_en_pie`).
+
+    La marca va ANTES del guardado del mazo: ese guardado comitea (la bitacora del lead), y la
+    baja y su seguimiento tienen que quedar en el mismo commit.
     """
+    from app.services import baja_service
+
     motivo = _texto(datos, 'motivo', obligatorio=True)
+    if appt.client:
+        baja_service.dar_de_baja(appt.client, motivo, usuario)
     aplicar_cambios(appt, {
         'seguimiento_tipo': 'cerrada',
-        'seguimiento_sub': f'Baja: {motivo}',
+        'seguimiento_sub': f'{baja_service.PREFIJO_SEGUIMIENTO} {motivo}',
         'seguimiento_realizado': not datos.get('fecha_seguimiento'),
         'fecha_seguimiento': datos.get('fecha_seguimiento'),
     }, usuario)
@@ -1501,7 +1512,38 @@ def baja(appt, datos, usuario):
             client_id=appt.client_id, author_id=usuario.id,
             text=f'Cliente dado de baja por {usuario.username}. Motivo: {motivo}.'))
     db.session.commit()
-    return {'id': appt.id, 'motivo': motivo}
+    return {'id': appt.id, 'motivo': motivo, 'baja': baja_service.descriptor(appt.client)}
+
+
+def revertir_baja(appt, datos, usuario):
+    """Deshace la baja del cliente de esta agenda: vuelve a deber y vuelve a las listas de cobro.
+
+    Es directo y seguro porque la baja no destruyo nada: la deuda sale de lo negociado menos lo
+    pagado y el cronograma de cuotas quedo intacto, asi que borrar la marca los devuelve exactos.
+    El seguimiento que cerro la baja queda como esta (es historial); el cliente vuelve a la cola de
+    cobro, que lista a todo cliente comprado.
+
+    Queda escrito en el hilo del cliente y en la bitacora del lead, con la baja que se deshizo.
+    """
+    from app.services import baja_service
+    from app.services.booking_service import BookingService
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    cliente = appt.client
+    anterior = baja_service.revertir(cliente) if cliente else None
+    if anterior is None:
+        raise ErrorDeAccion('Este cliente no está dado de baja.')
+
+    deuda = CloserFollowUpService._client_debt(cliente.id)
+    de_cuando = f"la del {anterior['fecha_legible']}"
+    if anterior.get('motivo'):
+        de_cuando += f" («{anterior['motivo']}»)"
+    texto = (f'{usuario.username} revirtió la baja del cliente ({de_cuando}). '
+             f'Vuelve a deber ${deuda:,.2f}.')
+    db.session.add(ClientComment(client_id=cliente.id, author_id=usuario.id, text=texto))
+    BookingService.log_lead_event(appt.id, usuario.id, 'baja_revertida', texto)
+    db.session.commit()
+    return {'id': appt.id, 'deuda': deuda, 'baja_anterior': anterior}
 
 
 # --- Nota del equipo --------------------------------------------------------------------------

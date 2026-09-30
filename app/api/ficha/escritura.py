@@ -298,7 +298,14 @@ def programa(appt_id):
 
 @bp.route('/<int:appt_id>/baja', methods=['POST'])
 def baja(appt_id):
+    """Da de baja al cliente: deja de deber y sale de las listas de cobro (ver `baja_service`)."""
     return _ejecutar(appt_id, 'cobrar', acciones.baja)
+
+
+@bp.route('/<int:appt_id>/revertir-baja', methods=['POST'])
+def revertir_baja(appt_id):
+    """Deshace la baja: el cliente vuelve a deber lo que debía. Mismo permiso que darla."""
+    return _ejecutar(appt_id, 'cobrar', acciones.revertir_baja)
 
 
 @bp.route('/<int:appt_id>/nota', methods=['POST'])

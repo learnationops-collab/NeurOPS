@@ -2066,6 +2066,7 @@ def test_ninguna_escritura_responde_a_un_anonimo(client, db, lead):
         client.patch(url(lead, '/seguimiento'), json={'realizado': True}),
         client.put(url(lead, '/plan-cuotas'), json={'total': 1, 'num_cuotas': 1}),
         client.post(url(lead, '/baja'), json={'motivo': 'x'}),
+        client.post(url(lead, '/revertir-baja'), json={}),
         client.post(url(lead, '/pago'), json={'fecha': '2026-09-01', 'monto': 1,
                                               'metodo_pago': 'Stripe', 'programa_code': 'RR',
                                               'tipo': 'cuota'}),
