@@ -42,7 +42,7 @@ const nombres = () => screen.queryAllByRole('button', { name: /^Abrir / })
     .map(b => b.getAttribute('aria-label').replace('Abrir ', ''));
 
 const elegirRapido = (etiqueta) => {
-    fireEvent.click(screen.getByRole('button', { name: /^Activos/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Vigentes/ }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: new RegExp(`^${etiqueta}`) }));
 };
 

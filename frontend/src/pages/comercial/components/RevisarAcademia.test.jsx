@@ -84,7 +84,7 @@ describe('Revisar · la Academia en Clientes', () => {
     it('el atajo "Activos en la Academia" filtra y pasa a sus columnas', () => {
         render(<Revisar {...props()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /^Todos/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^Vigentes/ }));
         fireEvent.click(screen.getByRole('menuitemradio', { name: /^Activos en la Academia/ }));
 
         expect(nombres()).toEqual(['Alumno 2', 'Alumno 4']);

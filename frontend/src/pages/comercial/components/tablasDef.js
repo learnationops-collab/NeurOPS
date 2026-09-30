@@ -322,10 +322,11 @@ export const TABLAS = {
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             ...FACETAS_ACADEMIA,
         ],
-        // El filtro rápido recibe también las facetas activas (ver `entraPorDefecto`). "Activos"
-        // y no "Todos": el listado por defecto deja afuera a los dados de baja.
+        // El filtro rápido recibe también las facetas activas (ver `entraPorDefecto`). "Vigentes"
+        // y no "Todos": el listado por defecto deja afuera a los dados de baja. Tampoco "Activos",
+        // que en esta misma lista se confundía con «Activos en la Academia» (otra cosa: estudian).
         chips: [
-            { key: 'todos', label: 'Activos', filtro: entraPorDefecto },
+            { key: 'todos', label: 'Vigentes', filtro: entraPorDefecto },
             { key: 'con_deuda', label: 'Con deuda', filtro: (f) => f.deuda > 0.01 },
             { key: 'vencida', label: 'Cuota vencida', filtro: (f) => f.cuota_vencida },
             // Un dado de baja no debe, pero no terminó de pagar: no está al día.
