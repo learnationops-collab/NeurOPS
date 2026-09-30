@@ -227,8 +227,10 @@ def get_new_clients_dashboard():
         elif clean_prog == 'SI':
             total_to_pay = 2000.0
 
-        # Deuda
-        debt = max(0.0, total_to_pay - total_pagado)
+        # Deuda. Un cliente dado de baja no debe nada: lo que pagó sigue en `total_pagado`, pero su
+        # saldo ya no es plata por cobrar (ver `app/services/baja_service.py`).
+        dado_de_baja = bool(db_client and db_client.baja_at)
+        debt = 0.0 if dado_de_baja else max(0.0, total_to_pay - total_pagado)
 
         # Recopilar todos los pagos historicos del cliente para el tooltip de total_pagado
         todos_los_pagos = []
@@ -261,6 +263,7 @@ def get_new_clients_dashboard():
             "total_pagado": round(total_pagado, 2),
             "total_a_pagar": round(total_to_pay, 2),
             "deuda": round(debt, 2),
+            "dado_de_baja": dado_de_baja,
             "follow_up_status": follow_up_status,
             "client_id": client_id,
             "detalle_pagos": {

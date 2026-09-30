@@ -214,7 +214,8 @@ class CloserService:
         cash_collect_net = total_revenue_gross - platform_fees
 
         enr_query = Enrollment.query.filter(Enrollment.closer_id == closer_id)
-        enr_query = enr_query.join(Client)
+        # Sin los dados de baja: su saldo ya no es deuda (lo cobrado sigue en `cash_collected`).
+        enr_query = enr_query.join(Client).filter(Client.baja_at.is_(None))
         enr_query = apply_lead_filters(enr_query)
         enrs = enr_query.all()
         total_debt = sum(max(0, (e.program.price if e.program else 0.0) - e.total_paid) for e in enrs)
@@ -305,7 +306,9 @@ class CloserService:
         sales_today_list = []
         for p in payments_today:
             debt = 0
-            if p.enrollment and p.enrollment.program:
+            # Un pago de un cliente dado de baja se cuenta, pero su saldo ya no es deuda.
+            de_baja = bool(p.enrollment and p.enrollment.client and p.enrollment.client.baja_at)
+            if p.enrollment and p.enrollment.program and not de_baja:
                 debt = max(0, p.enrollment.program.price - p.enrollment.total_paid)
             
             sales_today_list.append({

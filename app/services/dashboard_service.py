@@ -364,13 +364,16 @@ class DashboardService(BaseService):
         active_leads_count = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt).count()
         
         # Debt Query with Filters
+        # Sin los clientes dados de baja: lo que pagaron sigue en el ingreso, su saldo ya no es
+        # plata pendiente (ver `app/services/baja_service.py`).
         query_debt_bs = db.session.query(
             func.sum(Program.price),
             Enrollment.id
         ).select_from(Client)\
          .join(Enrollment, Client.enrollments)\
          .join(Program, Enrollment.program)\
-         .filter(Client.created_at >= start_dt, Client.created_at <= end_dt)
+         .filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
+                 Client.baja_at.is_(None))
          
         if closer_ids: query_debt_bs = query_debt_bs.filter(Enrollment.closer_id.in_(closer_ids))
         if program_ids: query_debt_bs = query_debt_bs.filter(Enrollment.program_id.in_(program_ids))
@@ -553,7 +556,8 @@ class DashboardService(BaseService):
             .join(Enrollment, Client.enrollments)\
             .join(Program, Enrollment.program)\
             .outerjoin(sq_paid, Enrollment.id == sq_paid.c.enrollment_id)\
-            .filter(Client.created_at >= start_dt, Client.created_at <= end_dt)\
+            .filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
+                    Client.baja_at.is_(None))\
             .group_by(Client.id)\
             .having(debt_col > 0)\
             .order_by(debt_col.desc())\

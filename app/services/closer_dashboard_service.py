@@ -151,9 +151,15 @@ class CloserDashboardService:
         total_amount_por_cliente = dict(
             db.session.query(Client.id, Client.total_amount).filter(Client.total_amount.isnot(None)).all()
         )
+        # Un cliente dado de baja no debe nada (ver `baja_service`): lo que pagó sigue en el cash,
+        # pero su saldo no es plata por cobrar. Mismo criterio que `_client_debt`, de donde sale
+        # la cola de cobro: si acá se lo contara, el dashboard pediría cobrar a alguien que la
+        # cola ya no le muestra al closer.
+        from app.services.baja_service import ids_de_baja
+        de_baja = ids_de_baja()
         enrollments_por_cliente = {}
         for e in Enrollment.query.all():
-            if not e.program or not e.client_id:
+            if not e.program or not e.client_id or e.client_id in de_baja:
                 continue
             enrollments_por_cliente.setdefault(e.client_id, []).append(e)
 

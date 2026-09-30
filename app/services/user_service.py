@@ -206,6 +206,9 @@ class UserService(BaseService):
         total_debt = 0.0
         programas_filtrados = set(program_filter.split(',')) if program_filter else None
         for c in clients:
+            # Un cliente dado de baja no debe nada: lo que pagó sigue en el ingreso de arriba.
+            if c.baja_at:
+                continue
             for enr in c.enrollments:
                 # base_q ya filtro los CLIENTES por programa (basta con que tengan UNA inscripcion en
                 # el programa pedido), pero antes esto sumaba la deuda de TODAS sus inscripciones,
