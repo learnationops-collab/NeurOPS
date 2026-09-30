@@ -5,7 +5,7 @@ vi.mock('../../services/api', () => ({
 }));
 
 import api from '../../services/api';
-import { ACCIONES, ejecutarAccion, ejecutarConsulta } from './fichaApi';
+import { ACCIONES, agendaParaVender, ejecutarAccion, ejecutarConsulta } from './fichaApi';
 import { construirPayload, estadoInicial, responder, ventaDirecta } from './arbolResultado';
 
 beforeEach(() => {
@@ -44,6 +44,12 @@ describe('rutas de la venta', () => {
     const estado = await ejecutarConsulta('estado_venta', 9012, { params: { programa: 'RR' } });
     expect(api.get).toHaveBeenCalledWith('/ficha/9012/estado-venta', { params: { programa: 'RR' } });
     expect(estado).toEqual({ total_paid: 500, sales_count: 1 });
+  });
+
+  it('la agenda donde vender se pide por cliente, no por agenda', async () => {
+    api.post.mockResolvedValue({ data: { appointment_id: 77, creada: true } });
+    await expect(agendaParaVender(5)).resolves.toEqual({ appointment_id: 77, creada: true });
+    expect(api.post).toHaveBeenCalledWith('/ficha/cliente/5/agenda-de-venta');
   });
 
   it('una venta directa avisa que no sale de la llamada de esta agenda', () => {

@@ -139,4 +139,14 @@ export const mensajeDeError = (err) => err?.response?.data?.message
     || err?.message
     || 'No se pudo completar la acción';
 
-export default { obtenerFicha, ejecutarAccion, ejecutarConsulta, ACCIONES, mensajeDeError };
+/**
+ * La agenda en la que declarar una venta de este cliente: la suya más reciente o, si no tiene
+ * ninguna, una que se crea para la venta. Es la entrada de «Declarar venta» del dock, que antes
+ * era una página aparte (`/closer/sales/new`). Devuelve `{appointment_id, creada}`.
+ */
+export const agendaParaVender = (clientId) => api
+    .post(`/ficha/cliente/${clientId}/agenda-de-venta`).then(r => r.data);
+
+export default {
+    obtenerFicha, ejecutarAccion, ejecutarConsulta, agendaParaVender, ACCIONES, mensajeDeError,
+};

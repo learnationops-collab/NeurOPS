@@ -173,7 +173,8 @@ def test_la_ficha_registro_sus_rutas(app):
 # Con que valor se rellena cada parametro de una ruta de la ficha para poder pedirla. Un
 # parametro sin rellenar deja el `<...>` literal en la URL, que no matchea ninguna regla y
 # responde 405: el trinquete daria por ABIERTA una ruta que en realidad nunca se llego a llamar.
-_RELLENOS = {'<grupo>': 'dolores', '<int:evento_id>': '1', '<int:pago_id>': '1'}
+_RELLENOS = {'<grupo>': 'dolores', '<int:evento_id>': '1', '<int:pago_id>': '1',
+             '<int:client_id>': '1'}
 
 
 def test_ninguna_ruta_de_la_ficha_responde_a_un_anonimo(client, app, db, lead_de_prueba):

@@ -1271,6 +1271,48 @@ def crear_agenda(appt, datos, usuario):
     return {'id': nueva.id, 'fecha': _iso_dt(nueva.start_time)}
 
 
+# --- Agenda de una venta ----------------------------------------------------------------------
+
+def agenda_para_vender(client_id, usuario):
+    """`(agenda, creada)` en la que declarar una venta de este cliente; `(None, False)` si no existe.
+
+    `/closer/sales/new` declaraba la venta de cualquier cliente, tuviera agenda o no. Esa pagina
+    ahora lleva al mazo y la venta se declara en la ficha, que cuelga de una agenda: la de un
+    cliente sin ninguna es de solo lectura. Si tiene, es la misma con la que se abre su ficha
+    (`resolver_lead`: la mas reciente, o el ancla de un cliente que ya compro). Si no, se crea una
+    a nombre del closer que vende.
+
+    Nace procesada, para no aparecer en el mazo como una llamada sin reportar, y en 'Pendiente',
+    para que la venta la marque 'Show up' (`mark_sale_appointment_as_show_up` solo pisa ese
+    estado). Nacer en 'Show up', como el ancla de las ventas historicas, contaria una asistencia
+    aunque el closer cierre la ficha sin vender.
+    """
+    from app.services.ficha_lead_service import resolver_lead
+
+    appt, cliente = resolver_lead(client_id=client_id)
+    if not cliente:
+        return None, False
+    if appt:
+        return appt, False
+
+    # La direccion comercial vende PARA un closer (lo elige en la venta): la agenda queda en el
+    # placeholder «otro», el mismo de las ventas de vendedor desconocido.
+    closer = usuario if getattr(usuario, 'role', None) == 'closer' else (
+        User.query.filter_by(username='otro', role='closer').first()
+        or User.query.filter_by(role='closer', is_active=True).first())
+    if not closer:
+        raise ErrorDeAccion('No hay ningún closer al que dejarle la agenda de la venta.')
+
+    appt = Appointment(closer_id=closer.id, client_id=cliente.id, start_time=datetime.utcnow(),
+                       origin='Venta sin agenda', last_stage='Nueva', closer_result='Pendiente',
+                       closer_processed=True, seguimiento_realizado=True,
+                       closer_notes='[Sistema] Agenda creada para declarar una venta: el cliente '
+                                    'no tenía ninguna.')
+    db.session.add(appt)
+    db.session.commit()
+    return appt, True
+
+
 # --- Programa del cliente ---------------------------------------------------------------------
 
 # El prefijo de programa de un `tipo_pago` ("RR - Parcial"), y el hueco que dejan los datos

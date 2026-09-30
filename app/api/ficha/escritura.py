@@ -73,6 +73,25 @@ def venta(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.venta, exito=201)
 
 
+@bp.route('/cliente/<int:client_id>/agenda-de-venta', methods=['POST'])
+def agenda_de_venta(client_id):
+    """La agenda en la que declarar una venta de este cliente (ver `agenda_para_vender`).
+
+    Es la entrada de «Declarar venta» del dock del closer, que antes era una pagina aparte: el
+    closer elige al cliente en el buscador del mazo y la ficha se abre en esta agenda, en
+    «Registrar una venta». 201 si hubo que crearla.
+    """
+    if not permisos_de(current_user)['reportar']:
+        return sin_permiso('reportar')
+    try:
+        appt, creada = acciones.agenda_para_vender(client_id, current_user)
+    except acciones.ErrorDeAccion as e:
+        return _error_de_accion(e)
+    if not appt:
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    return jsonify({'appointment_id': appt.id, 'creada': creada}), (201 if creada else 200)
+
+
 @bp.route('/<int:appt_id>/reprogramar', methods=['POST'])
 def reprogramar(appt_id):
     return _ejecutar(appt_id, 'confirmar', acciones.reprogramar)
