@@ -157,6 +157,19 @@ def _confirmacion(appt):
 
 # --- Resultado de la llamada ------------------------------------------------------------------
 
+def _que_compro(tipos_vendidos):
+    """(con_venta, solo_sena) de un cliente, por los tipos canónicos de sus pagos vigentes.
+
+    Venta es un pago completo o un split pay (`REAL_SALE_TIPOS`): la misma regla del close rate y
+    de la tabla Agendas del dashboard comercial. Una seña es una reserva — si es lo único que pagó,
+    la ficha no puede decir «Venta cerrada» donde el dashboard dice «Seña».
+    """
+    from app.services.closer_service import REAL_SALE_TIPOS
+
+    con_venta = any(t in REAL_SALE_TIPOS for t in tipos_vendidos)
+    return con_venta, (not con_venta and 'seña' in tipos_vendidos)
+
+
 def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
     """Los 5 hitos del stepper de la pestana Resultado, con su subtitulo en vivo.
 
@@ -165,9 +178,13 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
     ver de un golpe que la llamada ocurrio y salio mal.
     """
     clave_post = post['key']
-    asistio = clave_post in ('asistio', 'venta', 'seguimiento', 'presento_no_cerro', 'segunda_llamada')
+    asistio = clave_post in ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro',
+                             'segunda_llamada')
     reportado = clave_post != 'pendiente'
-    con_venta = bool(venta)
+    # `venta` es el último pago, de cualquier tipo: dice si hay un cliente con deuda que mirar. Si
+    # la llamada CERRÓ lo dicen los tipos de pago: una seña sola no es una venta.
+    es_cliente = bool(venta)
+    con_venta, solo_sena = _que_compro(tipos_vendidos)
 
     hitos = [{'clave': 'confirmado', 'label': 'Confirmado',
               'sub': 'Agenda confirmada' if confirmada else 'Sin confirmar',
@@ -183,6 +200,9 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
 
     if con_venta:
         cierre = ('Venta cerrada', 'hecho')
+    elif solo_sena:
+        # Hubo compromiso, pero el cierre es completar el pago: es el paso en curso, no uno hecho.
+        cierre = ('Seña · falta completar', 'actual')
     elif not asistio:
         cierre = ('Pendiente', 'pendiente')
     elif clave_post == 'presento_no_cerro':
@@ -191,13 +211,16 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
         cierre = ('Pendiente', 'actual')
     hitos.append({'clave': 'cierre', 'label': 'Cierre', 'sub': cierre[0], 'estado': cierre[1]})
 
-    if not con_venta:
+    if not es_cliente:
         deuda_hito = ('Pendiente', 'pendiente')
     elif baja:
         # No debe nada, pero no es «Sin deuda» en verde: no terminó de pagar, se fue.
         deuda_hito = ('Dado de baja', 'alerta')
     elif deuda > UMBRAL_DEUDA:
         deuda_hito = ('Con deuda', 'alerta')
+    elif solo_sena:
+        # Con una seña y sin deuda cargada (nadie puso el total) no está saldado: falta el resto.
+        deuda_hito = ('Falta completar', 'pendiente')
     else:
         deuda_hito = ('Sin deuda', 'hecho')
     hitos.append({'clave': 'deuda', 'label': 'Deuda', 'sub': deuda_hito[0], 'estado': deuda_hito[1]})
@@ -225,7 +248,9 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
                 'venta': None, 'hitos': _hitos(False, vacio, None, deuda, tipos_vendidos, baja),
                 'seguimiento_activo': False, 'seguimiento_intento': 1, 'seguimiento_tipo': None}
 
-    post = chip('post_call', post_call_de(estado_libro, bool(ventas), con_seguimiento))
+    con_venta, _ = _que_compro(tipos_vendidos)
+    post = chip('post_call', post_call_de(estado_libro, con_venta, con_seguimiento,
+                                          con_sena='seña' in tipos_vendidos))
     ultima = ventas[-1] if ventas else None
     venta = None
     if ultima:
@@ -384,7 +409,8 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
 
     estado = resolver_estado(estado_agenda=estado_libro,
                              etapa_confirmacion=appt.confirmation_stage if appt else None,
-                             tiene_venta=bool(ventas), deuda=deuda, baja=bool(baja))
+                             tiene_venta=bool(ventas), deuda=deuda, baja=bool(baja),
+                             solo_sena=_que_compro(tipos_vendidos)[1])
 
     return {
         'identidad': _identidad(appt, client, programa_nombre, _iso(enrollment_dt), baja),
