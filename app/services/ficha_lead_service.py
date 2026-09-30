@@ -308,11 +308,13 @@ def permisos_de(usuario, appt=None):
     del dashboard comercial, donde un setter corrige el pre call de sus propias filas y de ninguna
     otra.
 
-    Borrar lo puede la direccion sobre cualquier agenda —mismo criterio que
-    `DELETE /comercial/agendas`— y el closer solo sobre la suya, que es exactamente lo que ya
-    permite `DELETE /closer/deck/<id>`: cuando el mazo pase a usar esta ficha, el closer tiene que
-    seguir pudiendo limpiar una agenda de prueba propia. Lo que ninguno de los dos hace es borrar
-    la agenda de otro.
+    Borrar una agenda lo puede la direccion y CUALQUIER closer, sea o no el de la agenda. Antes el
+    closer solo borraba la suya; el pedido del usuario (29/09/2026), al pedir borrar agendas desde
+    el historial, fue que "eso tambien debe poder hacerlo cualquiera": el que limpia una agenda
+    duplicada o cargada por error suele ser el closer que esta trabajando el lead, no el que la
+    tenia asignada. Setter y triage no borran. Lo que protege de un borrado con consecuencias no
+    es el permiso sino el borrado mismo: el plan de cuotas no se va con la agenda (ver
+    `BookingService.eliminar_agenda`) y la ficha pide confirmacion en un modal.
 
     Corregir los datos del cliente (`editar_datos`) lo puede la direccion y CUALQUIER closer, sea
     o no el de la agenda, como reportar o cobrar. Es una decision explicita del usuario (bitacora,
@@ -326,12 +328,11 @@ def permisos_de(usuario, appt=None):
     direccion = rol in ROLES_DIRECCION
     uid = getattr(usuario, 'id', None)
     setter_dueno = rol == 'setter' and appt is not None and appt.setter_id == uid
-    closer_dueno = rol == 'closer' and appt is not None and appt.closer_id == uid
     return {
         'confirmar': direccion or rol in ('closer', 'triage') or setter_dueno,
         'reportar': direccion or rol == 'closer',
         'cobrar': direccion or rol == 'closer',
-        'eliminar': direccion or closer_dueno,
+        'eliminar': direccion or rol == 'closer',
         'editar_datos': direccion or rol == 'closer',
         'reasignar': direccion or rol == 'closer',
         'comentar': True,

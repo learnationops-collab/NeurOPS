@@ -2012,25 +2012,12 @@ def test_cancelar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
     assert lead.closer_result == 'Pendiente'
 
 
-def test_una_agenda_la_borra_su_closer_o_la_direccion(client, db, lead, equipo, auth_headers):
+def test_el_setter_que_la_genero_no_la_borra(client, db, lead, equipo, auth_headers):
     """Corregir un estado y borrar la fila no son la misma responsabilidad: el setter que la
-    genero corrige su pre call pero no la borra, y un closer solo borra la suya. El dueño si,
-    porque es lo que `DELETE /closer/deck/<id>` ya le permite desde el mazo."""
+    genero corrige su pre call pero no la borra. Quien si la borra —cualquier closer y la
+    direccion— lo fijan los tests de «Eliminar una agenda desde el historial»."""
     assert client.delete(url(lead), headers=auth_headers(equipo['setter'])).status_code == 403
-    assert client.delete(url(lead), headers=auth_headers(equipo['relevo'])).status_code == 403
     assert Appointment.query.count() == 1
-
-    r = client.delete(url(lead), headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 200
-    assert Appointment.query.count() == 0
-
-
-def test_la_direccion_borra_una_agenda_que_no_es_suya(client, db, lead, equipo, auth_headers):
-    r = client.delete(url(lead), headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 200
-    assert Appointment.query.count() == 0
 
 
 # --- Opciones nuevas de vocabulario -----------------------------------------------------------
@@ -2191,7 +2178,7 @@ def test_un_bloque_de_respuestas_desconocido_no_hace_fallar_el_reporte(client, d
     assert lead.closer_result == 'Show up'
 
 
-# --- Borrar una agenda no se lleva el plan de cuotas ---------------------------------------------------
+# --- Eliminar una agenda desde el historial ---------------------------------------------------
 
 def _otra_agenda(db, lead, equipo, dias=-10):
     otra = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id,
@@ -2199,6 +2186,33 @@ def _otra_agenda(db, lead, equipo, dias=-10):
     db.session.add(otra)
     db.session.commit()
     return otra
+
+
+def test_un_closer_que_no_es_el_de_la_agenda_la_borra(client, db, lead, equipo, auth_headers):
+    """Pedido del usuario (29/09/2026): borrar agendas del historial lo puede "cualquiera"."""
+    otra = _otra_agenda(db, lead, equipo)
+    r = client.delete(url(lead), headers=auth_headers(equipo['relevo']))
+
+    assert r.status_code == 200, r.get_json()
+    assert db.session.get(Appointment, lead.id) is None
+    # La ficha se vuelve a abrir en la agenda que le queda al cliente.
+    assert r.get_json()['agenda_siguiente'] == otra.id
+
+
+def test_la_direccion_borra_y_sin_otra_agenda_la_ficha_se_cierra(client, db, lead, equipo,
+                                                                 auth_headers):
+    r = client.delete(url(lead), headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200
+    assert r.get_json()['agenda_siguiente'] is None
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_setter_y_triage_no_borran_agendas(client, db, lead, equipo, auth_headers, rol):
+    r = client.delete(url(lead), headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert db.session.get(Appointment, lead.id) is not None
 
 
 def test_borrar_la_agenda_no_se_lleva_el_plan_de_cuotas(client, db, lead, equipo, auth_headers):
@@ -2233,3 +2247,15 @@ def test_la_unica_agenda_con_plan_de_cuotas_no_se_borra(client, db, lead, equipo
     assert 'plan de cuotas' in r.get_json()['message']
     assert db.session.get(Appointment, lead.id) is not None
     assert InstallmentPlan.query.filter_by(appointment_id=lead.id).count() == 1
+
+
+def test_el_registro_de_eventos_de_la_agenda_se_va_con_ella(client, db, lead, equipo, auth_headers):
+    _otra_agenda(db, lead, equipo)
+    db.session.add(LeadEventLog(appointment_id=lead.id, user_id=equipo['closer'].id,
+                                action_type='comment', description='Llamada de prueba'))
+    db.session.commit()
+
+    r = client.delete(url(lead), headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    assert LeadEventLog.query.filter_by(appointment_id=lead.id).count() == 0

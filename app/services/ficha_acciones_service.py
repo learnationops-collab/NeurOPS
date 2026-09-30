@@ -1038,12 +1038,16 @@ def nota(appt, datos, usuario):
 # --- Eliminar ---------------------------------------------------------------------------------
 
 def eliminar(appt, usuario):
+    """Borra la agenda. `agenda_siguiente` es la cita que le queda al cliente (la más reciente):
+    si se borró la agenda con la que estaba abierta la ficha, la ficha se vuelve a abrir en esa, y
+    si es None el lead ya no tiene agendas y la ficha se cierra."""
     from app.services.booking_service import BookingService
 
+    otra = BookingService.otra_agenda_del_cliente(appt)
     ok, error = BookingService.eliminar_agenda(appt)
     if not ok:
         raise ErrorDeAccion(error or 'No se pudo eliminar la agenda.')
-    return {'message': 'Agenda eliminada'}
+    return {'message': 'Agenda eliminada', 'agenda_siguiente': otra.id if otra else None}
 
 
 def buscar_agenda(appt_id):
