@@ -23,6 +23,40 @@ SALE_TIPO_TO_BUCKET = {
 REAL_SALE_TIPOS = ('completo', 'parcial')
 
 
+def matriz_de_cierres(ventas, senas, asistieron, presentaciones):
+    """El close rate en sus cuatro lecturas: por llamada o por presentación, sin o con señas.
+
+    Es la forma ÚNICA del bloque `cierres` que devuelven los dos tableros (el del closer, desde
+    `get_comprehensive_stats`, y el panel Cierre del comercial, desde `bloque_closers`): mismas
+    claves, mismo redondeo, misma regla para el denominador vacío. Así la tarjeta que los dibuja
+    es una sola y no puede leer distinto un tablero que el otro.
+
+      · `ventas`: cierres reales, solo pago completo y split pay (`REAL_SALE_TIPOS`).
+      · `senas`: señas que NO terminaron en una de esas ventas dentro del mismo conjunto. Solo se
+        suman en la fila "con señas": una seña que después se completó ya está en `ventas`, y
+        contarla otra vez daría dos cierres por un mismo lead.
+      · `asistieron`: denominador por llamada (llamadas con show up).
+      · `presentaciones`: denominador por presentación (llamadas donde se presentó la oferta).
+
+    `pct` es None sin denominador: un "0% de cierre" sobre cero llamadas afirma algo que no pasó.
+    """
+    def celda(num, den):
+        return {'num': num, 'den': den,
+                'pct': round(num / den * 100, 1) if den else None}
+
+    con_senas = ventas + senas
+    return {
+        'ventas': ventas,
+        'senas': senas,
+        'asistieron': asistieron,
+        'presentaciones': presentaciones,
+        'sin_senas': {'por_llamada': celda(ventas, asistieron),
+                      'por_presentacion': celda(ventas, presentaciones)},
+        'con_senas': {'por_llamada': celda(con_senas, asistieron),
+                      'por_presentacion': celda(con_senas, presentaciones)},
+    }
+
+
 def _program_from_examen(examen):
     """Programa deducido del campo libre `examen` de la venta, para las filas cuyo `tipo_pago`
     no trae prefijo de programa (ej. 'Parcial' a secas). Solo se usa como respaldo: el prefijo
@@ -2134,6 +2168,18 @@ class CloserService:
         señas_a_pif = 0
         señas_a_split = 0
 
+        # Todos los pagos del período de este closer (también los usa el ticket promedio y las
+        # discrepancias de más abajo) y, de ellos, cuáles son ventas reales. Sirve para saber qué
+        # señas ya están contadas como cierre: la que se completó con una venta de ESTE mismo
+        # conjunto no puede sumar otra vez en el close rate con señas, o un lead que dejó seña y
+        # después pagó el programa daba dos cierres.
+        all_sales = FinancialSale.query.filter(*sales_filters).all()
+        ids_ventas_reales = {
+            s.id for s in all_sales
+            if SheetsService.parse_tipo_pago(s.tipo_pago)[1] in REAL_SALE_TIPOS
+        }
+        señas_ya_en_ventas = 0
+
         for seña in señas_rows_periodo:
             ig_norm = seña.instagram.strip().lstrip('@').lower() if seña.instagram else None
             email_norm = seña.mail_cliente.strip().lower() if seña.mail_cliente else None
@@ -2159,11 +2205,13 @@ class CloserService:
 
             for venta in posteriores_q.order_by(FinancialSale.date.asc()).all():
                 _, tipo_simple = SheetsService.parse_tipo_pago(venta.tipo_pago)
-                if tipo_simple == 'completo':
-                    señas_a_pif += 1
-                    break
-                if tipo_simple == 'parcial':
-                    señas_a_split += 1
+                if tipo_simple in REAL_SALE_TIPOS:
+                    if tipo_simple == 'completo':
+                        señas_a_pif += 1
+                    else:
+                        señas_a_split += 1
+                    if venta.id in ids_ventas_reales:
+                        señas_ya_en_ventas += 1
                     break
 
         señas_convertidas = señas_a_pif + señas_a_split
@@ -2187,8 +2235,12 @@ class CloserService:
         # (cash de un cliente que ya había comprado — antes se sumaban acá e inflaban el close rate
         # por encima del 100%).
         total_sales = final_pif_count + final_split_count
-        # Ventas + señas: usado solo para el "close rate promesa" (compromiso de compra total)
-        total_sales_with_deposits = total_sales + final_deposit_count
+        # Cierres CON señas: las ventas reales más las señas que no terminaron en una de esas
+        # mismas ventas (ver `ids_ventas_reales`). Antes era `ventas + todas las señas`, y la seña
+        # que se completaba dentro del período sumaba dos veces. Es el numerador del close rate
+        # con señas (antes "close rate promesa"), por llamada y por presentación.
+        señas_sin_venta = max(0, final_deposit_count - scale(señas_ya_en_ventas))
+        total_sales_with_deposits = total_sales + señas_sin_venta
         # Efectivo total recaudado incluye las cuotas, upsells, renovaciones y lo no clasificable
         total_cash = (final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash
                       + final_upsell_cash + final_renovacion_cash + final_otros_cash)
@@ -2198,8 +2250,8 @@ class CloserService:
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
-        # Calculo de ticket promedio general y por programa (solo PIF y Split Pays)
-        all_sales = FinancialSale.query.filter(*sales_filters).all()
+        # Calculo de ticket promedio general y por programa (solo PIF y Split Pays), sobre
+        # `all_sales` (leído arriba, junto con las señas).
         program_data = {}
         total_pif_split_cash = 0.0
         total_pif_split_count = 0.0
@@ -2426,6 +2478,10 @@ class CloserService:
                 "discrepancies": discrepancies,
                 "totals": {"count": total_sales, "cash": total_cash, "cash_neto": total_cash_neto, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
+            # El close rate por llamada y por presentación, sin y con señas, con sus conteos. Misma
+            # forma que el panel Cierre del dashboard comercial (ver `matriz_de_cierres`).
+            "cierres": matriz_de_cierres(total_sales, señas_sin_venta, total_attended,
+                                         val(stats.offers_made)),
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
                 "closed": val(stats.fu_closed),
@@ -2450,12 +2506,18 @@ class CloserService:
                 "cancel_rate": div(total_canceled, total_scheduled),
                 # close_rate / offer_to_sale: solo ventas reales (PIF + Split Pay). Ni la seña
                 # (promesa de compra), ni la cuota, ni upsell/renovación cuentan como cierre.
+                # Las presentaciones pasan por `val` como todo lo demás: sin eso, en modo promedio
+                # las ventas se dividían por los días y las presentaciones no, y la tasa por
+                # presentación salía dividida por la cantidad de días.
                 "close_rate": div(total_sales, total_attended),
-                "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
-                # close_rate_promesa / offer_to_deposit: ventas + señas, para medir "compromiso de
-                # compra" total (cuantas ofertas terminan en algun tipo de compromiso, cerrado o no).
+                "offer_to_sale": div(total_sales, val(stats.offers_made)),
+                # close_rate_promesa: el close rate CON señas por llamada (ventas + señas que no
+                # terminaron en una de esas ventas). offer_to_sale_con_senas es lo mismo por
+                # presentación. Los cuatro, con sus conteos, están juntos en `cierres`.
                 "close_rate_promesa": div(total_sales_with_deposits, total_attended),
-                "offer_to_deposit": div(final_deposit_count, float(stats.offers_made or 0)),
+                "offer_to_sale_con_senas": div(total_sales_with_deposits, val(stats.offers_made)),
+                # offer_to_deposit: solo señas sobre ofertas (la tasa de reserva, no un cierre).
+                "offer_to_deposit": div(final_deposit_count, val(stats.offers_made)),
                 # Señas sobre llamadas asistidas: complementa offer_to_deposit (que es sobre
                 # ofertas presentadas) para ver la tasa de reserva desde los dos denominadores.
                 "deposit_rate_llamada": div(final_deposit_count, total_attended),

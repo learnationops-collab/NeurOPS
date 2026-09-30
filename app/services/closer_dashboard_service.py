@@ -463,6 +463,10 @@ class CloserDashboardService:
             # Confirmaciones del período vs. de agendas posteriores al período: son dos cosas
             # distintas y solo la primera pertenece a este embudo (ver _confirmations).
             'confirmaciones': confirmaciones,
+            # El close rate por llamada y por presentación, sin señas (pago completo + split pay)
+            # y con señas, con numerador y denominador de cada uno. Misma forma que el panel
+            # Cierre del dashboard comercial (`closer_service.matriz_de_cierres`).
+            'cierres': stats['cierres'],
             # Las señas se analizan aparte porque no son ventas: son reservas. Lo que importa es
             # con qué frecuencia se consiguen (sobre presentaciones y sobre llamadas asistidas) y
             # en qué terminan (pago completo, split, o nada todavía).
@@ -482,6 +486,8 @@ class CloserDashboardService:
                 'pendientes': conv.get('pending', 0),
                 'pendientes_rate': conv.get('rate_pending', 0),
                 'conversion_total': conv.get('rate', 0),
+                # Close rate CON señas por llamada: el mismo número que `cierres.con_senas.
+                # por_llamada.pct` (solo que 0 y no None sin asistencias).
                 'close_rate_promesa': pct.get('close_rate_promesa', 0)
             },
             # Cada bucket lleva su cantidad de pagos además del monto: sin eso no se puede
