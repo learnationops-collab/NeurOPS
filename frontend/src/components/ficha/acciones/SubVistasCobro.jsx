@@ -128,6 +128,11 @@ export function SubVistaBaja({ ficha, onVolver, onGuardar, guardando }) {
   return (
     <SubVista titulo="Dar de baja" onVolver={onVolver}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        {/* Se dice antes: la baja tiene consecuencias fuera de esta ficha, y una es en otro sistema. */}
+        <p className="ln-t-body-sm ln-muted" style={{ margin: 0 }}>
+          Ya no debe nada y sale de las listas de cobro; lo que pagó queda. También se le quita el
+          acceso a la Academia: su producto vence hoy.
+        </p>
         <div className="ln-field-wrap">
           <small className="ln-field-label" style={{ letterSpacing: '.08em', textTransform: 'uppercase' }}>
             ¿Por qué se da de baja?
@@ -194,6 +199,10 @@ export function SubVistaRevertirBaja({ ficha, onVolver, onGuardar, guardando }) 
         <p className="ln-t-body-sm ln-muted">
           Al revertirla vuelve a deber lo que debía, con su plan de cuotas tal como estaba, y
           vuelve a aparecer en las listas de cobro. Lo que ya pagó no cambia.
+        </p>
+        <p className="ln-t-body-sm ln-muted">
+          El acceso a la Academia que se le quitó con la baja no vuelve solo: si lo necesita,
+          renovalo desde Fulfillment.
         </p>
       </div>
     </SubVista>

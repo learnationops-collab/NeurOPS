@@ -56,6 +56,23 @@ const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agen
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
     'acceso_academia', 'quitar_acceso_academia']);
 
+/**
+ * El aviso de una acción que dio de baja a un cliente, con lo que pasó con su acceso a la Academia
+ * (`acceso_academia`, ver `_con_accesos_de_bajas` en el backend). Si no se pudo cortar vuelve en
+ * amarillo y con el motivo: la baja quedó hecha, el acceso hay que quitarlo a mano.
+ */
+export const conAccesoDeLaBaja = (base, r) => {
+    const acceso = r?.acceso_academia;
+    if (!acceso) return base;
+    if (acceso.estado === 'quitado') return `${base} También se le quitó el acceso a la Academia: vence hoy.`;
+    if (acceso.estado === 'sin_cuenta') return `${base} No tenía cuenta en la Academia.`;
+    return {
+        tono: 'warning',
+        texto: `${base} No se le pudo quitar el acceso a la Academia${acceso.motivo ? ` (${acceso.motivo.replace(/\.$/, '')})` : ''}: `
+            + 'quitáselo desde Fulfillment.',
+    };
+};
+
 const MENSAJES = {
     etapa_confirmacion: 'Etapa guardada.',
     como_viene: 'Estado del lead guardado.',
@@ -63,7 +80,8 @@ const MENSAJES = {
     nota_llamada: 'Nota guardada.',
     recordatorio_previo: 'Recordatorio guardado.',
     cerrar_confirmacion: 'Confirmación cerrada: el lead está 100% confirmado.',
-    reportar_resultado: 'Resultado reportado.',
+    // «No va a pagar» da de baja, y la baja corta el acceso a la Academia: se dice qué pasó.
+    reportar_resultado: (r) => conAccesoDeLaBaja('Resultado reportado.', r),
     // La venta del árbol de «Resultado» también da el acceso a la Academia si se pidió: se dice
     // qué pasó con él, porque «se creó la cuenta» significa que al cliente le llegó un email.
     registrar_venta: (r) => {
@@ -118,11 +136,13 @@ const MENSAJES = {
         ? 'Pago borrado. No tenía registro en inscripciones: la deuda no cambió.'
         : 'Pago borrado: la deuda se recalculó.'),
     registrar_seguimiento: 'Seguimiento agendado.',
-    dar_de_baja: 'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.',
+    dar_de_baja: (r) => conAccesoDeLaBaja(
+        'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.', r),
     // El monto viene del backend, ya recalculado: es la deuda que vuelve.
     revertir_baja: (r) => (Number(r?.deuda) > 0.009
         ? `Baja revertida: vuelve a deber $${Number(r.deuda).toLocaleString('es-AR', { maximumFractionDigits: 2 })} y vuelve a las listas de cobro.`
-        : 'Baja revertida: vuelve a las listas de cobro.'),
+        : 'Baja revertida: vuelve a las listas de cobro.')
+        + ' El acceso a la Academia no vuelve solo: renovalo desde Fulfillment si lo necesita.',
     enviar_nota: 'Nota enviada.',
 };
 
@@ -266,8 +286,12 @@ const FichaLeadModal = ({
             // Un mensaje puede depender de lo que respondió el backend (ver `editar_datos` y
             // `corregir_pago`).
             const mensaje = MENSAJES[nombre];
-            setAviso({ tono: 'success',
-                texto: (typeof mensaje === 'function' ? mensaje(resultado) : mensaje) || 'Guardado.' });
+            const aviso = typeof mensaje === 'function' ? mensaje(resultado) : mensaje;
+            // Un mensaje puede traer su propio tono (`{tono, texto}`): la acción salió, pero algo
+            // de lo que venía con ella no (ver `conAccesoDeLaBaja`).
+            setAviso(aviso && typeof aviso === 'object'
+                ? { tono: aviso.tono || 'success', texto: aviso.texto }
+                : { tono: 'success', texto: aviso || 'Guardado.' });
             return resultado;
         } catch (err) {
             // Si el backend dice QUÉ campo falló, el error ya se pinta al lado de ese campo (el
