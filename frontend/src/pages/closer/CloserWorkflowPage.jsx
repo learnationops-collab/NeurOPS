@@ -1147,12 +1147,17 @@ const CloserWorkflowPage = () => {
     // llamadas, uno confirmado cambia de carril. Se recarga la lista y, si el lead se borro, se
     // cierra la ficha en vez de recargar algo que ya no existe.
     const alCambiarLaFicha = (accion) => {
-        if (accion === 'eliminar') setSelectedLead(null);
-        // Reportar la llamada o declarar la venta saca al lead de esta columna, y el mazo cierra
-        // la ficha de un lead que ya no está en su cola. Acá no: la pestaña Resultado muestra lo
-        // que quedó guardado —y el aviso, si un paso de después de la venta falló— y ofrece seguir
-        // en Acciones con el cobro. La ficha la cierra el closer cuando terminó.
-        fetchAgendas({ conservarFicha: ['registrar_venta', 'reportar_resultado'].includes(accion) });
+        if (accion === 'eliminar') {
+            setSelectedLead(null);
+            fetchAgendas();
+            return;
+        }
+        // Al recargar, el mazo cierra el lead que ya no está en la columna abierta: era la regla
+        // del modal viejo. Con la ficha no: se trabaja adentro y se cierra cuando se terminó. Una
+        // venta o un reporte sacan al lead de la columna, y una ficha abierta desde el buscador
+        // (un cliente de «Mi cartera», uno sin agenda activa) casi nunca estaba en ella: corregir
+        // un pago en su historial la cerraba en la cara del closer.
+        fetchAgendas({ conservarFicha: true });
     };
 
 
