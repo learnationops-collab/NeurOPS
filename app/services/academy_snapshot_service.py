@@ -59,17 +59,42 @@ La precision es la de la sincronizacion: con el cron andando, cada cliente se mi
   · Sin datos todavia: nunca se lo pudo mirar (todavia no le toco, o la Academia dio error).
 """
 import logging
+import os
+import time
 from datetime import datetime, timedelta
 
+from sqlalchemy.exc import IntegrityError
+
 from app import db
-from app.models import AcademySnapshot
-from app.services.ficha_fulfillment_service import _telefonos_coinciden, es_placeholder
+from app.models import AcademySnapshot, Client
+from app.services.ficha_fulfillment_service import (
+    _error,
+    _resolver_alumno,
+    _telefonos_coinciden,
+    emails_candidatos,
+    es_placeholder,
+)
+from app.services.learnation_service import LearnationAPIError, LearnationService
 
 logger = logging.getLogger(__name__)
 
 # Dias hacia atras que cuentan como "activo". Una semana es el ritmo con el que el programa espera
 # que el alumno entregue algo; menos marcaria como inactivo a quien estudia los fines de semana.
 DIAS_ACTIVO = 7
+# Cada cuanto se vuelve a confirmar que alguien sigue sin cuenta (ver el docstring).
+DIAS_RECHEQUEO_SIN_ACCESO = 7
+
+# Peticiones por corrida. 20 es un tercio del limite de un minuto: aunque el lote las gaste todas
+# de golpe, a la ficha y a produccion les quedan 40. El tope de tiempo existe porque la app corre
+# con un solo worker de gunicorn (`--timeout 120`): mientras el lote espera a la Academia, nadie
+# mas es atendido.
+PRESUPUESTO_POR_LOTE = 20
+PRESUPUESTO_MAXIMO = 40
+TOPE_SEGUNDOS = 25
+
+# Errores que no mejoran con el cliente siguiente: token invalido, limite agotado, red caida
+# (codigo None). Con estos el lote se corta; con un 404 o un 500 de UN alumno, sigue.
+CORTAN_EL_LOTE = (401, 429, None)
 
 # columna de `AcademySnapshot` -> clave de `performance` en `/users/{id}/summary`. Verificado
 # contra la API real el 30/09/2026 (una sola GET, sin datos personales).
@@ -304,3 +329,176 @@ def guardar_desde_fulfillment(client, datos, ahora=None):
         db.session.rollback()
         logger.exception('[ACADEMIA] No se pudo guardar la foto del cliente %s', client.id)
         return None
+
+
+# --- El lote -------------------------------------------------------------------------------------
+
+def _id_de_la_foto(foto, candidatos):
+    """El id de la foto anterior, mientras el correo con el que se lo encontro siga siendo suyo."""
+    if foto and foto.learnation_user_id and foto.email_usado and foto.email_usado in candidatos:
+        return foto.learnation_user_id
+    return None
+
+
+def cola_de_sincronizacion(ids, clientes, fotos, ahora):
+    """En que orden se miran los clientes: los que nunca se miraron y los que recien recibieron el
+    acceso primero (los mas nuevos antes), despues el resto del intento mas viejo al mas reciente.
+
+    Se ordena por el ultimo INTENTO y no por la ultima foto buena: un cliente que da error va al
+    final de la cola como cualquiera, en vez de quedarse primero y gastar el presupuesto de cada
+    corrida en el mismo error.
+    """
+    primero, despues = [], []
+    limite_sin_acceso = ahora - timedelta(days=DIAS_RECHEQUEO_SIN_ACCESO)
+    for cid in ids:
+        cliente = clientes.get(cid)
+        if cliente is None:
+            continue
+        foto = fotos.get(cid)
+        if foto is None or foto.intentado_at is None:
+            primero.append(cid)
+            continue
+        if cliente.learnation_user_id and cliente.learnation_user_id != foto.learnation_user_id:
+            primero.append(cid)
+            continue
+        if foto.resultado == AcademySnapshot.SIN_ACCESO and foto.intentado_at > limite_sin_acceso:
+            continue
+        despues.append((foto.intentado_at, cid))
+    return sorted(primero, reverse=True) + [cid for _, cid in sorted(despues)]
+
+
+def _sincronizar_uno(cliente, ventas, foto, candidatos, conocido, ahora):
+    """(peticiones gastadas, error o None) de mirar UN cliente. Deja la foto lista para commit.
+
+    Las gastadas en la busqueda por correo se cuentan por lo alto cuando hay error: `_resolver_alumno`
+    no dice en que correo corto, y contar de mas solo achica el lote, nunca pasa el presupuesto.
+    """
+    email, gastadas = None, 0
+    if conocido:
+        alumno_id = conocido
+        if conocido == foto.learnation_user_id:
+            email = foto.email_usado
+    elif not candidatos:
+        _registrar_sin_correo(foto, ahora)
+        return 0, None
+    else:
+        alumno_id, email, probados, error = _resolver_alumno(cliente, ventas)
+        gastadas = probados.index(email) + 1 if email in probados else len(probados)
+        if error:
+            _registrar_error(foto, error, ahora)
+            return gastadas, error
+        if not alumno_id:
+            _registrar_sin_acceso(foto, ahora)
+            return gastadas, None
+
+    try:
+        resumen = LearnationService.get_student_summary(alumno_id) or {}
+    except LearnationAPIError as e:
+        error = _error(e)
+        if e.status_code == 404 and not cliente.learnation_user_id:
+            # El id de la foto ya no existe en la Academia: la proxima vez se busca por correo.
+            foto.learnation_user_id = None
+            foto.email_usado = None
+        _registrar_error(foto, error, ahora)
+        return gastadas + 1, error
+
+    alumno = resumen.get('student') or {}
+    _registrar_datos(cliente, foto, alumno.get('id') or alumno_id, resumen.get('performance'),
+                     alumno.get('active_product'), email, alumno.get('phone'), ahora)
+    return gastadas + 1, None
+
+
+def _acotar(presupuesto):
+    try:
+        valor = int(presupuesto) if presupuesto is not None else PRESUPUESTO_POR_LOTE
+    except (TypeError, ValueError):
+        valor = PRESUPUESTO_POR_LOTE
+    return max(1, min(valor, PRESUPUESTO_MAXIMO))
+
+
+def _mensaje(resumen):
+    corte = resumen['corte']
+    if corte == 'sin_token':
+        return 'Falta configurar ACADEMY_API_TOKEN: no se consultó la Academia.'
+    if corte == '401':
+        return ('La Academia rechazó el token (401). Avisale a un admin: reintentar no lo arregla. '
+                f'Se alcanzaron a actualizar {resumen["procesados"]} clientes.')
+    if corte == '429':
+        return ('La Academia pidió frenar: demasiadas consultas por minuto. Se guardó lo que alcanzó '
+                f'({resumen["procesados"]} clientes); el próximo lote sigue desde ahí.')
+    if corte == 'red':
+        return ('La Academia no respondió. Se guardó lo que alcanzó '
+                f'({resumen["procesados"]} clientes).')
+    base = (f'Se actualizaron {resumen["procesados"]} clientes con {resumen["peticiones"]} '
+            'consultas a la Academia.')
+    if resumen['sin_datos']:
+        return f'{base} Quedan {resumen["sin_datos"]} sin datos todavía.'
+    return f'{base} Todos los clientes con venta ya tienen datos.'
+
+
+def sincronizar_lote(presupuesto=None, tope_segundos=TOPE_SEGUNDOS, ahora=None, reloj=time.monotonic):
+    """Mira los clientes con venta mas desactualizados sin pasarse de `presupuesto` peticiones.
+
+    Antes de cada cliente se reserva lo MAXIMO que podria costar (ver `_sincronizar_uno`); si no
+    entra, la corrida termina ahi y ese cliente queda primero para la proxima. Cada cliente se
+    guarda con su propio commit: si el proceso muere a mitad de camino, lo ya mirado queda.
+    Devuelve un resumen con `mensaje` listo para mostrar.
+    """
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    presupuesto = _acotar(presupuesto)
+    ahora = ahora or datetime.utcnow()
+    resumen = {'presupuesto': presupuesto, 'peticiones': 0, 'procesados': 0, 'vinculados': 0,
+               'sin_acceso': 0, 'sin_correo': 0, 'errores': 0, 'corte': None, 'clientes': 0,
+               'sin_datos': 0}
+    if not os.environ.get('ACADEMY_API_TOKEN'):
+        resumen['corte'] = 'sin_token'
+        resumen['mensaje'] = _mensaje(resumen)
+        return resumen
+
+    ventas_por_cliente = CloserFollowUpService._resolve_sales_and_clients()
+    ids = list(ventas_por_cliente)
+    clientes = {}
+    for tanda in _en_tandas(ids):
+        clientes.update({c.id: c for c in Client.query.filter(Client.id.in_(tanda)).all()})
+    fotos = fotos_de(ids)
+    cola = cola_de_sincronizacion(ids, clientes, fotos, ahora)
+
+    usadas, inicio = 0, reloj()
+    for cid in cola:
+        if reloj() - inicio >= tope_segundos:
+            resumen['corte'] = 'tiempo'
+            break
+        cliente, ventas = clientes[cid], ventas_por_cliente.get(cid) or []
+        candidatos = emails_candidatos(cliente, ventas)
+        conocido = cliente.learnation_user_id or _id_de_la_foto(fotos.get(cid), candidatos)
+        costo_maximo = 1 if conocido else (len(candidatos) + 1 if candidatos else 0)
+        if costo_maximo > presupuesto - usadas:
+            resumen['corte'] = 'presupuesto'
+            break
+
+        foto = _foto_de(cid, fotos)
+        gastadas, error = _sincronizar_uno(cliente, ventas, foto, candidatos, conocido, ahora)
+        usadas += gastadas
+        try:
+            db.session.commit()
+        except IntegrityError:
+            # Otra corrida (el cron y el boton a la vez) o la ficha crearon la foto de este cliente
+            # en el medio. La suya vale igual: se sigue con el proximo.
+            db.session.rollback()
+            continue
+        fotos[cid] = foto
+        resumen['procesados'] += 1
+        clave = {AcademySnapshot.VINCULADO: 'vinculados', AcademySnapshot.SIN_ACCESO: 'sin_acceso',
+                 AcademySnapshot.SIN_CORREO: 'sin_correo'}.get(foto.resultado, 'errores')
+        resumen[clave] += 1
+        if error and error.get('codigo') in CORTAN_EL_LOTE:
+            resumen['corte'] = str(error.get('codigo') or 'red')
+            break
+
+    resumen['peticiones'] = usadas
+    resumen['clientes'] = len(ids)
+    resumen['sin_datos'] = sum(1 for cid in ids if cid not in fotos)
+    resumen['mensaje'] = _mensaje(resumen)
+    logger.info('[ACADEMIA] Lote: %s', {k: v for k, v in resumen.items() if k != 'mensaje'})
+    return resumen
