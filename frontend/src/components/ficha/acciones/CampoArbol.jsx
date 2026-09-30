@@ -1,25 +1,27 @@
 // Un campo del árbol, pintado según su `tipo`. Vive aparte para que `TabResultado` no tenga que
 // saber cómo se dibuja un monto o un grupo de píldoras: solo pide «pintá estos campos».
 
+import { motion, useReducedMotion } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 import { SelectorFecha } from './piezas';
 
-const Pildora = ({ activo, children, onClick }) => (
-  <button
-    type="button"
-    aria-pressed={activo}
-    onClick={onClick}
-    className="ln-chip ln-chip--sm"
-    style={{
-      cursor: 'pointer',
-      background: activo ? 'var(--brand-secondary)' : 'transparent',
-      borderColor: activo ? 'var(--brand-secondary)' : 'var(--border-control)',
-      color: activo ? 'var(--ink)' : 'var(--text-on-surface)',
-    }}
-  >
-    {children}
-  </button>
-);
+// La `.pastilla` de la ficha, con la elegida en blanco lleno (`.fi-elegible`, en `ficha.css`).
+// Era un `.ln-chip` y dentro de `.dc-shell` perdía el borde y el aire: se leía como una palabra
+// suelta. El apretón es de framer-motion para que respete el movimiento reducido.
+const Pildora = ({ activo, children, onClick }) => {
+  const reducido = useReducedMotion();
+  return (
+    <motion.button
+      type="button"
+      aria-pressed={activo}
+      onClick={onClick}
+      className="pastilla fi-elegible"
+      whileTap={reducido ? undefined : { scale: 0.96 }}
+    >
+      {children}
+    </motion.button>
+  );
+};
 
 // `<small>` y no `<span>`: el CSS global con !important anula el tracking fuerte en span/div.
 const Rotulo = ({ children, id }) => (

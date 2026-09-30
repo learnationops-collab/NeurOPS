@@ -173,6 +173,21 @@
   .dc-shell .fi-seg-op{min-width:34px;padding:0 var(--s2)}
 }
 
+/* ---------- Opción elegible ----------
+   Las opciones de un campo del árbol de Resultado y de los formularios de cobro («Stripe»,
+   «Mensual», «Sí, dejó referidos»…). Eran `.ln-chip` con el color inline y les pasaba lo mismo
+   que a la cantidad de cuotas: sin borde ni aire contra `.dc-shell button`, palabras sueltas y la
+   elegida un bloque magenta pegado al texto. Ahora son la `.pastilla` de la ficha, y la elegida
+   va en blanco lleno con texto tinta, como la marca de `.fi-seg`: una sola forma de decir «esto
+   está elegido» en todo el panel, y el magenta queda para el botón que guarda. Con
+   `.pastilla.fi-elegible` (0,4,0) le gana al `:hover` de la pastilla, que apagaba la elegida al
+   pasarle el mouse; el color entra en la transición para que el texto no cambie antes que el
+   fondo. */
+.dc-shell .pastilla.fi-elegible{transition:background-color .16s ease,border-color .16s ease,
+  color .16s ease}
+.dc-shell .pastilla.fi-elegible[aria-pressed="true"]{background:var(--text-on-surface);
+  border-color:var(--text-on-surface);color:var(--on-inverso)}
+
 /* ---------- Tarjeta de acción ---------- */
 .dc-shell .fi-accion{position:relative;isolation:isolate;overflow:hidden;
   display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;
