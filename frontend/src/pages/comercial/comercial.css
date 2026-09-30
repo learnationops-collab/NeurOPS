@@ -253,7 +253,8 @@
 .dc-shell .hundido{background:var(--hundido);border:1px solid var(--border-subtle);
   border-radius:var(--radius-control)}
 .dc-shell .grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
-.dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));
+  --min:150px;--g:var(--s3)}
 .dc-shell .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:1000px){.dc-shell .grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}

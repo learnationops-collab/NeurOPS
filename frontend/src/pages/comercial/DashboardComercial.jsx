@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import './comercial.css';
+import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
 import { EsqueletoPagina, Humo, Isotipo, PillMenu, Segmented } from './components/Shared';
 import DockSecciones, { HUMO_DOCK } from './components/DockSecciones';

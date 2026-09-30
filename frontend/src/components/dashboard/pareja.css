@@ -1,0 +1,45 @@
+/* Grilla pareja: nunca deja un elemento solo en la última fila.
+
+   Pedido del 30/09/2026: «no me gusta que haya tarjetas con 3 elementos arriba y uno abajo, se ve
+   asimétrico». Con `repeat(auto-fit, minmax(150px, 1fr))` entran tantas columnas como quepan, así
+   que 4 elementos en un ancho donde caben 3 quedan 3 + 1. Acá el ancho mínimo de cada columna
+   salta según el ancho de la grilla:
+
+     · 4 elementos → los 4 en fila si entran; si no, 2 × 2; si ni eso, uno debajo del otro.
+     · 3 elementos → los 3 en fila si entran (hasta un 20% más angostos que `--min`); si no, uno
+       debajo del otro (nunca 2 + 1).
+     · otra cantidad → como antes (`auto-fit`).
+
+   El salto es aritmético y no una media query, porque estas grillas viven en paneles y modales de
+   anchos distintos y lo que importa es el ancho de la grilla, no el de la ventana:
+   `(umbral - 100%) * 999` es enorme cuando la grilla no llega al umbral y negativo cuando lo pasa,
+   y `min()`/`max()` eligen con eso una columna u otra. Los `- 1px` absorben el redondeo: sin
+   ellos, cuatro columnas exactas pueden dar 3,999 y caer a tres.
+
+   Uso: `className="... pareja"`, con `--min` (ancho mínimo de una columna) y `--g` (el espacio
+   entre columnas, que entra en la cuenta) si no son los de por defecto. */
+.pareja {
+  --min: 150px;
+  --g: 12px;
+  display: grid;
+  column-gap: var(--g);
+  row-gap: var(--g-fila, var(--g));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--min)), 1fr));
+}
+
+/* Con 3 la única alternativa a la fila es apilarlos, que en un panel mediano queda largo y vacío:
+   se acepta que cada uno sea un 20% más angosto que `--min` antes de apilar. */
+.pareja:has(> :nth-child(3):last-child) {
+  grid-template-columns: repeat(auto-fit, minmax(max(
+    calc((100% - 2 * var(--g)) / 3 - 1px),
+    min(100%, calc((2.4 * var(--min) + 2 * var(--g) - 100%) * 999))
+  ), 1fr));
+}
+
+.pareja:has(> :nth-child(4):last-child) {
+  grid-template-columns: repeat(auto-fit, minmax(max(
+    calc((100% - 3 * var(--g)) / 4 - 1px),
+    min(calc((100% - var(--g)) / 2 - 1px), calc((4 * var(--min) + 3 * var(--g) - 100%) * 999)),
+    min(100%, calc((2 * var(--min) + var(--g) - 100%) * 999))
+  ), 1fr));
+}

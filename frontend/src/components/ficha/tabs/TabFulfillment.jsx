@@ -28,6 +28,7 @@ import { pestanasVisibles } from '../estadoFicha';
 import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
+import '../../dashboard/pareja.css';
 import './fulfillment.css';
 
 const SUAVE = [0.22, 0.7, 0.2, 1];
@@ -130,7 +131,7 @@ function AccesoPagado({ datos, ficha, irA }) {
         )}
       </div>
       {p && (
-        <div className="ful-datos">
+        <div className="ful-datos pareja">
           <Dato rotulo="Producto en la Academia" ayuda={AYUDA_ACCESO.producto} valor={nombreProducto(p)} />
           {/* `diaLegible` lee el texto: la Academia guarda el vencimiento a las 00:00 UTC y
               pasarlo por el huso de quien mira lo mostraba un día antes. */}
@@ -158,7 +159,7 @@ function Cuenta({ datos, ficha }) {
     <section className="ln-panel ln-panel--sm ful-seccion" aria-labelledby="ful-cuenta">
       <small id="ful-cuenta" className="ln-t-eyebrow ln-muted">Cuenta en la Academia</small>
       <p className="ln-t-body" style={{ margin: 0, fontWeight: 700 }}>{alumno.nombre || 'Sin nombre'}</p>
-      <div className="ful-datos">
+      <div className="ful-datos pareja">
         <Dato rotulo="Correo" ayuda={AYUDA_ACCESO.correo} valor={alumno.email || '—'} />
         <Dato rotulo="Teléfono" ayuda={AYUDA_ACCESO.telefono} valor={alumno.telefono || '—'}
           tono={datos.telefono_coincide === false ? 'var(--warning)' : undefined} />
@@ -315,12 +316,12 @@ export default function TabFulfillment({ ficha, onConsultar, irA }) {
           <motion.div {...entrar()}><AccesoPagado datos={datos} ficha={ficha} irA={irA} /></motion.div>
 
           {desempeno ? (
-            <div className="ful-secciones">
+            <div className="ful-secciones pareja">
               {SECCIONES.map((s) => (
                 <motion.section key={s.id} {...entrar()} className="ln-panel ln-panel--sm ful-seccion"
                   aria-labelledby={`ful-${s.id}`}>
                   <Rotulo id={`ful-${s.id}`} eyebrow texto={s.titulo} ayuda={s.ayuda} />
-                  <div className="ful-metricas">
+                  <div className="ful-metricas pareja">
                     {s.metricas.map((m) => <Metrica key={m.clave} m={m} desempeno={desempeno} />)}
                   </div>
                 </motion.section>

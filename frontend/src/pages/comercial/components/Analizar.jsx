@@ -561,7 +561,7 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
                                 style={{ fontSize: 19, fontWeight: 900 }} />
                         </MetricaClicable>
                     </div>
-                    <div className="grid-sm">
+                    <div className="grid-sm pareja">
                         {DEUDA.map(x => (
                             <div key={x.label} className="ficha" style={{ '--c': v(x.tone) }}>
                                 <span className="fila" style={{ gap: 5, alignItems: 'flex-start' }}>
@@ -627,7 +627,7 @@ const PanelPagos = ({ bloque, irA }) => {
                             );
                         })}
                     </div>
-                    <div className="grid-sm" style={{ marginTop: 'var(--s4)' }}>
+                    <div className="grid-sm pareja" style={{ marginTop: 'var(--s4)' }}>
                         {bloque.payment_types.map((t, i) => (
                             <button key={t.key} type="button" className="ficha"
                                 style={{ '--c': v(CAT[i]) }}
@@ -812,7 +812,7 @@ const PanelSenas = ({ senas, irA }) => {
         }>
             {senas.total === 0 ? <Vacio texto="Sin señas en el período." /> : (
                 <>
-                    <div className="grid-sm">
+                    <div className="grid-sm pareja">
                         {/* Sin drill-down, a diferencia del resto del tablero: estas celdas
                             cuentan SEÑAS según en qué terminaron después, y el único corte que la
                             tabla sabe hacer sobre las ventas es por tipo de pago. El clic en
@@ -832,7 +832,7 @@ const PanelSenas = ({ senas, irA }) => {
                         ))}
                     </div>
                     <hr className="sep" />
-                    <div className="grid-sm">
+                    <div className="grid-sm pareja">
                         {cifras.map(c => (
                             <div key={c.l} style={{ display: 'grid', gap: 5, minWidth: 0 }}>
                                 <span className="fila" style={{ gap: 5, alignItems: 'flex-start' }}>
