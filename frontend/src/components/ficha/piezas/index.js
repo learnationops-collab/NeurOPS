@@ -6,6 +6,7 @@ export { default as DesplegableAgrupado } from './DesplegableAgrupado';
 export { default as fechaLegible, diaLegible, instanteLegible, soloDia } from './fecha';
 export { default as SeccionColapsable } from './SeccionColapsable';
 export { default as SelectorFecha, construirMes } from './SelectorFecha';
+export { default as SiNo } from './SiNo';
 export { default as StepperFicha } from './StepperFicha';
 export { default as SubVista } from './SubVista';
 export { default as useMovimiento } from './useMovimiento';

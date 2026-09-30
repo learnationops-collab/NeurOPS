@@ -1,9 +1,8 @@
 // Las tres sub-vistas simples del cobro: registrar pago, registrar seguimiento y dar de baja.
 // Las tres son formularios chicos, así que comparten `FormularioSimple` y su validación.
 
-import { useId, useMemo, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import { SubVista, DesplegableAgrupado } from './piezas';
+import { useMemo, useState } from 'react';
+import { SubVista, DesplegableAgrupado, SiNo } from './piezas';
 import FormularioSimple from './FormularioSimple';
 
 const hoyIso = () => {
@@ -99,37 +98,6 @@ export function SubVistaSeguimiento({ ficha, onVolver, onGuardar, guardando }) {
         })}
       />
     </SubVista>
-  );
-}
-
-/**
- * Sí o no, en el control segmentado de la ficha (`.fi-seg`, el de «Pendiente | Realizado» del
- * historial). Eran dos `.ln-chip` y dentro de `.dc-shell` perdían el borde y el aire: dos palabras
- * sueltas con un bloque magenta detrás de la elegida. La marca se corre de una a la otra
- * (`layoutId`) y con movimiento reducido salta sin animar.
- */
-function SiNo({ valor, onElegir, etiqueta }) {
-  const reducido = useReducedMotion();
-  const marca = useId();
-  return (
-    <div className="fi-seg" role="group" aria-label={etiqueta}>
-      {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map((o) => {
-        const activo = valor === o.v;
-        return (
-          <button key={o.l} type="button" className="fi-seg-op" aria-pressed={activo}
-            onClick={() => onElegir(o.v)}>
-            {activo && (
-              <motion.span className="fi-seg-marca" aria-hidden="true"
-                {...(reducido ? {} : {
-                  layoutId: `fi-seg-sino-${marca}`,
-                  transition: { type: 'spring', bounce: 0.18, duration: 0.36 },
-                })} />
-            )}
-            {o.l}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

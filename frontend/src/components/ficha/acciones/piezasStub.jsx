@@ -71,6 +71,16 @@ export const SeccionColapsable = ({ titulo, resumen, children }) => (
   </details>
 );
 
+export const SiNo = ({ valor, onElegir, etiqueta }) => (
+  <div data-pieza="si-no" role="group" aria-label={etiqueta}>
+    {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map((o) => (
+      <button key={o.l} type="button" aria-pressed={valor === o.v} onClick={() => onElegir?.(o.v)}>
+        {o.l}
+      </button>
+    ))}
+  </div>
+);
+
 export const SubVista = ({ titulo, onVolver, acciones, children }) => (
   <section data-pieza="subvista">
     <header>

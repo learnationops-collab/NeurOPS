@@ -10,6 +10,7 @@
 //   <TarjetaAccion tono icono label onClick />
 //   <SeccionColapsable titulo resumen>…</SeccionColapsable>
 //   <SubVista titulo onVolver acciones>…</SubVista>
+//   <SiNo valor onElegir etiqueta />
 
 export { default as StepperFicha } from '../piezas/StepperFicha';
 export { default as DesplegableAgrupado } from '../piezas/DesplegableAgrupado';
@@ -17,3 +18,4 @@ export { default as SelectorFecha } from '../piezas/SelectorFecha';
 export { default as TarjetaAccion } from '../piezas/TarjetaAccion';
 export { default as SeccionColapsable } from '../piezas/SeccionColapsable';
 export { default as SubVista } from '../piezas/SubVista';
+export { default as SiNo } from '../piezas/SiNo';
