@@ -465,7 +465,23 @@ class ComercialService:
         filas_por_id = {f['id']: f for f in filas}
         for fila_id, dato in clasificar_senas(filas).items():
             filas_por_id[fila_id]['sena_estado'] = dato['estado']
+        ComercialService._con_academia(filas)
         return filas
+
+    @staticmethod
+    def _con_academia(filas):
+        """Le agrega a cada fila la foto de la Academia de su cliente (`fila['academia']`).
+
+        Es lo que deja filtrar y ordenar Clientes y Ventas por lo que el alumno hace en la Academia
+        (ver `academy_snapshot_service`). Se lee de la foto guardada, nunca de la Academia en vivo,
+        y en UNA consulta para todas las filas. Una venta que no se cruza con ningun cliente queda
+        en None: no hay alumno que buscar.
+        """
+        from app.services.academy_snapshot_service import bloques_por_cliente
+
+        bloques = bloques_por_cliente([f['client_id'] for f in filas if f.get('client_id')])
+        for fila in filas:
+            fila['academia'] = bloques.get(fila.get('client_id'))
 
     # --- Leads entrantes del setter -----------------------------------------------------------
 
@@ -757,6 +773,7 @@ class ComercialService:
                 'cuota_numero': cuota['numero_cuota'] if cuota else None,
             })
 
+        ComercialService._con_academia(filas)
         filas.sort(key=lambda f: (-f['deuda'], f['cliente'].lower()))
         return filas
 
