@@ -7,7 +7,7 @@ import {
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
-    Compass, Sparkles, DollarSign
+    Compass, Sparkles, DollarSign, UserPlus
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +25,7 @@ import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
+import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import { agendaParaVender, mensajeDeError } from '../../components/ficha/fichaApi';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -84,6 +85,8 @@ const CloserWorkflowPage = () => {
     const [paraVender, setParaVender] = useState(pideVenta);
     if (pideVenta && !paraVender) setParaVender(true);
     const buscadorRef = useRef(null);
+    // «¿No está? Registrar cliente nuevo»: `{busqueda}` con lo que se había buscado, o null.
+    const [clienteNuevo, setClienteNuevo] = useState(null);
     useEffect(() => {
         if (!pideVenta) return;
         const sinVenta = new URLSearchParams(searchParams);
@@ -1429,6 +1432,21 @@ const CloserWorkflowPage = () => {
                                         Sin resultados.
                                     </div>
                                 )}
+                                {/* La página vieja le vendía también a quien no estaba cargado. */}
+                                {paraVender && !searching && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowSearchResults(false);
+                                            setClienteNuevo({ busqueda: searchQuery });
+                                            setSearchQuery('');
+                                        }}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-left text-xs text-emerald-300 hover:bg-emerald-500/10 border-t border-slate-800 transition-colors"
+                                    >
+                                        <UserPlus size={14} aria-hidden="true" className="shrink-0" />
+                                        <span>¿No está? Registrar «{searchQuery.trim()}» como cliente nuevo</span>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1548,14 +1566,37 @@ const CloserWorkflowPage = () => {
                                 <b className="text-emerald-200">Declarar una venta.</b> Buscá al cliente y se abre su ficha en «Registrar una venta».
                             </span>
                         </span>
+                        {!clienteNuevo && (
+                            <button
+                                type="button"
+                                onClick={() => setClienteNuevo({ busqueda: searchQuery })}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-500/10 transition-colors"
+                            >
+                                <UserPlus size={13} aria-hidden="true" /> ¿No está? Registrar cliente nuevo
+                            </button>
+                        )}
                         <button
                             type="button"
-                            onClick={() => setParaVender(false)}
+                            onClick={() => { setParaVender(false); setClienteNuevo(null); }}
                             className="px-2 py-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
                         >
                             Cancelar
                         </button>
                     </motion.div>
+                )}
+                {paraVender && clienteNuevo && (
+                    <ClienteNuevoVenta
+                        busqueda={clienteNuevo.busqueda}
+                        onCancelar={() => setClienteNuevo(null)}
+                        onAbierto={({ appointment_id: agenda, nombre, nuevo }) => {
+                            setClienteNuevo(null);
+                            setParaVender(false);
+                            // Si ya estaba (el buscador no lo encontró porque se lo buscó
+                            // distinto), se dice: la ficha que se abre es la suya.
+                            if (!nuevo) toast(`${nombre} ya estaba en el sistema: se abre su ficha.`);
+                            handleSelectLead({ id: agenda, fase: 'venta' });
+                        }}
+                    />
                 )}
             </header>
 
