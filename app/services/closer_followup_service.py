@@ -4,6 +4,7 @@ from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
+from app.services import baja_service
 from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
 
@@ -330,13 +331,20 @@ class CloserFollowUpService:
         completo, así que un cliente con un precio negociado más alto que el de lista (caso
         real: Susett Anahí Cochachín Luna, `total_amount=1000` pero `Program.price=500`)
         aparecía debiendo mucho menos de lo real tanto en "Mi cartera" como en "Ver mis datos"
-        (reportado por el usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900")."""
+        (reportado por el usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900").
+
+        Un cliente dado de baja (`baja_service`) no debe nada: lo que pagó sigue contando como
+        cobrado, pero el saldo deja de existir. Se decide ACÁ para que todo lo que ya pregunta la
+        deuda por esta función (la ficha, la cola de cobro, la tabla Clientes, la secuencia de
+        pagos) diga lo mismo sin enterarse de la baja."""
         if not client_id:
             return 0.0
         if lote is not None:
             return lote.deuda(client_id)
         from app.models import Client
         client = Client.query.get(client_id)
+        if baja_service.esta_de_baja(client):
+            return 0.0
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
         if not enrollments:
             return 0.0
@@ -448,7 +456,11 @@ class CloserFollowUpService:
             # su caso por defecto al no encontrar nada que cobrar. Caso real visto en la pantalla
             # del closer (Fabricio Fuentes, 24/sep/2026).
             data['proxima_cuota'] = CloserFollowUpService._proxima_cuota(a.client_id, deuda_val)
-            data['etapa_cobro'] = resolver_etapa(deuda_val, data['proxima_cuota'], enrollment_dt)
+            # El único seguimiento de cobro de un cliente de baja que llega acá es el recontacto
+            # que se agendó al darlo de baja (ver `_base_query`): la fila tiene que decirlo.
+            data['baja'] = baja_service.descriptor(a.client)
+            data['etapa_cobro'] = resolver_etapa(deuda_val, data['proxima_cuota'], enrollment_dt,
+                                                 baja=data['baja'])
         return data
 
     @staticmethod
@@ -466,8 +478,17 @@ class CloserFollowUpService:
         por el armador de cuotas). None cuando no hay nada que cobrar.
 
         Vivía copiada en `_build_cartera_item` y en `get_client_lead_stage`, y faltaba en
-        `_serialize` — que es justamente de donde sale la lista que el closer mira todos los días."""
+        `_serialize` — que es justamente de donde sale la lista que el closer mira todos los días.
+
+        A un cliente dado de baja no se le cobra ninguna cuota: su cronograma queda como estaba
+        (por si la baja se revierte), pero ninguna cuota suya es "la próxima"."""
         if not client_id:
+            return None
+        cliente = lote.clientes.get(client_id) if lote is not None else None
+        if cliente is None:
+            from app.models import Client
+            cliente = db.session.get(Client, client_id)
+        if baja_service.esta_de_baja(cliente):
             return None
         if lote is not None:
             cuota = lote.cuota_pendiente.get(client_id)
@@ -730,6 +751,9 @@ class CloserFollowUpService:
         # Una vez: antes se pedía dos veces (código y nombre), con dos consultas idénticas.
         programa_code = CloserFollowUpService._client_program_code(cid, lote)
         closer = lote.closer_de(appt) if lote is not None else appt.closer
+        # La baja viaja en el item: la tabla Clientes la muestra en su propio filtro y la cola de
+        # cobro la usa para sacar al cliente (ver `_cerrada_pool_items`).
+        baja = baja_service.descriptor(client)
 
         # Historial de pagos del cliente, clasificado con el mismo tipo canónico que usa el
         # resto del sistema (SheetsService.parse_tipo_pago: completo/parcial/seña/cuota/
@@ -779,11 +803,12 @@ class CloserFollowUpService:
             'programa_code': programa_code,
             'programa_nombre': PROGRAM_CODE_NAMES.get(programa_code),
             'proxima_cuota': proxima_cuota,
+            'baja': baja,
             # En qué momento del cobro está: el modal del cliente abre el paso correspondiente
             # y la lista pinta el chip con el mismo texto, sin volver a deducirlo cada una por
             # su cuenta (que es como terminaron desalineados el chip de la lista y la pantalla
             # que se abría al tocarlo).
-            'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt),
+            'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt, baja=baja),
             'pagos': pagos,
             'desglose_pagos': desglose
         }
@@ -923,6 +948,7 @@ class CloserFollowUpService:
             deuda_val = CloserFollowUpService._client_debt(client_id)
             proxima_cuota = CloserFollowUpService._proxima_cuota(client_id, deuda_val)
             programa_code = CloserFollowUpService._client_program_code(client_id)
+            baja = baja_service.descriptor(client)
             return {
                 'stage': 'cerrada',
                 'client_id': client_id,
@@ -940,7 +966,8 @@ class CloserFollowUpService:
                 'programa_code': programa_code,
                 'programa_nombre': PROGRAM_CODE_NAMES.get(programa_code),
                 'proxima_cuota': proxima_cuota,
-                'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt)
+                'baja': baja,
+                'etapa_cobro': resolver_etapa(deuda_val, proxima_cuota, enrollment_dt, baja=baja)
             }
 
         appts = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
@@ -1420,6 +1447,9 @@ class CarteraEnLote:
 
     def deuda(self, client_id):
         cliente = self.clientes.get(client_id)
+        # Misma regla que `_client_debt` sin lote: de baja, no debe nada.
+        if baja_service.esta_de_baja(cliente):
+            return 0.0
         return _deuda_de(cliente.total_amount if cliente else None,
                          self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
 

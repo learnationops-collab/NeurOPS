@@ -137,3 +137,38 @@ def test_toda_etapa_trae_texto_tono_y_una_accion_principal_dentro_de_sus_accione
     assert etapa['titulo'] and etapa['subtitulo']
     assert etapa['tono'] in ('error', 'warning', 'primary', 'success')
     assert etapa['accion_principal'] in etapa['acciones']
+
+
+# --- Dado de baja ---
+
+BAJA = {'fecha': '2026-09-12T10:00:00', 'fecha_legible': '12 sep 2026', 'motivo': 'No puede pagar',
+        'por': 'lucia'}
+
+
+@pytest.mark.parametrize('deuda,cuota_arg', [
+    (900.0, None),
+    (500.0, {'monto': 250.0, 'fecha_vencimiento': '2026-09-14'}),
+    (0.0, None),
+])
+def test_la_baja_gana_sobre_cualquier_deuda_o_cuota(deuda, cuota_arg):
+    """Un cliente de baja no tiene nada que cobrar aunque le quede una cuota vencida en el
+    cronograma: ese cronograma queda como estaba solo por si la baja se revierte."""
+    etapa = resolver_etapa(deuda=deuda, proxima_cuota=cuota_arg, hoy=HOY, baja=BAJA)
+    assert etapa['clave'] == 'baja'
+    assert etapa['deuda'] == 0.0
+    assert clave_de_etapa(deuda, cuota_arg, hoy=HOY, baja=BAJA) == 'baja'
+
+
+def test_la_baja_no_propone_ninguna_accion_de_cobro():
+    etapa = resolver_etapa(deuda=0.0, hoy=HOY, baja=BAJA)
+    assert etapa['acciones'] == [etapa['accion_principal']]
+    assert ACCION_REGISTRAR_COBRO not in etapa['acciones']
+    assert ACCION_PROGRAMAR_COBRO not in etapa['acciones']
+
+
+def test_la_baja_dice_cuando_y_por_que():
+    etapa = resolver_etapa(deuda=0.0, hoy=HOY, baja=BAJA)
+    assert etapa['titulo'] == 'Dado de baja el 12 sep 2026'
+    assert 'No puede pagar' in etapa['subtitulo']
+    assert etapa['tono'] == 'idle'
+    assert etapa['baja'] == BAJA

@@ -53,9 +53,15 @@ def _dias_desde(valor, hoy):
     return (hoy - fecha).days if fecha else None
 
 
-def clave_de_etapa(deuda, proxima_cuota=None, enrollment_date=None, hoy=None):
+def clave_de_etapa(deuda, proxima_cuota=None, enrollment_date=None, hoy=None, baja=None):
     """La clave de la sub-etapa, sin el texto. Separada de `resolver_etapa` para poder ordenar
-    y agrupar listas de clientes por urgencia sin construir el descriptor completo de cada uno."""
+    y agrupar listas de clientes por urgencia sin construir el descriptor completo de cada uno.
+
+    `baja` (el descriptor de `baja_service`) gana sobre todo: un cliente dado de baja no tiene
+    nada que cobrar aunque su cronograma tenga cuotas sin pagar, que quedan como estaban por si
+    la baja se revierte."""
+    if baja:
+        return 'baja'
     hoy = hoy or date.today()
     deuda = float(deuda or 0.0)
 
@@ -90,16 +96,34 @@ def _plural_dias(n):
     return '1 día' if n == 1 else f'{n} días'
 
 
-def resolver_etapa(deuda, proxima_cuota=None, enrollment_date=None, hoy=None):
+def resolver_etapa(deuda, proxima_cuota=None, enrollment_date=None, hoy=None, baja=None):
     """Descriptor completo de en qué momento del cobro está el cliente.
 
     Devuelve `clave`, los textos que el modal muestra como encabezado, el `tono` del chip (mismo
     vocabulario de tonos que ya usa el dashboard comercial) y la lista de acciones, con la
-    principal marcada — el modal abre esa por defecto para que el closer no tenga que elegir."""
+    principal marcada — el modal abre esa por defecto para que el closer no tenga que elegir.
+
+    `baja` es el descriptor de `baja_service.descriptor` (o None)."""
     hoy = hoy or date.today()
     deuda = float(deuda or 0.0)
-    clave = clave_de_etapa(deuda, proxima_cuota, enrollment_date, hoy)
+    clave = clave_de_etapa(deuda, proxima_cuota, enrollment_date, hoy, baja)
     cuota = proxima_cuota or {}
+
+    if clave == 'baja':
+        # No accionable: no hay cobro que proponer, solo mirar lo que pasó. La deuda va en 0
+        # aunque llegue otra cosa — es la que el resto del sistema ya le pone a una baja.
+        cuando = f" el {baja['fecha_legible']}" if baja.get('fecha_legible') else ''
+        return {
+            'clave': clave,
+            'titulo': f'Dado de baja{cuando}',
+            'subtitulo': (f"Motivo: {baja['motivo']}. " if baja.get('motivo') else '')
+                         + 'Lo que pagó queda cobrado; no se le cobra nada más.',
+            'tono': 'idle',
+            'deuda': 0.0,
+            'baja': baja,
+            'accion_principal': ACCION_VER_HISTORIAL,
+            'acciones': [ACCION_VER_HISTORIAL],
+        }
 
     if clave == 'sin_plan':
         return {
