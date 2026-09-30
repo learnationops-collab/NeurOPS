@@ -464,7 +464,12 @@ export const PREGUNTAS = [
     clave: 'seguimiento', hito: 'resultado', tipo: 'formulario', enunciado: '¿Cuándo lo vas a seguir?',
     ayuda: 'Sin fecha va al pool del equipo.',
     campos: [
-      { campo: 'fecha_seguimiento', label: 'Fecha del próximo contacto', tipo: 'fecha', presets: ['hoy', 'manana', 'sin_fecha'] },
+      // `SelectorFecha` pide los atajos como `{label, dias}`: con los textos sueltos que había
+      // ('hoy', 'manana') dibujaba botones sin nada escrito. «Sin fecha» es dejarlo vacío.
+      {
+        campo: 'fecha_seguimiento', label: 'Fecha del próximo contacto', tipo: 'fecha',
+        presets: [{ label: 'Hoy', dias: 0 }, { label: 'Mañana', dias: 1 }, { label: 'En 1 semana', dias: 7 }],
+      },
       { campo: 'followup_reminder_enabled', label: 'Avisarme por WhatsApp', tipo: 'booleano' },
       { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora' },
       { campo: 'notes', label: 'Ángulo del seguimiento / Notas', tipo: 'parrafo' },
