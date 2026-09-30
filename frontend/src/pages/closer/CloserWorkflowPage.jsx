@@ -820,7 +820,7 @@ const CloserWorkflowPage = () => {
     // propios endpoints (/closer/followups/*), así que cualquier acción que recargue el mazo debe
     // avisarle para que un seguimiento recién resuelto desaparezca sin recargar la página. Se
     // apaga solo en la carga por cambio de pestaña/día, donde el panel ya se monta pidiendo datos.
-    const fetchAgendas = async ({ refreshSeguimientos = true } = {}) => {
+    const fetchAgendas = async ({ refreshSeguimientos = true, conservarFicha = false } = {}) => {
         const clave = `${activeStep}|${selectedDate}`;
         const conEsqueleto = mazoCargadoRef.current !== clave;
         if (conEsqueleto) setLoading(true);
@@ -853,7 +853,7 @@ const CloserWorkflowPage = () => {
             }
 
             // Si el lead actualmente seleccionado ya no está en la cola ni en unreadNoAgenda, deseleccionarlo
-            if (selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
+            if (!conservarFicha && selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
                 setSelectedLead(null);
             }
 
@@ -1140,7 +1140,11 @@ const CloserWorkflowPage = () => {
     // cierra la ficha en vez de recargar algo que ya no existe.
     const alCambiarLaFicha = (accion) => {
         if (accion === 'eliminar') setSelectedLead(null);
-        fetchAgendas();
+        // Reportar la llamada o declarar la venta saca al lead de esta columna, y el mazo cierra
+        // la ficha de un lead que ya no está en su cola. Acá no: la pestaña Resultado muestra lo
+        // que quedó guardado —y el aviso, si un paso de después de la venta falló— y ofrece seguir
+        // en Acciones con el cobro. La ficha la cierra el closer cuando terminó.
+        fetchAgendas({ conservarFicha: ['registrar_venta', 'reportar_resultado'].includes(accion) });
     };
 
 
