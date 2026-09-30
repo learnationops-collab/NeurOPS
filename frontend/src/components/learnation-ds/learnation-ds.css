@@ -540,8 +540,11 @@
 .ln-alert-ico { flex-shrink: 0; display: flex; margin-top: 1px; }
 .ln-alert-ico svg { width: 18px; height: 18px; }
 .ln-alert-body { flex: 1; min-width: 0; }
-.ln-alert-title { font-size: 14px; font-weight: 700; margin: 0; }
+/* En bloque aunque vengan en un <span>: la ficha los arma así, y en línea el título y la
+   descripción quedaban pegados («…$1,000Al guardar…»). */
+.ln-alert-title { display: block; font-size: 14px; font-weight: 700; margin: 0; }
 .ln-alert-desc {
+  display: block;
   font-size: 14px; font-weight: 400; line-height: 1.6;
   color: var(--text-muted); margin-top: var(--space-1);
 }
