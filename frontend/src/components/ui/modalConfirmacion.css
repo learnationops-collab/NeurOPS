@@ -1,0 +1,30 @@
+/* El diálogo de confirmación (`ModalConfirmacion`). Vive con la clase `dc-shell` encima porque se
+   monta en un portal a `body`: de ahí salen los tokens y los botones `.btn`.
+
+   Va por encima del velo de la ficha (z-index 90): se abre DESDE la ficha y tiene que taparla. */
+.dc-shell.confirma-velo{z-index:110;align-items:center}
+
+.dc-shell .confirma{position:relative;width:min(420px,100%);display:flex;flex-direction:column;
+  gap:var(--s3);padding:var(--s6);background:var(--bg-surface);border:1px solid var(--border-main);
+  border-top-color:var(--sheen);border-radius:var(--radius-main);box-shadow:var(--shadow-main)}
+
+.dc-shell .confirma-icono{width:44px;height:44px;border-radius:14px;display:inline-flex;
+  align-items:center;justify-content:center;color:var(--error);background:var(--error-surface);
+  border:1px solid var(--error-border)}
+.dc-shell .confirma-icono svg{width:20px;height:20px}
+
+.dc-shell .confirma-detalle{color:var(--text-muted);display:flex;flex-direction:column;gap:var(--s2)}
+.dc-shell .confirma-detalle strong{color:var(--text-on-surface);font-weight:700}
+
+.dc-shell .confirma-error{color:var(--error);background:var(--error-surface);
+  border:1px solid var(--error-border);border-radius:12px;padding:var(--s2) var(--s3)}
+
+.dc-shell .confirma-acciones{display:flex;justify-content:flex-end;gap:var(--s3);flex-wrap:wrap;
+  margin-top:var(--s2)}
+
+/* La acción destructiva, en rojo: la misma forma que `.btn--cta`, con el color del error. */
+.dc-shell .btn--peligro{background:var(--error);color:#fff;
+  box-shadow:0 10px 26px -12px var(--error)}
+.dc-shell .btn--peligro:hover:not(:disabled){filter:brightness(1.08)}
+.dc-shell .btn--peligro:focus-visible,
+.dc-shell .confirma .btn--linea:focus-visible{outline:2px solid var(--text-on-surface);outline-offset:2px}
