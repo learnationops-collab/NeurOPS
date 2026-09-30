@@ -71,7 +71,7 @@ repositorio se da por comprometido: se rota, no se reutiliza.
 |---|---|---|
 | `SECRET_KEY` | firma de los JWT y de las cookies; sin ella la app no arranca en producción ni en Railway | (interna) |
 | `BACKUP_SECRET_KEY` | `/api/backup/secret-*` (además hay que ser `admin`) | el admin, que la escribe en las pantallas `/admin/backup` y `/admin/restore` (sin enlace en el menú; se entra por la URL); usa una hexadecimal, porque viaja como parte de la ruta |
-| `CRON_SECRET` | `GET /api/sheets/cron-sync` y `GET /api/closer/followups/cron/send-reminders` | el cron externo: `Authorization: Bearer <valor>` (o, por compatibilidad, `?token=<valor>`) |
+| `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` y `GET /api/academia/cron/sincronizar` | el cron externo: `Authorization: Bearer <valor>` (o, por compatibilidad, `?token=<valor>`) |
 | `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/webhooks/manychat` | ManyChat, en el header `X-ManyChat-Token` |
 | `INGEST_API_TOKEN` | las rutas de ingesta y consulta de n8n y Apps Script (agendas, ventas, clientes; lista en `app/access_policy.py`) | n8n y Apps Script, en el header `X-Api-Token` (o `Authorization: Bearer`) |
 | `ACADEMY_INBOUND_API_TOKEN` | `/api/external/academy/*` | la Academia, `Authorization: Bearer <valor>` |

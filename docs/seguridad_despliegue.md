@@ -25,7 +25,7 @@ más cortos se rechazan).
 |---|---|---|
 | `SECRET_KEY` | firma de los JWT y las cookies (la app no arranca en Railway sin ella) | interna |
 | `BACKUP_SECRET_KEY` | `/api/backup/secret-*` | el admin, en `/admin/backup` y `/admin/restore` |
-| `CRON_SECRET` | `GET /api/sheets/cron-sync` y `GET /api/closer/followups/cron/send-reminders` | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
+| `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` y `GET /api/academia/cron/sincronizar` | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
 | `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/webhooks/manychat` | ManyChat: header `X-ManyChat-Token` |
 | `INGEST_API_TOKEN` | rutas de ingesta y consulta de n8n y Apps Script (ver §3) | n8n / Apps Script: header `X-Api-Token: <valor>` (o `Authorization: Bearer <valor>`) |
 | `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar y registra (ver §4) | — |
@@ -38,7 +38,13 @@ más cortos se rechazan).
 | **Apps Script** (hoja de ventas) | `POST /api/public/financial-sales` | `X-Api-Token: <INGEST_API_TOKEN>` |
 | **Otra página / integración de consulta de clientes** | `GET /api/public/clients/search`, `GET /api/public/new-clients`, `POST /api/public/clients/follow-up` | `X-Api-Token: <INGEST_API_TOKEN>` |
 | **ManyChat** (leads de Instagram) | `POST /api/webhooks/manychat` | `X-ManyChat-Token: <MANYCHAT_WEBHOOK_TOKEN>` |
-| **Cron externo** (Sheets, recordatorios) | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` | `Authorization: Bearer <CRON_SECRET>` |
+| **Cron externo** (Sheets, recordatorios, fotos de la Academia) | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders`, `GET /api/academia/cron/sincronizar` | `Authorization: Bearer <CRON_SECRET>` |
+
+**Fotos de la Academia** (`GET /api/academia/cron/sincronizar`, ver `app/services/academy_snapshot_service.py`):
+cada llamada renueva un lote de clientes con venta, del más desactualizado al más fresco, con un presupuesto de 20
+consultas a la Academia (`?presupuesto=N`, hasta 40) y un tope de 25 s; se corta sola ante un 401 o un 429. La
+Academia admite 60 consultas por minuto compartidas con la ficha, así que conviene programarla cada 10 minutos, no
+más seguido. Sin `ACADEMY_API_TOKEN` responde 200 sin consultar nada.
 
 En n8n: en el nodo *HTTP Request* → *Send Headers* → nombre `X-Api-Token`, valor el secreto. En Apps Script:
 `UrlFetchApp.fetch(url, { method: 'post', headers: { 'X-Api-Token': SECRETO }, ... })` (guarda el secreto en las
