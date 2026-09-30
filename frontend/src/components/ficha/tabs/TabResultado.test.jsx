@@ -100,6 +100,19 @@ describe('TabResultado', () => {
     expect(screen.getByRole('heading', { name: '¿Qué pasó con esta llamada?' })).toBeInTheDocument();
   });
 
+  it.each(['no-email-3f2a9c01@neurops.com', 'priscilajacome_172616@neurops.temp'])('un correo inventado por NeurOPS (%s) no se precarga como el del cliente', async (email) => {
+    // Llegaba confirmado a la venta y al acceso de la Academia, a una casilla que no existe.
+    const user = userEvent.setup();
+    const ficha = { ...fichaAgendaVencida, identidad: { ...fichaAgendaVencida.identidad, email } };
+    render(<TabResultado {...props(ficha)} />);
+    await user.click(screen.getByRole('button', { name: /Registrar una venta/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    expect(screen.getByRole('heading', { name: '¿Su email?' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveValue('');
+    expect(screen.getByRole('button', { name: /^Continuar$/ })).toBeDisabled();
+  });
+
   it('en la cadencia de seguimiento no se ofrece la venta directa: ahí está «Cerró la venta»', () => {
     render(<TabResultado {...props(fichaEnSeguimiento)} />);
     expect(screen.queryByRole('button', { name: /Registrar una venta/ })).toBeNull();

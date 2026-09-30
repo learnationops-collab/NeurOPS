@@ -65,13 +65,19 @@ const hoyIso = () => enDias(0);
 // Ojo: acá NO se precargan los campos de las preguntas de opciones (programa, medio de pago,
 // estado, si es mensual…), porque un campo con valor cuenta como contestado y la pregunta se
 // saltearía sin que el closer la haya visto.
+// Los correos que inventa NeurOPS cuando un lead llega sin ninguno (`no-email-…@neurops.com`,
+// `…@neurops.temp`). No son del cliente: precargados, pasaban como confirmados a la venta y al
+// acceso de la Academia, que le daba el usuario a una casilla que no existe.
+const esCorreoInventado = (email) => /no[-_]email[-_]|@neurops\.(com|temp)$/i
+  .test(String(email || '').trim());
+
 function precargar(ficha) {
   const id = ficha?.identidad || {};
   return {
     ...estadoInicial(),
     nombre_cliente: id.nombre || '',
     instagram: (id.instagram || '').replace(/@/g, ''),
-    mail_cliente: id.email || '',
+    mail_cliente: esCorreoInventado(id.email) ? '' : (id.email || ''),
     telefono: id.telefono || '',
     documento_identidad: '',
     // El respaldo cuando no hay lista de closers para elegir: la venta va al closer de la agenda.
