@@ -580,7 +580,11 @@ class DashboardService(BaseService):
             activity.append({'type': 'payment', 'time': p.date.isoformat(), 'message': f'Pago: ${p.amount:,.0f}', 'sub': p.enrollment.client.full_name or p.enrollment.client.email})
             
         activity.sort(key=lambda x: x['time'], reverse=True)
-        
+
+        # Sin este return la ruta de actividad respondía `null` y `/admin/dashboard` daba 500 al
+        # leer `activity['recent_activity']` (ver tests/api/test_admin_dashboard_activity.py).
+        return {'top_debtors': top_debtors, 'recent_activity': activity}
+
     @staticmethod
     def get_revenue_chart_data(period='this_month', granularity='day', group_by='program', metric='amount', start_date_arg=None, end_date_arg=None, closer_ids=None, program_ids=None):
         start_date, end_date = DashboardService._get_date_range(period, start_date_arg, end_date_arg)
