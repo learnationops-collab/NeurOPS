@@ -183,7 +183,10 @@ describe('camino: no asistió', () => {
     const r = recorrer({
       ...guion, noshow_next: { noshow_next: 'descartar' }, descarte: { motivo_descarte: 'no show reiterado' },
     });
-    expect(construirPayload(r, {}).datos.process).toMatchObject({ status: 'Lead Perdido', note: 'no show reiterado' });
+    // Como en el mazo: el motivo elegido va delante del comentario libre.
+    expect(construirPayload(r, {}).datos.process).toMatchObject({
+      status: 'Lead Perdido', note: 'No contestó el mensaje. no show reiterado',
+    });
   });
 });
 

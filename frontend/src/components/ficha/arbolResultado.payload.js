@@ -65,7 +65,17 @@ export function notaFinal(r = {}) {
     refs = ' | No se pidieron referidos.';
   }
   const cierre = r.sig_action === 'close' && r.cierre_motivo ? ` | Motivo de cierre: ${r.cierre_motivo}` : '';
-  return `${prefijo}${r.notes || ''}${cierre}${refs}`.trim();
+  // Sin texto libre la nota empezaba con el separador («| Se pidieron referidos…»).
+  return `${prefijo}${r.notes || ''}${cierre}${refs}`.trim().replace(/^\|\s*/, '');
+}
+
+// La nota cuando el closer no escribió nada: la misma que ponía el mazo en cada rama, para que la
+// bitácora diga qué pasó y no un «Reporte de llamada» genérico.
+function notaPorDefecto(r) {
+  if (r.nopres_next === 'segunda') return 'Agendó 2ª llamada';
+  if (r.reag_dejo_fecha === true) return `Reagendado por: ${r.reag_motivo || 'Sin especificar'}`;
+  if (seguimientoDeRama(r)) return 'Programó seguimiento';
+  return 'Reporte de llamada';
 }
 
 const bloqueReferidos = (r) => ({
@@ -105,7 +115,11 @@ function bloqueProcess(r) {
   return {
     status: descarte[elegido],
     role: 'closer',
-    note: r.motivo_descarte || motivoDeRama(r) || null,
+    // Como en el mazo: en el no show, el motivo elegido («Bloqueó / desapareció») va delante del
+    // comentario libre en vez de perderse.
+    note: r.noshow_next === 'descartar' && r.noshow_motivo && r.motivo_descarte
+      ? `${r.noshow_motivo}. ${r.motivo_descarte}`
+      : (r.motivo_descarte || motivoDeRama(r) || null),
     with_decision_maker: r.with_decision_maker ?? null,
     offer_presented: r.offer_presented ?? null,
   };
@@ -122,7 +136,7 @@ function bloqueReagenda(r) {
 
 /** El `POST /closer/deck/<appt>` que corresponde al camino recorrido. */
 function bloqueDeck(r, contexto) {
-  const notas = notaFinal(r) || 'Reporte de llamada';
+  const notas = notaFinal(r) || notaPorDefecto(r);
   const base = {
     closer_notes: notas,
     with_decision_maker: r.with_decision_maker ?? null,
