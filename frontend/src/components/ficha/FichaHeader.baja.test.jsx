@@ -55,10 +55,13 @@ describe('revertir la baja desde Acciones', () => {
         const usuario = userEvent.setup();
         await abrir(fichaDeBaja);
 
-        await usuario.click(await screen.findByRole('button', { name: 'Revertir baja' }));
+        // Acciones es una pestaña perezosa (`import.meta.glob`): con la suite entera corriendo en
+        // paralelo su chunk tarda más que el segundo por defecto de `findBy` en llegar.
+        await usuario.click(await screen.findByRole('button', { name: 'Revertir baja' }, { timeout: 8000 }));
         await usuario.click(screen.getByRole('button', { name: 'Revertir baja' }));
 
         expect(api.post).toHaveBeenCalledWith('/ficha/9012/revertir-baja', {});
-        expect(await screen.findByText(/Baja revertida: vuelve a deber \$1\.000/)).toBeInTheDocument();
+        expect(await screen.findByText(/Baja revertida: vuelve a deber \$1\.000/, {}, { timeout: 5000 }))
+            .toBeInTheDocument();
     });
 });
