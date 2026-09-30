@@ -5,6 +5,13 @@ from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_, func, case
 from sqlalchemy.orm import joinedload
 
+# `Payment.payment_type` de una venta real: pago completo o primer pago de un split pay, en las dos
+# grafías que conviven en la tabla (las claves de `SheetsService.PAYMENT_TYPE_MAP` y las etiquetas
+# en castellano de las cargas manuales). La seña ('down_payment', 'Seña'), la cuota y la
+# renovación no abren una venta.
+PAYMENT_TYPES_DE_VENTA = ('full', 'first_payment', 'completo', 'pago completo', 'primer pago', 'parcial')
+
+
 class DashboardService(BaseService):
     @staticmethod
     def get_detailed_closer_metrics(start_date, end_date, closer_id=None):
@@ -103,11 +110,15 @@ class DashboardService(BaseService):
             # Todo se agrupa en 'Agendas' ya que no usamos tipo
             update_bucket(stats['first_agendas'], status)
 
-        # Conteo de Ventas (Enrollments con pago completado)
+        # Conteo de Ventas: inscripciones con un pago completo o un primer pago de split pay
+        # cobrado. Antes alcanzaba con CUALQUIER pago completado, y una inscripción que solo tenía
+        # la seña (`down_payment`) contaba como venta en el closing rate (30/09/2026: "el close
+        # rate no debe tomar señas").
         sale_q = Enrollment.query.join(Payment).filter(
-            Enrollment.enrollment_date >= start_date, 
+            Enrollment.enrollment_date >= start_date,
             Enrollment.enrollment_date <= end_date,
-            Payment.status == 'completed'
+            Payment.status == 'completed',
+            func.lower(func.trim(Payment.payment_type)).in_(PAYMENT_TYPES_DE_VENTA)
         )
         if closer_id:
             sale_q = sale_q.filter(Enrollment.closer_id == closer_id)
