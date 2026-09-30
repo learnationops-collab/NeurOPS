@@ -40,9 +40,17 @@ import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './acade
  * pie: la lista entera no se pagina (ver `ListaAgrupable`).
  */
 
-/** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend). */
+/** Chip de estado con el tono que manda el backend (nunca uno elegido en el frontend).
+ *
+ * El texto va en su propio span: el chip es `inline-flex`, y a un texto suelto dentro de un flex
+ * no se le puede poner `text-overflow`. Así, en una columna angosta se corta con «…» en vez de
+ * salirse del chip y pisar la columna de al lado. */
 export const ChipTono = ({ chip }) => (chip
-    ? <span className="chip" style={{ '--c': `var(--${chip.tone})` }}>{chip.label}</span>
+    ? (
+        <span className="chip" style={{ '--c': `var(--${chip.tone})` }} title={chip.label}>
+            <span className="trunc">{chip.label}</span>
+        </span>
+    )
     : null);
 
 const Celda = ({ fila, col }) => {
@@ -54,9 +62,10 @@ const Celda = ({ fila, col }) => {
                     {fmt.hora(fila.fecha) && <span className="celda-sub num">{fmt.hora(fila.fecha)}</span>}
                 </span>
             );
+        // `title` con el texto entero: la celda lo corta con «…» cuando no entra.
         case 'cliente':
             return (
-                <span className="celda">
+                <span className="celda" title={fila.cliente || undefined}>
                     {fila.cliente}
                     {fila.ig && <span className="celda-sub">{fila.ig}</span>}
                 </span>
@@ -185,7 +194,7 @@ const Celda = ({ fila, col }) => {
         case 'ver':
             return <span className="celda-ver"><ArrowRight size={14} /></span>;
         default:
-            return <span className="celda">{fila[col.key] || '—'}</span>;
+            return <span className="celda" title={fila[col.key] || undefined}>{fila[col.key] || '—'}</span>;
     }
 };
 
@@ -233,11 +242,17 @@ const Encabezado = ({ def, plantilla, orden, onOrdenar }) => (
                             onClick={() => onOrdenar(c.key)}
                             aria-label={`Ordenar por ${c.ordenLabel || c.header}${dir
                                 ? `, ahora ${RotuloOrden[dir]}` : ''}`}>
-                            {c.header}
-                            <ArrowDown size={11} aria-hidden="true"
-                                className={dir === 'asc' ? 'cab-flecha cab-flecha--asc' : 'cab-flecha'} />
+                            {/* En su span: si la columna se angosta se corta el rótulo, no el
+                                ícono de ayuda de al lado. */}
+                            <span className="trunc">{c.header}</span>
+                            {/* Solo en la columna que ordena: invisible en las demás igual ocupaba
+                                15px, y en las columnas angostas de la Academia eso dejaba «H…». */}
+                            {dir && (
+                                <ArrowDown size={11} aria-hidden="true"
+                                    className={dir === 'asc' ? 'cab-flecha cab-flecha--asc' : 'cab-flecha'} />
+                            )}
                         </button>
-                    ) : c.header}
+                    ) : <span className="trunc">{c.header}</span>}
                     {c.ayuda && <Tip texto={c.ayuda} titulo={c.ordenLabel || c.header} />}
                 </span>
             );

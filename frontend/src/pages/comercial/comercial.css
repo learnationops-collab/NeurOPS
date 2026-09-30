@@ -291,7 +291,7 @@
 
 .dc-shell .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;
   border-radius:var(--radius-pill);font-size:11px;font-weight:900;
-  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;max-width:100%;
+  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;max-width:100%;min-width:0;
   background:color-mix(in srgb,var(--c) 13%,transparent);
   border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
   color:var(--c);font-variant-numeric:tabular-nums}
@@ -934,7 +934,10 @@
 .dc-shell .tabla-fila[role="button"]{cursor:pointer}
 .dc-shell .tabla-fila[role="button"]:hover{background:var(--mat-1)}
 .dc-shell .tabla-fila > *{min-width:0}
-.dc-shell .celda{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* `display:block` porque `.celda` es un <span>: en un elemento en línea `overflow` y
+   `text-overflow` no hacen nada, y un nombre largo se montaba sobre la columna de al lado. */
+.dc-shell .celda{display:block;font-size:13px;font-weight:600;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .celda--num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .dc-shell .celda-sub{display:block;font-size:11px;font-weight:600;color:var(--text-muted-40);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

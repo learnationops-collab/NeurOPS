@@ -46,6 +46,29 @@ describe('Revisar · ordenar por columna', () => {
         expect(orden()).toEqual(['Cliente 1', 'Cliente 2', 'Cliente 3']);
     });
 
+    it('la flecha solo ocupa lugar en la columna que ordena, y el rótulo se puede cortar', () => {
+        // Invisible en las demás igual ocupaba 15px, y en las columnas angostas eso dejaba «H…».
+        const { container } = render(<Revisar {...props()} />);
+        expect(container.querySelectorAll('.tabla-cab .cab-flecha')).toHaveLength(0);
+
+        fireEvent.click(encabezado('Deuda'));
+        expect(container.querySelectorAll('.tabla-cab .cab-flecha')).toHaveLength(1);
+        expect(within(encabezado('Deuda')).getByText('Debe')).toHaveClass('trunc');
+    });
+
+    it('un texto que no entra se corta con «…» y deja el entero en el title', () => {
+        // Antes un nombre largo se montaba sobre la columna de al lado (`.celda` es un span y en
+        // línea no recorta). El chip lleva su texto en su propio span, que es lo que se corta.
+        const largo = { ...cliente(9, 0, 100), cliente: 'Andrea Alejandra Pérez Hernández de la Torre' };
+        render(<Revisar {...props({ datos: { filas: [largo] } })} />);
+
+        const fila = screen.getByRole('button', { name: /^Abrir Andrea/ });
+        expect(within(fila).getByText(largo.cliente)).toHaveAttribute('title', largo.cliente);
+        const chip = within(fila).getByText('Al día');
+        expect(chip).toHaveClass('trunc');
+        expect(chip.closest('.chip')).toHaveAttribute('title', 'Al día');
+    });
+
     it('"Ordenar" hace lo mismo, también en tarjetas donde no hay encabezado', () => {
         render(<Revisar {...props()} />);
         fireEvent.click(screen.getByRole('button', { name: 'Ver como tarjetas' }));
