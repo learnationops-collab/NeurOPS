@@ -109,7 +109,9 @@ export const SECCIONES = [
         ayuda: 'Sesiones individuales en vivo a las que asistió, según la Academia.',
       },
       {
-        clave: 'open_support_tickets', label: 'Tickets de soporte abiertos', formato: cuenta,
+        // Corto: con «de soporte» ocupaba dos líneas y su número quedaba más abajo que los de al
+        // lado. La sección ya se llama «Acompañamiento y soporte».
+        clave: 'open_support_tickets', label: 'Tickets abiertos', formato: cuenta,
         alerta: (v) => numero(v) > 0,
         ayuda: 'Pedidos de soporte que abrió en la Academia y siguen sin resolver. Si hay alguno, conviene preguntarle antes de hablar de cobro o renovación.',
       },
