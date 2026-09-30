@@ -7,7 +7,9 @@
 //     `pages/closer/CloserWorkflowPage.jsx` → `renderActionStepContent()`
 //     (pasos root/decisor/pres/venta/nocierre/nopres/second/noshow/cancel/
 //     reagQ/reagSi/follow/seg + el overlay de referidos) y de
-//     `components/modals/DeclararVentaWizard.jsx` (los pasos de la venta).
+//     `components/modals/DeclararVentaWizard.jsx` (los pasos de la venta). Ese wizard se borró
+//     cuando la ficha pasó a ser el único lugar donde se declara una venta: está en el
+//     historial de git, y las referencias `← wizard …` de abajo apuntan a él.
 // Cada pregunta lleva anotado su origen en un comentario `← …`.
 //
 // Este archivo es SOLO datos: la lógica de recorrido vive en `arbolResultado.js` y la cuenta de la

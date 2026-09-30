@@ -3,19 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-    Users, Layers, Search, Check, X, ChevronRight, Loader2,
+    Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
-    CalendarDays, AlertCircle, DollarSign, CreditCard,
+    CalendarDays, AlertCircle, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
     Compass, Sparkles
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
-import ClientHistoryModal from '../../components/shared/ClientHistoryModal';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import OperatorControls from '../../components/modals/OperatorControls';
-import DeclararVentaWizard from '../../components/modals/DeclararVentaWizard';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
@@ -307,11 +305,6 @@ const CloserWorkflowPage = () => {
     // Mientras se averigua en qué etapa está el lead que se tocó en los resultados (ver
     // handleSelectSearchResult). El desplegable ya se cerró, así que el aviso va en el buscador.
     const [resolviendoLead, setResolviendoLead] = useState(false);
-    // Historial completo del cliente (agendas/ventas/pagos) — accesible como vista secundaria
-    // desde el modal de etapa (botón "Ver historial completo"), ya no es lo que abre por
-    // defecto un resultado de búsqueda (ver handleSelectSearchResult).
-    const [historyClientId, setHistoryClientId] = useState(null);
-
     // Selector de agenda cuando la búsqueda global encuentra un lead con varias agendas
     // pendientes de confirmar — el closer elige a cuál de todas le está marcando el estado.
     const [agendaPicker, setAgendaPicker] = useState({ open: false, appointments: [] });
@@ -328,7 +321,6 @@ const CloserWorkflowPage = () => {
     
     // Búsqueda local
     const [searchQuery, setSearchQuery] = useState('');
-    const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
     const [selectedDate, setSelectedDate] = useState(localToday);
     
     // Cita seleccionada para el visor de la derecha (modal overlay v7)
@@ -409,133 +401,6 @@ const CloserWorkflowPage = () => {
 
     // Reasignar lead a otro closer — estado del selector inline en la ficha del modal.
     const [reassignOpen, setReassignOpen] = useState(false);
-
-    // Flujo de registro de venta directo post-Show Up
-    const [salePrompt, setSalePrompt] = useState({ apptId: null });
-    const [saleModalOpen, setSaleModalOpen] = useState(false);
-    const [submittingSale, setSubmittingSale] = useState(false);
-    const [saleForm, setSaleForm] = useState({
-        lead_id: '',
-        client_id: null,
-        email_vendedor: user?.email || '',
-        nombre_cliente: '',
-        telefono: '',
-        mail_cliente: '',
-        programa: 'RR',
-        tipo_pago_simple: 'completo',
-        monto: '',
-        precio_total: '',
-        num_cuotas: 3,
-        cuotaFechas: {},
-        segundo_pago: '',
-        fecha_cobro: '',
-        metodo_pago: 'Stripe',
-        examen_lead: '',
-        notas: '',
-        estado: 'Completada',
-        instagram: '',
-        setter: '',
-        documento_identidad: '',
-        enviar_mensaje: true,
-        sold_in_call: true,
-        date: localToday(),
-        referralAsked: '',
-        referralCount: 1,
-        referralWhen: 'now'
-    });
-
-    // Sincronizar email del closer en cuanto esté cargado en la sesión
-    useEffect(() => {
-        if (user?.email) {
-            setSaleForm(prev => ({ ...prev, email_vendedor: user.email }));
-        }
-    }, [user]);
-
-    // Estado de pago del cliente para el programa seleccionado (cuánto ya pagó, cuánto le
-    // falta, qué tipos de pago corresponden a continuación) — evita volver a pedir el monto
-    // total de un programa que el cliente ya viene pagando, y deshabilita tipos de pago que
-    // romperían la secuencia (ej. Cuota sin Parcial previo).
-    const [saleClientState, setSaleClientState] = useState(null);
-    const [loadingSaleState, setLoadingSaleState] = useState(false);
-    const [settleBalanceWithSale, setSettleBalanceWithSale] = useState(false);
-
-    // Extraída del useEffect para poder volver a llamarla a demanda (ej. al cerrar
-    // "Ver / corregir historial" abierto desde el wizard, para que el aviso de inconsistencia
-    // desaparezca solo si el closer de verdad corrigió el dato en el historial).
-    const fetchSaleClientState = useCallback(() => {
-        if (!saleModalOpen) return;
-        setLoadingSaleState(true);
-        const params = saleForm.client_id
-            ? { client_id: saleForm.client_id, programa: saleForm.programa }
-            : { email: saleForm.mail_cliente, instagram: saleForm.instagram, phone: saleForm.telefono, name: saleForm.nombre_cliente, programa: saleForm.programa };
-        api.get('/closer/sales/client-state', { params })
-            .then(res => {
-                setSaleClientState(res.data);
-                // Sugerir el Total del cliente (ya pagando o recién autoasignado por programa:
-                // AL 1000 / RR 1500 / SI 2000) sin pisar lo que el closer ya haya escrito a mano.
-                setSaleForm(prev => ({
-                    ...prev,
-                    precio_total: prev.precio_total || String(res.data.program_price || ''),
-                    monto: (res.data?.total_paid > 0 && !prev.monto && res.data.balance_remaining > 0) ? String(res.data.balance_remaining) : prev.monto
-                }));
-                // `allowed_types` ya no oculta ni cambia la selección del closer: solo se usa
-                // para avisar (ver DeclararVentaWizard, paso "paymentType"). Si el historial del
-                // cliente está mal cargado, el closer tiene que poder declarar la venta real
-                // igual — forzarlo a otro tipo de pago acá era la misma trampa que bloquearlo
-                // del todo (caso real: Emilia Collantes, solo se le dejaba elegir
-                // Renovación/Upsell aunque esa no era la venta que estaba cerrando).
-            })
-            .catch(err => { console.error('Error al obtener el estado de pago del cliente:', err); setSaleClientState(null); })
-            .finally(() => setLoadingSaleState(false));
-    }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
-
-    useEffect(() => {
-        if (!saleModalOpen) {
-            setSaleClientState(null);
-            setSettleBalanceWithSale(false);
-            return;
-        }
-        fetchSaleClientState();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [saleModalOpen, saleForm.client_id, saleForm.programa, saleForm.mail_cliente, saleForm.instagram, saleForm.telefono]);
-
-    // Plan de cuotas YA existente de este cliente (de un Parcial declarado antes). Al registrar
-    // una Cuota hay que marcar cuál de las cuotas ya planificadas se está pagando, no volver a
-    // armar el cronograma desde cero (eso borraba el historial de cuotas ya cobradas).
-    const [saleExistingCuotas, setSaleExistingCuotas] = useState([]);
-    const [loadingSaleCuotas, setLoadingSaleCuotas] = useState(false);
-    const [selectedCuotaId, setSelectedCuotaId] = useState(null);
-    const isCuotaPayment = (saleForm.tipo_pago_simple || '').toLowerCase() === 'cuota';
-
-    // Se consulta siempre que el modal está abierto (no solo cuando el tipo de pago es "Cuota")
-    // — el wizard muestra el cronograma editable en la pantalla de revisión sin importar qué
-    // tipo de pago se esté declarando, para que el closer pueda ajustar un plan viejo mal
-    // cargado "en todo momento", no solo cuando justo está cobrando una cuota.
-    const refreshExistingCuotas = useCallback(() => {
-        if (!saleModalOpen || !salePrompt.apptId) {
-            setSaleExistingCuotas([]);
-            setSelectedCuotaId(null);
-            return;
-        }
-        setLoadingSaleCuotas(true);
-        api.get(`/closer/installments/${salePrompt.apptId}`, { params: { programa_code: saleForm.programa } })
-            .then(res => {
-                const cuotas = res.data?.cuotas || [];
-                setSaleExistingCuotas(cuotas);
-                const pendientes = cuotas.filter(c => c.estado !== 'pagado');
-                if (pendientes.length > 0) {
-                    setSelectedCuotaId(prev => prev || pendientes[0].id);
-                    setSaleForm(prev => ({ ...prev, monto: prev.monto || String(pendientes[0].monto) }));
-                }
-            })
-            .catch(err => console.error('Error al cargar el plan de cuotas existente:', err))
-            .finally(() => setLoadingSaleCuotas(false));
-    }, [saleModalOpen, salePrompt.apptId, saleForm.programa]);
-
-    useEffect(() => {
-        refreshExistingCuotas();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [saleModalOpen, isCuotaPayment, salePrompt.apptId, saleForm.programa]);
 
     // Búsqueda global con debounce
     useEffect(() => {
@@ -659,34 +524,6 @@ const CloserWorkflowPage = () => {
         } finally {
             setResolviendoLead(false);
         }
-    };
-
-    // Abrir una agenda puntual específica desde el historial completo del cliente — reporte de
-    // llamada de esa cita (misma ruta que "llamada por reportar" de la búsqueda global).
-    const handleOpenAppointmentFromHistory = (appointmentId) => {
-        setHistoryClientId(null);
-        handleSelectLead({ id: appointmentId, fase: 'call' });
-    };
-
-    // "Registrar venta/pago" desde el resumen del cliente — abre el mismo modal de Declarar
-    // Venta de siempre, precargado con los datos del cliente, anclado a su agenda más reciente
-    // (el modal necesita una cita de referencia para el plan de cuotas y el registro del pago).
-    const handleRegisterSaleFromHistory = (client, mostRecentAppointmentId) => {
-        setHistoryClientId(null);
-        if (!mostRecentAppointmentId) {
-            toast.error("Este cliente no tiene ninguna agenda registrada todavía — creale una agenda antes de declarar una venta.");
-            return;
-        }
-        openSaleModalForLead({
-            id: mostRecentAppointmentId,
-            client_id: client.id,
-            lead_name: client.full_name,
-            phone: client.phone,
-            email: client.email,
-            instagram: client.instagram,
-            examen: '',
-            setter_name: ''
-        }, true);
     };
 
     // Crear Nueva Agenda (Modal v7)
@@ -1420,317 +1257,24 @@ const CloserWorkflowPage = () => {
                 }));
             }
 
-            // Si es asistencia (Show up), gatillar el prompt para registrar venta
-            if (nextStatus === 'Completada') {
-                const appt = agendas.find(a => a.id === leadId);
-                if (appt) {
-                    const igUser = appt.instagram ? (appt.instagram.startsWith('@') ? appt.instagram : `@${appt.instagram}`) : '';
-                    setSaleForm({
-                        lead_id: appt.client_id || '',
-                        client_id: appt.client_id || null,
-                        email_vendedor: user?.email || '',
-                        nombre_cliente: appt.lead_name || '',
-                        telefono: appt.phone || '',
-                        mail_cliente: appt.email || '',
-                        programa: 'RR',
-                        tipo_pago_simple: 'completo',
-                        monto: '',
-                        segundo_pago: '',
-                        fecha_cobro: '',
-                        metodo_pago: 'Stripe',
-                        examen_lead: appt.keyword || '',
-                        notas: '',
-                        estado: 'Completada',
-                        instagram: igUser,
-                        setter: appt.setter_name || '',
-                        documento_identidad: '',
-                        enviar_mensaje: true,
-                        sold_in_call: true,
-                        date: localToday()
-                    });
-                    setSalePrompt({ apptId: leadId });
-                }
-            } else {
-                // Para estados distintos de Completada, preguntar por seguimiento
-                const appt = agendas.find(a => a.id === leadId);
-                setFollowUpModal({
-                    show: true,
-                    agendaId: leadId,
-                    leadName: appt?.lead_name || selectedLead?.lead_name || 'Prospecto',
-                    newStatus: nextStatus,
-                    isSaleFollowUp: false
-                });
-            }
+            // Después del cambio de estado se pregunta por el seguimiento. Acá había también un
+            // «¿Se cerró la venta?» que abría el wizard de venta en otro modal, pero lo disparaba
+            // un «¿Asistió con decisor?» que ya nada abría: la venta se declara en la ficha.
+            const appt = agendas.find(a => a.id === leadId);
+            setFollowUpModal({
+                show: true,
+                agendaId: leadId,
+                leadName: appt?.lead_name || selectedLead?.lead_name || 'Prospecto',
+                newStatus: nextStatus,
+                isSaleFollowUp: false
+            });
         } catch (err) {
             console.error("Error al procesar acción rápida:", err);
             toast.error("Error al actualizar el estado");
         } finally {
             setProcessingId(null);
-            setDecisionMakerPrompt({ apptId: null });
         }
     };
-
-
-
-
-    const buildSalePayload = (tipoOverride, montoOverride, commentOverride) => ({
-        email_vendedor: saleForm.email_vendedor,
-        nombre_cliente: saleForm.nombre_cliente,
-        telefono: saleForm.telefono ? saleForm.telefono.replace(/\+/g, '').trim() : '',
-        mail_cliente: saleForm.mail_cliente,
-        tipo_pago: `${saleForm.programa} - ${tipoOverride ?? saleForm.tipo_pago_simple}`,
-        monto: montoOverride ?? (parseFloat(saleForm.monto) || 0.0),
-        precio_total: parseFloat(saleForm.precio_total) || undefined,
-        segundo_pago: commentOverride ?? (saleForm.segundo_pago || ''),
-        metodo_pago: saleForm.metodo_pago,
-        examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notas}` : ''),
-        instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
-        estado: saleForm.estado,
-        setter: saleForm.setter || '',
-        documento_identidad: saleForm.documento_identidad || '',
-        // La agenda desde la que se declara la venta: el backend la marca como Show up sin
-        // adivinar cuál es (ver CloserService.mark_sale_appointment_as_show_up). Sin esto, si el
-        // lead tenía más de una agenda la venta podía caer en una anterior.
-        appointment_id: salePrompt.apptId || undefined,
-        marca_temporal: (() => {
-            // `saleForm.date` es 'YYYY-MM-DD' (input date / localToday()). `new Date('YYYY-MM-DD')`
-            // lo lee como medianoche UTC, que en cualquier zona al oeste de UTC (todo América) es
-            // el DÍA ANTERIOR: cada venta quedaba fechada un día antes de la real. Con las partes
-            // locales la fecha que se elige es la que se guarda.
-            const [y, m, d] = String(saleForm.date).split('-').map(Number);
-            const now = new Date();
-            const selectedDate = (y && m && d)
-                ? new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
-                : now;
-            return selectedDate.toLocaleString("es-ES");
-        })(),
-        // El closer decide si quiere disparar la automatización de n8n (mensajes al cliente +
-        // notificaciones del equipo) al reportar esta venta — checkbox en el paso de revisión
-        // del wizard, prendido por defecto para no perder avisos por omisión.
-        enviar_webhook: saleForm.enviar_webhook !== false,
-        enviar_mensaje: saleForm.enviar_webhook !== false,
-        sold_in_call: saleForm.sold_in_call
-    });
-
-    const handleRegisterSale = async () => {
-        if (!saleForm.date) {
-            toast.error("La fecha de la venta es obligatoria");
-            return;
-        }
-        setSubmittingSale(true);
-        try {
-            // Renovación/Upsell con saldo pendiente del programa actual: si el closer activó
-            // "liquidar saldo junto con esta venta", primero se registra una Cuota que cierra
-            // el saldo restante, y solo si eso funciona se continúa con la venta principal.
-            const isRenewalOrUpsell = ['Renovacion', 'Upsell'].includes(saleForm.tipo_pago_simple);
-            if (isRenewalOrUpsell && settleBalanceWithSale && saleClientState?.balance_remaining > 0) {
-                const settlePayload = buildSalePayload('Cuota', saleClientState.balance_remaining, 'Liquidación de saldo previo a Renovación/Upsell');
-                const settleRes = await api.post('/sheets/push?tabla=Ventas_DB', settlePayload);
-                if (settleRes.data.status !== 'success') {
-                    toast.error(settleRes.data.message || "No se pudo liquidar el saldo pendiente");
-                    setSubmittingSale(false);
-                    return;
-                }
-            }
-
-            const res = await api.post('/sheets/push?tabla=Ventas_DB', buildSalePayload());
-
-            if (res.data.status === 'success') {
-                toast.success("Venta declarada y sincronizada correctamente");
-                // La venta se guarda igual aunque el historial previo del cliente tenga una
-                // inconsistencia (ver SheetsService.post_to_sheets) — se avisa acá para que el
-                // closer sepa que hay algo para revisar y pueda abrir "Ver / corregir
-                // historial" y arreglar el dato real, en vez de quedar bloqueado sin saber por qué.
-                if (res.data.warning) {
-                    toast(res.data.warning, { icon: '⚠️', duration: 7000 });
-                }
-
-                // Acceso a la Academia (opt-in, checkbox de la pantalla de revisión) — se dispara
-                // recién acá porque hasta este punto no existía un client_id confirmado (lo crea/
-                // resuelve post_to_sheets al declarar la venta). No bloquea el resto del flujo si
-                // falla: la venta ya quedó registrada, el acceso se puede reintentar después desde
-                // el historial del cliente.
-                if (saleForm.dar_acceso_academia && res.data.client_id) {
-                    try {
-                        const academyRes = await api.post(`/closer/clients/${res.data.client_id}/academy-access`, {
-                            programa_code: saleForm.programa,
-                            tipo_venta: (saleForm.tipo_pago_simple || '').toLowerCase(),
-                            email: saleForm.mail_cliente
-                        });
-                        toast.success(
-                            academyRes.data.was_created
-                                ? 'Cuenta creada en la Academia — se le envió un email para activar su contraseña.'
-                                : 'Acceso a la Academia actualizado.'
-                        );
-                    } catch (academyErr) {
-                        toast.error(academyErr.response?.data?.error || 'La venta se guardó, pero no se pudo dar el acceso a la Academia');
-                    }
-                }
-
-                const savedApptId = salePrompt.apptId;
-
-                // Si se definió una fecha de cobro en la venta, auto-guardarla para la agenda
-                if (savedApptId && saleForm.fecha_cobro) {
-                    try {
-                        await api.post(`/closer/deck/${savedApptId}`, {
-                            fecha_seguimiento_cobro: saleForm.fecha_cobro,
-                            fecha_seguimiento: saleForm.fecha_cobro,
-                            seguimiento_tipo: 'cerrada',
-                            seguimiento_sub: 'Seguimiento de cobro',
-                            seguimiento_intento: 1,
-                            seguimiento_realizado: false
-                        });
-                    } catch (e) {
-                        console.error("Error al auto-guardar fecha_seguimiento_cobro:", e);
-                    }
-                }
-
-                // Persistir en la agenda si hubo decisor/presentación de oferta (viene del árbol
-                // de decisión) — necesario para las métricas de conversión de señas del dashboard.
-                if (savedApptId && (sessionForm.with_decision_maker !== undefined || sessionForm.offer_presented !== undefined)) {
-                    try {
-                        await api.post(`/closer/deck/${savedApptId}`, {
-                            with_decision_maker: sessionForm.with_decision_maker,
-                            offer_presented: sessionForm.offer_presented
-                        });
-                    } catch (e) {
-                        console.error("Error al guardar decisor/oferta presentada:", e);
-                    }
-                }
-
-                if (isCuotaPayment && selectedCuotaId) {
-                    // Ya existía un plan: esto es UNA cuota de ese plan cobrándose, no un plan
-                    // nuevo — marcarla pagada en vez de recrear todo el cronograma (eso borraba
-                    // el historial de cuotas ya cobradas).
-                    try {
-                        await api.patch(`/closer/installments/cuota/${selectedCuotaId}`, {
-                            estado: 'pagado',
-                            monto: parseFloat(saleForm.monto) || 0
-                        });
-                    } catch (e) {
-                        console.error("Error al marcar la cuota como pagada:", e);
-                        toast.error("La venta se guardó, pero hubo un error al marcar la cuota como pagada");
-                    }
-                } else if (savedApptId && saleForm.tipo_pago_simple !== 'completo' && saleForm.precio_total) {
-                    // Primera vez que se define el plan (Parcial), o Cuota sin plan previo (caso
-                    // de datos históricos incompletos) — acá sí corresponde crear el cronograma.
-                    const total = parseFloat(saleForm.precio_total) || 0;
-                    // "Cobrado hoy" para el cronograma tiene que incluir TODO lo que el cliente ya
-                    // pagó antes (ej. una Seña previa), no solo el monto de esta transacción puntual
-                    // — si no, el saldo a financiar se recalcula sobre el total completo otra vez y
-                    // se le cobran de más las cuotas restantes.
-                    const pagadoAntes = saleClientState?.total_paid || 0;
-                    const cobradoHoy = pagadoAntes + (parseFloat(saleForm.monto) || 0);
-                    if (total > cobradoHoy) {
-                        try {
-                            const numCuotas = parseInt(saleForm.num_cuotas) || 1;
-                            const fechas = Array.from({ length: numCuotas }, (_, i) => saleForm.cuotaFechas?.[i + 1] || null);
-                            // Montos por cuota elegidos a mano por el closer (opcional) — la última
-                            // posición siempre se recalcula en el backend para que la suma cierre
-                            // exacto contra el saldo, así que acá alcanza con mandar un default
-                            // parejo para las cuotas que el closer no haya tocado.
-                            const restante = Math.max(0, total - cobradoHoy);
-                            const each = numCuotas > 0 ? Math.round((restante / numCuotas) * 100) / 100 : 0;
-                            const montos = Array.from({ length: numCuotas }, (_, i) => {
-                                const custom = saleForm.cuotaMontos?.[i + 1];
-                                const parsed = custom !== undefined && custom !== '' ? parseFloat(custom) : NaN;
-                                return isNaN(parsed) ? each : parsed;
-                            });
-                            await api.post('/closer/installments', {
-                                appointment_id: savedApptId,
-                                total,
-                                cobrado_hoy: cobradoHoy,
-                                num_cuotas: numCuotas,
-                                fechas,
-                                montos,
-                                programa_code: saleForm.programa
-                            });
-                        } catch (e) {
-                            console.error("Error al guardar el plan de cuotas:", e);
-                            toast.error(e.response?.data?.error || "La venta se guardó, pero hubo un error al guardar el plan de cuotas");
-                        }
-                    }
-                }
-
-                setSaleModalOpen(false);
-                setSalePrompt({ apptId: null });
-                fetchAgendas();
-
-                // Ofrecer seguimiento de cobro post-venta
-                if (savedApptId) {
-                    setFollowUpModal({
-                        show: true,
-                        agendaId: savedApptId,
-                        leadName: saleForm.nombre_cliente || 'Cliente',
-                        newStatus: 'Seguimiento de Cobro',
-                        isSaleFollowUp: true,
-                        tipo: 'cerrada'
-                    });
-                }
-            } else {
-                toast.error(res.data.message || "Error al sincronizar con Google Sheets");
-            }
-        } catch (err) {
-            console.error("Error al registrar venta desde deck:", err);
-            toast.error(err.response?.data?.message || err.response?.data?.error || "Error al comunicar con el servidor");
-        } finally {
-            setSubmittingSale(false);
-        }
-    };
-
-
-
-
-
-
-
-
-    // Abre el modal de venta/cobro con los datos del lead precargados. Se llama DESPUÉS de
-    // persistir el cierre del seguimiento (antes se abría de inmediato al hacer clic en la
-    // opción, sin guardar nada de lo que el closer ya había escrito).
-    // `presetCuota` (opcional): abre el wizard directo en "Cuota", con esa cuota puntual ya
-    // seleccionada — usado por "Reportar pago" en la tabla de cuotas del cobro (ver más abajo),
-    // para no aterrizar en una pantalla de tipo de pago vacía cuando ya se sabe qué se está
-    // cobrando. El monto viene precargado con lo que dice la cuota pero queda editable: el
-    // cliente puede pagar más o menos, esa decisión es del closer, no del dato guardado.
-    // `opciones.renovacion` lo manda la pantalla de cobro cuando el cliente al día cierra una
-    // renovación o un upsell: es una venta nueva sobre un cliente que ya no debe nada, así que
-    // no puede entrar como "parcial" (el tipo por defecto de quien todavía tiene saldo).
-    const openSaleModalForLead = (lead, isCierreVenta, presetCuota, opciones = {}) => {
-        setSalePrompt({ apptId: lead.id });
-        setSaleForm({
-            lead_id: lead.id,
-            client_id: lead.client_id || null,
-            email_vendedor: user?.email || '',
-            nombre_cliente: lead.lead_name || '',
-            telefono: lead.phone || '',
-            mail_cliente: lead.email || '',
-            programa: isCierreVenta ? 'RR' : (lead.programa_code || 'RR'),
-            tipo_pago_simple: opciones.renovacion ? 'renovacion' : (presetCuota ? 'Cuota' : (isCierreVenta ? 'completo' : 'parcial')),
-            monto: presetCuota ? String(presetCuota.monto) : '',
-            segundo_pago: '',
-            fecha_cobro: '',
-            metodo_pago: 'Stripe',
-            examen_lead: lead.examen || '',
-            notas: '',
-            estado: 'Completada',
-            instagram: lead.instagram || '',
-            setter: lead.setter_name || '',
-            documento_identidad: '',
-            enviar_mensaje: true,
-            sold_in_call: isCierreVenta,
-            date: localToday()
-        });
-        if (presetCuota) setSelectedCuotaId(presetCuota.id);
-        setSaleModalOpen(true);
-    };
-
-
-
-
-
-
-
 
 
     return (
@@ -1815,7 +1359,7 @@ const CloserWorkflowPage = () => {
                                                     <button
                                                         type="button"
                                                         title="Abrir la última agenda directamente"
-                                                        onClick={(e) => { e.stopPropagation(); setShowSearchResults(false); handleOpenAppointmentFromHistory(appt.id); }}
+                                                        onClick={(e) => { e.stopPropagation(); setShowSearchResults(false); handleSelectLead({ id: appt.id, fase: 'call' }); }}
                                                         className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
                                                     >
                                                         <Calendar size={13} />
@@ -2720,141 +2264,6 @@ const CloserWorkflowPage = () => {
                 />
             )}
 
-            {/* Modal de decisión: Con / Sin Decisor */}
-            {/* Ver ovLead: AnimatePresence deja estos overlays pegados al cerrarse */}
-            <>
-                {decisionMakerPrompt.apptId && (
-                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200"
-                        >
-                            <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                <Users size={22} />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">¿Asistió con Decisor?</h3>
-                                <p className="text-xs text-slate-400 font-bold uppercase">Indica si el tomador de decisiones estuvo presente en la llamada.</p>
-                            </div>
-                            <div className="flex flex-col gap-2.5 pt-2">
-                                <button
-                                    onClick={() => executeQuickAction(decisionMakerPrompt.apptId, 'Completada', true)}
-                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer"
-                                >
-                                    Sí, con Decisor
-                                </button>
-                                <button
-                                    onClick={() => executeQuickAction(decisionMakerPrompt.apptId, 'Completada', false)}
-                                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs uppercase tracking-widest rounded-xl border border-slate-700 transition-all cursor-pointer"
-                                >
-                                    No, sin Decisor
-                                </button>
-                                <button
-                                    onClick={() => setDecisionMakerPrompt({ apptId: null })}
-                                    className="w-full py-2.5 text-slate-500 hover:text-slate-400 font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </>
-
-            {/* Prompt intermedio: ¿Hubo venta? */}
-            <>
-                {salePrompt.apptId && !saleModalOpen && (
-                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200"
-                        >
-                            <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                <DollarSign size={22} />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">¿Se cerró la venta?</h3>
-                                <p className="text-xs text-slate-400 font-bold uppercase">Indica si lograste cerrar la venta con este prospecto en la llamada.</p>
-                            </div>
-                            <div className="flex flex-col gap-2.5 pt-2">
-                                <button
-                                    onClick={() => setSaleModalOpen(true)}
-                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-650/20 animate-pulse"
-                                >
-                                    Sí, Declarar Venta
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const apptId = salePrompt.apptId;
-                                        const appt = agendas.find(a => a.id === apptId);
-                                        setSalePrompt({ apptId: null });
-                                        if (apptId) {
-                                            setFollowUpModal({
-                                                show: true,
-                                                agendaId: apptId,
-                                                leadName: appt?.lead_name || 'Prospecto',
-                                                newStatus: 'Cierre de Venta',
-                                                isSaleFollowUp: false
-                                            });
-                                        } else {
-                                            fetchAgendas();
-                                        }
-                                    }}
-                                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs uppercase tracking-widest rounded-xl border border-slate-700 transition-all cursor-pointer"
-                                >
-                                    No hubo venta (Configurar Seguimiento)
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </>
-
-            {/* Modal de declaración de venta por pasos */}
-            <>
-                {saleModalOpen && (
-                    <DeclararVentaWizard
-                        saleForm={saleForm}
-                        setSaleForm={setSaleForm}
-                        saleClientState={saleClientState}
-                        loadingSaleState={loadingSaleState}
-                        saleExistingCuotas={saleExistingCuotas}
-                        loadingSaleCuotas={loadingSaleCuotas}
-                        selectedCuotaId={selectedCuotaId}
-                        setSelectedCuotaId={setSelectedCuotaId}
-                        refreshExistingCuotas={refreshExistingCuotas}
-                        settleBalanceWithSale={settleBalanceWithSale}
-                        setSettleBalanceWithSale={setSettleBalanceWithSale}
-                        submittingSale={submittingSale}
-                        teamMembers={teamMembers}
-                        apptId={salePrompt.apptId}
-                        onClose={() => {
-                            const apptId = salePrompt.apptId;
-                            setSaleModalOpen(false);
-                            setSalePrompt({ apptId: null });
-                            if (apptId) {
-                                const appt = agendas.find(a => a.id === apptId);
-                                setFollowUpModal({
-                                    show: true,
-                                    agendaId: apptId,
-                                    leadName: appt?.lead_name || 'Prospecto',
-                                    newStatus: 'Cierre de Venta',
-                                    isSaleFollowUp: false
-                                });
-                            } else {
-                                fetchAgendas();
-                            }
-                        }}
-                        onRegisterSale={handleRegisterSale}
-                        onOpenHistory={saleClientState?.client_id ? () => setHistoryClientId(saleClientState.client_id) : undefined}
-                    />
-                )}
-            </>
-
             {/* Modal de Motivo / Razón de Cambio (Reemplazo de window.prompt) */}
             <>
                 {reasonModal.show && (
@@ -3213,21 +2622,6 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
             </>
-
-            {historyClientId && (
-                <ClientHistoryModal
-                    clientId={historyClientId}
-                    onClose={() => {
-                        setHistoryClientId(null);
-                        // Si se abrió desde "Declarar Venta" para corregir una inconsistencia,
-                        // refrescar el estado de pago al volver — así el aviso desaparece solo
-                        // si el closer de verdad corrigió el dato en el historial.
-                        if (saleModalOpen) fetchSaleClientState();
-                    }}
-                    onOpenAppointment={handleOpenAppointmentFromHistory}
-                    onRegisterSale={handleRegisterSaleFromHistory}
-                />
-            )}
 
             {/* Selector de agenda — lead con varias agendas pendientes de confirmar encontrado
                 desde la búsqueda global: elegir sobre cuál se está marcando el estado. */}
