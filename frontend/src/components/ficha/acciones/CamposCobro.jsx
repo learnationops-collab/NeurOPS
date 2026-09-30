@@ -8,6 +8,10 @@
 // Los dos guardan por `onGuardar`, que devuelve la promesa de la acción de la ficha: el aviso, la
 // recarga y el error los pone el cascarón, y acá sólo se decide si el editor se cierra o se queda
 // abierto con lo que la persona cargó.
+//
+// Los botones de ícono son el `.ibtn` de la ficha y no el `.ln-iconbtn` del design system: dentro
+// de `.dc-shell` una clase sola del DS pierde el borde y el fondo contra `.dc-shell button`, y el
+// lápiz o la cruz quedaban como un ícono suelto al lado del dato (ver `PlanCuotasForm`).
 
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -79,7 +83,7 @@ export function CampoPrograma({ cobro, programas, puedeEditar, onGuardar }) {
             </select>
           </span>
           {guardando ? <span className="ln-spinner" /> : (
-            <button type="button" className="ln-iconbtn" style={{ width: 32, height: 32 }}
+            <button type="button" className="ibtn ibtn--sm"
               aria-label="Dejar el programa como estaba" onClick={() => setEligiendo(false)}>
               <X />
             </button>
@@ -93,8 +97,7 @@ export function CampoPrograma({ cobro, programas, puedeEditar, onGuardar }) {
           {puedeEditar && opciones.length > 0 && (
             <button
               type="button"
-              className="ln-iconbtn"
-              style={{ width: 32, height: 32 }}
+              className="ibtn ibtn--sm"
               aria-label={nombre ? 'Corregir el programa' : 'Asignar el programa'}
               title={nombre ? 'Corregir el programa' : 'Asignar el programa'}
               onClick={() => setEligiendo(true)}
@@ -171,11 +174,11 @@ export function CampoTotal({ cobro, puedeEditar, onGuardar }) {
             />
             <span className="ln-unit">USD</span>
           </span>
-          <button type="button" className="ln-iconbtn" disabled={guardando}
+          <button type="button" className="ibtn" disabled={guardando}
             aria-label="Guardar el total a pagar" onClick={guardar}>
             {guardando ? <span className="ln-spinner" /> : <Check />}
           </button>
-          <button type="button" className="ln-iconbtn"
+          <button type="button" className="ibtn"
             aria-label="Dejar el total como estaba" onClick={() => setEditando(false)}>
             <X />
           </button>
@@ -188,8 +191,7 @@ export function CampoTotal({ cobro, puedeEditar, onGuardar }) {
           {puedeEditar && (
             <button
               type="button"
-              className="ln-iconbtn"
-              style={{ width: 32, height: 32 }}
+              className="ibtn ibtn--sm"
               aria-label={total === null ? 'Poner el total a pagar' : 'Corregir el total a pagar'}
               title={total === null ? 'Poner el total a pagar' : 'Corregir el total a pagar'}
               onClick={abrir}

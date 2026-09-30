@@ -423,3 +423,7 @@
    le gana a `.dc-shell .ibtn` (0,2,0): con Tab, el círculo pasaba a un cuadrado redondeado justo
    cuando el anillo azul lo marcaba. Mismo arreglo que `.btn` y `.pastilla`, solo en la ficha. */
 .dc-shell .fi-modal .ibtn:focus-visible{border-radius:var(--radius-pill)}
+/* Deshabilitado se tiene que ver deshabilitado, como `.btn:disabled`: `.ibtn` no traía la regla y
+   un botón de ícono apagado («Guardar el total a pagar» mientras guarda, «Enviar nota» sin texto)
+   se veía igual que uno que se puede tocar. */
+.dc-shell .fi-modal .ibtn:disabled{opacity:.4;cursor:not-allowed}
