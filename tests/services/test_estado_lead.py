@@ -80,6 +80,23 @@ def test_una_baja_despues_de_comprar_se_puede_forzar():
         == ('descartado', 'hist')
 
 
+def test_un_cliente_dado_de_baja_tiene_su_propio_estado_y_abre_en_acciones():
+    """No es un descarte (la llamada fue una venta) ni está al día (no terminó de pagar)."""
+    estado = resolver_estado(estado_agenda='show_up', tiene_venta=True, deuda=0.0, baja=True)
+    assert (estado['clave'], estado['etiqueta'], estado['tono']) == ('dado_de_baja', 'Dado de baja', 'idle')
+    assert estado['pestana_por_defecto'] == 'acciones'
+
+
+def test_la_baja_conserva_la_pestana_de_acciones_aunque_no_haya_venta_cruzada():
+    """Ahí se ve la baja y se revierte: sin la pestaña, no habría desde dónde deshacerla."""
+    assert 'acciones' in resolver_estado(estado_agenda='show_up', baja=True)['pestanas']
+
+
+def test_un_dado_de_baja_con_una_llamada_por_delante_se_esta_recuperando():
+    assert clave_y_pestana(estado_agenda='por_confirmar', tiene_venta=True, baja=True) \
+        == ('por_confirmar', 'conf')
+
+
 # --- Bordes ------------------------------------------------------------------------------------
 
 def test_unos_centavos_de_resto_no_son_una_deuda():

@@ -43,6 +43,8 @@ _ETIQUETAS = {
     'descartado': ('Descartado', 'error'),
     'venta_con_deuda': ('Venta · con deuda', 'warning'),
     'venta_al_dia': ('Cliente al día', 'success'),
+    # Compró y se fue (`baja_service`): no debe nada, pero tampoco está "al día".
+    'dado_de_baja': ('Dado de baja', 'idle'),
 }
 
 # La tabla del contrato: estado -> pestaña que se abre. Lo que no está acá abre en Historial,
@@ -55,28 +57,34 @@ _POR_DEFECTO = {
     'sin_reportar': 'resultado',
     'reportada_sin_resultado': 'resultado',
     'venta_con_deuda': 'acciones',
+    # En Acciones está la marca de la baja y el «Revertir baja»: es lo que se viene a mirar.
+    'dado_de_baja': 'acciones',
 }
 
 
-def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda):
+def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja=False):
     if not estado_agenda:
         return 'sin_agenda'
     if descartado:
         return 'descartado'
     if estado_agenda in _PRE_CALL:
         # La llamada no ocurrió: el trabajo es confirmarla, aunque el lead ya sea cliente (una 2ª
-        # llamada o una renovación entran por acá). Por eso el pre call gana al estado de cobro.
+        # llamada o una renovación entran por acá). Por eso el pre call gana al estado de cobro,
+        # y también a la baja: un dado de baja con una llamada por delante es alguien que se
+        # está recuperando.
         if estado_agenda == 'confirmada':
             return 'confirmada'
         # "A medio confirmar": el closer ya avanzó el wizard aunque el lead siga sin confirmar.
         return 'confirmando' if etapa_confirmacion not in (None, '', 'por_contactar') else 'por_confirmar'
+    if baja:
+        return 'dado_de_baja'
     if tiene_venta or deuda > UMBRAL_DEUDA:
         return 'venta_con_deuda' if deuda > UMBRAL_DEUDA else 'venta_al_dia'
     return estado_agenda
 
 
 def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=False, deuda=0.0,
-                    descartado=None):
+                    descartado=None, baja=False):
     """`{clave, etiqueta, tono, pestanas, pestana_por_defecto}` del lead.
 
     `estado_agenda` es lo que devuelve `derivar_estado` para la agenda vigente, o None cuando el
@@ -84,11 +92,14 @@ def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=Fal
     (`CloserFollowUpService._client_debt` y el cruce de ventas): esta función no consulta la base.
     `descartado` en None se deduce del estado de la agenda; se puede forzar para el lead que se dio
     de baja después de comprar, que no deja rastro en `closer_result`.
+
+    `baja` dice si el cliente está dado de baja (`baja_service`): la llamada fue una venta, así que
+    no es un descarte, y no debe nada pero tampoco está al día — es 'dado_de_baja'.
     """
     deuda = float(deuda or 0.0)
     if descartado is None:
         descartado = estado_agenda in _DESCARTE
-    clave = _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda)
+    clave = _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, baja)
 
     etiqueta, tono = _ETIQUETAS.get(clave, (str(clave), 'idle'))
     visibles = {
@@ -97,8 +108,9 @@ def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=Fal
         'conf': clave in ('sin_agenda', 'por_confirmar', 'confirmando', 'confirmada',
                           'sin_reportar', 'reportada_sin_resultado'),
         'resultado': bool(estado_agenda),
-        # Cobro: solo para quien ya compró. Sin venta no hay deuda ni plan que armar.
-        'acciones': bool(tiene_venta) or deuda > UMBRAL_DEUDA,
+        # Cobro: solo para quien ya compró. Sin venta no hay deuda ni plan que armar. Un dado de
+        # baja la conserva siempre: ahí se ve la baja y se revierte.
+        'acciones': bool(tiene_venta) or deuda > UMBRAL_DEUDA or bool(baja),
         # Fulfillment: mismo criterio, porque un alumno existe porque alguien compró. Ofrecerla
         # antes sería mandar al closer a buscar en la Academia a alguien que no puede estar.
         'ful': bool(tiene_venta) or deuda > UMBRAL_DEUDA,

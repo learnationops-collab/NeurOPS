@@ -107,7 +107,7 @@ def _ventas_del_cliente(client):
     return ventas
 
 
-def _identidad(appt, client, programa_nombre, ingreso):
+def _identidad(appt, client, programa_nombre, ingreso, baja=None):
     return {
         'client_id': client.id if client else None,
         'appointment_id': appt.id if appt else None,
@@ -129,6 +129,9 @@ def _identidad(appt, client, programa_nombre, ingreso):
                    if appt else None),
         'setter': ({'id': appt.setter_id, 'nombre': appt.setter.username if appt.setter else None}
                    if appt and appt.setter_id else None),
+        # `{fecha, fecha_legible, motivo, por}` si el cliente se dio de baja, o None. Va en la
+        # identidad y no en el cobro porque la cabecera la muestra en todas las pestañas.
+        'baja': baja,
     }
 
 
@@ -154,7 +157,7 @@ def _confirmacion(appt):
 
 # --- Resultado de la llamada ------------------------------------------------------------------
 
-def _hitos(confirmada, post, venta, deuda, tipos_vendidos):
+def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
     """Los 5 hitos del stepper de la pestana Resultado, con su subtitulo en vivo.
 
     `estado` es el vocabulario de `StepperFicha`: 'hecho' (verde), 'alerta' (ambar: se alcanzo pero
@@ -190,6 +193,9 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos):
 
     if not con_venta:
         deuda_hito = ('Pendiente', 'pendiente')
+    elif baja:
+        # No debe nada, pero no es «Sin deuda» en verde: no terminó de pagar, se fue.
+        deuda_hito = ('Dado de baja', 'alerta')
     elif deuda > UMBRAL_DEUDA:
         deuda_hito = ('Con deuda', 'alerta')
     else:
@@ -210,12 +216,13 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos):
     return hitos
 
 
-def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, con_seguimiento):
+def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, con_seguimiento,
+               baja=None):
     if not appt:
         vacio = chip('post_call', 'pendiente')
         return {'pre_call': chip('pre_call', 'sin_confirmar'), 'post_call': vacio,
                 'con_decisor': None, 'oferta_presentada': None, 'reportada': False,
-                'venta': None, 'hitos': _hitos(False, vacio, None, deuda, tipos_vendidos),
+                'venta': None, 'hitos': _hitos(False, vacio, None, deuda, tipos_vendidos, baja),
                 'seguimiento_activo': False, 'seguimiento_intento': 1, 'seguimiento_tipo': None}
 
     post = chip('post_call', post_call_de(estado_libro, bool(ventas), con_seguimiento))
@@ -234,7 +241,7 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
         'oferta_presentada': appt.offer_presented,
         'reportada': bool(appt.closer_processed),
         'venta': venta,
-        'hitos': _hitos(confirmada, post, venta, deuda, tipos_vendidos),
+        'hitos': _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja),
         # El lead puede entrar a la pestana Resultado por dos caminos distintos: una llamada sin
         # reportar (se elige entre las 4 tarjetas) o la cadencia de seguimiento, que ya tiene un
         # resultado y lo que pide es el proximo contacto. Sin esto la pestana no sabe cual es y
@@ -247,7 +254,7 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
 
 # --- Cobro ------------------------------------------------------------------------------------
 
-def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt):
+def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt, baja=None):
     from app.models import InstallmentPlan
     from app.services.sales_consistency_service import SalesConsistencyService
     from app.services.sheets_service import SheetsService
@@ -287,7 +294,9 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt)
         'programa_code': programa_code,
         'programa_nombre': programa_nombre,
         'proxima_cuota': proxima,
-        'etapa': resolver_etapa(deuda, proxima, enrollment_dt),
+        'etapa': resolver_etapa(deuda, proxima, enrollment_dt, baja=baja),
+        # El cronograma se muestra entero aunque el cliente esté de baja: quedó como estaba por
+        # si la baja se revierte. Lo que dice que no se cobra es la etapa y la marca de la baja.
         'cuotas': cuotas,
         'pagos': pagos,
         'estado_pagos': (SalesConsistencyService.get_client_payment_state(client_id, programa_code)
@@ -370,17 +379,21 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
     from app.services.sheets_service import SheetsService
     tipos_vendidos = {SheetsService.parse_tipo_pago(v.tipo_pago)[1] for v in ventas}
 
+    from app.services import baja_service
+    baja = baja_service.descriptor(client)
+
     estado = resolver_estado(estado_agenda=estado_libro,
                              etapa_confirmacion=appt.confirmation_stage if appt else None,
-                             tiene_venta=bool(ventas), deuda=deuda)
+                             tiene_venta=bool(ventas), deuda=deuda, baja=bool(baja))
 
     return {
-        'identidad': _identidad(appt, client, programa_nombre, _iso(enrollment_dt)),
+        'identidad': _identidad(appt, client, programa_nombre, _iso(enrollment_dt), baja),
         'estado': estado,
         'confirmacion': confirmacion,
         'resultado': _resultado(appt, ventas, estado_libro, confirmacion['cerrada'], deuda,
-                                tipos_vendidos, con_seguimiento),
-        'cobro': _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt),
+                                tipos_vendidos, con_seguimiento, baja),
+        'cobro': _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
+                        baja),
         'historial': secciones.historial(appts, ahora, tiene_venta=bool(ventas)),
         'formulario': secciones.formulario(client),
         'comunicacion': {'notas': secciones.notas(client, appt), 'equipo': secciones.equipo()},

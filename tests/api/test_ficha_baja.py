@@ -135,3 +135,54 @@ def test_un_setter_no_revierte_una_baja(client, db, cliente, equipo, auth_header
 
     assert r.status_code == 403
     assert db.session.get(Client, cliente.id).baja_at is not None
+
+
+# --- La lectura de la ficha --------------------------------------------------------------------
+
+def _ficha(client, cliente, usuario, auth_headers):
+    r = client.get(f'/api/ficha/lead?appointment_id={_agenda(cliente).id}', headers=auth_headers(usuario))
+    assert r.status_code == 200
+    return r.get_json()
+
+
+def test_la_ficha_dice_que_se_dio_de_baja_cuando_por_que_y_quien(client, db, cliente, equipo, auth_headers):
+    _dar_de_baja(client, cliente, equipo['closer'], auth_headers)
+
+    ficha = _ficha(client, cliente, equipo['director'], auth_headers)
+
+    baja = ficha['identidad']['baja']
+    assert baja['motivo'] == 'No puede pagar' and baja['por'] == 'vendedor'
+    assert baja['fecha_legible']
+    assert ficha['estado']['clave'] == 'dado_de_baja'
+    assert ficha['estado']['etiqueta'] == 'Dado de baja'
+    assert ficha['estado']['pestana_por_defecto'] == 'acciones'
+
+
+def test_el_cobro_de_la_ficha_no_debe_pero_conserva_lo_pagado_y_el_plan(client, db, cliente, equipo,
+                                                                        auth_headers):
+    _dar_de_baja(client, cliente, equipo['closer'], auth_headers)
+
+    cobro = _ficha(client, cliente, equipo['closer'], auth_headers)['cobro']
+
+    assert cobro['deuda'] == 0.0
+    assert cobro['proxima_cuota'] is None
+    assert cobro['etapa']['clave'] == 'baja'
+    assert cobro['pagado'] == 400.0
+    assert len(cobro['cuotas']) == 1
+
+
+def test_el_hito_de_la_deuda_no_la_pinta_como_saldada(client, db, cliente, equipo, auth_headers):
+    _dar_de_baja(client, cliente, equipo['closer'], auth_headers)
+
+    hitos = _ficha(client, cliente, equipo['closer'], auth_headers)['resultado']['hitos']
+
+    deuda, = [h for h in hitos if h['clave'] == 'deuda']
+    assert (deuda['sub'], deuda['estado']) == ('Dado de baja', 'alerta')
+
+
+def test_sin_baja_la_identidad_la_trae_en_null(client, db, cliente, equipo, auth_headers):
+    """Todo campo que puede faltar viaja en null: el frontend no pregunta si la clave existe."""
+    ficha = _ficha(client, cliente, equipo['closer'], auth_headers)
+
+    assert ficha['identidad']['baja'] is None
+    assert ficha['estado']['clave'] != 'dado_de_baja'
