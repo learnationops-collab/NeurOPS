@@ -646,10 +646,14 @@ const ConversationalStatsTab = () => {
               </div>
             </div>
 
-            {/* Agendas Generadas */}
+            {/* Agendas atribuidas. Se llamaba "Agendas generadas", como la métrica del setter en
+                "Mis datos", y es otra cosa: las agendas de TODO el equipo (también taller, VSL y
+                landing) de leads que recibieron un mensaje en el período, atribuidas al último que
+                recibieron. En septiembre de 2026 eran 90 contra 70 generadas de Elias: el mismo
+                nombre para dos números que no tienen por qué coincidir. */}
             <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
               <div className="flex justify-between items-start mb-3">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agendas generadas</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agendas atribuidas</p>
                 <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
                   <CalendarDays size={14} />
                 </div>
@@ -657,9 +661,9 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">
                   <StatTooltip
-                    label="Agendas Generadas"
+                    label="Agendas atribuidas"
                     value={fmt(kpis.total_agendas)}
-                    calculation="Total de citas agendadas registradas en el periodo."
+                    calculation="Agendas del equipo de leads que recibieron un mensaje en el periodo, atribuidas al último. Tus agendas generadas están en Mis datos."
                   >
                     {fmt(kpis.total_agendas)}
                   </StatTooltip>
