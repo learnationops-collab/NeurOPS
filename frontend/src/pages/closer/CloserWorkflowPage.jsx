@@ -6,9 +6,10 @@ import {
     Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil,
     Compass, Sparkles, DollarSign, UserPlus,
-    CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch
+    CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
+    CalendarPlus, Gift, Hourglass, Ghost
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,6 +23,8 @@ import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
+import MenuSesion from '../comercial/components/MenuSesion';
+import { revertImpersonation } from '../../utils/impersonation';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
@@ -397,9 +400,6 @@ const CloserWorkflowPage = () => {
 
     // Modales secundarios v7: Nueva Agenda y Referido Manual
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
-    // Menú "+" del header: agrupa Referido manual y Nueva agenda en un solo botón, junto al
-    // buscador y a "Quiero procrastinar" — antes vivían en una barra aparte encima del Kanban.
-    const [newActionMenuOpen, setNewActionMenuOpen] = useState(false);
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
@@ -1404,6 +1404,41 @@ const CloserWorkflowPage = () => {
         ...(auditEnabled ? [{ id: 'auditoria', label: 'Auditoría', Icono: FileSearch }] : []),
     ];
     const seccionDelDock = activeView === 'inbox' ? activeStep : activeView;
+
+    // Al final del dock, la sesión (ver MenuSesion): lo que antes eran botones del header. "Quiero
+    // procrastinar" sale solo si hay seguimientos, como antes; "Volver a mi sesión", solo si es una
+    // simulación (igual que en el espacio del setter).
+    const nombreDeSesion = user?.name || user?.username || 'Closer';
+    const volverAMiSesion = async () => {
+        try {
+            await revertImpersonation();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
+        }
+    };
+    const gruposDeSesion = [
+        [
+            { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => setNewAgendaModalOpen(true) },
+            { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
+        ],
+        [
+            { id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
+                cuenta: pendingCount > 0 ? pendingCount : null,
+                titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null },
+            { id: 'learnito', label: 'Learnito', Icono: Sparkles, pronto: true, titulo: 'próximamente',
+                onClick: () => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' }) },
+            ...(counts.seguimientos > 0
+                ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
+                : []),
+        ],
+        [
+            ...(user?.is_impersonating
+                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
+                : []),
+            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
+                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
+        ],
+    ];
     // La página scrollea dentro de su propio contenedor, no en la ventana: al cambiar de sección se
     // vuelve arriba ahí, para no caer en la mitad de la otra.
     const paginaRef = useRef(null);
@@ -1422,9 +1457,11 @@ const CloserWorkflowPage = () => {
         <div ref={paginaRef} className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
-            {/* Header del Espacio de Trabajo Premium v6 */}
+            {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
+                30/09/2026): crear una agenda o un referido, el Playbook, Learnito, "Quiero
+                procrastinar" y la sesión viven al final del dock, en `MenuSesion`. */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-                <div className="topin">
+                <div className="topin topin--buscador">
                     <div className="brand-v6">
                         <div className="logo-v6">L</div>
                         <div>
@@ -1536,105 +1573,6 @@ const CloserWorkflowPage = () => {
                                 )}
                             </div>
                         )}
-                    </div>
-                    
-                    <div className="relative shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => setNewActionMenuOpen(v => !v)}
-                            className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-800 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
-                            title="Referido manual o nueva agenda"
-                        >
-                            <Plus size={16} />
-                        </button>
-                        {newActionMenuOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setNewActionMenuOpen(false)} />
-                                <div className="absolute top-11 left-0 z-50 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden py-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => { setNewActionMenuOpen(false); setManualRefModalOpen(true); }}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
-                                    >
-                                        <span>🎁</span> Referido manual
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setNewActionMenuOpen(false); setNewAgendaModalOpen(true); }}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all cursor-pointer"
-                                    >
-                                        <span>＋</span> Nueva agenda
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => openPlaybook('pending')}
-                        className="relative shrink-0 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 hover:brightness-110 transition-all px-4 py-2 cursor-pointer"
-                        title="Videos de formación y actualizaciones"
-                    >
-                        <Compass size={13} className="text-white" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Playbook</span>
-                        {pendingCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-white text-slate-950 text-[9px] font-black flex items-center justify-center">
-                                {pendingCount}
-                            </span>
-                        )}
-                    </button>
-                    {/* "Pronto" vive en el tooltip y no en la pastilla: era una tercera palabra en
-                        un botón que todavía no hace nada, y el header necesita ese ancho. */}
-                    <button
-                        type="button"
-                        onClick={() => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' })}
-                        className="shrink-0 flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-all px-4 py-2 cursor-pointer"
-                        title="Learnito — buscador con IA sobre el Playbook. Próximamente."
-                    >
-                        <Sparkles size={13} className="text-blue-400" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Learnito</span>
-                    </button>
-
-                    {counts.seguimientos > 0 && (
-                        <button
-                            type="button"
-                            onClick={() => setShowProcrastinar(true)}
-                            className="shrink-0 flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 transition-all px-4 py-2 cursor-pointer"
-                            title="Ver cuánto valdría hacer unos seguimientos ahora"
-                        >
-                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">
-                                <span className="hidden xl:inline">Quiero procrastinar</span>
-                                <span className="xl:hidden">Procrastinar</span>
-                            </span>
-                        </button>
-                    )}
-
-                    {/* Quién sos y cómo salir van juntos y pegados a la derecha: son un grupo,
-                        y cuando la fila envuelve tienen que bajar los dos o ninguno. Sueltos, el
-                        botón de cerrar sesión terminaba solo en el renglón de abajo. */}
-                    <div className="flex items-center gap-2 shrink-0 ml-auto">
-                        {/* Solo el nombre de pila: "Gabriel Hernandez" costaba 209px de header
-                            —mayúscula con .16em de tracking— y era el hijo fijo más caro de la
-                            fila. El nombre completo queda en el tooltip y el avatar sigue
-                            llevando sus dos iniciales. */}
-                        <div className="who-v6" title={user?.name || user?.username || 'Closer'}>
-                            <span className="lbl-v6">
-                                {(user?.name || user?.username || 'Closer').trim().split(/\s+/)[0]}
-                            </span>
-                            <div className="av-v6">
-                                {(user?.name || user?.username || 'CL').substring(0, 2).toUpperCase()}
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => { if (window.confirm('¿Cerrar sesión?')) logout(); }}
-                            title="Cerrar sesión"
-                            className="w-9 h-9 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
-                        >
-                            <LogOut size={16} />
-                        </button>
                     </div>
                 </div>
                 {/* Mientras dura, el buscador elige a quién se le vende y no qué lead abrir: se
@@ -2366,7 +2304,14 @@ const CloserWorkflowPage = () => {
                 la página NO va adentro: el reset de botones del shell le borraría el Tailwind. */}
             <div className="dc-shell dc-shell--embebido">
                 <DockSecciones secciones={seccionesDelDock} activa={seccionDelDock}
-                    onElegir={irASeccion} ariaLabel="Secciones del espacio del closer" />
+                    onElegir={irASeccion} ariaLabel="Secciones del espacio del closer"
+                    despues={(
+                        <MenuSesion nombre={nombreDeSesion} rol={user?.is_impersonating ? 'Closer · simulación' : 'Closer'}
+                            aviso={pendingCount > 0
+                                ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
+                                : null}
+                            grupos={gruposDeSesion} />
+                    )} />
             </div>
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
