@@ -1305,6 +1305,10 @@
   .dc-shell .tot-tira{transition:none}
   .dc-shell .tot-embudo{animation:none}}
 .dc-shell .barra-tabla{flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3);align-items:center}
+/* "mostrando X de Y" y su "i", pegados a la derecha y sin partirse: si la barra no entra en una
+   línea bajan juntos, en vez de dejar el "i" solo en la de abajo. */
+.dc-shell .barra-cuenta{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s2);
+  white-space:nowrap}
 .dc-shell .busca--sm{flex:0 1 190px;height:38px}
 /* La fila de etiquetas del filtro, debajo de la barra (Revisar.jsx): rotulo con su "i", una
    etiqueta por condicion, el "+" que abre el Filtro completo y Limpiar. Cada etiqueta entra con

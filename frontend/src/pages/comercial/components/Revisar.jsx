@@ -576,10 +576,14 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         placeholder="Buscar cliente, @ig, persona…" aria-label="Buscar" />
                 </label>
 
-                <span className="t-cap mut40 num" style={{ marginLeft: 'auto' }}>
-                    mostrando {visibles.length} de {filtradas.length}
+                {/* La cuenta y su "i" van juntos: sueltos, cuando la barra no entraba en una
+                    línea el "i" caía solo en la de abajo, lejos de lo que explica. */}
+                <span className="barra-cuenta">
+                    <span className="t-cap mut40 num">
+                        mostrando {visibles.length} de {filtradas.length}
+                    </span>
+                    <Tip titulo="Qué estás mirando" texto={def.ayuda} />
                 </span>
-                <Tip titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
             {/* Las etiquetas del filtro: el único lugar que las muestra, cada una con su X, más el
