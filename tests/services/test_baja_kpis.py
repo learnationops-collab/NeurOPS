@@ -14,8 +14,8 @@ from freezegun import freeze_time
 from app.models import Appointment, Client, Enrollment, FinancialSale, Payment, Program
 from app.services import baja_service
 from app.services.closer_dashboard_service import CloserDashboardService
-from app.services.comercial_analitica import por_cobrar_de
 from app.services.closer_service import CloserService
+from app.services.comercial_analitica import por_cobrar_de
 from app.services.dashboard_service import DashboardService
 from app.services.user_service import UserService
 
