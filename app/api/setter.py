@@ -1335,14 +1335,17 @@ def get_cualificacion_stats():
 
 
     from sqlalchemy import func
+    from app.services.setter_assignment_service import condicion_leads_propios
     # 1. Cualificados hoy (únicos por prospecto/lead)
     query_qual = LeadAnswer.query.filter(
         LeadAnswer.qualification.in_(['yes', 'true']),
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
-    # Mismo criterio que la bandeja: cada setter cuenta lo suyo (ver
-    # setter_assignment_service), admin y operador cuentan todo.
-    condicion_setter = condicion_leads_visibles(current_user)
+    # "Cualificados hoy" y "Sin responder" son del setter: solo los leads que ManyChat ya le
+    # repartió. La bandeja le muestra también los sin repartir, pero esos van aparte, en "Sin
+    # asignación": antes entraban en los dos números y uno sin dueño podía terminar siendo de otro.
+    # Así los dos chips se reparten la lista de "Hoy": lo suyo + lo sin asignar.
+    condicion_setter = condicion_leads_propios(current_user)
     if condicion_setter is not None:
         query_qual = query_qual.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
                                .filter(condicion_setter)

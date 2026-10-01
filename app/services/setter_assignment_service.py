@@ -72,3 +72,22 @@ def condicion_leads_visibles(user):
         return sin_asignar
 
     return or_(ManychatLead.setter.in_(variantes), sin_asignar)
+
+
+def condicion_leads_propios(user):
+    """Como `condicion_leads_visibles`, pero SIN los leads que todavia no tienen dueño.
+
+    La bandeja le muestra al setter tambien los sin repartir (para que no queden
+    invisibles), pero un numero que dice ser suyo no puede contarlos: ManyChat
+    todavia no se los dio y pueden terminar siendo de otro. Para un setter que
+    aun no tiene ningun lead es una condicion que no cumple nadie.
+    """
+    from sqlalchemy import false
+
+    from app.models import ManychatLead
+
+    if not debe_filtrar_por_setter(user):
+        return None
+
+    variantes = _variantes_guardadas(user.username)
+    return ManychatLead.setter.in_(variantes) if variantes else false()
