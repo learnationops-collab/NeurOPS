@@ -381,7 +381,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
 def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     """Lo mismo para setters: el embudo va del lead entrante a la agenda generada."""
     leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
-    generadas = ComercialService.agendas(start, end, setter_id=setter_id, de_setters=True)
+    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
     tot_l = ComercialService.totales_leads(leads)
     tot_g = ComercialService.totales_agendas(generadas)
 
@@ -464,6 +464,12 @@ def _tasa_diaria(dias, filas, fecha_de, numerador, denominador):
 
 def _dia_de_agenda(fila):
     return fila['fecha'][:10] if fila['fecha'] else None
+
+
+def _dia_de_creacion(fila):
+    """El día en que se reservó la agenda: el eje de "Agendas generadas" (ver
+    `ComercialService.generadas`), para que la serie sume el mismo número que el tile."""
+    return fila['creada'][:10] if fila.get('creada') else None
 
 
 def _dia_de_venta(fila):
@@ -572,7 +578,7 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
 
 def _series_setters(dias, start, end, setter_id, setter_nombre):
     leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
-    generadas = ComercialService.agendas(start, end, setter_id=setter_id, de_setters=True)
+    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
 
     return [
         {'key': 'entrantes', 'label': 'Entrantes', 'unidad': '', 'tone': 'info',
@@ -593,7 +599,7 @@ def _series_setters(dias, start, end, setter_id, setter_nombre):
         {'key': 'agendas', 'label': 'Agendas generadas', 'unidad': '', 'tone': 'brand-secondary',
          'help': 'Citas reservadas cada día, por la fecha de la reunión. Es la salida del trabajo '
                  'de setting.',
-         'vals': _serie(dias, generadas, _dia_de_agenda)},
+         'vals': _serie(dias, generadas, _dia_de_creacion)},
         {'key': 'tasa_resp', 'label': 'Tasa de respuesta', 'unidad': '%', 'tone': 'success',
          'tipo': 'tasa',
          'help': 'Qué porcentaje de los entrantes de ese día contestó. Los días en cero son días '

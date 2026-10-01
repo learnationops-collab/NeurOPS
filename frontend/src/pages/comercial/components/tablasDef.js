@@ -368,7 +368,10 @@ export const TABLAS = {
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },
-            { key: 'dia', label: 'Día de la reunión', de: (f) => diaDe(f.fecha), oculta: true },
+            // El día en que se RESERVÓ, no el de la reunión: es el eje de la serie "Agendas
+            // generadas" de Variabilidad (ver `ComercialService.generadas`), y un día de esa serie
+            // tiene que abrir las agendas que suma.
+            { key: 'dia', label: 'Día de creación', de: (f) => diaDe(f.creada), oculta: true },
         ],
         chips: [
             { key: 'todas', label: 'Todas', filtro: () => true },

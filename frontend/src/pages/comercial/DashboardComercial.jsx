@@ -132,6 +132,14 @@ const SECCIONES = [
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
 ];
 
+/**
+ * Con qué fecha arranca el toggle "Fecha meet / F. creación" de cada tabla: la MISMA con la que el
+ * backend cuenta su número, para que la lista recién abierta cierre con el dato de Analizar. Las
+ * agendas generadas se cuentan por cuándo se reservaron (ver `ComercialService.generadas`); las
+ * del closer, por cuándo cae la reunión.
+ */
+const BASIS_INICIAL = { generadas: 'creacion' };
+
 const PRONTO = {
     proyectar: 'Vas a poder proyectar el cierre del mes con el ritmo actual y ajustar la meta. Estamos puliendo el cálculo.',
     simulador: 'Vas a poder mover cada palanca del embudo y ver cuánto cambia el resultado. Estamos puliendo el modelo.',
@@ -161,7 +169,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const tabla = params.get('t') || null;
 
     const [tab, setTab] = useState('dashboard');
-    const [basis, setBasis] = useState('meet');
+    // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
+    const [basisElegida, setBasisElegida] = useState({});
     const [resumen, setResumen] = useState(null);
     const [comparativas, setComparativas] = useState(null);
     const [variabilidad, setVariabilidad] = useState(null);
@@ -251,6 +260,20 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         [seccionActual, contexto]);
     const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
 
+    // Una fecha por tabla y no una sola: con una sola, la fecha por creación de "Agendas generadas"
+    // se arrastraba a "Agendas" del closer, cuyo número se cuenta por la reunión.
+    const basis = basisElegida[tablaActual] || BASIS_INICIAL[tablaActual] || 'meet';
+    const setBasis = useCallback(
+        (valor) => setBasisElegida(prev => ({ ...prev, [tablaActual]: valor })), [tablaActual]);
+    // Un drill-down abre la lista con la fecha con la que se contó el dato clickeado: una elección
+    // manual anterior del toggle dejaría una lista que no cierra con ese número.
+    const olvidarBasis = useCallback((cual) => setBasisElegida((prev) => {
+        if (!cual || !(cual in prev)) return prev;
+        const resto = { ...prev };
+        delete resto[cual];
+        return resto;
+    }), []);
+
     /**
      * Las filas cargadas solo se le pasan a Revisar si son DE ESA tabla.
      *
@@ -323,6 +346,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irA = useCallback((cual, filtro) => {
         const limpio = Object.fromEntries(
             Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
+        olvidarBasis(cual);
         set({
             ...(embebido ? {} : { s: 'revisar' }),
             t: cual,
@@ -332,7 +356,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         // Embebido la sección no está en la query string, la elige el host: sin este aviso el
         // filtro se aplicaba a una tabla que seguía fuera de pantalla.
         if (embebido) onIrASeccion?.('revisar');
-    }, [set, embebido, onIrASeccion, proximoToken]);
+    }, [set, embebido, onIrASeccion, proximoToken, olvidarBasis]);
 
     /**
      * El drill-down solo existe si hay una lista a la que llegar. Embebido, esa lista es del host:
@@ -352,6 +376,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irAPersona = useCallback((id, destino = null) => {
         if (!contexto?.puede_elegir_equipo) return;
         const filtro = destino?.filtro || {};
+        if (destino) olvidarBasis(destino.tabla);
         set({
             s: 'revisar',
             m: id && id !== 'equipo' ? id : null,
@@ -361,7 +386,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 ft: proximoToken(),
             } : {}),
         });
-    }, [contexto, set, proximoToken]);
+    }, [contexto, set, proximoToken, olvidarBasis]);
 
     /**
      * Corrige un estado y vuelve a pedir TODO lo que depende de él. Es el requisito del diseño:

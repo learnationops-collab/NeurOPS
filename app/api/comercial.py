@@ -172,7 +172,11 @@ def tabla():
     cual = request.args.get('tabla', 'agendas')
     if cual not in TABLAS:
         cual = 'agendas'
-    basis = 'creacion' if request.args.get('basis') == 'creacion' else 'meet'
+    # Sin `basis` explícito, cada tabla usa la fecha con la que se cuenta su número: las agendas
+    # generadas por creación (ver `ComercialService.generadas`), las demás por la reunión.
+    basis = request.args.get('basis')
+    if basis not in ('creacion', 'meet'):
+        basis = 'creacion' if cual == 'generadas' else 'meet'
 
     if cual == 'clientes':
         # La cartera NO se acota al periodo: es un saldo a hoy, no un flujo (ver
@@ -189,7 +193,7 @@ def tabla():
         filas = ComercialService.leads(start, end, setter_nombre=nombre if rol == ROL_SETTERS else None)
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
-        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis, de_setters=True)
+        filas = ComercialService.generadas(start, end, setter_id=miembro_id, basis=basis)
         totales = ComercialService.totales_agendas(filas)
     else:
         closer_id = miembro_id if rol == ROL_CLOSERS else None

@@ -416,6 +416,21 @@ class ComercialService:
             })
         return filas
 
+    @staticmethod
+    def generadas(start, end, setter_id=None, basis='creacion'):
+        """Filas de "Agendas generadas": el trabajo de un setter (o del equipo de setting).
+
+        Se cuentan por la fecha en que se CREÓ la agenda, no por la de la reunión: lo que hizo el
+        setter en el período es reservarla, y la reunión puede caer semanas después. Por fecha de
+        reunión, una agenda reservada el 28/09 para el 03/10 no le contaba a nadie en septiembre
+        y sí en octubre, cuando el setter ya no hizo nada (septiembre de 2026: Paula 51 por
+        reunión contra 59 por creación). `basis='meet'` queda para el toggle de Revisar.
+
+        Es la única puerta a estas filas: el bloque de Analizar, la serie de Variabilidad y la
+        tabla de Revisar la usan las tres, así que el número y la lista no pueden divergir.
+        """
+        return ComercialService.agendas(start, end, setter_id=setter_id, basis=basis, de_setters=True)
+
     # --- Ventas -------------------------------------------------------------------------------
 
     @staticmethod
