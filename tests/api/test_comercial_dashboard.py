@@ -85,7 +85,13 @@ def test_el_contexto_dice_que_puede_elegir_cada_rol(client, equipo, auth_headers
     assert (director['puede_elegir_equipo'], director['puede_reportar']) == (True, True)
     assert [m['nombre'] for m in director['miembros']] == ['Marlon', 'Nerina']
 
+    # El selector de persona cambia con el switch Closers / Setters sin volver a pedir el
+    # contexto: tienen que venir las dos listas (con Setters ofrecía closers, 01/10/2026).
+    assert {r: [m['nombre'] for m in ms] for r, ms in director['miembros_por_rol'].items()} == {
+        'closers': ['Marlon', 'Nerina'], 'setters': ['Elias']}
+
     # "Mis datos": ni selector de equipo, ni seccion de Reportar, y el rol fijo en el suyo.
+    assert closer['miembros_por_rol'] == {} and setter['miembros_por_rol'] == {}
     assert (closer['puede_elegir_equipo'], closer['puede_reportar']) == (False, False)
     assert (closer['rol'], closer['miembro_id']) == ('closers', equipo['closer_a'].id)
     assert (setter['rol'], setter['miembro_id']) == ('setters', equipo['setter'].id)

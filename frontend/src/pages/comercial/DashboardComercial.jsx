@@ -228,7 +228,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // El rol y la persona efectivos: para un closer o un setter los manda el backend y la query
     // string no puede cambiarlos (ver `alcance_de` en app/api/comercial.py).
     const rol = contexto?.puede_elegir_equipo ? (rolPedido || 'closers') : contexto?.rol;
-    const miembroId = contexto?.puede_elegir_equipo ? miembroPedido : null;
+    // Las personas del selector son las del rol elegido: con Setters, los setters. Un `m` de la
+    // URL que no es de ese rol (un link viejo, o el closer que quedó elegido al cambiar el switch)
+    // se ignora y se ve el equipo: acotar las agendas de setters por el id de un closer daba 0.
+    const miembrosDelRol = contexto?.miembros_por_rol?.[rol] || contexto?.miembros || [];
+    const miembroId = contexto?.puede_elegir_equipo
+        && miembrosDelRol.some(m => String(m.id) === String(miembroPedido)) ? miembroPedido : null;
 
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId }),
@@ -444,7 +449,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const salida = SALIDA[contexto.yo.rol];
 
     const miembroNombre = miembroId
-        ? contexto.miembros.find(m => String(m.id) === String(miembroId))?.nombre
+        ? miembrosDelRol.find(m => String(m.id) === String(miembroId))?.nombre
         : null;
     // La cartera no se acota al periodo (es un saldo a hoy, ver `ComercialService.clientes`), asi
     // que su linea de alcance no puede decir "este mes": diria algo que no es.
@@ -533,7 +538,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                                 texto={miembroNombre || 'Todo el equipo'}
                                 valor={miembroId || 'all'}
                                 opciones={[{ key: 'all', label: 'Todo el equipo' },
-                                    ...contexto.miembros.map(m => ({ key: String(m.id), label: m.nombre }))]}
+                                    ...miembrosDelRol.map(m => ({ key: String(m.id), label: m.nombre }))]}
                                 onChange={(k) => set({ m: k === 'all' ? null : k })} />
                         )}
 
