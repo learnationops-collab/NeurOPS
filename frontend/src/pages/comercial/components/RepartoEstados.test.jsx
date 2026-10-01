@@ -67,6 +67,10 @@ describe('RepartoEstados · gráfico', () => {
         expect(arcos).toHaveLength(7);
         expect(arcos[0].getAttribute('stroke')).toBe('var(--warning)');
         expect(arcos[3].getAttribute('stroke')).toBe('var(--brand-secondary)');
+        // Cada arco arranca donde terminó el anterior: 80 de 238 es el 33.6% de la vuelta.
+        expect(arcos[0].getAttribute('stroke-dashoffset')).toBe('0.000');
+        expect(arcos[1].getAttribute('stroke-dashoffset')).toBe('-33.613');
+        expect(arcos[2].getAttribute('stroke-dashoffset')).toBe('-60.924');
         const dona = screen.getByRole('img');
         expect(dona).toHaveAccessibleName(/^238 agendas: Sin reporte 80 \(33\.6%\), No show 65/);
     });

@@ -93,7 +93,9 @@ const R = 84 - GRUESO / 2;
 const RENDIJA = 0.7;
 
 const Dona = ({ estados, total, sinResultado, activo, irA }) => {
-    let off = 0;
+    // Dónde arranca cada arco: la suma de los anteriores, en % de la vuelta.
+    const arranques = estados.map((_, i) => estados
+        .slice(0, i).reduce((a, e) => a + (e.n / total) * 100, 0));
     const pcts = repartir(estados.map(e => e.n));
     const resumen = estados.map((e, i) => `${e.label} ${e.n} (${pct1(pcts[i])}%)`).join(', ');
     return (
@@ -106,12 +108,12 @@ const Dona = ({ estados, total, sinResultado, activo, irA }) => {
                     const largo = Math.max(p - Math.min(RENDIJA, p * 0.4), 0);
                     const ir = abrir(irA, destinoDe(e.label, [e.filtro]));
                     const texto = `${e.label}: ${plural(e.n, 'agenda', 'agendas')}, ${pct1(pcts[i])}%`;
-                    const seg = (
+                    return (
                         <circle key={e.key} className="est-seg" data-grupo={e.grupo}
                             data-apagado={activo && activo !== e.grupo ? '1' : undefined}
                             cx={C} cy={C} r={R} fill="none" stroke={color(e.tone)} strokeWidth={GRUESO}
                             pathLength="100" strokeDasharray={`${largo.toFixed(3)} ${(100 - largo).toFixed(3)}`}
-                            strokeDashoffset={(-off).toFixed(3)} transform={`rotate(-90 ${C} ${C})`}
+                            strokeDashoffset={(-arranques[i]).toFixed(3)} transform={`rotate(-90 ${C} ${C})`}
                             {...(ir ? {
                                 role: 'button', tabIndex: 0, 'aria-label': `${texto}. Ver en Revisar`,
                                 onClick: ir,
@@ -122,8 +124,6 @@ const Dona = ({ estados, total, sinResultado, activo, irA }) => {
                             <title>{texto}</title>
                         </circle>
                     );
-                    off += p;
-                    return seg;
                 })}
             </svg>
             <span className="est-centro">
