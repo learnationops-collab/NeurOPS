@@ -177,10 +177,11 @@ describe('LeyendaCierres', () => {
 });
 
 describe('PerformanceCierres (dashboard del closer)', () => {
-    it('dibuja la misma matriz con el bloque del backend', () => {
+    it('dibuja la misma matriz con el bloque del backend, y la leyenda en la cabecera', () => {
         render(<PerformanceCierres cierres={CIERRES} />);
 
-        expect(screen.getByText(/Cierres con y sin señas/)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Cierre/ })).toBeInTheDocument();
+        expect(screen.getByText('3 ventas')).toBeInTheDocument();
         expect(lectura('Ventas · Por llamada')).toHaveTextContent('50%');
         expect(lectura('Con señas · Por presentación')).toHaveTextContent('80%');
     });
@@ -190,5 +191,6 @@ describe('PerformanceCierres (dashboard del closer)', () => {
 
         expect(screen.getByText(/Ninguna llamada del período/)).toBeInTheDocument();
         expect(screen.queryByRole('group')).toBeNull();
+        expect(screen.queryByText(/ventas/)).toBeNull();
     });
 });
