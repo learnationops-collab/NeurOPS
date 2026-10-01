@@ -10,9 +10,9 @@ import { Esqueleto, Hueso, Renglon } from '../../../components/huesos/Huesos';
  *
  * Tiene la forma de la tarjeta con un lead, que es lo que suele venir en Confirmar y en Reportar:
  * el rótulo de verdad (no depende de nada), la cuenta regresiva, el nombre y el origen en hueso,
- * y el botón grande al pie. Mide lo mismo que esa tarjeta, 212 px. Sin el fondo rosa de la tarjeta
- * con lead: todavía no hay nada que tocar, así que va con la caja neutra de `tsp-done-v6`, que
- * además no se levanta con el hover.
+ * y el botón grande al pie. Mide lo mismo que esa tarjeta (186 px desde que va en la fila de tres
+ * tarjetas, 30/09/2026). Sin el fondo rosa de la tarjeta con lead: todavía no hay nada que tocar,
+ * así que va con la caja neutra de `tsp-done-v6`, que además no se levanta con el hover.
  */
 const EsqueletoSiguientePaso = () => (
     <Esqueleto rotulo="Cargando tu siguiente paso…" className="tsp-v6 tsp-done-v6">
@@ -23,12 +23,12 @@ const EsqueletoSiguientePaso = () => (
             {/* La cuenta regresiva (`.tsp-badge-v6`): 10 px de letra en 15, más 5 + 5 de padding. */}
             <Hueso alto={25} ancho={88} radio={99} />
         </div>
-        {/* El nombre (`.tsp-name-v6`): 26 px de letra con interlineado de 1,1. */}
-        <Renglon alto={28.6}><Hueso alto={22} ancho="46%" paso={1} /></Renglon>
+        {/* El nombre (`.tsp-name-v6`): 22 px de letra con interlineado de 1,1. */}
+        <Renglon alto={24.2}><Hueso alto={18} ancho="46%" paso={1} /></Renglon>
         {/* El origen y el @ (`.tsp-sub-v6`): 12,5 px de letra en un renglón de 18,75. */}
         <Renglon alto={18.75}><Hueso alto={11} ancho="34%" paso={2} /></Renglon>
-        {/* El botón (`.tsp-cta-v6`): 54 px de alto, al pie como el de verdad (`margin-top: auto`). */}
-        <Hueso alto={54} radio={99} paso={3} style={{ marginTop: 'auto' }} />
+        {/* El botón (`.tsp-cta-v6`): 46 px de alto, al pie como el de verdad (`margin-top: auto`). */}
+        <Hueso alto={46} radio={99} paso={3} style={{ marginTop: 'auto' }} />
     </Esqueleto>
 );
 

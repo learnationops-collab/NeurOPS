@@ -23,6 +23,7 @@ import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import '../comercial/comercial.css';
+import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -1689,7 +1690,11 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
                 
-                {/* TU SIGUIENTE PASO + TU DÍA (v7) */}
+                {/* TU SIGUIENTE PASO · TU DÍA · COMISIÓN: tres tarjetas iguales en una fila (pedido del
+                    30/09/2026). Antes eran dos arriba y la comisión en otra fila entera: entre las dos
+                    filas y las pestañas, lo que había que mirar —el tablero, los datos— empezaba a
+                    media pantalla. En `.pareja` para que, si no entran las tres, se apilen las tres
+                    y nunca quede una sola abajo. */}
                 {(() => {
                     // "Tu día" tiene que reflejar el trabajo real de HOY en las 3 pestañas, no solo lo
                     // que trajo la pestaña activa (`agendas` es la lista de una sola pestaña, y para
@@ -1716,7 +1721,7 @@ const CloserWorkflowPage = () => {
                     const heroCountdown = heroLead ? formatCountdown(heroLead.start_time, nowTick) : null;
                     const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
-                        <div className="tsprow-v6">
+                        <div className="tsprow-v6 pareja">
                             {/* En la primera carga, en hueso: con los contadores todavía en su cero
                                 inicial, las ramas de abajo caían en "todo el día resuelto" mientras el
                                 kanban de al lado decía que estaba cargando. Si la carga termina sin
@@ -1737,8 +1742,8 @@ const CloserWorkflowPage = () => {
                                             />
                                         )}
                                     </div>
-                                    <h3 className="tsp-name-v6">{heroLead.lead_name || 'Sin Nombre'}</h3>
-                                    <p className="tsp-sub-v6">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
+                                    <h3 className="tsp-name-v6 truncate" title={heroLead.lead_name || undefined}>{heroLead.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6 truncate">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
                                     <button
                                         type="button"
                                         className="tsp-cta-v6"
@@ -1761,8 +1766,8 @@ const CloserWorkflowPage = () => {
                                         <span className="tsp-dot-v6"></span>
                                         <span className="tsp-lbl-v6">Tu siguiente paso</span>
                                     </div>
-                                    <h3 className="tsp-name-v6">{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
-                                    <p className="tsp-sub-v6">
+                                    <h3 className="tsp-name-v6 truncate" title={seguimientoHero.item.lead_name || undefined}>{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
+                                    <p className="tsp-sub-v6 truncate">
                                         {seguimientoHero.item.origin || 'Meta Ads'} · @{seguimientoHero.item.instagram ? seguimientoHero.item.instagram.replace('@', '') : 'usuario'}
                                     </p>
                                     <button
@@ -1787,7 +1792,6 @@ const CloserWorkflowPage = () => {
                                     { key: 'seguimientos', label: 'Ir a seguir', accion: 'seguir', count: counts.seguimientos, step: 'seguimientos' }
                                 ];
                                 const next = PRIORITY.find(s => s.count > 0);
-                                const goTo = (step) => { setActiveView('inbox'); setSearchParams({ step, selected_date: selectedDate }); };
 
                                 if (!next) {
                                     return (
@@ -1811,7 +1815,7 @@ const CloserWorkflowPage = () => {
                                         <button
                                             type="button"
                                             className="tsp-cta-v6"
-                                            onClick={(e) => { e.stopPropagation(); goTo(next.step); }}
+                                            onClick={(e) => { e.stopPropagation(); irASeccion(next.step); }}
                                         >
                                             {next.label} →
                                         </button>
@@ -1824,8 +1828,10 @@ const CloserWorkflowPage = () => {
                                     <div className="tud-lbl-v6">Tu día</div>
                                     <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
                                 </div>
-                                <div className="tud-pct-v6">{pct}%</div>
-                                <div className="tud-sub-v6">del día completado</div>
+                                <div className="tud-pct-row-v6">
+                                    <span className="tud-pct-v6">{pct}%</span>
+                                    <span className="tud-sub-v6">del día completado</span>
+                                </div>
                                 <div className="pbarw-v6">
                                     <i style={{ width: `${pct}%` }}></i>
                                 </div>
@@ -1834,11 +1840,11 @@ const CloserWorkflowPage = () => {
                                     <span className="tud-foot-xp-v6">⚡ {xp} XP</span>
                                 </div>
                             </div>
+
+                            <ComisionMesCard />
                         </div>
                     );
                 })()}
-
-                <ComisionMesCard />
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">

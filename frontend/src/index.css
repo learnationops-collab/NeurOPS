@@ -1248,22 +1248,22 @@ header.top-v6 {
   gap: 6px;
 }
 
-/* TU SIGUIENTE PASO + TU DÍA (v7) — reemplaza el hero-v6/stats-v6 anterior: en vez de un saludo
-   genérico y cuatro cajas de conteo, arriba de todo se ve el lead más urgente de la pestaña
-   activa (con su propio CTA al modal) y, al lado, el avance del día. Calcado del artboard
-   "hub" de la referencia visual del rediseño. */
-.tsprow-v6 {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
+/* TU SIGUIENTE PASO · TU DÍA · COMISIÓN — reemplaza el hero-v6/stats-v6 anterior: en vez de un
+   saludo genérico y cuatro cajas de conteo, arriba de todo se ve el lead más urgente de la pestaña
+   activa (con su propio CTA al modal), el avance del día y la comisión del mes. Desde el 30/09/2026
+   son tres tarjetas iguales en UNA fila, más bajas que antes, para que el tablero y los datos
+   entren en la pantalla sin scrollear. La grilla es `.pareja` (components/dashboard/pareja.css):
+   las tres en fila desde ~750 px de ancho; por debajo, una debajo de la otra, nunca 2 + 1. */
+.bg-v6 .tsprow-v6 {
+  --min: 300px;
+  --g: 16px;
   align-items: stretch;
 }
 .tsp-v6 {
   background: linear-gradient(150deg,rgba(19,35,198,.30),rgba(255,63,164,.12));
   border: 1px solid rgba(255,63,164,.35);
   border-radius: 20px;
-  padding: 24px 26px;
+  padding: 20px 22px;
   position: relative;
   overflow: hidden;
   text-align: left;
@@ -1271,7 +1271,8 @@ header.top-v6 {
   transition: .2s;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
 }
 .tsp-v6::after {
   content: '';
@@ -1297,10 +1298,13 @@ header.top-v6 {
   transform: none;
   border-color: var(--v6-bd);
 }
+/* Envuelve: con la tarjeta a un tercio del ancho, el rótulo y una cuenta larga ("Hace 29 días 7 h")
+   no siempre entran en un renglón, y la cuenta pasa abajo en vez de salirse de la tarjeta. */
 .tsp-top-v6 {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   position: relative;
 }
 .tsp-dot-v6 {
@@ -1336,7 +1340,7 @@ header.top-v6 {
 .tsp-badge-v6.soon { background: rgba(255,63,164,.18); color: #FFB3DE; }
 .tsp-badge-v6.late { background: rgba(232,92,74,.18); color: #F5A99C; }
 .tsp-name-v6 {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
   letter-spacing: -.02em;
   color: #fff;
@@ -1353,12 +1357,12 @@ header.top-v6 {
    debería ser un botón grande, grandote... es la idea de la nueva vista, que sean botones
    grandes, llamativos") — ancho completo y 54px de alto, calcado del CTA principal de la
    referencia visual (antes era un botón chico alineado a la izquierda, se leía como una acción
-   secundaria en vez de LA acción de la tarjeta). */
+   secundaria en vez de LA acción de la tarjeta). 46 px desde que va en un tercio de la fila. */
 .tsp-cta-v6 {
   align-self: stretch;
   width: 100%;
   margin-top: auto;
-  height: 54px;
+  height: 46px;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -1386,9 +1390,10 @@ header.top-v6 {
   border: 1px solid var(--v6-bd);
   border-radius: 20px;
   background: var(--v6-card);
-  padding: 24px 26px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .tud-lbl-v6 {
   font-size: 10.5px;
@@ -1409,13 +1414,21 @@ header.top-v6 {
   flex: none;
   white-space: nowrap;
 }
+/* El porcentaje y "del día completado" en un solo renglón: así la tarjeta no es más alta que las
+   otras dos y la cifra queda a la misma altura que la de la comisión. */
+.tud-pct-row-v6 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 0 14px;
+}
 .tud-pct-v6 {
-  font-size: 38px;
+  font-size: 34px;
   font-weight: 900;
   letter-spacing: -.03em;
   color: var(--v6-ok);
   line-height: 1;
-  margin-top: 6px;
 }
 .tud-sub-v6 {
   font-size: 10px;
@@ -1423,8 +1436,27 @@ header.top-v6 {
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--v6-tx3);
-  margin-top: 4px;
-  margin-bottom: 14px;
+}
+/* La comisión del mes (ComisionMesCard), tercera tarjeta de la fila: la caja y los rótulos son
+   los de "Tu día"; esto es la cifra y el ícono que va donde "Tu día" lleva la racha. */
+.com-monto-v6 {
+  margin-top: 10px;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  color: var(--v6-ok);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.com-ic-v6 {
+  width: 26px;
+  height: 26px;
+  border-radius: 99px;
+  background: rgba(47,191,143,.15);
+  color: var(--v6-ok);
+  display: grid;
+  place-items: center;
+  flex: none;
 }
 .pbarw-v6 {
   height: 9px;
@@ -1464,10 +1496,6 @@ header.top-v6 {
   color: var(--v6-blue2);
   font-variant-numeric: tabular-nums;
   flex: none;
-}
-
-@media(max-width:1100px){
-  .tsprow-v6 { grid-template-columns: 1fr; }
 }
 
 /* Hero "Buen avance, Nombre — X de Y resueltos" de Cerrar el día: calcado del artboard
