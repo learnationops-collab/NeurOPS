@@ -4,8 +4,10 @@ Definiciones que fijó el dueño el 01/10/2026, para que el setter vea en "Mis d
 que no tenga que dudar:
 
   1. Una agenda generada se cuenta por la fecha en que se CREÓ, no por la de la reunión.
+  2. Una persona cuenta UNA vez por setter: si reagendó, queda su agenda más reciente.
 
-Todo lo de los closers queda como estaba: sus agendas se siguen contando por la reunión.
+Todo lo de los closers queda como estaba: sus agendas se siguen contando por la reunión, una por
+cita.
 """
 import itertools
 from datetime import date, datetime
@@ -13,7 +15,7 @@ from datetime import date, datetime
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client
+from app.models import Appointment, Client, FinancialSale
 from app.services import comercial_analitica as ca
 from app.services.comercial_service import ComercialService
 
@@ -118,7 +120,117 @@ def test_el_setter_ve_en_mis_datos_lo_mismo_que_la_direccion(client, db, equipo,
     assert suyo['actual']['generadas'] == len(tabla['filas']) == 1
 
 
+# --- 2. Una persona, una vez ----------------------------------------------------------------------
+
+def _bloque(setter=None, nombre=None):
+    return ca.bloque_setters(*SEP, setter_id=setter.id if setter else None, setter_nombre=nombre)
+
+
+@freeze_time(HOY)
+def test_un_lead_que_reagenda_cuenta_una_vez_con_su_agenda_mas_reciente(db, equipo):
+    lead = cliente(db, 'Reagendo')
+    agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='Reagendado',
+           creada=datetime(2026, 9, 3, 10, 0), reunion=datetime(2026, 9, 5, 15, 0))
+    vigente = agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='Show up',
+                     creada=datetime(2026, 9, 5, 16, 0), reunion=datetime(2026, 9, 9, 15, 0))
+
+    filas = ComercialService.generadas(*SEP, setter_id=equipo['elias'].id)
+    bloque = _bloque(equipo['elias'], 'Elias')
+
+    assert [f['id'] for f in filas] == [vigente.id]
+    assert bloque['generadas'] == 1
+    # El show up sale de la fila que quedó: la llamada de verdad fue la segunda y asistió.
+    assert bloque['show_up'] == 100.0
+
+
+@freeze_time(HOY)
+def test_la_mas_reciente_es_la_de_la_ultima_reunion_aunque_se_haya_creado_antes(db, equipo):
+    """La sincronización crea a veces de una vez agendas de reuniones ya pasadas (en producción, dos
+    del mismo lead en el mismo minuto para el 24/08 y el 27/08): el resultado vigente es el de la
+    última llamada, no el de la última fila que se escribió."""
+    lead = cliente(db, 'Sincronizado')
+    ultima_llamada = agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='No Show',
+                            creada=datetime(2026, 9, 7, 17, 52), reunion=datetime(2026, 9, 12, 16, 0))
+    agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='Show up',
+           creada=datetime(2026, 9, 7, 17, 53), reunion=datetime(2026, 9, 9, 16, 0))
+
+    assert [f['id'] for f in ComercialService.generadas(*SEP, setter_id=equipo['elias'].id)] == [
+        ultima_llamada.id]
+
+
+@freeze_time(HOY)
+def test_una_venta_originada_no_se_cuenta_dos_veces_por_las_agendas_del_mismo_lead(db, equipo):
+    lead = cliente(db, 'Compro')
+    for creada, reunion in [(datetime(2026, 9, 2, 10, 0), datetime(2026, 9, 4, 15, 0)),
+                            (datetime(2026, 9, 5, 10, 0), datetime(2026, 9, 8, 15, 0))]:
+        agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='Show up',
+               creada=creada, reunion=reunion)
+    db.session.add(FinancialSale(mail_cliente=lead.email, monto=990.0, tipo_pago='AL - Completo',
+                                 metodo_pago='zelle', email_vendedor='marlon@thelearnation.com',
+                                 date=datetime(2026, 9, 8), estado='Completada'))
+    db.session.commit()
+
+    assert _bloque(equipo['elias'], 'Elias')['ventas_originadas'] == 1
+
+
+@freeze_time(HOY)
+def test_un_lead_de_dos_setters_cuenta_para_los_dos_y_el_equipo_es_la_suma(db, equipo):
+    compartido = cliente(db, 'De los dos')
+    agenda(db, equipo['marlon'], compartido, setter=equipo['elias'],
+           creada=datetime(2026, 9, 3, 10, 0), reunion=datetime(2026, 9, 5, 15, 0))
+    agenda(db, equipo['marlon'], compartido, setter=equipo['paula'],
+           creada=datetime(2026, 9, 6, 10, 0), reunion=datetime(2026, 9, 8, 15, 0))
+    # Y uno que Elias reagendó: una sola persona para él.
+    reagendo = cliente(db, 'Reagendo')
+    for dia in (10, 14):
+        agenda(db, equipo['marlon'], reagendo, setter=equipo['elias'],
+               creada=datetime(2026, 9, dia, 10, 0), reunion=datetime(2026, 9, dia + 2, 15, 0))
+
+    elias = _bloque(equipo['elias'], 'Elias')['generadas']
+    paula = _bloque(equipo['paula'], 'Paula')['generadas']
+
+    assert (elias, paula) == (2, 1)
+    assert _bloque()['generadas'] == elias + paula == 3
+    # Y la tabla del equipo conserva su orden: la reunión más nueva arriba.
+    reuniones = [f['fecha'] for f in ComercialService.generadas(*SEP)]
+    assert reuniones == sorted(reuniones, reverse=True) and len(reuniones) == 3
+
+
+@freeze_time(HOY)
+def test_la_tabla_de_generadas_devuelve_las_filas_depuradas(client, db, equipo, auth_headers):
+    """La lista es el número: si la tabla trajera las dos agendas del que reagendó, el setter
+    contaría 2 filas debajo de un 1."""
+    lead = cliente(db, 'Reagendo')
+    for dia in (3, 6):
+        agenda(db, equipo['marlon'], lead, setter=equipo['elias'],
+               creada=datetime(2026, 9, dia, 10, 0), reunion=datetime(2026, 9, dia + 2, 15, 0))
+    rango = {'period': 'custom', 'start_date': '2026-09-01', 'end_date': '2026-09-30',
+             'compare': 'none'}
+
+    for quien, extra in [('elias', {}), ('director', {'rol': 'setters'}),
+                         ('director', {'rol': 'setters', 'miembro_id': equipo['elias'].id})]:
+        headers = auth_headers(equipo[quien])
+        resumen = client.get('/api/comercial/resumen', headers=headers,
+                             query_string={**rango, **extra}).get_json()
+        tabla = client.get(TABLA, headers=headers,
+                           query_string={**rango, **extra, 'tabla': 'generadas'}).get_json()
+        assert resumen['actual']['generadas'] == len(tabla['filas']) == tabla['totales']['agendas'] == 1
+
+
 # --- Los closers no cambian -----------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_el_closer_sigue_viendo_cada_cita_del_lead_que_reagendo(db, equipo):
+    lead = cliente(db, 'Reagendo')
+    for dia in (3, 6):
+        agenda(db, equipo['marlon'], lead, setter=equipo['elias'],
+               creada=datetime(2026, 9, dia, 10, 0), reunion=datetime(2026, 9, dia + 2, 15, 0))
+
+    marlon = equipo['marlon'].id
+    assert len(ComercialService.agendas(*SEP, closer_id=marlon)) == 2
+    assert ca.bloque_closers(*SEP, closer_id=marlon, closer_nombre='Marlon')['agendas'] == 2
+
+
 
 @freeze_time(HOY)
 def test_las_agendas_del_closer_se_siguen_contando_por_la_reunion(client, db, equipo, auth_headers):

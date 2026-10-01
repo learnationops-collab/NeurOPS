@@ -428,8 +428,44 @@ class ComercialService:
 
         Es la única puerta a estas filas: el bloque de Analizar, la serie de Variabilidad y la
         tabla de Revisar la usan las tres, así que el número y la lista no pueden divergir.
+
+        **Una persona cuenta una vez por setter** (ver `_una_por_persona`): el total, el show up y
+        las ventas originadas salen de las filas ya depuradas, y la tabla devuelve esas mismas.
         """
-        return ComercialService.agendas(start, end, setter_id=setter_id, basis=basis, de_setters=True)
+        filas = ComercialService.agendas(start, end, setter_id=setter_id, basis=basis, de_setters=True)
+        return ComercialService._una_por_persona(filas)
+
+    @staticmethod
+    def _una_por_persona(filas):
+        """Deja UNA agenda por lead y por setter: la más reciente.
+
+        Un lead que reagenda tiene dos o tres agendas del mismo setter en el período, y cada una
+        sumaba como una agenda generada más: el setter consiguió UNA persona, no tres (septiembre
+        de 2026, por fecha de creación: 136 agendas del equipo eran 124 personas). Se queda la
+        más reciente porque su resultado es el vigente; las anteriores son la historia de esa
+        misma persona.
+
+        "Más reciente" es la de la reunión más reciente, no la última que se creó: la
+        sincronización crea a veces de una vez agendas de reuniones ya pasadas, y en producción
+        hay dos del mismo lead creadas en el mismo minuto para el 24/08 y el 27/08. El resultado
+        vigente es el de la última llamada.
+
+        La clave es (setter, cliente) y no solo el cliente: un lead que agendaron dos setters
+        distintos les cuenta a los dos, y así el total del equipo es la suma de sus setters.
+        """
+        def persona(fila):
+            return (fila['setter_id'], fila['client_id'])
+
+        def reciente(fila):
+            return (fila['fecha'] or '', fila['creada'] or '', fila['id'])
+
+        ultima = {}
+        for fila in filas:
+            vigente = ultima.get(persona(fila))
+            if vigente is None or reciente(fila) > reciente(vigente):
+                ultima[persona(fila)] = fila
+        # Se filtra la lista original en vez de devolver `ultima`: así queda el orden de la tabla.
+        return [f for f in filas if ultima[persona(f)] is f]
 
     # --- Ventas -------------------------------------------------------------------------------
 
