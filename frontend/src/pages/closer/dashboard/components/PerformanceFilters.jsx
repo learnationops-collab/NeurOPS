@@ -1,5 +1,6 @@
 import React from 'react';
 import { CalendarRange } from 'lucide-react';
+import { localToday, toLocalDateStr } from '../../../../utils/datetime';
 
 const PERIODS = [
     { id: 'hoy', label: 'Hoy' },
@@ -23,11 +24,11 @@ const COMPARES = [
     { id: 'none', label: 'Sin comparación' }
 ];
 
-// Mes en curso, como arranque de cualquiera de los dos rangos libres.
+// Mes en curso, como arranque de cualquiera de los dos rangos libres. En días de calendario LOCAL:
+// con `toISOString()` era la fecha en UTC, y en UTC−3 después de las 21 h el rango terminaba mañana.
 const mesEnCurso = () => {
     const hoy = new Date();
-    const iso = (d) => d.toISOString().split('T')[0];
-    return { start: iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), end: iso(hoy) };
+    return { start: toLocalDateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), end: localToday() };
 };
 
 /* Las dos puntas de un rango libre. Se repite para el período y para la comparación, con el
