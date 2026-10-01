@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import InlineConfirm from '../../components/ui/InlineConfirm';
 import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter, Send, Download } from 'lucide-react';
 import Card from '../../components/ui/Card';
+import Modal from '../../components/ui/Modal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
 import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
@@ -2396,403 +2397,397 @@ const PublicFinancialSalesPage = () => {
             )}
 
             {showCreateModal && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-300">
-                        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-                            <div>
-                                <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Registrar Nueva Venta</h2>
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Ingresa los datos para registrar la venta en la app y Google Sheets</p>
-                            </div>
-                            <button onClick={handleCloseCreateModal} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
-                                <X className="w-5 h-5" />
+                <Modal
+                    ancho="2xl"
+                    titulo="Registrar Nueva Venta"
+                    subtitulo="Ingresa los datos para registrar la venta en la app y Google Sheets"
+                    onCerrar={handleCloseCreateModal}
+                    onSubmit={handleCreateSubmit}
+                    cuerpoClassName="space-y-6"
+                    pie={(
+                        <>
+                            <button type="button" onClick={handleCloseCreateModal} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">
+                                Cancelar
                             </button>
+                            <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20">
+                                Registrar Venta
+                            </button>
+                        </>
+                    )}
+                >
+                    {/* Buscador de Agenda del Cliente */}
+                    <div className="relative space-y-2 p-4 bg-slate-950/40 border border-slate-800 rounded-2xl">
+                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">
+                            Buscar Agenda del Cliente para Autocompletar
+                        </label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                value={agendaSearchQuery}
+                                onChange={(e) => handleAgendaSearch(e.target.value)}
+                                placeholder="Buscar por nombre, email, instagram o teléfono..."
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                            />
+                            {searchingAgendas && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
+                                </div>
+                            )}
                         </div>
 
-                        <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-left">
-                            {/* Buscador de Agenda del Cliente */}
-                            <div className="relative space-y-2 p-4 bg-slate-950/40 border border-slate-800 rounded-2xl">
-                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">
-                                    Buscar Agenda del Cliente para Autocompletar
-                                </label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        value={agendaSearchQuery}
-                                        onChange={(e) => handleAgendaSearch(e.target.value)}
-                                        placeholder="Buscar por nombre, email, instagram o teléfono..."
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                    />
-                                    {searchingAgendas && (
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Resultados de la Búsqueda */}
-                                {agendaSearchResults.length > 0 && (
-                                    <div className="absolute left-0 right-0 z-50 top-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
-                                        {agendaSearchResults.map((agenda) => (
-                                            <button
-                                                key={agenda.id}
-                                                type="button"
-                                                onClick={() => handleSelectAgenda(agenda)}
-                                                className="w-full text-left px-4 py-3 hover:bg-slate-800/65 border-b border-slate-850/50 transition-colors flex flex-col gap-0.5"
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-bold text-white text-sm">{agenda.lead}</span>
-                                                    <span className="text-[10px] text-slate-405 font-bold uppercase">
-                                                        {agenda.date ? parseUtcIso(agenda.date)?.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'S/F'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-xs text-slate-400">
-                                                    <span>IG: @{agenda.instagram || 'N/A'}</span>
-                                                    <span>Setter: {agenda.nombre || 'N/A'}</span>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Mensaje de Sin Resultados */}
-                                {agendaSearchQuery.trim().length >= 2 && !searchingAgendas && agendaSearchResults.length === 0 && (
-                                    <div className="text-xs text-slate-500 italic mt-1 pl-1">
-                                        No se encontraron agendas coincidentes.
-                                    </div>
-                                )}
-
-                                {/* Indicador de Agenda Seleccionada */}
-                                {selectedAgenda && (
-                                    <div className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-2 rounded-xl mt-2 animate-in fade-in duration-200">
-                                        <div className="space-y-0.5">
-                                            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest block">
-                                                Agenda Vinculada
-                                            </span>
-                                            <span className="text-xs font-semibold text-slate-200">
-                                                {selectedAgenda.lead} • @{selectedAgenda.instagram || 'N/A'}
-                                            </span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleClearSelectedAgenda}
-                                            className="p-1 text-slate-405 hover:text-white bg-slate-850/50 hover:bg-slate-800 rounded-lg transition-all"
-                                            title="Desvincular Agenda"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha de la Venta *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={createData.date}
-                                        onChange={e => setCreateData({...createData, date: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 outline-none transition-all font-semibold cursor-pointer"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nombre del Cliente *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={createData.nombre_cliente}
-                                        onChange={e => setCreateData({...createData, nombre_cliente: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. Juan Pérez"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Instagram (@ usuario)</label>
-                                    <input
-                                        type="text"
-                                        value={createData.instagram}
-                                        onChange={e => setCreateData({...createData, instagram: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. juan_perez"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Email del Cliente</label>
-                                    <input
-                                        type="email"
-                                        value={createData.mail_cliente}
-                                        onChange={e => setCreateData({...createData, mail_cliente: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. juan@gmail.com"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Teléfono del Cliente</label>
-                                    <input
-                                        type="text"
-                                        value={createData.telefono}
-                                        onChange={e => setCreateData({...createData, telefono: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. +34 600 000 000"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Programa *</label>
-                                    <select
-                                        value={createData.programa_custom ? 'otro' : createData.programa}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'otro') {
-                                                setCreateData({ ...createData, programa: '', programa_custom: true });
-                                            } else {
-                                                setCreateData({ ...createData, programa: val, programa_custom: false });
-                                            }
-                                        }}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="RR">Residency Roadmap (RR)</option>
-                                        <option value="AL">Ace Learner (AL)</option>
-                                        <option value="SI">Specialist Initiative (SI)</option>
-                                        <option value="otro">Otro / Agregar nuevo...</option>
-                                    </select>
-                                    {createData.programa_custom && (
-                                        <input
-                                            type="text"
-                                            value={createData.programa}
-                                            onChange={e => setCreateData({...createData, programa: e.target.value})}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
-                                            placeholder="Especificar programa"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Tipo de Pago *</label>
-                                    <select
-                                        value={createData.tipo_pago_custom ? 'otro' : createData.tipo_pago_simple}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'otro') {
-                                                setCreateData({ ...createData, tipo_pago_simple: '', tipo_pago_custom: true });
-                                            } else {
-                                                setCreateData({ ...createData, tipo_pago_simple: val, tipo_pago_custom: false });
-                                            }
-                                        }}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="Seña">Seña</option>
-                                        <option value="Parcial">Parcial</option>
-                                        <option value="Cuota">Cuota</option>
-                                        <option value="Completo">Completo</option>
-                                        <option value="Renovación">Renovación</option>
-                                        <option value="Upsell">Upsell</option>
-                                        <option value="otro">Otro / Agregar nuevo...</option>
-                                    </select>
-                                    {createData.tipo_pago_custom && (
-                                        <input
-                                            type="text"
-                                            value={createData.tipo_pago_simple}
-                                            onChange={e => setCreateData({...createData, tipo_pago_simple: e.target.value})}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
-                                            placeholder="Especificar tipo pago"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Monto Cobrado (USD) *</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        value={createData.monto}
-                                        onChange={e => setCreateData({...createData, monto: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-655 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Método de Pago *</label>
-                                    <select
-                                        value={createData.metodo_pago_custom ? 'otro' : createData.metodo_pago}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'otro') {
-                                                setCreateData({ ...createData, metodo_pago: '', metodo_pago_custom: true });
-                                            } else {
-                                                setCreateData({ ...createData, metodo_pago: val, metodo_pago_custom: false });
-                                            }
-                                        }}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="Stripe">Stripe</option>
-                                        <option value="PayPal">PayPal</option>
-                                        <option value="Binance">Binance</option>
-                                        <option value="Hotmart">Hotmart</option>
-                                        <option value="otro">Otro / Agregar nuevo...</option>
-                                    </select>
-                                    {createData.metodo_pago_custom && (
-                                        <input
-                                            type="text"
-                                            value={createData.metodo_pago}
-                                            onChange={e => setCreateData({...createData, metodo_pago: e.target.value})}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
-                                            placeholder="Especificar método"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Estado *</label>
-                                    <select
-                                        value={createData.estado}
-                                        onChange={e => setCreateData({...createData, estado: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="Completada">Completada</option>
-                                        <option value="Pendiente">Pendiente</option>
-                                        <option value="Reembolsada">Reembolsada</option>
-                                        <option value="Cancelada">Cancelada</option>
-                                    </select>
-                                </div>
-
-
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Closer (Email del Vendedor)</label>
-                                    <select
-                                        value={createData.closer_custom ? 'otro' : createData.email_vendedor}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'otro') {
-                                                setCreateData({ ...createData, email_vendedor: '', closer_custom: true });
-                                            } else {
-                                                setCreateData({ ...createData, email_vendedor: val, closer_custom: false });
-                                            }
-                                        }}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
-                                        <option value="otro">Otro / Agregar nuevo...</option>
-                                    </select>
-                                    {createData.closer_custom && (
-                                        <input
-                                            type="text"
-                                            value={createData.email_vendedor}
-                                            onChange={e => setCreateData({...createData, email_vendedor: e.target.value})}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
-                                            placeholder="ej. closer@neurops.com"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Setter (Fuente)</label>
-                                    <select
-                                        value={createData.setter_custom ? 'otro' : createData.setter_name}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'otro') {
-                                                setCreateData({ ...createData, setter_name: '', setter_custom: true });
-                                            } else {
-                                                setCreateData({ ...createData, setter_name: val, setter_custom: false });
-                                            }
-                                        }}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="workshop">workshop</option>
-                                        <option value="vsl">vsl</option>
-                                        <option value="Elias">Elias</option>
-                                        <option value="otro">Otro / Agregar nuevo...</option>
-                                    </select>
-                                    {createData.setter_custom && (
-                                        <input
-                                            type="text"
-                                            value={createData.setter_name}
-                                            onChange={e => setCreateData({...createData, setter_name: e.target.value})}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
-                                            placeholder="ej. elias"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Examen (ej. USMLE Step 1)</label>
-                                    <input
-                                        type="text"
-                                        value={createData.examen}
-                                        onChange={e => setCreateData({...createData, examen: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. USMLE Step 1"
-                                    />
-                                </div>
-
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha o Info Siguientes Pagos (segundo_pago)</label>
-                                    <input
-                                        type="text"
-                                        value={createData.segundo_pago}
-                                        onChange={e => setCreateData({...createData, segundo_pago: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. Cobro de $500 programado para el 15/06"
-                                    />
-                                </div>
-
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Notas / Observaciones</label>
-                                    <textarea
-                                        value={createData.notas}
-                                        onChange={e => setCreateData({...createData, notas: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold min-h-[80px] resize-none"
-                                        placeholder="Observaciones de la venta..."
-                                    />
-                                </div>
-
-                                {/* Switch de Automatización */}
-                                <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-850/80">
-                                    <div className="space-y-0.5 text-left">
-                                        <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest block">Enviar mensaje de WhatsApp</label>
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">Activar o desactivar el envío de mensaje al cliente tras registrar la venta</span>
-                                    </div>
+                        {/* Resultados de la Búsqueda */}
+                        {agendaSearchResults.length > 0 && (
+                            <div className="absolute left-0 right-0 z-50 top-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
+                                {agendaSearchResults.map((agenda) => (
                                     <button
+                                        key={agenda.id}
                                         type="button"
-                                        onClick={() => setCreateData({ ...createData, enviar_mensaje: !createData.enviar_mensaje })}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                            createData.enviar_mensaje ? 'bg-indigo-600' : 'bg-slate-700'
-                                        }`}
+                                        onClick={() => handleSelectAgenda(agenda)}
+                                        className="w-full text-left px-4 py-3 hover:bg-slate-800/65 border-b border-slate-850/50 transition-colors flex flex-col gap-0.5"
                                     >
-                                        <span
-                                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                createData.enviar_mensaje ? 'translate-x-5' : 'translate-x-0'
-                                            }`}
-                                        />
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-white text-sm">{agenda.lead}</span>
+                                            <span className="text-[10px] text-slate-405 font-bold uppercase">
+                                                {agenda.date ? parseUtcIso(agenda.date)?.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'S/F'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs text-slate-400">
+                                            <span>IG: @{agenda.instagram || 'N/A'}</span>
+                                            <span>Setter: {agenda.nombre || 'N/A'}</span>
+                                        </div>
                                     </button>
-                                </div>
+                                ))}
                             </div>
+                        )}
 
-                            <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
-                                <button type="button" onClick={handleCloseCreateModal} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">
-                                    Cancelar
-                                </button>
-                                <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20">
-                                    Registrar Venta
+                        {/* Mensaje de Sin Resultados */}
+                        {agendaSearchQuery.trim().length >= 2 && !searchingAgendas && agendaSearchResults.length === 0 && (
+                            <div className="text-xs text-slate-500 italic mt-1 pl-1">
+                                No se encontraron agendas coincidentes.
+                            </div>
+                        )}
+
+                        {/* Indicador de Agenda Seleccionada */}
+                        {selectedAgenda && (
+                            <div className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-2 rounded-xl mt-2 animate-in fade-in duration-200">
+                                <div className="space-y-0.5">
+                                    <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest block">
+                                        Agenda Vinculada
+                                    </span>
+                                    <span className="text-xs font-semibold text-slate-200">
+                                        {selectedAgenda.lead} • @{selectedAgenda.instagram || 'N/A'}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleClearSelectedAgenda}
+                                    className="p-1 text-slate-405 hover:text-white bg-slate-850/50 hover:bg-slate-800 rounded-lg transition-all"
+                                    title="Desvincular Agenda"
+                                >
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
-                        </form>
+                        )}
                     </div>
-                </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha de la Venta *</label>
+                            <input
+                                type="date"
+                                required
+                                value={createData.date}
+                                onChange={e => setCreateData({...createData, date: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 outline-none transition-all font-semibold cursor-pointer"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nombre del Cliente *</label>
+                            <input
+                                type="text"
+                                required
+                                value={createData.nombre_cliente}
+                                onChange={e => setCreateData({...createData, nombre_cliente: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. Juan Pérez"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Instagram (@ usuario)</label>
+                            <input
+                                type="text"
+                                value={createData.instagram}
+                                onChange={e => setCreateData({...createData, instagram: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. juan_perez"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Email del Cliente</label>
+                            <input
+                                type="email"
+                                value={createData.mail_cliente}
+                                onChange={e => setCreateData({...createData, mail_cliente: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. juan@gmail.com"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Teléfono del Cliente</label>
+                            <input
+                                type="text"
+                                value={createData.telefono}
+                                onChange={e => setCreateData({...createData, telefono: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. +34 600 000 000"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Programa *</label>
+                            <select
+                                value={createData.programa_custom ? 'otro' : createData.programa}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === 'otro') {
+                                        setCreateData({ ...createData, programa: '', programa_custom: true });
+                                    } else {
+                                        setCreateData({ ...createData, programa: val, programa_custom: false });
+                                    }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar...</option>
+                                <option value="RR">Residency Roadmap (RR)</option>
+                                <option value="AL">Ace Learner (AL)</option>
+                                <option value="SI">Specialist Initiative (SI)</option>
+                                <option value="otro">Otro / Agregar nuevo...</option>
+                            </select>
+                            {createData.programa_custom && (
+                                <input
+                                    type="text"
+                                    value={createData.programa}
+                                    onChange={e => setCreateData({...createData, programa: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
+                                    placeholder="Especificar programa"
+                                />
+                            )}
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Tipo de Pago *</label>
+                            <select
+                                value={createData.tipo_pago_custom ? 'otro' : createData.tipo_pago_simple}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === 'otro') {
+                                        setCreateData({ ...createData, tipo_pago_simple: '', tipo_pago_custom: true });
+                                    } else {
+                                        setCreateData({ ...createData, tipo_pago_simple: val, tipo_pago_custom: false });
+                                    }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar...</option>
+                                <option value="Seña">Seña</option>
+                                <option value="Parcial">Parcial</option>
+                                <option value="Cuota">Cuota</option>
+                                <option value="Completo">Completo</option>
+                                <option value="Renovación">Renovación</option>
+                                <option value="Upsell">Upsell</option>
+                                <option value="otro">Otro / Agregar nuevo...</option>
+                            </select>
+                            {createData.tipo_pago_custom && (
+                                <input
+                                    type="text"
+                                    value={createData.tipo_pago_simple}
+                                    onChange={e => setCreateData({...createData, tipo_pago_simple: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
+                                    placeholder="Especificar tipo pago"
+                                />
+                            )}
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Monto Cobrado (USD) *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                required
+                                value={createData.monto}
+                                onChange={e => setCreateData({...createData, monto: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-655 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="0.00"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Método de Pago *</label>
+                            <select
+                                value={createData.metodo_pago_custom ? 'otro' : createData.metodo_pago}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === 'otro') {
+                                        setCreateData({ ...createData, metodo_pago: '', metodo_pago_custom: true });
+                                    } else {
+                                        setCreateData({ ...createData, metodo_pago: val, metodo_pago_custom: false });
+                                    }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar...</option>
+                                <option value="Stripe">Stripe</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Binance">Binance</option>
+                                <option value="Hotmart">Hotmart</option>
+                                <option value="otro">Otro / Agregar nuevo...</option>
+                            </select>
+                            {createData.metodo_pago_custom && (
+                                <input
+                                    type="text"
+                                    value={createData.metodo_pago}
+                                    onChange={e => setCreateData({...createData, metodo_pago: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                    placeholder="Especificar método"
+                                />
+                            )}
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Estado *</label>
+                            <select
+                                value={createData.estado}
+                                onChange={e => setCreateData({...createData, estado: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="Completada">Completada</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Reembolsada">Reembolsada</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+
+
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Closer (Email del Vendedor)</label>
+                            <select
+                                value={createData.closer_custom ? 'otro' : createData.email_vendedor}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === 'otro') {
+                                        setCreateData({ ...createData, email_vendedor: '', closer_custom: true });
+                                    } else {
+                                        setCreateData({ ...createData, email_vendedor: val, closer_custom: false });
+                                    }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar...</option>
+                                <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
+                                <option value="otro">Otro / Agregar nuevo...</option>
+                            </select>
+                            {createData.closer_custom && (
+                                <input
+                                    type="text"
+                                    value={createData.email_vendedor}
+                                    onChange={e => setCreateData({...createData, email_vendedor: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                    placeholder="ej. closer@neurops.com"
+                                />
+                            )}
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Setter (Fuente)</label>
+                            <select
+                                value={createData.setter_custom ? 'otro' : createData.setter_name}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === 'otro') {
+                                        setCreateData({ ...createData, setter_name: '', setter_custom: true });
+                                    } else {
+                                        setCreateData({ ...createData, setter_name: val, setter_custom: false });
+                                    }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar...</option>
+                                <option value="workshop">workshop</option>
+                                <option value="vsl">vsl</option>
+                                <option value="Elias">Elias</option>
+                                <option value="otro">Otro / Agregar nuevo...</option>
+                            </select>
+                            {createData.setter_custom && (
+                                <input
+                                    type="text"
+                                    value={createData.setter_name}
+                                    onChange={e => setCreateData({...createData, setter_name: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                    placeholder="ej. elias"
+                                />
+                            )}
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Examen (ej. USMLE Step 1)</label>
+                            <input
+                                type="text"
+                                value={createData.examen}
+                                onChange={e => setCreateData({...createData, examen: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. USMLE Step 1"
+                            />
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha o Info Siguientes Pagos (segundo_pago)</label>
+                            <input
+                                type="text"
+                                value={createData.segundo_pago}
+                                onChange={e => setCreateData({...createData, segundo_pago: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                placeholder="ej. Cobro de $500 programado para el 15/06"
+                            />
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Notas / Observaciones</label>
+                            <textarea
+                                value={createData.notas}
+                                onChange={e => setCreateData({...createData, notas: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold min-h-[80px] resize-none"
+                                placeholder="Observaciones de la venta..."
+                            />
+                        </div>
+
+                        {/* Switch de Automatización */}
+                        <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-850/80">
+                            <div className="space-y-0.5 text-left">
+                                <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest block">Enviar mensaje de WhatsApp</label>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">Activar o desactivar el envío de mensaje al cliente tras registrar la venta</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setCreateData({ ...createData, enviar_mensaje: !createData.enviar_mensaje })}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    createData.enviar_mensaje ? 'bg-indigo-600' : 'bg-slate-700'
+                                }`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        createData.enviar_mensaje ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             )}
 
             <LeadRoadmapModal 
@@ -2806,298 +2801,16 @@ const PublicFinancialSalesPage = () => {
 
             {/* Modal de Modificación Masiva */}
             {showBulkEditModal && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden animate-in zoom-in duration-300">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                        
-                        <div>
-                            <h2 className="text-xl font-black text-white flex items-center gap-2">
-                                <Edit2 className="text-indigo-400 w-5 h-5" />
-                                Modificación Masiva
-                            </h2>
-                            <p className="text-xs text-slate-400 mt-1">
-                                Aplicá un mismo valor a varias ventas de una sola vez.
-                            </p>
-                        </div>
-
-                        {/* Alcance: las tildadas o todo el recorte filtrado */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">¿A cuáles se aplica?</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    disabled={selectedSaleIds.length === 0}
-                                    onClick={() => setBulkScope('seleccion')}
-                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                                        bulkScope === 'seleccion'
-                                            ? 'bg-indigo-600/20 border-indigo-500/40 text-white'
-                                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                                    }`}
-                                >
-                                    <span className="block text-[9px] font-black uppercase tracking-widest">Seleccionadas</span>
-                                    <span className="block text-2xl font-black italic tracking-tighter">{selectedSaleIds.length}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setBulkScope('filtro')}
-                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                                        bulkScope === 'filtro'
-                                            ? 'bg-amber-600/20 border-amber-500/40 text-white'
-                                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                                    }`}
-                                >
-                                    <span className="block text-[9px] font-black uppercase tracking-widest">Todo el filtro</span>
-                                    <span className="block text-2xl font-black italic tracking-tighter">{totalSalesCount}</span>
-                                </button>
-                            </div>
-                            {bulkPorFiltro && (
-                                <p className="text-[10px] text-amber-300/80 font-semibold bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
-                                    Se aplica a todas las ventas del recorte actual, incluidas las que todavía
-                                    no se cargaron en pantalla. La corrección queda guardada al instante en
-                                    NeurOPS y Google Sheets se pone al día unos segundos después.
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Campo a Modificar</label>
-                                <select
-                                    value={bulkEditField}
-                                    onChange={(e) => {
-                                        setBulkEditField(e.target.value);
-                                        setBulkEditValue('');
-                                        setBulkEditValueCustom(false);
-                                    }}
-                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                >
-                                    <option value="">Seleccionar campo...</option>
-                                    <option value="programa">Programa</option>
-                                    <option value="tipo_pago_simple">Tipo de Pago</option>
-                                    <option value="metodo_pago">Método de Pago</option>
-                                    <option value="estado">Estado</option>
-                                    <option value="email_vendedor">Closer (Email Vendedor)</option>
-                                    <option value="setter">Setter (Fuente)</option>
-                                </select>
-                            </div>
-
-                            {bulkEditField && (
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nuevo Valor</label>
-                                    {bulkEditField === 'programa' && (
-                                        <>
-                                            <select
-                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === 'otro') {
-                                                        setBulkEditValue('');
-                                                        setBulkEditValueCustom(true);
-                                                    } else {
-                                                        setBulkEditValue(val);
-                                                        setBulkEditValueCustom(false);
-                                                    }
-                                                }}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                            >
-                                                <option value="">Seleccionar programa...</option>
-                                                <option value="RR">Residency Roadmap (RR)</option>
-                                                <option value="AL">Ace Learner (AL)</option>
-                                                <option value="SI">Specialist Initiative (SI)</option>
-                                                <option value="otro">Otro / Especificar nuevo...</option>
-                                            </select>
-                                            {bulkEditValueCustom && (
-                                                <input
-                                                    type="text"
-                                                    value={bulkEditValue}
-                                                    onChange={e => setBulkEditValue(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
-                                                    placeholder="Especificar programa"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-
-                                    {bulkEditField === 'tipo_pago_simple' && (
-                                        <>
-                                            <select
-                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === 'otro') {
-                                                        setBulkEditValue('');
-                                                        setBulkEditValueCustom(true);
-                                                    } else {
-                                                        setBulkEditValue(val);
-                                                        setBulkEditValueCustom(false);
-                                                    }
-                                                }}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                            >
-                                                <option value="">Seleccionar tipo pago...</option>
-                                                <option value="Seña">Seña</option>
-                                                <option value="Parcial">Parcial</option>
-                                                <option value="Cuota">Cuota</option>
-                                                <option value="Completo">Completo</option>
-                                                <option value="Renovación">Renovación</option>
-                                                <option value="Upsell">Upsell</option>
-                                                <option value="otro">Otro / Especificar nuevo...</option>
-                                            </select>
-                                            {bulkEditValueCustom && (
-                                                <input
-                                                    type="text"
-                                                    value={bulkEditValue}
-                                                    onChange={e => setBulkEditValue(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
-                                                    placeholder="Especificar tipo pago"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-
-                                    {bulkEditField === 'metodo_pago' && (
-                                        <>
-                                            <select
-                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === 'otro') {
-                                                        setBulkEditValue('');
-                                                        setBulkEditValueCustom(true);
-                                                    } else {
-                                                        setBulkEditValue(val);
-                                                        setBulkEditValueCustom(false);
-                                                    }
-                                                }}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                            >
-                                                <option value="">Seleccionar método...</option>
-                                                <option value="Stripe">Stripe</option>
-                                                <option value="PayPal">PayPal</option>
-                                                <option value="Binance">Binance</option>
-                                                <option value="Hotmart">Hotmart</option>
-                                                <option value="otro">Otro / Especificar nuevo...</option>
-                                            </select>
-                                            {bulkEditValueCustom && (
-                                                <input
-                                                    type="text"
-                                                    value={bulkEditValue}
-                                                    onChange={e => setBulkEditValue(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
-                                                    placeholder="Especificar método"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-
-                                    {bulkEditField === 'estado' && (
-                                        <select
-                                            value={bulkEditValue}
-                                            onChange={e => setBulkEditValue(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                        >
-                                            <option value="">Seleccionar estado...</option>
-                                            <option value="Completada">Completada</option>
-                                            <option value="Pendiente">Pendiente</option>
-                                            <option value="Reembolsada">Reembolsada</option>
-                                            <option value="Cancelada">Cancelada</option>
-                                        </select>
-                                    )}
-
-                                    {bulkEditField === 'email_vendedor' && (
-                                        <>
-                                            <select
-                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === 'otro') {
-                                                        setBulkEditValue('');
-                                                        setBulkEditValueCustom(true);
-                                                    } else {
-                                                        setBulkEditValue(val);
-                                                        setBulkEditValueCustom(false);
-                                                    }
-                                                }}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                            >
-                                                <option value="">Seleccionar closer...</option>
-                                                {/* Antes acá solo estaba Jean Carlo escrito a mano. Se usan los
-                                                    mismos closers que ofrece el filtro, resueltos a nombre único. */}
-                                                {uniqueClosers.filter(c => c !== 'Sin Closer').map(c => (
-                                                    <option key={c} value={c}>{c}</option>
-                                                ))}
-                                                <option value="otro">Otro / Especificar email...</option>
-                                            </select>
-                                            {bulkEditValueCustom && (
-                                                <input
-                                                    type="email"
-                                                    value={bulkEditValue}
-                                                    onChange={e => setBulkEditValue(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
-                                                    placeholder="ej. closer@neurops.com"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-
-                                    {bulkEditField === 'setter' && (
-                                        <>
-                                            <select
-                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === 'otro') {
-                                                        setBulkEditValue('');
-                                                        setBulkEditValueCustom(true);
-                                                    } else {
-                                                        setBulkEditValue(val);
-                                                        setBulkEditValueCustom(false);
-                                                    }
-                                                }}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
-                                            >
-                                                <option value="">Seleccionar setter...</option>
-                                                {/* Antes estaban escritas a mano workshop/vsl/Elias. Se usan las
-                                                    fuentes que existen en el recorte, que ya incluyen el catálogo
-                                                    oficial (workshop, workshop_landing, vsl, setting, y los setters). */}
-                                                {uniqueSetters.filter(x => x !== 'Sin Setter').map(x => (
-                                                    <option key={x} value={x}>{x}</option>
-                                                ))}
-                                                <option value="otro">Otro / Especificar nuevo...</option>
-                                            </select>
-                                            {bulkEditValueCustom && (
-                                                <input
-                                                    type="text"
-                                                    value={bulkEditValue}
-                                                    onChange={e => setBulkEditValue(e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
-                                                    placeholder="Especificar setter"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* El modo "todo el filtro" puede tocar cientos de ventas de una vez,
-                            así que pide confirmación escrita antes de habilitar el botón. */}
-                        {bulkPorFiltro && (
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">
-                                    Escribí APLICAR para confirmar
-                                </label>
-                                <input
-                                    type="text"
-                                    value={bulkConfirm}
-                                    onChange={e => setBulkConfirm(e.target.value)}
-                                    placeholder="APLICAR"
-                                    className="w-full bg-slate-950 border border-amber-700/40 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all font-black tracking-widest uppercase"
-                                />
-                            </div>
-                        )}
-
-                        <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
+                <Modal
+                    ancho="md"
+                    titulo="Modificación Masiva"
+                    subtitulo="Aplicá un mismo valor a varias ventas de una sola vez."
+                    icono={<Edit2 className="text-indigo-400 w-5 h-5" />}
+                    onCerrar={cerrarBulkModal}
+                    cerrable={!bulkUpdating}
+                    cuerpoClassName="space-y-6"
+                    pie={(
+                        <>
                             <button
                                 type="button"
                                 onClick={cerrarBulkModal}
@@ -3113,185 +2826,301 @@ const PublicFinancialSalesPage = () => {
                             >
                                 {bulkUpdating ? 'Actualizando...' : `Aplicar a ${bulkPorFiltro ? totalSalesCount : selectedSaleIds.length}`}
                             </button>
+                        </>
+                    )}
+                >
+                    {/* La franja de color de arriba del panel: es `absolute` respecto del panel, así
+                        que no se va con el scroll del cuerpo. */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                    {/* Alcance: las tildadas o todo el recorte filtrado */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">¿A cuáles se aplica?</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                disabled={selectedSaleIds.length === 0}
+                                onClick={() => setBulkScope('seleccion')}
+                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                                    bulkScope === 'seleccion'
+                                        ? 'bg-indigo-600/20 border-indigo-500/40 text-white'
+                                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                }`}
+                            >
+                                <span className="block text-[9px] font-black uppercase tracking-widest">Seleccionadas</span>
+                                <span className="block text-2xl font-black italic tracking-tighter">{selectedSaleIds.length}</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBulkScope('filtro')}
+                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                    bulkScope === 'filtro'
+                                        ? 'bg-amber-600/20 border-amber-500/40 text-white'
+                                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                }`}
+                            >
+                                <span className="block text-[9px] font-black uppercase tracking-widest">Todo el filtro</span>
+                                <span className="block text-2xl font-black italic tracking-tighter">{totalSalesCount}</span>
+                            </button>
                         </div>
+                        {bulkPorFiltro && (
+                            <p className="text-[10px] text-amber-300/80 font-semibold bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                                Se aplica a todas las ventas del recorte actual, incluidas las que todavía
+                                no se cargaron en pantalla. La corrección queda guardada al instante en
+                                NeurOPS y Google Sheets se pone al día unos segundos después.
+                            </p>
+                        )}
                     </div>
-                </div>
+
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Campo a Modificar</label>
+                            <select
+                                value={bulkEditField}
+                                onChange={(e) => {
+                                    setBulkEditField(e.target.value);
+                                    setBulkEditValue('');
+                                    setBulkEditValueCustom(false);
+                                }}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="">Seleccionar campo...</option>
+                                <option value="programa">Programa</option>
+                                <option value="tipo_pago_simple">Tipo de Pago</option>
+                                <option value="metodo_pago">Método de Pago</option>
+                                <option value="estado">Estado</option>
+                                <option value="email_vendedor">Closer (Email Vendedor)</option>
+                                <option value="setter">Setter (Fuente)</option>
+                            </select>
+                        </div>
+
+                        {bulkEditField && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nuevo Valor</label>
+                                {bulkEditField === 'programa' && (
+                                    <>
+                                        <select
+                                            value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'otro') {
+                                                    setBulkEditValue('');
+                                                    setBulkEditValueCustom(true);
+                                                } else {
+                                                    setBulkEditValue(val);
+                                                    setBulkEditValueCustom(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar programa...</option>
+                                            <option value="RR">Residency Roadmap (RR)</option>
+                                            <option value="AL">Ace Learner (AL)</option>
+                                            <option value="SI">Specialist Initiative (SI)</option>
+                                            <option value="otro">Otro / Especificar nuevo...</option>
+                                        </select>
+                                        {bulkEditValueCustom && (
+                                            <input
+                                                type="text"
+                                                value={bulkEditValue}
+                                                onChange={e => setBulkEditValue(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                placeholder="Especificar programa"
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {bulkEditField === 'tipo_pago_simple' && (
+                                    <>
+                                        <select
+                                            value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'otro') {
+                                                    setBulkEditValue('');
+                                                    setBulkEditValueCustom(true);
+                                                } else {
+                                                    setBulkEditValue(val);
+                                                    setBulkEditValueCustom(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar tipo pago...</option>
+                                            <option value="Seña">Seña</option>
+                                            <option value="Parcial">Parcial</option>
+                                            <option value="Cuota">Cuota</option>
+                                            <option value="Completo">Completo</option>
+                                            <option value="Renovación">Renovación</option>
+                                            <option value="Upsell">Upsell</option>
+                                            <option value="otro">Otro / Especificar nuevo...</option>
+                                        </select>
+                                        {bulkEditValueCustom && (
+                                            <input
+                                                type="text"
+                                                value={bulkEditValue}
+                                                onChange={e => setBulkEditValue(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                placeholder="Especificar tipo pago"
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {bulkEditField === 'metodo_pago' && (
+                                    <>
+                                        <select
+                                            value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'otro') {
+                                                    setBulkEditValue('');
+                                                    setBulkEditValueCustom(true);
+                                                } else {
+                                                    setBulkEditValue(val);
+                                                    setBulkEditValueCustom(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar método...</option>
+                                            <option value="Stripe">Stripe</option>
+                                            <option value="PayPal">PayPal</option>
+                                            <option value="Binance">Binance</option>
+                                            <option value="Hotmart">Hotmart</option>
+                                            <option value="otro">Otro / Especificar nuevo...</option>
+                                        </select>
+                                        {bulkEditValueCustom && (
+                                            <input
+                                                type="text"
+                                                value={bulkEditValue}
+                                                onChange={e => setBulkEditValue(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                placeholder="Especificar método"
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {bulkEditField === 'estado' && (
+                                    <select
+                                        value={bulkEditValue}
+                                        onChange={e => setBulkEditValue(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="">Seleccionar estado...</option>
+                                        <option value="Completada">Completada</option>
+                                        <option value="Pendiente">Pendiente</option>
+                                        <option value="Reembolsada">Reembolsada</option>
+                                        <option value="Cancelada">Cancelada</option>
+                                    </select>
+                                )}
+
+                                {bulkEditField === 'email_vendedor' && (
+                                    <>
+                                        <select
+                                            value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'otro') {
+                                                    setBulkEditValue('');
+                                                    setBulkEditValueCustom(true);
+                                                } else {
+                                                    setBulkEditValue(val);
+                                                    setBulkEditValueCustom(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar closer...</option>
+                                            {/* Antes acá solo estaba Jean Carlo escrito a mano. Se usan los
+                                                mismos closers que ofrece el filtro, resueltos a nombre único. */}
+                                            {uniqueClosers.filter(c => c !== 'Sin Closer').map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                            <option value="otro">Otro / Especificar email...</option>
+                                        </select>
+                                        {bulkEditValueCustom && (
+                                            <input
+                                                type="email"
+                                                value={bulkEditValue}
+                                                onChange={e => setBulkEditValue(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                placeholder="ej. closer@neurops.com"
+                                            />
+                                        )}
+                                    </>
+                                )}
+
+                                {bulkEditField === 'setter' && (
+                                    <>
+                                        <select
+                                            value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'otro') {
+                                                    setBulkEditValue('');
+                                                    setBulkEditValueCustom(true);
+                                                } else {
+                                                    setBulkEditValue(val);
+                                                    setBulkEditValueCustom(false);
+                                                }
+                                            }}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar setter...</option>
+                                            {/* Antes estaban escritas a mano workshop/vsl/Elias. Se usan las
+                                                fuentes que existen en el recorte, que ya incluyen el catálogo
+                                                oficial (workshop, workshop_landing, vsl, setting, y los setters). */}
+                                            {uniqueSetters.filter(x => x !== 'Sin Setter').map(x => (
+                                                <option key={x} value={x}>{x}</option>
+                                            ))}
+                                            <option value="otro">Otro / Especificar nuevo...</option>
+                                        </select>
+                                        {bulkEditValueCustom && (
+                                            <input
+                                                type="text"
+                                                value={bulkEditValue}
+                                                onChange={e => setBulkEditValue(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                placeholder="Especificar setter"
+                                            />
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* El modo "todo el filtro" puede tocar cientos de ventas de una vez,
+                        así que pide confirmación escrita antes de habilitar el botón. */}
+                    {bulkPorFiltro && (
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">
+                                Escribí APLICAR para confirmar
+                            </label>
+                            <input
+                                type="text"
+                                value={bulkConfirm}
+                                onChange={e => setBulkConfirm(e.target.value)}
+                                placeholder="APLICAR"
+                                className="w-full bg-slate-950 border border-amber-700/40 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition-all font-black tracking-widest uppercase"
+                            />
+                        </div>
+                    )}
+                </Modal>
             )}
 
             {/* Modal: Configuración de exportación de pagos */}
             {showPaymentExportModal && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-base font-black text-white tracking-wide">Exportar Pagos</h2>
-                                <p className="text-xs text-slate-400 mt-0.5">Configura qué incluir en el CSV</p>
-                            </div>
-                            <button
-                                onClick={() => setShowPaymentExportModal(false)}
-                                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-all"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* Tipos de pago */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tipos de pago a incluir</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setPaymentExportTypes(uniquePaymentTypes.length > 0 ? uniquePaymentTypes : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'])}
-                                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
-                                    >
-                                        Todos
-                                    </button>
-                                    <span className="text-slate-600">·</span>
-                                    <button
-                                        onClick={() => setPaymentExportTypes([])}
-                                        className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
-                                    >
-                                        Ninguno
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {(uniquePaymentTypes.length > 0
-                                    ? uniquePaymentTypes
-                                    : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell']
-                                ).map(tipo => {
-                                    const isSelected = paymentExportTypes.some(t => t.toLowerCase() === tipo.toLowerCase());
-                                    return (
-                                        <button
-                                            key={tipo}
-                                            onClick={() => {
-                                                if (isSelected) {
-                                                    setPaymentExportTypes(prev => prev.filter(t => t.toLowerCase() !== tipo.toLowerCase()));
-                                                } else {
-                                                    setPaymentExportTypes(prev => [...prev, tipo]);
-                                                }
-                                            }}
-                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
-                                                isSelected
-                                                    ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
-                                                    : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                                            }`}
-                                        >
-                                            <span className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-600'}`}>
-                                                {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                            </span>
-                                            {tipo}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {paymentExportTypes.length === 0 && (
-                                <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                                    Sin selección = se exportan todos los tipos
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Agrupar por Lead */}
-                        <div className="border-t border-slate-800 pt-4">
-                            <button
-                                onClick={() => setPaymentExportGroupByLead(v => !v)}
-                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
-                                    paymentExportGroupByLead
-                                        ? 'bg-violet-600/20 border-violet-500/50'
-                                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-                                }`}
-                            >
-                                <div className="text-left">
-                                    <p className={`text-sm font-bold ${paymentExportGroupByLead ? 'text-violet-300' : 'text-slate-300'}`}>
-                                        Agrupar por Lead
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        {paymentExportGroupByLead
-                                            ? 'Una fila por lead con total y tipos combinados'
-                                            : 'Una fila por pago (vista detallada)'}
-                                    </p>
-                                </div>
-                                <div className={`w-10 h-5.5 rounded-full flex items-center transition-all px-0.5 ${paymentExportGroupByLead ? 'bg-violet-600' : 'bg-slate-700'}`}>
-                                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${paymentExportGroupByLead ? 'translate-x-4' : 'translate-x-0'}`} />
-                                </div>
-                            </button>
-                        </div>
-
-                        {/* Columnas a Exportar */}
-                        <div className="space-y-2 border-t border-slate-800 pt-4">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Columnas a exportar</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => {
-                                            if (paymentExportGroupByLead) {
-                                                setSelectedGroupedCols(GROUPED_COLUMNS.map(c => c.id));
-                                            } else {
-                                                setSelectedIndividualCols(INDIVIDUAL_COLUMNS.map(c => c.id));
-                                            }
-                                        }}
-                                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
-                                    >
-                                        Todas
-                                    </button>
-                                    <span className="text-slate-600">·</span>
-                                    <button
-                                        onClick={() => {
-                                            if (paymentExportGroupByLead) {
-                                                setSelectedGroupedCols([]);
-                                            } else {
-                                                setSelectedIndividualCols([]);
-                                            }
-                                        }}
-                                        className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
-                                    >
-                                        Ninguna
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                                {(paymentExportGroupByLead ? GROUPED_COLUMNS : INDIVIDUAL_COLUMNS).map(col => {
-                                    const isSelected = paymentExportGroupByLead
-                                        ? selectedGroupedCols.includes(col.id)
-                                        : selectedIndividualCols.includes(col.id);
-                                    return (
-                                        <button
-                                            key={col.id}
-                                            onClick={() => {
-                                                if (paymentExportGroupByLead) {
-                                                    setSelectedGroupedCols(prev =>
-                                                        isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
-                                                    );
-                                                } else {
-                                                    setSelectedIndividualCols(prev =>
-                                                        isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
-                                                    );
-                                                }
-                                            }}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                                                isSelected
-                                                    ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
-                                                    : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                                            }`}
-                                        >
-                                            <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
-                                                {isSelected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                            </span>
-                                            <span className="truncate">{col.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {((paymentExportGroupByLead ? selectedGroupedCols : selectedIndividualCols).length === 0) && (
-                                <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                                    Debes seleccionar al menos una columna para exportar.
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Botones */}
-                        <div className="flex gap-3 pt-1">
+                <Modal
+                    ancho="md"
+                    titulo="Exportar Pagos"
+                    subtitulo="Configura qué incluir en el CSV"
+                    onCerrar={() => setShowPaymentExportModal(false)}
+                    cuerpoClassName="space-y-5"
+                    pie={(
+                        <>
                             <button
                                 onClick={() => setShowPaymentExportModal(false)}
                                 className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all"
@@ -3308,9 +3137,166 @@ const PublicFinancialSalesPage = () => {
                                 <Download size={15} />
                                 Exportar CSV
                             </button>
+                        </>
+                    )}
+                >
+                    {/* Tipos de pago */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tipos de pago a incluir</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPaymentExportTypes(uniquePaymentTypes.length > 0 ? uniquePaymentTypes : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell'])}
+                                    className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
+                                >
+                                    Todos
+                                </button>
+                                <span className="text-slate-600">·</span>
+                                <button
+                                    onClick={() => setPaymentExportTypes([])}
+                                    className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
+                                >
+                                    Ninguno
+                                </button>
+                            </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {(uniquePaymentTypes.length > 0
+                                ? uniquePaymentTypes
+                                : ['Completo', 'Seña', 'Cuota', 'Parcial', 'Renovación', 'Upsell']
+                            ).map(tipo => {
+                                const isSelected = paymentExportTypes.some(t => t.toLowerCase() === tipo.toLowerCase());
+                                return (
+                                    <button
+                                        key={tipo}
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                setPaymentExportTypes(prev => prev.filter(t => t.toLowerCase() !== tipo.toLowerCase()));
+                                            } else {
+                                                setPaymentExportTypes(prev => [...prev, tipo]);
+                                            }
+                                        }}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                                            isSelected
+                                                ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                                                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <span className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-600'}`}>
+                                            {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                        </span>
+                                        {tipo}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {paymentExportTypes.length === 0 && (
+                            <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                Sin selección = se exportan todos los tipos
+                            </p>
+                        )}
                     </div>
-                </div>
+
+                    {/* Agrupar por Lead */}
+                    <div className="border-t border-slate-800 pt-4">
+                        <button
+                            onClick={() => setPaymentExportGroupByLead(v => !v)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
+                                paymentExportGroupByLead
+                                    ? 'bg-violet-600/20 border-violet-500/50'
+                                    : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                            }`}
+                        >
+                            <div className="text-left">
+                                <p className={`text-sm font-bold ${paymentExportGroupByLead ? 'text-violet-300' : 'text-slate-300'}`}>
+                                    Agrupar por Lead
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {paymentExportGroupByLead
+                                        ? 'Una fila por lead con total y tipos combinados'
+                                        : 'Una fila por pago (vista detallada)'}
+                                </p>
+                            </div>
+                            <div className={`w-10 h-5.5 rounded-full flex items-center transition-all px-0.5 ${paymentExportGroupByLead ? 'bg-violet-600' : 'bg-slate-700'}`}>
+                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${paymentExportGroupByLead ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Columnas a Exportar */}
+                    <div className="space-y-2 border-t border-slate-800 pt-4">
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Columnas a exportar</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        if (paymentExportGroupByLead) {
+                                            setSelectedGroupedCols(GROUPED_COLUMNS.map(c => c.id));
+                                        } else {
+                                            setSelectedIndividualCols(INDIVIDUAL_COLUMNS.map(c => c.id));
+                                        }
+                                    }}
+                                    className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider"
+                                >
+                                    Todas
+                                </button>
+                                <span className="text-slate-600">·</span>
+                                <button
+                                    onClick={() => {
+                                        if (paymentExportGroupByLead) {
+                                            setSelectedGroupedCols([]);
+                                        } else {
+                                            setSelectedIndividualCols([]);
+                                        }
+                                    }}
+                                    className="text-[10px] text-slate-400 hover:text-slate-300 font-bold uppercase tracking-wider"
+                                >
+                                    Ninguna
+                                </button>
+                            </div>
+                        </div>
+                        {/* Sin scroll propio: ya scrollea el cuerpo del modal, y dos barras una
+                            dentro de otra en una pantalla baja no dejaban ver casi ninguna columna. */}
+                        <div className="grid grid-cols-2 gap-2">
+                            {(paymentExportGroupByLead ? GROUPED_COLUMNS : INDIVIDUAL_COLUMNS).map(col => {
+                                const isSelected = paymentExportGroupByLead
+                                    ? selectedGroupedCols.includes(col.id)
+                                    : selectedIndividualCols.includes(col.id);
+                                return (
+                                    <button
+                                        key={col.id}
+                                        onClick={() => {
+                                            if (paymentExportGroupByLead) {
+                                                setSelectedGroupedCols(prev =>
+                                                    isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
+                                                );
+                                            } else {
+                                                setSelectedIndividualCols(prev =>
+                                                    isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
+                                                );
+                                            }
+                                        }}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                                            isSelected
+                                                ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
+                                                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border flex-shrink-0 transition-all ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
+                                            {isSelected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                        </span>
+                                        <span className="truncate">{col.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {((paymentExportGroupByLead ? selectedGroupedCols : selectedIndividualCols).length === 0) && (
+                            <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                Debes seleccionar al menos una columna para exportar.
+                            </p>
+                        )}
+                    </div>
+                </Modal>
             )}
         </div>
     );
