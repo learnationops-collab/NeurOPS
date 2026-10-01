@@ -92,6 +92,7 @@ describe('Clientes · los dados de baja', () => {
 
         expect(total('clientes').querySelector('b')).toHaveTextContent('1');
         expect(total('clientes').textContent).toMatch(/1 de baja/);
+        expect(total('clientes').textContent).not.toMatch(/al día/);
         expect(total('cobrado').querySelector('b')).toHaveTextContent('$400');
     });
 });

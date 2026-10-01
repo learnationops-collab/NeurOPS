@@ -68,6 +68,8 @@ describe('Totales · Clientes', () => {
         expect(registros()).toHaveLength(3);
         expect(valor('clientes')).toBe('3');
         expect(mostrando()).toBe('mostrando 3 de 5');
+        // Todos deben: la bajada no dice "0 al día".
+        expect(celda('clientes').textContent).not.toMatch(/al día/);
         expect(valor('deuda')).toBe('$1,450');
         expect(valor('vencido')).toBe('$450');
         expect(valor('cobrado')).toBe('$750');

@@ -384,9 +384,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             return [
                 { key: 'clientes', label: segun(lista.length, 'cliente', 'clientes'),
                     valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
-                    // En «Dados de baja» todos son bajas: "0 al día" sería ruido.
-                    hint: [alDia || !bajas ? `${fmt.num(alDia)} al día` : null, bajas ? `${fmt.num(bajas)} de baja` : null]
-                        .filter(Boolean).join(' · ') },
+                    // Sin ceros: en «Con deuda» "0 al día" y en «Dados de baja» "0 al día" son ruido.
+                    // Con saldo, al día y de baja suman la cuenta (el "con saldo" va en deuda).
+                    hint: [alDia ? `${fmt.num(alDia)} al día` : null, bajas ? `${fmt.num(bajas)} de baja` : null]
+                        .filter(Boolean).join(' · ') || null },
                 // La aclaración va en el "i" y no en el rótulo (antes decía "deuda · de esta
                 // cartera"): el panel Cash de Analizar muestra otro "por cobrar", atribuido por quién
                 // tiene HOY la agenda del cliente y sobre todos los saldos del sistema. Los dos son
