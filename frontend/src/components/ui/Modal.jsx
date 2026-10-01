@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -77,33 +77,24 @@ const trabarScroll = () => {
     };
 };
 
-const Modal = ({
-    titulo,
-    subtitulo = null,
-    icono = null,
-    children,
-    barra = null,
-    pie = null,
-    onCerrar,
-    onSubmit = null,
-    cerrable = true,
-    ancho = 'xl',
-    tono = 'slate',
-    etiqueta = null,
-    className = '',
-    cuerpoClassName = '',
-}) => {
-    const reducido = useReducedMotion();
-    const ids = useId();
-    const panel = useRef(null);
-    const t = TONOS[tono] || TONOS.slate;
-
-    // Refs para que los efectos corran una sola vez y lean siempre lo último.
+/**
+ * Lo que hace a un modal usable, sin el dibujo: Escape (solo el de arriba si hay varios), scroll de
+ * `body` trabado, el foco adentro al abrir y de vuelta donde estaba al cerrar, Tab que no se escapa,
+ * y un fondo que cierra solo con un clic que EMPIEZA y termina en él (arrastrar una selección desde
+ * un campo y soltarla afuera no puede tirar lo que se estaba escribiendo).
+ *
+ * `Modal` lo usa adentro; un modal con su propio diseño (el editor de curso) lo usa directo.
+ * `panel` es la ref del panel, que tiene que poder recibir foco (`tabIndex={-1}`).
+ * Devuelve `cerrar` (respeta `cerrable`), `atraparTab` para el `onKeyDown` del panel y
+ * `propsFondo` para el elemento que hace de fondo (el velo, si el panel es hijo suyo).
+ */
+export const useComportamientoModal = ({ onCerrar, cerrable = true, panel }) => {
+    // Refs para que el efecto corra una sola vez y lea siempre lo último.
     const cerrarRef = useRef(onCerrar);
     const cerrableRef = useRef(cerrable);
     cerrarRef.current = onCerrar;
     cerrableRef.current = cerrable;
-    const cerrar = () => { if (cerrableRef.current) cerrarRef.current?.(); };
+    const cerrar = useCallback(() => { if (cerrableRef.current) cerrarRef.current?.(); }, []);
 
     useEffect(() => {
         const yo = {};
@@ -126,13 +117,17 @@ const Modal = ({
             soltarScroll();
             if (antes && document.contains(antes)) antes.focus?.({ preventScroll: true });
         };
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // El fondo cierra con un clic que EMPIEZA y termina en él: arrastrar una selección de texto
-    // desde un campo y soltarla afuera no puede tirar lo que se estaba escribiendo.
-    const pulsoEnFondo = useRef(false);
+    const pulso = useRef(false);
+    const propsFondo = {
+        onMouseDown: (e) => { pulso.current = e.target === e.currentTarget; },
+        onClick: (e) => {
+            if (pulso.current && e.target === e.currentTarget) cerrar();
+            pulso.current = false;
+        },
+    };
 
-    // Tab no se escapa del diálogo.
     const atraparTab = (e) => {
         if (e.key !== 'Tab' || !panel.current) return;
         const enfocables = [...panel.current.querySelectorAll(ENFOCABLES)];
@@ -148,6 +143,31 @@ const Modal = ({
         }
     };
 
+    return { cerrar, atraparTab, propsFondo };
+};
+
+const Modal = ({
+    titulo,
+    subtitulo = null,
+    icono = null,
+    children,
+    barra = null,
+    pie = null,
+    onCerrar,
+    onSubmit = null,
+    cerrable = true,
+    ancho = 'xl',
+    tono = 'slate',
+    etiqueta = null,
+    className = '',
+    cuerpoClassName = '',
+}) => {
+    const reducido = useReducedMotion();
+    const ids = useId();
+    const panel = useRef(null);
+    const t = TONOS[tono] || TONOS.slate;
+    const { cerrar, atraparTab, propsFondo } = useComportamientoModal({ onCerrar, cerrable, panel });
+
     const cuerpo = (
         <div className={`modal-cuerpo custom-scrollbar px-5 py-5 sm:px-6 text-left ${cuerpoClassName}`}>
             {children}
@@ -162,11 +182,7 @@ const Modal = ({
     return createPortal(
         <div className="modal-velo" data-modal-velo="">
             <motion.div className="modal-fondo" aria-hidden="true" data-modal-fondo=""
-                onMouseDown={() => { pulsoEnFondo.current = true; }}
-                onClick={() => {
-                    if (pulsoEnFondo.current) cerrar();
-                    pulsoEnFondo.current = false;
-                }}
+                {...propsFondo}
                 {...(reducido ? {} : {
                     initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.16 },
                 })} />
@@ -174,7 +190,6 @@ const Modal = ({
                 aria-labelledby={etiqueta ? undefined : `${ids}-titulo`}
                 aria-label={etiqueta || undefined}
                 onKeyDown={atraparTab}
-                onMouseDown={() => { pulsoEnFondo.current = false; }}
                 className={`modal-panel rounded-[2rem] shadow-2xl ${t.panel} ${className}`}
                 style={{ '--modal-ancho': ANCHOS[ancho] || ancho }}
                 {...(reducido ? {} : {

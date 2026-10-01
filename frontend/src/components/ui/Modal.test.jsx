@@ -2,7 +2,20 @@ import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Modal from './Modal';
+import Modal, { useComportamientoModal } from './Modal';
+
+// Un modal con su propio dibujo (como el del editor de curso): el panel es HIJO del velo.
+const ModalPropio = ({ onCerrar }) => {
+    const panel = React.useRef(null);
+    const { atraparTab, propsFondo } = useComportamientoModal({ onCerrar, panel });
+    return (
+        <div data-testid="velo-propio" {...propsFondo}>
+            <div ref={panel} tabIndex={-1} role="dialog" aria-label="Propio" onKeyDown={atraparTab}>
+                <input aria-label="Campo" />
+            </div>
+        </div>
+    );
+};
 
 const Botones = ({ onCancelar }) => (
     <>
@@ -116,6 +129,22 @@ describe('Modal', () => {
         const pestana = screen.getByRole('button', { name: 'Por resolver' });
         expect(pestana.closest('.modal-cuerpo')).toBeNull();
         expect(screen.getByRole('dialog')).toContainElement(pestana);
+    });
+
+    it('el hook sirve a un modal propio: Escape y fondo cierran, arrastrar desde el panel no', async () => {
+        const onCerrar = vi.fn();
+        render(<ModalPropio onCerrar={onCerrar} />);
+        expect(screen.getByRole('dialog', { name: 'Propio' })).toHaveFocus();
+
+        // Arrastre que empieza en el campo y termina en el velo: el clic cae en el velo.
+        fireEvent.mouseDown(screen.getByLabelText('Campo'));
+        fireEvent.click(screen.getByTestId('velo-propio'));
+        expect(onCerrar).not.toHaveBeenCalled();
+
+        await userEvent.setup().click(screen.getByTestId('velo-propio'));
+        expect(onCerrar).toHaveBeenCalledTimes(1);
+        await userEvent.setup().keyboard('{Escape}');
+        expect(onCerrar).toHaveBeenCalledTimes(2);
     });
 
     it('Tab no se escapa del diálogo', async () => {
