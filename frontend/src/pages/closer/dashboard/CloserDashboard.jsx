@@ -75,7 +75,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
        dashboard comercial, que ya existe y ya sabe acotar por persona y por periodo. El hook
        arma la URL; `irA(tabla, filtro)` es la misma firma que usa el dashboard comercial por
        dentro, asi que `MetricaClicable` sirve igual en las dos pantallas. */
-    const irA = useDrillDown({ period, closerId });
+    const irA = useDrillDown({ period, closerId, fechas: data?.dates });
 
     const minHeightClass = embedded ? 'min-h-[60vh]' : 'min-h-screen';
 

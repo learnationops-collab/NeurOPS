@@ -25,13 +25,17 @@ const RUTA_COMERCIAL = {
     director_comercial: '/admin/comercial',
 };
 
-const AVISO_RANGO_LIBRE = 'El rango libre de este dashboard no viaja a la lista: la lista se abre '
-    + 'con el mes en curso. Volvé a elegir el rango allá si hace falta.';
-
-export const useDrillDown = ({ period, closerId }) => {
+/**
+ * `fechas` son las que este dashboard está mostrando (`data.dates`, las que devolvió el backend).
+ * Con el rango libre son las que viajan a la lista, así abre con el mismo rango que el número
+ * clickeado y no con el que el usuario esté tipeando a medias.
+ */
+export const useDrillDown = ({ period, closerId, fechas = null }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const ruta = RUTA_COMERCIAL[user?.role] || null;
+    const desde = fechas?.start || null;
+    const hasta = fechas?.end || null;
 
     /**
      * `opciones.miembroId` pisa la persona del filtro de arriba. Lo necesita el ranking del
@@ -39,25 +43,28 @@ export const useDrillDown = ({ period, closerId }) => {
      */
     return useCallback((tabla, filtro, opciones = {}) => {
         if (!ruta) return;
-        const notas = [filtro?.__aviso, period === 'custom' ? AVISO_RANGO_LIBRE : null]
-            .filter(Boolean);
         // Mismo payload que el drill-down interno del dashboard comercial: las condiciones más los
         // metadatos `__` que la lista usa para decir de dónde vino el filtro.
         const carga = Object.fromEntries(
-            Object.entries({ ...filtro, __aviso: notas.join(' ') || null })
-                .filter(([, v]) => v !== null && v !== undefined));
+            Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
 
         const q = new URLSearchParams({ s: 'revisar', rol: 'closers', t: tabla, ft: '1' });
         // El período tiene los mismos ids en las dos pantallas a propósito (`PERIODOS` en
         // comercial.py sale del mismo `_range_for_period`), así que viaja tal cual. El rango libre
-        // es la excepción: allá no hay selector de fechas, así que cae al mes en curso y se avisa.
-        if (period && period !== 'custom') q.set('p', period);
+        // viaja con sus fechas (`d`/`h`, las del dashboard comercial). Antes allá no había dónde
+        // ponerlas y la lista caía al mes en curso con un aviso; sin fechas (no debería pasar: sin
+        // datos no hay número que clickear), la lista las pide en vez de mostrar otro rango.
+        if (period) q.set('p', period);
+        if (period === 'custom' && desde && hasta) {
+            q.set('d', desde);
+            q.set('h', hasta);
+        }
         const miembro = opciones.miembroId ?? closerId;
         if (miembro && miembro !== 'all') q.set('m', String(miembro));
         if (Object.keys(carga).length) q.set('f', JSON.stringify(carga));
 
         navigate(`${ruta}?${q.toString()}`);
-    }, [navigate, ruta, period, closerId]);
+    }, [navigate, ruta, period, closerId, desde, hasta]);
 };
 
 /** ¿Hay a dónde llevar para esta persona? Lo usan las tarjetas para no pintar botones inertes. */
