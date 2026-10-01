@@ -132,6 +132,39 @@ def test_el_director_ve_al_equipo_completo_y_puede_acotar_a_una_persona(client, 
     assert [f['cliente'] for f in solo_nerina['filas']] == ['De Nerina']
 
 
+@freeze_time(HOY)
+def test_con_setters_el_equipo_cuenta_solo_las_agendas_que_genero_un_setter(client, db, equipo,
+                                                                          auth_headers):
+    # Reportado en produccion (01/10/2026): "Todo el equipo" con Setters contaba tambien las
+    # agendas de taller, VSL o landing, que no genero ningun setter (237 contra 129).
+    agenda(db, equipo['closer_a'], cliente(db, 'De Elias'), setter=equipo['setter'])
+    agenda(db, equipo['closer_a'], cliente(db, 'Del taller'))
+    # Un closer que agenda a mano queda como setter_id de la cita: no es trabajo de setting.
+    agenda(db, equipo['closer_b'], cliente(db, 'A mano'), setter=equipo['closer_b'])
+    headers = auth_headers(equipo['director'])
+    parametros = {'period': 'mes', 'compare': 'none', 'rol': 'setters'}
+
+    resumen = client.get(RESUMEN, headers=headers, query_string=parametros).get_json()
+    tabla = client.get(TABLA, headers=headers, query_string={**parametros, 'tabla': 'generadas'}).get_json()
+    de_elias = client.get(TABLA, headers=headers, query_string={
+        **parametros, 'tabla': 'generadas', 'miembro_id': equipo['setter'].id}).get_json()
+
+    assert resumen['actual']['generadas'] == 1
+    assert [f['cliente'] for f in tabla['filas']] == ['De Elias']
+    assert [f['cliente'] for f in de_elias['filas']] == ['De Elias']
+
+
+@freeze_time(HOY)
+def test_con_closers_el_equipo_sigue_viendo_todas_las_agendas(client, db, equipo, auth_headers):
+    agenda(db, equipo['closer_a'], cliente(db, 'De Elias'), setter=equipo['setter'])
+    agenda(db, equipo['closer_a'], cliente(db, 'Del taller'))
+
+    datos = client.get(TABLA, headers=auth_headers(equipo['director']), query_string={
+        'period': 'mes', 'rol': 'closers'}).get_json()
+
+    assert len(datos['filas']) == 2
+
+
 # --- Los numeros cierran con el filtro --------------------------------------------------------
 
 @freeze_time(HOY)

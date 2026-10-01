@@ -189,7 +189,7 @@ def tabla():
         filas = ComercialService.leads(start, end, setter_nombre=nombre if rol == ROL_SETTERS else None)
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
-        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis)
+        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis, de_setters=True)
         totales = ComercialService.totales_agendas(filas)
     else:
         closer_id = miembro_id if rol == ROL_CLOSERS else None
