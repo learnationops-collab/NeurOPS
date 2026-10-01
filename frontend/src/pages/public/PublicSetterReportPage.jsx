@@ -119,7 +119,9 @@ const PublicSetterReportPage = ({ onEnviado }) => {
         }
     }, [formData.funnel_qualification, formData.not_lead]);
 
-    // Auto-prefill data when setter and date are chosen
+    // Al elegir setter y fecha se completan Entrantes, Cualificación, No Lead y Agendas con los
+    // mismos números que "Mis datos" muestra para ese día (ver `prefill_public_setter_report`):
+    // "Leads netos" (Cualificación − No Lead) da sus cualificados. Siguen siendo editables.
     useEffect(() => {
         const prefillData = async () => {
             if (!formData.setter_id || !formData.date) return;
@@ -136,7 +138,7 @@ const PublicSetterReportPage = ({ onEnviado }) => {
                     funnel_qualification: res.data.funnel_qualification !== undefined ? res.data.funnel_qualification : '',
                     funnel_agenda: res.data.funnel_agenda !== undefined ? res.data.funnel_agenda : ''
                 }));
-                setPrefilledMessage('Métricas del día autocompletadas correctamente desde el sistema.');
+                setPrefilledMessage('Completado con Mis datos del día.');
             } catch (err) {
                 console.error("Error al prefill de reporte de setter:", err);
             } finally {

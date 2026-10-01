@@ -186,62 +186,70 @@ def submit_public_setter_report():
 
 @bp.route('/public/setter-report/prefill', methods=['GET'])
 def prefill_public_setter_report():
-    """Calcula y retorna estadísticas automatizadas para un setter y fecha específicos."""
-    from app.models import LeadAnswer, Ad, Event, Appointment, User
-    from sqlalchemy import or_
-    
+    """Los números con los que arranca el reporte del día: los MISMOS que "Mis datos" para ese día.
+
+    Antes se contaban acá con otra regla y el setter veía dos verdades del mismo día (01/10/2026,
+    septiembre de 2026 en producción):
+
+      · "Entrantes" eran las filas de `LeadAnswer` del día —interacciones, no personas— filtradas
+        por el setter del EVENTO del anuncio, que casi ningún anuncio tiene: con `setter_id IS NULL`
+        entraba todo el equipo y los leads sin repartir. A Elias y a Paula les sumaba 5.503 en el
+        mes, contra 692 y 480 leads suyos en "Mis datos".
+      · "Agendas" eran todas sus citas creadas ese día, sin depurar y con el marcador que deja
+        cualificar un lead (`no_es_marcador`).
+
+    Ahora sale de `ComercialService.leads` y `ComercialService.generadas`, con el día naive (UTC)
+    que usa "Mis datos". El reporte guarda tres campos y deriva "Leads netos" como Cualificación −
+    No Lead, así que se llenan para que esa resta dé los cualificados de "Mis datos":
+
+      · Entrantes = Entrantes; Cualificación = Respondieron (contestaron la pregunta filtro);
+      · No Lead = Respondieron − Cualificados (contestaron y no califican);
+      · Agendas = Agendas generadas.
+
+    Siguen siendo editables: es un punto de partida, el setter puede corregirlos antes de enviar.
+    Un usuario que no es setter (la dirección probando el formulario) recibe los del equipo, como
+    "Todo el equipo" en el dashboard.
+
+    Un setter solo pide los suyos: ahora son sus números reales, y en "Mis datos" nadie ve los de
+    otro (decisión del 24/09/2026). Antes daba igual, porque los entrantes eran los del equipo.
+    """
+    from flask_login import current_user
+
+    from app.models import User
+    from app.services.comercial_service import ComercialService
+
     setter_id = request.args.get('setter_id')
     date_str = request.args.get('date')
-    
+
     if not setter_id or not date_str:
         return jsonify({"message": "setter_id y date son obligatorios"}), 400
-        
+
+    if current_user.is_authenticated and current_user.role == 'setter' \
+            and str(current_user.id) != str(setter_id):
+        return jsonify({"message": "Solo podés autocompletar tu propio reporte"}), 403
+
     try:
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({"message": "Formato de fecha inválido"}), 400
-        
+
     user = User.query.get(setter_id)
     if not user:
         return jsonify({"message": "Setter no encontrado"}), 404
-        
-    start_dt = datetime.combine(target_date, datetime.min.time())
-    end_dt = datetime.combine(target_date, datetime.max.time())
-    
-    # 1. Consulta de LeadAnswer del setter
-    query_leads = LeadAnswer.query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
-    
-    if user.role != 'admin':
-        query_leads = query_leads.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
-                                 .outerjoin(Event, Event.id == Ad.event_id)\
-                                 .filter(
-                                     or_(
-                                         Event.setter_id == user.id,
-                                         Event.setter_id == None,
-                                         LeadAnswer.ad_id == None
-                                     )
-                                 )
-                                 
-    # 2. Inbox entrantes
-    inbox_entrantes = query_leads.count()
-    
-    # 3. No Leads (descalificados)
-    not_lead = query_leads.filter(LeadAnswer.qualification.in_(['no', 'false'])).count()
-    
-    # 4. Cualificados (funnel_qualification)
-    funnel_qualification = query_leads.filter(LeadAnswer.qualification.in_(['yes', 'true'])).count()
-    
-    # 5. Agendas (funnel_agenda)
-    funnel_agenda = Appointment.query.filter(
-        Appointment.setter_id == user.id,
-        Appointment.created_at.between(start_dt, end_dt)
-    ).count()
-    
+
+    es_setter = user.role == 'setter'
+    leads = ComercialService.totales_leads(ComercialService.leads(
+        target_date, target_date,
+        setter_nombre=user.username if es_setter else None,
+        setter_id=user.id if es_setter else None))
+    generadas = ComercialService.generadas(target_date, target_date,
+                                           setter_id=user.id if es_setter else None)
+
     return jsonify({
-        "inbox_entrantes": inbox_entrantes,
-        "not_lead": not_lead,
-        "funnel_qualification": funnel_qualification,
-        "funnel_agenda": funnel_agenda
+        "inbox_entrantes": leads['leads'],
+        "funnel_qualification": leads['respondieron'],
+        "not_lead": leads['respondieron'] - leads['cualificados'],
+        "funnel_agenda": len(generadas),
     }), 200
 
 def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
