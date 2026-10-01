@@ -62,6 +62,77 @@ describe('MenuSesion', () => {
         expect(screen.queryByRole('menu')).toBeNull();
     });
 
+    it('una opción con panel abre su lista en el mismo menú, y elegir de la lista corre esa acción', async () => {
+        const simularA = vi.fn();
+        let resolver;
+        const cargar = vi.fn(() => new Promise((r) => { resolver = r; }));
+        render(<MenuSesion nombre="Dirección" grupos={[[{
+            id: 'simular', label: 'Simular a un closer', Icono: CalendarPlus,
+            panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar },
+        }]]} />);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Dirección' })); });
+
+        const opcion = screen.getByRole('menuitem', { name: 'Simular a un closer' });
+        expect(opcion.getAttribute('aria-haspopup')).toBe('menu');
+        await act(async () => { fireEvent.click(opcion); });
+        // El menú sigue abierto, con la vuelta arriba y la lista cargando.
+        expect(screen.getByRole('menu')).toBeTruthy();
+        expect(cargar).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('group', { name: 'Simular a un closer' }).getAttribute('aria-busy')).toBe('true');
+        expect(screen.getByText('Cargando…')).toBeTruthy();
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Volver al menú. Simular a un closer' }));
+
+        await act(async () => { resolver([{ id: 7, label: 'Marlon Closer', onClick: () => simularA(7) }]); });
+        const marlon = screen.getByRole('menuitem', { name: 'Marlon Closer' });
+        expect(document.activeElement).toBe(marlon);
+        fireEvent.click(marlon);
+        expect(simularA).toHaveBeenCalledWith(7);
+        expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('en el panel, Escape vuelve al menú (a la opción que lo abrió); la lista vacía y el error se dicen', async () => {
+        const cargar = vi.fn()
+            .mockResolvedValueOnce([])
+            .mockRejectedValueOnce(new Error('caído'))
+            .mockResolvedValueOnce([{ id: 1, label: 'Ana', onClick: () => {} }]);
+        render(<MenuSesion nombre="Dirección" grupos={[[
+            { id: 'otra', label: 'Otra cosa', Icono: Compass, onClick: () => {} },
+            { id: 'simular', label: 'Simular a un closer', Icono: CalendarPlus,
+                panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar } },
+        ]]} />);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Dirección' })); });
+
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
+        expect(screen.getByText('No hay closers activos.')).toBeTruthy();
+
+        await act(async () => { fireEvent.keyDown(document, { key: 'Escape' }); });
+        expect(screen.getByRole('menu')).toBeTruthy(); // no se cerró: volvió
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Simular a un closer' }));
+
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
+        expect(screen.getByText('No se pudo cargar la lista.')).toBeTruthy();
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Reintentar' })); });
+        expect(screen.getByRole('menuitem', { name: 'Ana' })).toBeTruthy();
+        expect(cargar).toHaveBeenCalledTimes(3);
+    });
+
+    it('una lista que llega tarde, después de volver al menú, no se muestra', async () => {
+        let resolver;
+        const cargar = () => new Promise((r) => { resolver = r; });
+        render(<MenuSesion nombre="Dirección" grupos={[[{
+            id: 'simular', label: 'Simular a un closer', Icono: CalendarPlus,
+            panel: { titulo: 'Simular a un closer', vacio: 'Nadie.', cargar },
+        }]]} />);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Dirección' })); });
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Volver al menú. Simular a un closer' })); });
+
+        await act(async () => { resolver([{ id: 1, label: 'Ana', onClick: () => {} }]); });
+
+        expect(screen.queryByRole('menuitem', { name: 'Ana' })).toBeNull();
+        expect(screen.getByRole('menuitem', { name: 'Simular a un closer' })).toBeTruthy();
+    });
+
     it('Escape cierra y devuelve el foco al avatar; tocar afuera también cierra', async () => {
         renderMenu();
         const boton = screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' });

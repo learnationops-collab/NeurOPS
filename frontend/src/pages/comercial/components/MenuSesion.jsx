@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { fmt } from './Shared';
 
 /**
@@ -21,18 +22,52 @@ import { fmt } from './Shared';
  * correr la acción (`flushSync`: si no, React lo cerraba recién después, y el "¿Cerrar sesión?"
  * de `window.confirm` salía con el menú abierto detrás). Se cierra también con Escape (devuelve el
  * foco al botón) o tocando afuera.
+ *
+ * Una opción con `panel: { titulo, cargar, vacio }` no corre nada: abre, en el mismo menú, una
+ * lista que se pide al tocarla (`cargar` devuelve `[{ id, label, onClick }]`). Es "Simular a un
+ * closer" de la dirección comercial: la lista de closers activos sale del backend en ese momento.
+ * Arriba de la lista va la vuelta al menú, que también es Escape o la flecha a la izquierda.
  */
 const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const [abierto, setAbierto] = useState(false);
     const [pos, setPos] = useState(null);
+    // La opción cuyo panel está abierto y su lista: { estado: cargando | listo | error, opciones }.
+    const [panel, setPanel] = useState(null);
+    const [lista, setLista] = useState(null);
+    // Cada pedido de lista lleva un número: la respuesta de uno viejo (se volvió al menú, se cerró,
+    // se reintentó) no pisa lo que se está mostrando.
+    const pedido = useRef(0);
+    // Al volver de un panel, el foco va a la opción que lo abrió y no a la primera.
+    const regreso = useRef(null);
     const boton = useRef(null);
     const menu = useRef(null);
 
     const cerrar = useCallback((devolverFoco = false) => {
+        pedido.current += 1;
         setAbierto(false);
         setPos(null);
+        setPanel(null);
+        setLista(null);
         if (devolverFoco) boton.current?.focus();
     }, []);
+
+    const abrirPanel = useCallback((op) => {
+        pedido.current += 1;
+        const n = pedido.current;
+        setPanel(op);
+        setLista({ estado: 'cargando', opciones: [] });
+        Promise.resolve().then(op.panel.cargar).then(
+            (opciones) => { if (pedido.current === n) setLista({ estado: 'listo', opciones: opciones || [] }); },
+            () => { if (pedido.current === n) setLista({ estado: 'error', opciones: [] }); },
+        );
+    }, []);
+
+    const volverAlMenu = useCallback(() => {
+        pedido.current += 1;
+        regreso.current = panel?.id || null;
+        setPanel(null);
+        setLista(null);
+    }, [panel]);
 
     // Se mide después de dibujarlo (invisible) para saber su ancho y su alto reales.
     useLayoutEffect(() => {
@@ -53,10 +88,22 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     }, [abierto]);
 
     // Con el menú ya ubicado, el foco va a la primera opción: abrir con el teclado y seguir con
-    // Tab o con las flechas tiene que funcionar sin el mouse.
+    // Tab o con las flechas tiene que funcionar sin el mouse. En un panel, a la primera de la lista
+    // en cuanto llega (mientras carga, a la vuelta); al volver, a la opción que lo abrió.
+    const estadoDeLista = lista?.estado;
     useEffect(() => {
-        if (abierto && pos) menu.current?.querySelector('[role="menuitem"]')?.focus();
-    }, [abierto, pos]);
+        const m = menu.current;
+        if (!abierto || !pos || !m) return;
+        let destino;
+        if (panel) {
+            destino = m.querySelector('[data-opcion]') || m.querySelector('[data-volver]');
+        } else {
+            destino = (regreso.current && m.querySelector(`[data-id="${regreso.current}"]`))
+                || m.querySelector('[role="menuitem"]');
+            regreso.current = null;
+        }
+        destino?.focus();
+    }, [abierto, pos, panel, estadoDeLista]);
 
     useEffect(() => {
         if (!abierto) return undefined;
@@ -65,7 +112,12 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             cerrar();
         };
         const teclas = (e) => {
-            if (e.key === 'Escape') { e.preventDefault(); cerrar(true); return; }
+            if (e.key === 'Escape' || (e.key === 'ArrowLeft' && panel)) {
+                e.preventDefault();
+                if (panel) volverAlMenu();
+                else cerrar(true);
+                return;
+            }
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
             const items = [...(menu.current?.querySelectorAll('[role="menuitem"]') || [])];
             if (!items.length) return;
@@ -80,7 +132,16 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             document.removeEventListener('pointerdown', afuera);
             document.removeEventListener('keydown', teclas);
         };
-    }, [abierto, cerrar]);
+    }, [abierto, cerrar, panel, volverAlMenu]);
+
+    const elegir = (op) => {
+        if (op.panel) {
+            abrirPanel(op);
+            return;
+        }
+        flushSync(() => cerrar());
+        op.onClick();
+    };
 
     const iniciales = fmt.iniciales(nombre);
     const etiqueta = [`Tu sesión: ${nombre}`, aviso?.titulo].filter(Boolean).join(', ');
@@ -99,29 +160,66 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                         style={pos
                             ? { left: pos.left, bottom: pos.bottom, maxHeight: pos.alto }
                             : { left: 0, bottom: 0, visibility: 'hidden' }}>
-                        <div className="menu-quien">
-                            <span className="avatar" aria-hidden="true">{iniciales}</span>
-                            <span className="menu-quien-txt">
-                                <b className="trunc">{nombre}</b>
-                                {rol && <small>{rol}</small>}
-                            </span>
-                        </div>
-                        {grupos.filter(g => g.length).map((grupo, i) => (
-                            <div key={grupo[0].id} role="group">
-                                {i > 0 && <hr className="menu-sep" />}
-                                {grupo.map(op => (
-                                    <button key={op.id} type="button" role="menuitem"
-                                        className={`menu-item menu-item--ico${op.peligro ? ' menu-item--peligro' : ''}`}
-                                        aria-label={op.titulo ? `${op.label}, ${op.titulo}` : undefined}
-                                        onClick={() => { flushSync(() => cerrar()); op.onClick(); }}>
-                                        <op.Icono size={16} aria-hidden="true" />
-                                        <span className="trunc">{op.label}</span>
-                                        {op.cuenta != null && <span className="menu-cuenta">{op.cuenta}</span>}
-                                        {op.pronto && <span className="dock-pronto">Pronto</span>}
+                        {panel ? (
+                            <div role="group" aria-label={panel.panel.titulo} aria-busy={lista?.estado === 'cargando'}>
+                                <button type="button" role="menuitem" data-volver=""
+                                    className="menu-item menu-item--ico menu-volver"
+                                    aria-label={`Volver al menú. ${panel.panel.titulo}`} onClick={volverAlMenu}>
+                                    <ArrowLeft size={16} aria-hidden="true" />
+                                    <span className="trunc">{panel.panel.titulo}</span>
+                                </button>
+                                <hr className="menu-sep" />
+                                {lista?.estado === 'cargando' && <p className="menu-nota">Cargando…</p>}
+                                {lista?.estado === 'error' && (
+                                    <>
+                                        <p className="menu-nota">No se pudo cargar la lista.</p>
+                                        <button type="button" role="menuitem" data-opcion=""
+                                            className="menu-item" onClick={() => abrirPanel(panel)}>
+                                            Reintentar
+                                        </button>
+                                    </>
+                                )}
+                                {lista?.estado === 'listo' && !lista.opciones.length && (
+                                    <p className="menu-nota">{panel.panel.vacio}</p>
+                                )}
+                                {lista?.estado === 'listo' && lista.opciones.map(o => (
+                                    <button key={o.id} type="button" role="menuitem" data-opcion=""
+                                        className="menu-item menu-item--ico"
+                                        onClick={() => { flushSync(() => cerrar()); o.onClick(); }}>
+                                        <span className="avatar avatar--chica" aria-hidden="true">{fmt.iniciales(o.label)}</span>
+                                        <span className="trunc">{o.label}</span>
                                     </button>
                                 ))}
                             </div>
-                        ))}
+                        ) : (
+                            <>
+                                <div className="menu-quien">
+                                    <span className="avatar" aria-hidden="true">{iniciales}</span>
+                                    <span className="menu-quien-txt">
+                                        <b className="trunc">{nombre}</b>
+                                        {rol && <small>{rol}</small>}
+                                    </span>
+                                </div>
+                                {grupos.filter(g => g.length).map((grupo, i) => (
+                                    <div key={grupo[0].id} role="group">
+                                        {i > 0 && <hr className="menu-sep" />}
+                                        {grupo.map(op => (
+                                            <button key={op.id} type="button" role="menuitem" data-id={op.id}
+                                                className={`menu-item menu-item--ico${op.peligro ? ' menu-item--peligro' : ''}`}
+                                                aria-label={op.titulo ? `${op.label}, ${op.titulo}` : undefined}
+                                                aria-haspopup={op.panel ? 'menu' : undefined}
+                                                onClick={() => elegir(op)}>
+                                                <op.Icono size={16} aria-hidden="true" />
+                                                <span className="trunc">{op.label}</span>
+                                                {op.cuenta != null && <span className="menu-cuenta">{op.cuenta}</span>}
+                                                {op.pronto && <span className="dock-pronto">Pronto</span>}
+                                                {op.panel && <ChevronRight size={15} aria-hidden="true" className="menu-flecha" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </div>
                 </div>,
                 document.body,

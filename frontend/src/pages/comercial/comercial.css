@@ -556,6 +556,12 @@
 .dc-shell .menu-item .dock-pronto{margin:0 0 0 auto}
 .dc-shell .menu-item--peligro:hover,
 .dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
+/* Una opcion que abre una lista en el mismo menu ("Simular a un closer"): la flecha la anuncia,
+   y en la lista, la vuelta arriba y cada persona con sus iniciales. */
+.dc-shell .menu-flecha{margin-left:auto;flex-shrink:0}
+.dc-shell .menu-volver{color:var(--text-on-surface);font-weight:700}
+.dc-shell .menu-nota{padding:8px 14px 10px;font-size:12.5px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .avatar.avatar--chica{width:24px;height:24px;border-radius:8px;font-size:9.5px}
 
 /* ============================================================
    9 · DATA VIZ
