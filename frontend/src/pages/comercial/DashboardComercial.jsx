@@ -66,9 +66,9 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  *
  * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
  * resuelve `onIrASeccion(seccion, queryString)`, con el que el host cambia su propia pestaña ("Mi
- * cartera" en el mazo del closer). El segundo argumento es la URL con el filtro ya escrito, para
- * el host que también navega por la URL. Un host que no lo pasa no tiene lista, y entonces no hay
- * drill-down.
+ * cartera" en el mazo del closer, Reporte · Registros en el espacio del setter). El segundo
+ * argumento es la URL con el filtro ya escrito, para el host que también navega por la URL (el del
+ * setter). Un host que no lo pasa no tiene lista, y entonces no hay drill-down.
  *
  * `onAbrirCliente` es la otra salida al host: en la tabla Clientes, una fila NO es una agenda que
  * corregir sino un cliente al que hay que cobrarle, y el modal de corrección de esta pantalla no

@@ -60,6 +60,12 @@ const SECCIONES = [
     { id: 'datos', label: 'Mis datos', Icono: BarChart3 },
 ];
 
+/**
+ * Lo que el drill-down de "Mis datos" deja en la URL: la tabla (`t`) y su filtro (`f`, con su token
+ * `ft`). Ver `DashboardComercial`.
+ */
+const CLAVES_DEL_DRILL_DOWN = ['t', 'f', 'ft'];
+
 /** Fecha local de hoy (YYYY-MM-DD), la misma que el formulario del reporte pone por defecto. */
 const hoyLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
@@ -79,14 +85,24 @@ const SetterEspacioPage = () => {
         : seccionActual.tabs?.[0].key ?? null;
 
     /**
-     * Cambia de sección (y de pestaña) sin tocar el resto de la query string: el período que
-     * eligió en "Mis datos" (`p`, `vs`) sigue puesto al volver.
+     * Cambia de sección (y de pestaña) sin tocar el período que eligió en "Mis datos" (`p`, `vs`):
+     * sigue puesto al volver, y es el mismo con el que Registros arma la lista.
+     *
+     * `base` es la URL del drill-down de "Mis datos": el dashboard escribe su tabla y su filtro
+     * (`t`, `f`, `ft`) y en el mismo clic pide ir a la lista, así que la URL de este render todavía
+     * no los tiene. Armando desde ella, este cambio pisaba al otro y la lista abría sin filtro. Va
+     * como entrada nueva del historial (el dashboard escribe la suya reemplazando), así que "atrás"
+     * desde la lista vuelve a "Mis datos".
+     *
+     * Sin `base` es un cambio a mano (el dock o una pestaña), y suelta el drill-down: Registros
+     * abierto así muestra sus leads sin filtro, no el último número que tocó.
      */
-    const irA = useCallback((id, nuevaTab = null) => {
-        const siguiente = new URLSearchParams(params);
+    const irA = useCallback((id, nuevaTab = null, base = null) => {
+        const siguiente = new URLSearchParams(base || params);
         siguiente.set('step', id);
         if (nuevaTab) siguiente.set('tab', nuevaTab);
         else siguiente.delete('tab');
+        if (!base) CLAVES_DEL_DRILL_DOWN.forEach(k => siguiente.delete(k));
         setParams(siguiente);
         window.scrollTo({ top: 0 });
     }, [params, setParams]);
@@ -201,7 +217,12 @@ const SetterEspacioPage = () => {
                     {seccion === 'reporte' && tab === 'registros' && (
                         <DashboardComercial embebido seccionFija="revisar" />
                     )}
-                    {seccion === 'datos' && <DashboardComercial embebido seccionFija="analizar" />}
+                    {/* El drill-down de un dato lleva a Registros con la tabla y el filtro de ese
+                        número, partiendo de la URL que el dashboard acaba de escribir. */}
+                    {seccion === 'datos' && (
+                        <DashboardComercial embebido seccionFija="analizar"
+                            onIrASeccion={(_seccion, urlDelFiltro) => irA('reporte', 'registros', urlDelFiltro)} />
+                    )}
                 </motion.div>
 
                 <div className="dc-shell dc-shell--embebido">

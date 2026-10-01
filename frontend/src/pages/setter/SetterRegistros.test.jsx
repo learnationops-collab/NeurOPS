@@ -116,6 +116,38 @@ describe('Espacio del setter · de un número de "Mis datos" a su lista en Regis
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     });
 
+    it('el ojo de "Tasa de respuesta" abre sus leads con «Respondió: Sí» y tantas filas como dice', async () => {
+        await montar('/setter/deck?step=datos&p=mes');
+
+        const respuesta = await tile('Tasa de respuesta');
+        fireEvent.click(within(respuesta).getByRole('button', { name: /^Ver los registros/ }));
+
+        expect(await screen.findByRole('button', { name: 'Quitar Respondió: Sí' })).toBeInTheDocument();
+        expect(screen.getByText('Cumple todas:')).toBeInTheDocument();
+        expect(registros()).toHaveLength(BLOQUE.respondieron);
+        expect(screen.getByText(`mostrando ${BLOQUE.respondieron} de ${BLOQUE.respondieron}`)).toBeInTheDocument();
+
+        expect(url().get('step')).toBe('reporte');
+        expect(url().get('tab')).toBe('registros');
+        expect(url().get('t')).toBe('leads');
+        expect(url().get('p')).toBe('mes');
+        expect(getTabla.mock.calls.at(-1)[1]).toBe('leads');
+    });
+
+    it('un paso del embudo también aterriza filtrado, y "atrás" vuelve al tablero', async () => {
+        await montar('/setter/deck?step=datos&p=mes');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Cualificados' }));
+
+        expect(await screen.findByRole('button', { name: 'Quitar Cualificado: Sí' })).toBeInTheDocument();
+        expect(registros()).toHaveLength(BLOQUE.cualificados);
+
+        fireEvent.click(screen.getByRole('button', { name: 'atrás' }));
+
+        expect(await tile('Entrantes')).toBeInTheDocument();
+        expect(url().get('step')).toBe('datos');
+    });
+
     it('Registros abierto directo: sus leads sin filtro, y sin selector de persona ni de equipo', async () => {
         await montar('/setter/deck?step=reporte&tab=registros');
 

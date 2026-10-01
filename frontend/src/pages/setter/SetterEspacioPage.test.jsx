@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SetterEspacioPage from './SetterEspacioPage';
@@ -12,8 +12,10 @@ import SetterEspacioPage from './SetterEspacioPage';
  * Cualificación; la única salida era "Volver a mi sesión", que terminaba la simulación.
  *
  * Las secciones se reemplazan por dobles: acá se prueba la navegación del espacio, no las
- * pantallas que monta. El doble del dashboard dice si el host le dio a dónde llevar un
- * drill-down (`onIrASeccion`): el setter no ve Revisar, así que no tiene que dárselo.
+ * pantallas que monta. El doble del dashboard hace lo mismo que el real en el drill-down: escribe
+ * la tabla y el filtro en la URL y, en el MISMO clic, le pide al host ir a la lista con la query
+ * string que acaba de escribir. Montado como lista (`seccionFija="revisar"`), dice qué tabla y qué
+ * filtro le llegaron por la URL.
  */
 
 const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null }));
@@ -38,14 +40,37 @@ vi.mock('../public/PublicSetterStatsPage', () => ({
     default: ({ embebido }) => <div data-testid="mis-reportes">{embebido ? 'embebido' : 'pagina'}</div>,
 }));
 vi.mock('../comercial/DashboardComercial', () => ({
-    default: ({ seccionFija, onIrASeccion }) => (
-        <div data-testid={`dashboard-${seccionFija}`}>{onIrASeccion ? 'con drill-down' : 'sin drill-down'}</div>
-    ),
+    default: function DashboardDoble({ seccionFija, onIrASeccion }) {
+        const [params, setParams] = useSearchParams();
+        const drillDown = () => {
+            const siguiente = new URLSearchParams(params);
+            siguiente.set('t', 'generadas');
+            siguiente.set('f', '{"asistio":"Sí"}');
+            siguiente.set('ft', '1');
+            setParams(siguiente, { replace: true });
+            onIrASeccion?.('revisar', siguiente);
+        };
+        return (
+            <div data-testid={`dashboard-${seccionFija}`}>
+                {onIrASeccion ? 'con drill-down' : 'sin drill-down'}
+                {onIrASeccion && <button type="button" onClick={drillDown}>ver el detalle</button>}
+                {seccionFija === 'revisar' && (
+                    <output data-testid="lista">{`${params.get('t') || 'leads'} · ${params.get('f') || 'sin filtro'}`}</output>
+                )}
+            </div>
+        );
+    },
 }));
 
 const Ubicacion = () => {
     const { search } = useLocation();
     return <output data-testid="url">{search}</output>;
+};
+
+/** El "atrás" del navegador. */
+const Atras = () => {
+    const navigate = useNavigate();
+    return <button type="button" onClick={() => navigate(-1)}>atrás</button>;
 };
 
 /** Monta en `url` y deja resolver la consulta del reporte de hoy (el ✓ del dock). */
@@ -54,6 +79,7 @@ const montar = async (url) => {
         <MemoryRouter initialEntries={[url]}>
             <SetterEspacioPage />
             <Ubicacion />
+            <Atras />
         </MemoryRouter>,
     );
     await act(async () => {});
@@ -92,12 +118,12 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(url().get('step')).toBe('cualificacion');
     });
 
-    it('el setter no ve Revisar, y "Mis datos" va sin drill-down', async () => {
-        // Pedido del 29/09/2026: Revisar no le hace falta al setter. Sin a dónde llevar un dato,
-        // el dashboard muestra los números sin flechas que no lleven a ningún lado.
+    it('el setter no ve Revisar, pero "Mis datos" tiene a dónde llevar un número', async () => {
+        // Pedido del 29/09/2026: Revisar no le hace falta al setter. Desde el 01/10/2026 sus
+        // listas están en Reporte · Registros, y ahí lleva el drill-down.
         await montar('/setter/deck?step=datos');
 
-        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('sin drill-down');
+        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('con drill-down');
         expect(screen.queryAllByRole('button', { name: /^Revisar/ })).toHaveLength(0);
     });
 
@@ -111,11 +137,57 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('Reporte tiene sus Registros: la lista del dashboard, en una pestaña más', async () => {
         await montar('/setter/deck?step=reporte&tab=registros');
 
-        expect(screen.getByTestId('dashboard-revisar')).toBeInTheDocument();
+        // Abierta a mano, sin un número detrás: sus leads, sin filtro.
+        expect(screen.getByTestId('lista')).toHaveTextContent('leads · sin filtro');
         expect(screen.getAllByRole('tab').map(t => t.textContent))
             .toEqual(['Reporte del día', 'Mis reportes', 'Registros']);
         expect(screen.getByRole('tab', { name: 'Registros' })).toHaveAttribute('aria-selected', 'true');
         expect(itemDelDock('Reporte')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('un número de "Mis datos" abre Registros con su tabla y su filtro, en el mismo clic', async () => {
+        await montar('/setter/deck?step=datos&p=mes');
+
+        fireEvent.click(screen.getByRole('button', { name: 'ver el detalle' }));
+
+        // Las dos navegaciones del clic —la del dashboard (`t`, `f`, `ft`) y la del espacio
+        // (`step`, `tab`)— sobreviven: la segunda parte de la URL que escribió la primera.
+        expect(url().get('step')).toBe('reporte');
+        expect(url().get('tab')).toBe('registros');
+        expect(url().get('t')).toBe('generadas');
+        expect(url().get('f')).toBe('{"asistio":"Sí"}');
+        expect(url().get('ft')).toBe('1');
+        expect(url().get('p')).toBe('mes');
+        expect(screen.getByTestId('lista')).toHaveTextContent('generadas · {"asistio":"Sí"}');
+        expect(screen.getByRole('tab', { name: 'Registros' })).toHaveAttribute('aria-selected', 'true');
+        expect(itemDelDock('Reporte')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('"atrás" desde la lista vuelve a "Mis datos"', async () => {
+        await montar('/setter/deck?step=datos&p=mes');
+        fireEvent.click(screen.getByRole('button', { name: 'ver el detalle' }));
+        expect(screen.getByTestId('dashboard-revisar')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'atrás' }));
+
+        expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
+        expect(url().get('step')).toBe('datos');
+        expect(url().get('p')).toBe('mes');
+    });
+
+    it('volver a Registros por el dock suelta el filtro del último número', async () => {
+        // Tocó un número, volvió a "Mis datos" y después entra a Registros por su cuenta: la lista
+        // no tiene que resucitar aquel filtro.
+        await montar('/setter/deck?step=datos&p=mes&t=generadas&f=%7B%22asistio%22%3A%22S%C3%AD%22%7D&ft=3');
+
+        fireEvent.click(itemDelDock('Reporte'));
+        fireEvent.click(screen.getByRole('tab', { name: 'Registros' }));
+
+        expect(screen.getByTestId('lista')).toHaveTextContent('leads · sin filtro');
+        expect(url().get('t')).toBeNull();
+        expect(url().get('f')).toBeNull();
+        expect(url().get('ft')).toBeNull();
+        expect(url().get('p')).toBe('mes');
     });
 
     it('las rutas viejas caen en su sección y pestaña', async () => {
