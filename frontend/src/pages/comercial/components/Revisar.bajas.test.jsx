@@ -81,10 +81,18 @@ describe('Clientes · los dados de baja', () => {
         expect(nombres()).toEqual(['Ana Gomez']);
     });
 
-    it('la tira de totales los cuenta aparte y no como al día', () => {
-        render(<Revisar {...props()} />);
+    it('la tira de totales los cuenta solo en su filtro, aparte de los al día', () => {
+        // La tira cuenta lo que muestra la lista (pedido del 30/09/2026): en «Vigentes» la baja
+        // no está, y en «Dados de baja» es la única, con lo que pagó.
+        const { container } = render(<Revisar {...props()} />);
+        const total = (clave) => container.querySelector(`.tot-tira [data-total="${clave}"]`);
+        expect(total('clientes').textContent).not.toMatch(/de baja/);
 
-        expect(screen.getByText(/1 al día · 1 de baja/)).toBeInTheDocument();
+        elegirRapido('Dados de baja');
+
+        expect(total('clientes').querySelector('b')).toHaveTextContent('1');
+        expect(total('clientes').textContent).toMatch(/1 de baja/);
+        expect(total('cobrado').querySelector('b')).toHaveTextContent('$400');
     });
 });
 

@@ -26,13 +26,15 @@ export { ChipTono } from './RevisarLista';
  * Revisar: el libro de registros con un buscador, un filtro rápido, UN botón que abre todas las
  * facetas y la tira de totales de lo filtrado arriba de la tabla.
  *
- * Todo el filtrado (búsqueda, facetas y filtro rápido) pasa por `aplicarFiltros` y se hace en el
- * cliente sobre las filas del período, que ya vienen del backend. Eso es lo que permite que los
- * contadores del filtro rápido, el "mostrando X de Y" y los totales se recalculen juntos con el
- * mismo conjunto de filas: si cada uno consultara por su cuenta, podrían discrepar.
+ * Todo el filtrado (búsqueda, facetas y filtro rápido) se hace en el cliente sobre las filas del
+ * período, que ya vienen del backend. Eso es lo que permite que los contadores del filtro rápido,
+ * el "mostrando X de Y" y los totales se recalculen juntos con el mismo conjunto de filas: si cada
+ * uno consultara por su cuenta, podrían discrepar.
  *
- * Los totales ignoran el filtro rápido a propósito (es un atajo de lectura, no un filtro del
- * alcance), pero sí respetan el período, la búsqueda y las facetas.
+ * Los totales cuentan EXACTAMENTE las filas que muestra la lista: período, búsqueda, facetas y
+ * filtro rápido. Hasta el 30/09/2026 ignoraban el filtro rápido (se lo tomaba como un atajo de
+ * lectura); el usuario pidió que la tira muestre los datos según lo que se está filtrando, así que
+ * con «Con deuda» elegido, la deuda de la tira es la de esa lista y su cuenta es la de "mostrando".
  *
  * `datos` puede llegar en `null` mientras el backend todavía no devolvió las filas de la tabla
  * pedida (ver el fix de DashboardComercial): las filas que llegan acá SON siempre de la tabla
@@ -52,7 +54,10 @@ const hayCondiciones = (def, facetas) => def.facetas.some(fa => (facetas[fa.key]
  */
 const rotuloDe = (c) => (c.valor === 'Sí' || c.valor === 'No' ? `${c.faceta}: ${c.valor}` : c.valor);
 
-/** Búsqueda + facetas. El filtro rápido se aplica aparte, para que los totales lo ignoren. */
+/**
+ * Búsqueda + facetas. El filtro rápido se aplica aparte porque su menú cuenta cuántas filas deja
+ * CADA opción sobre este mismo conjunto (el "Con deuda 9" del desplegable).
+ */
 const aplicarFiltros = (filas, def, query, facetas, modo) => {
     const q = query.trim().toLowerCase();
     return filas.filter(f => {
@@ -72,7 +77,7 @@ const aplicarFiltros = (filas, def, query, facetas, modo) => {
 const TotalesTira = ({ items, alcance }) => (
     <div className="tot-tira">
         {items.map(t => (
-            <span key={t.label} className="tot-item">
+            <span key={t.key} className="tot-item" data-total={t.key}>
                 <b style={{ color: t.color }}>{t.valor}</b>
                 {t.label}
                 {t.hint && <span className="mut40"> · {t.hint}</span>}
@@ -204,13 +209,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // dados de baja salvo que se los pida por estado (ver `entraPorDefecto` en `tablasDef.js`).
     // Con una flecha y no pasando `rapido.filtro` directo: `Array.filter` le daría el índice.
     const pasaRapido = (c) => (f) => c.filtro(f, facetas);
+    // Lo que muestra la lista, sin ordenar: es lo que cuenta la tira de totales.
+    const mostradas = useMemo(
+        () => filtradas.filter(f => rapido.filtro(f, facetas)),
+        [filtradas, rapido, facetas]);
     // El orden va DESPUÉS de todo el filtrado (ver `ordenFilas.js`): no cambia qué filas entran,
     // así que los contadores y la tira de totales no se enteran.
     const ordenables = useMemo(() => columnasOrdenables(def), [def]);
     const colOrden = ordenables.find(c => c.key === orden?.key) || null;
     const visibles = useMemo(
-        () => ordenarFilas(filtradas.filter(f => rapido.filtro(f, facetas)), colOrden?.orden, orden?.dir),
-        [filtradas, rapido, facetas, colOrden, orden]);
+        () => ordenarFilas(mostradas, colOrden?.orden, orden?.dir),
+        [mostradas, colOrden, orden]);
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
     // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
     // de la tabla.
@@ -285,100 +294,106 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         valor => ({ clave: fa.key, faceta: fa.label, valor })));
 
     /**
-     * Los seis números de la tira, recalculados sobre lo filtrado con las mismas reglas del
-     * backend. Se recalculan acá y no se leen de `datos.totales` porque los del backend son del
-     * período completo: el pie tiene que cerrar con lo que se ve arriba.
+     * Los números de la tira, recalculados sobre las filas que muestra la lista (búsqueda, facetas
+     * y filtro rápido) con las mismas reglas del backend. Se recalculan acá y no se leen de
+     * `datos.totales` porque los del backend son del período completo: la tira tiene que cerrar
+     * con lo que se ve debajo, y su cuenta es la del "mostrando X".
+     *
+     * Cada número lleva una `key` estable: el rótulo puede cambiar (singular y plural) y la tira
+     * la usa para no volver a montar la cifra cuando cambia el filtro.
      */
     const totales = useMemo(() => {
         const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
+        const lista = mostradas;
 
         if (tabla === 'ventas') {
-            const cash = filtradas.reduce((a, f) => a + f.monto, 0);
-            const ventas = filtradas.filter(f => f.es_venta).length;
-            const neto = filtradas.reduce((a, f) => a + f.monto_neto, 0);
+            const cash = lista.reduce((a, f) => a + f.monto, 0);
+            const ventas = lista.filter(f => f.es_venta).length;
+            const neto = lista.reduce((a, f) => a + f.monto_neto, 0);
             return [
-                { label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
-                    color: 'var(--text-on-surface)', hint: fmt.plural(filtradas.length, 'cobro', 'cobros') },
-                { label: 'ventas', valor: fmt.num(ventas), color: 'var(--brand-secondary)',
+                { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
+                    color: 'var(--text-on-surface)', hint: fmt.plural(lista.length, 'cobro', 'cobros') },
+                { key: 'ventas', label: 'ventas', valor: fmt.num(ventas), color: 'var(--brand-secondary)',
                     hint: 'completo o split' },
-                { label: 'ticket', valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
+                { key: 'ticket', label: 'ticket', valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
                     color: 'var(--text-on-surface)', hint: 'cash / ventas' },
-                { label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
+                { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', hint: 'sin fees de pasarela' },
-                itemTotalAcademia(filtradas),
+                itemTotalAcademia(lista),
             ];
         }
 
         if (tabla === 'clientes') {
-            const deuda = filtradas.reduce((a, f) => a + f.deuda, 0);
-            const conDeuda = filtradas.filter(f => f.deuda > 0.01).length;
-            const vencidas = filtradas.filter(f => f.cuota_vencida);
+            const deuda = lista.reduce((a, f) => a + f.deuda, 0);
+            const conDeuda = lista.filter(f => f.deuda > 0.01).length;
+            const vencidas = lista.filter(f => f.cuota_vencida);
             const vencido = vencidas.reduce((a, f) => a + (f.cuota_monto || 0), 0);
-            const pagado = filtradas.reduce((a, f) => a + f.pagado, 0);
-            // Un dado de baja no debe nada pero no está "al día": se cuenta aparte. Lo que pagó sí
-            // suma en "cobrado", que es plata que entró (mismo criterio que `totales_clientes`).
-            const bajas = filtradas.filter(f => f.baja).length;
+            const pagado = lista.reduce((a, f) => a + f.pagado, 0);
+            // Un dado de baja no debe nada pero no está "al día": se cuenta aparte. Si la lista lo
+            // muestra («Dados de baja», o su estado pedido en el filtro), lo que pagó suma en
+            // "cobrado", que es plata que entró (mismo criterio que `totales_clientes`).
+            const bajas = lista.filter(f => f.baja).length;
             return [
-                { label: 'clientes', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
-                    hint: [`${filtradas.length - conDeuda - bajas} al día`,
+                { key: 'clientes', label: 'clientes', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
+                    hint: [`${lista.length - conDeuda - bajas} al día`,
                         bajas ? fmt.plural(bajas, 'de baja', 'de baja') : null]
                         .filter(Boolean).join(' · ') },
                 // "de esta cartera" y no "a hoy" a secas: el panel Cash de Analizar muestra
                 // otro "por cobrar", atribuido por quién tiene HOY la agenda del cliente y sobre
                 // todos los saldos del sistema. Los dos son correctos y dan distinto; el rótulo
                 // es lo que evita que parezca que uno de los dos está mal.
-                { label: 'deuda · de esta cartera', valor: fmt.money(Math.round(deuda * 100) / 100),
+                { key: 'deuda', label: 'deuda · de esta cartera', valor: fmt.money(Math.round(deuda * 100) / 100),
                     color: conDeuda ? 'var(--error)' : 'var(--success)',
                     hint: `${conDeuda} con saldo` },
-                { label: 'vencido', valor: fmt.money(Math.round(vencido * 100) / 100),
+                { key: 'vencido', label: 'vencido', valor: fmt.money(Math.round(vencido * 100) / 100),
                     color: 'var(--warning)',
                     hint: `${vencidas.length} ${vencidas.length === 1 ? 'cuota' : 'cuotas'}` },
-                { label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
+                { key: 'cobrado', label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
                     color: 'var(--success)', hint: 'desde siempre' },
-                itemTotalAcademia(filtradas),
+                itemTotalAcademia(lista),
             ];
         }
 
         if (tabla === 'leads') {
-            const respondieron = filtradas.filter(f => f.respondio).length;
-            const cualificados = filtradas.filter(f => f.cualificado).length;
-            const agendaron = filtradas.filter(f => f.agendo).length;
+            const respondieron = lista.filter(f => f.respondio).length;
+            const cualificados = lista.filter(f => f.cualificado).length;
+            const agendaron = lista.filter(f => f.agendo).length;
             return [
-                { label: 'leads', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
-                    hint: `${fmt.num(filtradas.reduce((a, f) => a + f.mensajes, 0))} mensajes` },
-                { label: 'respuesta', valor: fmt.pct(pct(respondieron, filtradas.length)),
-                    color: 'var(--info)', hint: `${respondieron} de ${filtradas.length}` },
-                { label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
+                { key: 'leads', label: 'leads', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
+                    hint: `${fmt.num(lista.reduce((a, f) => a + f.mensajes, 0))} mensajes` },
+                { key: 'respuesta', label: 'respuesta', valor: fmt.pct(pct(respondieron, lista.length)),
+                    color: 'var(--info)', hint: `${respondieron} de ${lista.length}` },
+                { key: 'cualificacion', label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
                     color: 'var(--success)', hint: `${cualificados} de ${respondieron}` },
-                { label: 'conversión', valor: fmt.pct(pct(agendaron, filtradas.length)),
+                { key: 'conversion', label: 'conversión', valor: fmt.pct(pct(agendaron, lista.length)),
                     color: 'var(--brand-secondary)', hint: `${agendaron} agendaron` },
             ];
         }
 
-        const realizadas = filtradas.filter(f => f.realizada).length;
-        const asistieron = filtradas.filter(f => f.asistio).length;
-        const ventas = filtradas.filter(f => f.post_call.key === 'venta').length;
-        const noShow = filtradas.filter(f => f.post_call.key === 'no_show').length;
-        const pendientes = filtradas.filter(f => f.post_call.key === 'pendiente');
+        const realizadas = lista.filter(f => f.realizada).length;
+        const asistieron = lista.filter(f => f.asistio).length;
+        const ventas = lista.filter(f => f.post_call.key === 'venta').length;
+        const noShow = lista.filter(f => f.post_call.key === 'no_show').length;
+        const pendientes = lista.filter(f => f.post_call.key === 'pendiente');
         const conRetraso = pendientes.filter(f => f.retraso_dias > 0).length;
-        const seguimiento = filtradas.filter(
+        const seguimiento = lista.filter(
             f => ['seguimiento', 'presento_no_cerro'].includes(f.post_call.key)).length;
         return [
-            { label: 'agendas', valor: fmt.num(filtradas.length), color: 'var(--text-on-surface)',
+            { key: 'agendas', label: 'agendas', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
                 hint: `${realizadas} ya realizadas` },
-            { label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)), color: 'var(--success)',
+            { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)), color: 'var(--success)',
                 hint: `${asistieron} de ${realizadas} asistieron` },
-            { label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
+            { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
                 color: 'var(--brand-secondary)', hint: `${ventas} de ${asistieron} cerraron` },
-            { label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
+            { key: 'seguimiento', label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
                 hint: 'asistieron sin cerrar' },
-            { label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
+            { key: 'no_show', label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
                 hint: `${fmt.pct(pct(noShow, realizadas))} de las realizadas` },
-            { label: 'pendientes', valor: fmt.num(pendientes.length),
+            { key: 'pendientes', label: 'pendientes', valor: fmt.num(pendientes.length),
                 color: conRetraso ? 'var(--warning)' : 'var(--idle)',
                 hint: conRetraso ? `${conRetraso} con retraso` : 'al día' },
         ];
-    }, [filtradas, tabla]);
+    }, [mostradas, tabla]);
 
     const alcanceTexto = [alcance, query ? `"${query}"` : null].filter(Boolean).join(' · ');
 

@@ -175,6 +175,6 @@ export const resumenAcademia = (filas) => {
  */
 export const itemTotalAcademia = (filas) => {
     const r = resumenAcademia(filas);
-    return { label: 'activos en la Academia', valor: num(r.activos), color: 'var(--success)',
+    return { key: 'academia', label: 'activos en la Academia', valor: num(r.activos), color: 'var(--success)',
         hint: `de ${num(r.conCuenta)} con cuenta` };
 };
