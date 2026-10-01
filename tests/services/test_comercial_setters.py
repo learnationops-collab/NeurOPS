@@ -304,6 +304,30 @@ def test_la_lista_de_leads_del_setter_cierra_con_agendaron(client, db, equipo, l
         assert resumen['actual']['agendas'] == tabla['totales']['agendas'] == len(agendo) == 1
 
 
+# --- El marcador de cualificación no es una agenda ------------------------------------------------
+
+@freeze_time(HOY)
+def test_cualificar_un_lead_en_el_mazo_no_es_generar_una_agenda_ni_agendar(db, equipo):
+    """`/setter/deck/confirm-qualified` deja un Appointment con result 'Cualificado' y la hora del
+    clic como reunión, sin reserva detrás. No es trabajo de agenda: es haberlo cualificado."""
+    lead(db, '@cualificado')
+    marcador = agenda(db, equipo['marlon'], cliente(db, ig='cualificado'), setter=equipo['elias'],
+                      creada=datetime(2026, 9, 11, 10, 0), reunion=datetime(2026, 9, 11, 10, 0))
+    marcador.result = 'Cualificado'
+    # Una agenda real con `result` vacío sí cuenta: el filtro no se lleva puestos los NULL.
+    agenda(db, equipo['marlon'], cliente(db), setter=equipo['elias'],
+           creada=datetime(2026, 9, 12, 10, 0), reunion=datetime(2026, 9, 14, 15, 0)).result = None
+    db.session.commit()
+
+    elias = equipo['elias'].id
+    bloque = ca.bloque_setters(*SEP, setter_id=elias, setter_nombre='Elias')
+    assert (bloque['generadas'], bloque['agendas']) == (1, 0)
+    assert ComercialService.leads(*SEP, setter_id=elias, setter_nombre='Elias')[0]['estado']['key'] \
+        == 'sin_respuesta'
+    # El closer al que quedó asignado lo sigue viendo como siempre: esto es solo del setter.
+    assert len(ComercialService.agendas(*SEP, closer_id=equipo['marlon'].id)) == 2
+
+
 # --- Los closers no cambian -----------------------------------------------------------------------
 
 @freeze_time(HOY)

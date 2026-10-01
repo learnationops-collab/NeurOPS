@@ -166,6 +166,18 @@ PRESENTO = ('venta', 'sena', 'presento_no_cerro')
 REALIZADAS = ASISTIO + ('no_show',)
 
 
+def no_es_marcador():
+    """Condición SQL: la cita NO es el marcador que deja cualificar un lead en el mazo del setter.
+
+    Confirmar un lead de ManyChat como cualificado (`/setter/deck/confirm-qualified` y sus dos
+    hermanas en app/api/setter.py) crea un `Appointment` con `result='Cualificado'`, el
+    `setter_id` del setter y la hora del clic como reunión, sin ninguna reserva detrás: es lo que
+    `setter_agendas.py` ya documenta como placeholder. Contarlo haría de cada lead cualificado una
+    "agenda generada" y un "Agendó". `coalesce` porque un `result` vacío es una agenda de verdad.
+    """
+    return func.lower(func.coalesce(Appointment.result, '')) != 'cualificado'
+
+
 def _limpiar_email(valor):
     v = (valor or '').strip().lower()
     return v if v and v != 'n/a' and '@' in v else None
@@ -336,7 +348,8 @@ class ComercialService:
         `de_setters=True` deja solo las agendas que generó un setter: es "Agendas generadas" del
         equipo de setting. Sin eso, "Todo el equipo" con Setters contaba TODAS las agendas del
         período, también las de taller, VSL o landing que no generó ningún setter (en septiembre
-        de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya.
+        de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya. Tampoco
+        entra el marcador que deja cualificar un lead, que no es una reserva (`no_es_marcador`).
         """
         desde, hasta = ComercialService._limites(start, end)
         columna = Appointment.created_at if basis == 'creacion' else Appointment.start_time
@@ -351,6 +364,8 @@ class ComercialService:
         elif de_setters:
             q = q.filter(Appointment.setter_id.in_(
                 db.session.query(User.id).filter(User.role == 'setter')))
+        if de_setters:
+            q = q.filter(no_es_marcador())
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
         if not appts:
@@ -637,7 +652,7 @@ class ComercialService:
             ig_cliente = func.lower(func.replace(Client.instagram, '@', ''))
             for ig, generada_por in db.session.query(ig_cliente, Appointment.setter_id).join(
                     Appointment, Appointment.client_id == Client.id).filter(
-                    ig_cliente.in_(igs)).distinct():
+                    ig_cliente.in_(igs), no_es_marcador()).distinct():
                 con_cita.add(ig)
                 if generada_por in propios:
                     agendados.add(ig)
