@@ -172,6 +172,12 @@ def tabla():
     cual = request.args.get('tabla', 'agendas')
     if cual not in TABLAS:
         cual = 'agendas'
+    # Las ventas y la cartera se atribuyen al closer, así que con rol setters se devuelven SIN
+    # acotar por persona (sirve a la dirección mirando el área de setting). Para un setter eso
+    # era la plata y los clientes de todo el equipo: su pantalla nunca las pide, pero el endpoint
+    # las servía igual (encontrado el 01/10/2026).
+    if current_user.role == ROLE_SETTER and cual in ('ventas', 'clientes'):
+        return jsonify({'message': 'Forbidden'}), 403
     # Sin `basis` explícito, cada tabla usa la fecha con la que se cuenta su número: las agendas
     # generadas por creación (ver `ComercialService.generadas`), las demás por la reunión.
     basis = request.args.get('basis')
