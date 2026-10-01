@@ -612,30 +612,12 @@ def get_setter_deck():
     from datetime import date, timedelta, datetime
     from sqlalchemy import or_, func
     
-    date_range = request.args.get('date_range', 'today' if request.args.get('step') == 'agendas' else 'all')
-    target_date_str = request.args.get('date')
+    from app.api.setter_mazo import _rango_pedido
+
     step = request.args.get('step')
-    # "Hoy" es el del setter, no el del servidor (que corre en UTC): ver
-    # user_time_service.
-    today = hoy_del_usuario(current_user)
-
-    start_dt = None
-    end_dt = None
-
-    if date_range == 'today':
-        start_dt, end_dt = limites_dia_utc(current_user, today)
-    elif date_range == 'yesterday':
-        start_dt, end_dt = limites_dia_utc(current_user, today - timedelta(days=1))
-    elif date_range == 'week':
-        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=7), today)
-    elif date_range == 'month':
-        start_dt, end_dt = limites_rango_utc(current_user, today - timedelta(days=30), today)
-    elif date_range == 'custom' and target_date_str:
-        try:
-            t_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-            start_dt, end_dt = limites_dia_utc(current_user, t_date)
-        except ValueError:
-            pass
+    # Los chips de fecha son los mismos que los de la lista de agendas del mazo, con el "hoy" del
+    # setter: ver `_rango_pedido`. Sin chip, la cualificacion trae todo.
+    start_dt, end_dt = _rango_pedido('today' if step == 'agendas' else 'all')
 
     unread_client_ids = set()
     if current_user and current_user.is_authenticated:

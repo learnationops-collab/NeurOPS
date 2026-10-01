@@ -28,8 +28,8 @@ const SetterCualificacionFilters = ({
                     <span>
                         {dateRange === 'today' && 'Hoy'}
                         {dateRange === 'yesterday' && 'Ayer'}
-                        {dateRange === 'week' && 'Esta semana'}
-                        {dateRange === 'month' && 'Este mes'}
+                        {dateRange === 'week' && '7 días'}
+                        {dateRange === 'month' && '30 días'}
                         {dateRange === 'custom' && `Personalizado: ${customDate}`}
                     </span>
                     <ChevronDown size={14} className="text-slate-500" />
@@ -37,11 +37,13 @@ const SetterCualificacionFilters = ({
                 
                 {showCalendar && (
                     <div className="absolute top-12 left-0 bg-slate-950 border border-slate-850 p-3 rounded-2xl shadow-xl z-50 space-y-2 min-w-[200px] animate-in fade-in slide-in-from-top-1 duration-150">
+                        {/* Los nombres de "Mis datos" para los mismos rangos (ver `_rango_pedido`):
+                            "Este mes" allá es el mes calendario, y acá eran los últimos 31 días. */}
                         {[
                             { value: 'today', label: 'Hoy' },
                             { value: 'yesterday', label: 'Ayer' },
-                            { value: 'week', label: 'Esta semana' },
-                            { value: 'month', label: 'Este mes' }
+                            { value: 'week', label: '7 días' },
+                            { value: 'month', label: '30 días' }
                         ].map(opt => (
                             <button
                                 key={opt.value}

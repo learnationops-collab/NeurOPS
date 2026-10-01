@@ -30,13 +30,24 @@ from app.api.setter_agendas import agendas_del_setter, _cliente_de, _cita_de
 logger = logging.getLogger(__name__)
 
 
-def _rango_pedido():
+def _rango_pedido(por_defecto='today'):
     """(desde, hasta) en UTC segun el ?date_range de la pantalla.
 
     "Hoy" es el del setter, no el del servidor (que corre en UTC): ver
-    user_time_service.
+    user_time_service. Es una lista de trabajo, y su dia termina a la medianoche
+    del setter.
+
+    Los chips son los periodos de "Mis datos" con el mismo nombre: 'week' es
+    "7 dias" (hoy y los 6 anteriores) y 'month' "30 dias" (hoy y los 29
+    anteriores), como '7d' y '30d' en `CloserDashboardService._range_for_period`.
+    Antes eran 8 y 31 dias con los nombres "Esta semana" y "Este mes", que en el
+    dashboard es el mes calendario: el mismo chip decia cosas distintas en las
+    dos pantallas (01/10/2026).
+
+    Lo usan las dos listas del mazo, la de cualificacion (`get_setter_deck`) y la
+    de agendas, para que el mismo chip sea el mismo rango en las dos.
     """
-    date_range = request.args.get('date_range', 'today')
+    date_range = request.args.get('date_range', por_defecto)
     target_date_str = request.args.get('date')
     hoy = hoy_del_usuario(current_user)
 
@@ -45,9 +56,9 @@ def _rango_pedido():
     if date_range == 'yesterday':
         return limites_dia_utc(current_user, hoy - timedelta(days=1))
     if date_range == 'week':
-        return limites_rango_utc(current_user, hoy - timedelta(days=7), hoy)
+        return limites_rango_utc(current_user, hoy - timedelta(days=6), hoy)
     if date_range == 'month':
-        return limites_rango_utc(current_user, hoy - timedelta(days=30), hoy)
+        return limites_rango_utc(current_user, hoy - timedelta(days=29), hoy)
     if date_range == 'custom' and target_date_str:
         try:
             dia = datetime.strptime(target_date_str, '%Y-%m-%d').date()
