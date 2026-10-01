@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
+import { useComportamientoModal } from '../../../components/ui/Modal';
 
 // 620px en el mockup: lista agrupada por área, radio + chip "Acá está" para el
 // módulo donde ya vive la lección, más al-principio/al-final del módulo
@@ -8,6 +10,9 @@ const MoveLessonModal = ({ lesson, flatModules, onClose, onConfirm }) => {
     const [moduleId, setModuleId] = useState(lesson.module_id);
     const [position, setPosition] = useState('end');
     const [saving, setSaving] = useState(false);
+    const panel = useRef(null);
+    const idTitulo = useId();
+    const { atraparTab, propsFondo } = useComportamientoModal({ onCerrar: onClose, cerrable: !saving, panel });
 
     const byArea = useMemo(() => {
         const groups = {};
@@ -28,13 +33,16 @@ const MoveLessonModal = ({ lesson, flatModules, onClose, onConfirm }) => {
         }
     };
 
-    return (
-        <div className="ce-modal-overlay" onClick={onClose}>
-            <div className="ce-modal is-narrow" onClick={(e) => e.stopPropagation()}>
+    // Por portal, igual que EditLessonModal: ver ahí.
+    return createPortal(
+        <div className="ce-shell ce-shell--portal">
+        <div className="ce-modal-overlay" {...propsFondo}>
+            <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={idTitulo}
+                className="ce-modal is-narrow" onKeyDown={atraparTab}>
                 <div className="ce-modal__header">
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                         <p className="ce-modal__breadcrumb">Mover lección</p>
-                        <h3 className="ce-modal__title">{lesson.title}</h3>
+                        <h3 id={idTitulo} className="ce-modal__title">{lesson.title}</h3>
                     </div>
                     <button type="button" className="ce-modal__close" onClick={onClose} aria-label="Cerrar"><X size={16} /></button>
                 </div>
@@ -72,6 +80,8 @@ const MoveLessonModal = ({ lesson, flatModules, onClose, onConfirm }) => {
                 </div>
             </div>
         </div>
+        </div>,
+        document.body,
     );
 };
 

@@ -179,11 +179,20 @@
 
 .ce-shell .empty-hint { padding: 12px 4px; font-size: 11px; font-style: italic; color: var(--ce-text-muted); }
 
-/* ---------- modal ---------- */
-.ce-shell .ce-modal-overlay { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(2, 6, 23, .78); backdrop-filter: blur(6px); animation: ce-fade-in .18s ease both; }
-.ce-shell .ce-modal { width: 100%; max-width: 680px; max-height: 88vh; display: flex; flex-direction: column; border-radius: 28px; border: 1px solid var(--ce-border); background: linear-gradient(165deg, #0a0e2f, #05071c); box-shadow: var(--ce-shadow-main); animation: ce-modal-in .22s cubic-bezier(.2, .9, .3, 1) both; }
-.ce-shell .ce-modal.is-wide { max-width: 780px; }
-.ce-shell .ce-modal.is-narrow { max-width: 480px; }
+/* ---------- modal ----------
+   Los modales salen por portal a <body> dentro de un `.ce-shell.ce-shell--portal` (sin alto ni
+   fondo propios), así este CSS les sigue aplicando y quedan fuera de MainLayout: su `z-index` ya
+   compite con el resto de la app. Mismo criterio que `components/ui/modal.css`: tapan todo menos el
+   widget de bugs (z-190), el panel mide como mucho el velo menos su margen y el pie le reserva al
+   widget el hueco que se mete adentro del panel. */
+.ce-shell.ce-shell--portal { min-height: 0; background: none; }
+.ce-shell .ce-modal-overlay { --ce-modal-margen: 24px; position: fixed; inset: 0; z-index: 170; display: flex; align-items: center; justify-content: center; padding: var(--ce-modal-margen); background: rgba(2, 6, 23, .78); backdrop-filter: blur(6px); animation: ce-velo-in .18s ease both; }
+.ce-shell .ce-modal { --ce-modal-ancho: 680px; width: 100%; max-width: var(--ce-modal-ancho); max-height: 100%; display: flex; flex-direction: column; border-radius: 28px; border: 1px solid var(--ce-border); background: linear-gradient(165deg, #0a0e2f, #05071c); box-shadow: var(--ce-shadow-main); outline: none; animation: ce-modal-in .22s cubic-bezier(.2, .9, .3, 1) both; }
+.ce-shell .ce-modal.is-wide { --ce-modal-ancho: 780px; }
+.ce-shell .ce-modal.is-narrow { --ce-modal-ancho: 480px; }
+@media (max-width: 639px) {
+    .ce-shell .ce-modal-overlay { --ce-modal-margen: 12px; }
+}
 
 .ce-shell .ce-modal__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 24px 24px 0; }
 .ce-shell .ce-modal__breadcrumb { margin: 0 0 6px; font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--ce-text-muted); }
@@ -197,8 +206,14 @@
 .ce-shell .ce-modal__tab.is-active { background: rgba(255, 255, 255, .08); border-color: var(--ce-border); color: var(--ce-text); }
 .ce-shell .ce-modal__tab.is-active .ce-dot { opacity: 1; }
 
-.ce-shell .ce-modal__body { flex: 1; overflow-y: auto; padding: 18px 24px; display: flex; flex-direction: column; gap: 18px; }
-.ce-shell .ce-modal__footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 18px 24px; border-top: 1px solid var(--ce-border); }
+.ce-shell .ce-modal__header,
+.ce-shell .ce-modal__tabs,
+.ce-shell .ce-modal__footer { flex-shrink: 0; }
+.ce-shell .ce-modal__tabs { flex-wrap: wrap; }
+.ce-shell .ce-modal__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 24px; display: flex; flex-direction: column; gap: 18px; }
+/* El widget de bugs ocupa de 96 a 144px desde el borde derecho de la ventana: el pie reserva lo que
+   de eso cae adentro del panel (cero cuando el panel queda lejos), más 16px de aire. */
+.ce-shell .ce-modal__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; padding: 18px 24px; padding-right: max(24px, calc(160px - (100vw - min(var(--ce-modal-ancho), 100vw - 2 * var(--ce-modal-margen))) / 2)); border-top: 1px solid var(--ce-border); }
 
 .ce-shell .btn-ghost { padding: 12px 18px; border-radius: var(--ce-radius-pill); border: 0; background: none; color: var(--ce-text-muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .ce-shell .btn-ghost:hover { color: var(--ce-text); }
@@ -285,6 +300,14 @@
 /* ---------- animations ---------- */
 @keyframes ce-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ce-modal-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+/* El velo solo se funde: con el `translateY` de `ce-fade-in` dejaba sin tapar una franja arriba
+   mientras entraba. */
+@keyframes ce-velo-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .ce-shell .ce-modal-overlay,
+    .ce-shell .ce-modal { animation: none; }
+}
 
 @media (max-width: 640px) {
     .ce-shell .form-row { grid-template-columns: 1fr; }

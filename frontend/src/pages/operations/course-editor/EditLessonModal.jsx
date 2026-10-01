@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
+import { useComportamientoModal } from '../../../components/ui/Modal';
 import ContentTab from './ContentTab';
 import VisibilityTab from './VisibilityTab';
 import QuestionsTab from './QuestionsTab';
@@ -41,6 +43,11 @@ const EditLessonModal = ({ lesson, defaultModuleId, flatModules, onClose, onSave
     const [tab, setTab] = useState('content');
     const [form, setForm] = useState(() => buildInitialForm(lesson, defaultModuleId));
     const [saving, setSaving] = useState(false);
+    const panel = useRef(null);
+    const idTitulo = useId();
+    // Escape, fondo, scroll trabado y foco: lo mismo que los demás modales de la app. Mientras
+    // guarda no se cierra ni con Escape ni con el fondo.
+    const { atraparTab, propsFondo } = useComportamientoModal({ onCerrar: onClose, cerrable: !saving, panel });
 
     const currentModule = flatModules.find((m) => m.moduleId === form.module_id);
 
@@ -82,13 +89,17 @@ const EditLessonModal = ({ lesson, defaultModuleId, flatModules, onClose, onSave
         }
     };
 
-    return (
-        <div className="ce-modal-overlay" onClick={onClose}>
-            <div className="ce-modal is-wide" onClick={(e) => e.stopPropagation()}>
+    // Por portal a <body>, dentro de un `.ce-shell` propio para que le siga aplicando su CSS: montado
+    // en la página quedaba en el `z-10` de MainLayout, con el widget de bugs encima del pie.
+    return createPortal(
+        <div className="ce-shell ce-shell--portal">
+        <div className="ce-modal-overlay" {...propsFondo}>
+            <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={idTitulo}
+                className="ce-modal is-wide" onKeyDown={atraparTab}>
                 <div className="ce-modal__header">
                     <div style={{ minWidth: 0 }}>
                         <p className="ce-modal__breadcrumb">{currentModule ? `${currentModule.areaName} · ${currentModule.moduleName}` : ''}</p>
-                        <h3 className="ce-modal__title">{isEditing ? (form.title || 'Editar lección') : 'Nueva lección'}</h3>
+                        <h3 id={idTitulo} className="ce-modal__title">{isEditing ? (form.title || 'Editar lección') : 'Nueva lección'}</h3>
                     </div>
                     <button type="button" className="ce-modal__close" onClick={onClose} aria-label="Cerrar sin guardar"><X size={16} /></button>
                 </div>
@@ -120,6 +131,8 @@ const EditLessonModal = ({ lesson, defaultModuleId, flatModules, onClose, onSave
                 </div>
             </div>
         </div>
+        </div>,
+        document.body,
     );
 };
 

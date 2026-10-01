@@ -77,7 +77,7 @@ const QuestionsTab = ({ form, setForm }) => {
                                 {isOpen ? summary : null}
                             </button>
                             {!isOpen && (
-                                <span className="question-card__summary" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <span className="question-card__summary" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                                     <span className="question-chip">{QUESTION_TYPE_OPTIONS.find((t) => t.value === q.question_type)?.label}</span>
                                     {!hasExplanation && <span className="question-chip is-warning">Sin explicación</span>}
                                 </span>
