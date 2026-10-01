@@ -5,11 +5,28 @@ nada: la ruta de actividad respondía 200 con `null` y la de dashboard (que la l
 hacer `None['recent_activity']`. Ninguna pantalla actual las llama —el /admin de hoy lee
 `/analytics/*`—, así que nadie lo veía; estos tests fijan que respondan lo que prometen.
 """
-from datetime import date
+from datetime import datetime
 
 import pytest
+from freezegun import freeze_time
 
 from app.models import Client, Enrollment, Payment, Program
+
+# Hora fija: un mediodía de mitad de mes. El rango del período sale de `date.today()` (la hora de
+# la máquina) y `Client.created_at` se guarda en UTC: en producción da igual porque el servidor
+# corre en UTC, pero en una máquina en UTC-4, de 20 a 24 h, "hoy" todavía es el día anterior
+# mientras el cliente recién creado ya es de mañana. El último día del mes eso lo saca del mes y
+# estos tests fallaban todas las noches de fin de mes (30/09/2026, 22 h). Congelar la hora no
+# alcanza solo: el default de `created_at` es el `datetime.utcnow` real, guardado al importar el
+# modelo, y freezegun no lo toca. Por eso los clientes llevan su `created_at` puesto a mano.
+MEDIODIA = datetime(2026, 9, 15, 15, 0)
+HOY = MEDIODIA.date()
+
+
+@pytest.fixture(autouse=True)
+def _hora_fija():
+    with freeze_time(MEDIODIA):
+        yield
 
 
 @pytest.fixture()
@@ -23,18 +40,17 @@ def deudores(db, make_user):
     dio de baja debiendo $900 y no tiene que figurar."""
     closer = make_user(role='closer', username='vendedor', email='vendedor@neuro.com')
     programa = Program(name='Residency Roadmap', price=1000.0)
-    debe = Client(full_name='Ana Deuda', email='ana@x.com')
-    de_baja = Client(full_name='Beto Baja', email='beto@x.com')
+    debe = Client(full_name='Ana Deuda', email='ana@x.com', created_at=MEDIODIA)
+    de_baja = Client(full_name='Beto Baja', email='beto@x.com', created_at=MEDIODIA)
     db.session.add_all([programa, debe, de_baja])
     db.session.commit()
     for cliente, pagado in ((debe, 300.0), (de_baja, 100.0)):
         inscripcion = Enrollment(client_id=cliente.id, program_id=programa.id, closer_id=closer.id,
-                                 enrollment_date=date.today())
+                                 enrollment_date=HOY)
         db.session.add(inscripcion)
         db.session.commit()
-        db.session.add(Payment(enrollment_id=inscripcion.id, amount=pagado, date=date.today(),
+        db.session.add(Payment(enrollment_id=inscripcion.id, amount=pagado, date=HOY,
                                payment_type='first_payment', status='completed'))
-    from datetime import datetime
     de_baja.baja_at = datetime.utcnow()
     db.session.commit()
     return debe

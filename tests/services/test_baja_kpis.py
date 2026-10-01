@@ -5,10 +5,11 @@ Cash del comercial (`_pending_collections`), los KPIs del admin, los de la lista
 tablero público de clientes nuevos—, así que cada uno tiene que enterarse de la baja. El test de
 cada uno parte de un cliente que debe, para que ninguno pase en vacío.
 """
-from datetime import date, datetime
+from datetime import datetime
 
 import pytest
 from flask_login import login_user
+from freezegun import freeze_time
 
 from app.models import Appointment, Client, Enrollment, FinancialSale, Payment, Program
 from app.services import baja_service
@@ -18,7 +19,21 @@ from app.services.closer_service import CloserService
 from app.services.dashboard_service import DashboardService
 from app.services.user_service import UserService
 
-HOY = date.today()
+# Hora fija: un mediodía de mitad de mes. El rango del período sale de `date.today()` (la hora de
+# la máquina) y `Client.created_at` se guarda en UTC: en producción da igual porque el servidor
+# corre en UTC, pero en una máquina en UTC-4, de 20 a 24 h, "hoy" todavía es el día anterior
+# mientras el cliente recién creado ya es de mañana. El último día del mes eso lo saca del mes y
+# estos tests fallaban todas las noches de fin de mes (30/09/2026, 22 h). Congelar la hora no
+# alcanza solo: el default de `created_at` es el `datetime.utcnow` real, guardado al importar el
+# modelo, y freezegun no lo toca. Por eso los clientes llevan su `created_at` puesto a mano.
+MEDIODIA = datetime(2026, 9, 15, 15, 0)
+HOY = MEDIODIA.date()
+
+
+@pytest.fixture(autouse=True)
+def _hora_fija():
+    with freeze_time(MEDIODIA):
+        yield
 
 
 @pytest.fixture()
@@ -36,7 +51,7 @@ def programa(db):
 
 def _cliente(db, closer, programa, nombre, pagado):
     email = f"{nombre.split()[0].lower()}@x.com"
-    c = Client(full_name=nombre, email=email, instagram=nombre.split()[0].lower())
+    c = Client(full_name=nombre, email=email, instagram=nombre.split()[0].lower(), created_at=MEDIODIA)
     db.session.add(c)
     db.session.commit()
     db.session.add(FinancialSale(mail_cliente=email, instagram=c.instagram, tipo_pago='RR - Parcial',
