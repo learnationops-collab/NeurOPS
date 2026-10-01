@@ -23,7 +23,7 @@ SALE_TIPO_TO_BUCKET = {
 REAL_SALE_TIPOS = ('completo', 'parcial')
 
 
-def matriz_de_cierres(ventas, senas, asistieron, presentaciones):
+def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones):
     """El close rate en sus cuatro lecturas: por llamada o por presentación, sin o con señas.
 
     Es la forma ÚNICA del bloque `cierres` que devuelven los dos tableros (el del closer, desde
@@ -31,12 +31,20 @@ def matriz_de_cierres(ventas, senas, asistieron, presentaciones):
     claves, mismo redondeo, misma regla para el denominador vacío. Así la tarjeta que los dibuja
     es una sola y no puede leer distinto un tablero que el otro.
 
-      · `ventas`: cierres reales, solo pago completo y split pay (`REAL_SALE_TIPOS`).
+      · `completo` / `split`: cierres reales, pago completo y split pay (`REAL_SALE_TIPOS`). Las
+        ventas son su suma y no un tercer argumento: así el desglose de la leyenda de la tarjeta
+        ("3 PC + 9 SP") no puede dejar de sumar el total que está al lado.
       · `senas`: señas que NO terminaron en una de esas ventas dentro del mismo conjunto. Solo se
-        suman en la fila "con señas": una seña que después se completó ya está en `ventas`, y
+        suman en la fila "con señas": una seña que después se completó ya está en las ventas, y
         contarla otra vez daría dos cierres por un mismo lead.
       · `asistieron`: denominador por llamada (llamadas con show up).
       · `presentaciones`: denominador por presentación (llamadas donde se presentó la oferta).
+
+    Van todos por nombre: son cinco conteos del mismo tipo y cambiar dos de lugar daría números
+    plausibles y equivocados.
+
+    `presentacion` es la tasa de presentación (presentaciones sobre llamadas con show up), que la
+    tarjeta muestra arriba de la matriz porque explica la distancia entre sus dos columnas.
 
     `pct` es None sin denominador: un "0% de cierre" sobre cero llamadas afirma algo que no pasó.
     """
@@ -44,12 +52,16 @@ def matriz_de_cierres(ventas, senas, asistieron, presentaciones):
         return {'num': num, 'den': den,
                 'pct': round(num / den * 100, 1) if den else None}
 
+    ventas = completo + split
     con_senas = ventas + senas
     return {
         'ventas': ventas,
+        'ventas_completo': completo,
+        'ventas_split': split,
         'senas': senas,
         'asistieron': asistieron,
         'presentaciones': presentaciones,
+        'presentacion': celda(presentaciones, asistieron),
         'sin_senas': {'por_llamada': celda(ventas, asistieron),
                       'por_presentacion': celda(ventas, presentaciones)},
         'con_senas': {'por_llamada': celda(con_senas, asistieron),
@@ -2483,8 +2495,9 @@ class CloserService:
             },
             # El close rate por llamada y por presentación, sin y con señas, con sus conteos. Misma
             # forma que el panel Cierre del dashboard comercial (ver `matriz_de_cierres`).
-            "cierres": matriz_de_cierres(total_sales, señas_sin_venta, total_attended,
-                                         val(stats.offers_made)),
+            "cierres": matriz_de_cierres(completo=final_pif_count, split=final_split_count,
+                                         senas=señas_sin_venta, asistieron=total_attended,
+                                         presentaciones=val(stats.offers_made)),
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
                 "closed": val(stats.fu_closed),

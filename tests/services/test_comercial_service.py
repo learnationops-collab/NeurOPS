@@ -131,7 +131,30 @@ def test_un_split_pay_tambien_es_venta(db, marlon):
     agenda(db, marlon, cli, closer_result='Show up')
     venta(db, mail='luciana@test.local', tipo='RR - Parcial')
 
-    assert ComercialService.agendas(DESDE, HASTA)[0]['post_call']['key'] == 'venta'
+    fila = ComercialService.agendas(DESDE, HASTA)[0]
+    assert fila['post_call']['key'] == 'venta'
+    assert fila['venta_tipo'] == 'parcial'
+
+
+@freeze_time(HOY)
+def test_el_desglose_de_ventas_suma_las_agendas_en_venta(db, marlon):
+    """El panel Cierre dice "N ventas · X PC + Y SP". Una agenda es UNA venta aunque el lead pagara
+    un completo y además abriera un split (dos programas): manda el pago completo, y el desglose
+    sigue sumando el total."""
+    for email, tipos in [('pif@test.local', ['AL - Completo']), ('split@test.local', ['RR - Parcial']),
+                         ('dos@test.local', ['RR - Parcial', 'AL - Completo']),
+                         ('sena@test.local', ['RR - Seña'])]:
+        agenda(db, marlon, cliente(db, email=email), closer_result='Show up')
+        for tipo in tipos:
+            venta(db, mail=email, tipo=tipo)
+
+    filas = ComercialService.agendas(DESDE, HASTA)
+    totales = ComercialService.totales_agendas(filas)
+
+    assert {f['email']: f['venta_tipo'] for f in filas} == {
+        'pif@test.local': 'completo', 'split@test.local': 'parcial',
+        'dos@test.local': 'completo', 'sena@test.local': None}
+    assert (totales['ventas'], totales['ventas_completo'], totales['ventas_split']) == (3, 2, 1)
 
 
 @freeze_time(HOY)

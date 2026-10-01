@@ -330,9 +330,11 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         # completo + split pay) y con señas— con numerador y denominador de cada una. Es la MISMA
         # forma que el bloque `cierres` del dashboard del closer (`matriz_de_cierres`), así la
         # tarjeta que las dibuja es una sola. Acá cada seña es una agenda en "Seña", que por
-        # construcción no tiene venta: no hay nada que descontar para no contarla dos veces.
-        'cierres': matriz_de_cierres(tot_a['ventas'], tot_a['senas'], tot_a['asistieron'],
-                                     presentaciones),
+        # construcción no tiene venta: no hay nada que descontar para no contarla dos veces. El
+        # desglose pago completo / split pay es por agenda (`venta_tipo`), como las ventas.
+        'cierres': matriz_de_cierres(completo=tot_a['ventas_completo'], split=tot_a['ventas_split'],
+                                     senas=tot_a['senas'], asistieron=tot_a['asistieron'],
+                                     presentaciones=presentaciones),
         'estados': estados_de(agendas),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],

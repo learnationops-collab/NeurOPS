@@ -74,6 +74,9 @@ def test_los_dos_backends_dan_la_misma_matriz_de_cierres(db, marlon):
 
     esperado = {
         'ventas': 3, 'senas': 1, 'asistieron': 6, 'presentaciones': 5,
+        # El desglose de la leyenda: pif@ y completo@ pagaron completo, split@ abrió un split.
+        'ventas_completo': 2, 'ventas_split': 1,
+        'presentacion': {'num': 5, 'den': 6, 'pct': 83.3},
         'sin_senas': {'por_llamada': {'num': 3, 'den': 6, 'pct': 50.0},
                       'por_presentacion': {'num': 3, 'den': 5, 'pct': 60.0}},
         'con_senas': {'por_llamada': {'num': 4, 'den': 6, 'pct': 66.7},

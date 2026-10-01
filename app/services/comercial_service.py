@@ -362,6 +362,10 @@ class ComercialService:
             ig = _limpiar_ig(cliente.instagram) if cliente else None
             tipos = tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
             con_venta = any(t in REAL_SALE_TIPOS for t in tipos)
+            # Qué venta es, para el desglose pago completo / split pay del panel Cierre. Una agenda
+            # cuenta UNA venta aunque el lead tenga las dos (dos programas): manda el pago
+            # completo, y así completo + split siempre suma las agendas en "Venta".
+            venta_tipo = ('completo' if 'completo' in tipos else 'parcial') if con_venta else None
             con_sena = 'seña' in tipos
             con_seguimiento = bool(a.seguimiento_tipo or a.fecha_seguimiento) and not a.seguimiento_realizado
 
@@ -399,6 +403,7 @@ class ComercialService:
                 # `con_venta`: pago completo o split pay. `con_sena`: dejó una seña (tenga o no,
                 # además, una venta: la seña que después se completó sigue siendo una seña).
                 'con_venta': con_venta,
+                'venta_tipo': venta_tipo,
                 'con_sena': con_sena,
             })
         return filas
@@ -601,6 +606,9 @@ class ComercialService:
             'asistieron': len(asistieron),
             'show_up': pct(len(asistieron), len(realizadas)),
             'ventas': len(ventas),
+            # El desglose de esas ventas (ver `venta_tipo` en `agendas`): suman `ventas` exacto.
+            'ventas_completo': sum(1 for f in ventas if f.get('venta_tipo') == 'completo'),
+            'ventas_split': sum(1 for f in ventas if f.get('venta_tipo') != 'completo'),
             'close_rate': pct(len(ventas), len(asistieron)),
             'senas': len(senas),
             'close_rate_con_senas': pct(len(ventas) + len(senas), len(asistieron)),

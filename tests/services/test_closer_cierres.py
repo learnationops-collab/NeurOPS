@@ -60,7 +60,7 @@ def stats(closer, agg='sum'):
 # --- La forma del bloque ----------------------------------------------------------------------
 
 def test_la_matriz_tiene_las_cuatro_tasas_con_sus_conteos():
-    m = matriz_de_cierres(ventas=2, senas=1, asistieron=8, presentaciones=4)
+    m = matriz_de_cierres(completo=1, split=1, senas=1, asistieron=8, presentaciones=4)
 
     assert m['sin_senas']['por_llamada'] == {'num': 2, 'den': 8, 'pct': 25.0}
     assert m['sin_senas']['por_presentacion'] == {'num': 2, 'den': 4, 'pct': 50.0}
@@ -69,11 +69,33 @@ def test_la_matriz_tiene_las_cuatro_tasas_con_sus_conteos():
     assert (m['ventas'], m['senas'], m['asistieron'], m['presentaciones']) == (2, 1, 8, 4)
 
 
+def test_las_ventas_son_pago_completo_mas_split_y_la_tarjeta_trae_el_desglose():
+    """La leyenda de la tarjeta dice "12 ventas · 3 PC + 9 SP": el total es la suma del desglose
+    por construcción, no un tercer número que podría no cerrar."""
+    m = matriz_de_cierres(completo=3, split=9, senas=13, asistieron=84, presentaciones=76)
+
+    assert (m['ventas'], m['ventas_completo'], m['ventas_split']) == (12, 3, 9)
+    assert m['sin_senas']['por_llamada']['num'] == 12
+
+
+def test_la_tasa_de_presentacion_viaja_en_el_bloque():
+    m = matriz_de_cierres(completo=3, split=9, senas=13, asistieron=84, presentaciones=76)
+
+    assert m['presentacion'] == {'num': 76, 'den': 84, 'pct': 90.5}
+
+
+def test_los_conteos_van_por_nombre():
+    """Cinco conteos del mismo tipo: de a posición, cambiar dos de lugar no avisaría nada."""
+    with pytest.raises(TypeError):
+        matriz_de_cierres(1, 1, 1, 8, 4)
+
+
 def test_sin_denominador_la_tasa_es_none_y_no_cero():
-    m = matriz_de_cierres(ventas=0, senas=0, asistieron=0, presentaciones=0)
+    m = matriz_de_cierres(completo=0, split=0, senas=0, asistieron=0, presentaciones=0)
 
     assert m['sin_senas']['por_llamada']['pct'] is None
     assert m['con_senas']['por_presentacion']['pct'] is None
+    assert m['presentacion']['pct'] is None
 
 
 # --- get_comprehensive_stats --------------------------------------------------------------------
@@ -90,6 +112,7 @@ def test_una_sena_sola_no_es_un_cierre_pero_si_cuenta_con_senas(db, marlon):
     cierres = s['cierres']
 
     assert s['percentages']['close_rate'] == 50.0          # 2 de 4: la seña no entra
+    assert (cierres['ventas_completo'], cierres['ventas_split']) == (1, 1)
     assert cierres['sin_senas']['por_llamada'] == {'num': 2, 'den': 4, 'pct': 50.0}
     assert cierres['con_senas']['por_llamada'] == {'num': 3, 'den': 4, 'pct': 75.0}
     assert cierres['sin_senas']['por_presentacion']['pct'] == 50.0
