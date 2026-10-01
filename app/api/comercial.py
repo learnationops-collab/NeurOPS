@@ -190,7 +190,9 @@ def tabla():
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
-        filas = ComercialService.leads(start, end, setter_nombre=nombre if rol == ROL_SETTERS else None)
+        de_setter = rol == ROL_SETTERS
+        filas = ComercialService.leads(start, end, setter_nombre=nombre if de_setter else None,
+                                       setter_id=miembro_id if de_setter else None)
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
         filas = ComercialService.generadas(start, end, setter_id=miembro_id, basis=basis)

@@ -380,7 +380,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
 
 def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     """Lo mismo para setters: el embudo va del lead entrante a la agenda generada."""
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
+    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
     generadas = ComercialService.generadas(start, end, setter_id=setter_id)
     tot_l = ComercialService.totales_leads(leads)
     tot_g = ComercialService.totales_agendas(generadas)
@@ -577,7 +577,7 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
 
 
 def _series_setters(dias, start, end, setter_id, setter_nombre):
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
+    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
     generadas = ComercialService.generadas(start, end, setter_id=setter_id)
 
     return [

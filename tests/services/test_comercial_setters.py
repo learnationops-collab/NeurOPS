@@ -5,6 +5,7 @@ que no tenga que dudar:
 
   1. Una agenda generada se cuenta por la fecha en que se CREÓ, no por la de la reunión.
   2. Una persona cuenta UNA vez por setter: si reagendó, queda su agenda más reciente.
+  3. "Agendaron" (el embudo de leads) cuenta solo los leads que agendaron con ESE setter.
 
 Todo lo de los closers queda como estaba: sus agendas se siguen contando por la reunión, una por
 cita.
@@ -15,7 +16,7 @@ from datetime import date, datetime
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client, FinancialSale
+from app.models import Appointment, Client, FinancialSale, ManychatLead
 from app.services import comercial_analitica as ca
 from app.services.comercial_service import ComercialService
 
@@ -215,6 +216,92 @@ def test_la_tabla_de_generadas_devuelve_las_filas_depuradas(client, db, equipo, 
         tabla = client.get(TABLA, headers=headers,
                            query_string={**rango, **extra, 'tabla': 'generadas'}).get_json()
         assert resumen['actual']['generadas'] == len(tabla['filas']) == tabla['totales']['agendas'] == 1
+
+
+# --- 3. Agendaron: con ESE setter -----------------------------------------------------------------
+
+def lead(db, ig, setter='Elias', cuando=datetime(2026, 9, 10, 12, 0)):
+    l = ManychatLead(manychat_id=f'mc-{next(_n)}', name=f'Lead {ig}', ig=ig, setter=setter,
+                     created_at=cuando)
+    db.session.add(l)
+    db.session.commit()
+    return l
+
+
+@pytest.fixture()
+def leads_de_elias(db, equipo, make_user):
+    """Cuatro leads de Elias que reservaron, cada uno por una vía distinta."""
+    marlon = equipo['marlon']
+    reunion = {'creada': datetime(2026, 9, 11, 10, 0), 'reunion': datetime(2026, 9, 13, 15, 0)}
+    vias = {
+        'con_elias': equipo['elias'],
+        'con_paula': equipo['paula'],
+        'en_un_taller': None,          # las agendas de taller, VSL o landing no tienen setter
+        'a_mano_por_un_closer': marlon,  # el closer que agenda a mano queda como setter_id
+    }
+    leads = {}
+    for via, quien in vias.items():
+        leads[via] = lead(db, f'@{via}')
+        agenda(db, marlon, cliente(db, ig=via.upper()), setter=quien, **reunion)
+    leads['sin_cita'] = lead(db, '@sin_cita')
+    return leads
+
+
+@freeze_time(HOY)
+def test_agendo_cuenta_solo_las_citas_que_genero_ese_setter(db, equipo, leads_de_elias):
+    filas = ComercialService.leads(*SEP, setter_nombre='Elias', setter_id=equipo['elias'].id)
+    estado = {f['id']: f['estado']['key'] for f in filas}
+    ids = {via: l.id for via, l in leads_de_elias.items()}
+
+    assert [f['id'] for f in filas if f['agendo']] == [ids['con_elias']]
+    # Los que reservaron por otro lado no le cuentan, pero tampoco se disfrazan de "sin respuesta".
+    assert {via: estado[i] for via, i in ids.items() if via != 'con_elias'} == {
+        'con_paula': 'agendo_otra_via', 'en_un_taller': 'agendo_otra_via',
+        'a_mano_por_un_closer': 'agendo_otra_via', 'sin_cita': 'sin_respuesta'}
+
+    bloque = ca.bloque_setters(*SEP, setter_id=equipo['elias'].id, setter_nombre='Elias')
+    assert bloque['agendas'] == 1
+    assert next(p['n'] for p in bloque['funnel'] if p['paso'] == 'Agendaron') == 1
+    assert bloque['conversion'] == 20.0  # 1 de 5 entrantes
+
+
+@freeze_time(HOY)
+def test_con_el_equipo_agendo_es_una_cita_de_cualquier_setter(db, equipo, leads_de_elias):
+    agendaron = {f['cliente'] for f in ComercialService.leads(*SEP) if f['agendo']}
+
+    # El de Paula sí: es trabajo del equipo de setting. El taller y el closer, no.
+    assert agendaron == {'Lead @con_elias', 'Lead @con_paula'}
+    assert ca.bloque_setters(*SEP)['agendas'] == 2
+
+
+@freeze_time(HOY)
+def test_el_nombre_de_manychat_se_cruza_con_el_usuario_del_setter(db, equipo):
+    """ManyChat escribe el nombre a mano ('elías'), las citas guardan el id del usuario 'Elias'."""
+    lead(db, 'Suyo.IG', setter='elías')
+    agenda(db, equipo['marlon'], cliente(db, ig='@suyo.ig'), setter=equipo['elias'],
+           creada=datetime(2026, 9, 11, 10, 0), reunion=datetime(2026, 9, 13, 15, 0))
+
+    # Sin el id, sale del nombre; con el instagram normalizado igual que siempre (@, mayúsculas).
+    solo_nombre = ComercialService.leads(*SEP, setter_nombre='Elias')
+    assert [f['agendo'] for f in solo_nombre] == [True]
+    assert ComercialService._setter_id_de('ELÍAS') == equipo['elias'].id
+
+
+@freeze_time(HOY)
+def test_la_lista_de_leads_del_setter_cierra_con_agendaron(client, db, equipo, leads_de_elias,
+                                                           auth_headers):
+    rango = {'period': 'custom', 'start_date': '2026-09-01', 'end_date': '2026-09-30',
+             'compare': 'none'}
+    for quien, extra in [('elias', {}),
+                         ('director', {'rol': 'setters', 'miembro_id': equipo['elias'].id})]:
+        headers = auth_headers(equipo[quien])
+        resumen = client.get('/api/comercial/resumen', headers=headers,
+                             query_string={**rango, **extra}).get_json()
+        tabla = client.get(TABLA, headers=headers,
+                           query_string={**rango, **extra, 'tabla': 'leads'}).get_json()
+        # El drill-down de "Agendaron" filtra por la etiqueta "Agendó": tiene que dar el número.
+        agendo = [f for f in tabla['filas'] if f['estado']['label'] == 'Agendó']
+        assert resumen['actual']['agendas'] == tabla['totales']['agendas'] == len(agendo) == 1
 
 
 # --- Los closers no cambian -----------------------------------------------------------------------

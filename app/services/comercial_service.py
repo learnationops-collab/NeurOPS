@@ -99,6 +99,10 @@ POST_CALL = [
 
 ESTADO_LEAD = [
     {'key': 'agendo', 'label': 'Agendó', 'tone': 'success'},
+    # Reservó, pero no con el setter que se está mirando: con otro setter, en un taller o por un
+    # closer (ver `ComercialService.leads`). No suma en "Agendaron" y tampoco es "Sin respuesta":
+    # el setter tiene que poder ver por qué un lead que sabe que agendó no le cuenta.
+    {'key': 'agendo_otra_via', 'label': 'Agendó por otra vía', 'tone': 'idle'},
     {'key': 'en_conversacion', 'label': 'En conversación', 'tone': 'info'},
     {'key': 'sin_respuesta', 'label': 'Sin respuesta', 'tone': 'warning'},
     {'key': 'descartado', 'label': 'Descartado', 'tone': 'error'},
@@ -554,13 +558,34 @@ class ComercialService:
     # --- Leads entrantes del setter -----------------------------------------------------------
 
     @staticmethod
-    def leads(start, end, setter_nombre=None):
+    def _setter_id_de(nombre):
+        """El id del usuario setter que se llama `nombre`, comparando normalizado.
+
+        Los leads se atribuyen por NOMBRE (`ManychatLead.setter`, lo escribe ManyChat) y las
+        agendas por id (`Appointment.setter_id`): esto es el puente, para quien pida los leads de
+        un setter con el nombre solo.
+        """
+        buscado = normalizar_nombre(nombre)
+        return next((u.id for u in User.query.filter_by(role='setter').order_by(User.id).all()
+                     if normalizar_nombre(u.username) == buscado), None)
+
+    @staticmethod
+    def leads(start, end, setter_nombre=None, setter_id=None):
         """Filas de la tabla "Leads entrantes": los prospectos de ManyChat del período.
 
         El estado no es una columna: se deriva de lo que hizo el lead, con el mismo orden de
         prioridad con el que lo lee la bandeja del setter — agendó (tiene una cita), lo
         descartaron (su cualificación dio que no), viene conversando (contestó al menos una
         pregunta) o no contestó nunca.
+
+        **"Agendó" es agendar con ESE setter** (decisión del 01/10/2026): el lead del período
+        cuyo instagram es el de un cliente con una cita que generó ese setter (`setter_id`). Con
+        el equipo entero, una cita que generó cualquier setter. Antes alcanzaba con CUALQUIER
+        cita, así que a un setter le contaban como suyos los leads que reservaron con otro setter,
+        en un taller o por un closer. Esos quedan como "Agendó por otra vía": reservaron, pero no
+        le cuentan.
+
+        `setter_id` es la persona de la que se miden las citas; si no viene, sale del nombre.
         """
         desde, hasta = ComercialService._limites(start, end)
         q = ManychatLead.query.filter(ManychatLead.created_at >= desde, ManychatLead.created_at <= hasta)
@@ -596,16 +621,26 @@ class ComercialService:
             elif valor in ('no', 'false'):
                 datos['descartado'] = True
 
-        # Leads que llegaron a agendar: se cruzan por instagram contra los clientes con cita.
+        # Leads que llegaron a agendar: se cruzan por instagram contra los clientes con cita, y de
+        # cada cita se mira quién la generó. `con_cita` es cualquier cita; `agendados`, solo las
+        # que cuentan para quien se está mirando (ver el docstring).
+        if setter_nombre and setter_id is None:
+            setter_id = ComercialService._setter_id_de(setter_nombre)
+        if setter_nombre or setter_id:
+            propios = {setter_id} if setter_id else set()
+        else:
+            propios = {uid for (uid,) in db.session.query(User.id).filter(User.role == 'setter')}
+
         igs = sorted({ig for ig in (_limpiar_ig(l.ig) for l in leads) if ig})
-        agendados = set()
+        con_cita, agendados = set(), set()
         if igs:
-            filas_agenda = db.session.query(
-                func.lower(func.replace(Client.instagram, '@', ''))
-            ).join(Appointment, Appointment.client_id == Client.id).filter(
-                func.lower(func.replace(Client.instagram, '@', '')).in_(igs)
-            ).distinct().all()
-            agendados = {fila[0] for fila in filas_agenda}
+            ig_cliente = func.lower(func.replace(Client.instagram, '@', ''))
+            for ig, generada_por in db.session.query(ig_cliente, Appointment.setter_id).join(
+                    Appointment, Appointment.client_id == Client.id).filter(
+                    ig_cliente.in_(igs)).distinct():
+                con_cita.add(ig)
+                if generada_por in propios:
+                    agendados.add(ig)
 
         salida = []
         vacio = {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False}
@@ -615,6 +650,8 @@ class ComercialService:
             agendo = ig in agendados
             if agendo:
                 estado = 'agendo'
+            elif ig in con_cita:
+                estado = 'agendo_otra_via'
             elif datos['descartado']:
                 estado = 'descartado'
             elif datos['respondio']:
@@ -900,6 +937,7 @@ class ComercialService:
     def totales_leads(filas):
         respondieron = [f for f in filas if f['respondio']]
         cualificados = [f for f in filas if f['cualificado']]
+        # Solo los que agendaron con quien se mira: "Agendó por otra vía" no suma (ver `leads`).
         agendaron = [f for f in filas if f['agendo']]
         return {
             'leads': len(filas),
