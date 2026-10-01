@@ -108,6 +108,16 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(screen.queryByTestId('dashboard-revisar')).toBeNull();
     });
 
+    it('Reporte tiene sus Registros: la lista del dashboard, en una pestaña más', async () => {
+        await montar('/setter/deck?step=reporte&tab=registros');
+
+        expect(screen.getByTestId('dashboard-revisar')).toBeInTheDocument();
+        expect(screen.getAllByRole('tab').map(t => t.textContent))
+            .toEqual(['Reporte del día', 'Mis reportes', 'Registros']);
+        expect(screen.getByRole('tab', { name: 'Registros' })).toHaveAttribute('aria-selected', 'true');
+        expect(itemDelDock('Reporte')).toHaveAttribute('aria-current', 'page');
+    });
+
     it('las rutas viejas caen en su sección y pestaña', async () => {
         // /setter/statistics redirige a esta URL (ver App.jsx).
         await montar('/setter/deck?step=reporte&tab=historial');

@@ -39,17 +39,24 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * en el mazo del closer; en el header queda solo "Volver a mi sesión" mientras se simula, que es lo
  * primero que busca quien termina de mirar.
  *
- * Revisar (el libro de registros del dashboard) NO es una sección del setter: no la necesita
- * (pedido del 29/09/2026). Por eso "Mis datos" va sin drill-down —no hay lista a la que llevar un
- * número— y `?step=revisar` de un link viejo cae en Cualificación.
+ * Revisar (el libro de registros del dashboard) NO es una sección del setter (pedido del
+ * 29/09/2026), y `?step=revisar` de un link viejo cae en Cualificación. Sus listas viven en
+ * Reporte · Registros (pedido del 01/10/2026: "el setter trabaja con Reporte, que vea los datos
+ * dentro de su reporte"): sus leads y sus agendas generadas, acotadas a él por el backend.
  */
 
+/**
+ * "Registros", una palabra: es la que ya dice el ojo de cada número de "Mis datos" ("Ver los
+ * registros"), así que el clic y el lugar al que lleva se llaman igual. "Mis registros" quedaba al
+ * lado de "Mis reportes" y de un vistazo eran la misma pestaña.
+ */
 const SECCIONES = [
     { id: 'cualificacion', label: 'Cualificación', Icono: Layers },
     { id: 'agendas', label: 'Agendas', Icono: CalendarDays,
         tabs: [{ key: 'fecha', label: 'Por fecha' }, { key: 'historial', label: 'Historial' }] },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList,
-        tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' }] },
+        tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' },
+            { key: 'registros', label: 'Registros' }] },
     { id: 'datos', label: 'Mis datos', Icono: BarChart3 },
 ];
 
@@ -187,9 +194,13 @@ const SetterEspacioPage = () => {
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
                     )}
                     {seccion === 'reporte' && tab === 'historial' && <PublicSetterStatsPage embebido />}
-                    {/* "Mis datos" es el dashboard comercial, acotado a este setter por el backend.
-                        Sin `onIrASeccion`: no hay Revisar al que llevar un dato, así que el
-                        dashboard no ofrece drill-down. */}
+                    {/* Registros y "Mis datos" son el dashboard comercial, acotado a este setter
+                        por el backend (`alcance_de`): la lista de Revisar y el tablero de Analizar,
+                        como "Mi cartera" y "Ver mis datos" en el mazo del closer. Sin selector de
+                        persona: el contexto de un setter no lo ofrece. */}
+                    {seccion === 'reporte' && tab === 'registros' && (
+                        <DashboardComercial embebido seccionFija="revisar" />
+                    )}
                     {seccion === 'datos' && <DashboardComercial embebido seccionFija="analizar" />}
                 </motion.div>
 
