@@ -26,3 +26,11 @@
 /* En el header queda solo "Volver a mi sesión" mientras se simula: el Playbook, quién está
    conectado y cerrar sesión viven en la sesión al final del dock (`MenuSesion`). */
 .setter-espacio .tope-acciones{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+/* A ancho de teléfono las pestañas entran enteras: Reporte tiene tres desde el 01/10/2026
+   (Reporte del día · Mis reportes · Registros) y con el padding de escritorio la última quedaba
+   cortada contra el borde — justo la que abre un número de "Mis datos". Lo mismo las dos tablas
+   de Registros (Leads entrantes · Agendas generadas). */
+@media (max-width:440px){
+  .setter-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
+}
