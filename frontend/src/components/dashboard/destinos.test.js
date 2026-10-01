@@ -101,8 +101,8 @@ describe('el mapa de destinos del drill-down', () => {
     });
 
     it('todo destino dice de qué número viene', () => {
-        // Sin `de` la lista no puede mostrar el aviso de procedencia, y entonces se pierde la
-        // mitad del requisito: "se ve de dónde viene el filtro".
+        // Sin `de` el "i" de la fila de etiquetas no puede decir de qué número viene el filtro, y
+        // entonces se pierde la mitad del requisito: "se ve de dónde viene el filtro".
         const sinNombre = todos().filter(([, d]) => !d.de).map(([donde]) => donde);
         expect(sinNombre).toEqual([]);
     });

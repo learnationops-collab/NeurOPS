@@ -5,7 +5,6 @@ import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
 import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
-import PanelDetalle from '../../../components/dashboard/PanelDetalle';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
@@ -42,6 +41,16 @@ export { ChipTono } from './RevisarLista';
 
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
     fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
+
+/** Si alguna faceta de la tabla tiene al menos un valor puesto. */
+const hayCondiciones = (def, facetas) => def.facetas.some(fa => (facetas[fa.key] || []).length > 0);
+
+/**
+ * El texto de una etiqueta de filtro: el valor solo, salvo en las facetas de sí/no. Un «Sí» suelto
+ * no dice nada —lo que trae el número de Show up es «Asistió: Sí»—, y desde que no está el aviso
+ * grande que nombraba la faceta, la etiqueta es lo único que lo cuenta.
+ */
+const rotuloDe = (c) => (c.valor === 'Sí' || c.valor === 'No' ? `${c.faceta}: ${c.valor}` : c.valor);
 
 /** Búsqueda + facetas. El filtro rápido se aplica aparte, para que los totales lo ignoren. */
 const aplicarFiltros = (filas, def, query, facetas, modo) => {
@@ -111,33 +120,43 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      * Acá no hay nada que "consumir": el token viaja en el estado, así que repetir el render
      * da el mismo resultado. El token distingue además "llegó un drill-down" de "el usuario
      * cambió de pestaña a mano", que tiene que limpiar.
+     *
+     * `de` es el nombre del número que trajo el filtro, y es lo que dice el "i" de la fila de
+     * etiquetas. Solo se guarda si ese número trajo condiciones: uno que se mide sobre el período
+     * entero (Cash, por ejemplo) lleva a la lista completa, sin etiquetas que explicar.
      */
     const token = filtroInicial?.__t ?? null;
-    const [origen, setOrigen] = useState({ tabla, token: null, de: null, aviso: null });
+    const [origen, setOrigen] = useState({ tabla, token: null, de: null, soltado: false });
     if (origen.tabla !== tabla || origen.token !== token) {
-        const nuevas = {};
-        let de = null;
-        let aviso = null;
-        if (token !== null && token !== origen.token) {
-            de = filtroInicial.__de || null;
-            aviso = filtroInicial.__aviso || null;
-            Object.entries(filtroInicial).forEach(([k, valor]) => {
-                // Las claves `__` son metadatos del drill-down (token, procedencia, advertencia),
-                // no condiciones. Un array de etiquetas en la misma faceta es un OR.
-                if (k.startsWith('__') || valor === null || valor === undefined) return;
-                nuevas[k] = Array.isArray(valor) ? valor : [valor];
-            });
+        if (origen.soltado && origen.tabla === tabla && token === null) {
+            // La URL soltó el filtro porque esta lista se quedó sin etiquetas y lo pidió (ver
+            // `olvidarOrigen`). Se anota y no se toca nada más: la búsqueda, la agrupación, el
+            // orden y el panel abierto son del usuario, y antes quitar el filtro se los llevaba
+            // puestos.
+            setOrigen({ tabla, token: null, de: null, soltado: false });
+        } else {
+            const nuevas = {};
+            if (token !== null && token !== origen.token) {
+                Object.entries(filtroInicial).forEach(([k, valor]) => {
+                    // Las claves `__` son metadatos del drill-down (token, procedencia,
+                    // advertencia), no condiciones. Un array de etiquetas en la misma faceta es
+                    // un OR.
+                    if (k.startsWith('__') || valor === null || valor === undefined) return;
+                    nuevas[k] = Array.isArray(valor) ? valor : [valor];
+                });
+            }
+            const de = Object.keys(nuevas).length ? filtroInicial.__de || null : null;
+            setOrigen({ tabla, token, de, soltado: false });
+            setFacetas(nuevas);
+            setChip(null);
+            setQuery('');
+            setMenu(null);
+            // La agrupación también se reinicia: las dimensiones son por tabla y la de Ventas no
+            // existe en Leads. El orden, por lo mismo: "por monto" no existe en Clientes.
+            setAgrupacion(null);
+            setOrden(null);
+            setColumnas('base');
         }
-        setOrigen({ tabla, token, de, aviso });
-        setFacetas(nuevas);
-        setChip(null);
-        setQuery('');
-        setMenu(null);
-        // La agrupación también se reinicia: las dimensiones son por tabla y la de Ventas no
-        // existe en Leads. El orden, por lo mismo: "por monto" no existe en Clientes.
-        setAgrupacion(null);
-        setOrden(null);
-        setColumnas('base');
     }
 
     /**
@@ -223,23 +242,39 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [gruposElegidos, elegirGrupo] = useGruposElegidos(
         dimension ? `${tabla}.${dimension.key}` : null);
 
+    /**
+     * La lista deja de venir de un número: se borra de dónde venía (si no, el "i" seguiría
+     * diciendo "Filtro de Show up" sobre etiquetas que ya no son las de Show up) y se saca de la
+     * URL, que es donde vive el filtro del drill-down: sin esto, salir de Revisar y volver lo
+     * resucitaba. `soltado` avisa que la URL vacía que va a llegar la pidió esta lista.
+     */
+    const olvidarOrigen = () => {
+        setOrigen(o => ({ ...o, de: null, soltado: o.token !== null }));
+        onOlvidarFiltro?.();
+    };
+
+    /**
+     * Todo cambio de etiquetas pasa por acá —la X de cada una, el panel Filtro completo y su
+     * Limpiar— porque quedarse sin ninguna es lo mismo que limpiar: la lista ya es la del
+     * período, y lo que trajo el número se olvida.
+     */
+    const cambiarFacetas = (nuevas) => {
+        setFacetas(nuevas);
+        if (!hayCondiciones(def, nuevas) && (origen.de || token !== null)) olvidarOrigen();
+    };
+
     const limpiar = () => {
         setFacetas({});
         setChip(null);
         setQuery('');
-        // Sacar el filtro también saca el aviso de procedencia: si no, la lista seguía diciendo
-        // "viniste de Show up" arriba de las agendas completas del período.
-        setOrigen(o => ({ ...o, de: null, aviso: null }));
-        // Y lo saca de la URL, que es donde vive el filtro del drill-down: sin esto, salir de
-        // Revisar y volver lo resucitaba.
-        onOlvidarFiltro?.();
+        olvidarOrigen();
     };
 
-    const quitarCriterio = (clave, valor) => setFacetas({
+    const quitarCriterio = (clave, valor) => cambiarFacetas({
         ...facetas, [clave]: (facetas[clave] || []).filter(x => x !== valor),
     });
 
-    /** Las condiciones activas, con el nombre de su faceta, para el aviso de procedencia. */
+    /** Las condiciones activas, con el nombre de su faceta, para la fila de etiquetas. */
     const criterios = def.facetas.flatMap(fa => (facetas[fa.key] || []).map(
         valor => ({ clave: fa.key, faceta: fa.label, valor })));
 
@@ -395,9 +430,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         <ChevronDown size={14} />
                     </button>
                     {menu === 'config' && (
-                        <PanelConfigurar def={def} filas={filas} facetas={facetas} setFacetas={setFacetas}
+                        <PanelConfigurar def={def} filas={filas} facetas={facetas} setFacetas={cambiarFacetas}
                             modo={modo} setModo={setModo} tabla={tabla} basis={basis} setBasis={setBasis}
-                            onLimpiar={() => setFacetas({})} onCerrar={() => setMenu(null)} />
+                            onLimpiar={() => cambiarFacetas({})} onCerrar={() => setMenu(null)} />
                     )}
                 </div>
 
@@ -469,24 +504,28 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <Tip titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
-            {/* De dónde viene el filtro. Va arriba de los chips de faceta porque contesta la
-                pregunta anterior: no "qué condición hay puesta" sino "qué número me trajo acá". */}
-            <PanelDetalle de={origen.de} criterios={criterios}
-                cuantas={visibles.length} total={filas.length}
-                onQuitarCriterio={quitarCriterio} onLimpiar={limpiar} />
-
+            {/* Las etiquetas del filtro: el único lugar que las muestra, cada una con su X. Se
+                suman desde el panel Filtro completo de la barra. Hubo arriba un aviso grande
+                ("Viniste de… · 13 de 238 registros", con las mismas etiquetas repetidas y un
+                "Quitar el filtro"); se sacó por pedido del usuario (30/09) y de qué número viene
+                la lista quedó en el "i" del rótulo. La cuenta ya la dice "mostrando X de Y". */}
             {activas > 0 && (
-                <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)', marginBottom: 'var(--s3)' }}>
-                    <span className="t-rotulo">
-                        {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
+                <div className="fila filtro-fila">
+                    <span className="filtro-rotulo">
+                        <span className="t-rotulo">
+                            {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
+                        </span>
+                        {origen.de && (
+                            <Tip titulo={`Filtro de ${origen.de}`} texto="Viene del número que tocaste." />
+                        )}
                     </span>
                     {criterios.map(c => (
-                        <button key={`${c.clave}-${c.valor}`} type="button" className="chip"
+                        <button key={`${c.clave}-${c.valor}`} type="button" className="chip filtro-tag"
                             style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
                                 letterSpacing: 0, fontWeight: 700 }}
-                            aria-label={`Quitar ${c.valor}`}
+                            aria-label={`Quitar ${c.faceta}: ${c.valor}`}
                             onClick={() => quitarCriterio(c.clave, c.valor)}>
-                            {c.valor}
+                            {rotuloDe(c)}
                             <X size={12} />
                         </button>
                     ))}
