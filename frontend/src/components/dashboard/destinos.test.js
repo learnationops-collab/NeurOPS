@@ -241,6 +241,18 @@ describe('el destino de un día de Variabilidad', () => {
         expect(FACETAS_POR_TABLA.agendas).toContain('dia');
     });
 
+    it('un día de "Agendas generadas" abre las agendas CREADAS ese día, no las que se reúnen', () => {
+        // La serie del setter suma por fecha de creación (ver `ComercialService.generadas`): si la
+        // faceta mirara la reunión, el día abriría otras agendas que las que suma la barra.
+        const d = conDia(destinoDeSerie('setters', 'agendas'), '2026-09-28');
+        const dia = TABLAS.generadas.facetas.find(f => f.key === 'dia');
+        const reservadaEl28 = { creada: '2026-09-28T14:00:00', fecha: '2026-10-03T15:00:00' };
+
+        expect(d.tabla).toBe('generadas');
+        expect(revisarDestino(d)).toEqual([]);
+        expect(dia.de(reservadaEl28)).toBe(d.filtro.dia);
+    });
+
     it('sin fecha devuelve el destino tal cual', () => {
         const base = destinoDeSerie('closers', 'agendas');
         expect(conDia(base, null)).toBe(base);

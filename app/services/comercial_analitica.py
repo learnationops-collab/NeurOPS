@@ -59,11 +59,12 @@ METRICAS = {
         {'key': 'cualificacion', 'label': 'Cualificación', 'formato': 'pct', 'suma': False,
          'desc': 'De los que contestaron, cuántos cualificaron.'},
         {'key': 'agendas', 'label': 'Agendas', 'formato': 'num', 'suma': True,
-         'desc': 'Leads que llegaron a agendar una llamada.'},
+         'desc': 'Leads del período que agendaron con ese setter. Los que reservaron por otro '
+                 'lado (un taller, otro setter, un closer) no cuentan.'},
         {'key': 'conversion', 'label': 'Conv. final', 'formato': 'pct', 'suma': False,
          'desc': 'De entrante a agenda, punta a punta.'},
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
-         'desc': 'De las agendas que generó, cuántas asistieron.'},
+         'desc': 'De las agendas que generó (una por persona), cuántas asistieron.'},
         {'key': 'ventas_originadas', 'label': 'Ventas originadas', 'formato': 'num', 'suma': True,
          'desc': 'Ventas salidas de las agendas que generó.'},
     ],
@@ -420,8 +421,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
 
 def bloque_setters(start, end, setter_id=None, setter_nombre=None):
     """Lo mismo para setters: el embudo va del lead entrante a la agenda generada."""
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
-    generadas = ComercialService.agendas(start, end, setter_id=setter_id, de_setters=True)
+    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
+    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
     tot_l = ComercialService.totales_leads(leads)
     tot_g = ComercialService.totales_agendas(generadas)
 
@@ -504,6 +505,12 @@ def _tasa_diaria(dias, filas, fecha_de, numerador, denominador):
 
 def _dia_de_agenda(fila):
     return fila['fecha'][:10] if fila['fecha'] else None
+
+
+def _dia_de_creacion(fila):
+    """El día en que se reservó la agenda: el eje de "Agendas generadas" (ver
+    `ComercialService.generadas`), para que la serie sume el mismo número que el tile."""
+    return fila['creada'][:10] if fila.get('creada') else None
 
 
 def _dia_de_venta(fila):
@@ -611,8 +618,8 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
 
 
 def _series_setters(dias, start, end, setter_id, setter_nombre):
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre)
-    generadas = ComercialService.agendas(start, end, setter_id=setter_id, de_setters=True)
+    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
+    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
 
     return [
         {'key': 'entrantes', 'label': 'Entrantes', 'unidad': '', 'tone': 'info',
@@ -631,9 +638,10 @@ def _series_setters(dias, start, end, setter_id, setter_nombre):
          'help': 'Leads que cumplieron el perfil cada día.',
          'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['cualificado'])},
         {'key': 'agendas', 'label': 'Agendas generadas', 'unidad': '', 'tone': 'brand-secondary',
-         'help': 'Citas reservadas cada día, por la fecha de la reunión. Es la salida del trabajo '
-                 'de setting.',
-         'vals': _serie(dias, generadas, _dia_de_agenda)},
+         'help': 'Agendas reservadas cada día, por el día en que se crearon y no el de la '
+                 'reunión. Un lead que reagendó cuenta una vez. Es la salida del trabajo de '
+                 'setting.',
+         'vals': _serie(dias, generadas, _dia_de_creacion)},
         {'key': 'tasa_resp', 'label': 'Tasa de respuesta', 'unidad': '%', 'tone': 'success',
          'tipo': 'tasa',
          'help': 'Qué porcentaje de los entrantes de ese día contestó. Los días en cero son días '

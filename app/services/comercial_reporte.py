@@ -111,9 +111,13 @@ def dia_del_equipo(fecha=None):
             'actividad': _actividad_de_closer(suyas),
         })
 
+    # Las agendas que cada setter GENERÓ hoy, con la misma definición que "Agendas generadas" del
+    # tablero (por creación y una por persona, ver `ComercialService.generadas`). Antes eran las
+    # reuniones de hoy con su `setter_id`: otro número que el de Revisar para el mismo día.
+    generadas_hoy = ComercialService.generadas(dia, dia)
     for s in setters:
         suyos = [f for f in leads if f['setter'] and f['setter'].strip().lower() == s['nombre'].strip().lower()]
-        generadas = [f for f in agendas if f['setter_id'] == s['id']]
+        generadas = [f for f in generadas_hoy if f['setter_id'] == s['id']]
         resumen = ComercialService.totales_leads(suyos)
         personas.append({
             **s,

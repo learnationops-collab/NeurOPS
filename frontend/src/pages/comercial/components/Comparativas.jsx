@@ -49,7 +49,9 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
         : valorEquipo;
 
     const bajada = (fila) => {
-        if (metrica.key === 'show_up') return `${fila.agendas ?? fila.generadas ?? 0} agendas`;
+        // El show up de un setter se mide sobre las agendas que GENERÓ; su `agendas` es otra cosa
+        // (los leads que agendaron). Un closer no trae `generadas` y cae en sus agendas.
+        if (metrica.key === 'show_up') return `${fila.generadas ?? fila.agendas ?? 0} agendas`;
         if (metrica.key === 'close_rate' || metrica.key === 'ticket') return `${fila.ventas ?? 0} ventas`;
         if (metrica.key === 'comision') return `10% de ${fmt.money(fila.cash)}`;
         if (metrica.key === 'senas_conversion') return fila.senas_detalle;

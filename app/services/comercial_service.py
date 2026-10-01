@@ -99,6 +99,10 @@ POST_CALL = [
 
 ESTADO_LEAD = [
     {'key': 'agendo', 'label': 'Agendó', 'tone': 'success'},
+    # Reservó, pero no con el setter que se está mirando: con otro setter, en un taller o por un
+    # closer (ver `ComercialService.leads`). No suma en "Agendaron" y tampoco es "Sin respuesta":
+    # el setter tiene que poder ver por qué un lead que sabe que agendó no le cuenta.
+    {'key': 'agendo_otra_via', 'label': 'Agendó por otra vía', 'tone': 'idle'},
     {'key': 'en_conversacion', 'label': 'En conversación', 'tone': 'info'},
     {'key': 'sin_respuesta', 'label': 'Sin respuesta', 'tone': 'warning'},
     {'key': 'descartado', 'label': 'Descartado', 'tone': 'error'},
@@ -160,6 +164,18 @@ ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro', 'segu
 PRESENTO = ('venta', 'sena', 'presento_no_cerro')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
+
+
+def no_es_marcador():
+    """Condición SQL: la cita NO es el marcador que deja cualificar un lead en el mazo del setter.
+
+    Confirmar un lead de ManyChat como cualificado (`/setter/deck/confirm-qualified` y sus dos
+    hermanas en app/api/setter.py) crea un `Appointment` con `result='Cualificado'`, el
+    `setter_id` del setter y la hora del clic como reunión, sin ninguna reserva detrás: es lo que
+    `setter_agendas.py` ya documenta como placeholder. Contarlo haría de cada lead cualificado una
+    "agenda generada" y un "Agendó". `coalesce` porque un `result` vacío es una agenda de verdad.
+    """
+    return func.lower(func.coalesce(Appointment.result, '')) != 'cualificado'
 
 
 def _limpiar_email(valor):
@@ -332,7 +348,8 @@ class ComercialService:
         `de_setters=True` deja solo las agendas que generó un setter: es "Agendas generadas" del
         equipo de setting. Sin eso, "Todo el equipo" con Setters contaba TODAS las agendas del
         período, también las de taller, VSL o landing que no generó ningún setter (en septiembre
-        de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya.
+        de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya. Tampoco
+        entra el marcador que deja cualificar un lead, que no es una reserva (`no_es_marcador`).
         """
         desde, hasta = ComercialService._limites(start, end)
         columna = Appointment.created_at if basis == 'creacion' else Appointment.start_time
@@ -347,6 +364,8 @@ class ComercialService:
         elif de_setters:
             q = q.filter(Appointment.setter_id.in_(
                 db.session.query(User.id).filter(User.role == 'setter')))
+        if de_setters:
+            q = q.filter(no_es_marcador())
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
         if not appts:
@@ -415,6 +434,66 @@ class ComercialService:
                 'con_sena': con_sena,
             })
         return filas
+
+    @staticmethod
+    def generadas(start, end, setter_id=None, basis='creacion'):
+        """Filas de "Agendas generadas": el trabajo de un setter (o del equipo de setting).
+
+        Se cuentan por la fecha en que se CREÓ la agenda, no por la de la reunión: lo que hizo el
+        setter en el período es reservarla, y la reunión puede caer semanas después. Por fecha de
+        reunión, una agenda reservada el 28/09 para el 03/10 no le contaba a nadie en septiembre
+        y sí en octubre, cuando el setter ya no hizo nada (septiembre de 2026: Paula 51 por
+        reunión contra 59 por creación). `basis='meet'` queda para el toggle de Revisar.
+
+        Es la única puerta a estas filas: el bloque de Analizar, la serie de Variabilidad y la
+        tabla de Revisar la usan las tres, así que el número y la lista no pueden divergir.
+
+        **Una persona cuenta una vez por setter** (ver `_una_por_persona`): el total, el show up y
+        las ventas originadas salen de las filas ya depuradas, y la tabla devuelve esas mismas.
+        """
+        filas = ComercialService.agendas(start, end, setter_id=setter_id, basis=basis, de_setters=True)
+        return ComercialService._una_por_persona(filas)
+
+    @staticmethod
+    def _una_por_persona(filas):
+        """Deja UNA agenda por lead y por setter: la más reciente.
+
+        Un lead que reagenda tiene dos o tres agendas del mismo setter en el período, y cada una
+        sumaba como una agenda generada más: el setter consiguió UNA persona, no tres (septiembre
+        de 2026, por fecha de creación: 136 agendas del equipo eran 124 personas). Se queda la
+        más reciente porque su resultado es el vigente; las anteriores son la historia de esa
+        misma persona.
+
+        "Más reciente" es la de la reunión más reciente, no la última que se creó: la
+        sincronización crea a veces de una vez agendas de reuniones ya pasadas, y en producción
+        hay dos del mismo lead creadas en el mismo minuto para el 24/08 y el 27/08. El resultado
+        vigente es el de la última llamada.
+
+        **Salvo que una de ellas sea la venta (o la seña):** esa gana aunque haya otra más nueva.
+        La persona compró, y eso es lo que el setter originó; una agenda posterior que nadie
+        reportó no puede borrarlo. En producción (septiembre de 2026) un lead de Elias compró en
+        la llamada del 07/09 y tenía otra agenda del 15/09 sin resultado: quedándose con la más
+        reciente, sus ventas originadas bajaban de 5 a 4 sin que nadie hubiera dejado de comprar.
+
+        La clave es (setter, cliente) y no solo el cliente: un lead que agendaron dos setters
+        distintos les cuenta a los dos, y así el total del equipo es la suma de sus setters.
+        """
+        def persona(fila):
+            return (fila['setter_id'], fila['client_id'])
+
+        cierre = {'venta': 2, 'sena': 1}
+
+        def reciente(fila):
+            return (cierre.get(fila['post_call']['key'], 0),
+                    fila['fecha'] or '', fila['creada'] or '', fila['id'])
+
+        ultima = {}
+        for fila in filas:
+            vigente = ultima.get(persona(fila))
+            if vigente is None or reciente(fila) > reciente(vigente):
+                ultima[persona(fila)] = fila
+        # Se filtra la lista original en vez de devolver `ultima`: así queda el orden de la tabla.
+        return [f for f in filas if ultima[persona(f)] is f]
 
     # --- Ventas -------------------------------------------------------------------------------
 
@@ -503,13 +582,34 @@ class ComercialService:
     # --- Leads entrantes del setter -----------------------------------------------------------
 
     @staticmethod
-    def leads(start, end, setter_nombre=None):
+    def _setter_id_de(nombre):
+        """El id del usuario setter que se llama `nombre`, comparando normalizado.
+
+        Los leads se atribuyen por NOMBRE (`ManychatLead.setter`, lo escribe ManyChat) y las
+        agendas por id (`Appointment.setter_id`): esto es el puente, para quien pida los leads de
+        un setter con el nombre solo.
+        """
+        buscado = normalizar_nombre(nombre)
+        return next((u.id for u in User.query.filter_by(role='setter').order_by(User.id).all()
+                     if normalizar_nombre(u.username) == buscado), None)
+
+    @staticmethod
+    def leads(start, end, setter_nombre=None, setter_id=None):
         """Filas de la tabla "Leads entrantes": los prospectos de ManyChat del período.
 
         El estado no es una columna: se deriva de lo que hizo el lead, con el mismo orden de
         prioridad con el que lo lee la bandeja del setter — agendó (tiene una cita), lo
         descartaron (su cualificación dio que no), viene conversando (contestó al menos una
         pregunta) o no contestó nunca.
+
+        **"Agendó" es agendar con ESE setter** (decisión del 01/10/2026): el lead del período
+        cuyo instagram es el de un cliente con una cita que generó ese setter (`setter_id`). Con
+        el equipo entero, una cita que generó cualquier setter. Antes alcanzaba con CUALQUIER
+        cita, así que a un setter le contaban como suyos los leads que reservaron con otro setter,
+        en un taller o por un closer. Esos quedan como "Agendó por otra vía": reservaron, pero no
+        le cuentan.
+
+        `setter_id` es la persona de la que se miden las citas; si no viene, sale del nombre.
         """
         desde, hasta = ComercialService._limites(start, end)
         q = ManychatLead.query.filter(ManychatLead.created_at >= desde, ManychatLead.created_at <= hasta)
@@ -545,16 +645,26 @@ class ComercialService:
             elif valor in ('no', 'false'):
                 datos['descartado'] = True
 
-        # Leads que llegaron a agendar: se cruzan por instagram contra los clientes con cita.
+        # Leads que llegaron a agendar: se cruzan por instagram contra los clientes con cita, y de
+        # cada cita se mira quién la generó. `con_cita` es cualquier cita; `agendados`, solo las
+        # que cuentan para quien se está mirando (ver el docstring).
+        if setter_nombre and setter_id is None:
+            setter_id = ComercialService._setter_id_de(setter_nombre)
+        if setter_nombre or setter_id:
+            propios = {setter_id} if setter_id else set()
+        else:
+            propios = {uid for (uid,) in db.session.query(User.id).filter(User.role == 'setter')}
+
         igs = sorted({ig for ig in (_limpiar_ig(l.ig) for l in leads) if ig})
-        agendados = set()
+        con_cita, agendados = set(), set()
         if igs:
-            filas_agenda = db.session.query(
-                func.lower(func.replace(Client.instagram, '@', ''))
-            ).join(Appointment, Appointment.client_id == Client.id).filter(
-                func.lower(func.replace(Client.instagram, '@', '')).in_(igs)
-            ).distinct().all()
-            agendados = {fila[0] for fila in filas_agenda}
+            ig_cliente = func.lower(func.replace(Client.instagram, '@', ''))
+            for ig, generada_por in db.session.query(ig_cliente, Appointment.setter_id).join(
+                    Appointment, Appointment.client_id == Client.id).filter(
+                    ig_cliente.in_(igs), no_es_marcador()).distinct():
+                con_cita.add(ig)
+                if generada_por in propios:
+                    agendados.add(ig)
 
         salida = []
         vacio = {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False}
@@ -564,6 +674,8 @@ class ComercialService:
             agendo = ig in agendados
             if agendo:
                 estado = 'agendo'
+            elif ig in con_cita:
+                estado = 'agendo_otra_via'
             elif datos['descartado']:
                 estado = 'descartado'
             elif datos['respondio']:
@@ -849,6 +961,7 @@ class ComercialService:
     def totales_leads(filas):
         respondieron = [f for f in filas if f['respondio']]
         cualificados = [f for f in filas if f['cualificado']]
+        # Solo los que agendaron con quien se mira: "Agendó por otra vía" no suma (ver `leads`).
         agendaron = [f for f in filas if f['agendo']]
         return {
             'leads': len(filas),

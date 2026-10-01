@@ -215,7 +215,7 @@ export const PASOS_SETTER = {
         destino: { tabla: 'leads', filtro: { cualificado: 'Sí' }, de: 'Embudo · Cualificados' },
     },
     Agendaron: {
-        ayuda: 'Reservaron horario en el calendario de un closer.',
+        ayuda: 'Reservaron una cita con el setter. Los que reservaron por otro lado no cuentan.',
         // Los LEADS que agendaron, no la tabla de agendas generadas: el paso cuenta leads del
         // período que llegaron a reservar (45), y esa otra tabla son las citas del período
         // mirándolo al revés (169). El clic mostraba 169 filas debajo de un 45.

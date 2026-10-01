@@ -523,7 +523,8 @@ def test_el_estado_del_lead_se_deriva_de_lo_que_hizo(db, marlon, elias):
     respuesta(db, descartado, qualification='false')
     agendo = lead(db, 'Agendo', '@agendo')
     respuesta(db, agendo, qualification='true')
-    agenda(db, marlon, cliente(db, 'Agendo Cliente', ig='@agendo'))
+    # Una cita que generó un setter: con el equipo entero, eso es agendar (ver test_comercial_setters).
+    agenda(db, marlon, cliente(db, 'Agendo Cliente', ig='@agendo'), setter=elias)
 
     por_id = {f['id']: f['estado']['key'] for f in ComercialService.leads(DESDE, HASTA)}
 
@@ -538,7 +539,7 @@ def test_agendar_manda_sobre_cualquier_otro_estado(db, marlon, elias):
     # Un lead que ManyChat descartó pero que igual terminó agendando: lo que vale es que agendó.
     descartado_que_agendo = lead(db, 'Insistente', '@insistente')
     respuesta(db, descartado_que_agendo, qualification='false')
-    agenda(db, marlon, cliente(db, 'Insistente Cliente', ig='insistente'))
+    agenda(db, marlon, cliente(db, 'Insistente Cliente', ig='insistente'), setter=elias)
 
     assert ComercialService.leads(DESDE, HASTA)[0]['estado']['key'] == 'agendo'
 

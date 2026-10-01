@@ -155,6 +155,34 @@ def test_con_setters_el_equipo_cuenta_solo_las_agendas_que_genero_un_setter(clie
 
 
 @freeze_time(HOY)
+@pytest.mark.parametrize('tabla', ['ventas', 'clientes'])
+def test_un_setter_no_puede_pedir_las_ventas_ni_la_cartera_del_equipo(client, db, equipo, auth_headers,
+                                                                      tabla):
+    # Con rol setters esas tablas no se acotan por persona: para un setter eran las de todos.
+    respuesta = client.get(TABLA, headers=auth_headers(equipo['setter']),
+                           query_string={'period': 'mes', 'tabla': tabla})
+
+    assert respuesta.status_code == 403
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('tabla', ['leads', 'generadas', 'agendas'])
+def test_un_setter_si_ve_sus_tablas(client, db, equipo, auth_headers, tabla):
+    respuesta = client.get(TABLA, headers=auth_headers(equipo['setter']),
+                           query_string={'period': 'mes', 'tabla': tabla})
+
+    assert respuesta.status_code == 200
+
+
+@freeze_time(HOY)
+def test_la_direccion_si_ve_las_ventas_con_setters(client, db, equipo, auth_headers):
+    respuesta = client.get(TABLA, headers=auth_headers(equipo['director']),
+                           query_string={'period': 'mes', 'tabla': 'ventas', 'rol': 'setters'})
+
+    assert respuesta.status_code == 200
+
+
+@freeze_time(HOY)
 def test_con_closers_el_equipo_sigue_viendo_todas_las_agendas(client, db, equipo, auth_headers):
     agenda(db, equipo['closer_a'], cliente(db, 'De Elias'), setter=equipo['setter'])
     agenda(db, equipo['closer_a'], cliente(db, 'Del taller'))

@@ -349,7 +349,8 @@ export const TABLAS = {
         // Es la misma llamada que en `agendas`, contada del otro lado: acá el dueño de la fila es
         // el setter que la generó, no el closer que la atendió. Eso es lo único que el texto
         // necesita decir; el closer y el resultado están en sus columnas.
-        ayuda: 'Las agendas que generó el equipo de setting.',
+        ayuda: 'Las agendas que generó el equipo de setting, por la fecha en que se crearon. Un '
+            + 'lead que reagendó aparece una vez, con su agenda más reciente.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
             { key: 'cliente', header: 'Lead', width: '1.8fr' },
@@ -368,7 +369,10 @@ export const TABLAS = {
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },
-            { key: 'dia', label: 'Día de la reunión', de: (f) => diaDe(f.fecha), oculta: true },
+            // El día en que se RESERVÓ, no el de la reunión: es el eje de la serie "Agendas
+            // generadas" de Variabilidad (ver `ComercialService.generadas`), y un día de esa serie
+            // tiene que abrir las agendas que suma.
+            { key: 'dia', label: 'Día de creación', de: (f) => diaDe(f.creada), oculta: true },
         ],
         chips: [
             { key: 'todas', label: 'Todas', filtro: () => true },

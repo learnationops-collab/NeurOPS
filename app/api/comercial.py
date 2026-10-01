@@ -172,7 +172,17 @@ def tabla():
     cual = request.args.get('tabla', 'agendas')
     if cual not in TABLAS:
         cual = 'agendas'
-    basis = 'creacion' if request.args.get('basis') == 'creacion' else 'meet'
+    # Las ventas y la cartera se atribuyen al closer, así que con rol setters se devuelven SIN
+    # acotar por persona (sirve a la dirección mirando el área de setting). Para un setter eso
+    # era la plata y los clientes de todo el equipo: su pantalla nunca las pide, pero el endpoint
+    # las servía igual (encontrado el 01/10/2026).
+    if current_user.role == ROLE_SETTER and cual in ('ventas', 'clientes'):
+        return jsonify({'message': 'Forbidden'}), 403
+    # Sin `basis` explícito, cada tabla usa la fecha con la que se cuenta su número: las agendas
+    # generadas por creación (ver `ComercialService.generadas`), las demás por la reunión.
+    basis = request.args.get('basis')
+    if basis not in ('creacion', 'meet'):
+        basis = 'creacion' if cual == 'generadas' else 'meet'
 
     if cual == 'clientes':
         # La cartera NO se acota al periodo: es un saldo a hoy, no un flujo (ver
@@ -186,10 +196,12 @@ def tabla():
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
-        filas = ComercialService.leads(start, end, setter_nombre=nombre if rol == ROL_SETTERS else None)
+        de_setter = rol == ROL_SETTERS
+        filas = ComercialService.leads(start, end, setter_nombre=nombre if de_setter else None,
+                                       setter_id=miembro_id if de_setter else None)
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
-        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis, de_setters=True)
+        filas = ComercialService.generadas(start, end, setter_id=miembro_id, basis=basis)
         totales = ComercialService.totales_agendas(filas)
     else:
         closer_id = miembro_id if rol == ROL_CLOSERS else None
