@@ -958,8 +958,9 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
                     (45) y esa tabla son las citas del período, que es la misma historia contada al
                     revés (169). El clic mostraba 169 filas debajo de un 45. */}
                 <Tile label="Agendas" valor={fmt.num(bloque.agendas)} color={v('brand-secondary')}
-                    help={'Citas que el equipo de setting dejó reservadas en el calendario de un '
-                        + 'closer. Es el resultado del trabajo del setter.'}
+                    help={'Leads del período que reservaron una cita con el setter. Los que '
+                        + 'reservaron por otro lado (un taller, otro setter, un closer) no cuentan: '
+                        + 'en la lista figuran como "Agendó por otra vía".'}
                     delta={deltas.agendas}
                     humo={[v('brand-secondary'), v('brand-secondary-light'), v('brand-primary'), v('brand-navy')]}
                     sub={`${fmt.pct(bloque.conversion)} de los entrantes`}

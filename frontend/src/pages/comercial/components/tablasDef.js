@@ -349,7 +349,8 @@ export const TABLAS = {
         // Es la misma llamada que en `agendas`, contada del otro lado: acá el dueño de la fila es
         // el setter que la generó, no el closer que la atendió. Eso es lo único que el texto
         // necesita decir; el closer y el resultado están en sus columnas.
-        ayuda: 'Las agendas que generó el equipo de setting.',
+        ayuda: 'Las agendas que generó el equipo de setting, por la fecha en que se crearon. Un '
+            + 'lead que reagendó aparece una vez, con su agenda más reciente.',
         cols: [
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
             { key: 'cliente', header: 'Lead', width: '1.8fr' },

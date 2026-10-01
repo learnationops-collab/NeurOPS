@@ -59,11 +59,12 @@ METRICAS = {
         {'key': 'cualificacion', 'label': 'Cualificación', 'formato': 'pct', 'suma': False,
          'desc': 'De los que contestaron, cuántos cualificaron.'},
         {'key': 'agendas', 'label': 'Agendas', 'formato': 'num', 'suma': True,
-         'desc': 'Leads que llegaron a agendar una llamada.'},
+         'desc': 'Leads del período que agendaron con ese setter. Los que reservaron por otro '
+                 'lado (un taller, otro setter, un closer) no cuentan.'},
         {'key': 'conversion', 'label': 'Conv. final', 'formato': 'pct', 'suma': False,
          'desc': 'De entrante a agenda, punta a punta.'},
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
-         'desc': 'De las agendas que generó, cuántas asistieron.'},
+         'desc': 'De las agendas que generó (una por persona), cuántas asistieron.'},
         {'key': 'ventas_originadas', 'label': 'Ventas originadas', 'formato': 'num', 'suma': True,
          'desc': 'Ventas salidas de las agendas que generó.'},
     ],
@@ -597,8 +598,9 @@ def _series_setters(dias, start, end, setter_id, setter_nombre):
          'help': 'Leads que cumplieron el perfil cada día.',
          'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['cualificado'])},
         {'key': 'agendas', 'label': 'Agendas generadas', 'unidad': '', 'tone': 'brand-secondary',
-         'help': 'Citas reservadas cada día, por la fecha de la reunión. Es la salida del trabajo '
-                 'de setting.',
+         'help': 'Agendas reservadas cada día, por el día en que se crearon y no el de la '
+                 'reunión. Un lead que reagendó cuenta una vez. Es la salida del trabajo de '
+                 'setting.',
          'vals': _serie(dias, generadas, _dia_de_creacion)},
         {'key': 'tasa_resp', 'label': 'Tasa de respuesta', 'unidad': '%', 'tone': 'success',
          'tipo': 'tasa',
