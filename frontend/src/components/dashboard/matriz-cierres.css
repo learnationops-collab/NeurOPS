@@ -1,116 +1,338 @@
-/* Matriz de cierres (MatrizCierres.jsx): sin / con señas × por llamada / por presentación.
+/* Matriz de cierres (MatrizCierres.jsx): la tira de presentación y una tarjeta por columna
+ * (por llamada / por presentación), con las ventas solas y con señas en cada una.
  *
  * Como drill.css, sin prefijo de pantalla: vive en el panel Cierre del dashboard comercial (dentro
- * de `.dc-shell`, con sus tokens) y en el dashboard del closer (Tailwind, `dash-v6`). Todo hereda
- * tipografía y color del padre; lo único propio son los dos acentos, que cada tablero puede pisar
- * con `--mc-sin` / `--mc-con`, y el riel de fondo, `--mc-hueco`. */
+ * de `.dc-shell`) y en el dashboard del closer (Tailwind, `dash-v6`). Los dos son oscuros siempre
+ * —el comercial por decisión de producto, el del closer porque `.dash-v6` pisa el tema— así que
+ * acá no hay variante clara. La tipografía (Montserrat en los dos) se hereda del padre.
+ *
+ * Los colores salen de los tokens de marca `--v6-*` (index.css, en `:root`) y no de los del
+ * tablero comercial: `--info` o `--brand-secondary` existen también fuera de `.dc-shell` con otros
+ * valores, y el dashboard del closer los leería distintos. Cada tablero puede pisar los acentos
+ * con `--mc-sin` (ventas, azul) y `--mc-con` (señas, rosa).
+ *
+ * Los pesos van en `<b>` / `<small>` y no en `<span>`: el CSS global de index.html fuerza 400
+ * con !important en span/div/p fuera de los shells exentos, y `small` no está en esa lista. */
 
 .mc {
-    --mc-sin: var(--success, #2FBF8F);
-    --mc-con: var(--warning, #D9A441);
-    --mc-hueco: var(--hueco, rgba(148, 163, 184, .18));
+    --mc-sin: var(--v6-blue2, #4E8BD8);
+    --mc-con: var(--v6-pink, #FF3FA4);
+    --mc-presenta: rgba(255, 255, 255, .94);
+    --mc-hueco: rgba(2, 6, 23, .55);
+    --mc-mut: rgba(255, 255, 255, .5);
+    --mc-mut-2: rgba(255, 255, 255, .72);
+    --mc-borde: rgba(255, 255, 255, .09);
+    --mc-superficie: rgba(255, 255, 255, .035);
+    --mc-curva: cubic-bezier(.22, .7, .2, 1);
+    container: mc / inline-size;
+    display: grid;
+    gap: 14px;
     min-width: 0;
 }
 
-.mc-tabla {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 6px;
-    table-layout: fixed;
+/* --- Rótulos y cifras ------------------------------------------------------------------------ */
+
+.mc-rot {
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -.005em;
+    color: inherit;
 }
 
-.mc-tabla th,
-.mc-tabla td {
-    text-align: left;
-    vertical-align: top;
-    padding: 6px 8px;
+.mc-eyebrow {
+    font-size: 9.5px;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--mc-mut-2);
+    white-space: nowrap;
 }
 
-.mc-tabla thead th {
+.mc-frac {
     font-size: 11px;
-    opacity: .7;
-    padding-bottom: 0;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--mc-mut);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
-.mc-tabla thead th:first-child,
-.mc-tabla tbody th {
-    width: 30%;
+.mc-frac b {
+    font-weight: 800;
+    color: var(--mc-mut-2);
 }
 
-.mc-cab {
+/* El "i" de cada tablero, atenuado hasta que se pasa por la tarjeta o se llega con el teclado:
+   sigue a mano, pero no compite con las cifras. */
+.mc-ayuda {
+    display: inline-flex;
+    align-items: center;
+    font-style: normal;
+    opacity: .45;
+    transition: opacity .18s ease;
+}
+
+.mc-tira:hover .mc-ayuda,
+.mc-col:hover .mc-ayuda,
+.mc-ayuda:focus-within {
+    opacity: 1;
+}
+
+/* Sin subrayado permanente sobre cifras de 36px: el puntero, el `title` y el subrayado al pasar
+   dicen que llevan a la lista. */
+.mc .metrica-clic:hover .mc-pct,
+.mc .metrica-clic:focus-visible .mc-pct,
+.mc .metrica-clic:hover .mc-tira-pct,
+.mc .metrica-clic:focus-visible .mc-tira-pct {
+    text-decoration: underline dotted;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 5px;
+}
+
+/* --- Rieles ---------------------------------------------------------------------------------- */
+
+.mc-riel {
+    display: flex;
+    height: 10px;
+    border-radius: 4px;
+    background: var(--mc-hueco);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+    overflow: hidden;
+}
+
+/* Cada tramo crece desde 0 al montar (keyframes: no depende de un primer cuadro de JS) y, si el
+   dato cambia, se desliza a su ancho nuevo (transition). `both` lo deja en 0 durante su demora:
+   el rosa espera a que el azul llegue. */
+.mc-tramo {
+    display: block;
+    flex: none;
+    height: 100%;
+    width: var(--ancho);
+    animation: mc-crece .8s var(--mc-curva) var(--demora, 0ms) both;
+    transition: width .6s var(--mc-curva);
+}
+
+.mc-tramo--ventas { background: var(--mc-sin); }
+.mc-tramo--senas { background: var(--mc-con); }
+.mc-tramo--presenta { background: var(--mc-presenta); border-radius: 999px; }
+
+/* --- Tira de presentación -------------------------------------------------------------------- */
+
+.mc-tira {
+    display: grid;
+    grid-template-columns: auto minmax(40px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: var(--mc-superficie);
+    border: 1px solid var(--mc-borde);
+    animation: mc-entra .4s ease both;
+}
+
+.mc-tira-rot {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
 }
 
-.mc-tabla tbody th {
-    font-size: 12.5px;
-    padding-top: 10px;
-}
-
-.mc-punto {
-    width: 8px;
-    height: 8px;
+.mc-riel--tira {
+    height: 7px;
     border-radius: 999px;
-    flex: none;
-    background: var(--mc-acento);
 }
 
-.mc-fila--sin_senas { --mc-acento: var(--mc-sin); }
-.mc-fila--con_senas { --mc-acento: var(--mc-con); }
+.mc-tira-cifra {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
 
-.mc-celda {
-    animation: mc-entra .36s ease both;
-    animation-delay: calc(var(--mc-orden, 0) * 70ms);
+.mc-tira-pct {
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Tarjetas por columna -------------------------------------------------------------------- */
+
+.mc-cols {
+    --min: 220px;
+    --g: 14px;
+}
+
+.mc-col {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    container: mc-col / inline-size;
+    display: grid;
+    gap: 18px;
+    align-content: start;
+    min-width: 0;
+    padding: 18px 18px 20px;
+    border-radius: 18px;
+    background: var(--mc-superficie);
+    border: 1px solid var(--mc-borde);
+    transition: border-color .2s ease;
+    animation: mc-entra .45s ease both;
+    animation-delay: calc(80ms + var(--mc-orden, 0) * 90ms);
+}
+
+.mc-col:hover {
+    border-color: rgba(255, 255, 255, .16);
+}
+
+/* El humo de la referencia: azul arriba a la izquierda, magenta hacia la derecha y un índigo
+   profundo abajo. Detrás de todo (z-index -1 dentro del `isolation`). */
+.mc-humo {
+    position: absolute;
+    inset: -35%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(30% 34% at 30% 28%, rgba(78, 139, 216, .36), transparent 70%),
+        radial-gradient(30% 38% at 76% 46%, rgba(255, 63, 164, .27), transparent 72%),
+        radial-gradient(38% 30% at 48% 74%, rgba(19, 35, 198, .36), transparent 72%);
+    filter: blur(14px);
+}
+
+.mc-col-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.mc-col-titulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.mc-den {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--mc-mut);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.mc-lectura {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mc-lectura-cab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 20px;
+}
+
+.mc-pp {
+    display: inline-flex;
+    align-items: center;
+    height: 19px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--mc-con);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 14px rgba(255, 63, 164, .28);
 }
 
 .mc-cifra {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 .mc-pct {
-    font-size: 22px;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-    color: var(--mc-acento);
-}
-
-.mc-frac {
-    display: block;
-    font-size: 11px;
-    opacity: .65;
-    margin-top: 2px;
+    font-size: clamp(28px, 14cqi, 40px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.035em;
     font-variant-numeric: tabular-nums;
 }
 
-.mc-riel {
-    display: block;
-    height: 4px;
-    margin-top: 8px;
-    border-radius: 999px;
-    background: var(--mc-hueco);
-    overflow: hidden;
+/* Tarjeta angosta: "POR PRESENTACIÓN" y "76 presentaciones" ya no entran en un renglón. Pasan a
+   dos en las DOS tarjetas a la vez —tienen el mismo ancho, así que la consulta salta igual en
+   ambas— y los números de una quedan a la altura de los de la otra. */
+@container mc-col (max-width: 330px) {
+    .mc-col-cab {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
 }
 
-.mc-riel > i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--mc-acento);
-    transition: width .7s cubic-bezier(.2, .7, .2, 1);
+/* --- Leyenda (la pone cada tablero en su cabecera) ------------------------------------------- */
+
+.mc-leyenda {
+    --mc-sin: var(--v6-blue2, #4E8BD8);
+    --mc-con: var(--v6-pink, #FF3FA4);
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    min-width: 0;
 }
 
-.mc-pie {
-    font-size: 11.5px;
-    opacity: .65;
-    margin: 4px 8px 0;
-    line-height: 1.4;
+.mc-ley {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
 }
 
-/* El "i" de respaldo, cuando el tablero no pasa su propio tooltip. */
+.mc-ley > b {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -.005em;
+    font-variant-numeric: tabular-nums;
+}
+
+.mc-ley-marca {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+}
+
+.mc-ley-marca--ventas { background: var(--mc-sin); }
+.mc-ley-marca--senas { background: var(--mc-con); }
+
+.mc-ley-desglose {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--mc-mut, rgba(255, 255, 255, .5));
+    font-variant-numeric: tabular-nums;
+}
+
+.mc-ley-desglose abbr {
+    text-decoration: none;
+    cursor: help;
+}
+
+/* --- El "i" de respaldo, cuando el tablero no pasa su propio tooltip ------------------------- */
+
 .mc-i {
     display: inline-grid;
     place-items: center;
@@ -124,27 +346,42 @@
     cursor: help;
 }
 
-.mc-oculto {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+/* --- Movimiento ------------------------------------------------------------------------------ */
+
+@keyframes mc-crece {
+    from { width: 0; }
 }
 
 @keyframes mc-entra {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mc-celda { animation: none; }
-    .mc-riel > i { transition: none; }
+    .mc-tira,
+    .mc-col,
+    .mc-tramo {
+        animation: none;
+    }
+
+    .mc-tramo,
+    .mc-ayuda,
+    .mc-col {
+        transition: none;
+    }
 }
 
-@media (max-width: 480px) {
-    .mc-tabla th,
-    .mc-tabla td { padding: 4px; }
-    .mc-pct { font-size: 18px; }
+/* Matriz angosta (un teléfono): la tira pasa a dos renglones —rótulo y cifra arriba, la barra
+   entera abajo— en vez de dejarle a la barra un hilo entre los dos textos. Se mide el ancho de la
+   matriz y no el de la ventana: el panel Cierre comparte fila con otro en pantallas medianas. */
+@container mc (max-width: 380px) {
+    .mc-tira {
+        grid-template-columns: 1fr auto;
+        row-gap: 10px;
+    }
+
+    .mc-riel--tira {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
 }

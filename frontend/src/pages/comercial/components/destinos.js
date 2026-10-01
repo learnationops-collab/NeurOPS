@@ -128,10 +128,12 @@ export const DESTINOS_CLOSER = {
 
 /**
  * La matriz de cierres (`MatrizCierres`), con la misma forma que el bloque `cierres` del backend:
- * fila (sin / con señas) → columna (por llamada / por presentación) → destino. La usan el panel
- * Cierre de acá y la tarjeta del dashboard del closer, que lleva a esta misma lista.
+ * fila (sin / con señas) → columna (por llamada / por presentación) → destino, más la tira de
+ * presentación de arriba (`presentacion`). La usan el panel Cierre de acá y la tarjeta del
+ * dashboard del closer, que lleva a esta misma lista.
  */
 export const DESTINOS_CIERRES = {
+    presentacion: DESTINOS_CLOSER.presentacion_rate,
     sin_senas: {
         por_llamada: DESTINOS_CLOSER.close_llamada,
         por_presentacion: DESTINOS_CLOSER.close_presentacion,
