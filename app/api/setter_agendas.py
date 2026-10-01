@@ -21,6 +21,7 @@ import logging
 from flask import request, jsonify
 from flask_login import current_user
 from sqlalchemy import or_, func
+from sqlalchemy.orm import load_only
 
 from app import db
 from app.models import ROLE_SETTER, Client, Appointment
@@ -51,6 +52,28 @@ def _variantes_de_fuente(coincide):
 def _mis_variantes(user=None):
     objetivo = normalizar((user or current_user).username)
     return _variantes_de_fuente(lambda n: normalizar(n) == objetivo)
+
+
+def clave_de_persona(instagram, lead):
+    """La persona detras de una agenda: su instagram normalizado o, si no tiene, su
+    nombre. None si no hay ninguno de los dos.
+
+    Una misma persona tiene varias filas cuando reagenda; las dos listas del setter
+    (Por fecha e Historial) la cuentan una vez con esta clave.
+    """
+    ig = instagram.strip().lstrip('@').lower() if isinstance(instagram, str) else ''
+    if ig and ig not in ('n/a', 'none'):
+        return f'ig:{ig}'
+    nombre = (lead or '').strip().lower()
+    return f'nombre:{nombre}' if nombre else None
+
+
+def _filtrar_por_estado(agendas, estado_filtro):
+    if estado_filtro == 'pending':
+        return [a for a in agendas if (a.estado or '').strip().lower() in ESTADOS_PENDIENTES]
+    if estado_filtro == 'completed':
+        return [a for a in agendas if (a.estado or '').strip().lower() not in ESTADOS_PENDIENTES]
+    return agendas
 
 
 def agendas_del_setter(user, desde=None, hasta=None):
@@ -204,14 +227,32 @@ def get_setter_agendas():
     """
     estado_filtro = request.args.get('status', 'all')
 
-    agendas = agendas_del_setter(current_user)
-
-    if estado_filtro == 'pending':
-        agendas = [a for a in agendas if (a.estado or '').strip().lower() in ESTADOS_PENDIENTES]
-    elif estado_filtro == 'completed':
-        agendas = [a for a in agendas if (a.estado or '').strip().lower() not in ESTADOS_PENDIENTES]
+    agendas = _filtrar_por_estado(agendas_del_setter(current_user), estado_filtro)
 
     return jsonify([_serializar(a) for a in agendas]), 200
+
+
+@bp.route('/agendas/total', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_total_de_agendas():
+    """El "Total histórico" del Historial: cuántas PERSONAS tienen una agenda de su
+    fuente, de siempre, con el mismo ?status que la lista.
+
+    Antes el Historial mostraba "Total" con el largo de la lista: una fila por
+    agenda, así que quien reagendó contaba dos o tres veces, y además la lista se
+    corta en 500 filas, así que a Elias le decía 500 (01/10/2026) sin ser su total.
+    Se cuenta acá, sobre todas las filas y solo con las tres columnas que hacen
+    falta, con la misma clave de persona que Por fecha (`clave_de_persona`).
+    """
+    estado_filtro = request.args.get('status', 'all')
+    variantes = _mis_variantes()
+    filas = db.session.query(FinancialAgenda).filter(
+        FinancialAgenda.nombre.in_(variantes)).options(
+        load_only(FinancialAgenda.id, FinancialAgenda.instagram, FinancialAgenda.lead,
+                  FinancialAgenda.estado)).all() if variantes else []
+    filas = _filtrar_por_estado(filas, estado_filtro)
+    personas = {clave_de_persona(a.instagram, a.lead) or f'agenda:{a.id}' for a in filas}
+    return jsonify({'personas': len(personas), 'agendas': len(filas)}), 200
 
 
 @bp.route('/agendas/sin-asignar', methods=['GET'])

@@ -25,7 +25,7 @@ from app.models import ROLE_SETTER, Client, Appointment, ManychatLead, LeadAnswe
 from app.decorators import role_required
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
 from app.api.setter import bp
-from app.api.setter_agendas import agendas_del_setter, _cliente_de, _cita_de
+from app.api.setter_agendas import agendas_del_setter, clave_de_persona, _cliente_de, _cita_de
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +122,8 @@ def get_agendas_del_mazo():
         nombre_norm = (agenda.lead or '').strip().lower()
 
         # Una misma persona puede tener varias filas de agenda (reagendas); en la
-        # lista de trabajo se muestra una sola.
-        llave = f"ig:{ig_norm}" if ig_norm else (f"nombre:{nombre_norm}" if nombre_norm else None)
+        # lista de trabajo se muestra una sola. Misma clave que el Historial.
+        llave = clave_de_persona(agenda.instagram, agenda.lead)
         if llave and llave in vistas:
             continue
         if llave:

@@ -22,6 +22,9 @@ import { parseUtcIso } from '../../../utils/datetime';
 const SetterAgendasPage = () => {
     const [loading, setLoading] = useState(true);
     const [agendas, setAgendas] = useState([]);
+    // "Total histórico": personas, no filas, y de siempre (la lista se corta en 500). Ver
+    // `get_total_de_agendas`.
+    const [personas, setPersonas] = useState(null);
     const [sinAsignar, setSinAsignar] = useState([]);
     const [bookingLinks, setBookingLinks] = useState([]);
     const [filter, setFilter] = useState('all'); // 'all', 'pending', 'completed'
@@ -41,6 +44,9 @@ const SetterAgendasPage = () => {
         } finally {
             setLoading(false);
         }
+        api.get('/setter/agendas/total', { params: { status: filter } })
+            .then(res => setPersonas(res.data?.personas ?? null))
+            .catch(() => setPersonas(null));
     };
 
     const fetchSinAsignar = async () => {
@@ -169,9 +175,12 @@ const SetterAgendasPage = () => {
                             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                                 <CalendarIcon size={14} className="text-primary" /> Historial de Agendas
                             </h3>
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span> Total: {agendas.length}
-                            </div>
+                            {personas !== null && (
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500/50"></span>
+                                    Total histórico: {personas} {personas === 1 ? 'persona' : 'personas'}
+                                </div>
+                            )}
                         </div>
 
                         {loading ? (
