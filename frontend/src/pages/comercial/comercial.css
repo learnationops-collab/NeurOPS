@@ -500,6 +500,16 @@
   .dc-shell .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
   .dc-shell .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
 }
+/* Seis secciones o más (el mazo del closer, ver `DockSecciones`): con el aire de cuatro medía
+   ~1020px y en una laptop de 1366 ya scrolleaba. Más juntas miden ~930 y entran desde 1280px; por
+   debajo, el nombre de las inactivas se esconde antes que en el dock de cuatro. */
+.dc-shell .dock--denso .dock-item{padding:0 14px;gap:8px}
+.dc-shell .dock--denso .dock-num{left:14px}
+@media (max-width:1279px){
+  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-label{display:none}
+  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
+  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
+}
 
 /* ============================================================
    9 · DATA VIZ

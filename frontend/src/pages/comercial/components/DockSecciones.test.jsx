@@ -46,6 +46,15 @@ describe('DockSecciones', () => {
         expect(marcas.map(m => m.className)).toEqual(['dock-marca dock-marca--aviso', 'dock-marca']);
     });
 
+    it('con seis secciones o más va denso, para entrar en una laptop', () => {
+        const seccion = (id) => ({ id, label: id, Icono: Layers });
+        const { container, rerender } = renderDock(['a', 'b', 'c', 'd', 'e'].map(seccion));
+        expect(container.querySelector('nav').className).toBe('dock caja');
+        rerender(<DockSecciones secciones={['a', 'b', 'c', 'd', 'e', 'f'].map(seccion)} activa="a"
+            onElegir={() => {}} ariaLabel="Secciones" />);
+        expect(container.querySelector('nav').className).toBe('dock dock--denso caja');
+    });
+
     it('sin marcas el nombre es la sección, y elegir avisa cuál', () => {
         const onElegir = vi.fn();
         renderDock([

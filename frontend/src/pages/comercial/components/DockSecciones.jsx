@@ -58,8 +58,10 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
         return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
     }, [activa, ids]);
 
+    // Con seis secciones o más (el mazo del closer) el aire de las cuatro del dashboard no entra en
+    // una laptop: `dock--denso` las junta y esconde antes el nombre de las inactivas.
     return (
-        <nav className="dock caja" aria-label={ariaLabel}>
+        <nav className={secciones.length >= 6 ? 'dock dock--denso caja' : 'dock caja'} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
             {antes}
             {antes && <span className="dock-sep" />}
