@@ -85,7 +85,13 @@ def test_el_contexto_dice_que_puede_elegir_cada_rol(client, equipo, auth_headers
     assert (director['puede_elegir_equipo'], director['puede_reportar']) == (True, True)
     assert [m['nombre'] for m in director['miembros']] == ['Marlon', 'Nerina']
 
+    # El selector de persona cambia con el switch Closers / Setters sin volver a pedir el
+    # contexto: tienen que venir las dos listas (con Setters ofrecía closers, 01/10/2026).
+    assert {r: [m['nombre'] for m in ms] for r, ms in director['miembros_por_rol'].items()} == {
+        'closers': ['Marlon', 'Nerina'], 'setters': ['Elias']}
+
     # "Mis datos": ni selector de equipo, ni seccion de Reportar, y el rol fijo en el suyo.
+    assert closer['miembros_por_rol'] == {} and setter['miembros_por_rol'] == {}
     assert (closer['puede_elegir_equipo'], closer['puede_reportar']) == (False, False)
     assert (closer['rol'], closer['miembro_id']) == ('closers', equipo['closer_a'].id)
     assert (setter['rol'], setter['miembro_id']) == ('setters', equipo['setter'].id)
@@ -124,6 +130,39 @@ def test_el_director_ve_al_equipo_completo_y_puede_acotar_a_una_persona(client, 
 
     assert len(todo['filas']) == 2
     assert [f['cliente'] for f in solo_nerina['filas']] == ['De Nerina']
+
+
+@freeze_time(HOY)
+def test_con_setters_el_equipo_cuenta_solo_las_agendas_que_genero_un_setter(client, db, equipo,
+                                                                          auth_headers):
+    # Reportado en produccion (01/10/2026): "Todo el equipo" con Setters contaba tambien las
+    # agendas de taller, VSL o landing, que no genero ningun setter (237 contra 129).
+    agenda(db, equipo['closer_a'], cliente(db, 'De Elias'), setter=equipo['setter'])
+    agenda(db, equipo['closer_a'], cliente(db, 'Del taller'))
+    # Un closer que agenda a mano queda como setter_id de la cita: no es trabajo de setting.
+    agenda(db, equipo['closer_b'], cliente(db, 'A mano'), setter=equipo['closer_b'])
+    headers = auth_headers(equipo['director'])
+    parametros = {'period': 'mes', 'compare': 'none', 'rol': 'setters'}
+
+    resumen = client.get(RESUMEN, headers=headers, query_string=parametros).get_json()
+    tabla = client.get(TABLA, headers=headers, query_string={**parametros, 'tabla': 'generadas'}).get_json()
+    de_elias = client.get(TABLA, headers=headers, query_string={
+        **parametros, 'tabla': 'generadas', 'miembro_id': equipo['setter'].id}).get_json()
+
+    assert resumen['actual']['generadas'] == 1
+    assert [f['cliente'] for f in tabla['filas']] == ['De Elias']
+    assert [f['cliente'] for f in de_elias['filas']] == ['De Elias']
+
+
+@freeze_time(HOY)
+def test_con_closers_el_equipo_sigue_viendo_todas_las_agendas(client, db, equipo, auth_headers):
+    agenda(db, equipo['closer_a'], cliente(db, 'De Elias'), setter=equipo['setter'])
+    agenda(db, equipo['closer_a'], cliente(db, 'Del taller'))
+
+    datos = client.get(TABLA, headers=auth_headers(equipo['director']), query_string={
+        'period': 'mes', 'rol': 'closers'}).get_json()
+
+    assert len(datos['filas']) == 2
 
 
 # --- Los numeros cierran con el filtro --------------------------------------------------------

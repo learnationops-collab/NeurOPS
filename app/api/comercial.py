@@ -105,6 +105,11 @@ def contexto():
         'puede_reportar': current_user.role in ROLES_DIRECCION,
         'yo': {'id': current_user.id, 'nombre': current_user.username, 'rol': current_user.role},
         'miembros': ComercialService.miembros(rol) if puede_elegir else [],
+        # La lista del selector de persona depende del switch Closers / Setters, que se mueve sin
+        # volver a pedir el contexto: por eso van las dos. Antes solo viajaba `miembros` (siempre
+        # los closers, porque el contexto se pide sin `rol`) y con Setters el selector ofrecía
+        # closers: elegir uno acotaba las agendas por un setter_id que no generó ninguna y daba 0.
+        'miembros_por_rol': {r: ComercialService.miembros(r) for r in ROLES} if puede_elegir else {},
         'periodos': PERIODOS,
         'comparaciones': COMPARACIONES,
         'estados': {'pre_call': PRE_CALL, 'post_call': POST_CALL},
@@ -184,7 +189,7 @@ def tabla():
         filas = ComercialService.leads(start, end, setter_nombre=nombre if rol == ROL_SETTERS else None)
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
-        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis)
+        filas = ComercialService.agendas(start, end, setter_id=miembro_id, basis=basis, de_setters=True)
         totales = ComercialService.totales_agendas(filas)
     else:
         closer_id = miembro_id if rol == ROL_CLOSERS else None

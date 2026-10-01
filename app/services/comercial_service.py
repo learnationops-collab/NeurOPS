@@ -323,11 +323,16 @@ class ComercialService:
     # --- Agendas ------------------------------------------------------------------------------
 
     @staticmethod
-    def agendas(start, end, closer_id=None, setter_id=None, basis='meet'):
+    def agendas(start, end, closer_id=None, setter_id=None, basis='meet', de_setters=False):
         """Filas de la tabla "Agendas" (y de "Agendas generadas" cuando se acota por setter).
 
         `basis='creacion'` filtra por cuándo se creó la agenda en vez de por cuándo cae la
         reunión — es el toggle "Fecha meet / F. creación" de la barra de Revisar.
+
+        `de_setters=True` deja solo las agendas que generó un setter: es "Agendas generadas" del
+        equipo de setting. Sin eso, "Todo el equipo" con Setters contaba TODAS las agendas del
+        período, también las de taller, VSL o landing que no generó ningún setter (en septiembre
+        de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya.
         """
         desde, hasta = ComercialService._limites(start, end)
         columna = Appointment.created_at if basis == 'creacion' else Appointment.start_time
@@ -339,6 +344,9 @@ class ComercialService:
             q = q.filter(Appointment.closer_id == closer_id)
         if setter_id:
             q = q.filter(Appointment.setter_id == setter_id)
+        elif de_setters:
+            q = q.filter(Appointment.setter_id.in_(
+                db.session.query(User.id).filter(User.role == 'setter')))
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
         if not appts:
