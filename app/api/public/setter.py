@@ -503,6 +503,36 @@ def _subtract_one_month(d):
         except ValueError:
             day -= 1
 
+def _generadas_del_rango(start_date_str, end_date_str, setter_id):
+    """Las agendas generadas de verdad en el rango, para ponerlas al lado de las reportadas.
+
+    "Mis reportes" suma lo que el setter tipeó en `funnel_agenda` y lo mostraba como "Agendas
+    Generadas", el nombre de la métrica real de "Mis datos" (septiembre de 2026: Elias 75
+    reportadas contra 70 generadas, Paula 55 contra 52). Ahora esa tarjeta dice "Agendas
+    reportadas" y esto es el número de "Mis datos" para el mismo rango (`ComercialService.generadas`),
+    o None si no hay rango.
+
+    Un setter solo ve el suyo: el selector de "Mis reportes" le deja mirar los reportes de otros,
+    pero los números de "Mis datos" de otro no (decisión del 24/09/2026).
+    """
+    from flask_login import current_user
+
+    from app.services.comercial_service import ComercialService
+
+    if not (start_date_str and end_date_str):
+        return None
+    if current_user.is_authenticated and current_user.role == 'setter' \
+            and str(setter_id or '') != str(current_user.id):
+        return None
+    try:
+        inicio = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        fin = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        quien = int(setter_id) if setter_id else None
+    except ValueError:
+        return None
+    return len(ComercialService.generadas(inicio, fin, setter_id=quien))
+
+
 @bp.route('/public/setter-stats', methods=['GET'])
 def get_public_setter_stats():
     """Returns aggregated stats for setters with sum/avg support and comparison."""
@@ -514,6 +544,7 @@ def get_public_setter_stats():
     compare_mode = request.args.get('compare_mode', 'month')
 
     res = _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type)
+    res['generadas'] = _generadas_del_rango(start_date_str, end_date_str, setter_id)
 
     if compare and start_date_str and end_date_str:
         try:

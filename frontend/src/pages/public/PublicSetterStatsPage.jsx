@@ -727,27 +727,37 @@ const PublicSetterStatsPage = ({ embebido = false }) => {
                                             </div>
                                         </div>
 
-                                        {/* FILA SECUNDARIA: Agendas Generadas + Eficacia a Cita */}
+                                        {/* FILA SECUNDARIA: Agendas reportadas + Eficacia a Cita */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                            {/* TARJETA SECUNDARIA 1: AGENDAS GENERADAS */}
+                                            {/* TARJETA SECUNDARIA 1: AGENDAS REPORTADAS. Es la suma de lo que se
+                                                tipeó en los reportes, no la métrica de "Mis datos": se llamaba
+                                                "Agendas Generadas" como aquella. Al lado va la real del mismo rango
+                                                (`generadas`, solo sumando y solo la propia: ver
+                                                `_generadas_del_rango`). */}
                                             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:border-slate-700 transition-all">
                                                 <div className="flex items-start justify-between relative z-10">
                                                     <div className="space-y-1 text-left flex-1">
-                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Agendas reportadas</p>
                                                         <h3 className="text-4xl font-black text-white italic tracking-tighter">
                                                             <StatTooltip
-                                                                label="Agendas Generadas"
+                                                                label="Agendas reportadas"
                                                                 value={stats.totals.funnel_agenda}
-                                                                calculation="Total de citas agendadas por el setter en el periodo seleccionado. Es el resultado directo de toda la gestion de conversaciones."
+                                                                calculation="Suma de las agendas cargadas en los reportes diarios del periodo. Las generadas son las de Mis datos."
                                                             >
                                                                 {stats.totals.funnel_agenda}
                                                             </StatTooltip>
                                                         </h3>
-                                                        <div className="flex items-center gap-1.5 mt-2">
+                                                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                                                             <span className="px-2 py-0.5 rounded-full text-xs font-black text-slate-400 bg-slate-500/10 border border-slate-600/30">
                                                                 {stats.percentages.conversions_to_agenda.opening_to_agenda}% de openings a cita
                                                             </span>
+                                                            {stats.generadas != null && filters.agg_type === 'sum' && (
+                                                                <span className="px-2 py-0.5 rounded-full text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30"
+                                                                    title="Agendas generadas en Mis datos, mismo período">
+                                                                    {stats.generadas} {stats.generadas === 1 ? 'generada' : 'generadas'}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
                                                     </div>
