@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useRef } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -89,11 +89,14 @@ const trabarScroll = () => {
  * `propsFondo` para el elemento que hace de fondo (el velo, si el panel es hijo suyo).
  */
 export const useComportamientoModal = ({ onCerrar, cerrable = true, panel }) => {
-    // Refs para que el efecto corra una sola vez y lea siempre lo último.
+    // Refs para que el efecto de abajo corra una sola vez y lea siempre lo último. Se actualizan
+    // después de cada render, no durante (react-hooks/refs).
     const cerrarRef = useRef(onCerrar);
     const cerrableRef = useRef(cerrable);
-    cerrarRef.current = onCerrar;
-    cerrableRef.current = cerrable;
+    useLayoutEffect(() => {
+        cerrarRef.current = onCerrar;
+        cerrableRef.current = cerrable;
+    });
     const cerrar = useCallback(() => { if (cerrableRef.current) cerrarRef.current?.(); }, []);
 
     useEffect(() => {
