@@ -24,7 +24,6 @@ import {
     RefreshCw,
     Download,
     Check,
-    X,
     Layers,
     ClipboardCheck,
     CopyCheck
@@ -32,6 +31,7 @@ import {
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import Modal from '../../../components/ui/Modal';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
 import AgendasBulkEditModal from './AgendasBulkEditModal';
@@ -1666,282 +1666,154 @@ const FinancialAgendasPage = () => {
 
             {/* Modal de Edición de Agenda */}
             {editingAgenda && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-2xl w-full max-h-[80dvh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        {/* Cabecera Fija */}
-                        <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
-                            <h3 className="text-lg font-black text-white italic uppercase">Editar Registro de Agenda</h3>
-                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Modificar datos de la cita</p>
+                <Modal
+                    ancho="2xl"
+                    titulo="Editar Registro de Agenda"
+                    subtitulo="Modificar datos de la cita"
+                    onCerrar={() => setEditingAgenda(null)}
+                    onSubmit={handleEditSubmit}
+                    pie={(
+                        <>
+                            <button 
+                                type="button"
+                                onClick={() => setEditingAgenda(null)}
+                                className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="submit"
+                                className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                            >
+                                Guardar
+                            </button>
+                        </>
+                    )}
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+                            <input 
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                value={editForm.lead}
+                                onChange={e => setEditForm({...editForm, lead: e.target.value})}
+                                required
+                            />
                         </div>
-                        
-                        <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                            {/* Cuerpo con Scroll */}
-                            <div className="p-5 md:p-6 space-y-4 text-left overflow-y-auto flex-1 min-h-0 custom-scrollbar">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.lead}
-                                            onChange={e => setEditForm({...editForm, lead: e.target.value})}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet</label>
-                                        <input 
-                                            type="datetime-local"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={editForm.fecha_meet}
-                                            onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.nombre}
-                                            onChange={e => setEditForm({...editForm, nombre: e.target.value})}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.instagram}
-                                            onChange={e => setEditForm({...editForm, instagram: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp / Teléfono</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.whatsapp}
-                                            onChange={e => setEditForm({...editForm, whatsapp: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
-                                        <select 
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={editForm.closer}
-                                            onChange={e => setEditForm({...editForm, closer: e.target.value})}
-                                            required
-                                        >
-                                            <option value="Sin asignar" className="bg-slate-900 text-slate-500">Sin Asignar</option>
-                                            {editForm.closer && editForm.closer !== 'Sin asignar' && !activeClosers.includes(editForm.closer) && (
-                                                <option value={editForm.closer} className="bg-slate-900 text-amber-500">{editForm.closer} (inactivo)</option>
-                                            )}
-                                            {activeClosers.map(cl => (
-                                                <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
-                                        <select 
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={editForm.estado}
-                                            onChange={e => setEditForm({...editForm, estado: e.target.value})}
-                                            required
-                                        >
-                                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
-                                                <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Call Confirmer</label>
-                                        <select 
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={editForm.encargado_triage || ''}
-                                            onChange={e => setEditForm({...editForm, encargado_triage: e.target.value})}
-                                        >
-                                            <option value="" className="bg-slate-900 text-slate-500">Sin Asignar</option>
-                                            {uniqueTriage.map(tg => (
-                                                <option key={tg} value={tg} className="bg-slate-900 text-white">{tg}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Registro (Sistema)</label>
-                                        <input 
-                                            type="datetime-local"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                            value={editForm.created_at}
-                                            onChange={e => setEditForm({...editForm, created_at: e.target.value})}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                                
-                            {/* Footer Fijo */}
-                            <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex gap-3">
-                                <button 
-                                    type="button"
-                                    onClick={() => setEditingAgenda(null)}
-                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
-                                >
-                                    Guardar
-                                </button>
-                            </div>
-                        </form>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet</label>
+                            <input 
+                                type="datetime-local"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                value={editForm.fecha_meet}
+                                onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
+                            <input 
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                value={editForm.nombre}
+                                onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
+                            <input 
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                value={editForm.instagram}
+                                onChange={e => setEditForm({...editForm, instagram: e.target.value})}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp / Teléfono</label>
+                            <input 
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                value={editForm.whatsapp}
+                                onChange={e => setEditForm({...editForm, whatsapp: e.target.value})}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
+                            <select 
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                value={editForm.closer}
+                                onChange={e => setEditForm({...editForm, closer: e.target.value})}
+                                required
+                            >
+                                <option value="Sin asignar" className="bg-slate-900 text-slate-500">Sin Asignar</option>
+                                {editForm.closer && editForm.closer !== 'Sin asignar' && !activeClosers.includes(editForm.closer) && (
+                                    <option value={editForm.closer} className="bg-slate-900 text-amber-500">{editForm.closer} (inactivo)</option>
+                                )}
+                                {activeClosers.map(cl => (
+                                    <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+                            <select 
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                value={editForm.estado}
+                                onChange={e => setEditForm({...editForm, estado: e.target.value})}
+                                required
+                            >
+                                {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
+                                    <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Call Confirmer</label>
+                            <select 
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                value={editForm.encargado_triage || ''}
+                                onChange={e => setEditForm({...editForm, encargado_triage: e.target.value})}
+                            >
+                                <option value="" className="bg-slate-900 text-slate-500">Sin Asignar</option>
+                                {uniqueTriage.map(tg => (
+                                    <option key={tg} value={tg} className="bg-slate-900 text-white">{tg}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* El noveno campo ocupa la fila entera: suelto en media fila quedaba colgado. */}
+                        <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Registro (Sistema)</label>
+                            <input 
+                                type="datetime-local"
+                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                value={editForm.created_at}
+                                onChange={e => setEditForm({...editForm, created_at: e.target.value})}
+                            />
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
-            {/* Modal de Configuración de Exportación de Leads Potenciales.
-                Va por portal a <body>: la página vive dentro de un contenedor con `z-10`,
-                así que sin esto el `z-[100]` sólo ordena dentro de ese contenedor y el dock
-                inferior (`z-50`, hermano del contenedor) termina tapando los botones. */}
-            {showExportModal && createPortal(
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-lg w-full max-h-[85dvh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        {/* Cabecera Fija */}
-                        <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
-                            <h3 className="text-lg font-black text-white italic uppercase flex items-center gap-2">
-                                {exportMode === 'agendas' ? (
-                                    <ClipboardCheck className="text-amber-500 w-5 h-5" />
-                                ) : (
-                                    <Download className="text-teal-500 w-5 h-5" />
-                                )}
-                                {exportMode === 'agendas' ? 'Exportar Agendas para Revisión' : 'Exportar Clientes Potenciales'}
-                            </h3>
-                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
-                                {exportMode === 'agendas'
-                                    ? 'Todas las agendas del recorte, con el show up que calcula el sistema'
-                                    : 'Leads sin ventas registradas'}
-                            </p>
-                        </div>
-
-                        <div className="p-5 md:p-6 space-y-5 text-left overflow-y-auto custom-scrollbar">
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    {exportMode === 'agendas' ? 'Cantidad de Agendas a Exportar (más recientes)' : 'Cantidad de Leads a Exportar (últimos agendados)'}
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="5000"
-                                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold"
-                                    value={exportLimit}
-                                    onChange={e => setExportLimit(parseInt(e.target.value) || '')}
-                                    required
-                                />
-                                <p className="text-[10px] text-slate-500">
-                                    {exportMode === 'agendas'
-                                        ? 'Se ordenan las agendas de más reciente a más antigua. Usá el closer y el rango de fechas del tablero para acotar a una sola persona y un solo período antes de exportar.'
-                                        : 'Se ordenarán las agendas de forma descendente y se exportarán los leads únicos que no tengan ventas asociadas.'}
-                                </p>
-                            </div>
-
-                            {/* Uso de los filtros del tablero */}
-                            <div className="border-t border-slate-800 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setExportApplyFilters(v => !v)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all cursor-pointer ${
-                                        exportApplyFilters
-                                            ? 'bg-teal-600/15 border-teal-500/40'
-                                            : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-                                    }`}
-                                >
-                                    <div className="text-left">
-                                        <p className={`text-sm font-bold ${exportApplyFilters ? 'text-teal-300' : 'text-slate-300'}`}>
-                                            Aplicar filtros del tablero
-                                        </p>
-                                        <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {exportApplyFilters
-                                                ? `Sólo se exportan ${exportMode === 'agendas' ? 'las agendas' : 'los leads'} del recorte visible (fechas, estados, closers, fuentes)`
-                                                : (exportMode === 'agendas' ? 'Se exportan todas las agendas históricas sin filtrar' : 'Se exportan todos los leads históricos sin filtrar')}
-                                        </p>
-                                    </div>
-                                    <div className={`w-10 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${exportApplyFilters ? 'bg-teal-600' : 'bg-slate-700'}`}>
-                                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${exportApplyFilters ? 'translate-x-5' : 'translate-x-0'}`} />
-                                    </div>
-                                </button>
-
-                                {exportApplyFilters && activeExportFilters.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mt-3">
-                                        {activeExportFilters.map(f => (
-                                            <span key={f} className="text-[9px] font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 rounded-lg px-2 py-1">
-                                                {f}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Columnas a Exportar */}
-                            <div className="space-y-2 border-t border-slate-800 pt-4">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Columnas a exportar</p>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setExportColumns(exportColumnsCatalog.map(c => c.id))}
-                                            className="text-[9px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-wider transition-colors cursor-pointer"
-                                        >
-                                            Todas
-                                        </button>
-                                        <span className="text-slate-600">·</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setExportColumns([])}
-                                            className="text-[9px] font-black text-slate-400 hover:text-slate-300 uppercase tracking-wider transition-colors cursor-pointer"
-                                        >
-                                            Ninguna
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {exportColumnsCatalog.map(col => {
-                                        const isSelected = exportColumns.includes(col.id);
-                                        return (
-                                            <button
-                                                key={col.id}
-                                                type="button"
-                                                onClick={() => setExportColumns(prev => (
-                                                    isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
-                                                ))}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                                                    isSelected
-                                                        ? 'bg-teal-600/20 border-teal-500/50 text-teal-300'
-                                                        : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                                                }`}
-                                            >
-                                                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 transition-all ${
-                                                    isSelected ? 'bg-teal-500 border-teal-500' : 'border-slate-600'
-                                                }`}>
-                                                    {isSelected && <Check size={10} className="text-white" />}
-                                                </span>
-                                                <span className="truncate">{col.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                {exportColumns.length === 0 && (
-                                    <p className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                                        Debes seleccionar al menos una columna para exportar.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Footer Fijo */}
-                        <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex gap-3">
+            {/* Modal de Configuración de Exportación (agendas para revisión o clientes potenciales).
+                Va sobre el cascarón `Modal`, que ya lo monta en un portal a <body>: dentro del
+                `z-10` del layout, el dock inferior (`z-50`) le tapaba los botones. */}
+            {showExportModal && (
+                <Modal
+                    ancho="lg"
+                    titulo={exportMode === 'agendas' ? 'Exportar Agendas para Revisión' : 'Exportar Clientes Potenciales'}
+                    icono={exportMode === 'agendas'
+                        ? <ClipboardCheck className="text-amber-500 w-5 h-5" />
+                        : <Download className="text-teal-500 w-5 h-5" />}
+                    subtitulo={exportMode === 'agendas'
+                        ? 'Todas las agendas del recorte, con el show up que calcula el sistema'
+                        : 'Leads sin ventas registradas'}
+                    onCerrar={() => setShowExportModal(false)}
+                    cerrable={!exporting}
+                    cuerpoClassName="space-y-5"
+                    pie={(
+                        <>
                             <button 
                                 type="button"
                                 onClick={() => setShowExportModal(false)}
@@ -1968,93 +1840,193 @@ const FinancialAgendasPage = () => {
                                     'Exportar CSV'
                                 )}
                             </button>
-                        </div>
+                        </>
+                    )}
+                >
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                            {exportMode === 'agendas' ? 'Cantidad de Agendas a Exportar (más recientes)' : 'Cantidad de Leads a Exportar (últimos agendados)'}
+                        </label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="5000"
+                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold"
+                            value={exportLimit}
+                            onChange={e => setExportLimit(parseInt(e.target.value) || '')}
+                            required
+                        />
+                        <p className="text-[10px] text-slate-500">
+                            {exportMode === 'agendas'
+                                ? 'Se ordenan las agendas de más reciente a más antigua. Usá el closer y el rango de fechas del tablero para acotar a una sola persona y un solo período antes de exportar.'
+                                : 'Se ordenarán las agendas de forma descendente y se exportarán los leads únicos que no tengan ventas asociadas.'}
+                        </p>
                     </div>
-                </div>,
-                document.body
+
+                    {/* Uso de los filtros del tablero */}
+                    <div className="border-t border-slate-800 pt-4">
+                        <button
+                            type="button"
+                            onClick={() => setExportApplyFilters(v => !v)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all cursor-pointer ${
+                                exportApplyFilters
+                                    ? 'bg-teal-600/15 border-teal-500/40'
+                                    : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                            }`}
+                        >
+                            <div className="text-left">
+                                <p className={`text-sm font-bold ${exportApplyFilters ? 'text-teal-300' : 'text-slate-300'}`}>
+                                    Aplicar filtros del tablero
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                    {exportApplyFilters
+                                        ? `Sólo se exportan ${exportMode === 'agendas' ? 'las agendas' : 'los leads'} del recorte visible (fechas, estados, closers, fuentes)`
+                                        : (exportMode === 'agendas' ? 'Se exportan todas las agendas históricas sin filtrar' : 'Se exportan todos los leads históricos sin filtrar')}
+                                </p>
+                            </div>
+                            <div className={`w-10 h-5 rounded-full flex items-center transition-all px-0.5 shrink-0 ${exportApplyFilters ? 'bg-teal-600' : 'bg-slate-700'}`}>
+                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${exportApplyFilters ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </div>
+                        </button>
+
+                        {exportApplyFilters && activeExportFilters.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                {activeExportFilters.map(f => (
+                                    <span key={f} className="text-[9px] font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 rounded-lg px-2 py-1">
+                                        {f}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Columnas a Exportar */}
+                    <div className="space-y-2 border-t border-slate-800 pt-4">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Columnas a exportar</p>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setExportColumns(exportColumnsCatalog.map(c => c.id))}
+                                    className="text-[9px] font-black text-teal-400 hover:text-teal-300 uppercase tracking-wider transition-colors cursor-pointer"
+                                >
+                                    Todas
+                                </button>
+                                <span className="text-slate-600">·</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setExportColumns([])}
+                                    className="text-[9px] font-black text-slate-400 hover:text-slate-300 uppercase tracking-wider transition-colors cursor-pointer"
+                                >
+                                    Ninguna
+                                </button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {exportColumnsCatalog.map(col => {
+                                const isSelected = exportColumns.includes(col.id);
+                                return (
+                                    <button
+                                        key={col.id}
+                                        type="button"
+                                        onClick={() => setExportColumns(prev => (
+                                            isSelected ? prev.filter(id => id !== col.id) : [...prev, col.id]
+                                        ))}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-teal-600/20 border-teal-500/50 text-teal-300'
+                                                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 transition-all ${
+                                            isSelected ? 'bg-teal-500 border-teal-500' : 'border-slate-600'
+                                        }`}>
+                                            {isSelected && <Check size={10} className="text-white" />}
+                                        </span>
+                                        <span className="truncate">{col.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {exportColumns.length === 0 && (
+                            <p className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                Debes seleccionar al menos una columna para exportar.
+                            </p>
+                        )}
+                    </div>
+                </Modal>
             )}
 
             {statusActionModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-                    <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-slate-800/60 flex justify-between items-center bg-slate-950/20 shrink-0">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-white italic">
-                                Confirmar {statusActionModal.nuevoEstado}
-                            </h3>
+                <Modal
+                    ancho="md"
+                    titulo={`Confirmar ${statusActionModal.nuevoEstado}`}
+                    onCerrar={() => setStatusActionModal(prev => ({ ...prev, isOpen: false }))}
+                    onSubmit={handleStatusActionSubmit}
+                    cuerpoClassName="space-y-5"
+                    pie={(
+                        <>
                             <button 
+                                type="button"
                                 onClick={() => setStatusActionModal(prev => ({ ...prev, isOpen: false }))}
-                                className="text-slate-400 hover:text-white transition-colors"
+                                className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-450 rounded-xl hover:text-white transition-colors"
                             >
-                                <X size={16} />
+                                Cancelar
                             </button>
-                        </div>
-                        
-                        <form onSubmit={handleStatusActionSubmit} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-                            <div className="p-6 space-y-5 flex-1">
-                                <div className="space-y-1 text-left">
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cliente</p>
-                                    <p className="text-sm font-black text-white">{statusActionModal.agenda ? (getAgendaLeadName(statusActionModal.agenda) || 'Sin nombre') : ''}</p>
-                                </div>
-
-                                {statusActionModal.requiresDate && (
-                                    <div className="space-y-1.5 text-left">
-                                        <style>{`
-                                            .custom-datetime-picker::-webkit-calendar-picker-indicator {
-                                                filter: invert(1);
-                                                cursor: pointer;
-                                                font-size: 18px;
-                                                padding: 4px;
-                                                opacity: 1 !important;
-                                                display: block !important;
-                                            }
-                                        `}</style>
-                                        <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5 animate-pulse">
-                                            <CalendarIcon size={10} />
-                                            Fecha y Hora de Reprogramación (Click para abrir)
-                                        </label>
-                                        <div className="relative group">
-                                            <input 
-                                                type="datetime-local"
-                                                className="custom-datetime-picker w-full px-4 py-3.5 bg-indigo-950/20 border border-indigo-500/40 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-black cursor-pointer transition-all hover:bg-indigo-950/30 hover:border-indigo-500/60"
-                                                value={statusActionModal.fechaHora}
-                                                onChange={e => setStatusActionModal(prev => ({ ...prev, fechaHora: e.target.value }))}
-                                                required
-                                                style={{ colorScheme: 'dark' }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-1.5 text-left">
-                                    <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1">Razón del cambio (Obligatoria)</label>
-                                    <textarea 
-                                        placeholder="Ingresa detalladamente por qué se está realizando este cambio..."
-                                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold resize-none h-28"
-                                        value={statusActionModal.razon}
-                                        onChange={e => setStatusActionModal(prev => ({ ...prev, razon: e.target.value }))}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="p-5 border-t border-slate-800/60 bg-slate-950/20 flex gap-3 shrink-0">
-                                <button 
-                                    type="button"
-                                    onClick={() => setStatusActionModal(prev => ({ ...prev, isOpen: false }))}
-                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-450 rounded-xl hover:text-white transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
-                                >
-                                    Confirmar
-                                </button>
-                            </div>
-                        </form>
+                            <button 
+                                type="submit"
+                                className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                            >
+                                Confirmar
+                            </button>
+                        </>
+                    )}
+                >
+                    <div className="space-y-1 text-left">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cliente</p>
+                        <p className="text-sm font-black text-white">{statusActionModal.agenda ? (getAgendaLeadName(statusActionModal.agenda) || 'Sin nombre') : ''}</p>
                     </div>
-                </div>
+
+                    {statusActionModal.requiresDate && (
+                        <div className="space-y-1.5 text-left">
+                            <style>{`
+                                .custom-datetime-picker::-webkit-calendar-picker-indicator {
+                                    filter: invert(1);
+                                    cursor: pointer;
+                                    font-size: 18px;
+                                    padding: 4px;
+                                    opacity: 1 !important;
+                                    display: block !important;
+                                }
+                            `}</style>
+                            <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5 animate-pulse">
+                                <CalendarIcon size={10} />
+                                Fecha y Hora de Reprogramación (Click para abrir)
+                            </label>
+                            <div className="relative group">
+                                <input 
+                                    type="datetime-local"
+                                    className="custom-datetime-picker w-full px-4 py-3.5 bg-indigo-950/20 border border-indigo-500/40 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-black cursor-pointer transition-all hover:bg-indigo-950/30 hover:border-indigo-500/60"
+                                    value={statusActionModal.fechaHora}
+                                    onChange={e => setStatusActionModal(prev => ({ ...prev, fechaHora: e.target.value }))}
+                                    required
+                                    style={{ colorScheme: 'dark' }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="space-y-1.5 text-left">
+                        <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1">Razón del cambio (Obligatoria)</label>
+                        <textarea 
+                            placeholder="Ingresa detalladamente por qué se está realizando este cambio..."
+                            className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold resize-none h-28"
+                            value={statusActionModal.razon}
+                            onChange={e => setStatusActionModal(prev => ({ ...prev, razon: e.target.value }))}
+                            required
+                        />
+                    </div>
+                </Modal>
             )}
 
             <LeadRoadmapModal
