@@ -223,6 +223,32 @@ def senas_de(filas_ventas):
 SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'error'}
 POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
 
+# El gráfico del panel Estados (diseño de Kerwin, 30/09/2026) junta los estados en tres grupos:
+# cuántas citas no dieron ningún resultado, cuántas siguen abiertas y cuántas cerraron. La
+# pertenencia vive SOLO acá —el frontend suma por `grupo` y no tiene su propia copia—, porque una
+# segunda lista en el cliente se desincroniza en silencio el día que se agregue un estado.
+#
+#   · Sin resultado: la llamada no se reportó o no ocurrió. Además de "Sin reporte" y "No show",
+#     que nombra el diseño, entran "Canceló" y "Reagendó": son las otras dos pérdidas de agenda
+#     del dashboard del closer, y en las dos la cita no tuvo llamada.
+#   · En curso: la llamada todavía no pasó ("Aún no ocurrió") o pasó y la venta sigue abierta
+#     (seguimiento, segunda llamada, presentó sin cerrar, asistió sin más datos, otro estado).
+#   · Cerradas: hubo venta o seña.
+GRUPO_DE_ESTADO = {
+    'sin_reporte': 'sin_resultado',
+    'no_show': 'sin_resultado',
+    'reagendo': 'sin_resultado',
+    'cancelo': 'sin_resultado',
+    'por_ocurrir': 'en_curso',
+    'asistio': 'en_curso',
+    'segunda_llamada': 'en_curso',
+    'seguimiento': 'en_curso',
+    'presento_no_cerro': 'en_curso',
+    'otro': 'en_curso',
+    'venta': 'cerradas',
+    'sena': 'cerradas',
+}
+
 
 def estados_de(filas_agendas):
     """Desglose de las agendas del período por su resultado, en el orden del vocabulario.
@@ -230,7 +256,8 @@ def estados_de(filas_agendas):
     Cada estado lleva el `filtro` con el que Revisar lo reconoce, que es su PROPIA etiqueta:
     Revisar deriva el mismo estado fila por fila (ver `estadoDeAgenda`), así que las dos mitades
     de "Pendiente" se pueden filtrar por separado. Antes las dos mandaban 'Pendiente' y el clic
-    en "Sin reporte · 62" aterrizaba en las 71 pendientes.
+    en "Sin reporte · 62" aterrizaba en las 71 pendientes. Y lleva su `grupo`
+    (`GRUPO_DE_ESTADO`), que es lo que suma el gráfico.
 
     Los estados en cero se omiten — una tabla con siete filas vacías esconde las tres que
     importan.
@@ -250,7 +277,7 @@ def estados_de(filas_agendas):
             orden.append(estado)
 
     return [{'key': e['key'], 'label': e['label'], 'tone': e['tone'],
-             'n': conteo[e['key']], 'filtro': e['label']}
+             'n': conteo[e['key']], 'filtro': e['label'], 'grupo': GRUPO_DE_ESTADO[e['key']]}
             for e in orden if conteo.get(e['key'])]
 
 

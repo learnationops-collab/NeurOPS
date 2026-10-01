@@ -318,6 +318,55 @@ def test_los_estados_sin_ninguna_agenda_no_aparecen_en_el_panel(db, marlon):
     assert [(e['key'], e['n']) for e in estados] == [('no_show', 1)]
 
 
+def test_todo_estado_que_puede_mostrar_el_panel_tiene_grupo():
+    """El gráfico suma por `grupo`: un estado sin grupo se caería del total y los tres grupos ya
+    no sumarían el 100% de las agendas. Si se agrega un estado al vocabulario, este test pide
+    decidir en qué grupo va antes de que llegue a la pantalla."""
+    from app.services.comercial_service import POST_CALL
+
+    posibles = {e['key'] for e in POST_CALL if e['key'] != 'pendiente'}
+    posibles |= {ca.SIN_REPORTE['key'], ca.POR_OCURRIR['key']}
+
+    assert set(ca.GRUPO_DE_ESTADO) == posibles
+    assert set(ca.GRUPO_DE_ESTADO.values()) == {'sin_resultado', 'en_curso', 'cerradas'}
+
+
+@freeze_time(HOY)
+def test_los_grupos_del_panel_estados_siguen_el_diseno(db, marlon):
+    """Sin resultado = sin reporte + no show (+ canceladas y reagendadas: la cita no tuvo
+    llamada); cerradas = venta + seña; en curso, el resto. Y los tres grupos suman todas las
+    agendas del período."""
+    agenda(db, marlon, cliente(db, 'Ya paso'), cuando=datetime(2026, 9, 10, 15, 0))
+    agenda(db, marlon, cliente(db, 'Manana'), cuando=datetime(2026, 9, 25, 15, 0))
+    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show')
+    agenda(db, marlon, cliente(db, 'Cancelo'), closer_result='Cancelado')
+    agenda(db, marlon, cliente(db, 'Reagendo'), closer_result='Reagendado')
+    compro = cliente(db, 'Compro', email='compro@test.local')
+    agenda(db, marlon, compro, closer_result='Show up')
+    venta(db, mail='compro@test.local')
+    reservo = cliente(db, 'Reservo', email='reservo@test.local')
+    agenda(db, marlon, reservo, closer_result='Show up')
+    venta(db, mail='reservo@test.local', monto=100.0, tipo='AL - Seña')
+    agenda(db, marlon, cliente(db, 'Lo pienso'), closer_result='Show up',
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20))
+    agenda(db, marlon, cliente(db, 'Escucho'), closer_result='Show up', offer_presented=True)
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+    grupo = {e['key']: e['grupo'] for e in bloque['estados']}
+
+    assert grupo == {
+        'sin_reporte': 'sin_resultado', 'no_show': 'sin_resultado',
+        'cancelo': 'sin_resultado', 'reagendo': 'sin_resultado',
+        'por_ocurrir': 'en_curso', 'seguimiento': 'en_curso', 'presento_no_cerro': 'en_curso',
+        'venta': 'cerradas', 'sena': 'cerradas',
+    }
+    por_grupo = {}
+    for e in bloque['estados']:
+        por_grupo[e['grupo']] = por_grupo.get(e['grupo'], 0) + e['n']
+    assert por_grupo == {'sin_resultado': 4, 'en_curso': 3, 'cerradas': 2}
+    assert sum(por_grupo.values()) == bloque['agendas'] == 9
+
+
 # --- Señas ---------------------------------------------------------------------------------------
 
 @freeze_time(HOY)
