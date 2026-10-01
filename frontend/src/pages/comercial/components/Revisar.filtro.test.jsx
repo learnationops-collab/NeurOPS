@@ -155,6 +155,24 @@ describe('Revisar · la fila de etiquetas del filtro', () => {
         expect(registros()).toHaveLength(4);
     });
 
+    it('el "+" de la fila abre el Filtro completo para sumar otra etiqueta, y lo vuelve a cerrar', () => {
+        render(<ConUrl inicial={DE_CIERRE} onOlvidar={() => {}} />);
+        const mas = screen.getByRole('button', { name: 'Agregar filtro' });
+        // Como un click de verdad: el `mousedown` llega antes y es el que cierra los menús que se
+        // tocan por fuera de la barra.
+        const tocar = () => { fireEvent.mouseDown(mas); fireEvent.click(mas); };
+
+        tocar();
+        expect(mas).toHaveAttribute('aria-expanded', 'true');
+        tildar('Post call', 'Seguimiento');
+        expect(screen.getByRole('button', { name: 'Quitar Post call: Seguimiento' })).toBeInTheDocument();
+        expect(registros()).toHaveLength(3);
+
+        tocar();
+        expect(screen.queryByRole('dialog', { name: 'Filtro completo' })).toBeNull();
+        expect(mas).toHaveAttribute('aria-expanded', 'false');
+    });
+
     it('las etiquetas de sí/no llevan el nombre de su faceta', () => {
         render(<ConUrl inicial={{ asistio: 'Sí', __de: 'Show up', __t: 1 }} onOlvidar={() => {}} />);
 

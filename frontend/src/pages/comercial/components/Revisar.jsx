@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Filter, LayoutGrid, List, Rows, RotateCcw, Search,
+import { ChevronDown, Filter, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
@@ -96,6 +96,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // tablas con `colsAcademia`). Son las mismas filas y el mismo filtro: cambia qué se muestra.
     const [columnas, setColumnas] = useState('base');
     const barra = useRef(null);
+    const mas = useRef(null);
 
     // Lista o tarjetas, con la elección recordada. La clave es por tabla: mirar las agendas como
     // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
@@ -179,10 +180,15 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, [origen.token]);
 
-    // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra.
+    // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra. El "+" de la fila
+    // de etiquetas cuenta como barra: abre el mismo panel, y sin esto el `mousedown` lo cerraba
+    // y el `click` lo volvía a abrir, así que no había forma de cerrarlo desde ahí.
     useEffect(() => {
         if (!menu) return undefined;
-        const fuera = (e) => { if (barra.current && !barra.current.contains(e.target)) setMenu(null); };
+        const fuera = (e) => {
+            if (mas.current?.contains(e.target)) return;
+            if (barra.current && !barra.current.contains(e.target)) setMenu(null);
+        };
         document.addEventListener('mousedown', fuera);
         return () => document.removeEventListener('mousedown', fuera);
     }, [menu]);
@@ -504,8 +510,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <Tip titulo="Qué estás mirando" texto={def.ayuda} />
             </div>
 
-            {/* Las etiquetas del filtro: el único lugar que las muestra, cada una con su X. Se
-                suman desde el panel Filtro completo de la barra. Hubo arriba un aviso grande
+            {/* Las etiquetas del filtro: el único lugar que las muestra, cada una con su X, más el
+                "+" que abre el panel Filtro completo para sumar otra. Hubo arriba un aviso grande
                 ("Viniste de… · 13 de 238 registros", con las mismas etiquetas repetidas y un
                 "Quitar el filtro"); se sacó por pedido del usuario (30/09) y de qué número viene
                 la lista quedó en el "i" del rótulo. La cuenta ya la dice "mostrando X de Y". */}
@@ -529,6 +535,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             <X size={12} />
                         </button>
                     ))}
+                    <button ref={mas} type="button" className="chip filtro-mas"
+                        aria-label="Agregar filtro" title="Agregar filtro"
+                        aria-expanded={menu === 'config'} aria-haspopup="dialog"
+                        onClick={() => setMenu(m => (m === 'config' ? null : 'config'))}>
+                        <Plus size={14} />
+                    </button>
                     <button type="button" className="btn btn--linea btn--sm" onClick={limpiar}>
                         <RotateCcw size={13} />
                         Limpiar
