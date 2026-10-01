@@ -1,0 +1,133 @@
+/* Página de reserva de Agendas 2.0 (laboratorio). Sistema visual del Manual de Marca Learnation v2.0:
+   Montserrat sola, Ink #020617 de fondo, magenta #FF3FA4 como único acento, texto sobre magenta en
+   Ink. La raíz lleva también .bg-v6 para quedar fuera de los resets tipográficos globales de
+   index.css/index.html (mismo mecanismo que el Closer Workspace). */
+
+.ag2-lead {
+    --ink: #020617;
+    --navy: #0A0E3D;
+    --blue: #1323C6;
+    --mag: #FF3FA4;
+    --tx: #FFFFFF;
+    --tx2: #A9B0CC;
+    --meta: #6E779B;
+    --hair: rgba(255, 255, 255, .15);
+    --hair2: rgba(255, 255, 255, .08);
+    --field: rgba(255, 255, 255, .04);
+    min-height: 100dvh;
+    color: var(--tx);
+    font-variant-numeric: tabular-nums;
+    background:
+        radial-gradient(900px 520px at 12% 78%, rgba(19, 35, 198, .28), transparent 62%),
+        linear-gradient(180deg, #020617, #0A0E24);
+    display: flex;
+    flex-direction: column;
+}
+
+.ag2-lead * { box-sizing: border-box; }
+.ag2-lead ::selection { background: rgba(255, 63, 164, .3); }
+.ag2-lead :where(button) { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.ag2-lead :where(input, textarea, select) { font: inherit; color: inherit; }
+.ag2-lead :focus-visible:not(.ag2-field) { outline: 2px solid var(--mag) !important; outline-offset: 3px; }
+
+/* Cabecera fija: running head + riel segmentado (sin contador "3/12", ver sistema visual). */
+.ag2-head { position: sticky; top: 0; z-index: 5; padding: 18px 20px 0; background: linear-gradient(180deg, rgba(2, 6, 23, .96) 60%, rgba(2, 6, 23, 0)); }
+.ag2-head-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 1040px; margin: 0 auto; }
+.ag2-runhead { font-size: 10px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--meta); }
+.ag2-runhead b { color: var(--tx); font-weight: 900; }
+.ag2-rail { display: flex; gap: 6px; max-width: 1040px; margin: 14px auto 0; }
+.ag2-rail span { flex: 1; height: 2px; background: var(--hair); border-radius: 2px; transition: background .3s; }
+.ag2-rail span.on { background: var(--mag); }
+
+.ag2-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 20px 120px; }
+.ag2-screen { width: 100%; max-width: 640px; }
+.ag2-screen.wide { max-width: 1040px; }
+
+/* Tipografía: jerarquía por peso, una sola palabra en magenta por titular. */
+.ag2-display { font-size: clamp(34px, 7vw, 52px); font-weight: 900; letter-spacing: -.03em; line-height: .98; text-wrap: balance; margin: 0; }
+.ag2-q { font-size: clamp(24px, 4.6vw, 34px); font-weight: 800; letter-spacing: -.025em; line-height: 1.12; text-wrap: balance; margin: 0; }
+.ag2-hl { color: var(--mag); }
+.ag2-lede { font-size: 16px; line-height: 1.55; color: var(--tx2); margin: 18px 0 0; max-width: 46ch; }
+.ag2-help { font-size: 14px; color: var(--tx2); margin: 10px 0 0; }
+.ag2-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 26px; font-size: 13px; font-weight: 600; color: var(--tx2); }
+.ag2-meta span { display: inline-flex; align-items: center; gap: 7px; }
+.ag2-meta svg { color: var(--mag); }
+
+/* Opciones estilo Typeform: fila con letra-atajo. */
+.ag2-opts { display: grid; gap: 10px; margin-top: 28px; max-width: 520px; }
+.ag2-opt { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px; border: 1px solid var(--hair); border-radius: 12px; background: var(--field); font-size: 16px; font-weight: 600; transition: border-color .15s, background .15s, transform .15s; }
+.ag2-opt:hover { border-color: rgba(255, 255, 255, .32); background: rgba(255, 255, 255, .07); }
+.ag2-opt.sel { border-color: var(--mag); background: rgba(255, 63, 164, .1); }
+.ag2-key { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--hair); border-radius: 6px; font-size: 12px; font-weight: 800; color: var(--tx2); }
+.ag2-opt.sel .ag2-key { background: var(--mag); border-color: var(--mag); color: var(--ink); }
+.ag2-opt .ag2-check { margin-left: auto; color: var(--mag); }
+
+/* Campos de texto: línea inferior, como Typeform. */
+.ag2-field { width: 100%; max-width: 520px; margin-top: 28px; padding: 10px 0; border: 0; border-bottom: 2px solid var(--hair); background: transparent; font-size: clamp(20px, 4vw, 26px); font-weight: 600; outline: none !important; transition: border-color .15s; }
+.ag2-field:focus { border-bottom-color: var(--mag); }
+.ag2-field::placeholder { color: #3E4668; }
+textarea.ag2-field { resize: none; min-height: 96px; line-height: 1.35; }
+.ag2-phone { display: flex; gap: 12px; max-width: 520px; align-items: flex-end; }
+.ag2-phone select { flex: none; margin-top: 28px; padding: 12px 8px; background: var(--field); border: 1px solid var(--hair); border-radius: 10px; font-size: 15px; font-weight: 700; }
+.ag2-phone select option { background: var(--navy); }
+.ag2-error { margin-top: 12px; font-size: 13px; font-weight: 600; color: #FF8AC6; }
+
+/* Acciones. */
+.ag2-actions { display: flex; align-items: center; gap: 16px; margin-top: 30px; flex-wrap: wrap; }
+.ag2-btn { display: inline-flex; align-items: center; gap: 10px; height: 48px; padding: 0 24px; border-radius: 999px; background: var(--mag) !important; color: var(--ink) !important; font-size: 13px !important; font-weight: 900 !important; letter-spacing: .16em; text-transform: uppercase; transition: transform .15s, opacity .15s; }
+.ag2-btn:hover { transform: translateY(-1px); }
+.ag2-btn:disabled { opacity: .35; transform: none; cursor: not-allowed; }
+.ag2-btn.ghost { background: transparent !important; color: var(--tx) !important; border: 1px solid var(--hair) !important; }
+.ag2-hint { font-size: 12px; color: var(--meta); }
+.ag2-hint kbd { font: inherit; font-weight: 800; color: var(--tx2); }
+.ag2-link { font-size: 13px; font-weight: 700; color: var(--tx2); text-decoration: underline; text-underline-offset: 3px; }
+
+.ag2-nav { position: fixed; right: 20px; bottom: 20px; display: flex; gap: 6px; z-index: 6; }
+.ag2-nav button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--hair); border-radius: 10px; background: rgba(2, 6, 23, .8); }
+.ag2-nav button:disabled { opacity: .3; cursor: not-allowed; }
+
+/* Horario estilo Calendly: calendario + lista de horarios. */
+.ag2-cal-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 26px; }
+.ag2-cal-wrap > * { min-width: 0; }
+@media (min-width: 900px) { .ag2-cal-wrap { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 40px; } }
+.ag2-cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 15px; font-weight: 800; }
+.ag2-cal-head button { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--hair); }
+.ag2-cal-head button:disabled { opacity: .25; }
+.ag2-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.ag2-cal-dow { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .2em; color: var(--meta); padding-bottom: 6px; }
+.ag2-cal-day { aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; font-size: 15px; font-weight: 600; color: #3E4668; }
+.ag2-cal-day.av { color: var(--tx); font-weight: 800; background: rgba(255, 63, 164, .1); }
+.ag2-cal-day.av:hover { background: rgba(255, 63, 164, .22); }
+.ag2-cal-day.sel { background: var(--mag) !important; color: var(--ink); }
+.ag2-days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+.ag2-days::-webkit-scrollbar { display: none; }
+.ag2-daychip { flex: none; width: 62px; padding: 10px 0; border-radius: 12px; border: 1px solid var(--hair); text-align: center; }
+.ag2-daychip small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--tx2); }
+.ag2-daychip b { display: block; font-size: 20px; font-weight: 900; margin-top: 2px; }
+.ag2-daychip.sel { background: var(--mag); border-color: var(--mag); color: var(--ink); }
+.ag2-daychip.sel small { color: var(--ink); }
+.ag2-slots-title { font-size: 15px; font-weight: 800; margin: 0 0 14px; }
+.ag2-slots { display: grid; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.ag2-slot-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.ag2-slot-row.open { grid-template-columns: 1fr 1fr; }
+.ag2-slot { height: 48px; border-radius: 10px; border: 1px solid rgba(255, 63, 164, .55); color: var(--tx); font-size: 15px; font-weight: 800; transition: background .15s; }
+.ag2-slot:hover { background: rgba(255, 63, 164, .1); }
+.ag2-slot.sel { background: rgba(255, 255, 255, .1); border-color: var(--hair); }
+.ag2-tz { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--tx2); }
+.ag2-tz select { background: transparent; border: 0; font-weight: 700; color: var(--tx); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ag2-tz select option { background: var(--navy); }
+.ag2-empty { padding: 24px; border: 1px dashed var(--hair); border-radius: 12px; color: var(--tx2); font-size: 14px; }
+@media (min-width: 900px) { .ag2-days { display: none; } }
+@media (max-width: 899px) { .ag2-cal { display: none; } }
+
+/* Confirmación y preparación. */
+.ag2-when { margin-top: 28px; padding: 22px 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); display: grid; gap: 12px; }
+.ag2-when-date { font-size: clamp(22px, 4vw, 30px); font-weight: 900; letter-spacing: -.02em; }
+.ag2-when-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tx2); }
+.ag2-when-row svg { color: var(--mag); flex: none; }
+.ag2-video { position: relative; aspect-ratio: 16 / 9; margin-top: 24px; border-radius: 14px; overflow: hidden; border: 1px solid var(--hair2); background: radial-gradient(600px 300px at 20% 80%, rgba(19, 35, 198, .45), transparent 60%), linear-gradient(135deg, #0A0E3D, #111746); display: grid; place-items: center; }
+.ag2-play { width: 72px; height: 72px; border-radius: 50%; background: var(--mag); color: var(--ink); display: grid; place-items: center; transition: transform .15s; }
+.ag2-play:hover { transform: scale(1.06); }
+.ag2-video-cap { position: absolute; left: 18px; bottom: 16px; right: 18px; display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--tx2); }
+.ag2-video-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--mag); transition: width .2s linear; }
+.ag2-sample { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--meta); }

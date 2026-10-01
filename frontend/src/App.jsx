@@ -45,6 +45,7 @@ import PlaybookOverlay from './components/playbook/PlaybookOverlay';
 import PlaybookNotification from './components/playbook/PlaybookNotification';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
+import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
@@ -106,6 +107,7 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="/agendas-v2/*" element={<AgendasV2Routes />} />
 
             {/* Protected Admin Routes: Hubs */}
             <Route
