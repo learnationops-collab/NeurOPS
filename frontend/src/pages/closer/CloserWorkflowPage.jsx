@@ -7,7 +7,8 @@ import {
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil, Plus,
-    Compass, Sparkles, DollarSign, UserPlus
+    Compass, Sparkles, DollarSign, UserPlus,
+    CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +21,8 @@ import EsqueletoKanban from './components/EsqueletoKanban';
 import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
+import DockSecciones from '../comercial/components/DockSecciones';
+import '../comercial/comercial.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -33,23 +36,13 @@ const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', '
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-// Fondo de la pestaña activa del nav principal (".nav5-v6"): un solo `motion.span` compartido
-// (mismo layoutId) que se monta como hijo del botón activo en cada momento. Framer Motion nota
-// que "se movió" de un padre a otro y anima la transición (posición + tamaño) en vez de que la
-// pestaña nueva aparezca de golpe -- el color en sí sigue en el CSS (".nc-v6.on"), acá solo va
-// el fondo/borde que antes pintaba esa clase de forma instantánea.
-const NavPill = () => (
-    <motion.span
-        layoutId="nav5-active-pill"
-        className="absolute inset-0 rounded-[1.1rem]"
-        style={{
-            background: 'rgba(255,63,164,.08)',
-            border: '1px solid rgba(255,63,164,.5)',
-            boxShadow: '0 6px 18px rgba(255,63,164,.16)',
-        }}
-        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-    />
-);
+// Las secciones del dock que son pestañas del mazo (`?step=`); el resto son vistas de la página.
+const PASOS_DEL_MAZO = ['confirmations', 'calls', 'seguimientos'];
+
+// La insignia "hecho/total" de una pestaña del mazo en el dock, apagada cuando ya no queda nada.
+const cuentaDelDock = (hechas, total, nadaPendiente, que) => ({
+    tipo: 'cuenta', texto: `${hechas}/${total}`, titulo: `${hechas} de ${total} ${que}`, apagada: nadaPendiente,
+});
 
 
 
@@ -155,7 +148,7 @@ const CloserWorkflowPage = () => {
     const [reportSentAt, setReportSentAt] = useState(null);
     const [loadingReportStatus, setLoadingReportStatus] = useState(false);
     // Estado de HOY específicamente (independiente del día que se esté viendo en el selector de
-    // arriba) — es lo que decora el dock flotante ("✓ Reporte enviado"), que siempre habla de hoy.
+    // arriba) — es lo que pone el "✓" de «Cerrar el día» en el dock, que siempre habla de hoy.
     const [todayReportSent, setTodayReportSent] = useState(false);
     // "Hoy" y "ayer" del closer según el backend (`today`/`yesterday` de GET /closer/deck/daily-report),
     // no según el reloj del navegador: un admin simulando a un closer de otro país tiene otro "hoy"
@@ -173,7 +166,7 @@ const CloserWorkflowPage = () => {
     const elegirDiaDelReporte = useCallback((fecha) => {
         setDiaElegido(fecha === hoyReporte ? null : fecha);
     }, [hoyReporte]);
-    // Si ayer quedó sin reportar (`yesterday` del mismo GET): aviso en «Cerrar el día» y punto en el nav.
+    // Si ayer quedó sin reportar (`yesterday` del mismo GET): aviso en «Cerrar el día» y punto en el dock.
     const [estadoDeAyer, setEstadoDeAyer] = useState(null);
     const leerDiasReporte = useCallback((d) => {
         if (!d?.today || !d.yesterday) return;
@@ -199,7 +192,7 @@ const CloserWorkflowPage = () => {
     const [reportSlots, setReportSlots] = useState('');
     // Resumen en vivo de lo que el closer tocó HOY (Conversando/Confirmados/Show ups/
     // Reagendas/Seguimientos/Referidos) — reemplaza los inputs manuales de referidos: todo sale
-    // de CloserService.get_daily_activity_summary. Alimenta "Tu día" y el nav.
+    // de CloserService.get_daily_activity_summary. Alimenta "Tu día" y el dock.
     const [dailyActivity, setDailyActivity] = useState(null);
     // Lo mismo, pero del día que se está cerrando en «Cerrar el día» (hoy o ayer). Va aparte para
     // que elegir Ayer no le cambie los números a "Tu día", que siempre habla de hoy.
@@ -316,7 +309,7 @@ const CloserWorkflowPage = () => {
     // vez que `seguimientosRefreshKey` sube (esa señal ya se dispara después de cualquier acción
     // que modifica el mazo, así que "Tu día" queda al día sin agregar otro punto de recarga).
     // Sin `date`: el backend contesta por el "hoy" del closer, y de paso dice si ayer quedó sin
-    // reportar (el punto del nav de «Cerrar el día» tiene que verse sin entrar a esa pestaña).
+    // reportar (el punto de «Cerrar el día» en el dock tiene que verse sin entrar a esa pestaña).
     useEffect(() => {
         api.get('/closer/deck/daily-report')
             .then(res => {
@@ -1378,10 +1371,56 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    // El dock de abajo, el mismo de la dirección comercial y del setter (ver DockSecciones): antes
+    // estas secciones eran una fila de pestañas entre "Tu siguiente paso" y el tablero, y le
+    // robaban a lo que hay que mirar el alto de una pantalla (pedido del 30/09/2026).
+    //
+    // Las tres de trabajo muestran lo hecho sobre el total (pedido del 28/ago/2026: "si hay cinco
+    // llamadas por confirmar y hay dos confirmadas, entonces hay dos de cinco"). Confirmar y
+    // Reportar usan `confirmations_done`/`calls_done` (backend, `/deck/counts`) y no
+    // `dailyActivity`: ese mide "hecho HOY por el closer", que no es lo mismo que "ya aparece
+    // resuelto en el pool que se está mostrando" —una cita confirmada (o una llamada reportada) un
+    // día anterior pero todavía visible hoy en el Kanban contaba "0 hechas", aunque el Kanban ya la
+    // mostrara en "Confirmado"/"Reportadas"—. `counts.confirmations` ya es el total del pool
+    // (incluye las resueltas que siguen visibles); `counts.calls`, solo lo que falta. Seguir no
+    // tiene ese problema: lo resuelto sale del pool, así que ahí `dailyActivity` es la fuente.
+    const llamadasHechas = counts.calls_done || 0;
+    const seguimientosHechos = dailyActivity?.seguimientos_hechos || 0;
+    const seccionesDelDock = [
+        { id: 'confirmations', label: 'Confirmar', Icono: CalendarCheck,
+            marca: cuentaDelDock(counts.confirmations_done || 0, counts.confirmations, counts.confirmations === 0, 'confirmadas') },
+        { id: 'calls', label: 'Reportar', Icono: PhoneCall,
+            marca: cuentaDelDock(llamadasHechas, llamadasHechas + counts.calls, counts.calls === 0, 'reportadas') },
+        { id: 'seguimientos', label: 'Seguir', Icono: MessageCircle,
+            marca: cuentaDelDock(seguimientosHechos, seguimientosHechos + counts.seguimientos, counts.seguimientos === 0, 'hechos hoy') },
+        { id: 'report', label: 'Cerrar el día', Icono: ClipboardList, marcas: [
+            estadoDeAyer?.unreported && { tipo: 'aviso', texto: '', titulo: 'ayer quedó sin reportar' },
+            todayReportSent && { texto: '✓', titulo: 'reporte de hoy enviado' },
+        ].filter(Boolean) },
+        { id: 'dashboard', label: 'Mis datos', Icono: BarChart3 },
+        { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
+        // Temporal: solo mientras Operaciones la tenga activada (GET /closer/leads-audit/status).
+        ...(auditEnabled ? [{ id: 'auditoria', label: 'Auditoría', Icono: FileSearch }] : []),
+    ];
+    const seccionDelDock = activeView === 'inbox' ? activeStep : activeView;
+    // La página scrollea dentro de su propio contenedor, no en la ventana: al cambiar de sección se
+    // vuelve arriba ahí, para no caer en la mitad de la otra.
+    const paginaRef = useRef(null);
+    const irASeccion = (id) => {
+        if (id === seccionDelDock) return;
+        if (PASOS_DEL_MAZO.includes(id)) {
+            setActiveView('inbox');
+            setSearchParams({ step: id, selected_date: selectedDate });
+        } else {
+            setActiveView(id);
+        }
+        paginaRef.current?.scrollTo({ top: 0 });
+    };
 
     return (
-        <div className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar pb-32">
-            
+        <div ref={paginaRef} className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
+            style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
+
             {/* Header del Espacio de Trabajo Premium v6 */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="topin">
@@ -1801,123 +1840,6 @@ const CloserWorkflowPage = () => {
 
                 <ComisionMesCard />
 
-                {/* NAVEGACIÓN 01-05 (v7): reemplaza las 3 pestañas + el dock flotante como fuente
-                    principal de "adónde ir" — el dock sigue abajo como acceso rápido mientras se
-                    hace scroll, esto es la vista completa. */}
-                {(() => {
-                    // Las 3 pestañas de bandeja muestran "hecho/total" en vez de solo lo pendiente
-                    // (pedido del usuario, 28/ago/2026: "si hay cinco llamadas por confirmar y hay
-                    // dos confirmadas, entonces hay dos de cinco"). Confirmar/Reportar usan
-                    // `confirmations_done`/`calls_done` (backend, `/deck/counts`) en vez de
-                    // `dailyActivity` — ese campo mide "hecho HOY por el closer", que no es lo
-                    // mismo que "ya aparece resuelto en el pool que se está mostrando": una cita
-                    // confirmada (o una llamada reportada) en un día anterior pero todavía visible
-                    // hoy en el Kanban seguía contando como "0 hechas" con `dailyActivity`, aunque
-                    // el propio Kanban ya la mostrara en su columna "Confirmado"/"Reportadas".
-                    // Reportado por el usuario: "dice cero de nueve, pero tiene una agenda
-                    // [ya] confirmada... debería decir uno de nueve", mismo caso en Reportar.
-                    // `counts.confirmations`/`counts.calls` ya son el total del pool (incluyen las
-                    // ya resueltas que siguen visibles), así que no hay que sumarles nada más.
-                    const confirmDone = counts.confirmations_done || 0;
-                    const confirmTotal = counts.confirmations;
-                    const callsDone = counts.calls_done || 0;
-                    const callsTotal = callsDone + counts.calls;
-                    // Seguimientos no tiene este problema: una vez resuelto, el item desaparece
-                    // del pool en vez de quedar visible en un estado "hecho" — `dailyActivity`
-                    // (hecho hoy) sigue siendo la fuente correcta acá.
-                    const segDone = dailyActivity?.seguimientos_hechos || 0;
-                    const segTotal = segDone + counts.seguimientos;
-                    return (
-                <div className="nav5-v6">
-                    {/* El fondo/borde rosa de cada pestaña activa ya no lo pinta el CSS ".on" de
-                        golpe: es este mismo `motion.span` (layoutId compartido entre las 5-7
-                        pestañas) que Framer Motion desliza de una a otra en vez de teletransportarse,
-                        igual que la técnica que ya usa AgendaManagerModal para su selector de tabs. */}
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'confirmations' ? 'on' : ''}`}
-                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'confirmations', selected_date: selectedDate }); }}
-                    >
-                        {activeView === 'inbox' && activeStep === 'confirmations' && <NavPill />}
-                        <span className="nc-n-v6 relative">01</span>
-                        <span className="nc-lbl-v6 relative">Confirmar</span>
-                        <span className={`nc-count-v6 relative ${counts.confirmations === 0 ? 'zero' : ''}`}>{confirmDone}/{confirmTotal}</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'calls' ? 'on' : ''}`}
-                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'calls', selected_date: selectedDate }); }}
-                    >
-                        {activeView === 'inbox' && activeStep === 'calls' && <NavPill />}
-                        <span className="nc-n-v6 relative">02</span>
-                        <span className="nc-lbl-v6 relative">Reportar</span>
-                        <span className={`nc-count-v6 relative ${counts.calls === 0 ? 'zero' : ''}`}>{callsDone}/{callsTotal}</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'inbox' && activeStep === 'seguimientos' ? 'on' : ''}`}
-                        onClick={() => { setActiveView('inbox'); setSearchParams({ step: 'seguimientos', selected_date: selectedDate }); }}
-                    >
-                        {activeView === 'inbox' && activeStep === 'seguimientos' && <NavPill />}
-                        <span className="nc-n-v6 relative">03</span>
-                        <span className="nc-lbl-v6 relative">Seguir</span>
-                        <span className={`nc-count-v6 relative ${counts.seguimientos === 0 ? 'zero' : ''}`}>{segDone}/{segTotal}</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'report' ? 'on' : ''}`}
-                        onClick={() => setActiveView('report')}
-                    >
-                        {activeView === 'report' && <NavPill />}
-                        <span className="nc-n-v6 relative">04</span>
-                        <span className="nc-lbl-v6 relative">Cerrar el día</span>
-                        {estadoDeAyer?.unreported && (
-                            <span
-                                role="img"
-                                aria-label="Ayer quedó sin reportar"
-                                title="Ayer quedó sin reportar"
-                                className="relative w-2 h-2 rounded-full flex-none"
-                                style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.18)' }}
-                            />
-                        )}
-                        {todayReportSent && <span className="nc-check-v6 relative">✓</span>}
-                    </button>
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'dashboard' ? 'on' : ''}`}
-                        onClick={() => setActiveView('dashboard')}
-                    >
-                        {activeView === 'dashboard' && <NavPill />}
-                        <span className="nc-n-v6 relative">05</span>
-                        <span className="nc-lbl-v6 relative">Ver mis datos</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`nc-v6 ${activeView === 'cartera' ? 'on' : ''}`}
-                        onClick={() => setActiveView('cartera')}
-                    >
-                        {activeView === 'cartera' && <NavPill />}
-                        <span className="nc-n-v6 relative">06</span>
-                        <span className="nc-lbl-v6 relative">Mi cartera</span>
-                    </button>
-                    {/* Pestaña temporal: solo aparece mientras Operaciones la tenga activada
-                        (ver GET /closer/leads-audit/status). No tiene número fijo en la
-                        referencia visual porque no forma parte de su flujo habitual. */}
-                    {auditEnabled && (
-                        <button
-                            type="button"
-                            className={`nc-v6 ${activeView === 'auditoria' ? 'on' : ''}`}
-                            onClick={() => setActiveView('auditoria')}
-                        >
-                            {activeView === 'auditoria' && <NavPill />}
-                            <span className="nc-n-v6 relative">🗂️</span>
-                            <span className="nc-lbl-v6 relative">Auditoría</span>
-                        </button>
-                    )}
-                </div>
-                    );
-                })()}
-
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -2202,10 +2124,10 @@ const CloserWorkflowPage = () => {
                     {(() => {
                         const cobrosPendientes = seguimientosHoyGrouped?.cerrada?.length || 0;
                         // Confirmaciones: `counts.confirmations` ya es el total del pool (incluye las
-                        // ya resueltas que siguen visibles, ver el nav 01-05 más arriba) — sumarle
+                        // ya resueltas que siguen visibles, ver la cuenta del dock) — sumarle
                         // `done` encima las contaba dos veces. Bug real confirmado en producción
                         // (08/sep/2026, Nerina): con 1 sola agenda del día mostraba "2 de 3" acá
-                        // mientras el nav de arriba, para el mismo pool, mostraba "1/1" correctamente.
+                        // mientras la navegación, para el mismo pool, mostraba "1/1" correctamente.
                         const confirmDoneKpi = reportActivity?.confirmados_hoy || 0;
                         const confirmPendingKpi = Math.max(0, counts.confirmations - confirmDoneKpi);
                         // `counts` es lo pendiente de HOY: cerrando ayer no se suma (mismo criterio
@@ -2362,7 +2284,7 @@ const CloserWorkflowPage = () => {
                                     setReportSentAt(new Date().toISOString());
                                     const enviadoAyer = !!res.data?.late;
                                     if (!enviadoAyer) setTodayReportSent(true);
-                                    // El de ayer ya está: se apagan el aviso y el punto del nav.
+                                    // El de ayer ya está: se apagan el aviso y el punto del dock.
                                     if (enviadoAyer) setEstadoDeAyer(prev => (prev ? { ...prev, sent: true, unreported: false } : prev));
                                     toast.success(enviadoAyer
                                         ? `Reporte de ayer (${etiquetaDia(res.data?.date || reportDate, { largo: true })}) enviado con éxito`
@@ -2427,12 +2349,19 @@ const CloserWorkflowPage = () => {
                     <DashboardComercial embebido seccionFija="revisar"
                         onAbrirCliente={(clientId) => handleSelectSearchResult({ id: clientId })} />
                 ) : (
-                    /* Y "Ver mis datos" es la seccion Analizar de esa misma pantalla, sin el
+                    /* Y "Mis datos" es la seccion Analizar de esa misma pantalla, sin el
                        selector de persona (el backend no se lo ofrece a un closer). El drill-down
                        de un dato cambia a "Mi cartera", que es donde vive la tabla. */
                     <DashboardComercial embebido seccionFija="analizar"
-                        onIrASeccion={() => setActiveView('cartera')} />
+                        onIrASeccion={() => irASeccion('cartera')} />
                 )}
+
+            {/* Fijo abajo. Dentro de un `.dc-shell` porque de ahí cuelgan sus estilos; el resto de
+                la página NO va adentro: el reset de botones del shell le borraría el Tailwind. */}
+            <div className="dc-shell dc-shell--embebido">
+                <DockSecciones secciones={seccionesDelDock} activa={seccionDelDock}
+                    onElegir={irASeccion} ariaLabel="Secciones del espacio del closer" />
+            </div>
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
             {/* Sin AnimatePresence a propósito: con esta versión de framer-motion el overlay nunca
