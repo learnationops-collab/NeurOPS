@@ -285,7 +285,9 @@ const Variabilidad = ({ datos, rol, irA }) => {
                     {fmt.fechaLarga(dias[0])} al {fmt.fechaLarga(dias[dias.length - 1])}
                 </span>
             </div>
-            <div className="grid-2">
+            {/* `grid-2--series`: con un número impar de series (las cinco del setter) la última
+                ocupa la fila entera en vez de quedar sola debajo de una columna. */}
+            <div className="grid-2 grid-2--series">
                 {series.map(serie => (
                     <PanelSerie key={serie.key} serie={serie} dias={dias} vista={vista}
                         rol={rol} irA={irA} />

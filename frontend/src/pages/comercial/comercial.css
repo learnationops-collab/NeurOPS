@@ -261,6 +261,9 @@
 @media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}
 .dc-shell .grid-2{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
 .dc-shell .grid-2 > *{min-width:0}
+/* Variabilidad: la última serie de una cantidad impar ocupa la fila entera (las cinco del setter
+   dejaban una sola debajo de la columna izquierda). En una columna no cambia nada. */
+.dc-shell .grid-2--series > :last-child:nth-child(odd){grid-column:1 / -1}
 .dc-shell .fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
 .dc-shell .sep{height:1px;background:var(--border-subtle);border:0;margin:var(--s4) 0}
 
