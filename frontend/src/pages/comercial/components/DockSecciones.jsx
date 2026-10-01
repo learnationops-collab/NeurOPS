@@ -16,7 +16,9 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  * cuelgan de ese shell. Quien no es el dashboard lo envuelve en un `.dc-shell--embebido`.
  *
  * `antes` es lo que va a la izquierda de la navegación, separado por una línea: en el dashboard,
- * el switch Closers/Setters de la dirección.
+ * el switch Closers/Setters de la dirección. `despues`, lo mismo a la derecha: en el mazo del
+ * closer, su sesión (`MenuSesion`). Va pegado al borde derecho aunque el dock scrollee (en un
+ * teléfono no entra): ahí vive cerrar sesión, y no puede quedar fuera de la vista.
  *
  * Una sección puede traer `marca: { texto, titulo }`: una insignia chica al lado del nombre (el
  * "✓" del reporte ya enviado). `titulo` es lo que se lee en voz alta, porque el `aria-label` del
@@ -30,12 +32,16 @@ const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
 const claseDeMarca = (m) => ['dock-marca', m.tipo && `dock-marca--${m.tipo}`, m.apagada && 'dock-marca--apagada']
     .filter(Boolean).join(' ');
 
-const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null }) => {
+const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, despues = null }) => {
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
     // Se remide al cambiar de sección, al cambiar la lista y al redimensionar.
     const navRef = useRef(null);
     const [indicador, setIndicador] = useState({ '--w': '0px', '--x': '0px' });
+    // Si el dock no entra y scrollea. Solo entonces `despues` necesita fondo propio, para que las
+    // secciones que pasan por debajo no se le vean a través: con el dock entero, ese fondo era un
+    // parche más oscuro sobre el humo.
+    const [desborda, setDesborda] = useState(false);
     const ids = secciones.map(s => s.id).join('|');
     useEffect(() => {
         const medir = () => {
@@ -47,11 +53,15 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
             // En un teléfono el dock no entra y scrollea de costado: sin esto la sección activa
             // podía quedar cortada contra el borde, justo la única con el nombre a la vista.
             const dock = nav.parentElement;
-            if (!dock || dock.scrollWidth <= dock.clientWidth) return;
+            const scrollea = !!dock && dock.scrollWidth > dock.clientWidth;
+            setDesborda(scrollea);
+            if (!scrollea) return;
+            // Lo que va pegado a la derecha (`despues`) tapa ese pedazo: no cuenta como visible.
+            const tapa = dock.querySelector('.dock-despues')?.offsetWidth || 0;
             const ini = nav.offsetLeft + item.offsetLeft;
             const fin = ini + item.offsetWidth;
             if (ini < dock.scrollLeft) dock.scrollLeft = ini - 8;
-            else if (fin > dock.scrollLeft + dock.clientWidth) dock.scrollLeft = fin - dock.clientWidth + 8;
+            else if (fin > dock.scrollLeft + dock.clientWidth - tapa) dock.scrollLeft = fin - dock.clientWidth + tapa + 8;
         };
         const id = requestAnimationFrame(medir);
         window.addEventListener('resize', medir);
@@ -61,7 +71,8 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
     // Con seis secciones o más (el mazo del closer) el aire de las cuatro del dashboard no entra en
     // una laptop: `dock--denso` las junta y esconde antes el nombre de las inactivas.
     return (
-        <nav className={secciones.length >= 6 ? 'dock dock--denso caja' : 'dock caja'} aria-label={ariaLabel}>
+        <nav className={['dock', secciones.length >= 6 && 'dock--denso', desborda && 'dock--desborda', 'caja'].filter(Boolean).join(' ')}
+            aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
             {antes}
             {antes && <span className="dock-sep" />}
@@ -87,6 +98,12 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
                     );
                 })}
             </div>
+            {despues && (
+                <div className="dock-despues">
+                    <span className="dock-sep" />
+                    {despues}
+                </div>
+            )}
         </nav>
     );
 };

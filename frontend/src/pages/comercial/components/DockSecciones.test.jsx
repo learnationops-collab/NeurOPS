@@ -55,6 +55,23 @@ describe('DockSecciones', () => {
         expect(container.querySelector('nav').className).toBe('dock dock--denso caja');
     });
 
+    it('`despues` va al final, separado, en su propio pedazo pegado a la derecha', () => {
+        const { container } = render(
+            <DockSecciones secciones={[{ id: 'a', label: 'Mis datos', Icono: BarChart3 }]} activa="a"
+                onElegir={() => {}} ariaLabel="Secciones"
+                despues={<button type="button">Tu sesión</button>} />,
+        );
+        const nav = container.querySelector('nav');
+        const ultimo = nav.lastElementChild;
+        expect(ultimo.className).toBe('dock-despues');
+        expect(ultimo.firstElementChild.className).toBe('dock-sep');
+        expect(ultimo.textContent).toBe('Tu sesión');
+        // Sin `despues` no queda un separador suelto al final.
+        const { container: sin } = renderDock([{ id: 'a', label: 'Mis datos', Icono: BarChart3 }]);
+        expect(sin.querySelector('.dock-despues')).toBeNull();
+        expect(sin.querySelector('nav').lastElementChild.className).toBe('dock-nav');
+    });
+
     it('sin marcas el nombre es la sección, y elegir avisa cuál', () => {
         const onElegir = vi.fn();
         renderDock([

@@ -510,6 +510,14 @@
   .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
   .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
 }
+/* Lo que va al final del dock (`despues` de `DockSecciones`) queda pegado al borde derecho
+   aunque el dock no entre y scrollee: las secciones pasan por debajo. Solo cuando scrollea lleva
+   fondo (el del dock, con un degradé a la izquierda para que no se corten en seco); con el dock
+   entero sería un parche más oscuro sobre el humo. */
+.dc-shell .dock-despues{position:sticky;right:0;z-index:2;flex-shrink:0;
+  display:flex;align-items:center;gap:var(--s1)}
+.dc-shell .dock--desborda .dock-despues{padding-left:14px;margin-left:-10px;
+  background:linear-gradient(90deg,transparent,var(--bg-surface) 14px)}
 
 /* ============================================================
    9 · DATA VIZ
