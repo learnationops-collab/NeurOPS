@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Search } from 'lucide-react';
 import api from '../../services/api';
+import { getTabla } from '../comercial/comercialApi';
+import { filtrosDeMisDatos } from './periodosDelMazo';
 import SetterCualificacionModal from '../../components/modals/SetterCualificacionModal';
 import AgendaManagerModal from '../../components/modals/AgendaManagerModal';
 import SetterCualificacionFilters from './components/SetterCualificacionFilters';
@@ -60,6 +62,9 @@ const SetterWorkflowPage = ({ paso = 'cualificacion' }) => {
     const [agendaIgMap, setAgendaIgMap] = useState({});
     const [assigningId, setAssigningId] = useState(null);
     const [guardandoIgId, setGuardandoIgId] = useState(null);
+    // Las agendas generadas del período del chip, el número de "Mis datos" (ver `fetchGeneradas`).
+    const [generadas, setGeneradas] = useState(null);
+    const pedidoDeGeneradas = useRef(0);
 
     // Al cambiar de paso lo elegido en el otro deja de tener sentido: la selección masiva y el
     // lead abierto son de la lista que se dejó de ver.
@@ -136,6 +141,38 @@ const SetterWorkflowPage = ({ paso = 'cualificacion' }) => {
         }
     };
 
+    /**
+     * El número del encabezado de la lista: las agendas generadas del período, pedidas al mismo
+     * endpoint y con el mismo período que "Mis datos" (`filtrosDeMisDatos`), así que dan lo mismo.
+     *
+     * No es el largo de la lista, a propósito: la lista es para trabajar y trae también las
+     * reuniones del período que se reservaron antes (hay que confirmarlas). Antes el encabezado
+     * mostraba ese largo como "Mis Agendas", y el 01/10/2026 decía 84 para Elias con "Este mes"
+     * mientras "Mis datos" decía 1.
+     *
+     * Si cambian el chip antes de que vuelva la respuesta, gana el último pedido.
+     */
+    const fetchGeneradas = async () => {
+        const pedido = ++pedidoDeGeneradas.current;
+        const filtros = filtrosDeMisDatos(dateRange, customDate);
+        if (!filtros) {
+            setGeneradas(null);
+            return;
+        }
+        try {
+            const datos = await getTabla(filtros, 'generadas');
+            if (pedido === pedidoDeGeneradas.current) setGeneradas(datos?.totales?.agendas ?? null);
+        } catch (err) {
+            console.error('Error al cargar las agendas generadas:', err);
+            if (pedido === pedidoDeGeneradas.current) setGeneradas(null);
+        }
+    };
+
+    const refrescarAgendas = () => {
+        fetchAgendasDelMazo();
+        fetchGeneradas();
+    };
+
     // Corregir el Instagram del lead: es lo que vincula la agenda con ManyChat,
     // así que sin esto la atribución del anuncio no puede encontrar la conversación.
     const handleGuardarInstagram = async (agenda) => {
@@ -195,7 +232,7 @@ const SetterWorkflowPage = ({ paso = 'cualificacion' }) => {
     useEffect(() => {
         fetchKeywords();
         if (activeStep === 'agendas') {
-            fetchAgendasDelMazo();
+            refrescarAgendas();
         } else {
             fetchLeads();
             fetchCualificacionStats();
@@ -414,8 +451,9 @@ const SetterWorkflowPage = ({ paso = 'cualificacion' }) => {
                 {activeStep === 'agendas' && (
                     <SetterAgendasList
                         agendas={agendasDelMazo}
+                        generadas={generadas}
                         cargando={loadingAgendas}
-                        onRefrescar={fetchAgendasDelMazo}
+                        onRefrescar={refrescarAgendas}
                         onAbrirLead={abrirDetalleAgenda}
                         availableKeywords={availableKeywords}
                         agendaIgMap={agendaIgMap}

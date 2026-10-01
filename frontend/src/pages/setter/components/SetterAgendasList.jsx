@@ -15,9 +15,14 @@ import {
  *
  * Ahora es una sola fila por agenda: se hace clic para abrir el lead y, si le
  * falta el anuncio, se resuelve ahí mismo sin cambiar de lista.
+ *
+ * `generadas` es el número del encabezado: las agendas generadas del período, el
+ * mismo de "Mis datos" (ver `fetchGeneradas` en SetterWorkflowPage). No es el largo
+ * de la lista: la lista también trae las reuniones del período reservadas antes.
  */
 const SetterAgendasList = ({
     agendas,
+    generadas = null,
     cargando,
     onRefrescar,
     onAbrirLead,
@@ -51,9 +56,12 @@ const SetterAgendasList = ({
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400"><Calendar size={16} /></span>
                     <h3 className="text-sm font-black text-white italic tracking-wider uppercase">Mis Agendas</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-slate-900 text-slate-300 border border-slate-800">
-                        {agendas.length}
-                    </span>
+                    {generadas !== null && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-slate-900 text-slate-300 border border-slate-800"
+                            title="Agendas generadas en el período, como en Mis datos">
+                            {generadas} {generadas === 1 ? 'generada' : 'generadas'}
+                        </span>
+                    )}
                     {sinAnuncio > 0 && (
                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30">
                             {sinAnuncio} sin anuncio
