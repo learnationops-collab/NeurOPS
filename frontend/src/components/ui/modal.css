@@ -1,0 +1,81 @@
+/* El cascarón de `Modal.jsx`. Va en CSS y no en clases de Tailwind por dos cuentas que Tailwind no
+   escribe bien: el alto máximo (el velo menos su margen) y el hueco del widget de bugs en el pie.
+
+   El velo vive en un portal a `body`, así que su `z-index` compite con el del resto de la app y
+   no con el del contenedor `relative z-10` de `MainLayout`: tapa el dock, la barra lateral y la
+   cabecera de la página. Queda POR DEBAJO del widget de bugs (z-190) a propósito: se tiene que
+   poder reportar un problema con un modal abierto (mismo criterio que la ficha del lead). */
+.modal-velo {
+    --modal-margen: 12px;
+    position: fixed;
+    inset: 0;
+    z-index: 170;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--modal-margen);
+    /* Ni un margen heredado ni un `space-y-*` del padre lo puede correr (ver Modal.jsx). */
+    margin: 0;
+}
+
+@media (min-width: 640px) {
+    .modal-velo { --modal-margen: 24px; }
+}
+
+.modal-fondo {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+/* `max-height: 100%` es el alto del velo menos su `padding`: el panel entra siempre en la ventana,
+   también en el teléfono cuando la barra del navegador aparece y desaparece (el velo es `fixed`,
+   sigue a la ventana real sin depender de `vh`). */
+.modal-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: var(--modal-ancho, 36rem);
+    max-height: 100%;
+    overflow: hidden;
+    outline: none;
+}
+
+.modal-cabecera,
+.modal-pie {
+    flex-shrink: 0;
+}
+
+.modal-cuerpo {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* El widget de bugs flota fijo en `bottom-8 right-24` (48px de ancho): ocupa de 96 a 144px desde
+   el borde derecho de la ventana. Con el panel centrado, su borde derecho queda a
+   (ancho de ventana − ancho del panel) / 2 del borde de la ventana; lo que el widget se mete
+   adentro del panel es 144px menos ese margen. El pie reserva eso más 16px de aire, y nada
+   cuando el panel queda lejos (un modal angosto en una pantalla ancha no pierde lugar). */
+.modal-pie {
+    --modal-pad-x: 1.25rem;
+    padding-right: max(
+        var(--modal-pad-x),
+        calc(160px - (100vw - min(var(--modal-ancho, 36rem), 100vw - 2 * var(--modal-margen))) / 2)
+    );
+}
+
+@media (min-width: 640px) {
+    .modal-pie { --modal-pad-x: 1.5rem; }
+}
