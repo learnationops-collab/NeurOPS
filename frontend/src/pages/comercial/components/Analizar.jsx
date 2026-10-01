@@ -5,7 +5,7 @@ import Embudo from './Embudo';
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
 import { EsqueletoTablero, Humo, Tip, fmt, useMontado } from './Shared';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
-import MatrizCierres from '../../../components/dashboard/MatrizCierres';
+import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER,
     destinoToques,
@@ -406,44 +406,31 @@ const PanelEstados = ({ bloque, irA }) => {
 };
 
 /**
- * El cierre en sus cuatro lecturas: sin señas (pago completo + split pay, el close rate de verdad)
- * y con señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
- * dashboard del closer (`MatrizCierres`) sobre el mismo bloque `cierres` del backend.
+ * El cierre en sus cuatro lecturas: ventas (pago completo + split pay, el close rate de verdad) y
+ * con señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
+ * dashboard del closer (`MatrizCierres`) sobre el mismo bloque `cierres` del backend, y trae
+ * arriba la tira de presentación (que lleva a la lista de las que presentaron, como antes).
  *
- * Debajo va la tasa de presentación, que es la que explica la distancia entre las dos columnas:
- * cuánto se pierde antes de mostrar la oferta es un problema distinto de no cerrar.
+ * La cabecera lleva la leyenda de los dos colores con los conteos detrás de las tasas —cuántas
+ * ventas, partidas en pago completo y split pay, y cuántas señas sin completar—, que es lo que
+ * antes era "N de M llamadas".
  */
 const PanelCierre = ({ bloque, irA }) => {
     const c = bloque.cierres;
+    const vacio = bloque.asistieron === 0 || !c;
     return (
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
                 ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
-                    + 'no una venta. La fila "con señas" suma a las que dejaron seña para ver el '
-                    + 'compromiso de compra completo. Las columnas miden lo mismo contra las llamadas '
-                    + 'con show up y contra las presentaciones.'}>
-                <span className="t-cap mut40 num">
-                    {bloque.cerradas} de {fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}
-                </span>
+                    + 'no una venta. "Con señas" suma a las que dejaron seña para ver el compromiso '
+                    + 'de compra completo. Cada tarjeta mide lo mismo contra las llamadas con show up '
+                    + 'y contra las presentaciones.'}>
+                {!vacio && <LeyendaCierres cierres={c} />}
             </PanelCab>
         }>
-            {bloque.asistieron === 0 || !c
+            {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : (
-                    <>
-                        <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip} />
-                        <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
-                            Presentación:{' '}
-                            <MetricaClicable irA={irA} destino={D.presentacion_rate}
-                                vacio={!bloque.presentaciones}
-                                detalle={`${bloque.presentaciones} de ${bloque.asistieron} · Presentación`}>
-                                {fmt.pct(bloque.presentacion_rate)}
-                            </MetricaClicable>
-                            {' '}· en {bloque.presentaciones} de las {bloque.asistieron} llamadas con
-                            show up se llegó a presentar la oferta.
-                        </p>
-                    </>
-                )}
+                : <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip} />}
         </Panel>
     );
 };
