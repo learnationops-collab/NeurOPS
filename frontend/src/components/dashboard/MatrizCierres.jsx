@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import MetricaClicable from './MetricaClicable';
 import './pareja.css';
 import './matriz-cierres.css';
@@ -83,8 +84,42 @@ const ConAyuda = ({ Ayuda, titulo, texto }) => (
     <span className="mc-ayuda"><Ayuda titulo={titulo} texto={texto} /></span>
 );
 
-/** Una tasa en grande. */
-const Pct = ({ valor, className }) => <b className={className}>{pctDe(valor)}</b>;
+const quieto = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * La tasa grande sube de 0 a su valor (0,8 s, la misma curva que las barras).
+ *
+ * El conteo se escribe en el nodo desde el efecto y no por estado —como `Cifra` en el dashboard
+ * comercial—: son unos cincuenta cuadros por cifra y no vale re-renderizar la tarjeta por cada uno.
+ * El render ya deja el valor final, así que sin animación (movimiento reducido, pestaña oculta,
+ * tests) se lee el número correcto desde el primer momento.
+ */
+const Pct = ({ valor, className }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+        const el = ref.current;
+        const fin = Number(valor);
+        if (!el || valor === null || valor === undefined || !Number.isFinite(fin) || quieto()) {
+            return undefined;
+        }
+        const dec = (String(valor).split('.')[1] || '').length;
+        let id = 0;
+        let t0 = 0;
+        const paso = (t) => {
+            if (!t0) t0 = t;
+            const k = Math.min((t - t0) / 800, 1);
+            el.textContent = `${(fin * (1 - (1 - k) ** 3)).toFixed(dec)}%`;
+            if (k < 1) id = requestAnimationFrame(paso);
+            else el.textContent = pctDe(valor);
+        };
+        id = requestAnimationFrame(paso);
+        // Solo se corta el conteo: si el valor cambió, React ya escribió el nuevo antes de esta
+        // limpieza, y reponer acá el texto de este efecto dejaría el número viejo.
+        return () => cancelAnimationFrame(id);
+    }, [valor]);
+    return <b ref={ref} className={className}>{pctDe(valor)}</b>;
+};
 
 /** "12 de 84": el numerador resaltado, el resto apagado. */
 const Fraccion = ({ num, den }) => (

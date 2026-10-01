@@ -189,7 +189,7 @@
 }
 
 /* El humo de la referencia: azul arriba a la izquierda, magenta hacia la derecha y un índigo
-   profundo abajo. Detrás de todo (z-index -1 dentro del `isolation`). */
+   profundo abajo, a la deriva muy lenta. Detrás de todo (z-index -1 dentro del `isolation`). */
 .mc-humo {
     position: absolute;
     inset: -35%;
@@ -200,7 +200,10 @@
         radial-gradient(30% 38% at 76% 46%, rgba(255, 63, 164, .27), transparent 72%),
         radial-gradient(38% 30% at 48% 74%, rgba(19, 35, 198, .36), transparent 72%);
     filter: blur(14px);
+    animation: mc-humo 24s ease-in-out infinite alternate;
 }
+
+.mc-col:nth-child(2) .mc-humo { animation-delay: -9s; }
 
 .mc-col-cab {
     display: flex;
@@ -254,6 +257,8 @@
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     box-shadow: 0 4px 14px rgba(255, 63, 164, .28);
+    animation: mc-pastilla .5s var(--mc-curva) both;
+    animation-delay: calc(700ms + var(--mc-orden, 0) * 110ms);
 }
 
 .mc-cifra {
@@ -357,10 +362,22 @@
     to { opacity: 1; transform: none; }
 }
 
+@keyframes mc-pastilla {
+    from { opacity: 0; transform: scale(.7); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes mc-humo {
+    from { transform: translate3d(-5%, -4%, 0) scale(1); }
+    to { transform: translate3d(6%, 5%, 0) scale(1.1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mc-tira,
     .mc-col,
-    .mc-tramo {
+    .mc-pp,
+    .mc-tramo,
+    .mc-humo {
         animation: none;
     }
 
