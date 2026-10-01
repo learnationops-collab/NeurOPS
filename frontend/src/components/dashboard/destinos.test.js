@@ -80,6 +80,40 @@ describe('el mapa de destinos del drill-down', () => {
         expect(huerfanas).toEqual([]);
     });
 
+    it('un número del setter abre una tabla que el setter tiene, y uno del closer una del closer', () => {
+        // Que la tabla exista para ALGÚN rol no alcanza: la lista del setter (Reporte · Registros)
+        // ofrece solo Leads entrantes y Agendas generadas. Un destino suyo que apuntara a
+        // `agendas` no fallaría: la lista caería en su primera tabla, ignoraría las facetas que no
+        // tiene y mostraría el período entero debajo de un número que no es. Lo mismo al revés.
+        const SERIES = {
+            closers: ['cash', 'agendas', 'ventas', 'showup', 'senas', 'programas'],
+            setters: ['entrantes', 'respuestas', 'cualificados', 'agendas', 'tasa_resp'],
+        };
+        const delRol = {
+            setters: [
+                ...Object.entries(DESTINOS_SETTER).map(([k, d]) => [`DESTINOS_SETTER.${k}`, d]),
+                ...Object.entries(PASOS_SETTER).map(([k, p]) => [`PASOS_SETTER.${k}`, p.destino]),
+                ...Object.entries(DESTINOS_METRICA.setters).map(([k, d]) => [`DESTINOS_METRICA.setters.${k}`, d]),
+                ['destinoToques()', destinoToques('4+')],
+            ],
+            closers: [
+                ...Object.entries(DESTINOS_CLOSER).map(([k, d]) => [`DESTINOS_CLOSER.${k}`, d]),
+                ...Object.entries(PASOS_CLOSER).map(([k, p]) => [`PASOS_CLOSER.${k}`, p.destino]),
+                ...Object.entries(DESTINOS_METRICA.closers).map(([k, d]) => [`DESTINOS_METRICA.closers.${k}`, d]),
+            ],
+        };
+        Object.entries(SERIES).forEach(([rol, keys]) => keys.forEach(k => {
+            delRol[rol].push([`destinoDeSerie(${rol}, ${k})`, destinoDeSerie(rol, k)]);
+        }));
+
+        const ajenas = Object.entries(delRol).flatMap(([rol, destinos]) => destinos
+            .filter(([, d]) => !TABLAS_POR_ROL[rol].includes(d.tabla))
+            .map(([donde, d]) => `${donde} -> ${d.tabla} (no es de ${rol})`));
+
+        expect(delRol.setters.length).toBeGreaterThan(20);
+        expect(ajenas).toEqual([]);
+    });
+
     it('los valores del filtro son etiquetas, no keys', () => {
         // El filtrado compara contra `faceta.de(fila)`, que devuelve la etiqueta. Mandar la key
         // ("venta" en vez de "Venta") no falla: filtra cero filas y la lista sale vacía. Se
