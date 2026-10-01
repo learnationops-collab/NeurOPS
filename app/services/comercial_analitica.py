@@ -220,8 +220,21 @@ def senas_de(filas_ventas):
 # llamada de mañana sin reportar es lo normal, y una de la semana pasada sin reportar es un
 # agujero que además ENSUCIA el show up, porque lo deja medido sobre menos llamadas de las que
 # hubo. `retraso_dias` ya distingue las dos (ver `ComercialService.agendas`).
-SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'error'}
+SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'warning'}
 POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
+
+# El color de cada estado EN ESTE PANEL, donde el vocabulario no alcanza: la dona pone los estados
+# uno al lado del otro, y con los tonos de los chips "Seña", "Seguimiento" y "Presentó, no cerró"
+# serían tres arcos del mismo amarillo (y "Sin reporte" y "No show", dos del mismo rojo). La
+# paleta es la del diseño de Kerwin (30/09/2026): la seña en magenta, como en la tarjeta de Cierre;
+# el seguimiento en azul; "Presentó, no cerró" en `naranja`, entre el error y el aviso (lo define
+# la pieza del panel, `reparto-estados.css`); y "Sin reporte" en amarillo, arriba. Los chips de
+# Revisar siguen con el tono del vocabulario.
+TONO_EN_PANEL = {
+    'sena': 'brand-secondary',
+    'seguimiento': 'info',
+    'presento_no_cerro': 'naranja',
+}
 
 # El gráfico del panel Estados (diseño de Kerwin, 30/09/2026) junta los estados en tres grupos:
 # cuántas citas no dieron ningún resultado, cuántas siguen abiertas y cuántas cerraron. La
@@ -276,7 +289,7 @@ def estados_de(filas_agendas):
         else:
             orden.append(estado)
 
-    return [{'key': e['key'], 'label': e['label'], 'tone': e['tone'],
+    return [{'key': e['key'], 'label': e['label'], 'tone': TONO_EN_PANEL.get(e['key'], e['tone']),
              'n': conteo[e['key']], 'filtro': e['label'], 'grupo': GRUPO_DE_ESTADO[e['key']]}
             for e in orden if conteo.get(e['key'])]
 

@@ -16,7 +16,7 @@ from freezegun import freeze_time
 
 from app.models import Appointment, Client, Enrollment, FinancialSale, Payment, Program
 from app.services import comercial_analitica as ca
-from app.services.comercial_service import ComercialService
+from app.services.comercial_service import ComercialService, chip
 
 HOY = '2026-09-17 21:30:00'
 DESDE = datetime(2026, 9, 1).date()
@@ -365,6 +365,17 @@ def test_los_grupos_del_panel_estados_siguen_el_diseno(db, marlon):
         por_grupo[e['grupo']] = por_grupo.get(e['grupo'], 0) + e['n']
     assert por_grupo == {'sin_resultado': 4, 'en_curso': 3, 'cerradas': 2}
     assert sum(por_grupo.values()) == bloque['agendas'] == 9
+
+    # Los colores son los del diseño: la dona no repite tono entre estados que el diseño separa.
+    tono = {e['key']: e['tone'] for e in bloque['estados']}
+    assert tono['sin_reporte'] == 'warning'
+    assert tono['no_show'] == 'error'
+    assert tono['venta'] == 'success'
+    assert tono['sena'] == 'brand-secondary'
+    assert tono['seguimiento'] == 'info'
+    assert tono['presento_no_cerro'] == 'naranja'
+    # Es la paleta del panel, no la del vocabulario: el chip de Revisar sigue en su tono.
+    assert chip('post_call', 'sena')['tone'] == 'warning'
 
 
 # --- Señas ---------------------------------------------------------------------------------------
