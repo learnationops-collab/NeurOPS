@@ -328,6 +328,28 @@ def test_cualificar_un_lead_en_el_mazo_no_es_generar_una_agenda_ni_agendar(db, e
     assert len(ComercialService.agendas(*SEP, closer_id=equipo['marlon'].id)) == 2
 
 
+# --- El reporte del día de la dirección -----------------------------------------------------------
+
+@freeze_time(HOY)
+def test_el_reporte_del_dia_cuenta_las_agendas_que_el_setter_genero_hoy(client, db, equipo,
+                                                                        auth_headers):
+    """Mismo número que "Agendas generadas" con el período "Hoy", no las reuniones de hoy."""
+    for hora in (9, 10):  # dos reservadas hoy, para pasado mañana
+        agenda(db, equipo['marlon'], cliente(db), setter=equipo['elias'],
+               creada=datetime(2026, 10, 1, hora, 0), reunion=datetime(2026, 10, 3, 15, 0))
+    # Y una que se reúne hoy pero se reservó el 28/09: no es trabajo de hoy.
+    agenda(db, equipo['marlon'], cliente(db), setter=equipo['elias'],
+           creada=datetime(2026, 9, 28, 9, 0), reunion=datetime(2026, 10, 1, 15, 0))
+
+    datos = client.get('/api/comercial/reporte/hoy', headers=auth_headers(equipo['director'])).get_json()
+    elias = next(p for p in datos['personas'] if p['nombre'] == 'Elias')
+    hoy = client.get('/api/comercial/resumen', headers=auth_headers(equipo['elias']),
+                     query_string={'period': 'hoy', 'compare': 'none'}).get_json()
+
+    assert elias['resumen'].endswith('· 2 agendas')
+    assert hoy['actual']['generadas'] == 2
+
+
 # --- Los closers no cambian -----------------------------------------------------------------------
 
 @freeze_time(HOY)
