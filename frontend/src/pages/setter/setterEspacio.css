@@ -34,3 +34,11 @@
 @media (max-width:440px){
   .setter-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
 }
+
+/* La pestaña elegida entra con un pop corto, el de las etiquetas del filtro: al llegar a Registros
+   desde un número es la señal de dónde se aterrizó. Con movimiento reducido, quieta. */
+.setter-espacio .dc-shell .tab[aria-selected="true"]{animation:setterTabOn .26s var(--spring) both}
+@keyframes setterTabOn{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .setter-espacio .dc-shell .tab[aria-selected="true"]{animation:none}
+}
