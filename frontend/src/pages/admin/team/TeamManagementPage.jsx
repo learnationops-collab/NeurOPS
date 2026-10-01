@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Ghost,
@@ -13,7 +13,6 @@ import {
     UserPlus,
     Edit2,
     Trash2,
-    X,
     Check,
     Power,
     Eye,
@@ -24,6 +23,7 @@ import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import Modal from '../../../components/ui/Modal';
 import { saveSession } from '../../../utils/sessionStore';
 import { roleLandingPath } from '../../../utils/roleLanding';
 
@@ -50,6 +50,14 @@ const TeamManagementPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [modalError, setModalError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
+    const errorRef = useRef(null);
+
+    const cerrarModal = () => setModal(m => ({ ...m, show: false }));
+
+    // El error va arriba del cuerpo, que scrollea: si se guardó desde abajo, se lo trae a la vista.
+    useEffect(() => {
+        if (modalError) errorRef.current?.scrollIntoView?.({ block: 'nearest' });
+    }, [modalError]);
 
     useEffect(() => {
         fetchUsers();
@@ -361,182 +369,179 @@ const TeamManagementPage = () => {
                 </div>
             </div>
 
-            {/* Premium Modal */}
-            <AnimatePresence>
-                {modal.show && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setModal({ ...modal, show: false })}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-surface border border-base w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden relative"
-                        >
-                            <div className="p-10 border-b border-base flex justify-between items-center bg-main/30">
-                                <div>
-                                    <h2 className="text-3xl font-black text-base italic tracking-tighter uppercase">
-                                        {modal.type === 'create' ? 'Nuevo Miembro' : 'Editar Miembro'}
-                                    </h2>
-                                    <p className="text-muted text-[10px] font-black uppercase tracking-[0.2em] mt-1">Configuración técnica de acceso</p>
-                                </div>
+            {/* Alta y edición de un miembro. Va sobre el cascarón `Modal` (portal a body, cabecera
+                y pie fijos): montado acá, adentro del `space-y-10`, el velo se corría 40px y un
+                formulario más alto que la ventana dejaba «Guardar» fuera de alcance. */}
+            {modal.show && (
+                <Modal
+                    tono="tema"
+                    ancho="xl"
+                    titulo={modal.type === 'create' ? 'Nuevo Miembro' : 'Editar Miembro'}
+                    subtitulo="Configuración técnica de acceso"
+                    onCerrar={cerrarModal}
+                    onSubmit={handleSubmit}
+                    cerrable={!submitting}
+                    cuerpoClassName="space-y-5"
+                    pie={(
+                        <>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={cerrarModal}
+                                disabled={submitting}
+                                className="h-12 px-6 rounded-2xl text-[10px]"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={submitting}
+                                variant="primary"
+                                className="h-12 px-6 rounded-2xl shadow-brand-glow flex items-center justify-center gap-2 text-[10px]"
+                            >
+                                {submitting ? <Loader2 className="animate-spin" size={18} /> : (
+                                    <>
+                                        <Check size={18} />
+                                        {modal.type === 'create' ? 'Crear Miembro' : 'Guardar Cambios'}
+                                    </>
+                                )}
+                            </Button>
+                        </>
+                    )}
+                >
+                    {modalError && (
+                        <div ref={errorRef} role="alert" className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs font-black uppercase tracking-widest flex items-center gap-3">
+                            <AlertCircle size={20} className="shrink-0" />
+                            {modalError}
+                        </div>
+                    )}
+
+                    {/* Dos columnas solo con lugar: en un panel angosto, Rol y Contraseña se apilan. */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div className="space-y-2 sm:col-span-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Nombre de Usuario</label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="Ej: jsmith"
+                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Correo Electrónico</label>
+                            <input
+                                type="email"
+                                placeholder="usuario@learnation.com"
+                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Número de WhatsApp (recordatorios de seguimiento)</label>
+                            <input
+                                type="text"
+                                placeholder="Ej: 525620873819 (código de país + número, sin +, opcional)"
+                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
+                                value={formData.two_chat_number}
+                                onChange={(e) => setFormData({ ...formData, two_chat_number: e.target.value })}
+                            />
+                            <p className="text-[10px] text-muted/70 font-bold uppercase ml-1">Si se deja vacío, este closer no recibe avisos automáticos de seguimiento por WhatsApp.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Rol Operativo</label>
+                            <select
+                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold appearance-none cursor-pointer"
+                                value={formData.role}
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                            >
+                                <option value="admin">Administrador</option>
+                                <option value="closer">Closer Principal</option>
+                                <option value="setter">Setter de Leads</option>
+                                <option value="operator">Operador Técnico</option>
+                                <option value="triage">Call Confirmer</option>
+                                <option value="director_comercial">Director Comercial</option>
+                                <option value="director_marketing">Director de Marketing</option>
+                                <option value="hiring">Hiring (Asistente)</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Contraseña</label>
+                            <div className="relative">
+                                {/* `pr-12`: el texto no pasa por debajo del ojo. */}
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder={modal.type === 'edit' ? 'Vacio para no cambiar' : '••••••••'}
+                                    required={modal.type === 'create'}
+                                    className="w-full pl-5 pr-12 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                />
                                 <button
-                                    onClick={() => setModal({ ...modal, show: false })}
-                                    className="p-4 bg-main hover:bg-surface-hover border border-base rounded-[1.5rem] text-muted hover:text-white transition-all"
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
                                 >
-                                    <X size={24} />
+                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
-
-                            <form onSubmit={handleSubmit} className="p-10 space-y-8">
-                                {modalError && (
-                                    <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-[1.5rem] text-rose-400 text-xs font-black uppercase tracking-widest flex items-center gap-3 animate-in shake duration-300">
-                                        <AlertCircle size={20} />
-                                        {modalError}
-                                    </div>
-                                )}
-
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2 col-span-2">
-                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Nombre de Usuario</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="Ej: jsmith"
-                                                className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                                value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2 col-span-2">
-                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Correo Electrónico</label>
-                                            <input
-                                                type="email"
-                                                placeholder="usuario@learnation.com"
-                                                className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2 col-span-2">
-                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Número de WhatsApp (recordatorios de seguimiento)</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Ej: 525620873819 (código de país + número, sin +, opcional)"
-                                                className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                                value={formData.two_chat_number}
-                                                onChange={(e) => setFormData({ ...formData, two_chat_number: e.target.value })}
-                                            />
-                                            <p className="text-[10px] text-muted/70 font-bold uppercase ml-1">Si se deja vacío, este closer no recibe avisos automáticos de seguimiento por WhatsApp.</p>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Rol Operativo</label>
-                                            <select
-                                                className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold appearance-none cursor-pointer"
-                                                value={formData.role}
-                                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                            >
-                                                <option value="admin">Administrador</option>
-                                                <option value="closer">Closer Principal</option>
-                                                <option value="setter">Setter de Leads</option>
-                                                <option value="operator">Operador Técnico</option>
-                                                <option value="triage">Call Confirmer</option>
-                                                <option value="director_comercial">Director Comercial</option>
-                                                <option value="director_marketing">Director de Marketing</option>
-                                                <option value="hiring">Hiring (Asistente)</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Contraseña</label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    placeholder={modal.type === 'edit' ? 'Vacio para no cambiar' : '••••••••'}
-                                                    required={modal.type === 'create'}
-                                                    className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-6 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
-                                                >
-                                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-6 bg-main/40 rounded-[2rem] border border-base">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-2xl ${formData.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                                                <Power size={24} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[11px] font-black uppercase text-base tracking-widest">Estado de Cuenta</p>
-                                                <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.is_active ? 'Acceso Habilitado' : 'Acceso Restringido'}</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                                            className={`w-14 h-7 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.is_active ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                                        >
-                                            <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.is_active ? 'translate-x-7' : 'translate-x-0'}`} />
-                                        </button>
-                                    </div>
-
-                                    {formData.role === 'admin' && (
-                                        <div className="flex items-center justify-between p-6 bg-main/40 rounded-[2rem] border border-base">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-3 rounded-2xl ${formData.can_view_finance ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
-                                                    <Shield size={24} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[11px] font-black uppercase text-base tracking-widest">Acceso a Finanzas</p>
-                                                    <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.can_view_finance ? 'Permitido' : 'Restringido'}</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, can_view_finance: !formData.can_view_finance })}
-                                                className={`w-14 h-7 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.can_view_finance ? 'bg-indigo-500' : 'bg-slate-700'}`}
-                                            >
-                                                <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.can_view_finance ? 'translate-x-7' : 'translate-x-0'}`} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    disabled={submitting}
-                                    variant="primary"
-                                    className="w-full h-20 rounded-[1.5rem] shadow-brand-glow flex items-center justify-center gap-3 font-black text-xs uppercase tracking-[0.3em]"
-                                >
-                                    {submitting ? <Loader2 className="animate-spin" size={24} /> : (
-                                        <>
-                                            <Check size={24} />
-                                            {modal.type === 'create' ? 'Crear Miembro' : 'Guardar Cambios'}
-                                        </>
-                                    )}
-                                </Button>
-                            </form>
-                        </motion.div>
+                        </div>
                     </div>
-                )}
-            </AnimatePresence>
+
+                    <div className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-main/40 rounded-[1.5rem] border border-base">
+                        <div className="flex items-center gap-4 min-w-0">
+                            <div className={`p-3 rounded-2xl shrink-0 ${formData.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                <Power size={22} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-black uppercase text-base tracking-widest">Estado de Cuenta</p>
+                                <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.is_active ? 'Acceso Habilitado' : 'Acceso Restringido'}</p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={formData.is_active}
+                            aria-label="Estado de cuenta"
+                            onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                            className={`w-14 h-7 shrink-0 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.is_active ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                        >
+                            <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.is_active ? 'translate-x-7' : 'translate-x-0'}`} />
+                        </button>
+                    </div>
+
+                    {formData.role === 'admin' && (
+                        <div className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-main/40 rounded-[1.5rem] border border-base">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className={`p-3 rounded-2xl shrink-0 ${formData.can_view_finance ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                                    <Shield size={22} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-black uppercase text-base tracking-widest">Acceso a Finanzas</p>
+                                    <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.can_view_finance ? 'Permitido' : 'Restringido'}</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={formData.can_view_finance}
+                                aria-label="Acceso a finanzas"
+                                onClick={() => setFormData({ ...formData, can_view_finance: !formData.can_view_finance })}
+                                className={`w-14 h-7 shrink-0 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.can_view_finance ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                            >
+                                <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.can_view_finance ? 'translate-x-7' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+                    )}
+                </Modal>
+            )}
         </div>
     );
 };
