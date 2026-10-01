@@ -469,14 +469,23 @@ class ComercialService:
         hay dos del mismo lead creadas en el mismo minuto para el 24/08 y el 27/08. El resultado
         vigente es el de la última llamada.
 
+        **Salvo que una de ellas sea la venta (o la seña):** esa gana aunque haya otra más nueva.
+        La persona compró, y eso es lo que el setter originó; una agenda posterior que nadie
+        reportó no puede borrarlo. En producción (septiembre de 2026) un lead de Elias compró en
+        la llamada del 07/09 y tenía otra agenda del 15/09 sin resultado: quedándose con la más
+        reciente, sus ventas originadas bajaban de 5 a 4 sin que nadie hubiera dejado de comprar.
+
         La clave es (setter, cliente) y no solo el cliente: un lead que agendaron dos setters
         distintos les cuenta a los dos, y así el total del equipo es la suma de sus setters.
         """
         def persona(fila):
             return (fila['setter_id'], fila['client_id'])
 
+        cierre = {'venta': 2, 'sena': 1}
+
         def reciente(fila):
-            return (fila['fecha'] or '', fila['creada'] or '', fila['id'])
+            return (cierre.get(fila['post_call']['key'], 0),
+                    fila['fecha'] or '', fila['creada'] or '', fila['id'])
 
         ultima = {}
         for fila in filas:

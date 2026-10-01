@@ -175,6 +175,24 @@ def test_una_venta_originada_no_se_cuenta_dos_veces_por_las_agendas_del_mismo_le
 
 
 @freeze_time(HOY)
+def test_la_agenda_de_la_venta_gana_aunque_haya_otra_mas_nueva_sin_resultado(db, equipo):
+    """En producción: un lead de Elias compró en la llamada del 07/09 y tenía otra agenda del 15/09
+    que nadie reportó. Quedarse con la más reciente le borraba la venta originada."""
+    lead = cliente(db, 'Compro y quedo otra')
+    compra = agenda(db, equipo['marlon'], lead, setter=equipo['elias'], closer_result='Show up',
+                    creada=datetime(2026, 9, 3, 10, 0), reunion=datetime(2026, 9, 7, 15, 0))
+    agenda(db, equipo['marlon'], lead, setter=equipo['elias'],
+           creada=datetime(2026, 9, 10, 10, 0), reunion=datetime(2026, 9, 15, 15, 0))
+    db.session.add(FinancialSale(mail_cliente=lead.email, monto=990.0, tipo_pago='AL - Completo',
+                                 metodo_pago='zelle', email_vendedor='marlon@thelearnation.com',
+                                 date=datetime(2026, 9, 7), estado='Completada'))
+    db.session.commit()
+
+    assert [f['id'] for f in ComercialService.generadas(*SEP, setter_id=equipo['elias'].id)] == [compra.id]
+    assert _bloque(equipo['elias'], 'Elias')['ventas_originadas'] == 1
+
+
+@freeze_time(HOY)
 def test_un_lead_de_dos_setters_cuenta_para_los_dos_y_el_equipo_es_la_suma(db, equipo):
     compartido = cliente(db, 'De los dos')
     agenda(db, equipo['marlon'], compartido, setter=equipo['elias'],
