@@ -111,6 +111,13 @@ describe('Modal', () => {
         expect(screen.queryByRole('dialog', { name: 'Abajo' })).not.toBeInTheDocument();
     });
 
+    it('la barra (pestañas) va fija entre la cabecera y el cuerpo, fuera del scroll', () => {
+        montar({ barra: <button type="button">Por resolver</button> });
+        const pestana = screen.getByRole('button', { name: 'Por resolver' });
+        expect(pestana.closest('.modal-cuerpo')).toBeNull();
+        expect(screen.getByRole('dialog')).toContainElement(pestana);
+    });
+
     it('Tab no se escapa del diálogo', async () => {
         montar();
         const usuario = userEvent.setup();

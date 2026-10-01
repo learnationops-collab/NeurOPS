@@ -25,6 +25,7 @@ import './modal.css';
  *
  * Props:
  *  - `titulo`, `subtitulo`, `icono`: la cabecera. La X de cerrar va siempre.
+ *  - `barra`: una fila fija entre la cabecera y el cuerpo (pestañas): no se va con el scroll.
  *  - `pie`: los botones de acción. Van en un pie fijo que reserva el hueco del widget de bugs.
  *  - `onSubmit`: si viene, cuerpo y pie van dentro de un `<form>`, así un `type="submit"` del pie
  *    envía el formulario (y la validación nativa de los `required` sigue funcionando).
@@ -81,6 +82,7 @@ const Modal = ({
     subtitulo = null,
     icono = null,
     children,
+    barra = null,
     pie = null,
     onCerrar,
     onSubmit = null,
@@ -201,6 +203,8 @@ const Modal = ({
                         <X size={18} />
                     </button>
                 </div>
+
+                {barra && <div className="modal-cabecera px-5 pt-4 sm:px-6">{barra}</div>}
 
                 {onSubmit ? (
                     <form className="modal-form" onSubmit={onSubmit}>
