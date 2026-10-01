@@ -1,0 +1,332 @@
+/* Panel Estados (RepartoEstados.jsx): la dona con los tres grupos, y la tabla de estados.
+ *
+ * Vive solo en el dashboard comercial (`.dc-shell`, oscuro siempre), así que cuelga de `.dc-shell`
+ * como `comercial.css` y usa sus tokens. El prefijo además gana a `.dc-shell button`, que les
+ * quita el padding a todos los botones del tablero.
+ *
+ * El color de cada estado llega por su `tone` del backend (`var(--tone)`). `--naranja` es el único
+ * que no es un token del tablero: el diseño pinta "Presentó, no cerró" entre el error y el aviso,
+ * y se define acá porque solo este panel lo usa. */
+
+.dc-shell .est {
+    --naranja: color-mix(in oklch, var(--error) 55%, var(--warning));
+    container: est / inline-size;
+    min-width: 0;
+    animation: est-entra .35s ease both;
+}
+
+/* --- Gráfico -------------------------------------------------------------------------------- */
+
+.dc-shell .est-caja {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s6);
+    padding: var(--s6);
+    border-radius: var(--radius-control);
+    background: var(--bg-element);
+    border: 1px solid var(--border-subtle);
+}
+
+/* El humo del tablero (`Humo`, el mismo de los KPIs) con la medida del diseño: tres auras más
+   chicas y más rápidas, error / magenta / azul de marca. */
+.dc-shell .est-caja .est-aura { opacity: .5; }
+.dc-shell .est-caja .est-aura i { width: 46%; filter: blur(46px); }
+.dc-shell .est-caja .est-aura i:nth-child(1) { left: -10%; top: -30%; animation-duration: 12s; }
+.dc-shell .est-caja .est-aura i:nth-child(2) { left: 58%; top: 10%; animation-duration: 15s; }
+.dc-shell .est-caja .est-aura i:nth-child(3) { left: 30%; top: 50%; animation-duration: 17s; }
+.dc-shell .est-caja .est-aura i:nth-child(4) { display: none; }
+
+.dc-shell .est-dona {
+    position: relative;
+    width: 168px;
+    height: 168px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 0 40px color-mix(in srgb, var(--error) 25%, transparent);
+}
+
+/* La dona barre en sentido horario al aparecer: la máscara es un cono que se abre de 0 a 360°.
+   `@property` es lo que deja interpolar el ángulo; sin soporte, la dona aparece de una vez. */
+@property --est-barrido {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 360deg;
+}
+
+.dc-shell .est-dona-svg {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    overflow: visible;
+    -webkit-mask: conic-gradient(#000 var(--est-barrido), transparent 0);
+    mask: conic-gradient(#000 var(--est-barrido), transparent 0);
+    animation: est-barre 1.1s var(--crecer) .12s both;
+}
+
+.dc-shell .est-seg {
+    transition: opacity .2s ease, stroke-width .2s ease;
+}
+
+.dc-shell .est-seg[role="button"] { cursor: pointer; }
+
+/* Un arco por vez: el que se señala queda y el resto se apaga. Pasar por un grupo apaga los
+   arcos de los otros dos. */
+.dc-shell .est-dona-svg:hover .est-seg:not(:hover),
+.dc-shell .est-dona-svg:has(.est-seg:focus-visible) .est-seg:not(:focus-visible),
+.dc-shell .est-seg[data-apagado] {
+    opacity: .3;
+}
+
+.dc-shell .est-dona-svg .est-seg:hover,
+.dc-shell .est-dona-svg .est-seg:focus-visible {
+    stroke-width: 26;
+    outline: none;
+}
+
+.dc-shell .est-centro {
+    position: absolute;
+    inset: 22px;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 4px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.dc-shell .est-centro-pct {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-shell .est-centro-rot {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-muted);
+}
+
+.dc-shell .est-grupos {
+    display: grid;
+    gap: var(--s4);
+    min-width: 0;
+}
+
+/* El margen negativo deja el texto alineado con el borde y le da aire al fondo del hover. */
+.dc-shell .est-grupo {
+    display: grid;
+    gap: var(--s2);
+    min-width: 0;
+    width: calc(100% + 16px);
+    margin: -6px -8px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    text-align: left;
+    transition: background-color .16s ease;
+}
+
+.dc-shell button.est-grupo:hover { background: var(--mat-1); }
+
+.dc-shell .est-grupo-cab {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s3);
+    min-width: 0;
+}
+
+.dc-shell .est-grupo-nom {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.dc-shell .est-grupo-pct {
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.025em;
+    color: var(--c);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-shell .est-riel {
+    display: block;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--idle-border);
+    overflow: hidden;
+}
+
+/* Las barras crecen desde 0 al aparecer, una detrás de otra (keyframes: no dependen de un primer
+   cuadro de JS). */
+.dc-shell .est-riel > i,
+.dc-shell .est-fila-riel > i {
+    display: block;
+    height: 100%;
+    width: var(--ancho);
+    border-radius: var(--radius-pill);
+    background: var(--c);
+    animation: est-crece .9s var(--crecer) both;
+    animation-delay: calc(220ms + var(--i, 0) * 110ms);
+    transition: width .6s var(--crecer);
+}
+
+/* Angosto (un teléfono): la dona arriba y centrada, los grupos debajo a todo el ancho. Se mide el
+   panel y no la ventana: en pantallas medianas comparte fila con el embudo. */
+@container est (max-width: 420px) {
+    .dc-shell .est-caja {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+    }
+
+    .dc-shell .est-grupos {
+        width: 100%;
+    }
+}
+
+/* --- Tabla ---------------------------------------------------------------------------------- */
+
+.dc-shell .est-tabla {
+    display: grid;
+    min-width: 0;
+}
+
+.dc-shell .est-fila {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 150px) minmax(0, 1fr) 40px 52px;
+    align-items: center;
+    gap: var(--s3);
+    width: 100%;
+    min-width: 0;
+    padding: var(--s3) 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+    transition: background-color .16s ease;
+}
+
+.dc-shell .est-fila:last-child { border-bottom: 0; }
+.dc-shell button.est-fila:hover { background: var(--mat-1); }
+
+.dc-shell .est-punto {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--c);
+}
+
+.dc-shell .est-fila-nom {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.dc-shell .est-fila-riel {
+    display: block;
+    height: 8px;
+    min-width: 0;
+}
+
+.dc-shell .est-fila-riel > i {
+    min-width: 4px;
+    animation-delay: calc(120ms + var(--i, 0) * 60ms);
+}
+
+.dc-shell .est-fila-n {
+    text-align: right;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -.015em;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-shell .est-fila-p {
+    text-align: right;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Muy angosto (un teléfono): el nombre más largo entra entero si puede y las barras se quedan con lo
+   que sobra, en vez de partir el ancho por la mitad y cortar "Presentó, no cerró". Las columnas
+   son de la tabla (`subgrid`) para que todas las barras arranquen a la misma altura; sin soporte
+   queda la grilla de arriba. La primera y la última columna suman los 8px de padding de la fila,
+   que en un subgrid caen dentro de las columnas de los bordes. */
+@container est (max-width: 340px) {
+    .dc-shell .est-tabla {
+        grid-template-columns: 18px minmax(0, max-content) minmax(28px, 1fr) 28px 52px;
+        column-gap: 10px;
+    }
+
+    .dc-shell .est-fila {
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        column-gap: 10px;
+    }
+}
+
+/* --- Cabecera del panel ---------------------------------------------------------------------- */
+
+/* "238 agendas": el número fuerte, la palabra apagada. */
+.dc-shell .est-total {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.dc-shell .est-total b {
+    font-weight: 800;
+    color: var(--text-on-surface);
+}
+
+/* --- Movimiento ----------------------------------------------------------------------------- */
+
+@keyframes est-entra {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes est-barre {
+    from { --est-barrido: 0deg; }
+    to { --est-barrido: 360deg; }
+}
+
+@keyframes est-crece {
+    from { width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dc-shell .est,
+    .dc-shell .est-dona-svg,
+    .dc-shell .est-riel > i,
+    .dc-shell .est-fila-riel > i {
+        animation: none;
+    }
+
+    .dc-shell .est-dona-svg {
+        -webkit-mask: none;
+        mask: none;
+    }
+}

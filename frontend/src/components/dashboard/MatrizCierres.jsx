@@ -94,8 +94,11 @@ const quieto = () => typeof window !== 'undefined' && typeof window.matchMedia =
  * comercial—: son unos cincuenta cuadros por cifra y no vale re-renderizar la tarjeta por cada uno.
  * El render ya deja el valor final, así que sin animación (movimiento reducido, pestaña oculta,
  * tests) se lee el número correcto desde el primer momento.
+ *
+ * Se exporta porque el panel Estados (`RepartoEstados`) cuenta sus porcentajes con la misma pieza.
+ * Un `valor` en texto conserva sus decimales: "30.0" sube y termina en "30.0%", no en "30%".
  */
-const Pct = ({ valor, className }) => {
+export const Pct = ({ valor, className }) => {
     const ref = useRef(null);
     useEffect(() => {
         const el = ref.current;
