@@ -114,7 +114,10 @@ const bajarA = (id) => {
 
 /**
  * Tile de vista rápida: un número, su lectura en chico y dos accesos — el ojo lleva al dato
- * crudo en Revisar, el otro baja al panel que lo desglosa.
+ * crudo en la lista, el otro baja al panel que lo desglosa.
+ *
+ * El ojo dice "Ver los registros", sin nombrar la sección: la lista es Revisar para la dirección,
+ * "Mi cartera" para el closer y Reporte · Registros para el setter.
  */
 const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
     <section className="kpi caja">
@@ -133,7 +136,7 @@ const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
             <div className="kpi-acciones">
                 {ver && (
                     <button type="button" className="kpi-acc kpi-acc--solo" onClick={ver}
-                        title="Ver los registros en Revisar" aria-label="Ver los registros en Revisar">
+                        title="Ver los registros" aria-label="Ver los registros">
                         <Eye size={14} />
                     </button>
                 )}
@@ -150,7 +153,7 @@ const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
 
 /**
  * Barra gruesa: el conteo entra dentro de la barra si hay lugar, y el botón de la derecha lleva
- * a ese mismo corte en Revisar. Es la pieza de los paneles que muestran una tasa sola.
+ * a ese mismo corte en la lista. Es la pieza de los paneles que muestran una tasa sola.
  */
 const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
     const montado = useMontado();
@@ -185,7 +188,7 @@ const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
                 </MetricaClicable>
                 {ir && (
                     <button type="button" className="ir-btn" style={{ '--c': color }} onClick={ir}
-                        aria-label={`Ver ${label.toLowerCase()} en Revisar`}>
+                        aria-label={`Ver ${label.toLowerCase()} en la lista`}>
                         <ArrowRight size={14} />
                     </button>
                 )}
