@@ -1236,14 +1236,74 @@
   color:var(--text-muted)}
 
 /* ============================================================
-   15 · TOTALES DE LO FILTRADO — una tira de verificacion, no un panel
+   15 · TOTALES DE LO QUE MUESTRA LA LISTA (Revisar.jsx · TotalesTira)
+   Una tarjeta tranquila: arriba de quien es la lista, y cada numero grande con su rotulo y su
+   bajada chicos debajo, como la tarjeta de Cierre del dashboard.
+
+   Con un filtro puesto (rapido, etiquetas o busqueda) el borde y el embudo junto al alcance
+   toman el rosa de las pastillas de filtro encendidas: es la misma senal, sin palabras.
+
+   La grilla nunca deja un numero solo en la ultima fila (pedido del 30/09/2026, ver
+   components/dashboard/pareja.css). `data-n` es cuantos numeros hay y `--n` cuantas columnas:
+     · 4 -> los 4 en fila; 2 x 2; columna.
+     · 5 -> los 5 en fila; si no, columna (3 + 2 tambien seria disparejo).
+     · 6 -> los 6 en fila; 3 x 2; 2 x 3; columna.
+   Se mide el ancho de la tarjeta y no el de la ventana (container query): en el mazo del closer
+   vive mas angosta. Los cortes salen de una celda minima de 128px y 12px entre columnas
+   (4 = 4*128 + 3*12 = 548, 5 = 688, 6 = 828, 3 columnas = 408, 2 = 268). Hoy ninguna tabla
+   tiene menos de 4 numeros (Leads 4; Ventas y Clientes 4, o 5 con la Academia; Agendas 6).
+   En columna cada numero va a la izquierda de su rotulo, todos alineados (subgrid).
+
+   Pesos en <b> y <small> (no en span): ver la cabecera de esta hoja.
    ============================================================ */
-.dc-shell .tot-tira{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s3) var(--s6);
-  padding:10px 14px;margin-bottom:var(--s3);border-radius:var(--radius-control);
-  background:var(--hundido);border:1px solid var(--border-subtle)}
-.dc-shell .tot-item{font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap}
-.dc-shell .tot-item b{margin-right:5px;font-size:15px;font-weight:900;letter-spacing:-.02em;
-  color:var(--text-on-surface);font-variant-numeric:tabular-nums}
+.dc-shell .tot-tira{container:tot / inline-size;display:grid;gap:12px;
+  padding:12px 18px 14px;margin-bottom:var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle);
+  transition:border-color .3s ease}
+.dc-shell .tot-tira--filtrada{border-color:var(--brand-secondary-border)}
+.dc-shell .tot-alcance{display:flex;align-items:center;gap:6px;min-width:0;
+  font-size:11px;font-weight:700;line-height:13px;letter-spacing:.02em;color:var(--text-muted-40)}
+.dc-shell .tot-alcance small{font-size:inherit}
+.dc-shell .tot-embudo{color:var(--brand-secondary);animation:dcTagIn .22s var(--spring) both}
+.dc-shell .tot-grid{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:14px 12px}
+.dc-shell .tot-celda{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* `overflow:hidden` es el ultimo recurso contra un monto que no entra: se corta con "...", nunca
+   se monta sobre la celda de al lado. Con la celda minima de 128px no deberia pasar. */
+.dc-shell .tot-n{font-size:20px;font-weight:900;line-height:21px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-shell .tot-pie{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dc-shell .tot-rot{display:inline-flex;align-items:center;gap:5px;min-height:14px;
+  font-size:11.5px;font-weight:700;line-height:14px;color:var(--text-muted);white-space:nowrap}
+.dc-shell .tot-hint{font-size:11px;font-weight:600;line-height:13px;color:var(--text-muted-40);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+/* El "i" mas chico que el de la barra (va pegado a un rotulo de 11px) y atenuado hasta que se
+   pasa por la celda o se llega con el teclado, como en la tarjeta de Cierre. */
+.dc-shell .tot-rot .tip{opacity:.55;transition:opacity .18s ease}
+.dc-shell .tot-celda:hover .tip,
+.dc-shell .tot-rot .tip:focus-visible{opacity:1}
+.dc-shell .tot-rot .tip-dot{width:14px;height:14px;font-size:8.5px}
+
+@container tot (max-width:827.98px){.dc-shell .tot-tira[data-n="6"] .tot-grid{--n:3}}
+@container tot (max-width:547.98px){.dc-shell .tot-tira[data-n="4"] .tot-grid{--n:2}}
+@container tot (max-width:407.98px){.dc-shell .tot-tira[data-n="6"] .tot-grid{--n:2}}
+/* En columna: numero | rotulo y bajada en la misma linea. Los numeros a la derecha de su
+   columna, como en un libro de cuentas: los montos alinean sus cifras. */
+@container tot (max-width:687.98px){
+  .dc-shell .tot-tira[data-n="5"] .tot-grid{grid-template-columns:max-content minmax(0,1fr);row-gap:8px}
+  .dc-shell .tot-tira[data-n="5"] .tot-celda{display:grid;grid-column:1 / -1;
+    grid-template-columns:subgrid;align-items:baseline;column-gap:14px}
+  .dc-shell .tot-tira[data-n="5"] .tot-n{justify-self:end}
+  .dc-shell .tot-tira[data-n="5"] .tot-pie{flex-direction:row;flex-wrap:wrap;align-items:baseline;
+    column-gap:8px}}
+@container tot (max-width:267.98px){
+  .dc-shell .tot-grid{grid-template-columns:max-content minmax(0,1fr);row-gap:8px}
+  .dc-shell .tot-celda{display:grid;grid-column:1 / -1;grid-template-columns:subgrid;
+    align-items:baseline;column-gap:14px}
+  .dc-shell .tot-n{justify-self:end}
+  .dc-shell .tot-pie{flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:8px}}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .tot-tira{transition:none}
+  .dc-shell .tot-embudo{animation:none}}
 .dc-shell .barra-tabla{flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3);align-items:center}
 .dc-shell .busca--sm{flex:0 1 190px;height:38px}
 /* La fila de etiquetas del filtro, debajo de la barra (Revisar.jsx): rotulo con su "i", una

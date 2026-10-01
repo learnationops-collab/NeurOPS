@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
-import { Esqueleto, Hueso, escalonDe } from '../../../components/huesos/Huesos';
+import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
 import { Tip, fmt } from './Shared';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 
@@ -333,10 +333,21 @@ const HuesoTarjeta = ({ paso }) => (
  */
 export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 }) => (
     <Esqueleto rotulo="Cargando los registros…">
-        <div className="tot-tira" aria-hidden="true">
-            {Array.from({ length: totales }, (_, i) => (
-                <Hueso key={i} alto={18} ancho={96} paso={i} />
-            ))}
+        {/* La tira con la misma grilla y los mismos renglones que `TotalesTira` (Revisar.jsx): el
+            alcance, y por celda el número, el rótulo y la bajada. Al llegar los datos no se corre. */}
+        <div className="tot-tira" aria-hidden="true" data-n={totales} style={{ '--n': totales }}>
+            <Renglon alto={13}><Hueso alto={9} ancho={150} paso={0} /></Renglon>
+            <div className="tot-grid">
+                {Array.from({ length: totales }, (_, i) => (
+                    <div key={i} className="tot-celda">
+                        <Renglon alto={21}><Hueso alto={16} ancho={72} paso={i} /></Renglon>
+                        <span className="tot-pie">
+                            <Renglon alto={14}><Hueso alto={9} ancho={54} paso={i + 1} /></Renglon>
+                            <Renglon alto={13}><Hueso alto={8} ancho={40} paso={i + 2} /></Renglon>
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
         {modo === 'tarjetas' ? (
             <div className="tarjetas" aria-hidden="true">

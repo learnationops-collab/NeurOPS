@@ -116,6 +116,42 @@ describe('Totales · Clientes', () => {
         expect(celda('vencido').textContent).toMatch(/0 cuotas/);
     });
 
+    it('la tira se enciende con cualquier filtro, sin palabras, y el alcance no repite la búsqueda', () => {
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+        const encendida = () => tira().classList.contains('tot-tira--filtrada');
+        expect(encendida()).toBe(false);
+        expect(tira()).toHaveAccessibleName('Totales de la lista');
+
+        elegirRapido('Vigentes', 'Con deuda');
+        expect(encendida()).toBe(true);
+        expect(tira()).toHaveAccessibleName('Totales de lo filtrado');
+        elegirRapido('Con deuda', 'Vigentes');
+        expect(encendida()).toBe(false);
+
+        buscar('Ana');
+        expect(encendida()).toBe(true);
+        expect(tira().querySelector('.tot-alcance')).toHaveTextContent(/^Todo el equipo$/);
+        buscar('  ');
+        expect(encendida()).toBe(false);
+
+        fireEvent.click(screen.getByRole('button', { name: /Filtro completo/ }));
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Filtro completo' }))
+            .getByRole('checkbox', { name: /^Marlon/ }));
+        expect(encendida()).toBe(true);
+        // Sin texto que lo diga: lo dicen el borde y el embudo (y el nombre accesible).
+        expect(tira().textContent).not.toMatch(/filtrad/i);
+    });
+
+    it('la grilla sabe cuántos números hay, para no dejar uno solo abajo', () => {
+        const { unmount } = render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+        expect(tira()).toHaveAttribute('data-n', '4');
+        expect(tira().style.getPropertyValue('--n')).toBe('4');
+        unmount();
+
+        render(<Revisar {...props({ tabla: 'agendas', datos: { filas: AGENDAS } })} />);
+        expect(tira()).toHaveAttribute('data-n', '6');
+    });
+
     it('sin nadie con cuenta en la Academia, su número no aparece', () => {
         render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
 

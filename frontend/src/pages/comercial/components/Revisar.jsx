@@ -81,18 +81,45 @@ const segun = (n, uno, varios) => (n === 1 ? uno : varios);
  * 22", "9 con saldo"). Lo que antes iba escrito al lado para que no se lo malinterprete ("deuda ·
  * de esta cartera", "cobrado · desde siempre") pasó al "i" del rótulo: el usuario pidió menos texto
  * (30/09/2026) y esas aclaraciones se leen una vez, no cada vez que se mira la tira.
+ *
+ * El dibujo sigue a la tarjeta de Cierre del dashboard: el número grande y en negrita, y debajo su
+ * rótulo y su bajada, chicos y apagados. Arriba, de quién es la lista (`alcance`, corto: la
+ * búsqueda ya se lee en su campo).
+ *
+ * `filtrada` (hay filtro rápido, etiquetas o búsqueda) se dice sin palabras: el borde y un embudo
+ * junto al alcance toman el rosa de las pastillas de filtro encendidas, que es la misma señal que
+ * el usuario ya lee arriba. No se repite "11 de 40" en cada número: el "mostrando X de Y" de la
+ * barra ya lo cuenta, y en una tasa ("63%") ese "de" no significa nada.
+ *
+ * La grilla (CSS, `.tot-grid`) nunca deja un número solo en la última fila: `data-n` es cuántos
+ * hay, y con eso cada ancho elige una fila, una grilla pareja o una columna.
  */
-const TotalesTira = ({ items, alcance }) => (
-    <div className="tot-tira">
-        {items.map(t => (
-            <span key={t.key} className="tot-item" data-total={t.key}>
-                <b style={{ color: t.color }}>{t.valor}</b>
-                {t.label}
-                {t.ayuda && <Tip titulo={mayuscula(t.label)} texto={t.ayuda} />}
-                {t.hint && <span className="mut40"> · {t.hint}</span>}
-            </span>
-        ))}
-        <span className="t-cap mut40" style={{ marginLeft: 'auto' }}>{alcance}</span>
+const TotalesTira = ({ items, alcance, filtrada }) => (
+    <div className={`tot-tira${filtrada ? ' tot-tira--filtrada' : ''}`} data-n={items.length}
+        style={{ '--n': items.length }} role="group"
+        aria-label={filtrada ? 'Totales de lo filtrado' : 'Totales de la lista'}>
+        {alcance && (
+            <small className="tot-alcance" title={filtrada ? 'Totales de lo filtrado' : undefined}>
+                {filtrada && <Filter size={11} strokeWidth={2.6} className="tot-embudo" aria-hidden="true" />}
+                <small className="trunc">{alcance}</small>
+            </small>
+        )}
+        <div className="tot-grid">
+            {items.map(t => (
+                <div key={t.key} className="tot-celda" data-total={t.key}>
+                    {/* `<b>` y `<small>`, no `<span>`: fuera de `.dc-shell` el CSS global fuerza el
+                        peso de los span con !important, y estas dos conservan el suyo. */}
+                    <b className="tot-n" style={{ color: t.color }}>{t.valor}</b>
+                    <span className="tot-pie">
+                        <small className="tot-rot">
+                            {t.label}
+                            {t.ayuda && <Tip titulo={mayuscula(t.label)} texto={t.ayuda} />}
+                        </small>
+                        {t.hint && <small className="tot-hint">{t.hint}</small>}
+                    </span>
+                </div>
+            ))}
+        </div>
     </div>
 );
 
@@ -314,6 +341,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const totales = useMemo(() => {
         const pct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
         const lista = mostradas;
+        // "1,057 de 1,836": las bajadas con separador de miles, como los números.
+        const de = (a, b) => `${fmt.num(a)} de ${fmt.num(b)}`;
 
         if (tabla === 'ventas') {
             const cash = lista.reduce((a, f) => a + f.monto, 0);
@@ -349,19 +378,19 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 { key: 'clientes', label: segun(lista.length, 'cliente', 'clientes'),
                     valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
                     // En «Dados de baja» todos son bajas: "0 al día" sería ruido.
-                    hint: [alDia || !bajas ? `${alDia} al día` : null, bajas ? `${bajas} de baja` : null]
+                    hint: [alDia || !bajas ? `${fmt.num(alDia)} al día` : null, bajas ? `${fmt.num(bajas)} de baja` : null]
                         .filter(Boolean).join(' · ') },
                 // La aclaración va en el "i" y no en el rótulo (antes decía "deuda · de esta
                 // cartera"): el panel Cash de Analizar muestra otro "por cobrar", atribuido por quién
                 // tiene HOY la agenda del cliente y sobre todos los saldos del sistema. Los dos son
                 // correctos y dan distinto; el "i" es lo que evita que parezca que uno está mal.
                 { key: 'deuda', label: 'deuda', valor: fmt.money(Math.round(deuda * 100) / 100),
-                    color: conDeuda ? 'var(--error)' : 'var(--success)', hint: `${conDeuda} con saldo`,
+                    color: conDeuda ? 'var(--error)' : 'var(--success)', hint: `${fmt.num(conDeuda)} con saldo`,
                     ayuda: 'Lo que deben hoy los clientes de esta lista. No coincide con el «por cobrar» '
                         + 'de Cash, que atribuye cada saldo por otra regla.' },
                 { key: 'vencido', label: 'vencido', valor: fmt.money(Math.round(vencido * 100) / 100),
                     color: 'var(--warning)',
-                    hint: `${vencidas.length} ${segun(vencidas.length, 'cuota', 'cuotas')}` },
+                    hint: fmt.plural(vencidas.length, 'cuota', 'cuotas') },
                 { key: 'cobrado', label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
                     color: 'var(--success)',
                     ayuda: 'Todo lo que pagaron los clientes de esta lista desde su primer cobro: no '
@@ -379,11 +408,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 { key: 'leads', label: segun(lista.length, 'lead', 'leads'), valor: fmt.num(lista.length),
                     color: 'var(--text-on-surface)', hint: fmt.plural(mensajes, 'mensaje', 'mensajes') },
                 { key: 'respuesta', label: 'respuesta', valor: fmt.pct(pct(respondieron, lista.length)),
-                    color: 'var(--info)', hint: `${respondieron} de ${lista.length}` },
+                    color: 'var(--info)', hint: de(respondieron, lista.length) },
                 { key: 'cualificacion', label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
-                    color: 'var(--success)', hint: `${cualificados} de ${respondieron}` },
+                    color: 'var(--success)', hint: de(cualificados, respondieron) },
                 { key: 'conversion', label: 'conversión', valor: fmt.pct(pct(agendaron, lista.length)),
-                    color: 'var(--brand-secondary)', hint: `${agendaron} ${segun(agendaron, 'agendó', 'agendaron')}` },
+                    color: 'var(--brand-secondary)', hint: fmt.plural(agendaron, 'agendó', 'agendaron') },
             ];
         }
 
@@ -398,22 +427,24 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         return [
             { key: 'agendas', label: segun(lista.length, 'agenda', 'agendas'), valor: fmt.num(lista.length),
                 color: 'var(--text-on-surface)',
-                hint: `${realizadas} ${segun(realizadas, 'realizada', 'realizadas')}` },
+                hint: fmt.plural(realizadas, 'realizada', 'realizadas') },
             { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)),
-                color: 'var(--success)', hint: `${asistieron} de ${realizadas}` },
+                color: 'var(--success)', hint: de(asistieron, realizadas) },
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
-                color: 'var(--brand-secondary)', hint: `${ventas} de ${asistieron}` },
+                color: 'var(--brand-secondary)', hint: de(ventas, asistieron) },
             { key: 'seguimiento', label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
                 ayuda: 'Asistieron y no cerraron: siguen en seguimiento.' },
             { key: 'no_show', label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
-                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${realizadas}` : null },
+                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${fmt.num(realizadas)}` : null },
             { key: 'pendientes', label: segun(pendientes.length, 'pendiente', 'pendientes'),
                 valor: fmt.num(pendientes.length), color: conRetraso ? 'var(--warning)' : 'var(--idle)',
-                hint: conRetraso ? `${conRetraso} con retraso` : 'al día' },
+                hint: conRetraso ? `${fmt.num(conRetraso)} con retraso` : 'al día' },
         ];
     }, [mostradas, tabla]);
 
-    const alcanceTexto = [alcance, query ? `"${query}"` : null].filter(Boolean).join(' · ');
+    // ¿La lista está recortada por algo que eligió el usuario? Es lo que enciende la tira (ver
+    // `TotalesTira`). El período no cuenta: es el de toda la pantalla y ya lo dice el alcance.
+    const filtrando = chipActivo !== def.chips[0].key || activas > 0 || query.trim() !== '';
 
     return (
         <section className="panel" ref={panel}>
@@ -585,7 +616,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 totales={totales.length} /> : (
                 <>
                     {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
-                    <TotalesTira items={totales} alcance={alcanceTexto} />
+                    <TotalesTira items={totales} alcance={alcance} filtrada={filtrando} />
 
                     {visibles.length === 0 ? (
                         <div className="tabla">
