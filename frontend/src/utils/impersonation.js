@@ -14,3 +14,13 @@ export const revertImpersonation = async () => {
     saveSession(originalUser, token);
     window.location.href = roleLandingPath(originalUser.role);
 };
+
+// Empezar a simular a alguien en ESTA pestaña (el modo de siempre, con la cookie): guarda la
+// sesión simulada y entra a la pantalla de su rol. La usa el menú de sesión del dock de la
+// dirección comercial ("Simular a un closer"); el backend decide a quién se puede simular.
+export const simularA = async (userId) => {
+    const res = await api.post('/auth/impersonate', { user_id: userId });
+    const { user, token } = res.data;
+    saveSession(user, token);
+    window.location.href = roleLandingPath(user.role);
+};

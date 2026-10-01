@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, CheckCircle2, Ghost, Inbox, Search, Target, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { revertImpersonation } from '../../utils/impersonation';
+import { revertImpersonation, simularA } from '../../utils/impersonation';
 import './comercial.css';
 import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
 import { EsqueletoPagina, Humo, Isotipo, PillMenu, Segmented } from './components/Shared';
 import DockSecciones, { HUMO_DOCK } from './components/DockSecciones';
+import MenuSesion from './components/MenuSesion';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
@@ -50,7 +52,8 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * tiene su propio dock fijo abajo y el de la app quedaba encima, superpuesto pixel a pixel. A
  * cambio, la salida la ofrece esta pantalla: la vuelta al lugar de trabajo de cada rol y, si es
  * una simulación, además "Volver a mi sesión" (ver `revertImpersonation`, que existe justamente
- * para las sub-apps sin MainLayout).
+ * para las sub-apps sin MainLayout). Al final del dock va la sesión (`MenuSesion`): cerrar
+ * sesión, volver de una simulación y, para la dirección, "Simular a un closer".
  *
  * ## Modo embebido
  *
@@ -75,12 +78,45 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
 
 /**
  * A dónde vuelve cada rol cuando sale del dashboard. El setter no está: nunca lo ve suelto, lo ve
- * embebido en su espacio, donde la vuelta es el dock (ver `SetterEspacioPage`).
+ * embebido en su espacio, donde la vuelta es el dock (ver `SetterEspacioPage`). La dirección
+ * comercial tampoco, desde el 30/09/2026: su "Ir a Ventas" se sacó a pedido; su sesión (simular a
+ * un closer, cerrar sesión) está en el menú del dock.
  */
 const SALIDA = {
     closer: { to: '/closer/deck?step=confirmations', label: 'Volver al mazo' },
-    director_comercial: { to: '/admin/ventas', label: 'Ir a Ventas' },
     admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
+};
+
+/**
+ * Quién puede elegir "Simular a un closer" en el menú de sesión: lo decide el backend
+ * (`/auth/impersonate`), esto solo evita ofrecerle la opción a quien recibiría un 403. Se mira el
+ * rol REAL: simulando a un closer, la dirección sigue pudiendo pasar a otro.
+ */
+const SIMULAN_CLOSERS = ['director_comercial', 'admin', 'operator'];
+
+const ROTULO_DE_ROL = {
+    director_comercial: 'Dirección comercial',
+    admin: 'Admin',
+    operator: 'Operaciones',
+    closer: 'Closer',
+};
+
+const cargarCloseresParaSimular = async () => {
+    const res = await api.get('/auth/impersonate/closers');
+    return (res.data?.closers || []).map(c => ({
+        id: c.id,
+        label: c.username,
+        onClick: async () => {
+            const aviso = toast.loading(`Entrando como ${c.username}…`);
+            try {
+                await simularA(c.id);
+            } catch (error) {
+                toast.error(error?.response?.status === 403
+                    ? `No podés simular a ${c.username}`
+                    : `No se pudo simular a ${c.username}`, { id: aviso });
+            }
+        },
+    }));
 };
 
 const SECCIONES = [
@@ -114,7 +150,7 @@ const ProntoSection = ({ seccion }) => (
 const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [saliendo, setSaliendo] = useState(false);
 
     const seccion = seccionFija || params.get('s') || 'analizar';
@@ -418,6 +454,33 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             : contexto.periodos.find(p => p.key === period)?.label.toLowerCase(),
     ].filter(Boolean).join(' · ');
 
+    const volverAMiSesion = async () => {
+        setSaliendo(true);
+        try {
+            await revertImpersonation();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
+            setSaliendo(false);
+        }
+    };
+
+    const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
+    const gruposDeSesion = [
+        SIMULAN_CLOSERS.includes(rolReal) ? [{
+            id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
+            panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },
+        }] : [],
+        [
+            ...(user?.is_impersonating
+                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
+                : []),
+            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
+                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
+        ],
+    ];
+    const rotuloDeRol = [ROTULO_DE_ROL[contexto.yo.rol] || contexto.yo.rol, user?.is_impersonating && 'simulación']
+        .filter(Boolean).join(' · ');
+
     const puedeCorregirFila = (fila) => {
         if (!fila || fila.tipo !== 'agenda') return false;
         if (contexto.puede_reportar) return true;
@@ -447,16 +510,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         )}
                         {user?.is_impersonating && (
                             <button type="button" className="btn btn--linea btn--sm" disabled={saliendo}
-                                title="Volver a tu sesión original"
-                                onClick={async () => {
-                                    setSaliendo(true);
-                                    try {
-                                        await revertImpersonation();
-                                    } catch (error) {
-                                        toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
-                                        setSaliendo(false);
-                                    }
-                                }}>
+                                title="Volver a tu sesión original" onClick={volverAMiSesion}>
                                 <Ghost size={15} />
                                 {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
                             </button>
@@ -559,6 +613,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     <DockSecciones secciones={secciones} activa={seccion}
                         onElegir={(id) => set({ s: id })}
                         ariaLabel="Secciones del dashboard comercial"
+                        despues={<MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />}
                         antes={contexto.puede_elegir_equipo && (
                             <div className="dock-rol caja">
                                 <Humo colores={HUMO_DOCK} />
