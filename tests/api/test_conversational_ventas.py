@@ -22,7 +22,8 @@ def lead_con_agenda(db, ig, *tipos):
     db.session.commit()
     db.session.add(LeadAnswer(lead_id=lead.id, id_option_send='msg-1', qualification='true',
                               created_at=DIA))
-    db.session.add(FinancialAgenda(nombre=ig.title(), instagram=ig, date=DIA, created_at=DIA))
+    # `nombre` es la fuente de la agenda; la persona es `lead`.
+    db.session.add(FinancialAgenda(nombre='Elias', lead=ig.title(), instagram=ig, date=DIA, created_at=DIA))
     for tipo in tipos:
         db.session.add(FinancialSale(instagram=ig, nombre_cliente=ig.title(), tipo_pago=tipo,
                                      monto=500.0, date=DIA, estado='Completada'))

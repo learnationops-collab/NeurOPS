@@ -287,7 +287,11 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
 
     for ag in agendas_all:
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram')
-        lead = resolve_lead_by_ig_or_name(ig_val, ag.nombre)
+        # El nombre de la persona es `lead`. `nombre` es la FUENTE de la agenda (el setter,
+        # 'workshop', 'vsl'): con él, una agenda cuyo instagram no cruzaba se atribuía al lead de
+        # ManyChat que se llama como el setter — en producción la conversación de prueba del
+        # propio Elias o de Paula —, 44 agendas en septiembre de 2026.
+        lead = resolve_lead_by_ig_or_name(ig_val, ag.lead)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:
