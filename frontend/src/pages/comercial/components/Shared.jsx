@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import Tip from './Tip';
 import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
@@ -153,6 +153,7 @@ const ariaLabel_ = (texto) => `Opciones de ${String(texto || '').toLowerCase()}`
 export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, ancho, pie, rotulo }) => {
     const [abierto, setAbierto] = useState(false);
     const ref = useRef(null);
+    const menuRef = useRef(null);
 
     useEffect(() => {
         if (!abierto) return undefined;
@@ -160,6 +161,23 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
         document.addEventListener('mousedown', fuera);
         return () => document.removeEventListener('mousedown', fuera);
     }, [abierto]);
+
+    /**
+     * El menú cuelga del borde derecho de su píldora. En el teléfono la barra se parte en renglones
+     * y una píldora puede quedar contra el borde izquierdo: el menú, más ancho que ella, se salía de
+     * la pantalla por la izquierda (el del VS, 250px, desde una píldora de 186). Se corre lo justo
+     * para quedar entero, con el mismo margen de 16px que la página.
+     */
+    const conPie = Boolean(pie);
+    useLayoutEffect(() => {
+        const menu = menuRef.current;
+        if (!abierto || !menu) return;
+        menu.style.transform = '';
+        const caja = menu.getBoundingClientRect();
+        const borde = document.documentElement.clientWidth - 16;
+        const corrimiento = caja.left < 16 ? 16 - caja.left : caja.right > borde ? borde - caja.right : 0;
+        if (corrimiento) menu.style.transform = `translateX(${Math.round(corrimiento)}px)`;
+    }, [abierto, conPie, ancho]);
 
     return (
         <div style={{ position: 'relative' }} ref={ref}>
@@ -171,7 +189,8 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
                 <ChevronDown size={14} />
             </button>
             {abierto && (
-                <div className={`menu menu--der${pie ? ' menu--pie' : ''}`} role="menu" aria-label={ariaLabel_(rotulo || texto)}
+                <div ref={menuRef} className={`menu menu--der${pie ? ' menu--pie' : ''}`} role="menu"
+                    aria-label={ariaLabel_(rotulo || texto)}
                     style={ancho ? { minWidth: ancho } : undefined}>
                     {opciones.map(o => (
                         <button key={o.key} type="button" className="menu-item" role="menuitemradio"
