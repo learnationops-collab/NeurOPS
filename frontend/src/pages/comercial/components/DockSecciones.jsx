@@ -20,8 +20,16 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  *
  * Una sección puede traer `marca: { texto, titulo }`: una insignia chica al lado del nombre (el
  * "✓" del reporte ya enviado). `titulo` es lo que se lee en voz alta, porque el `aria-label` del
- * botón tapa su contenido.
+ * botón tapa su contenido. Si necesita más de una, `marcas: [...]`. Cada una puede ser de un
+ * `tipo`: sin tipo es el "✓"; `cuenta` es una pastilla con lo hecho sobre el total ("2/5", las
+ * pestañas del closer), `apagada` cuando ya no queda nada por hacer ahí; `aviso` es un punto ámbar
+ * sin texto (el día de ayer que quedó sin reportar).
  */
+const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
+
+const claseDeMarca = (m) => ['dock-marca', m.tipo && `dock-marca--${m.tipo}`, m.apagada && 'dock-marca--apagada']
+    .filter(Boolean).join(' ');
+
 const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null }) => {
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
@@ -59,18 +67,23 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null })
                 {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
                     propio fondo: el movimiento dice de dónde a dónde se fue. */}
                 <span className="dock-ind" style={indicador} aria-hidden="true" />
-                {secciones.map((s, i) => (
-                    <button key={s.id} type="button" className="dock-item"
-                        aria-current={activa === s.id ? 'page' : undefined}
-                        aria-label={s.marca ? `${s.label}, ${s.marca.titulo}` : s.label}
-                        onClick={() => onElegir(s.id)}>
-                        <span className="dock-num">{i + 1}</span>
-                        <s.Icono size={20} />
-                        <span className="dock-label">{s.label}</span>
-                        {s.pronto && <span className="dock-pronto">Pronto</span>}
-                        {s.marca && <span className="dock-marca" aria-hidden="true">{s.marca.texto}</span>}
-                    </button>
-                ))}
+                {secciones.map((s, i) => {
+                    const marcas = marcasDe(s);
+                    return (
+                        <button key={s.id} type="button" className="dock-item"
+                            aria-current={activa === s.id ? 'page' : undefined}
+                            aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
+                            onClick={() => onElegir(s.id)}>
+                            <span className="dock-num">{i + 1}</span>
+                            <s.Icono size={20} />
+                            <span className="dock-label">{s.label}</span>
+                            {s.pronto && <span className="dock-pronto">Pronto</span>}
+                            {marcas.map(m => (
+                                <span key={m.titulo} className={claseDeMarca(m)} aria-hidden="true">{m.texto}</span>
+                            ))}
+                        </button>
+                    );
+                })}
             </div>
         </nav>
     );

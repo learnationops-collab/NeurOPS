@@ -464,6 +464,15 @@
 .dc-shell .dock-marca{margin-top:9px;display:inline-grid;place-items:center;width:16px;height:16px;
   border-radius:var(--radius-pill);background:var(--success);color:var(--on-state);
   font-size:10px;font-weight:900;line-height:1}
+/* Lo hecho sobre el total de una sección de trabajo ("2/5", ver `DockSecciones`): una pastilla
+   neutra que se apaga cuando ahí ya no queda nada por hacer. */
+.dc-shell .dock-marca--cuenta{width:auto;min-width:16px;padding:0 6px;
+  background:var(--mat-3);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .dock-item[aria-current="page"] .dock-marca--cuenta{color:var(--text-on-surface)}
+.dc-shell .dock-marca--apagada{opacity:.45}
+/* Un punto ámbar y nada más: hay algo de antes sin cerrar. */
+.dc-shell .dock-marca--aviso{width:8px;height:8px;background:var(--warning);
+  box-shadow:0 0 0 3px var(--warning-border)}
 .dc-shell .dock-ind{position:absolute;top:0;height:100%;border-radius:17px;
   background:var(--mat-3);border-top:1px solid var(--sheen);
   box-shadow:0 2px 12px rgba(0,0,0,.28);
