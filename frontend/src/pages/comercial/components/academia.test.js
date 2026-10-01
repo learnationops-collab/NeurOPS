@@ -70,7 +70,15 @@ describe('resumenAcademia', () => {
     it('el total de la tira dice activos sobre los que tienen cuenta', () => {
         const filas = [{ client_id: 1, academia: bloque('activo') }, { client_id: 2, academia: bloque('inactivo') }];
 
-        expect(itemTotalAcademia(filas)).toMatchObject({ valor: '1', hint: 'de 2 con cuenta' });
+        expect(itemTotalAcademia(filas)).toMatchObject({ valor: '1', label: 'activo', hint: 'de 2 en la Academia' });
+        expect(itemTotalAcademia(filas).ayuda).toMatch(/últimos 7 días/);
+    });
+
+    it('sin nadie con cuenta no hay total: «0 de 0» no dice nada', () => {
+        const filas = [{ client_id: 1, academia: bloque('sin_acceso') }, { client_id: 2, academia: null }];
+
+        expect(itemTotalAcademia(filas)).toBeNull();
+        expect(itemTotalAcademia([])).toBeNull();
     });
 });
 

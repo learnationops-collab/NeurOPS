@@ -69,10 +69,18 @@ const aplicarFiltros = (filas, def, query, facetas, modo) => {
     });
 };
 
+const mayuscula = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "1 cliente" / "3 clientes": el rótulo de una cuenta concuerda con su número. */
+const segun = (n, uno, varios) => (n === 1 ? uno : varios);
+
 /**
- * Totales de lo filtrado: una tira de verificación, no un panel de tarjetas. Son los mismos
- * números de antes (con su bajada, que es lo que los hace verificables: "18 de 22 asistieron"),
- * con mucho menos peso visual.
+ * Totales de lo filtrado: una tira de verificación, no un panel de tarjetas.
+ *
+ * Cada número lleva un rótulo corto y, como mucho, una bajada que sirve para comprobarlo ("18 de
+ * 22", "9 con saldo"). Lo que antes iba escrito al lado para que no se lo malinterprete ("deuda ·
+ * de esta cartera", "cobrado · desde siempre") pasó al "i" del rótulo: el usuario pidió menos texto
+ * (30/09/2026) y esas aclaraciones se leen una vez, no cada vez que se mira la tira.
  */
 const TotalesTira = ({ items, alcance }) => (
     <div className="tot-tira">
@@ -80,6 +88,7 @@ const TotalesTira = ({ items, alcance }) => (
             <span key={t.key} className="tot-item" data-total={t.key}>
                 <b style={{ color: t.color }}>{t.valor}</b>
                 {t.label}
+                {t.ayuda && <Tip titulo={mayuscula(t.label)} texto={t.ayuda} />}
                 {t.hint && <span className="mut40"> · {t.hint}</span>}
             </span>
         ))}
@@ -313,14 +322,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             return [
                 { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
                     color: 'var(--text-on-surface)', hint: fmt.plural(lista.length, 'cobro', 'cobros') },
-                { key: 'ventas', label: 'ventas', valor: fmt.num(ventas), color: 'var(--brand-secondary)',
-                    hint: 'completo o split' },
-                { key: 'ticket', label: 'ticket', valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
-                    color: 'var(--text-on-surface)', hint: 'cash / ventas' },
+                { key: 'ventas', label: segun(ventas, 'venta', 'ventas'), valor: fmt.num(ventas),
+                    color: 'var(--brand-secondary)',
+                    ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
+                { key: 'ticket', label: 'ticket', color: 'var(--text-on-surface)',
+                    valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
+                    ayuda: 'Ticket promedio: el cash dividido por las ventas.' },
                 { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
-                    color: 'var(--success)', hint: 'sin fees de pasarela' },
+                    color: 'var(--success)', ayuda: 'El cash sin los fees de la pasarela de pago.' },
                 itemTotalAcademia(lista),
-            ];
+            ].filter(Boolean);
         }
 
         if (tabla === 'clientes') {
@@ -333,40 +344,46 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             // muestra («Dados de baja», o su estado pedido en el filtro), lo que pagó suma en
             // "cobrado", que es plata que entró (mismo criterio que `totales_clientes`).
             const bajas = lista.filter(f => f.baja).length;
+            const alDia = lista.length - conDeuda - bajas;
             return [
-                { key: 'clientes', label: 'clientes', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
-                    hint: [`${lista.length - conDeuda - bajas} al día`,
-                        bajas ? fmt.plural(bajas, 'de baja', 'de baja') : null]
+                { key: 'clientes', label: segun(lista.length, 'cliente', 'clientes'),
+                    valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
+                    // En «Dados de baja» todos son bajas: "0 al día" sería ruido.
+                    hint: [alDia || !bajas ? `${alDia} al día` : null, bajas ? `${bajas} de baja` : null]
                         .filter(Boolean).join(' · ') },
-                // "de esta cartera" y no "a hoy" a secas: el panel Cash de Analizar muestra
-                // otro "por cobrar", atribuido por quién tiene HOY la agenda del cliente y sobre
-                // todos los saldos del sistema. Los dos son correctos y dan distinto; el rótulo
-                // es lo que evita que parezca que uno de los dos está mal.
-                { key: 'deuda', label: 'deuda · de esta cartera', valor: fmt.money(Math.round(deuda * 100) / 100),
-                    color: conDeuda ? 'var(--error)' : 'var(--success)',
-                    hint: `${conDeuda} con saldo` },
+                // La aclaración va en el "i" y no en el rótulo (antes decía "deuda · de esta
+                // cartera"): el panel Cash de Analizar muestra otro "por cobrar", atribuido por quién
+                // tiene HOY la agenda del cliente y sobre todos los saldos del sistema. Los dos son
+                // correctos y dan distinto; el "i" es lo que evita que parezca que uno está mal.
+                { key: 'deuda', label: 'deuda', valor: fmt.money(Math.round(deuda * 100) / 100),
+                    color: conDeuda ? 'var(--error)' : 'var(--success)', hint: `${conDeuda} con saldo`,
+                    ayuda: 'Lo que deben hoy los clientes de esta lista. No coincide con el «por cobrar» '
+                        + 'de Cash, que atribuye cada saldo por otra regla.' },
                 { key: 'vencido', label: 'vencido', valor: fmt.money(Math.round(vencido * 100) / 100),
                     color: 'var(--warning)',
-                    hint: `${vencidas.length} ${vencidas.length === 1 ? 'cuota' : 'cuotas'}` },
+                    hint: `${vencidas.length} ${segun(vencidas.length, 'cuota', 'cuotas')}` },
                 { key: 'cobrado', label: 'cobrado', valor: fmt.money(Math.round(pagado * 100) / 100),
-                    color: 'var(--success)', hint: 'desde siempre' },
+                    color: 'var(--success)',
+                    ayuda: 'Todo lo que pagaron los clientes de esta lista desde su primer cobro: no '
+                        + 'depende del período.' },
                 itemTotalAcademia(lista),
-            ];
+            ].filter(Boolean);
         }
 
         if (tabla === 'leads') {
             const respondieron = lista.filter(f => f.respondio).length;
             const cualificados = lista.filter(f => f.cualificado).length;
             const agendaron = lista.filter(f => f.agendo).length;
+            const mensajes = lista.reduce((a, f) => a + f.mensajes, 0);
             return [
-                { key: 'leads', label: 'leads', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
-                    hint: `${fmt.num(lista.reduce((a, f) => a + f.mensajes, 0))} mensajes` },
+                { key: 'leads', label: segun(lista.length, 'lead', 'leads'), valor: fmt.num(lista.length),
+                    color: 'var(--text-on-surface)', hint: fmt.plural(mensajes, 'mensaje', 'mensajes') },
                 { key: 'respuesta', label: 'respuesta', valor: fmt.pct(pct(respondieron, lista.length)),
                     color: 'var(--info)', hint: `${respondieron} de ${lista.length}` },
                 { key: 'cualificacion', label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
                     color: 'var(--success)', hint: `${cualificados} de ${respondieron}` },
                 { key: 'conversion', label: 'conversión', valor: fmt.pct(pct(agendaron, lista.length)),
-                    color: 'var(--brand-secondary)', hint: `${agendaron} agendaron` },
+                    color: 'var(--brand-secondary)', hint: `${agendaron} ${segun(agendaron, 'agendó', 'agendaron')}` },
             ];
         }
 
@@ -379,18 +396,19 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         const seguimiento = lista.filter(
             f => ['seguimiento', 'presento_no_cerro'].includes(f.post_call.key)).length;
         return [
-            { key: 'agendas', label: 'agendas', valor: fmt.num(lista.length), color: 'var(--text-on-surface)',
-                hint: `${realizadas} ya realizadas` },
-            { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)), color: 'var(--success)',
-                hint: `${asistieron} de ${realizadas} asistieron` },
+            { key: 'agendas', label: segun(lista.length, 'agenda', 'agendas'), valor: fmt.num(lista.length),
+                color: 'var(--text-on-surface)',
+                hint: `${realizadas} ${segun(realizadas, 'realizada', 'realizadas')}` },
+            { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)),
+                color: 'var(--success)', hint: `${asistieron} de ${realizadas}` },
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
-                color: 'var(--brand-secondary)', hint: `${ventas} de ${asistieron} cerraron` },
+                color: 'var(--brand-secondary)', hint: `${ventas} de ${asistieron}` },
             { key: 'seguimiento', label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
-                hint: 'asistieron sin cerrar' },
+                ayuda: 'Asistieron y no cerraron: siguen en seguimiento.' },
             { key: 'no_show', label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
-                hint: `${fmt.pct(pct(noShow, realizadas))} de las realizadas` },
-            { key: 'pendientes', label: 'pendientes', valor: fmt.num(pendientes.length),
-                color: conRetraso ? 'var(--warning)' : 'var(--idle)',
+                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${realizadas}` : null },
+            { key: 'pendientes', label: segun(pendientes.length, 'pendiente', 'pendientes'),
+                valor: fmt.num(pendientes.length), color: conRetraso ? 'var(--warning)' : 'var(--idle)',
                 hint: conRetraso ? `${conRetraso} con retraso` : 'al día' },
         ];
     }, [mostradas, tabla]);

@@ -43,7 +43,9 @@ const props = (extra = {}) => ({
 const nombres = () => screen.getAllByRole('button', { name: /^Abrir / })
     .map(b => b.getAttribute('aria-label').replace('Abrir ', ''));
 const pasarAAcademia = () => fireEvent.click(screen.getByRole('button', { name: /Academia$/, pressed: false }));
-const tira = (container) => container.querySelector('.tot-tira').textContent;
+// Un total de la tira por su clave: el número (su `<b>`) y la celda entera, con su bajada.
+const total = (container, clave) => container.querySelector(`.tot-tira [data-total="${clave}"]`);
+const cifra = (container, clave) => total(container, clave)?.querySelector('b').textContent;
 
 describe('Revisar · la Academia en Clientes', () => {
     beforeEach(() => {
@@ -95,14 +97,16 @@ describe('Revisar · la Academia en Clientes', () => {
 
     it('la faceta "Actividad en la Academia" filtra, y la tira de totales cierra con lo filtrado', () => {
         const { container } = render(<Revisar {...props()} />);
-        expect(tira(container)).toMatch(/2activos en la Academia · de 3 con cuenta/);
+        expect(cifra(container, 'academia')).toBe('2');
+        expect(total(container, 'academia').textContent).toMatch(/de 3 en la Academia/);
 
         fireEvent.click(screen.getByRole('button', { name: /Filtro completo/ }));
         fireEvent.click(screen.getByRole('checkbox', { name: /^Activo/ }));
 
         expect(nombres()).toEqual(['Alumno 2', 'Alumno 4']);
-        expect(tira(container)).toMatch(/2clientes/);
-        expect(tira(container)).toMatch(/2activos en la Academia · de 2 con cuenta/);
+        expect(cifra(container, 'clientes')).toBe('2');
+        expect(cifra(container, 'academia')).toBe('2');
+        expect(total(container, 'academia').textContent).toMatch(/de 2 en la Academia/);
     });
 
     it('el atajo "Activos en la Academia" filtra y pasa a sus columnas', () => {
@@ -186,7 +190,8 @@ describe('Revisar · la Academia en Ventas', () => {
         const filas = [venta(1, 7, activo), venta(2, 7, activo), venta(3, null, null)];
         const { container } = render(<Revisar {...props({ tabla: 'ventas', datos: { filas } })} />);
 
-        expect(tira(container)).toMatch(/1activos en la Academia · de 1 con cuenta/);
+        expect(cifra(container, 'academia')).toBe('1');
+        expect(total(container, 'academia').textContent).toMatch(/de 1 en la Academia/);
 
         fireEvent.click(screen.getByRole('button', { name: /Filtro completo/ }));
         const opciones = screen.getAllByRole('checkbox').map(c => c.textContent);

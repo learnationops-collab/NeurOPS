@@ -172,9 +172,17 @@ export const resumenAcademia = (filas) => {
  * El número de la Academia en la tira de totales de Clientes y Ventas: cuántos alumnos de lo
  * filtrado están activos, sobre cuántos tienen cuenta. Sale de las mismas filas que el resto de la
  * tira, así que cierra con lo que se ve.
+ *
+ * `null` (no se muestra) si nadie de esas filas tiene cuenta: «0 activos de 0» no dice nada y
+ * ocupaba un lugar de la tira.
  */
 export const itemTotalAcademia = (filas) => {
     const r = resumenAcademia(filas);
-    return { key: 'academia', label: 'activos en la Academia', valor: num(r.activos), color: 'var(--success)',
-        hint: `de ${num(r.conCuenta)} con cuenta` };
+    if (!r.conCuenta) return null;
+    return {
+        key: 'academia', label: r.activos === 1 ? 'activo' : 'activos', valor: num(r.activos),
+        color: 'var(--success)', hint: `de ${num(r.conCuenta)} en la Academia`,
+        ayuda: 'Alumnos de esta lista con actividad en la Academia en los últimos 7 días, sobre los '
+            + 'que tienen cuenta.',
+    };
 };

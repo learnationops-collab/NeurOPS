@@ -87,6 +87,41 @@ describe('Totales · Clientes', () => {
         expect(valor('clientes')).toBe('0');
         expect(valor('deuda')).toBe('$0');
     });
+
+    it('cada número lleva un rótulo corto: las aclaraciones van en su "i"', () => {
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+
+        expect(tira().textContent).not.toMatch(/de esta cartera|desde siempre/);
+        expect(celda('deuda').textContent).toMatch(/deuda.*3 con saldo/);
+
+        const deuda = within(celda('deuda')).getByRole('note');
+        expect(deuda).toHaveAccessibleName(/^Deuda: Lo que deben hoy .*«por cobrar» de Cash/);
+        fireEvent.mouseEnter(deuda);
+        expect(screen.getByText(/No coincide con el «por cobrar» de Cash/)).toBeInTheDocument();
+        fireEvent.mouseLeave(deuda);
+
+        expect(within(celda('cobrado')).getByRole('note'))
+            .toHaveAccessibleName(/^Cobrado: .*no depende del período/);
+        // Lo que no necesita aclaración no lleva "i".
+        expect(within(celda('vencido')).queryByRole('note')).toBeNull();
+    });
+
+    it('el rótulo de una cuenta concuerda con su número', () => {
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+
+        elegirRapido('Vigentes', 'Al día');
+
+        expect(valor('clientes')).toBe('1');
+        expect(celda('clientes').textContent).toMatch(/cliente(?!s)/);
+        expect(celda('vencido').textContent).toMatch(/0 cuotas/);
+    });
+
+    it('sin nadie con cuenta en la Academia, su número no aparece', () => {
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+
+        expect(celda('academia')).toBeNull();
+        expect(tira().querySelectorAll('[data-total]')).toHaveLength(4);
+    });
 });
 
 // --- Agendas ---------------------------------------------------------------------------------
