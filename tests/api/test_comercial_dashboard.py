@@ -222,6 +222,72 @@ def test_el_resumen_y_la_tabla_dan_el_mismo_show_up(client, db, equipo, auth_hea
     assert resumen['actual']['show_up'] == tabla['totales']['show_up'] == 50.0
 
 
+# --- Rango personalizado ----------------------------------------------------------------------
+# "Personalizado" mostraba el mes en curso: el frontend no mandaba fechas y el backend cae al mes
+# cuando faltan. Ahora las manda; esto fija lo que el backend hace con ellas.
+
+def _resumen_entre(client, headers, desde, hasta, vs_desde=None, vs_hasta=None):
+    parametros = {'period': 'custom', 'start_date': desde, 'end_date': hasta,
+                  'compare': 'custom' if vs_desde or vs_hasta else 'none'}
+    if vs_desde or vs_hasta:
+        parametros.update({'compare_start': vs_desde, 'compare_end': vs_hasta})
+    return client.get(RESUMEN, headers=headers, query_string=parametros).get_json()
+
+
+def test_el_contexto_ofrece_un_periodo_y_una_comparacion_personalizados(client, equipo, auth_headers):
+    datos = client.get(CONTEXTO, headers=auth_headers(equipo['director'])).get_json()
+
+    assert {'key': 'custom', 'label': 'Personalizado'} in datos['periodos']
+    assert {'key': 'custom', 'label': 'Personalizado'} in datos['comparaciones']
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('quien', ['director', 'closer_a'])
+@pytest.mark.parametrize('periodo, comparado', [
+    # Una semana contra un mes entero: la comparación no tiene por qué medir lo mismo.
+    (('2026-09-08', '2026-09-14'), ('2026-08-01', '2026-08-31')),
+    # Un solo día contra otro.
+    (('2026-09-10', '2026-09-10'), ('2026-09-03', '2026-09-03')),
+])
+def test_el_resumen_devuelve_exactamente_las_fechas_elegidas(client, db, equipo, auth_headers, quien,
+                                                            periodo, comparado):
+    datos = _resumen_entre(client, auth_headers(equipo[quien]), *periodo, *comparado)
+
+    assert datos['dates'] == {'start': periodo[0], 'end': periodo[1],
+                              'compare_start': comparado[0], 'compare_end': comparado[1]}
+
+
+@freeze_time(HOY)
+def test_los_numeros_salen_del_rango_elegido_y_no_del_mes(client, db, equipo, auth_headers):
+    agenda(db, equipo['closer_a'], cliente(db, 'El 3'), cuando=datetime(2026, 9, 3, 15, 0))
+    agenda(db, equipo['closer_a'], cliente(db, 'El 10'), cuando=datetime(2026, 9, 10, 15, 0))
+    agenda(db, equipo['closer_a'], cliente(db, 'El 11'), cuando=datetime(2026, 9, 11, 15, 0))
+    headers = auth_headers(equipo['director'])
+
+    dia = _resumen_entre(client, headers, '2026-09-10', '2026-09-10', '2026-09-03', '2026-09-03')
+    semana = _resumen_entre(client, headers, '2026-09-08', '2026-09-14', '2026-09-01', '2026-09-07')
+
+    assert (dia['actual']['agendas'], dia['previo']['agendas']) == (1, 1)
+    assert (semana['actual']['agendas'], semana['previo']['agendas']) == (2, 1)
+
+
+@freeze_time(HOY)
+def test_un_rango_invertido_se_da_vuelta_en_vez_de_quedar_vacio(client, db, equipo, auth_headers):
+    datos = _resumen_entre(client, auth_headers(equipo['director']), '2026-09-14', '2026-09-08')
+
+    assert (datos['dates']['start'], datos['dates']['end']) == ('2026-09-08', '2026-09-14')
+
+
+@freeze_time(HOY)
+def test_la_comparacion_personalizada_sin_sus_dos_fechas_no_compara(client, db, equipo, auth_headers):
+    # Sin las dos puntas no hay contra qué comparar: mostrar el período anterior bajo la etiqueta
+    # "Personalizado" sería decir algo que no es.
+    datos = _resumen_entre(client, auth_headers(equipo['director']), '2026-09-08', '2026-09-14',
+                           '2026-08-01', None)
+
+    assert (datos['dates']['compare_start'], datos['dates']['compare_end'], datos['previo']) == (None, None, None)
+
+
 # --- Corregir el estado -----------------------------------------------------------------------
 
 @freeze_time(HOY)

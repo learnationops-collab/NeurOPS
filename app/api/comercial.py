@@ -38,9 +38,13 @@ PERIODOS = [
     {'key': 'mes', 'label': 'Este mes'}, {'key': 'mes_pasado', 'label': 'Mes pasado'},
     {'key': '90', 'label': '90 días'}, {'key': 'custom', 'label': 'Personalizado'},
 ]
+# `custom` compara contra dos fechas libres (`compare_start`/`compare_end`), independientes del
+# período: un mes contra una semana es una lectura válida y no se recorta (ver `_comparison_range`).
+# Sin las dos fechas no hay comparación, nunca el período anterior disfrazado de personalizado.
 COMPARACIONES = [
     {'key': 'prev', 'label': 'Período anterior'}, {'key': 'month', 'label': 'Mismo período mes pasado'},
-    {'key': 'year', 'label': 'Mismo período año pasado'}, {'key': 'none', 'label': 'Sin comparar'},
+    {'key': 'year', 'label': 'Mismo período año pasado'}, {'key': 'custom', 'label': 'Personalizado'},
+    {'key': 'none', 'label': 'Sin comparar'},
 ]
 TABLAS = ('agendas', 'ventas', 'leads', 'generadas', 'clientes')
 
