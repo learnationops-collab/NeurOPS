@@ -213,6 +213,7 @@
   /* El parpadeo de "lo que buscabas esta aca" es una animacion, no una transicion: la regla de
      arriba no lo apaga. El foco y el scroll siguen ubicando igual. */
   .dc-shell .destacado{animation:none}
+  .dc-shell .menu--sesion{animation:none}
   /* Lo mismo con la entrada del tooltip: con 33 "i" en Analizar, cada uno que se roza es un
      parpadeo. La burbuja aparece igual, sin desplazarse. */
   .dc-shell .tip-burbuja,
@@ -518,6 +519,42 @@
   display:flex;align-items:center;gap:var(--s1)}
 .dc-shell .dock--desborda .dock-despues{padding-left:14px;margin-left:-10px;
   background:linear-gradient(90deg,transparent,var(--bg-surface) 14px)}
+/* La sesión al final del dock (ver `MenuSesion`): el avatar, con la cuenta de lo pendiente
+   encima (los videos del Playbook) para que guardarlo en un menú no lo esconda. */
+.dc-shell .dock-sesion{position:relative;z-index:1;flex-shrink:0;display:grid;place-items:center;
+  width:56px;height:56px;border-radius:17px;
+  transition:background-color .18s ease,transform .26s var(--spring)}
+.dc-shell .dock-sesion:hover,
+.dc-shell .dock-sesion[aria-expanded="true"]{background:var(--mat-3)}
+.dc-shell .dock-sesion:active{transform:scale(.95)}
+.dc-shell .dock-sesion .avatar{width:36px;height:36px}
+.dc-shell .dock-sesion-aviso{position:absolute;top:4px;right:3px;min-width:17px;height:17px;padding:0 4px;
+  display:grid;place-items:center;border-radius:var(--radius-pill);
+  background:var(--brand-secondary);color:var(--on-brand);font-size:9.5px;font-weight:900;line-height:1;
+  box-shadow:0 0 0 2px var(--bg-flotante)}
+/* Su menú vive en un portal fijo, como la burbuja de `Tip` (el dock lo recortaría), y abre hacia
+   arriba desde el avatar. La capa solo lleva los tokens: se le apaga lo que `.dc-shell` pone por
+   ser página. */
+.dc-shell.menu-capa{position:fixed;top:0;left:0;width:0;height:0;z-index:1200;
+  background:none;min-height:0;padding:0;overflow:visible}
+.dc-shell .menu--sesion{position:fixed;top:auto;width:268px;overflow-y:auto;
+  animation:dcTipInArriba .18s ease-out both}
+.dc-shell .menu-quien{display:flex;align-items:center;gap:var(--s3);padding:6px 10px 10px}
+.dc-shell .menu-quien-txt{display:grid;min-width:0;line-height:1.25}
+.dc-shell .menu-quien-txt b{font-size:14px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .menu-quien-txt small{font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .menu-sep{border:0;border-top:1px solid var(--border-subtle);margin:6px 6px}
+.dc-shell .menu-item--ico{align-items:center}
+.dc-shell .menu-item--ico svg{flex-shrink:0;color:var(--text-muted-40);transition:color .15s ease}
+.dc-shell .menu-item--ico:hover svg,
+.dc-shell .menu-item--ico:focus-visible svg{color:inherit}
+.dc-shell .menu-item:focus-visible{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .menu-cuenta{margin-left:auto;min-width:18px;height:18px;padding:0 5px;
+  display:grid;place-items:center;border-radius:var(--radius-pill);
+  background:var(--brand-secondary);color:var(--on-brand);font-size:10px;font-weight:900;line-height:1}
+.dc-shell .menu-item .dock-pronto{margin:0 0 0 auto}
+.dc-shell .menu-item--peligro:hover,
+.dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
 
 /* ============================================================
    9 · DATA VIZ
