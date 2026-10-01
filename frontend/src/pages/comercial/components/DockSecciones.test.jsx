@@ -55,6 +55,15 @@ describe('DockSecciones', () => {
         expect(container.querySelector('nav').className).toBe('dock dock--denso caja');
     });
 
+    it('cuentan también lo de antes y lo de después: la dirección con su switch y su sesión va densa', () => {
+        const seccion = (id) => ({ id, label: id, Icono: Layers });
+        const { container } = render(
+            <DockSecciones secciones={['a', 'b', 'c', 'd', 'e'].map(seccion)} activa="a" onElegir={() => {}}
+                ariaLabel="Secciones" antes={<span>switch</span>} despues={<span>sesión</span>} />,
+        );
+        expect(container.querySelector('nav').className).toBe('dock dock--denso caja');
+    });
+
     it('`despues` va al final, separado, en su propio pedazo pegado a la derecha', () => {
         const { container } = render(
             <DockSecciones secciones={[{ id: 'a', label: 'Mis datos', Icono: BarChart3 }]} activa="a"

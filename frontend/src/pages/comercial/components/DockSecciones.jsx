@@ -42,17 +42,34 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
     // secciones que pasan por debajo no se le vean a través: con el dock entero, ese fondo era un
     // parche más oscuro sobre el humo.
     const [desborda, setDesborda] = useState(false);
+    // Si con el nombre de todas las secciones el dock no entra: entonces se esconde el de las
+    // inactivas (`dock--compacto`). Se mide en vez de cortar en un ancho fijo porque lo que mide el
+    // dock depende de quién lo usa —el switch de la dirección, la sesión al final, las cuentas del
+    // closer— y un corte pensado para uno dejaba al otro scrolleando (30/09/2026).
+    const [compacto, setCompacto] = useState(false);
     const ids = secciones.map(s => s.id).join('|');
     useEffect(() => {
         const medir = () => {
             const nav = navRef.current;
             const item = nav?.querySelector('[aria-current="page"]');
             if (!nav || !item) return;
+            const dock = nav.parentElement;
+
+            // ¿Entra con todos los nombres? Se prueba sacando `dock--compacto` un instante: es
+            // sincrónico, el navegador no llega a pintar en el medio. Así no oscila: lo que se
+            // compara es siempre el ancho con nombres, no el que dejó la medición anterior.
+            if (dock) {
+                const estaba = dock.classList.contains('dock--compacto');
+                if (estaba) dock.classList.remove('dock--compacto');
+                const noEntra = dock.scrollWidth > dock.clientWidth + 1;
+                if (estaba) dock.classList.add('dock--compacto');
+                setCompacto(noEntra);
+            }
+
             setIndicador({ '--w': `${item.offsetWidth}px`, '--x': `${item.offsetLeft}px` });
 
-            // En un teléfono el dock no entra y scrollea de costado: sin esto la sección activa
-            // podía quedar cortada contra el borde, justo la única con el nombre a la vista.
-            const dock = nav.parentElement;
+            // En un teléfono el dock no entra ni compacto y scrollea de costado: sin esto la sección
+            // activa podía quedar cortada contra el borde, justo la única con el nombre a la vista.
             const scrollea = !!dock && dock.scrollWidth > dock.clientWidth;
             setDesborda(scrollea);
             if (!scrollea) return;
@@ -66,13 +83,15 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
         const id = requestAnimationFrame(medir);
         window.addEventListener('resize', medir);
         return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
-    }, [activa, ids]);
+    }, [activa, ids, compacto]);
 
-    // Con seis secciones o más (el mazo del closer) el aire de las cuatro del dashboard no entra en
-    // una laptop: `dock--denso` las junta y esconde antes el nombre de las inactivas.
+    // Con seis cosas o más en el dock (el mazo del closer, o la dirección con su switch y su sesión)
+    // el aire de las cuatro secciones del dashboard no entra en una laptop: `dock--denso` las junta.
+    const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
+    const clases = ['dock', cosas >= 6 && 'dock--denso', compacto && 'dock--compacto',
+        desborda && 'dock--desborda', 'caja'];
     return (
-        <nav className={['dock', secciones.length >= 6 && 'dock--denso', desborda && 'dock--desborda', 'caja'].filter(Boolean).join(' ')}
-            aria-label={ariaLabel}>
+        <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
             {antes}
             {antes && <span className="dock-sep" />}

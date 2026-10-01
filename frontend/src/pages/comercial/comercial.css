@@ -501,17 +501,16 @@
   .dc-shell .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
   .dc-shell .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
 }
-/* Seis secciones o más (el mazo del closer, ver `DockSecciones`): con el aire de cuatro medía
-   ~1020px y en una laptop de 1366 ya scrolleaba. Más juntas, y con la sesión al final, miden
-   ~1010 y entran desde 1350px (el dock deja 336 libres para el botón de reportar errores); por
-   debajo, el nombre de las inactivas se esconde antes que en el dock de cuatro. */
+/* Seis cosas o más en el dock (ver `DockSecciones`): con el aire de cuatro, el del closer medía
+   ~1020px y en una laptop de 1366 ya scrolleaba. Más juntas. */
 .dc-shell .dock--denso .dock-item{padding:0 14px;gap:8px}
 .dc-shell .dock--denso .dock-num{left:14px}
-@media (max-width:1349px){
-  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-label{display:none}
-  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
-  .dc-shell .dock--denso .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
-}
+/* Y si ni así entra con todos los nombres (lo mide `DockSecciones`, porque depende de qué lleva
+   cada dock), se esconde el de las secciones inactivas: el mismo dock que bajo 1120px. */
+.dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-label,
+.dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-pronto{display:none}
+.dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
+.dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
 /* Lo que va al final del dock (`despues` de `DockSecciones`) queda pegado al borde derecho
    aunque el dock no entre y scrollee: las secciones pasan por debajo. Solo cuando scrollea lleva
    fondo (el del dock, con un degradé a la izquierda para que no se corten en seco); con el dock
