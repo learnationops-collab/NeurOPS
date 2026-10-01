@@ -694,6 +694,62 @@ header.top-v6 {
 .topin--buscador .brand-v6 h1 {
   white-space: nowrap;
 }
+/* "Volver a mi sesión" mientras se simula a este closer: en la tercera columna, la que equilibra a
+   la marca y está vacía el resto del tiempo. Ámbar, el color de aviso del mazo: no es una acción
+   del closer sino un estado en el que se está. En un teléfono baja a su propio renglón. */
+.topin--buscador .sim-v6 {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border-radius: 13px;
+  border: 1px solid rgba(217,164,65,.45);
+  background: rgba(217,164,65,.12);
+  color: #F3D08A;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .18s, border-color .18s;
+}
+.topin--buscador .sim-v6:hover {
+  background: rgba(217,164,65,.2);
+  border-color: rgba(217,164,65,.7);
+}
+.topin--buscador .sim-v6 svg {
+  flex: none;
+}
+.topin--buscador .sim-v6 > span {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+.topin--buscador .sim-v6 small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: rgba(243,208,138,.75) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topin--buscador .sim-v6 b {
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .topin--buscador .sim-v6 small { display: none; }
+}
+@media (max-width: 640px) {
+  .topin--buscador .sim-v6 {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: center;
+  }
+}
 @media (max-width: 640px) {
   .topin.topin--buscador { grid-template-columns: auto minmax(0, 1fr); }
   .topin--buscador .brand-v6 > div:last-child { display: none; }

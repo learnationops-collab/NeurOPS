@@ -1574,6 +1574,21 @@ const CloserWorkflowPage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Simulando (la dirección comercial o un admin que entró como este closer), la
+                        salida va a la vista, a la derecha del buscador, y no solo en el menú del
+                        dock: es lo primero que busca quien termina de mirar. Dice a quién se
+                        simula, porque la cabecera ya no muestra el nombre. */}
+                    {user?.is_impersonating && (
+                        <button type="button" className="sim-v6" onClick={volverAMiSesion}
+                            title={`Estás simulando a ${nombreDeSesion}`}>
+                            <Ghost size={16} aria-hidden="true" />
+                            <span>
+                                <small>Simulando a {nombreDeSesion.trim().split(/\s+/)[0]}</small>
+                                <b>Volver a mi sesión</b>
+                            </span>
+                        </button>
+                    )}
                 </div>
                 {/* Mientras dura, el buscador elige a quién se le vende y no qué lead abrir: se
                     dice acá, pegado al buscador, y no en un aviso que se va solo. */}
