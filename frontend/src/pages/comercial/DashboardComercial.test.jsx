@@ -1,18 +1,19 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DashboardComercial from './DashboardComercial';
 
 /**
  * El drill-down de "Mis datos" existe solo si hay una lista a la que llegar.
  *
- * El setter no ve Revisar (pedido del 29/09/2026): embebido en su espacio, el dashboard no recibe
- * `onIrASeccion` y cada flecha o número cliqueable llevaría a ninguna parte. El closer (que tiene
- * "Mi cartera") y la dirección (que tiene su dock) lo siguen teniendo.
+ * Embebido, la lista es del host: sin `onIrASeccion` cada flecha o número cliqueable llevaría a
+ * ninguna parte. El closer ("Mi cartera"), el setter (Reporte · Registros) y la dirección (su
+ * dock) lo tienen.
  *
- * Analizar se reemplaza por un doble que dice si recibió `irA`: sin él, el real ya muestra los
- * números como números (ver `MetricaClicable` y `abrir`).
+ * Analizar se reemplaza por un doble que dice si recibió `irA` y, si lo recibió, lo usa con un
+ * destino de verdad: sin él, el real ya muestra los números como números (ver `MetricaClicable` y
+ * `abrir`).
  */
 
 vi.mock('./comercialApi', () => ({
@@ -35,22 +36,32 @@ vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: { id: 7, role: 'setter', is_impersonating: false } }),
 }));
 vi.mock('./components/Analizar', () => ({
-    default: ({ irA }) => <div data-testid="analizar">{irA ? 'con drill-down' : 'sin drill-down'}</div>,
+    default: ({ irA }) => (
+        <div data-testid="analizar">
+            {irA ? 'con drill-down' : 'sin drill-down'}
+            {irA && (
+                <button type="button"
+                    onClick={() => irA('leads', { respondio: 'Sí', __de: 'Tasa de respuesta', __aviso: null })}>
+                    respuesta
+                </button>
+            )}
+        </div>
+    ),
 }));
 
-const montar = (props) => render(
-    <MemoryRouter initialEntries={['/x']}>
+const montar = (props, url = '/x') => render(
+    <MemoryRouter initialEntries={[url]}>
         <DashboardComercial {...props} />
     </MemoryRouter>,
 );
 
 describe('DashboardComercial · drill-down de Analizar', () => {
-    it('embebido sin a dónde ir (el espacio del setter), no lo ofrece', async () => {
+    it('embebido sin a dónde ir, no lo ofrece', async () => {
         montar({ embebido: true, seccionFija: 'analizar' });
         expect(await screen.findByTestId('analizar')).toHaveTextContent('sin drill-down');
     });
 
-    it('embebido con Revisar en el host (el mazo del closer), lo ofrece', async () => {
+    it('embebido con una lista en el host (mazo del closer, espacio del setter), lo ofrece', async () => {
         montar({ embebido: true, seccionFija: 'analizar', onIrASeccion: () => {} });
         expect(await screen.findByTestId('analizar')).toHaveTextContent('con drill-down');
     });
@@ -58,5 +69,26 @@ describe('DashboardComercial · drill-down de Analizar', () => {
     it('suelto, con su propio dock (la dirección), lo ofrece', async () => {
         montar({});
         expect(await screen.findByTestId('analizar')).toHaveTextContent('con drill-down');
+    });
+
+    it('embebido, le pasa al host la query string con la tabla y el filtro ya escritos', async () => {
+        // El host del setter navega por la URL en el mismo clic: si armara la suya desde la URL
+        // del render, pisaría `t`/`f`/`ft` y la lista abriría sin condiciones.
+        const onIrASeccion = vi.fn();
+        montar({ embebido: true, seccionFija: 'analizar', onIrASeccion }, '/x?step=datos&p=mes');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'respuesta' }));
+
+        expect(onIrASeccion).toHaveBeenCalledTimes(1);
+        const [seccion, query] = onIrASeccion.mock.calls[0];
+        expect(seccion).toBe('revisar');
+        expect(query.get('t')).toBe('leads');
+        expect(JSON.parse(query.get('f'))).toEqual({ respondio: 'Sí', __de: 'Tasa de respuesta' });
+        expect(query.get('ft')).toBe('1');
+        // Lo que ya estaba en la URL (la sección del host, el período) sigue ahí.
+        expect(query.get('step')).toBe('datos');
+        expect(query.get('p')).toBe('mes');
+        // Embebido, la sección la elige el host: el dashboard no escribe la suya.
+        expect(query.get('s')).toBeNull();
     });
 });

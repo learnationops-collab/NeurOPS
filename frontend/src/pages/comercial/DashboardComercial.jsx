@@ -65,8 +65,10 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * versiones se fueran separando.
  *
  * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
- * resuelve `onIrASeccion`, con el que el host cambia su propia pestaña. Un host que no lo pasa no
- * tiene lista (el espacio del setter, que no ve Revisar), y entonces no hay drill-down.
+ * resuelve `onIrASeccion(seccion, queryString)`, con el que el host cambia su propia pestaña ("Mi
+ * cartera" en el mazo del closer). El segundo argumento es la URL con el filtro ya escrito, para
+ * el host que también navega por la URL. Un host que no lo pasa no tiene lista, y entonces no hay
+ * drill-down.
  *
  * `onAbrirCliente` es la otra salida al host: en la tabla Clientes, una fila NO es una agenda que
  * corregir sino un cliente al que hay que cobrarle, y el modal de corrección de esta pantalla no
@@ -212,6 +214,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
+    // Devuelve la query string que dejó escrita: el drill-down embebido se la pasa al host (ver
+    // `irA`), que también escribe en la URL en el mismo clic y tiene que partir de esta.
     const set = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
         Object.entries(cambios).forEach(([k, v]) => {
@@ -219,6 +223,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             else siguiente.set(k, v);
         });
         setParams(siguiente, { replace: true });
+        return siguiente;
     }, [params, setParams]);
 
     useEffect(() => {
@@ -323,22 +328,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irA = useCallback((cual, filtro) => {
         const limpio = Object.fromEntries(
             Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
-        set({
+        const siguiente = set({
             ...(embebido ? {} : { s: 'revisar' }),
             t: cual,
             f: Object.keys(limpio).length ? JSON.stringify(limpio) : null,
             ft: proximoToken(),
         });
         // Embebido la sección no está en la query string, la elige el host: sin este aviso el
-        // filtro se aplicaba a una tabla que seguía fuera de pantalla.
-        if (embebido) onIrASeccion?.('revisar');
+        // filtro se aplicaba a una tabla que seguía fuera de pantalla. Va con la query string
+        // recién escrita porque un host que guarda su sección en la URL navega en este mismo
+        // clic: `setSearchParams` arma la suya desde la URL del render, que todavía no tiene
+        // `t`/`f`/`ft`, y pisaba el filtro — la lista abría sin ninguna condición.
+        if (embebido) onIrASeccion?.('revisar', siguiente);
     }, [set, embebido, onIrASeccion, proximoToken]);
 
     /**
      * El drill-down solo existe si hay una lista a la que llegar. Embebido, esa lista es del host:
-     * sin `onIrASeccion` no hay Revisar al que ir (el setter no lo tiene), y cada flecha y cada
-     * número cliqueable llevarían a ninguna parte. Sin `irA`, Analizar y Variabilidad muestran los
-     * números como números.
+     * sin `onIrASeccion` no hay a dónde ir, y cada flecha y cada número cliqueable llevarían a
+     * ninguna parte. Sin `irA`, Analizar y Variabilidad muestran los números como números.
      */
     const irADetalle = embebido && !onIrASeccion ? null : irA;
 
