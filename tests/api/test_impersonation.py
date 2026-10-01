@@ -1,7 +1,7 @@
 """/api/auth/impersonate y /api/auth/revert: simular a otro usuario y volver.
 
-Solo admin y operator pueden empezar una simulacion (o quien ya esta simulando, para cambiar de
-usuario sin volver). El estado viaja en los claims del JWT (`is_impersonating`, `original_user_id`,
+Admin y operator simulan a cualquiera; la direccion comercial, solo a closers activos. Quien ya esta
+simulando puede cambiar de usuario sin volver, con lo que puede su usuario ORIGINAL (no el simulado). El estado viaja en los claims del JWT (`is_impersonating`, `original_user_id`,
 `original_user_role`), asi cada pestana lleva su propia identidad; el modo clasico ademas cambia la
 cookie de sesion, que es de TODO el navegador. Invariante de auditoria: el "original" es siempre el
 operador real, aunque se cambie de usuario simulado varias veces.
@@ -208,3 +208,143 @@ def test_un_token_de_suplantacion_sin_original_cierra_la_sesion(client, equipo):
 
     assert respuesta.status_code == 200
     assert respuesta.get_json() == {'message': 'Session lost, logged out'}
+
+
+# --- La direccion comercial simula closers (30/09/2026) ---------------------------------------
+#
+# Para ver el mazo como lo ve cada closer. Solo closers activos: ni setters, ni otra direccion, ni un
+# admin. Y lo que puede se decide por el usuario REAL, tambien al cambiar de usuario sin volver: un
+# closer simulado no puede ser la puerta a una cuenta con mas permisos.
+
+LISTA = '/api/auth/impersonate/closers'
+
+
+@pytest.fixture()
+def direccion(make_user, equipo):
+    return make_user(role='director_comercial', username='dire')
+
+
+def test_la_direccion_simula_a_un_closer_activo(client, auth_headers, equipo, direccion):
+    respuesta = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True)
+
+    assert respuesta.status_code == 200
+    reclamos = claims(respuesta.get_json()['token'])
+    assert (reclamos['id'], reclamos['is_impersonating']) == (equipo['closer_a'].id, True)
+    assert (reclamos['original_user_id'], reclamos['original_user_role']) == (direccion.id, 'director_comercial')
+
+
+@pytest.mark.parametrize('rol', ['admin', 'operator', 'setter', 'triage', 'hiring', 'director_comercial',
+                                 'director_marketing'])
+def test_la_direccion_no_simula_a_quien_no_es_closer(client, make_user, auth_headers, direccion, rol):
+    otro = make_user(role=rol)
+
+    respuesta = suplantar(client, auth_headers(direccion), otro.id)
+
+    assert respuesta.status_code == 403
+    assert respuesta.get_json() == {'message': 'Forbidden'}
+    assert 'token' not in respuesta.get_json()
+
+
+def test_la_direccion_no_simula_a_un_closer_desactivado(client, db, auth_headers, equipo, direccion):
+    equipo['closer_a'].is_active = False
+    db.session.commit()
+
+    respuesta = suplantar(client, auth_headers(direccion), equipo['closer_a'].id)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'message': 'User is inactive'}
+
+
+def test_simulando_a_un_closer_la_direccion_cambia_a_otro_closer(client, auth_headers, equipo, direccion):
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+
+    respuesta = suplantar(client, bearer(token_a), equipo['closer_b'].id, isolated=True)
+
+    assert respuesta.status_code == 200
+    reclamos = claims(respuesta.get_json()['token'])
+    assert (reclamos['id'], reclamos['original_user_id'], reclamos['original_user_role']) == \
+        (equipo['closer_b'].id, direccion.id, 'director_comercial')
+
+
+@pytest.mark.parametrize('destino', ['admin', 'operator'])
+def test_un_closer_simulado_por_la_direccion_no_salta_a_un_admin(client, auth_headers, equipo, direccion, destino):
+    # El agujero que habria si "quien ya simula cambia a cualquiera" siguiera valiendo.
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+
+    respuesta = suplantar(client, bearer(token_a), equipo[destino].id, isolated=True)
+
+    assert respuesta.status_code == 403
+    assert 'token' not in respuesta.get_json()
+
+
+def test_tampoco_salta_en_el_modo_clasico_de_cookie(client, equipo, direccion):
+    assert client.post('/api/auth/login', json={'username': 'dire', 'password': 'secret123'}).status_code == 200
+    assert client.post(IMPERSONAR, json={'user_id': equipo['closer_a'].id}).status_code == 200
+
+    respuesta = client.post(IMPERSONAR, json={'user_id': equipo['admin'].id})
+
+    assert respuesta.status_code == 403
+    usuario = client.get('/api/auth/me').get_json()['user']  # sigue siendo el closer simulado
+    assert (usuario['id'], usuario['original_user_role']) == (equipo['closer_a'].id, 'director_comercial')
+
+
+def test_si_a_la_direccion_le_cambian_el_rol_mientras_simula_ya_no_cambia_de_usuario(
+        client, db, auth_headers, equipo, direccion):
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+    direccion.role = 'setter'
+    db.session.commit()
+
+    assert suplantar(client, bearer(token_a), equipo['closer_b'].id, isolated=True).status_code == 403
+    assert client.get(LISTA, headers=bearer(token_a)).status_code == 403
+
+
+def test_un_token_de_suplantacion_sin_original_no_cambia_de_usuario(client, equipo):
+    token = equipo['closer_a'].get_auth_token(is_impersonating=True)  # sin original_user_id
+
+    assert suplantar(client, bearer(token), equipo['closer_b'].id, isolated=True).status_code == 403
+
+
+def test_la_direccion_vuelve_a_su_sesion(client, auth_headers, equipo, direccion):
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+
+    respuesta = client.post(REVERTIR, headers=bearer(token_a))
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()['user']['id'] == direccion.id
+    assert 'is_impersonating' not in claims(respuesta.get_json()['token'])
+
+
+# --- La lista de closers para simular ---------------------------------------------------------
+
+def test_la_lista_trae_solo_los_closers_activos_por_nombre(client, db, make_user, auth_headers, equipo, direccion):
+    make_user(role='closer', username='ana')
+    make_user(role='closer', username='zoe', is_active=False)
+    make_user(role='setter', username='beto')
+
+    respuesta = client.get(LISTA, headers=auth_headers(direccion))
+
+    assert respuesta.status_code == 200
+    assert [c['username'] for c in respuesta.get_json()['closers']] == ['ana', 'carlos', 'cata']
+    assert set(respuesta.get_json()['closers'][0]) == {'id', 'username'}  # nada mas que eso
+
+
+@pytest.mark.parametrize('quien', ['admin', 'operator'])
+def test_admin_y_operator_tambien_ven_la_lista(client, auth_headers, equipo, quien):
+    assert client.get(LISTA, headers=auth_headers(equipo[quien])).status_code == 200
+
+
+@pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_marketing'])
+def test_quien_no_simula_closers_no_ve_la_lista(client, make_user, auth_headers, equipo, rol):
+    respuesta = client.get(LISTA, headers=auth_headers(make_user(role=rol)))
+
+    assert respuesta.status_code == 403
+
+
+def test_sin_sesion_no_hay_lista(client):
+    assert client.get(LISTA).status_code == 401
+
+
+def test_simulando_a_un_closer_la_direccion_sigue_viendo_la_lista(client, auth_headers, equipo, direccion):
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+
+    assert client.get(LISTA, headers=bearer(token_a)).status_code == 200
