@@ -303,30 +303,45 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         if (primera && !tabsVisibles.some(t => t.key === tab)) setTab(primera);
     }, [tabsVisibles, tab]);
 
+    /**
+     * Solo la respuesta del ÚLTIMO pedido de cada cosa llega a la pantalla.
+     *
+     * Cambiar de filtro dispara un pedido nuevo sin cancelar el anterior, y no vuelven en orden:
+     * 90 días tarda más que un día. Si la respuesta vieja llegaba después, pisaba los números con
+     * los de un período que ya no estaba elegido, debajo de la píldora que decía el nuevo.
+     */
+    const pedidos = useRef({});
+    const soloElUltimo = useCallback((clave, poner) => {
+        const n = (pedidos.current[clave] || 0) + 1;
+        pedidos.current[clave] = n;
+        return (datos) => { if (pedidos.current[clave] === n) poner(datos); };
+    }, []);
+
     const cargarAnalizar = useCallback(() => {
         if (!rol) return;
-        getResumen(filtros).then(setResumen).catch(() => toast.error('No se pudieron cargar los KPIs'));
+        getResumen(filtros).then(soloElUltimo('resumen', setResumen))
+            .catch(() => toast.error('No se pudieron cargar los KPIs'));
         if (tab === 'comparativas' && contexto?.puede_elegir_equipo) {
-            getComparativas(filtros).then(setComparativas)
+            getComparativas(filtros).then(soloElUltimo('comparativas', setComparativas))
                 .catch(() => toast.error('No se pudieron cargar las comparativas'));
         }
         // Las series por dia se piden solo al abrir su pestania: son seis y no hacen falta para
         // ver el dashboard. Se limpian antes de pedirlas para no mostrar las del rol anterior.
         if (tab === 'variabilidad') {
             setVariabilidad(null);
-            getVariabilidad(filtros).then(setVariabilidad)
+            getVariabilidad(filtros).then(soloElUltimo('variabilidad', setVariabilidad))
                 .catch(() => toast.error('No se pudieron cargar las series por dia'));
         }
-    }, [filtros, rol, tab, contexto]);
+    }, [filtros, rol, tab, contexto, soloElUltimo]);
 
     const cargarTabla = useCallback(() => {
         if (!rol || !tablaActual) return;
         setCargandoTabla(true);
         getTabla(filtros, tablaActual, basis)
-            .then(setDatosTabla)
+            .then(soloElUltimo('tabla', setDatosTabla))
             .catch(() => toast.error('No se pudo cargar la tabla'))
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis]);
+    }, [filtros, rol, tablaActual, basis, soloElUltimo]);
 
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
     useEffect(() => { if (seccion === 'revisar') cargarTabla(); }, [seccion, cargarTabla]);
