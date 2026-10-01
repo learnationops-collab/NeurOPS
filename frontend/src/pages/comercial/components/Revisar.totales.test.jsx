@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Revisar from './Revisar';
 
 /**
@@ -157,6 +157,57 @@ describe('Totales · Clientes', () => {
 
         expect(celda('academia')).toBeNull();
         expect(tira().querySelectorAll('[data-total]')).toHaveLength(4);
+    });
+});
+
+describe('Totales · la cifra se mueve con el filtro', () => {
+    let cola;
+    const correr = (t) => {
+        const cuadros = [...cola.values()];
+        cola.clear();
+        cuadros.forEach(cb => cb(t));
+    };
+    beforeEach(() => {
+        window.localStorage.clear();
+        cola = new Map();
+        let siguiente = 0;
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+            siguiente += 1;
+            cola.set(siguiente, cb);
+            return siguiente;
+        });
+        vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => { cola.delete(id); });
+    });
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('al elegir otro filtro, cada número cuenta desde el que se veía hasta el nuevo', () => {
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+        // Al llegar la tabla, sube desde 0 (como el dashboard).
+        correr(0);
+        expect(valor('cobrado')).toBe('$0');
+        correr(2000);
+        expect(valor('cobrado')).toBe('$1,750');
+
+        elegirRapido('Vigentes', 'Con deuda');
+        correr(3000);
+        expect(valor('cobrado')).toBe('$1,750');
+        expect(valor('clientes')).toBe('4');
+        correr(5000);
+        expect(valor('cobrado')).toBe('$750');
+        expect(valor('clientes')).toBe('3');
+    });
+
+    it('con movimiento reducido, los números cambian sin contar', () => {
+        vi.stubGlobal('matchMedia', vi.fn((q) => ({ matches: q.includes('reduce'), media: q,
+            addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {},
+            removeListener: () => {} })));
+        render(<Revisar {...props({ tabla: 'clientes', datos: { filas: CLIENTES } })} />);
+        correr(0);
+        expect(valor('cobrado')).toBe('$1,750');
+
+        elegirRapido('Vigentes', 'Con deuda');
+        correr(100);
+        expect(valor('cobrado')).toBe('$750');
     });
 });
 

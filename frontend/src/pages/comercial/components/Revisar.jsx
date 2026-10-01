@@ -4,6 +4,7 @@ import { ChevronDown, Filter, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
+import Cifra from './Cifra';
 import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
@@ -93,6 +94,10 @@ const segun = (n, uno, varios) => (n === 1 ? uno : varios);
  *
  * La grilla (CSS, `.tot-grid`) nunca deja un número solo en la última fila: `data-n` es cuántos
  * hay, y con eso cada ancho elige una fila, una grilla pareja o una columna.
+ *
+ * Cada número cuenta hasta su valor (`Cifra`, la del dashboard): desde 0 al llegar la tabla y
+ * desde el que se veía cuando cambia el filtro. Con movimiento reducido, quieto. Sin
+ * `AnimatePresence` a propósito: Revisar vive también dentro del mazo del closer.
  */
 const TotalesTira = ({ items, alcance, filtrada }) => (
     <div className={`tot-tira${filtrada ? ' tot-tira--filtrada' : ''}`} data-n={items.length}
@@ -108,8 +113,10 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
             {items.map(t => (
                 <div key={t.key} className="tot-celda" data-total={t.key}>
                     {/* `<b>` y `<small>`, no `<span>`: fuera de `.dc-shell` el CSS global fuerza el
-                        peso de los span con !important, y estas dos conservan el suyo. */}
-                    <b className="tot-n" style={{ color: t.color }}>{t.valor}</b>
+                        peso de los span con !important, y estas dos conservan el suyo. La cifra
+                        cuenta desde la que se estaba viendo: al cambiar el filtro se ve moverse. */}
+                    <Cifra tag="b" className="tot-n" style={{ color: t.color }} valor={t.valor}
+                        desdeAnterior duracion={600} />
                     <span className="tot-pie">
                         <small className="tot-rot">
                             {t.label}
