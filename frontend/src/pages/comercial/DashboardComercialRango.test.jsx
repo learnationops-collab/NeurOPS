@@ -259,3 +259,63 @@ describe('DashboardComercial · período personalizado', () => {
         await waitFor(() => expect(pedidosA('/comercial/resumen').at(-1)).not.toHaveProperty('start_date'));
     });
 });
+
+describe('DashboardComercial · comparación personalizada', () => {
+    it('arranca con los mismos días justo antes del período, y sus fechas son suyas', async () => {
+        montar('/x?p=custom&d=2026-09-08&h=2026-09-14');
+
+        await elegir(/Período anterior/, 'Personalizado');
+
+        expect(fecha('Comparación: desde')).toHaveValue('2026-09-01');
+        expect(fecha('Comparación: hasta')).toHaveValue('2026-09-07');
+
+        // Un mes entero contra una semana: vale, y el período no se toca.
+        ponerFecha('Comparación: desde', '2026-08-01');
+        ponerFecha('Comparación: hasta', '2026-08-31');
+
+        await waitFor(() => expect(pedidosA('/comercial/resumen').at(-1)).toMatchObject({
+            period: 'custom', start_date: '2026-09-08', end_date: '2026-09-14',
+            compare: 'custom', compare_start: '2026-08-01', compare_end: '2026-08-31',
+        }));
+        expect(Object.fromEntries(url())).toMatchObject({ d: '2026-09-08', h: '2026-09-14', vs: 'custom', vd: '2026-08-01', vh: '2026-08-31' });
+        expect(screen.getByRole('button', { name: /01\/08 – 31\/08/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /08\/09 – 14\/09/ })).toBeInTheDocument();
+    });
+
+    it('con un período de los de siempre también vale, y un solo día también', async () => {
+        montar('/x?p=mes&vs=custom&vd=2026-08-10&vh=2026-08-10');
+
+        await waitFor(() => expect(pedidosA('/comercial/resumen').at(-1)).toMatchObject({
+            period: 'mes', compare: 'custom', compare_start: '2026-08-10', compare_end: '2026-08-10',
+        }));
+        expect(pedidosA('/comercial/resumen').at(-1)).not.toHaveProperty('start_date');
+        expect(screen.getByRole('button', { name: /^\s*VS\s*10\/08\s*$/ })).toBeInTheDocument();
+    });
+
+    it('con una fecha sola no pide nada y pide la que falta', async () => {
+        montar('/x?vs=custom&vd=2026-08-01');
+
+        expect(await screen.findByText('Elegí las dos fechas de la comparación.')).toBeInTheDocument();
+        expect(pedidosA('/comercial/resumen')).toEqual([]);
+
+        ponerFecha('Comparación: hasta', '2026-08-31');
+
+        await waitFor(() => expect(pedidosA('/comercial/resumen'))
+            .toEqual([expect.objectContaining({ compare_start: '2026-08-01', compare_end: '2026-08-31' })]));
+    });
+
+    it('Revisar no compara: una comparación a medio elegir no le impide cargar', async () => {
+        montar('/x?s=revisar&vs=custom&vd=2026-08-01');
+
+        expect(await screen.findByTestId('revisar')).toBeInTheDocument();
+        await waitFor(() => expect(pedidosA('/comercial/tabla')).toHaveLength(1));
+    });
+
+    it('elegir otra comparación suelta sus fechas', async () => {
+        montar('/x?vs=custom&vd=2026-08-01&vh=2026-08-31');
+
+        await elegir(/01\/08 – 31\/08/, 'Sin comparar');
+
+        expect([url().get('vs'), url().get('vd'), url().get('vh')]).toEqual(['none', null, null]);
+    });
+});

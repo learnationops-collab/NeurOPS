@@ -18,7 +18,7 @@ import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
-import RangoFechas, { mesEnCurso, rangoDe, textoRango } from './components/RangoFechas';
+import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 
@@ -187,6 +187,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
      */
     const rango = period === 'custom' ? rangoDe(params.get('d'), params.get('h')) : null;
     const faltaPeriodo = period === 'custom' && !rango;
+    // La comparación personalizada tiene sus propias fechas (`vd`/`vh`), independientes del
+    // período: un mes contra una semana es una lectura válida y el backend no la recorta.
+    const rangoVs = compare === 'custom' ? rangoDe(params.get('vd'), params.get('vh')) : null;
+    const faltaVs = compare === 'custom' && !rangoVs;
     const rolPedido = params.get('rol');
     const miembroPedido = params.get('m');
     const tabla = params.get('t') || null;
@@ -271,8 +275,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         && miembrosDelRol.some(m => String(m.id) === String(miembroPedido)) ? miembroPedido : null;
 
     const filtros = useMemo(
-        () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta }),
-        [period, compare, rol, miembroId, rango?.desde, rango?.hasta]);
+        () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta,
+            vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta }),
+        [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -339,13 +344,15 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, []);
 
     /**
-     * ¿Hay que esperar una fecha antes de pedir esta vista? La cartera (tabla Clientes) es un saldo
-     * a hoy y no se acota al período, así que se pide igual.
+     * ¿Hay que esperar una fecha antes de pedir esta vista? Revisar no compara (su VS ni se
+     * muestra), así que solo espera al período; y la cartera (tabla Clientes) es un saldo a hoy que
+     * no se acota al período, así que se pide igual.
      */
-    const esperaFechas = faltaPeriodo && !(seccion === 'revisar' && tablaActual === 'clientes');
+    const esperaFechas = seccion === 'analizar' ? faltaPeriodo || faltaVs
+        : seccion === 'revisar' && faltaPeriodo && tablaActual !== 'clientes';
 
     const cargarAnalizar = useCallback(() => {
-        if (!rol || faltaPeriodo) return;
+        if (!rol || faltaPeriodo || faltaVs) return;
         getResumen(filtros).then(soloElUltimo('resumen', setResumen))
             .catch(() => toast.error('No se pudieron cargar los KPIs'));
         if (tab === 'comparativas' && contexto?.puede_elegir_equipo) {
@@ -359,7 +366,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             getVariabilidad(filtros).then(soloElUltimo('variabilidad', setVariabilidad))
                 .catch(() => toast.error('No se pudieron cargar las series por dia'));
         }
-    }, [filtros, rol, tab, contexto, soloElUltimo, faltaPeriodo]);
+    }, [filtros, rol, tab, contexto, soloElUltimo, faltaPeriodo, faltaVs]);
 
     const cargarTabla = useCallback(() => {
         if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
@@ -556,6 +563,28 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             onCambiar={({ desde, hasta }) => set({ p: 'custom', d: desde || null, h: hasta || null })} />
     );
 
+    /**
+     * La comparación personalizada arranca de la comparación que se está viendo; sin una (con
+     * "Sin comparar", o antes de los datos), de los mismos días justo antes del período.
+     */
+    const elegirComparacion = (k) => {
+        if (k !== 'custom') {
+            set({ vs: k, vd: null, vh: null });
+            return;
+        }
+        if (compare === 'custom') return;
+        const periodoEnPantalla = (fechasEnPantalla && rangoDe(fechasEnPantalla.start, fechasEnPantalla.end))
+            || rango || mesEnCurso();
+        const inicial = (resumen?.dates && rangoDe(resumen.dates.compare_start, resumen.dates.compare_end))
+            || rangoAnterior(periodoEnPantalla);
+        set({ vs: 'custom', vd: inicial.desde, vh: inicial.hasta });
+    };
+    const camposDeLaComparacion = (
+        <RangoFechas rotulo="Comparación"
+            desde={rangoVs?.desde ?? (params.get('vd') || '')} hasta={rangoVs?.hasta ?? (params.get('vh') || '')}
+            onCambiar={({ desde, hasta }) => set({ vs: 'custom', vd: desde || null, vh: hasta || null })} />
+    );
+
     const volverAMiSesion = async () => {
         setSaliendo(true);
         try {
@@ -655,9 +684,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                         {seccion === 'analizar' && (
                             <PillMenu icono={<span className="ln-muted" style={{ fontSize: 10, fontWeight: 900, letterSpacing: '.14em' }}>VS</span>}
-                                texto={contexto.comparaciones.find(c => c.key === compare)?.label}
-                                valor={compare} opciones={contexto.comparaciones} ancho={250}
-                                onChange={(k) => set({ vs: k })} />
+                                rotulo="comparación"
+                                texto={rangoVs ? textoRango(rangoVs) : contexto.comparaciones.find(c => c.key === compare)?.label}
+                                valor={compare}
+                                opciones={contexto.comparaciones.map(c => (c.key === 'custom' ? { ...c, quedaAbierto: true } : c))}
+                                ancho={compare === 'custom' ? 324 : 250}
+                                pie={compare === 'custom' ? camposDeLaComparacion : null}
+                                onChange={elegirComparacion} />
                         )}
                     </div>
                 </div>
@@ -668,8 +701,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 <div className="vista">
                     {/* Sin las dos fechas no se pide nada: se piden acá, en vez de mostrar los
                         datos de otro rango bajo la etiqueta "Personalizado". */}
-                    {esperaFechas && (seccion === 'analizar' || seccion === 'revisar') && (
+                    {esperaFechas && faltaPeriodo && (
                         <FaltaFecha texto="Elegí las dos fechas del período.">{camposDelPeriodo}</FaltaFecha>
+                    )}
+                    {esperaFechas && !faltaPeriodo && (
+                        <FaltaFecha texto="Elegí las dos fechas de la comparación.">{camposDeLaComparacion}</FaltaFecha>
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle} />
