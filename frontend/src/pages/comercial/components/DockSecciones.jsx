@@ -82,7 +82,23 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
         };
         const id = requestAnimationFrame(medir);
         window.addEventListener('resize', medir);
-        return () => { cancelAnimationFrame(id); window.removeEventListener('resize', medir); };
+        // Y cada vez que el dock o sus secciones cambian de tamaño de verdad. El `resize` de la
+        // ventana no alcanza: el ancho máximo del dock depende de `100vw`, y hay navegadores (la
+        // emulación de tamaños de Chrome, al menos) que lo acomodan después del aviso, así que se
+        // medía el tamaño de antes y el dock quedaba un paso atrás —se agrandaba la ventana y
+        // seguía compacto—. También cubre lo que cambia sin tocar la ventana (una cuenta que
+        // pasa de "9/9" a "10/12"). No oscila: la medición compara siempre el ancho con nombres.
+        const nav = navRef.current;
+        const observador = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => medir());
+        if (observador && nav) {
+            observador.observe(nav);
+            if (nav.parentElement) observador.observe(nav.parentElement);
+        }
+        return () => {
+            cancelAnimationFrame(id);
+            window.removeEventListener('resize', medir);
+            observador?.disconnect();
+        };
     }, [activa, ids, compacto]);
 
     // Con seis cosas o más en el dock (el mazo del closer, o la dirección con su switch y su sesión)
