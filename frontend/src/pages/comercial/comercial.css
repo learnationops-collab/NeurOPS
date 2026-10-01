@@ -389,6 +389,14 @@
 .dc-shell .rango-dia:hover::-webkit-calendar-picker-indicator,
 .dc-shell .rango-dia:focus::-webkit-calendar-picker-indicator{background:var(--text-on-surface)}
 .dc-shell .vacio-grande--rango .rango{max-width:330px}
+/* Cada fecha pide ~140px: si las dos no entran lado a lado (el aviso dentro de su panel en un
+   teléfono), van una debajo de la otra. Achicadas, la fecha se cortaba y el ícono quedaba encima
+   del texto. Se mide el propio `.rango` y no la pantalla: el pie del menú sí entra a 390px. */
+.dc-shell .rango{container-type:inline-size}
+@container (max-width:299px){
+  .dc-shell .rango-a{display:none}
+  .dc-shell .rango-dia{grid-column:1 / -1}
+}
 @keyframes dcRangoIn{from{opacity:.35;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.dc-shell .rango{animation:none}}
 
