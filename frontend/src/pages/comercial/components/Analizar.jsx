@@ -6,6 +6,7 @@ import Embudo from './Embudo';
 import { EsqueletoTablero, Humo, Tip, fmt, useMontado } from './Shared';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
+import RepartoEstados from './RepartoEstados';
 import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER,
     destinoToques,
@@ -290,31 +291,6 @@ const Torta = ({ items, total, f, centro }) => {
     );
 };
 
-/** El mismo reparto como tabla o como torta. `items`: {label, n, tone, ir?}. */
-const Reparto = ({ vista, items, total, f = String, colLabel = 'Estado', centro = 'total' }) => {
-    if (vista === 'grafico') return <Torta items={items} total={total} f={f} centro={centro} />;
-    return (
-        <div className="tdatos">
-            <div className="tdatos-cab"><span>{colLabel}</span><span>Cant.</span><span>%</span></div>
-            {items.map(it => {
-                const cuerpo = (
-                    <>
-                        <span className="tdatos-nom">
-                            <span className="dato-punto" style={{ background: v(it.tone) }} />
-                            <span className="trunc">{it.label}</span>
-                        </span>
-                        <span className="tdatos-n" style={{ color: v(it.tone) }}>{f(it.n)}</span>
-                        <span className="tdatos-p">{total ? `${((it.n / total) * 100).toFixed(1)}%` : '—'}</span>
-                    </>
-                );
-                return it.ir
-                    ? <button key={it.label} type="button" className="tdatos-fila" onClick={it.ir}>{cuerpo}</button>
-                    : <div key={it.label} className="tdatos-fila">{cuerpo}</div>;
-            })}
-        </div>
-    );
-};
-
 /** Sparkline del cash del período: una barra por día, el pico marcado si es único. */
 const Chispa = ({ dias, tone, etiqueta }) => {
     const montado = useMontado();
@@ -371,36 +347,35 @@ const rampa = (i, n) =>
    PANELES · CLOSERS
    ============================================================ */
 
-/** Qué pasó con cada cita del período. El total va una sola vez, en la cabecera. */
+const TABS_ESTADOS = [['grafico', 'Gráfico', PieChart], ['tabla', 'Tabla', Rows]];
+
+/**
+ * Qué pasó con cada cita del período: la dona con los tres grupos (la vista de entrada) o la tabla
+ * de estados. El total va una sola vez, en la cabecera. Lo de "Sin reporte" —que mientras no se
+ * carguen el show up y el close rate quedan medidos de menos— vive en el tooltip y no en una nota
+ * debajo: el diseño no lleva texto en el panel.
+ */
 const PanelEstados = ({ bloque, irA }) => {
-    const [vista, setVista] = useState('tabla');
+    const [vista, setVista] = useState('grafico');
     const total = bloque.agendas;
     const sinReporte = bloque.estados.find(e => e.key === 'sin_reporte');
     return (
         <Panel id="p-estados" cab={
             <PanelCab titulo="Estados"
-                ayuda={`Qué pasó con cada una de las ${total} citas agendadas del período. "Sin `
-                    + 'reporte" son las que ya pasaron y nadie cargó: hasta que no se carguen, el show '
-                    + 'up está medido sobre menos llamadas de las que hubo.'}>
-                <Tabs valor={vista} onChange={setVista} ops={TABS_VISTA} aria="Vista de estados" />
-                <span className="t-cap mut40 num">{fmt.plural(total, 'agenda', 'agendas')}</span>
+                ayuda={`Qué pasó con cada una de las ${total} citas agendadas del período.${sinReporte
+                    ? ` ${fmt.plural(sinReporte.n, 'llamada', 'llamadas')} ya `
+                        + `${sinReporte.n === 1 ? 'pasó' : 'pasaron'} sin reporte: hasta que se carguen, `
+                        + 'el show up y el close rate quedan medidos de menos.'
+                    : ''}`}>
+                <Tabs valor={vista} onChange={setVista} ops={TABS_ESTADOS} aria="Vista de estados" />
+                <small className="est-total num">
+                    <b>{fmt.num(total)}</b> {total === 1 ? 'agenda' : 'agendas'}
+                </small>
             </PanelCab>
         }>
-            {total === 0 ? <Vacio texto="Sin agendas en el período." /> : (
-                <>
-                    <Reparto vista={vista} total={total} centro="agendas"
-                        items={bloque.estados.map(e => ({
-                            label: e.label, n: e.n, tone: e.tone,
-                            ir: () => irA('agendas', { estado: e.filtro, __de: `Estados: ${e.label}` }),
-                        }))} />
-                    {sinReporte && (
-                        <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
-                            {fmt.plural(sinReporte.n, 'llamada', 'llamadas')} ya pasaron sin resultado
-                            cargado: mientras sigan así, el show up y el close rate están medidos de menos.
-                        </p>
-                    )}
-                </>
-            )}
+            {total === 0
+                ? <Vacio texto="Sin agendas en el período." />
+                : <RepartoEstados estados={bloque.estados} vista={vista} irA={irA} />}
         </Panel>
     );
 };
