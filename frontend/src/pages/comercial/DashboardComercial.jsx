@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
+import { ArrowLeft, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,6 +18,7 @@ import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
+import RangoFechas, { mesEnCurso, rangoDe, textoRango } from './components/RangoFechas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 
@@ -157,6 +158,18 @@ const ProntoSection = ({ seccion }) => (
     </section>
 );
 
+/** En lugar de los datos, mientras a un rango personalizado le falta una fecha: con los campos
+ *  ahí mismo, para no tener que ir a buscarlos a la píldora. */
+const FaltaFecha = ({ texto, children }) => (
+    <section className="panel">
+        <div className="vacio-grande vacio-grande--rango">
+            <span className="vacio-icono"><CalendarRange size={24} /></span>
+            <p className="t-sm mut">{texto}</p>
+            {children}
+        </div>
+    </section>
+);
+
 const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
@@ -166,6 +179,14 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const seccion = seccionFija || params.get('s') || 'analizar';
     const period = params.get('p') || 'mes';
     const compare = params.get('vs') || 'prev';
+    /**
+     * Las fechas de "Personalizado" van en la URL (`d`/`h`), como el resto del filtro: así las
+     * ven los dos montajes del mazo del closer, sobreviven al drill-down a Revisar y a "atrás", y
+     * un link las comparte. Sin las dos no se pide nada (ver `faltaPeriodo`): el backend, sin
+     * fechas, cae al mes en curso, y eso es lo que se veía bajo la etiqueta "Personalizado".
+     */
+    const rango = period === 'custom' ? rangoDe(params.get('d'), params.get('h')) : null;
+    const faltaPeriodo = period === 'custom' && !rango;
     const rolPedido = params.get('rol');
     const miembroPedido = params.get('m');
     const tabla = params.get('t') || null;
@@ -250,8 +271,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         && miembrosDelRol.some(m => String(m.id) === String(miembroPedido)) ? miembroPedido : null;
 
     const filtros = useMemo(
-        () => ({ period, compare, rol, miembroId }),
-        [period, compare, rol, miembroId]);
+        () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta }),
+        [period, compare, rol, miembroId, rango?.desde, rango?.hasta]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -317,8 +338,14 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         return (datos) => { if (pedidos.current[clave] === n) poner(datos); };
     }, []);
 
+    /**
+     * ¿Hay que esperar una fecha antes de pedir esta vista? La cartera (tabla Clientes) es un saldo
+     * a hoy y no se acota al período, así que se pide igual.
+     */
+    const esperaFechas = faltaPeriodo && !(seccion === 'revisar' && tablaActual === 'clientes');
+
     const cargarAnalizar = useCallback(() => {
-        if (!rol) return;
+        if (!rol || faltaPeriodo) return;
         getResumen(filtros).then(soloElUltimo('resumen', setResumen))
             .catch(() => toast.error('No se pudieron cargar los KPIs'));
         if (tab === 'comparativas' && contexto?.puede_elegir_equipo) {
@@ -332,16 +359,16 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             getVariabilidad(filtros).then(soloElUltimo('variabilidad', setVariabilidad))
                 .catch(() => toast.error('No se pudieron cargar las series por dia'));
         }
-    }, [filtros, rol, tab, contexto, soloElUltimo]);
+    }, [filtros, rol, tab, contexto, soloElUltimo, faltaPeriodo]);
 
     const cargarTabla = useCallback(() => {
-        if (!rol || !tablaActual) return;
+        if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
         setCargandoTabla(true);
         getTabla(filtros, tablaActual, basis)
             .then(soloElUltimo('tabla', setDatosTabla))
             .catch(() => toast.error('No se pudo cargar la tabla'))
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis, soloElUltimo]);
+    }, [filtros, rol, tablaActual, basis, soloElUltimo, faltaPeriodo]);
 
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
     useEffect(() => { if (seccion === 'revisar') cargarTabla(); }, [seccion, cargarTabla]);
@@ -498,13 +525,36 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const miembroNombre = miembroId
         ? miembrosDelRol.find(m => String(m.id) === String(miembroId))?.nombre
         : null;
+    const etiquetaPeriodo = contexto.periodos.find(p => p.key === period)?.label;
     // La cartera no se acota al periodo (es un saldo a hoy, ver `ComercialService.clientes`), asi
-    // que su linea de alcance no puede decir "este mes": diria algo que no es.
+    // que su linea de alcance no puede decir "este mes": diria algo que no es. Un rango elegido a
+    // mano se dice con sus fechas: "personalizado" no dice de cuándo son las filas.
     const alcance = [miembroNombre || (contexto.puede_elegir_equipo ? 'Todo el equipo' : contexto.yo.nombre),
         tablaActual === 'clientes'
             ? 'toda la cartera'
-            : contexto.periodos.find(p => p.key === period)?.label.toLowerCase(),
+            : (rango ? textoRango(rango) : etiquetaPeriodo?.toLowerCase()),
     ].filter(Boolean).join(' · ');
+
+    /**
+     * Elegir "Personalizado" arranca del rango que se está viendo —el de los datos en pantalla—, y
+     * si todavía no hay datos, del mes en curso: los campos nunca abren vacíos. Cualquier otro
+     * período suelta las fechas, para que la URL no arrastre un rango que ya no se usa.
+     */
+    const fechasEnPantalla = seccion === 'revisar' ? datosVigentes?.dates : resumen?.dates;
+    const elegirPeriodo = (k) => {
+        if (k !== 'custom') {
+            set({ p: k, d: null, h: null });
+            return;
+        }
+        if (period === 'custom') return;
+        const inicial = (fechasEnPantalla && rangoDe(fechasEnPantalla.start, fechasEnPantalla.end)) || mesEnCurso();
+        set({ p: 'custom', d: inicial.desde, h: inicial.hasta });
+    };
+    const camposDelPeriodo = (
+        <RangoFechas rotulo="Período"
+            desde={rango?.desde ?? (params.get('d') || '')} hasta={rango?.hasta ?? (params.get('h') || '')}
+            onCambiar={({ desde, hasta }) => set({ p: 'custom', d: desde || null, h: hasta || null })} />
+    );
 
     const volverAMiSesion = async () => {
         setSaliendo(true);
@@ -589,12 +639,18 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                                 onChange={(k) => set({ m: k === 'all' ? null : k })} />
                         )}
 
+                        {/* Con "Personalizado" la píldora dice el rango, y su menú queda abierto
+                            con las dos fechas debajo de los períodos. */}
                         {seccion !== 'reportar' && (
-                            <PillMenu icono={<Calendar size={14} />}
-                                texto={contexto.periodos.find(p => p.key === period)?.label}
-                                detalle={resumen?.dates ? `${resumen.dates.start.slice(8)}–${resumen.dates.end.slice(8)}` : null}
-                                valor={period} opciones={contexto.periodos}
-                                onChange={(k) => set({ p: k })} />
+                            <PillMenu icono={<Calendar size={14} />} rotulo="período"
+                                texto={rango ? textoRango(rango) : etiquetaPeriodo}
+                                detalle={period !== 'custom' && resumen?.dates
+                                    ? `${resumen.dates.start.slice(8)}–${resumen.dates.end.slice(8)}` : null}
+                                valor={period}
+                                opciones={contexto.periodos.map(p => (p.key === 'custom' ? { ...p, quedaAbierto: true } : p))}
+                                ancho={period === 'custom' ? 324 : undefined}
+                                pie={period === 'custom' ? camposDelPeriodo : null}
+                                onChange={elegirPeriodo} />
                         )}
 
                         {seccion === 'analizar' && (
@@ -610,19 +666,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
                 <div className="vista">
-                    {seccion === 'analizar' && tab === 'dashboard' && (
+                    {/* Sin las dos fechas no se pide nada: se piden acá, en vez de mostrar los
+                        datos de otro rango bajo la etiqueta "Personalizado". */}
+                    {esperaFechas && (seccion === 'analizar' || seccion === 'revisar') && (
+                        <FaltaFecha texto="Elegí las dos fechas del período.">{camposDelPeriodo}</FaltaFecha>
+                    )}
+                    {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle} />
                     )}
-                    {seccion === 'analizar' && tab === 'comparativas' && contexto.puede_elegir_equipo && (
+                    {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_elegir_equipo && (
                         <Comparativas datos={comparativas} irAPersona={irAPersona} />
                     )}
-                    {seccion === 'analizar' && tab === 'variabilidad' && (
+                    {!esperaFechas && seccion === 'analizar' && tab === 'variabilidad' && (
                         <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle} />
                     )}
                     {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
                         no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda
                         y el estado interno de Revisar se pierde al desmontarse. */}
-                    {seccion === 'revisar' && (
+                    {!esperaFechas && seccion === 'revisar' && (
                         <Revisar tabla={tablaActual} setTabla={(t) => set({ t, f: null, ft: null })}
                             datos={datosVigentes}
                             cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
@@ -636,7 +697,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
                             onStepper={setStepper}
-                            irAPersona={(persona) => set({ s: 'revisar', m: persona.id, p: 'hoy' })} />
+                            irAPersona={(persona) => set({ s: 'revisar', m: persona.id, p: 'hoy', d: null, h: null })} />
                     )}
                 </div>
 

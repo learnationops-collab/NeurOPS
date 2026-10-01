@@ -143,8 +143,14 @@ export const Segmented = ({ opciones, valor, onChange, ariaLabel, chico }) => (
 
 const ariaLabel_ = (texto) => `Opciones de ${String(texto || '').toLowerCase()}`;
 
-/** Píldora del header con su menú. Se cierra al elegir o al clickear afuera. */
-export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, ancho }) => {
+/**
+ * Píldora del header con su menú. Se cierra al elegir o al clickear afuera.
+ *
+ * Una opción con `quedaAbierto` no lo cierra: es la que necesita algo más que elegirse (las
+ * fechas de "Personalizado"), y eso va en `pie`, debajo de las opciones. `rotulo` nombra el menú
+ * cuando el texto de la píldora es un dato y no un nombre (un rango de fechas).
+ */
+export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, ancho, pie, rotulo }) => {
     const [abierto, setAbierto] = useState(false);
     const ref = useRef(null);
 
@@ -165,16 +171,17 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
                 <ChevronDown size={14} />
             </button>
             {abierto && (
-                <div className="menu menu--der" role="menu" aria-label={ariaLabel_(texto)}
+                <div className={`menu menu--der${pie ? ' menu--pie' : ''}`} role="menu" aria-label={ariaLabel_(rotulo || texto)}
                     style={ancho ? { minWidth: ancho } : undefined}>
                     {opciones.map(o => (
                         <button key={o.key} type="button" className="menu-item" role="menuitemradio"
                             aria-checked={valor === o.key}
-                            onClick={() => { onChange(o.key); setAbierto(false); }}>
+                            onClick={() => { onChange(o.key); if (!o.quedaAbierto) setAbierto(false); }}>
                             <span className="trunc">{o.label}</span>
                             {valor === o.key && <Check size={13} style={{ marginLeft: 'auto' }} />}
                         </button>
                     ))}
+                    {pie && <div className="menu-pie">{pie}</div>}
                 </div>
             )}
         </div>

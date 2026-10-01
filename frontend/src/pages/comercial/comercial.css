@@ -360,6 +360,30 @@
 .dc-shell .menu-item[aria-checked="true"] .menu-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
 .dc-shell .menu-item .cuenta{margin-left:auto;font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
 
+/* Rango personalizado (`RangoFechas`): las dos fechas del período o de la comparación, en el pie
+   del menú de su píldora y en el aviso que reemplaza a los datos mientras falta una. Son inputs
+   de fecha nativos (el calendario del navegador, también en el teléfono) vestidos de píldora.
+   Entran con un desliz corto desde su estado visible, nunca parados en opacity:0 (como `.vista`). */
+/* Dos fechas lado a lado piden ~140px cada una (Montserrat, con el ícono del calendario): el menú
+   con pie se deja pasar del tope de 300px, hasta el ancho de la pantalla menos sus márgenes. */
+.dc-shell .menu--pie{max-width:calc(100vw - 32px)}
+.dc-shell .menu-pie{margin-top:var(--s2);padding:var(--s2) 2px 2px;border-top:1px solid var(--border-subtle)}
+.dc-shell .rango{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;
+  gap:6px;width:100%;animation:dcRangoIn .26s var(--spring) both}
+.dc-shell .rango-a{color:var(--text-muted-40);font-size:13px}
+.dc-shell .rango-dia{width:100%;min-width:0;height:36px;padding:0 10px 0 12px;border-radius:var(--radius-pill);
+  -webkit-appearance:none;appearance:none;
+  background:var(--bg-input);border:1px solid var(--border-control);color:var(--text-on-surface);
+  font-size:13px;font-weight:600;text-align:left;cursor:pointer;transition:border-color .16s ease}
+.dc-shell .rango-dia:hover{border-color:var(--text-muted)}
+.dc-shell .rango-dia:focus{outline:none;border-color:var(--brand-secondary-border)}
+.dc-shell .rango-dia::-webkit-date-and-time-value{text-align:left}
+.dc-shell .rango-dia::-webkit-calendar-picker-indicator{margin-left:2px;opacity:.55;cursor:pointer}
+.dc-shell .rango-dia::-webkit-calendar-picker-indicator:hover{opacity:1}
+.dc-shell .vacio-grande--rango .rango{max-width:330px}
+@keyframes dcRangoIn{from{opacity:.35;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.dc-shell .rango{animation:none}}
+
 /* Input */
 .dc-shell .busca{display:flex;align-items:center;gap:var(--s2);height:40px;padding:0 14px;
   border-radius:var(--radius-control);background:var(--bg-input);
