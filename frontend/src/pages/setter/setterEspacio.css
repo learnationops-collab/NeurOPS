@@ -23,13 +23,6 @@
    alineados al mismo borde. */
 .setter-espacio-wrap{max-width:1340px;margin:0 auto;padding:24px clamp(16px,3vw,22px) 0}
 
+/* En el header queda solo "Volver a mi sesión" mientras se simula: el Playbook, quién está
+   conectado y cerrar sesión viven en la sesión al final del dock (`MenuSesion`). */
 .setter-espacio .tope-acciones{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-.setter-espacio .yo{display:flex;align-items:center;gap:8px;min-width:0}
-.setter-espacio .yo-nombre{font-size:13px;font-weight:700;color:var(--text-muted);max-width:140px}
-.setter-espacio .playbook-n{min-width:16px;height:16px;padding:0 4px;border-radius:999px;
-  display:inline-grid;place-items:center;background:var(--brand-secondary);color:var(--on-brand);
-  font-size:9px;font-weight:900;letter-spacing:0}
-
-@media (max-width:640px){
-  .setter-espacio .yo-nombre{display:none}
-}

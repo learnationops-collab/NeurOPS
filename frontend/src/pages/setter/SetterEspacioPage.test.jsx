@@ -16,13 +16,13 @@ import SetterEspacioPage from './SetterEspacioPage';
  * drill-down (`onIrASeccion`): el setter no ve Revisar, así que no tiene que dárselo.
  */
 
-const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0 }));
+const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null }));
 
 vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: sesion.user, logout: vi.fn() }),
 }));
 vi.mock('../../contexts/PlaybookContext', () => ({
-    usePlaybook: () => ({ pendingCount: 0, openPlaybook: vi.fn() }),
+    usePlaybook: () => ({ pendingCount: sesion.pendientes, openPlaybook: sesion.openPlaybook }),
 }));
 vi.mock('../../services/api', () => ({
     default: { get: vi.fn(() => Promise.resolve({ data: { total: sesion.reportesHoy } })) },
@@ -69,6 +69,8 @@ describe('SetterEspacioPage · un solo dock', () => {
     beforeEach(() => {
         sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: true };
         sesion.reportesHoy = 0;
+        sesion.pendientes = 0;
+        sesion.openPlaybook = vi.fn();
         // jsdom no implementa el scroll; cambiar de sección vuelve arriba de la página.
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     });
@@ -148,5 +150,56 @@ describe('SetterEspacioPage · un solo dock', () => {
         await montar('/setter/deck?step=datos');
 
         expect(screen.queryByRole('button', { name: /Volver a mi sesión/ })).toBeNull();
+    });
+});
+
+/**
+ * La sesión al final del dock (30/09/2026), como en el mazo del closer: el Playbook, quién está
+ * conectado y cerrar sesión ya no son botones del header. Simulando, "Volver a mi sesión" sigue
+ * a la vista arriba y además está en el menú.
+ */
+describe('SetterEspacioPage · la sesión en el dock', () => {
+    beforeEach(() => {
+        sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: false };
+        sesion.reportesHoy = 0;
+        sesion.pendientes = 3;
+        sesion.openPlaybook = vi.fn();
+        vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    });
+
+    const abrirSesion = async (nombre) => {
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: nombre })); });
+    };
+
+    it('el header ya no tiene Playbook ni cerrar sesión: están en el avatar del dock, con lo pendiente a la vista', async () => {
+        await montar('/setter/deck?step=cualificacion');
+
+        const header = document.querySelector('header.tope');
+        expect(header.querySelectorAll('button')).toHaveLength(0);
+        const avatar = screen.getByRole('button', { name: 'Tu sesión: Ana Setter, 3 videos pendientes del Playbook' });
+        expect(dock().contains(avatar)).toBe(true);
+        expect(avatar.querySelector('.dock-sesion-aviso')).toHaveTextContent('3');
+
+        await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
+        expect(screen.getByText('Setter')).toBeInTheDocument();
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
+            .toEqual(['Playbook, 3 pendientes', 'Cerrar sesión']);
+
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Playbook, 3 pendientes' }));
+        expect(sesion.openPlaybook).toHaveBeenCalledWith('pending');
+    });
+
+    it('simulando, "Volver a mi sesión" está arriba y también en el menú', async () => {
+        sesion.user = { ...sesion.user, is_impersonating: true };
+        sesion.pendientes = 0;
+        await montar('/setter/deck?step=cualificacion');
+
+        const header = document.querySelector('header.tope');
+        expect(Array.from(header.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Volver a mi sesión']);
+
+        await abrirSesion('Tu sesión: Ana Setter');
+        expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
+            .toEqual(['Playbook', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 });

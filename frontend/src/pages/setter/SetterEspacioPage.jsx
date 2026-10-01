@@ -10,7 +10,8 @@ import { revertImpersonation } from '../../utils/impersonation';
 import OperatorControls from '../../components/modals/OperatorControls';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
-import { Isotipo, Segmented, fmt } from '../comercial/components/Shared';
+import MenuSesion from '../comercial/components/MenuSesion';
+import { Isotipo, Segmented } from '../comercial/components/Shared';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import SetterWorkflowPage from './SetterWorkflowPage';
@@ -33,8 +34,10 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * rutas viejas (/setter/report, /setter/agendas, /setter/mis-datos...) redirigen acá.
  *
  * Va SIN `MainLayout`, igual que el mazo del closer: el dock de la app le quedaría encima del
- * propio. A cambio, este header ofrece lo que daba aquel: el Playbook, la salida de una simulación
- * y cerrar sesión.
+ * propio. A cambio, ofrece lo que daba aquel: el Playbook, la salida de una simulación y cerrar
+ * sesión. Desde el 30/09/2026 están en la sesión al final del dock (`MenuSesion`, el avatar), como
+ * en el mazo del closer; en el header queda solo "Volver a mi sesión" mientras se simula, que es lo
+ * primero que busca quien termina de mirar.
  *
  * Revisar (el libro de registros del dashboard) NO es una sección del setter: no la necesita
  * (pedido del 29/09/2026). Por eso "Mis datos" va sin drill-down —no hay lista a la que llevar un
@@ -129,6 +132,20 @@ const SetterEspacioPage = () => {
     const claveVista = esMazo ? 'mazo' : `${seccion}-${tab || ''}`;
     const nombre = user?.name || user?.username || 'Setter';
 
+    // La sesión al final del dock: lo que antes eran botones del header.
+    const gruposDeSesion = [
+        [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
+            cuenta: pendingCount > 0 ? pendingCount : null,
+            titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null }],
+        [
+            ...(user?.is_impersonating
+                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
+                : []),
+            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
+                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
+        ],
+    ];
+
     return (
         <div className="setter-espacio">
             <div className="setter-espacio-wrap">
@@ -138,33 +155,18 @@ const SetterEspacioPage = () => {
                             <Isotipo idGrad="lnGradSetter" />
                             <h1 className="t-h1">{seccionActual.label}</h1>
                         </div>
-                        <div className="tope-meta tope-acciones">
-                            <button type="button" className="btn btn--linea btn--sm"
-                                onClick={() => openPlaybook('pending')}
-                                title="Videos de formación y actualizaciones">
-                                <Compass size={15} />
-                                Playbook
-                                {pendingCount > 0 && <span className="playbook-n">{pendingCount}</span>}
-                            </button>
-                            {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
-                                salida de ningún lado: moverse entre secciones es el dock. */}
-                            {user?.is_impersonating && (
+                        {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
+                            salida de ningún lado: moverse entre secciones es el dock. También está
+                            en el menú del avatar, pero acá se ve sin buscarla. */}
+                        {user?.is_impersonating && (
+                            <div className="tope-meta tope-acciones">
                                 <button type="button" className="btn btn--linea btn--sm" disabled={saliendo}
                                     title="Volver a tu sesión original" onClick={volverAMiSesion}>
                                     <Ghost size={15} />
                                     {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
                                 </button>
-                            )}
-                            <div className="yo" title={nombre}>
-                                <span className="avatar" aria-hidden="true">{fmt.iniciales(nombre)}</span>
-                                <span className="yo-nombre trunc">{nombre.trim().split(/\s+/)[0]}</span>
                             </div>
-                            <button type="button" className="ibtn ibtn--sm" title="Cerrar sesión"
-                                aria-label="Cerrar sesión"
-                                onClick={() => { if (window.confirm('¿Cerrar sesión?')) logout(); }}>
-                                <LogOut />
-                            </button>
-                        </div>
+                        )}
                     </header>
 
                     {seccionActual.tabs && (
@@ -194,7 +196,15 @@ const SetterEspacioPage = () => {
                 <div className="dc-shell dc-shell--embebido">
                     <DockSecciones secciones={secciones} activa={seccion}
                         onElegir={(id) => { if (id !== seccion) irA(id); }}
-                        ariaLabel="Secciones del espacio del setter" />
+                        ariaLabel="Secciones del espacio del setter"
+                        despues={(
+                            <MenuSesion nombre={nombre}
+                                rol={user?.is_impersonating ? 'Setter · simulación' : 'Setter'}
+                                aviso={pendingCount > 0
+                                    ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
+                                    : null}
+                                grupos={gruposDeSesion} />
+                        )} />
                 </div>
             </div>
 
