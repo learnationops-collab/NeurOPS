@@ -1156,13 +1156,18 @@ const CloserWorkflowPage = () => {
     // countdown de la tarjeta (que mide urgencia en horas/minutos), acá el corte es por fecha
     // calendario: una llamada de las 8am de hoy sigue siendo "de hoy", no "atrasada", aunque ya
     // sean las 3pm — es lo que pidió el usuario explícitamente.
+    //
+    // "Atrasadas" es SOLO lo de un día anterior al seleccionado. Antes era "todo lo que no es del
+    // día seleccionado", y una llamada de mañana temprano —que el backend trae porque cae en el día
+    // del closer, en su zona— aparecía como atrasada diciendo "En 6 h" (02/10/2026). Lo que no es
+    // de un día anterior va a "Hoy": todavía está por tomar.
     const callsPipeline = useMemo(() => {
         const atrasadas = [];
         const hoy = [];
         (filteredAgendas || []).forEach(a => {
             const { date: apptDate } = splitLocalDateTime(a.start_time);
-            if (apptDate === selectedDate) hoy.push(a);
-            else atrasadas.push(a);
+            if (apptDate && apptDate < selectedDate) atrasadas.push(a);
+            else hoy.push(a);
         });
         return { atrasadas, hoy, reportadas: reportedTodayCalls };
     }, [filteredAgendas, selectedDate, reportedTodayCalls]);
