@@ -296,6 +296,17 @@ ETIQUETAS_FUENTE = {
 }
 
 
+def etiqueta_de_fuente(fuente):
+    """Como se lee una fuente guardada (`Appointment.origin`), o None si no hay ninguna.
+
+    Las del catalogo salen con su etiqueta; un setter o un valor historico fuera del catalogo
+    ('workshop manychat', 'Entrevista Diagnóstica Gratuita') se muestran tal cual, como en el
+    historial.
+    """
+    texto = (fuente or '').strip()
+    return ETIQUETAS_FUENTE.get(texto, texto) if texto else None
+
+
 def fuentes_disponibles():
     """Las fuentes que se le pueden poner a una agenda desde el historial, en dos grupos.
 

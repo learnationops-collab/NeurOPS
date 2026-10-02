@@ -83,6 +83,18 @@ def resultado(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.resultado)
 
 
+@bp.route('/<int:appt_id>/fathom', methods=['PATCH'])
+def fathom(appt_id):
+    """El link de Fathom (grabacion y transcripcion) de ESTA agenda; vacio lo quita.
+
+    Aparte del `POST /resultado` porque la grabacion suele llegar despues del reporte. El permiso es
+    `reportar`, el mismo con el que se reporta la llamada: la direccion y cualquier closer.
+    """
+    from app.services import ficha_grabacion_service as grabacion
+
+    return _ejecutar(appt_id, 'reportar', grabacion.guardar)
+
+
 @bp.route('/<int:appt_id>/venta', methods=['POST'])
 def venta(appt_id):
     """Declara una venta o cobra una cuota (via `SheetsService.post_to_sheets`)."""

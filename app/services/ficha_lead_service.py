@@ -121,6 +121,12 @@ def _identidad(appt, client, programa_nombre, ingreso, baja=None):
         'ingreso': ingreso,
         'llamada': _momento(appt.start_time if appt else None),
         'fuente': (appt.origin or None) if appt else None,
+        # Como se lee la fuente en la cabecera: la misma etiqueta que el desplegable del historial,
+        # para que 'workshop_landing' no aparezca escrito como un nombre de variable.
+        'fuente_label': voc.etiqueta_de_fuente(appt.origin) if appt else None,
+        # El link de Fathom de ESTA llamada (ver `ficha_grabacion_service`): lo abre la cabecera y
+        # lo edita la pestaña Resultado.
+        'fathom_url': (appt.fathom_url or None) if appt else None,
         # El email del closer viaja porque es el `email_vendedor` con el que se declara la venta: la
         # atribucion de una venta (y por lo tanto la comision) es por email y no por FK.
         'closer': ({'id': appt.closer_id,
