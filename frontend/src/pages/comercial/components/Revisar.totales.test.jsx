@@ -287,6 +287,8 @@ describe('Totales · Ventas', () => {
     it('la búsqueda y el filtro rápido recortan el cash, las ventas y el ticket', () => {
         render(<Revisar {...props({ tabla: 'ventas', datos: { filas: VENTAS } })} />);
         expect(valor('cash')).toBe('$2,000');
+        // El cobro de Carla no es venta: suma al cash pero no al ticket (1,800 / 3, no 2,000 / 3).
+        expect(valor('ticket')).toBe('$600');
 
         buscar('Ana');
         expect(valor('cash')).toBe('$1,300');

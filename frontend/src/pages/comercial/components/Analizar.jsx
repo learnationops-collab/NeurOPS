@@ -418,8 +418,8 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
         {
             label: 'Ticket promedio', valor: bloque.ticket, p: '—', tone: 'brand-secondary',
             destino: D.ticket_promedio,
-            help: `Cash del período dividido por las ${bloque.ventas} ventas nuevas. No mira el `
-                + 'contrato firmado: mira cuánta plata entró por cada venta.',
+            help: `Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
+                + 'Las cuotas y las señas no entran.',
         },
     ];
     return (
@@ -667,8 +667,8 @@ const PanelProgramas = ({ bloque, irA }) => {
                                     <Tip titulo={p.programa}
                                         texto={`${fmt.plural(p.ventas, 'venta nueva', 'ventas nuevas')} y `
                                             + `${fmt.plural(p.cobros, 'cobro', 'cobros')} en el período. El `
-                                            + 'ticket se calcula sobre las ventas y no sobre los cobros: las '
-                                            + 'cuotas y las señas entran en el cash sin abrir una venta nueva.'} />
+                                            + 'ticket promedia solo lo cobrado en las ventas nuevas: las cuotas '
+                                            + 'y las señas entran en el cash pero no en el ticket.'} />
                                 </span>
                             </span>
                             <span className="tdatos-p" style={{ fontSize: 13 }}>{p.ventas}</span>
@@ -830,8 +830,8 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 sub={`neto ${fmt.money(bloque.cash_neto)} · comisión ${fmt.money(bloque.comision)}`}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
-                help={`Cash del período dividido por las ${bloque.ventas} ventas nuevas. No mira el `
-                    + 'contrato firmado: mira cuánta plata entró por cada venta.'}
+                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
+                    + 'Las cuotas y las señas no entran.'}
                 delta={deltas.ticket}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
                 sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}

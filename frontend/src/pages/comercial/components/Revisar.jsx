@@ -353,7 +353,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
         if (tabla === 'ventas') {
             const cash = lista.reduce((a, f) => a + f.monto, 0);
-            const ventas = lista.filter(f => f.es_venta).length;
+            // El ticket promedia solo lo cobrado en las ventas nuevas: las cuotas y las señas
+            // suman al cash pero no son ventas (igual que `totales_ventas` en el backend).
+            const nuevas = lista.filter(f => f.es_venta);
+            const ventas = nuevas.length;
+            const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0);
             const neto = lista.reduce((a, f) => a + f.monto_neto, 0);
             return [
                 { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
@@ -362,8 +366,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     color: 'var(--brand-secondary)',
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
                 { key: 'ticket', label: 'ticket', color: 'var(--text-on-surface)',
-                    valor: fmt.money(ventas ? Math.round((cash / ventas) * 100) / 100 : null),
-                    ayuda: 'Ticket promedio: el cash dividido por las ventas.' },
+                    valor: fmt.money(ventas ? Math.round((cashVentas / ventas) * 100) / 100 : null),
+                    ayuda: 'Ticket promedio: lo cobrado en las ventas nuevas dividido por cuántas '
+                        + 'fueron. Las cuotas y las señas no entran.' },
                 { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', ayuda: 'El cash sin los fees de la pasarela de pago.' },
                 itemTotalAcademia(lista),

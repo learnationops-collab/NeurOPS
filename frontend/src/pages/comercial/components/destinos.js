@@ -12,9 +12,8 @@ import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloToques } from './tablasDef';
  *
  * `aviso` no es un adorno: es para las cifras que NO se pueden cortar con el mismo criterio con el
  * que se calcularon. El "por cobrar" del panel Cash se atribuye por quién tiene HOY la agenda del
- * cliente y la cartera de Clientes por quién VENDIÓ; el ticket promedio divide todo el cash del
- * período por las ventas nuevas. En esos casos la lista es lo más cerca que se puede llegar, y la
- * regla del proyecto es decir en pantalla por qué no cierra.
+ * cliente y la cartera de Clientes por quién VENDIÓ. En esos casos la lista es lo más cerca que se
+ * puede llegar, y la regla del proyecto es decir en pantalla por qué no cierra.
  */
 
 /** La tabla de agendas de cada rol: el setter ve las que generó, el closer las que atiende. */
@@ -55,10 +54,8 @@ export const DESTINOS_CLOSER = {
     close_rate: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Close rate',
         aviso: AVISO_TASA_NUMERADOR },
     cash: { tabla: 'ventas', filtro: {}, de: 'Cash collected' },
-    ticket: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ticket promedio',
-        aviso: 'El ticket divide TODO el cash del período (también cuotas y señas) por las ventas '
-            + 'nuevas. La lista muestra solo esas ventas nuevas, así que su "cash" es menor que el '
-            + 'numerador de la división.' },
+    // El ticket ahora se calcula sobre estas mismas ventas nuevas: la lista cierra con él.
+    ticket: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ticket promedio' },
 
     // --- Panel Cierre: las tres tasas comparten numerador (las agendas que cerraron) ---
     presentacion_rate: { tabla: 'agendas', filtro: { presento: 'Sí' }, de: 'Presentación',
@@ -83,10 +80,7 @@ export const DESTINOS_CLOSER = {
     cash_collected: { tabla: 'ventas', filtro: {}, de: 'Cash collected' },
     fees: { tabla: 'ventas', filtro: {}, de: 'Fees de pasarela', aviso: AVISO_COBROS },
     cash_neto: { tabla: 'ventas', filtro: {}, de: 'Cash neto' },
-    ticket_promedio: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS },
-        de: 'Ticket promedio',
-        aviso: 'El ticket divide TODO el cash del período por las ventas nuevas. La lista muestra '
-            + 'solo esas ventas nuevas.' },
+    ticket_promedio: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ticket promedio' },
 
     por_cobrar: { tabla: 'clientes', filtro: {}, de: 'Por cobrar · a hoy', aviso: AVISO_POR_COBRAR },
     por_cobrar_vencido: { tabla: 'clientes', filtro: { estado: ESTADO_CARTERA.vencida },
