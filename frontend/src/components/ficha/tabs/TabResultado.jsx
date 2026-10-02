@@ -25,6 +25,7 @@ import CampoArbol from '../acciones/CampoArbol';
 import CronogramaCuotas from '../acciones/CronogramaCuotas';
 import { moneda } from '../acciones/planCuotas';
 import { Hueso } from '../../huesos/Huesos';
+import GrabacionFathom from './GrabacionFathom';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
@@ -265,6 +266,10 @@ export default function TabResultado({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       <StepperFicha pasos={pasos} onPaso={null} />
+
+      {/* El link de la grabación se guarda aparte del reporte: llega cuando Fathom la procesa,
+          muchas veces con la llamada ya reportada. */}
+      <GrabacionFathom ficha={ficha} onAccion={onAccion} />
 
       {error && (
         <div className="ln-alert ln-alert--error" role="alert">

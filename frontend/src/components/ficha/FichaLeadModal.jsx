@@ -54,7 +54,7 @@ const TabAcciones = lazyDe('TabAcciones');
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
-    'acceso_academia', 'quitar_acceso_academia']);
+    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom']);
 
 /**
  * El aviso de una acción que dio de baja a un cliente, con lo que pasó con su acceso a la Academia
@@ -96,6 +96,13 @@ const MENSAJES = {
         return r?.creada
             ? `Acceso a la Academia dado${hasta}. Se le creó la cuenta y le llegó un correo para activar su contraseña.`
             : `Acceso a la Academia dado${hasta}.`;
+    },
+    // El backend dice si el link es de Fathom (`es_fathom`): uno de otra herramienta se guarda
+    // igual, pero el aviso lo dice.
+    guardar_fathom: (r) => {
+        if (!r?.fathom_url) return 'Link de Fathom quitado.';
+        if (r.es_fathom === false) return { tono: 'warning', texto: 'Link guardado, pero no es de Fathom: revisalo.' };
+        return 'Link de Fathom guardado: se abre desde la cabecera.';
     },
     quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',

@@ -433,3 +433,20 @@
    «Resultado». Texto a la izquierda y botón a la derecha; en un teléfono el botón baja. */
 .dc-shell .fi-venta-directa{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
   gap:var(--space-4);margin-top:var(--space-6)}
+
+/* ---------- Link de Fathom (Resultado) ----------
+   Una franja baja y no un bloque: la pregunta de la llamada, debajo, es lo que se viene a hacer.
+   El rótulo a la izquierda y el campo con su botón a la derecha; cuando no entran, el campo baja
+   entero. El botón nunca se separa del campo, tampoco en un teléfono. */
+.dc-shell .fi-fathom{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s5)}
+.dc-shell .fi-fathom-cab{display:grid;grid-template-columns:auto auto;justify-content:start;
+  align-items:center;column-gap:var(--s2)}
+.dc-shell .fi-fathom-cab svg{color:var(--brand-secondary);flex-shrink:0}
+.dc-shell .fi-fathom-cab label{cursor:pointer}
+.dc-shell .fi-fathom-cab small{grid-column:2}
+.dc-shell .fi-fathom-fila{flex:1 1 340px;min-width:0;display:flex;align-items:center;gap:var(--s2)}
+.dc-shell .fi-fathom-fila .ln-field{flex:1 1 auto;min-width:0;height:40px;padding:0 var(--s3)}
+.dc-shell .fi-fathom-fila .btn{flex-shrink:0}
+.dc-shell .fi-fathom > .fi-fathom-aviso,
+.dc-shell .fi-fathom > .fi-motivo{flex-basis:100%}
+.dc-shell .fi-fathom-aviso{color:var(--warning);line-height:1.4}

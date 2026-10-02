@@ -40,6 +40,8 @@ const RUTAS = {
     // Resultado de la llamada y venta.
     reportar_resultado: (appt, p) => api.post(`/ficha/${appt}/resultado`, p),
     registrar_venta: (appt, p) => api.post(`/ficha/${appt}/venta`, p),
+    // El link de Fathom (grabación y transcripción) de la agenda, aparte del reporte; vacío lo quita.
+    guardar_fathom: (appt, p) => api.patch(`/ficha/${appt}/fathom`, p),
 
     // Agenda.
     reprogramar: (appt, p) => api.post(`/ficha/${appt}/reprogramar`, p),
