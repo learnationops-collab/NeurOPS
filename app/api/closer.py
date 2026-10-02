@@ -1586,10 +1586,17 @@ def get_closer_deck():
         except ValueError:
             today_local = date.today()
         start_utc, _ = _user_day_bounds_utc(current_user, today_local)
+        # Las canceladas y reagendadas desde Confirmación (`result`) no se confirman más: salen
+        # del tablero, igual que en Llamadas. Antes caían en "Por confirmar" (02/10/2026).
         query = Appointment.query.filter(
             Appointment.start_time >= start_utc,
             Appointment.closer_processed == False,
-            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == ''),
+            or_(
+                Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+                Appointment.result == None,
+                Appointment.result == ''
+            )
         )
     elif step == 'calls':
         # Llamadas cuyo horario ya llegó (o es de hoy) y el closer nunca reportó qué pasó
