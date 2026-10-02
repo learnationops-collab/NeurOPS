@@ -87,7 +87,10 @@ def test_pre_call_sale_de_result(result, esperado):
     ('cancelada', False, False, 'cancelo'),
     ('sin_reportar', False, False, 'pendiente'),
     ('reportada_sin_resultado', False, False, 'pendiente'),
-    ('lead_perdido', False, False, 'otro'),
+    # Antes "Otro estado": desde el 02/10/2026 cuentan como pendientes (Sin reporte si ya pasó).
+    ('lead_perdido', False, False, 'pendiente'),
+    ('no_lead', False, False, 'pendiente'),
+    ('inventado', False, False, 'pendiente'),
 ])
 def test_post_call_resuelve_los_estados_derivados(estado, venta_, seguimiento, esperado):
     assert post_call_de(estado, venta_, seguimiento) == esperado

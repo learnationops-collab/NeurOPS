@@ -139,7 +139,7 @@ def test_una_llamada_por_ocurrir_gana_al_estado_de_cobro():
 
 
 def test_una_llamada_reportada_sin_venta_se_abre_en_historial():
-    for estado in ('no_show', 'cancelada', 'reagendada', 'segunda_llamada', 'show_up', 'otro'):
+    for estado in ('no_show', 'cancelada', 'reagendada', 'segunda_llamada', 'show_up'):
         assert clave_y_pestana(estado_agenda=estado) == (estado, 'hist')
 
 

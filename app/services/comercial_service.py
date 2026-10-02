@@ -94,7 +94,6 @@ POST_CALL = [
     {'key': 'sena', 'label': 'Seña', 'tone': 'warning', 'editable': False},
     {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning', 'editable': False},
     {'key': 'presento_no_cerro', 'label': 'Presentó, no cerró', 'tone': 'warning', 'editable': False},
-    {'key': 'otro', 'label': 'Otro estado', 'tone': 'idle', 'editable': False},
 ]
 
 ESTADO_LEAD = [
@@ -150,6 +149,11 @@ _ESTADO_A_POST_CALL = {
     'confirmada': 'pendiente',
     'sin_reportar': 'pendiente',
     'reportada_sin_resultado': 'pendiente',
+    # "Lead perdido" y "No lead" se mostraban como "Otro estado", un rótulo que no decía nada.
+    # Desde el 02/10/2026 (pedido del usuario) cuentan como pendientes: en el panel y en la tabla
+    # caen en "Sin reporte" si la llamada ya pasó. No suman a las realizadas, igual que antes.
+    'lead_perdido': 'pendiente',
+    'no_lead': 'pendiente',
 }
 
 # Valor que se escribe en la base al corregir el estado desde el modal.
@@ -280,7 +284,7 @@ def post_call_de(estado, con_venta, con_seguimiento, con_sena=False):
         if con_seguimiento:
             return 'seguimiento'
         return 'presento_no_cerro'
-    return _ESTADO_A_POST_CALL.get(estado, 'otro')
+    return _ESTADO_A_POST_CALL.get(estado, 'pendiente')
 
 
 def chip(grupo, key):

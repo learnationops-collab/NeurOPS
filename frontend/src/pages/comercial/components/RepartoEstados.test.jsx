@@ -18,7 +18,7 @@ const ESTADOS = [
     { key: 'sena', label: 'Seña', tone: 'brand-secondary', n: 12, filtro: 'Seña', grupo: 'cerradas' },
     { key: 'seguimiento', label: 'Seguimiento', tone: 'info', n: 58, filtro: 'Seguimiento', grupo: 'en_curso' },
     { key: 'presento_no_cerro', label: 'Presentó, no cerró', tone: 'naranja', n: 1, filtro: 'Presentó, no cerró', grupo: 'en_curso' },
-    { key: 'otro', label: 'Otro estado', tone: 'idle', n: 9, filtro: 'Otro estado', grupo: 'en_curso' },
+    { key: 'segunda_llamada', label: '2da llamada', tone: 'info', n: 9, filtro: '2da llamada', grupo: 'en_curso' },
 ];
 
 const fila = (nombre) => screen.getByRole('button', { name: new RegExp(`^${nombre}:`) });

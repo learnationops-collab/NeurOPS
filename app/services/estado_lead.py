@@ -39,7 +39,6 @@ _ETIQUETAS = {
     'segunda_llamada': ('2da llamada', 'info'),
     'reagendada': ('Reagendada', 'info'),
     'cancelada': ('Canceló', 'warning'),
-    'otro': ('Otro estado', 'idle'),
     'descartado': ('Descartado', 'error'),
     'venta_con_deuda': ('Venta · con deuda', 'warning'),
     'venta_al_dia': ('Cliente al día', 'success'),

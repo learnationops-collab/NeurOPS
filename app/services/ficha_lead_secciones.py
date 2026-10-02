@@ -54,7 +54,6 @@ _CHIP_AGENDA = {
     'reportada_sin_resultado': ('Reportada · sin resultado', 'warning'),
     'por_confirmar': ('Por confirmar', 'idle'),
     'confirmada': ('Confirmada', 'info'),
-    'otro': ('Otro estado', 'idle'),
 }
 
 

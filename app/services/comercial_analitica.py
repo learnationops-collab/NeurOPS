@@ -247,7 +247,7 @@ TONO_EN_PANEL = {
 #     que nombra el diseño, entran "Canceló" y "Reagendó": son las otras dos pérdidas de agenda
 #     del dashboard del closer, y en las dos la cita no tuvo llamada.
 #   · En curso: la llamada todavía no pasó ("Aún no ocurrió") o pasó y la venta sigue abierta
-#     (seguimiento, segunda llamada, presentó sin cerrar, asistió sin más datos, otro estado).
+#     (seguimiento, segunda llamada, presentó sin cerrar, asistió sin más datos).
 #   · Cerradas: hubo venta o seña.
 GRUPO_DE_ESTADO = {
     'sin_reporte': 'sin_resultado',
@@ -259,7 +259,6 @@ GRUPO_DE_ESTADO = {
     'segunda_llamada': 'en_curso',
     'seguimiento': 'en_curso',
     'presento_no_cerro': 'en_curso',
-    'otro': 'en_curso',
     'venta': 'cerradas',
     'sena': 'cerradas',
 }

@@ -49,8 +49,6 @@ ESTADOS = [
      'desc': 'Marcada como lead perdido.'},
     {'key': 'no_lead', 'label': 'No lead', 'color': '#78716C',
      'desc': 'Marcada como no lead (no calificaba).'},
-    {'key': 'otro', 'label': 'Otro estado', 'color': '#CBD5E1',
-     'desc': 'Resultado que no encaja en ninguna categoría conocida (se muestra el valor crudo).'},
 ]
 ESTADO_LABELS = {e['key']: e['label'] for e in ESTADOS}
 
@@ -168,9 +166,8 @@ def derivar_estado(appt, now_utc):
         return 'cancelada'
     if cr in _REAGENDADA or res in _REAGENDADA:
         return 'reagendada'
-    if cr not in _PENDIENTE:
-        return 'otro'
-    # Sin resultado del closer todavía: depende de si la llamada ya pasó.
+    # Sin resultado del closer todavía —o con uno que no se reconoce: antes era "Otro estado", un
+    # rótulo que no le servía a nadie (02/10/2026)—: depende de si la llamada ya pasó.
     if appt.start_time and appt.start_time > now_utc:
         return 'confirmada' if res == 'confirmado' else 'por_confirmar'
     return 'reportada_sin_resultado' if appt.closer_processed else 'sin_reportar'
