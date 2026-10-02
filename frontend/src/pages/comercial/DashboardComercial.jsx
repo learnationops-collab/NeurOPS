@@ -123,11 +123,11 @@ const cargarCloseresParaSimular = async () => {
 };
 
 const SECCIONES = [
-    // `soloDireccion` en una tab: igual que en una sección, pero por pestaña. Comparativas es la
-    // única vista que muestra los números de OTRAS personas con nombre y apellido, así que un
-    // closer o un setter no la ve — su tablero es el suyo y nada más.
+    // `permiso` en una tab: la clave del contexto que la habilita. Comparativas es la única vista
+    // que muestra los números de OTRAS personas con nombre y apellido: la ven la dirección y los
+    // closers (desde el 02/10/2026), y el setter no — su tablero es el suyo y nada más.
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
-        { key: 'comparativas', label: 'Comparativas', soloDireccion: true },
+        { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
     { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
@@ -287,7 +287,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
      * `tab` podría quedar en una pestaña que no está en pantalla y la sección se vería vacía.
      */
     const tabsVisibles = useMemo(
-        () => seccionActual.tabs.filter(t => !t.soloDireccion || contexto?.puede_elegir_equipo),
+        () => seccionActual.tabs.filter(t => !t.permiso || contexto?.[t.permiso]),
         [seccionActual, contexto]);
     const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
 
@@ -355,7 +355,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         if (!rol || faltaPeriodo || faltaVs) return;
         getResumen(filtros).then(soloElUltimo('resumen', setResumen))
             .catch(() => toast.error('No se pudieron cargar los KPIs'));
-        if (tab === 'comparativas' && contexto?.puede_elegir_equipo) {
+        if (tab === 'comparativas' && contexto?.puede_comparar) {
             getComparativas(filtros).then(soloElUltimo('comparativas', setComparativas))
                 .catch(() => toast.error('No se pudieron cargar las comparativas'));
         }
@@ -710,8 +710,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle} />
                     )}
-                    {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_elegir_equipo && (
-                        <Comparativas datos={comparativas} irAPersona={irAPersona} />
+                    {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
+                        // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
+                        // lo acota a él): sin `irAPersona` las filas no son clickeables.
+                        <Comparativas datos={comparativas}
+                            irAPersona={contexto.puede_elegir_equipo ? irAPersona : null} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'variabilidad' && (
                         <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle} />

@@ -30,3 +30,13 @@ describe('Comparativas · la bajada del show up', () => {
         expect(screen.getByText('41 agendas')).toBeInTheDocument();
     });
 });
+
+describe('Comparativas · mirada por un closer', () => {
+    // Un closer ve a su equipo pero no puede abrir la lista de otro: sin `irAPersona` ninguna
+    // fila ni celda lleva a una persona, y su propia fila se marca con "· vos".
+    it('las filas son solo lectura y la suya dice "vos"', () => {
+        render(<Comparativas datos={{ ...datos('closers', { agendas: 41 }), yo: 1 }} irAPersona={null} />);
+        expect(screen.getByText('Persona · vos')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Ver la lista de/ })).toBeNull();
+    });
+});

@@ -90,10 +90,15 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                     const valor = fila[metrica.key];
                     const sobrePromedio = valor !== null && promedio !== null && valor >= promedio;
                     const largo = valor && tope ? (valor / tope) * 100 : 0;
+                    // Sin `irAPersona` (un closer mirando a su equipo) la fila es solo lectura.
+                    const Fila = irAPersona ? 'button' : 'div';
+                    const accion = irAPersona ? {
+                        type: 'button',
+                        'aria-label': `Ver la lista de ${fila.nombre} filtrada por ${metrica.label}`,
+                        onClick: () => irAPersona(fila.id, destino),
+                    } : {};
                     return (
-                        <button key={fila.id} type="button" className="rk-fila"
-                            aria-label={`Ver la lista de ${fila.nombre} filtrada por ${metrica.label}`}
-                            onClick={() => irAPersona(fila.id, destino)}>
+                        <Fila key={fila.id} className="rk-fila" {...accion}>
                             <span className="rk-pos">{i + 1}</span>
                             <span className="rk-quien">
                                 <Avatar nombre={fila.nombre} rol={datos.rol} />
@@ -118,7 +123,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                                 <span className="rk-cifra">{fmt.porFormato(valor, metrica.formato)}</span>
                                 <span className="rk-delta"><Delta delta={fila.deltas?.[metrica.key]} /></span>
                             </span>
-                        </button>
+                        </Fila>
                     );
                 })}
             </div>
@@ -215,7 +220,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
                                     if (!c.rankeable) clases.push('info');
                                     const texto = fmt.porFormato(valor, c.formato);
                                     const aLaLista = DESTINOS_METRICA[datos.rol]?.[c.key];
-                                    return c.rankeable && aLaLista ? (
+                                    return c.rankeable && aLaLista && irAPersona ? (
                                         <button key={c.key} type="button"
                                             title={`${c.desc} · abre la lista de ${fila.nombre}`}
                                             aria-label={`Ver la lista de ${fila.nombre} filtrada por ${c.label}`}
