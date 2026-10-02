@@ -95,6 +95,12 @@ class Appointment(db.Model):
     # criterio de bajo ceremonial que el resto del modelo (sin JSON column).
     confirmation_pain_points = db.Column(db.String(255), nullable=True)
 
+    # Link de Fathom de ESTA llamada (pedido del 02/10/2026): una sola URL, porque Fathom comparte
+    # la grabacion y la transcripcion en la misma pagina. Lo pega el closer en la pestaña Resultado
+    # de la ficha y la cabecera lo abre. No es `linked_call`, que es del mazo viejo y nadie
+    # escribe desde la ficha; ver `ficha_grabacion_service` para lo que se acepta.
+    fathom_url = db.Column(db.String(500), nullable=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')
