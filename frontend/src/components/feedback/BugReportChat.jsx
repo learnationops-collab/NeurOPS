@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle, Bug, Lightbulb } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle, Bug, Lightbulb, ImagePlus } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -51,6 +51,9 @@ const blobToCompressedDataUrl = (blob) => new Promise((resolve, reject) => {
     img.src = objectUrl;
 });
 
+// Lo que se arrastra trae archivos (y no texto seleccionado o un elemento de la propia página).
+const arrastraArchivos = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+
 // Si el reporte no viene de un error detectado automáticamente, no hay contexto técnico
 // que explique "cuál es el problema" — por eso se pregunta explícitamente antes de pedir
 // qué intentaba hacer el usuario. Si sí viene de un error, esa pregunta ya está respondida
@@ -68,6 +71,8 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
     const [extraScreenshots, setExtraScreenshots] = useState([]);
     const [loomLink, setLoomLink] = useState('');
     const [pasting, setPasting] = useState(false);
+    const [arrastrando, setArrastrando] = useState(false);
+    const reducido = useReducedMotion();
 
     const isMejora = reportType === 'mejora';
 
@@ -94,18 +99,23 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
         onMinimize();
     };
 
-    const addPastedImage = async (blob) => {
+    // Las imágenes pegadas o arrastradas, como capturas extra y con un solo aviso para todas.
+    const addImages = async (blobs) => {
         setPasting(true);
+        let added = 0;
         try {
-            const dataUrl = await blobToCompressedDataUrl(blob);
-            setExtraScreenshots((prev) => [...prev, dataUrl]);
-            toast.success('Captura agregada');
+            for (const blob of blobs) {
+                const dataUrl = await blobToCompressedDataUrl(blob);
+                setExtraScreenshots((prev) => [...prev, dataUrl]);
+                added += 1;
+            }
         } catch (e) {
-            console.error('No se pudo procesar la imagen pegada:', e);
+            console.error('No se pudo procesar la imagen:', e);
             toast.error('No se pudo agregar la captura.');
         } finally {
             setPasting(false);
         }
+        if (added > 0) toast.success(added === 1 ? 'Captura agregada' : `${added} capturas agregadas`);
     };
 
     // Ctrl+V pega la imagen que esté en el portapapeles (además de la captura automática que
@@ -123,10 +133,62 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
             if (!imageItem) return;
             e.preventDefault();
             const blob = imageItem.getAsFile();
-            if (blob) addPastedImage(blob);
+            if (blob) addImages([blob]);
         };
         window.addEventListener('paste', handlePaste);
         return () => window.removeEventListener('paste', handlePaste);
+    }, [isOpen, step]);
+
+    // Arrastrar una imagen (del escritorio, del Finder, la miniatura de la captura de macOS) la
+    // agrega igual que Ctrl+V. Pedido del 01/10/2026: un closer quiso arrastrar su captura al
+    // chat y no pasaba nada. Se escucha en toda la ventana mientras el chat está abierto, como
+    // el pegado: soltarla unos píxeles afuera del drawer también cuenta, y el navegador ya no
+    // abre la imagen en la pestaña, que sacaba de la app con el reporte a medio llenar. Mientras
+    // se envía o ya se envió no se agrega nada, pero tampoco se deja que el navegador la abra.
+    // Solo reacciona a archivos: arrastrar texto o algo de la página sigue como siempre.
+    useEffect(() => {
+        if (!isOpen) return;
+        const acepta = step !== 'submitting' && step !== 'done';
+        // dragenter/dragleave llegan por cada elemento que se cruza: se cuenta la profundidad
+        // para saber cuándo el archivo salió de la ventana de verdad.
+        let profundidad = 0;
+        const alEntrar = (e) => {
+            if (!arrastraArchivos(e)) return;
+            e.preventDefault();
+            profundidad += 1;
+            if (acepta) setArrastrando(true);
+        };
+        const alPasar = (e) => {
+            if (!arrastraArchivos(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = acepta ? 'copy' : 'none';
+        };
+        const alSalir = (e) => {
+            if (!arrastraArchivos(e)) return;
+            profundidad = Math.max(0, profundidad - 1);
+            if (profundidad === 0) setArrastrando(false);
+        };
+        const alSoltar = (e) => {
+            if (!arrastraArchivos(e)) return;
+            e.preventDefault();
+            profundidad = 0;
+            setArrastrando(false);
+            if (!acepta) return;
+            const imagenes = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
+            if (imagenes.length) addImages(imagenes);
+            else toast.error('Solo se pueden agregar imágenes. Para un video, pegá el link de Loom.');
+        };
+        window.addEventListener('dragenter', alEntrar);
+        window.addEventListener('dragover', alPasar);
+        window.addEventListener('dragleave', alSalir);
+        window.addEventListener('drop', alSoltar);
+        return () => {
+            window.removeEventListener('dragenter', alEntrar);
+            window.removeEventListener('dragover', alPasar);
+            window.removeEventListener('dragleave', alSalir);
+            window.removeEventListener('drop', alSoltar);
+            setArrastrando(false);
+        };
     }, [isOpen, step]);
 
     // Respaldo para el botón "Pegar captura": no todos los navegadores permiten leer el
@@ -368,7 +430,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     className="w-full flex items-center justify-center gap-2 bg-surface border border-dashed border-base hover:border-primary hover:text-primary rounded-2xl py-3 text-xs font-bold uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {pasting ? <Loader2 size={14} className="animate-spin" /> : <Clipboard size={14} />}
-                                    Pegar captura (Ctrl+V)
+                                    Pegar (Ctrl+V) o arrastrar captura
                                 </button>
 
                                 {extraScreenshots.length > 0 && (
@@ -435,6 +497,40 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                             </button>
                         </div>
                     )}
+
+                    {/* Mientras se arrastra un archivo, el drawer entero se vuelve el lugar donde
+                        soltarlo. No captura eventos: los escucha la ventana (ver el efecto). */}
+                    <AnimatePresence>
+                        {arrastrando && (
+                            <motion.div
+                                key="soltar-imagen"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                // `--color-surface` ya es translúcido: el desenfoque evita que el
+                                // texto del chat se lea por detrás del aviso y compita con él.
+                                className="pointer-events-none absolute inset-0 z-10 p-3 flex bg-surface backdrop-blur-md"
+                            >
+                                <motion.div
+                                    initial={reducido ? false : { scale: 0.94, y: 8 }}
+                                    animate={{ scale: 1, y: 0 }}
+                                    transition={{ type: 'spring', bounce: 0.3, duration: 0.4 }}
+                                    className="flex-1 rounded-[1.6rem] border-2 border-dashed border-[#FF3FA4] flex flex-col items-center justify-center gap-2 text-center p-6"
+                                >
+                                    <motion.span
+                                        animate={reducido ? undefined : { y: [0, -4, 0] }}
+                                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                                        className="w-12 h-12 rounded-2xl bg-[#FF3FA4]/15 text-[#FF3FA4] flex items-center justify-center"
+                                    >
+                                        <ImagePlus size={22} />
+                                    </motion.span>
+                                    <p className="text-sm font-bold">Soltá la imagen acá</p>
+                                    <p className="text-xs text-muted">Se agrega al reporte como captura</p>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             )}
         </AnimatePresence>
