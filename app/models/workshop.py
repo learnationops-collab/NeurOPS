@@ -69,6 +69,14 @@ class WorkshopEvent(db.Model):
     sales = db.Column(db.Integer, default=0)
     cash_collected = db.Column(db.Float, default=0.0)
 
+    # Base del ticket promedio (02/10/2026): lo cobrado en ventas NUEVAS -- pago completo y
+    # split pay, lo que acepta `_es_cierre` -- y cuantas filas de venta son. `cash_collected`
+    # no sirve para el ticket porque incluye las señas (y debe: el ROAS las usa), y `sales`
+    # cuenta personas, incluso a quien la hoja marca como cerrada sin la venta cargada. Null
+    # en los talleres anteriores a la columna hasta que el listado de eventos los completa.
+    cash_ventas = db.Column(db.Float, nullable=True)
+    ventas_cobradas = db.Column(db.Integer, nullable=True)
+
     # Ultima vez que las 5 metricas automaticas de arriba se recalcularon desde
     # el sistema (agendas/ventas reales) -- ya sea por el hook de sincronizacion
     # en vivo (workshop_live_sync.py) o por un resync manual. Null si el evento
@@ -175,8 +183,13 @@ class WorkshopEvent(db.Model):
 
     @property
     def ticket_promedio(self):
-        if self.sales and self.sales > 0:
-            return self.cash_collected / self.sales
+        """Lo cobrado en ventas nuevas / cuantas son. Cuotas, señas, renovaciones y upsells
+        nunca entran. None mientras el taller no tenga calculada la base (columnas nuevas en
+        null): mejor no mostrar ticket que volver a la cuenta vieja, que salia inflada."""
+        if self.ventas_cobradas is None:
+            return None
+        if self.ventas_cobradas > 0:
+            return (self.cash_ventas or 0.0) / self.ventas_cobradas
         return 0.0
 
     @property
@@ -204,6 +217,8 @@ class WorkshopEvent(db.Model):
             "show_up_sales_call": self.show_up_sales_call,
             "sales": self.sales,
             "cash_collected": self.cash_collected,
+            "cash_ventas": self.cash_ventas,
+            "ventas_cobradas": self.ventas_cobradas,
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
 
             "replay_loom_id": self.replay_loom_id,
@@ -227,7 +242,7 @@ class WorkshopEvent(db.Model):
             "costo_por_agenda": round(self.costo_por_agenda, 2),
             "pct_show_up_sales_call": round(self.pct_show_up_sales_call, 2),
             "pct_close_rate": round(self.pct_close_rate, 2),
-            "ticket_promedio": round(self.ticket_promedio, 2),
+            "ticket_promedio": round(self.ticket_promedio, 2) if self.ticket_promedio is not None else None,
             "roas": round(self.roas, 2),
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
