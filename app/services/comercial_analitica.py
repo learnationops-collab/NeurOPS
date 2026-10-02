@@ -43,7 +43,8 @@ METRICAS = {
          'desc': 'De los que asistieron, cuántos compraron con pago completo o split pay. '
                  'Las señas no cuentan.'},
         {'key': 'ticket', 'label': 'Ticket promedio', 'formato': 'money', 'suma': False,
-         'desc': 'Cash dividido por las ventas cerradas.'},
+         'desc': 'Lo cobrado en las ventas nuevas (pago completo y split pay) dividido por '
+                 'cuántas fueron. Las cuotas y las señas no entran.'},
         {'key': 'comision', 'label': 'Comisión', 'formato': 'money', 'suma': True,
          'desc': '10% del cash neto, ya descontadas las fees de la pasarela.'},
         {'key': 'senas_conversion', 'label': 'Conversión de señas', 'formato': 'pct', 'suma': False,
@@ -335,10 +336,13 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         bucket['ventas'] += 1
         bucket['cash'] += f['monto']
 
-        p = programas.setdefault(f['programa'], {'filas': 0, 'cash': 0.0, 'ventas': 0, 'por_tipo': {}})
+        p = programas.setdefault(f['programa'], {'filas': 0, 'cash': 0.0, 'ventas': 0, 'cash_ventas': 0.0,
+                                                 'por_tipo': {}})
         p['filas'] += 1
         p['cash'] += f['monto']
-        p['ventas'] += 1 if f['es_venta'] else 0
+        if f['es_venta']:
+            p['ventas'] += 1
+            p['cash_ventas'] += f['monto']
         t = p['por_tipo'].setdefault(f['tipo_pago']['key'], {'ventas': 0, 'cash': 0.0})
         t['ventas'] += 1
         t['cash'] += f['monto']
@@ -399,7 +403,9 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
              'ventas': datos['ventas'],
              'cobros': datos['filas'],
              'cash': round(datos['cash'], 2),
-             'ticket': round(datos['cash'] / datos['ventas'], 2) if datos['ventas'] else None,
+             # Sobre lo cobrado en las ventas nuevas, no sobre todo el cash del programa (ver
+             # `totales_ventas`).
+             'ticket': round(datos['cash_ventas'] / datos['ventas'], 2) if datos['ventas'] else None,
              'por_tipo': [{**chip('tipo_pago', k), 'ventas': v['ventas'], 'cash': round(v['cash'], 2)}
                           for k, v in datos['por_tipo'].items()]}
             for nombre, datos in programas.items()

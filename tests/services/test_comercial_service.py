@@ -350,7 +350,22 @@ def test_una_cuota_suma_cash_pero_no_cuenta_como_venta(db, marlon):
 
     assert totales['cash'] == 1240.0
     assert totales['ventas'] == 1
-    assert totales['ticket'] == 1240.0  # cash / ventas: la cuota es cash cobrado igual
+    # El ticket es por venta nueva: la cuota suma al cash pero no al ticket.
+    assert totales['ticket'] == 990.0
+
+
+@freeze_time(HOY)
+def test_el_ticket_promedia_solo_lo_cobrado_en_las_ventas_nuevas(db, marlon):
+    # El caso de producción: una sola venta de $250 en el mes y mucho cash de cuotas y señas.
+    # El ticket tiene que decir $250, no el cash total dividido por una venta.
+    venta(db, mail='a@test.local', monto=250.0, tipo='RR - Parcial')
+    venta(db, mail='b@test.local', monto=600.0, tipo='RR - Cuota')
+    venta(db, mail='c@test.local', monto=400.0, tipo='AL - Cuota')
+    venta(db, mail='d@test.local', monto=100.0, tipo='RR - Seña')
+
+    totales = ComercialService.totales_ventas(ComercialService.ventas(DESDE, HASTA))
+
+    assert (totales['cash'], totales['ventas'], totales['ticket']) == (1350.0, 1, 250.0)
 
 
 @freeze_time(HOY)

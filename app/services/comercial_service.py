@@ -949,12 +949,17 @@ class ComercialService:
     def totales_ventas(filas):
         cash = sum(f['monto'] for f in filas)
         ventas = [f for f in filas if f['es_venta']]
+        # El ticket es lo que entró POR CADA VENTA NUEVA (pago completo o split pay), igual que
+        # en el dashboard del closer (`general_average_ticket`). Antes dividía TODO el cash del
+        # período —cuotas y señas incluidas— por las ventas: un mes con una venta de $250 y
+        # cuotas viejas cobradas mostraba un ticket de $1.200.
+        cash_ventas = sum(f['monto'] for f in ventas)
         return {
             'filas': len(filas),
             'ventas': len(ventas),
             'cash': round(cash, 2),
             'cash_neto': round(sum(f['monto_neto'] for f in filas), 2),
-            'ticket': round(cash / len(ventas), 2) if ventas else None,
+            'ticket': round(cash_ventas / len(ventas), 2) if ventas else None,
         }
 
     @staticmethod
