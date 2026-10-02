@@ -6,6 +6,7 @@ from app.decorators import workshop_required
 from datetime import datetime
 import pytz
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -138,10 +139,54 @@ def get_workshop_stats_summary():
         
     return jsonify(stats), 200
 
+def _float_o_none(valor):
+    return float(valor) if valor not in (None, '') else None
+
+
+def _int_o_none(valor):
+    return int(valor) if valor not in (None, '') else None
+
+
+# Tope de tiempo para completar talleres viejos en un mismo request: `calcular_prefill` es
+# N+1 y gunicorn corta a los 120 s. Lo que no entre se completa en la recarga siguiente
+# (el panel ya repregunta solo cada 20 s).
+_TOPE_COMPLETAR_TICKET_SEG = 30
+
+
+def _completar_base_del_ticket(events):
+    """Calcula `cash_ventas`/`ventas_cobradas` de los talleres que todavia no los tienen.
+
+    Las dos columnas nacieron el 02/10/2026 y los talleres ya cargados quedaron en null: sin
+    esto su ticket promedio queda vacio hasta el proximo cambio en su ventana o un resync.
+    Solo se escriben esas dos: el resto del snapshot no se toca, asi que abrir el panel no
+    reescribe numeros que nadie pidio recalcular. Un taller que falla queda para la proxima
+    y nunca rompe el listado. Se commitea uno por uno para que, si el tope de tiempo corta
+    la pasada, lo ya calculado no se pierda.
+    """
+    pendientes = [e for e in events if e.ventas_cobradas is None]
+    if not pendientes:
+        return
+    from app.services.workshop_metrics_service import calcular_prefill
+
+    inicio = time.monotonic()
+    for ev in pendientes:
+        if time.monotonic() - inicio > _TOPE_COMPLETAR_TICKET_SEG:
+            break
+        try:
+            data = calcular_prefill(ev.date)
+            ev.cash_ventas = data['cash_ventas']
+            ev.ventas_cobradas = data['ventas_cobradas']
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('No se pudo completar el ticket promedio del workshop del %s', ev.date)
+
+
 @bp.route('/events', methods=['GET'])
 @workshop_required
 def get_workshop_events():
     events = WorkshopEvent.query.order_by(WorkshopEvent.date.desc()).all()
+    _completar_base_del_ticket(events)
     return jsonify([_con_replay_local(e.to_dict(), e) for e in events]), 200
 
 @bp.route('/events/<int:event_id>', methods=['GET'])
@@ -229,6 +274,9 @@ def create_workshop_event():
         show_up_sales_call=int(data.get('show_up_sales_call', 0)),
         sales=int(data.get('sales', 0)),
         cash_collected=float(data.get('cash_collected', 0.0)),
+        # Sin prefill no llegan: quedan null y el listado de eventos los calcula solo.
+        cash_ventas=_float_o_none(data.get('cash_ventas')),
+        ventas_cobradas=_int_o_none(data.get('ventas_cobradas')),
         replay_loom_id=(data.get('replay_loom_id') or None),
         replay_activo_desde=_parse_replay_datetime(data.get('replay_activo_desde')),
         replay_vence_hasta=_parse_replay_datetime(data.get('replay_vence_hasta')),
@@ -280,6 +328,10 @@ def update_workshop_event(event_id):
         event.sales = int(data['sales'])
     if 'cash_collected' in data:
         event.cash_collected = float(data['cash_collected'])
+    if 'cash_ventas' in data:
+        event.cash_ventas = _float_o_none(data['cash_ventas'])
+    if 'ventas_cobradas' in data:
+        event.ventas_cobradas = _int_o_none(data['ventas_cobradas'])
     if 'replay_loom_id' in data:
         event.replay_loom_id = data['replay_loom_id'] or None
     if 'replay_activo_desde' in data:
