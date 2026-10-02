@@ -239,7 +239,7 @@ describe('Totales · Agendas', () => {
         expect(valor('show_up')).toBe('50%');
         expect(valor('no_show')).toBe('1');
 
-        elegirRapido('Todas', 'Asistieron');
+        elegirRapido('Vigentes', 'Asistieron');
 
         expect(registros()).toHaveLength(2);
         expect(valor('agendas')).toBe('2');

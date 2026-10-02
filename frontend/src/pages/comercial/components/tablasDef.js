@@ -27,8 +27,22 @@ import { AGRUPABLE_ACADEMIA, CHIP_ACADEMIA, COLS_ACADEMIA, FACETAS_ACADEMIA } fr
  */
 export const estadoDeAgenda = (fila) => {
     if (fila.post_call?.key !== 'pendiente') return fila.post_call?.label;
-    return fila.retraso_dias > 0 ? 'Sin reporte' : 'Aún no ocurrió';
+    // Por la HORA, no por el día: una llamada de esta mañana que nadie reportó ya pasó. `ya_paso`
+    // falta en filas viejas (tests, caché): ahí se cae a los días de retraso, como antes.
+    const yaPaso = fila.ya_paso ?? fila.retraso_dias > 0;
+    return yaPaso ? 'Sin reporte' : 'Aún no ocurrió';
 };
+
+/**
+ * ¿Esta agenda entra en el listado por defecto?
+ *
+ * Las descartadas —el lead canceló, o el closer lo marcó como lead perdido o no lead— salen de la
+ * lista y se ven en su propio filtro rápido, «Descartadas» (pedido del usuario, 02/10/2026: «que
+ * desaparezcan y queden en otro lugar aparte»). Mismo criterio que los dados de baja de Clientes
+ * (`entraPorDefecto`): si alguien pide ese estado desde el filtro completo, se lo muestra.
+ */
+export const agendaEntraPorDefecto = (fila, facetas) => !fila.descartada
+    || [...(facetas?.estado || []), ...(facetas?.post_call || [])].includes(fila.post_call?.label);
 
 /**
  * Las etiquetas del vocabulario del backend con las que se corta una tabla, en un solo lugar.
@@ -187,10 +201,12 @@ export const TABLAS = {
             { key: 'dia', label: 'Día de la reunión', de: (f) => diaDe(f.fecha), oculta: true },
         ],
         chips: [
-            { key: 'todas', label: 'Todas', filtro: () => true },
+            // "Vigentes" y no "Todas": el listado por defecto deja afuera a las descartadas.
+            { key: 'todas', label: 'Vigentes', filtro: agendaEntraPorDefecto },
             { key: 'asistieron', label: 'Asistieron', filtro: (f) => f.asistio },
             { key: 'pendientes', label: 'Pendientes', filtro: (f) => f.post_call.key === 'pendiente' },
             { key: 'no_show', label: 'No show', filtro: (f) => f.post_call.key === 'no_show' },
+            { key: 'descartadas', label: 'Descartadas', filtro: (f) => !!f.descartada },
         ],
         agrupables: [
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
@@ -375,9 +391,11 @@ export const TABLAS = {
             { key: 'dia', label: 'Día de creación', de: (f) => diaDe(f.creada), oculta: true },
         ],
         chips: [
-            { key: 'todas', label: 'Todas', filtro: () => true },
+            // "Vigentes" y no "Todas": el listado por defecto deja afuera a las descartadas.
+            { key: 'todas', label: 'Vigentes', filtro: agendaEntraPorDefecto },
             { key: 'asistieron', label: 'Asistieron', filtro: (f) => f.asistio },
             { key: 'pendientes', label: 'Pendientes', filtro: (f) => f.post_call.key === 'pendiente' },
+            { key: 'descartadas', label: 'Descartadas', filtro: (f) => !!f.descartada },
         ],
         agrupables: [
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
