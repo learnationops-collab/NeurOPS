@@ -107,6 +107,7 @@ def contexto():
         'miembro_id': miembro_id,
         'puede_elegir_equipo': puede_elegir,
         'puede_reportar': current_user.role in ROLES_DIRECCION,
+        'puede_comparar': _puede_comparar(),
         'yo': {'id': current_user.id, 'nombre': current_user.username, 'rol': current_user.role},
         'miembros': ComercialService.miembros(rol) if puede_elegir else [],
         # La lista del selector de persona depende del switch Closers / Setters, que se mueve sin
@@ -131,18 +132,19 @@ def resumen():
 
 @bp.route('/comparativas', methods=['GET'])
 def comparativas():
-    """Analizar → Comparativas: ranking por métrica y mapa del equipo. **Solo la dirección.**
+    """Analizar → Comparativas: ranking por métrica y mapa del equipo. **La dirección y los
+    closers.**
 
     Es la única pantalla del tablero que muestra los números de OTRAS personas con nombre y
-    apellido; todo lo demás está acotado a quien pregunta. Un closer y un setter ven sus propios
-    datos, y nada más — decisión del usuario, 24/sep/2026, que revierte la anterior (se les
-    mostraba el ranking completo con el argumento de que ya se comparte en el reporte diario).
+    apellido; todo lo demás está acotado a quien pregunta. Desde el 02/oct/2026 los closers la
+    ven —decisión del usuario, que revierte la del 24/sep— y siempre la de los CLOSERS: el rol
+    lo fija `alcance_de`, así que un closer no puede pedir la de los setters. Los setters siguen
+    sin verla.
 
     El 403 es lo que la hace cumplir: la pestaña escondida en el frontend no alcanza, porque el
-    endpoint se puede pedir igual. Mismo criterio que `alcance_de`, que decide el alcance en un
-    solo lugar para que ninguna vista pueda olvidarse de filtrar.
+    endpoint se puede pedir igual.
     """
-    if not _solo_direccion():
+    if not _puede_comparar():
         return jsonify({'message': 'Forbidden'}), 403
     rol, miembro_id, _ = _alcance()
     start, end, prev_start, prev_end = _rangos()
@@ -365,6 +367,11 @@ def marcar_duplicada_agenda(agenda_id):
 
 def _solo_direccion():
     return current_user.role in ROLES_DIRECCION
+
+
+def _puede_comparar():
+    """Quién ve Analizar → Comparativas (ver `comparativas`)."""
+    return current_user.role in ROLES_DIRECCION + (ROLE_CLOSER,)
 
 
 @bp.route('/reporte/hoy', methods=['GET'])

@@ -385,12 +385,29 @@ def test_corregir_una_agenda_que_no_existe_da_404(client, db, equipo, auth_heade
 
 # --- Comparativas ------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('quien', ['closer_a', 'setter'])
-def test_la_comparativa_del_equipo_es_solo_de_la_direccion(client, db, equipo, auth_headers, quien):
+def test_el_setter_no_ve_la_comparativa_del_equipo(client, db, equipo, auth_headers):
     """Es la única pantalla del tablero que muestra los números de OTRAS personas con nombre y
     apellido. Esconder la pestaña no protege nada — el endpoint se puede pedir igual —, que es
     el mismo motivo por el que el alcance se decide en el backend y no en la vista."""
-    assert client.get(COMPARATIVAS, headers=auth_headers(equipo[quien])).status_code == 403
+    assert client.get(COMPARATIVAS, headers=auth_headers(equipo['setter'])).status_code == 403
+
+
+def test_el_closer_ve_la_comparativa_de_los_closers_aunque_pida_la_de_setters(
+        client, db, equipo, auth_headers):
+    # Desde el 02/10/2026 los closers ven el ranking de su equipo, marcado con su propia fila.
+    respuesta = client.get(COMPARATIVAS + '?rol=setters', headers=auth_headers(equipo['closer_a']))
+
+    assert respuesta.status_code == 200
+    datos = respuesta.get_json()
+    assert datos['rol'] == 'closers'
+    assert datos['yo'] == equipo['closer_a'].id
+
+
+@pytest.mark.parametrize('quien, puede', [('closer_a', True), ('setter', False), ('director', True)])
+def test_el_contexto_dice_quien_puede_comparar(client, db, equipo, auth_headers, quien, puede):
+    respuesta = client.get('/api/comercial/contexto', headers=auth_headers(equipo[quien]))
+
+    assert respuesta.get_json()['puede_comparar'] is puede
 
 
 @pytest.mark.parametrize('quien', ['director', 'admin'])
