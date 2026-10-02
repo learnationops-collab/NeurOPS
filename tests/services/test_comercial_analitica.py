@@ -291,6 +291,32 @@ def test_una_agenda_vencida_sin_reportar_no_se_mezcla_con_una_que_todavia_no_ocu
 
 
 @freeze_time(HOY)
+def test_una_llamada_de_hoy_que_ya_paso_no_figura_como_proxima(db, marlon):
+    # Reportado por el usuario (02/10/2026): una agenda cuya hora ya había pasado decía "Aún no
+    # ocurrió" porque el corte era por día. HOY son las 21:30.
+    agenda(db, marlon, cliente(db, 'Esta tarde'), cuando=datetime(2026, 9, 17, 15, 0))
+
+    estados = {e['key']: e for e in ca.bloque_closers(DESDE, HASTA)['estados']}
+
+    assert estados['sin_reporte']['n'] == 1
+    assert 'por_ocurrir' not in estados
+
+
+@freeze_time(HOY)
+def test_lead_perdido_y_no_lead_tienen_su_propio_estado(db, marlon):
+    agenda(db, marlon, cliente(db, 'Perdido'), cuando=datetime(2026, 9, 10, 15, 0),
+           closer_result='Lead Perdido')
+    agenda(db, marlon, cliente(db, 'No califica'), cuando=datetime(2026, 9, 10, 16, 0),
+           closer_result='No Lead')
+
+    estados = {e['key']: e for e in ca.bloque_closers(DESDE, HASTA)['estados']}
+
+    assert (estados['lead_perdido']['label'], estados['lead_perdido']['grupo']) == ('Lead perdido', 'sin_resultado')
+    assert (estados['no_lead']['label'], estados['no_lead']['grupo']) == ('No lead', 'sin_resultado')
+    assert 'sin_reporte' not in estados
+
+
+@freeze_time(HOY)
 def test_los_estados_suman_todas_las_agendas_del_periodo_y_no_solo_las_realizadas(db, marlon):
     """El panel contesta "qué pasó con cada cita agendada", así que su total son las agendas —no
     las realizadas, que es el denominador del show up. Si el panel usara ese otro denominador

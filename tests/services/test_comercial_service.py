@@ -87,9 +87,9 @@ def test_pre_call_sale_de_result(result, esperado):
     ('cancelada', False, False, 'cancelo'),
     ('sin_reportar', False, False, 'pendiente'),
     ('reportada_sin_resultado', False, False, 'pendiente'),
-    # Antes "Otro estado": desde el 02/10/2026 cuentan como pendientes (Sin reporte si ya pasó).
-    ('lead_perdido', False, False, 'pendiente'),
-    ('no_lead', False, False, 'pendiente'),
+    # Antes caían en "Otro estado": se muestran con lo que reportó el closer (02/10/2026).
+    ('lead_perdido', False, False, 'lead_perdido'),
+    ('no_lead', False, False, 'no_lead'),
     ('inventado', False, False, 'pendiente'),
 ])
 def test_post_call_resuelve_los_estados_derivados(estado, venta_, seguimiento, esperado):
@@ -251,6 +251,38 @@ def test_retraso_solo_para_llamadas_pasadas_sin_resultado(db, marlon):
     assert por_id[pasada.id]['retraso_dias'] == 3
     assert por_id[futura.id]['retraso_dias'] == 0
     assert por_id[reportada.id]['retraso_dias'] == 0
+
+
+@freeze_time(HOY)
+def test_ya_paso_mira_la_hora_y_no_solo_el_dia(db, marlon):
+    # HOY son las 21:30. Una llamada de hoy a las 15 ya pasó aunque no tenga días de retraso: se
+    # mostraba como "Aún no ocurrió" (02/10/2026). Una de hoy a las 23 todavía no.
+    tarde = agenda(db, marlon, cliente(db, 'Esta tarde'), cuando=datetime(2026, 9, 17, 15, 0))
+    noche = agenda(db, marlon, cliente(db, 'Esta noche'), cuando=datetime(2026, 9, 17, 23, 0))
+
+    por_id = {f['id']: f for f in ComercialService.agendas(DESDE, HASTA)}
+
+    assert (por_id[tarde.id]['retraso_dias'], por_id[tarde.id]['ya_paso']) == (0, True)
+    assert por_id[noche.id]['ya_paso'] is False
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('closer_result,result,etiqueta', [
+    ('Lead Perdido', 'Confirmado', 'Lead perdido'),
+    ('No Lead', 'Confirmado', 'No lead'),
+    ('Cancelado', 'Confirmado', 'Canceló'),
+])
+def test_las_descartadas_se_marcan_y_conservan_su_nombre(db, marlon, closer_result, result, etiqueta):
+    a = agenda(db, marlon, cliente(db, 'Descartada'), cuando=datetime(2026, 9, 10, 15, 0),
+               closer_result=closer_result, result=result)
+    viva = agenda(db, marlon, cliente(db, 'Viva'), cuando=datetime(2026, 9, 10, 16, 0))
+
+    por_id = {f['id']: f for f in ComercialService.agendas(DESDE, HASTA)}
+
+    assert por_id[a.id]['post_call']['label'] == etiqueta
+    assert por_id[a.id]['descartada'] is True
+    assert por_id[a.id]['realizada'] is False
+    assert por_id[viva.id]['descartada'] is False
 
 
 @freeze_time(HOY)

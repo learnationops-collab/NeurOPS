@@ -94,6 +94,8 @@ POST_CALL = [
     {'key': 'sena', 'label': 'Seña', 'tone': 'warning', 'editable': False},
     {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning', 'editable': False},
     {'key': 'presento_no_cerro', 'label': 'Presentó, no cerró', 'tone': 'warning', 'editable': False},
+    {'key': 'lead_perdido', 'label': 'Lead perdido', 'tone': 'error', 'editable': False},
+    {'key': 'no_lead', 'label': 'No lead', 'tone': 'idle', 'editable': False},
 ]
 
 ESTADO_LEAD = [
@@ -149,11 +151,11 @@ _ESTADO_A_POST_CALL = {
     'confirmada': 'pendiente',
     'sin_reportar': 'pendiente',
     'reportada_sin_resultado': 'pendiente',
-    # "Lead perdido" y "No lead" se mostraban como "Otro estado", un rótulo que no decía nada.
-    # Desde el 02/10/2026 (pedido del usuario) cuentan como pendientes: en el panel y en la tabla
-    # caen en "Sin reporte" si la llamada ya pasó. No suman a las realizadas, igual que antes.
-    'lead_perdido': 'pendiente',
-    'no_lead': 'pendiente',
+    # "Lead perdido" y "No lead" son lo que el closer reportó y se muestran con ese nombre (antes
+    # caían en un "Otro estado" que no decía nada). Como "Canceló", son agendas DESCARTADAS: la
+    # tabla las saca del listado por defecto (ver `DESCARTADAS`). No suman a las realizadas.
+    'lead_perdido': 'lead_perdido',
+    'no_lead': 'no_lead',
 }
 
 # Valor que se escribe en la base al corregir el estado desde el modal.
@@ -168,6 +170,10 @@ ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro', 'segu
 PRESENTO = ('venta', 'sena', 'presento_no_cerro')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
+# Agendas que salieron del trabajo del equipo: el lead canceló o el closer lo descartó. Siguen en los
+# números del período, pero las listas las esconden detrás de su propio filtro («Descartadas»):
+# pedido del usuario, 02/10/2026, «que desaparezcan y queden en otro lugar aparte».
+DESCARTADAS = ('cancelo', 'lead_perdido', 'no_lead')
 
 
 def no_es_marcador():
@@ -408,6 +414,10 @@ class ComercialService:
             retraso = 0
             if post == 'pendiente' and a.start_time and a.start_time.date() < hoy:
                 retraso = (hoy - a.start_time.date()).days
+            # Si la hora de la llamada ya pasó. Los días de retraso no alcanzan para decir "todavía
+            # no ocurrió": una llamada de hoy a las 9 sigue con 0 días de retraso a las 18, y se
+            # mostraba como próxima cuando ya había pasado (reportado por el usuario, 02/10/2026).
+            ya_paso = bool(a.start_time and a.start_time <= ahora)
 
             filas.append({
                 'id': a.id,
@@ -431,6 +441,8 @@ class ComercialService:
                 'realizada': post in REALIZADAS,
                 'presento': post in PRESENTO or bool(a.offer_presented),
                 'retraso_dias': retraso,
+                'ya_paso': ya_paso,
+                'descartada': post in DESCARTADAS,
                 # `con_venta`: pago completo o split pay. `con_sena`: dejó una seña (tenga o no,
                 # además, una venta: la seña que después se completó sigue siendo una seña).
                 'con_venta': con_venta,

@@ -221,7 +221,8 @@ def senas_de(filas_ventas):
 # agenda no tiene resultado, punto—, pero en el panel las dos mitades son cosas opuestas: una
 # llamada de mañana sin reportar es lo normal, y una de la semana pasada sin reportar es un
 # agujero que además ENSUCIA el show up, porque lo deja medido sobre menos llamadas de las que
-# hubo. `retraso_dias` ya distingue las dos (ver `ComercialService.agendas`).
+# hubo. `ya_paso` distingue las dos por la HORA de la llamada, no por el día (ver
+# `ComercialService.agendas`).
 SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'warning'}
 POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
 
@@ -254,6 +255,8 @@ GRUPO_DE_ESTADO = {
     'no_show': 'sin_resultado',
     'reagendo': 'sin_resultado',
     'cancelo': 'sin_resultado',
+    'lead_perdido': 'sin_resultado',
+    'no_lead': 'sin_resultado',
     'por_ocurrir': 'en_curso',
     'asistio': 'en_curso',
     'segunda_llamada': 'en_curso',
@@ -280,7 +283,7 @@ def estados_de(filas_agendas):
     for f in filas_agendas:
         clave = f['post_call']['key']
         if clave == 'pendiente':
-            clave = SIN_REPORTE['key'] if f['retraso_dias'] > 0 else POR_OCURRIR['key']
+            clave = SIN_REPORTE['key'] if f['ya_paso'] else POR_OCURRIR['key']
         conteo[clave] = conteo.get(clave, 0) + 1
 
     orden = []
