@@ -34,7 +34,8 @@ from app import create_app, db
 from app.models import WorkshopEvent
 from app.services.workshop_metrics_service import calcular_prefill
 
-CAMPOS = ('aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected')
+CAMPOS = ('aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected',
+          'cash_ventas', 'ventas_cobradas')
 
 
 def main(apply=False):
@@ -48,9 +49,12 @@ def main(apply=False):
         for ev in eventos:
             data = calcular_prefill(ev.date)
             v = data['ventana']
-            antes = {c: getattr(ev, c) or 0 for c in CAMPOS}
+            antes = {c: getattr(ev, c) for c in CAMPOS}
             despues = {c: data[c] for c in CAMPOS}
-            diff = {c: (antes[c], despues[c]) for c in CAMPOS if antes[c] != despues[c]}
+            # Un null cuenta como cambio aunque el calculo de 0: `cash_ventas` y `ventas_cobradas`
+            # nacieron null en los talleres viejos, y sin escribirles el 0 el ticket sigue vacio.
+            diff = {c: (antes[c], despues[c]) for c in CAMPOS
+                    if antes[c] is None or antes[c] != despues[c]}
 
             abierta = ', abierta hasta hoy)' if v['abierta'] else ')'
             rango = f"{v['desde']} → {v['hasta']} ({v['dias']} día/s{abierta}"

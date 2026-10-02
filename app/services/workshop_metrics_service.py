@@ -385,14 +385,23 @@ def _resumen(personas, agendas, compradores, ventas):
     Las cuatro metricas del embudo van por persona. `llamadas` queda aparte como dato
     informativo: es cuantas reuniones se reservaron de verdad, que es lo que mide la
     carga de los closers y casi siempre es un numero mas alto.
+
+    `cash_ventas` / `ventas_cobradas` son la base del ticket promedio (02/10/2026): solo
+    las filas de venta nueva (pago completo y split pay, `_es_cierre`). `cash_collected`
+    sigue sumando las señas, que son plata que el taller trajo, pero el ticket es lo que
+    vale una venta: con la seña adentro, y dividiendo por personas (`sales`, que cuenta
+    tambien a quien la hoja da por cerrado sin la venta cargada), salia inflado.
     """
     show_up, desglose = _desglose_estados(personas)
+    cierres = [s for s in ventas if _es_cierre(s)]
     return {
         "agendas": len(personas),
         "llamadas": len(agendas),
         "show_up": show_up,
         "sales": len(compradores),
         "cash_collected": sum(s.monto or 0.0 for s in ventas),
+        "cash_ventas": sum(s.monto or 0.0 for s in cierres),
+        "ventas_cobradas": len(cierres),
         "breakdown": desglose,
     }
 
@@ -437,6 +446,9 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
         "show_up_sales_call": resumen_vivo["show_up"] + resumen_landing["show_up"],
         "sales": resumen_vivo["sales"] + resumen_landing["sales"],
         "cash_collected": resumen_vivo["cash_collected"] + resumen_landing["cash_collected"],
+        # Base del ticket promedio: solo ventas nuevas, sin señas ni cuotas (ver `_resumen`)
+        "cash_ventas": resumen_vivo["cash_ventas"] + resumen_landing["cash_ventas"],
+        "ventas_cobradas": resumen_vivo["ventas_cobradas"] + resumen_landing["ventas_cobradas"],
         "agendas_breakdown": breakdown_total,
         "desglose": {
             "vivo": resumen_vivo,

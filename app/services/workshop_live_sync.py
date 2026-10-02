@@ -159,4 +159,6 @@ def register_workshop_live_sync(app):
             ev.show_up_sales_call = data['show_up_sales_call']
             ev.sales = data['sales']
             ev.cash_collected = data['cash_collected']
+            ev.cash_ventas = data['cash_ventas']
+            ev.ventas_cobradas = data['ventas_cobradas']
             ev.synced_at = datetime.utcnow()
