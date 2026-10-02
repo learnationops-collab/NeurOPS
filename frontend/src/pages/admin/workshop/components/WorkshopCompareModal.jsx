@@ -18,6 +18,9 @@ const ROWS = [
 
 const WorkshopCompareModal = ({ events, onClose, formatDate, formatCurrency }) => {
     const fmtVal = (val, fmt) => {
+        // Un taller viejo puede no tener todavía el ticket calculado (llega null): mejor
+        // una raya que un $0 que parece un dato.
+        if (val == null) return '—';
         if (fmt === 'currency') return formatCurrency(val || 0);
         if (fmt === 'roas') return `${(val || 0).toFixed(2)}x`;
         return (val || 0).toLocaleString('en-US');

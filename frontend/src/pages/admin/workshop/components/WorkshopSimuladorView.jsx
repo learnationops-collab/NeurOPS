@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { RotateCcw, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
-import { STAGE_ORDER, aggregateTotals, projectSales, computeFuga, money } from '../funnelMath';
+import { STAGE_ORDER, aggregateTotals, projectSales, computeFuga, money, ticketPromedio } from '../funnelMath';
 
 const clamp = (v) => Math.min(100, Math.max(0, v || 0));
 
@@ -23,7 +23,7 @@ const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, 
         });
         const inversion = totals.inversion / n;
         const cpl = totals.leads > 0 ? totals.inversion / totals.leads : 0;
-        const ticket = totals.sales > 0 ? totals.cash_collected / totals.sales : 0;
+        const ticket = ticketPromedio(totals);
         const sales = totals.sales / n;
         const cash = totals.cash_collected / n;
         const roas = totals.inversion > 0 ? totals.cash_collected / totals.inversion : 0;

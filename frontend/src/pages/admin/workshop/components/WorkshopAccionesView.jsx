@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, CheckCircle2, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
-import { STAGE_ORDER, aggregateTotals, stageRates, computeFuga, computeClarityScore, projectSales, money } from '../funnelMath';
+import { STAGE_ORDER, aggregateTotals, stageRates, computeFuga, computeClarityScore, projectSales, money, ticketPromedio as calcularTicket } from '../funnelMath';
 
 const SCORE_FIELDS = [
     { key: 'value_score', label: 'Valor' },
@@ -35,7 +35,7 @@ const WorkshopAccionesView = ({ events, goals, actions, onActionsChanged, format
     const rates = useMemo(() => stageRates(totals), [totals]);
     const fugas = useMemo(() => computeFuga(totals, rates, goals), [totals, rates, goals]);
     const clarity = useMemo(() => computeClarityScore(goals, actions, fugas), [goals, actions, fugas]);
-    const ticketPromedio = totals.sales > 0 ? totals.cash_collected / totals.sales : 0;
+    const ticketPromedio = calcularTicket(totals);
     const fmt = formatCurrency || money;
 
     const stageLabel = (key) => STAGE_ORDER.find((s) => s.key === key)?.label;

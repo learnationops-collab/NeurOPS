@@ -32,6 +32,9 @@ const initialFormData = {
     show_up_sales_call: 0,
     sales: 0,
     cash_collected: 0.0,
+    // Base del ticket promedio: no tiene campo en el formulario, viaja con el prefill
+    cash_ventas: null,
+    ventas_cobradas: null,
     replay_loom_id: '',
     replay_activo_desde: '',
     replay_vence_hasta: '',
@@ -184,7 +187,9 @@ const WorkshopDashboardPage = () => {
                 agendas_exitosas: data.agendas_exitosas,
                 show_up_sales_call: data.show_up_sales_call,
                 sales: data.sales,
-                cash_collected: data.cash_collected
+                cash_collected: data.cash_collected,
+                cash_ventas: data.cash_ventas,
+                ventas_cobradas: data.ventas_cobradas
             }));
             setAgendaBreakdown(data.agendas_breakdown);
             setDesglose(data.desglose || null);
@@ -234,6 +239,8 @@ const WorkshopDashboardPage = () => {
             show_up_sales_call: event.show_up_sales_call,
             sales: event.sales,
             cash_collected: event.cash_collected,
+            cash_ventas: event.cash_ventas,
+            ventas_cobradas: event.ventas_cobradas,
             replay_loom_id: event.replay_loom_id || '',
             replay_activo_desde: event.replay_activo_desde ? event.replay_activo_desde.slice(0, 16) : '',
             replay_vence_hasta: event.replay_vence_hasta ? event.replay_vence_hasta.slice(0, 16) : '',
@@ -322,7 +329,9 @@ const WorkshopDashboardPage = () => {
                 agendas_exitosas: data.agendas_exitosas,
                 show_up_sales_call: data.show_up_sales_call,
                 sales: data.sales,
-                cash_collected: data.cash_collected
+                cash_collected: data.cash_collected,
+                cash_ventas: data.cash_ventas,
+                ventas_cobradas: data.ventas_cobradas
             };
             await api.put(`workshop/events/${selectedEventForFunnel.id}`, {
                 ...selectedEventForFunnel,
@@ -349,6 +358,8 @@ const WorkshopDashboardPage = () => {
         let agendas = 0;
         let sales = 0;
         let cash = 0;
+        let cash_ventas = 0;
+        let ventas_cobradas = 0;
 
         events.forEach(e => {
             inversion += e.inversion || 0;
@@ -358,6 +369,8 @@ const WorkshopDashboardPage = () => {
             agendas += e.agendas_exitosas || 0;
             sales += e.sales || 0;
             cash += e.cash_collected || 0;
+            cash_ventas += e.cash_ventas || 0;
+            ventas_cobradas += e.ventas_cobradas || 0;
         });
 
         const roas = inversion > 0 ? cash / inversion : 0;
@@ -370,6 +383,8 @@ const WorkshopDashboardPage = () => {
             agendas,
             sales,
             cash,
+            cash_ventas,
+            ventas_cobradas,
             roas
         };
     }, [events]);

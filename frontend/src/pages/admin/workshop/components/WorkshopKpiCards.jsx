@@ -1,6 +1,7 @@
 import React from 'react';
 import { CircleDollarSign, TrendingUp, Gauge, Users, CalendarDays, Award } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import { ticketPromedio } from '../funnelMath';
 
 // Tarjeta KPI individual — vocabulario visual de la referencia (.kpi-card / .kpi-head / .kpi-foot)
 const KpiCard = ({ label, value, icon: Icon, subtitle, badge, ayuda }) => (
@@ -28,7 +29,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
     const cplAvg = totalStats.leads > 0 ? totalStats.inversion / totalStats.leads : 0;
     const cpaAvg = totalStats.agendas > 0 ? totalStats.inversion / totalStats.agendas : 0;
     const cacAvg = totalStats.sales > 0 ? totalStats.inversion / totalStats.sales : 0;
-    const ticketAvg = totalStats.sales > 0 ? totalStats.cash / totalStats.sales : 0;
+    const ticketAvg = ticketPromedio(totalStats);
 
     let roasBadge = { text: 'Sin datos', tone: 'warning' };
     if (totalStats.roas >= 3.0) {
@@ -57,7 +58,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="ROAS global"
-                ayuda="Por cada $1 gastado en publicidad, cuántos dólares volvieron. 1x es empatar; arriba de 3x va muy bien. Ticket promedio = cuánto deja en promedio cada persona que compra."
+                ayuda="Por cada $1 gastado en publicidad, cuántos dólares volvieron. 1x es empatar; arriba de 3x va muy bien. Ticket promedio = cuánto deja en promedio cada venta nueva (pago completo o split pay); las señas y las cuotas no entran."
                 value={`${totalStats.roas.toFixed(2)}x`}
                 icon={Gauge}
                 subtitle={`Ticket prom. ${formatCurrency(ticketAvg)}`}

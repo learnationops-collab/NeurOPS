@@ -21,7 +21,8 @@ export const STAGE_ORDER = [
 
 const RAW_FIELDS = [
     'inversion', 'leads', 'whatsapp_leads', 'show_up', 'pitch_leads', 'pitch_final_leads',
-    'aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected'
+    'aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected',
+    'cash_ventas', 'ventas_cobradas'
 ];
 
 // Suma los campos crudos de una lista de eventos — mismo patrón que `totalStats`
@@ -32,6 +33,14 @@ export function aggregateTotals(events) {
         RAW_FIELDS.forEach((f) => { totals[f] += e[f] || 0; });
     });
     return totals;
+}
+
+// Ticket promedio de un objeto de totales (02/10/2026): lo cobrado en ventas NUEVAS (pago
+// completo y split pay) dividido por esas ventas. No es `cash_collected / sales`: el cash
+// incluye las señas y `sales` cuenta personas, así que esa cuenta salía inflada.
+export function ticketPromedio(totals) {
+    const ventas = totals?.ventas_cobradas || 0;
+    return ventas > 0 ? (totals.cash_ventas || 0) / ventas : 0;
 }
 
 // Tasa real (0-1) de cada una de las 8 etapas, a partir de un objeto de totales.
