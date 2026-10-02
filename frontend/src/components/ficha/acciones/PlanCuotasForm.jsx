@@ -19,7 +19,7 @@ import { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import CronogramaCuotas from './CronogramaCuotas';
 import {
-  CANTIDADES_SUGERIDAS, redimensionar, repartirParejo, sumarMeses, moneda, cuadre,
+  CANTIDADES_SUGERIDAS, redimensionar, repartirParejo, sumarMeses, moneda, cuadre, cerrarConLaUltima,
 } from './planCuotas';
 
 export const primeraFechaPorDefecto = () => {
@@ -120,13 +120,17 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
   });
 
   const sinFecha = filas.some((f) => !f.fecha);
+  // La última absorbe la diferencia: si quedó negativa, las anteriores suman más que el total.
+  const motivoBloqueo = sinFecha ? 'Cada cuota necesita su fecha de cobro'
+    : estado.negativa ? 'La última cuota quedó en negativo: bajá alguna de las anteriores'
+      : undefined;
 
   const boton = (
     <button
       type="button"
       className="btn btn--cta"
-      disabled={guardando || filas.length === 0 || sinFecha}
-      title={sinFecha ? 'Cada cuota necesita su fecha de cobro' : undefined}
+      disabled={guardando || filas.length === 0 || Boolean(motivoBloqueo)}
+      title={motivoBloqueo}
       onClick={guardar}
     >
       {guardando && <span className="ln-spinner" />}
@@ -162,18 +166,19 @@ export default function PlanCuotasForm({ ficha, onGuardar, guardando, children }
         <CantidadDeCuotas actual={filas.length} onElegir={elegirCantidad} />
       </div>
 
+      {/* Cada cambio en una fila vuelve a cerrar la suma con la última, que no se tipea. */}
       <CronogramaCuotas
         total={total}
         filas={filas}
         conEstado
-        onCambiar={setFilas}
+        onCambiar={(nuevas) => setFilas(cerrarConLaUltima(nuevas, total))}
         onRepartir={() => setFilas(repartirParejo(filas.length, total)
           .map((monto, i) => ({ ...filas[i], monto })))}
       />
 
-      {!estado.cuadra && (
+      {estado.negativa && (
         <small className="ln-t-caption" style={{ color: 'var(--warning)' }}>
-          {`El plan se puede guardar igual, pero ${estado.mensaje.toLowerCase()} contra el total de ${moneda(total)}.`}
+          {`Las cuotas anteriores suman más que el total de ${moneda(total)}: bajá alguna para poder guardar.`}
         </small>
       )}
     </div>

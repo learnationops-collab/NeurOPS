@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  repartirCuotas, repartirParejo, cuadre, moneda, sumarMeses, redimensionar,
+  repartirCuotas, repartirParejo, cuadre, moneda, sumarMeses, redimensionar, cerrarConLaUltima,
   CANTIDADES_SUGERIDAS, ESTADOS_CUOTA, round2,
 } from './planCuotas';
 
@@ -37,6 +37,43 @@ describe('repartirCuotas', () => {
 
   it('repartirParejo ignora los montos a mano', () => {
     expect(repartirParejo(2, 1000)).toEqual([500, 500]);
+  });
+});
+
+describe('cerrarConLaUltima', () => {
+  const filas = (montos) => montos.map((monto, i) => ({ id: i + 1, monto, estado: 'pendiente' }));
+
+  it('la última cierra la suma contra el total cuando se tocan las anteriores', () => {
+    // El caso del closer (01/10/2026): 1500 en 4, cargó 250, 250 y 500; la última quedaba en 375.
+    const cerradas = cerrarConLaUltima(filas([250, 250, 500, 375]), 1500);
+    expect(cerradas.map((f) => f.monto)).toEqual([250, 250, 500, 500]);
+    expect(cuadre(1500, cerradas).cuadra).toBe(true);
+  });
+
+  it('respeta lo tipeado aunque venga como texto y no toca el resto de la última fila', () => {
+    const cerradas = cerrarConLaUltima([
+      { id: 1, monto: '333.33', estado: 'pagado' },
+      { id: 2, monto: 0, fecha: '2026-11-10', estado: 'pendiente' },
+    ], 1000);
+    expect(cerradas[0]).toEqual({ id: 1, monto: '333.33', estado: 'pagado' });
+    expect(cerradas[1]).toEqual({ id: 2, monto: 666.67, fecha: '2026-11-10', estado: 'pendiente' });
+  });
+
+  it('una sola fila se lleva el total', () => {
+    expect(cerrarConLaUltima(filas([0]), 900)[0].monto).toBe(900);
+  });
+
+  it('si las anteriores se pasan, la última queda negativa y el cuadre lo marca', () => {
+    const cerradas = cerrarConLaUltima(filas([1200, 500, 0]), 1500);
+    expect(cerradas[2].monto).toBe(-200);
+    expect(cuadre(1500, cerradas)).toMatchObject({
+      cuadra: false, negativa: true, mensaje: 'Te pasaste $200: bajá alguna cuota', tono: 'warning',
+    });
+  });
+
+  it('sin filas no devuelve nada', () => {
+    expect(cerrarConLaUltima([], 1000)).toEqual([]);
+    expect(cerrarConLaUltima(null, 1000)).toEqual([]);
   });
 });
 

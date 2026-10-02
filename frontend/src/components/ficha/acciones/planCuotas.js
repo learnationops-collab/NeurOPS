@@ -35,12 +35,38 @@ export function repartirCuotas(n, total, montosMap) {
 export const repartirParejo = (n, total) => repartirCuotas(n, total, null);
 
 /**
+ * Recalcula la última fila para que la suma cierre contra `total`, dejando las anteriores como
+ * están. Es lo que el editor del plan aplica cada vez que se toca una fila.
+ *
+ * Sin esto la última no se tipeaba pero tampoco se recalculaba: se quedaba con el reparto parejo
+ * de antes. Caso real (01/10/2026): total 1500 en 4 cuotas, el closer cargó 250, 250 y 500, y la
+ * última siguió en 375 (1500 / 4) en vez de 500; el plan se guardó sumando 1375.
+ */
+export function cerrarConLaUltima(filas, total) {
+  if (!filas?.length) return [];
+  const anteriores = filas.slice(0, -1);
+  const acumulado = round2(anteriores.reduce((acc, f) => acc + (Number(f.monto) || 0), 0));
+  return [...anteriores, { ...filas[filas.length - 1], monto: round2(round2(total) - acumulado) }];
+}
+
+/**
  * Estado de cuadre entre el total del plan y las filas cargadas.
  * `tono` sale del design system: success cuando cierra, warning cuando no.
+ *
+ * Una última cuota en negativo no cuadra aunque la suma dé el total: es que las anteriores se
+ * pasaron, y una cuota negativa no se puede cobrar.
  */
 export function cuadre(total, filas) {
-  const suma = round2((filas || []).reduce((acc, f) => acc + (Number(f.monto) || 0), 0));
+  const lista = filas || [];
+  const suma = round2(lista.reduce((acc, f) => acc + (Number(f.monto) || 0), 0));
   const diferencia = round2(round2(total) - suma);
+  const ultima = round2(lista[lista.length - 1]?.monto);
+  if (ultima < 0) {
+    return {
+      suma, diferencia, cuadra: false, negativa: true,
+      mensaje: `Te pasaste ${moneda(-ultima)}: bajá alguna cuota`, tono: 'warning',
+    };
+  }
   if (diferencia === 0) return { suma, diferencia, cuadra: true, mensaje: 'Cuadra con el total', tono: 'success' };
   if (diferencia > 0) {
     return { suma, diferencia, cuadra: false, mensaje: `Faltan ${moneda(diferencia)} por asignar`, tono: 'warning' };

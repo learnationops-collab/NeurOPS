@@ -495,7 +495,7 @@ describe('TabAcciones', () => {
     expect(screen.queryByLabelText('Monto')).toBeNull();
   });
 
-  it('el plan de cuotas arranca del plan existente y avisa cuando no cuadra', async () => {
+  it('el plan de cuotas arranca del plan existente y la última cuota cierra la suma', async () => {
     const user = userEvent.setup();
     const p = props(fichaConDeuda);
     render(<TabAcciones {...p} />);
@@ -503,9 +503,20 @@ describe('TabAcciones', () => {
     expect(screen.getByLabelText('Total del plan')).toHaveValue(1500);
     expect(screen.getByRole('status')).toHaveTextContent('Cuadra con el total');
 
+    // La última no se tipea: absorbe lo que se cambia en las anteriores. Antes se quedaba con el
+    // reparto parejo y el plan se guardaba sin sumar el total.
+    const ultima = screen.getByTitle('Se ajusta sola para que la suma cierre');
     await user.clear(screen.getByLabelText('Monto de la cuota 1'));
     await user.type(screen.getByLabelText('Monto de la cuota 1'), '100');
-    expect(screen.getByRole('status')).toHaveTextContent('Faltan $400 por asignar');
+    expect(ultima).toHaveTextContent('$900');
+    expect(screen.getByRole('status')).toHaveTextContent('Cuadra con el total');
+
+    // Si las anteriores se pasan del total, la última queda negativa y no se puede guardar.
+    await user.clear(screen.getByLabelText('Monto de la cuota 2'));
+    await user.type(screen.getByLabelText('Monto de la cuota 2'), '1600');
+    expect(ultima).toHaveTextContent('$-200');
+    expect(screen.getByRole('status')).toHaveTextContent('Te pasaste $200');
+    expect(screen.getByRole('button', { name: /Guardar plan de 3 cuotas/ })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Repartir en partes iguales' }));
     expect(screen.getByRole('status')).toHaveTextContent('Cuadra con el total');
