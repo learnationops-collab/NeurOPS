@@ -18,6 +18,8 @@ export const fichaAgendaVencida = {
     ingreso: null,
     llamada: { iso: '2026-09-25T21:00:00Z', fecha: '25 sep 2026', hora: '18:00' },
     fuente: 'Elias',
+    fuente_label: 'Elias',
+    fathom_url: null,
     closer: { id: 12, nombre: 'Jean Carlo', email: 'jean@neurocogniciones.com' },
     setter: { id: 7, nombre: 'Elías' },
   },

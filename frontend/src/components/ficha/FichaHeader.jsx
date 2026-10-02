@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, Video, X } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import FranjaBaja from './piezas/FranjaBaja';
@@ -8,12 +8,13 @@ import { instanteLegible, soloDia } from './piezas/fecha';
 import { opciones } from './estadoFicha';
 import { mensajeDeError } from './fichaApi';
 import { CAMPOS_DATOS, cambiosDe, valoresIniciales } from './datosCliente';
+import { esDeFathom } from './fathom';
 
 /**
  * Cabecera de la ficha: una FRANJA, no un bloque de metadatos apilados.
  *
- * El nombre en h2 y al lado, separados por divisores de 1px, los cuatro datos que
- * se miran antes de hacer cualquier cosa. El de Closer no es texto: es el botón
+ * El nombre en h2 y al lado, separados por divisores de 1px, los cinco datos que
+ * se miran antes de hacer cualquier cosa (la fuente se sumó el 02/10/2026). El de Closer no es texto: es el botón
  * para pasarle el lead a otro, que es la acción más frecuente sobre esta franja y
  * hoy vive escondida en el mazo.
  *
@@ -58,6 +59,14 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         : id.llamada ? [id.llamada.fecha, id.llamada.hora].filter(Boolean).join(' · ') : null;
     // Ya vendido: el programa reemplaza al examen, que pasa a ser un dato de origen.
     const esCliente = !!id.programa;
+    // La etiqueta la arma el backend con el mismo vocabulario del historial; la clave cruda queda
+    // de respaldo para una ficha vieja que todavía no la traiga.
+    const fuente = id.fuente_label || id.fuente || null;
+
+    // El link de Fathom de esta llamada, que el closer pega en Resultado (pedido del 02/10/2026).
+    // Va con los botones de arriba a la derecha y no dentro de un dato: es una acción, como copiar.
+    const grabacion = id.fathom_url || null;
+    const rotuloGrabacion = esDeFathom(grabacion) ? 'Ver grabación en Fathom' : 'Ver grabación de la llamada';
 
     // El telefono del lead es, en la practica, su WhatsApp: el modal del mazo ya abria el chat
     // desde aca y esa era la forma real de contactarlo.
@@ -172,8 +181,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
             id.email ? `Correo: ${id.email}` : null,
             id.examen ? `Examen: ${id.examen}` : null,
             llamada ? `Agendada: ${llamada}` : null,
+            fuente ? `Fuente: ${fuente}` : null,
             id.setter?.nombre ? `Setter: ${id.setter.nombre}` : null,
             ficha?.confirmacion?.nota ? `Notas: ${ficha.confirmacion.nota}` : null,
+            grabacion ? `Grabación: ${grabacion}` : null,
         ].filter(Boolean).join('\n');
         try {
             await navigator.clipboard.writeText(lineas);
@@ -225,6 +236,13 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                         </>
                     ) : (
                         <>
+                            {grabacion && (
+                                <a className="ibtn fi-cab-grabacion" href={grabacion}
+                                    target="_blank" rel="noopener noreferrer"
+                                    aria-label={rotuloGrabacion} title={rotuloGrabacion}>
+                                    <Video size={16} />
+                                </a>
+                            )}
                             <button type="button" className="ibtn" onClick={copiarResumen}
                                 aria-label="Copiar los datos del lead"
                                 title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>
@@ -330,6 +348,8 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                             <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
                         )}
                     </div>
+
+                    <Dato rotulo="Fuente" valor={fuente} />
                 </div>
             )}
 

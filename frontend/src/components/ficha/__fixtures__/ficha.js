@@ -118,7 +118,8 @@ export const fichaPrecall = {
         telefono: '+593 99 515 7254', instagram: '@kevin.enc',
         examen: 'MIR / ENARM', programa: null, grupo: null, ingreso: '2026-09-18',
         llamada: { iso: '2026-09-25T18:00:00', fecha: '25 sep', hora: '18:00' },
-        fuente: 'Webinar', closer: { id: 7, nombre: 'Jean Carlo' },
+        fuente: 'Webinar', fuente_label: 'Webinar', fathom_url: null,
+        closer: { id: 7, nombre: 'Jean Carlo' },
         setter: { id: 3, nombre: 'Paula' },
     },
     estado: {
