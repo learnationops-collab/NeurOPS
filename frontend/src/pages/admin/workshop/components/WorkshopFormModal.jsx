@@ -9,6 +9,14 @@ const STEP_META = [
     { n: 3, title: 'Validación del sistema', copy: 'Agendas, ventas y cash' },
 ];
 
+// Foto comparable del formulario: '' y 0, o '5' y 5, son el mismo valor guardado
+// (el foco vacía los ceros y los inputs devuelven texto).
+const fotoDe = (datos) => JSON.stringify(datos, (_k, v) => {
+    if (v === '') return 0;
+    if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v);
+    return v;
+});
+
 const WorkshopFormModal = ({
     isEditMode,
     currentStep,
@@ -30,14 +38,14 @@ const WorkshopFormModal = ({
     // Guardado parcial: el taller se va completando mientras corre el evento, así que
     // se guarda sin cerrar el modal. La foto del último guardado dice si quedaron
     // cambios pendientes; al abrir, lo que trae el formulario cuenta como guardado.
-    const [fotoGuardada, setFotoGuardada] = useState(() => JSON.stringify(formData));
+    const [fotoGuardada, setFotoGuardada] = useState(() => fotoDe(formData));
     const [guardadoA, setGuardadoA] = useState(null);
-    const hayCambios = JSON.stringify(formData) !== fotoGuardada;
+    const hayCambios = fotoDe(formData) !== fotoGuardada;
     const puedeGuardar = Boolean(formData.date && formData.name) && !guardando;
 
     const guardarProgreso = async () => {
         if (!puedeGuardar) return;
-        const foto = JSON.stringify(formData);
+        const foto = fotoDe(formData);
         const ok = await onGuardar();
         if (ok) {
             setFotoGuardada(foto);
@@ -103,9 +111,41 @@ const WorkshopFormModal = ({
         if (currentStep > 1) setCurrentStep(currentStep - 1);
     };
 
+    // Al entrar a un campo: si tiene un 0 se vacía para escribir directo, y si ya
+    // tiene algo se selecciona entero para que lo que se tipee lo reemplace. Si se
+    // sale de un campo numérico vacío vuelve a 0. El mouseup del mismo clic que dio
+    // el foco ubicaría el cursor y deshace la selección: ese único mouseup se anula.
+    const seleccionar = (e) => {
+        const el = e.target;
+        if (el.type !== 'text' && el.type !== 'number') return; // fecha/hora: sin selección
+        el.select();
+        el.dataset.recienEnfocado = '1';
+    };
+    const conservarSeleccion = (e) => {
+        if (e.target.dataset.recienEnfocado) {
+            e.preventDefault();
+            delete e.target.dataset.recienEnfocado;
+        }
+    };
+
     const field = (key) => ({
         value: formData[key],
         onChange: (e) => setFormData((prev) => ({ ...prev, [key]: e.target.value })),
+        onFocus: (e) => {
+            const valor = formData[key];
+            if (e.target.type === 'number' && String(valor ?? '').trim() !== '' && Number(valor) === 0) {
+                setFormData((prev) => ({ ...prev, [key]: '' }));
+                return;
+            }
+            seleccionar(e);
+        },
+        onMouseUp: conservarSeleccion,
+        onBlur: (e) => {
+            delete e.target.dataset.recienEnfocado;
+            if (e.target.type === 'number' && String(formData[key] ?? '').trim() === '') {
+                setFormData((prev) => ({ ...prev, [key]: 0 }));
+            }
+        },
     });
 
     return (
@@ -244,6 +284,9 @@ const WorkshopFormModal = ({
                                                         type="text"
                                                         placeholder="Pegá el link de Loom (https://www.loom.com/share/...) o solo el ID"
                                                         value={formData.replay_loom_id}
+                                                        onFocus={seleccionar}
+                                                        onMouseUp={conservarSeleccion}
+                                                        onBlur={(e) => delete e.target.dataset.recienEnfocado}
                                                         onChange={(e) => setFormData((prev) => ({ ...prev, replay_loom_id: extractLoomId(e.target.value) }))}
                                                     />
                                                 </span>
