@@ -418,7 +418,7 @@
 .ws-shell .wizard-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .09); flex-wrap: wrap; }
 .ws-shell .wizard-footer > div:last-child { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
 /* Guardado parcial del wizard: [estado] [Guardar] [Siguiente | Registrar] en una fila. */
-.ws-shell .wizard-footer > .wizard-acciones { flex-direction: row; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.ws-shell .wizard-footer > div.wizard-acciones { flex-direction: row; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .ws-shell .wizard-footer .secondary-action:disabled { opacity: .45; cursor: not-allowed; }
 .ws-shell .wizard-guardado { color: var(--success); font-size: 10px; font-weight: 700; transition: color 180ms ease, opacity 180ms ease; }
 .ws-shell .wizard-guardado:empty { display: none; }
@@ -516,7 +516,7 @@
   .ws-shell .wizard-preview { grid-template-columns: 1fr 1fr; }
   .ws-shell .wizard-footer { align-items: stretch; flex-direction: column; }
   .ws-shell .wizard-footer > div:last-child { align-items: stretch; }
-  .ws-shell .wizard-footer > .wizard-acciones { flex-direction: column; align-items: stretch; }
+  .ws-shell .wizard-footer > div.wizard-acciones { flex-direction: column; align-items: stretch; }
   .ws-shell .wizard-guardado { text-align: center; }
   .ws-shell .wizard-footer .secondary-action, .ws-shell .wizard-footer .form-submit { width: 100%; }
   .ws-shell .modal-overlay { align-items: end; padding: 0; }
