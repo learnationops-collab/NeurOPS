@@ -555,6 +555,9 @@
   .ws-shell .custom-ratings { grid-template-columns: 1fr 1fr; }
   .ws-shell .comparison-panel table, .ws-shell .comparison-panel tbody, .ws-shell .comparison-panel tr, .ws-shell .comparison-panel th, .ws-shell .comparison-panel td { display: block; width: 100%; }
   .ws-shell .comparison-panel thead { display: none; }
+  /* En tarjetas la tabla no puede conservar su ancho minimo de escritorio: los valores
+     quedaban a la derecha, escondidos detras de un scroll horizontal. */
+  .ws-shell .comparison-panel table { min-width: 0; }
   .ws-shell .comparison-panel tbody tr { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
   .ws-shell .comparison-panel tbody th { width: 100%; padding: 5px 2px 10px; border: 0; background: transparent; color: #fff; font-size: 11px; }
   .ws-shell .comparison-panel tbody td { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 2px; border: 0; }
