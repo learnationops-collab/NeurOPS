@@ -451,11 +451,41 @@
 .ws-shell .compare-bar button.clear { border: 0; background: none; color: rgba(255, 255, 255, .7); font-size: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
 .ws-shell .compare-bar button.clear:hover { color: #fff; }
 
+/* Tráfico landings: visitas por día (una serie, un eje), share por landing y la pareja fuente/campaña. */
+.ws-shell .trafico-aviso { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 22px; padding: 12px 16px; border: 1px solid rgba(251, 191, 36, .35); border-radius: 14px; background: rgba(251, 191, 36, .08); color: #fde68a; font-size: 11px; line-height: 1.5; }
+.ws-shell .trafico-aviso svg { flex: 0 0 auto; margin-top: 2px; }
+.ws-shell .trafico-chart { margin-top: 14px; }
+.ws-shell .trafico-chart-tip { min-height: 20px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 10px; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ws-shell .trafico-chart-tip strong { color: #fff; font-size: 13px; }
+.ws-shell .trafico-chart-plot { height: 180px; display: flex; align-items: flex-end; gap: 2px; padding-bottom: 1px; border-bottom: 1px solid rgba(255, 255, 255, .14); background: repeating-linear-gradient(to top, rgba(255, 255, 255, .05) 0 1px, transparent 1px 25%); }
+.ws-shell .trafico-chart-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: transparent; cursor: default; }
+.ws-shell .trafico-chart-col:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+.ws-shell .trafico-chart-col i { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--pink); opacity: .78; transform-origin: bottom; animation: ws-barra-crece 520ms cubic-bezier(.2, .8, .2, 1) both; transition: opacity 120ms ease; }
+.ws-shell .trafico-chart-col.activo i { opacity: 1; }
+.ws-shell .trafico-chart-plot:hover .trafico-chart-col:not(.activo) i { opacity: .45; }
+@keyframes ws-barra-crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.ws-shell .trafico-chart-axis { display: flex; gap: 2px; margin-top: 6px; }
+.ws-shell .trafico-chart-axis span { flex: 1 1 0; min-width: 0; overflow: visible; white-space: nowrap; color: var(--text-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.ws-shell .trafico-landings th:first-child { width: 30%; }
+.ws-shell .trafico-landings th[scope="row"] strong { display: block; color: #fff; font-size: 12px; }
+.ws-shell .trafico-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.ws-shell .trafico-chips .status { justify-self: start; }
+.ws-shell .trafico-share { display: block; height: 4px; margin: 6px 0 2px auto; width: 100%; max-width: 120px; border-radius: 4px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ws-shell .trafico-share i { display: block; height: 100%; margin-left: auto; border-radius: 4px; background: var(--pink); }
+.ws-shell .trafico-share-pct { color: var(--text-muted); font-size: 9px; }
+.ws-shell .trafico-visitas { display: block; text-align: right; }
+.ws-shell .trafico-pareja { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 22px; }
+.ws-shell .trafico-pareja .comparison-panel { min-width: 0; margin-top: 0; }
+.ws-shell .trafico-tabla table { min-width: 380px; }
+.ws-shell .trafico-tabla th:first-child { width: 40%; }
+.ws-shell .trafico-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+
 @media (prefers-reduced-motion: reduce) {
   .ws-shell *, .ws-shell *::before, .ws-shell *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
 @media (max-width: 1200px) {
+  .ws-shell .trafico-pareja { grid-template-columns: minmax(0, 1fr); }
   .ws-shell .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ws-shell .detail-grid, .ws-shell .sim-grid, .ws-shell .actions-grid { grid-template-columns: 1fr; }
   .ws-shell .detail-sidebar { grid-template-columns: 1fr 1fr; }
@@ -529,4 +559,7 @@
   .ws-shell .comparison-panel tbody th { width: 100%; padding: 5px 2px 10px; border: 0; background: transparent; color: #fff; font-size: 11px; }
   .ws-shell .comparison-panel tbody td { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 2px; border: 0; }
   .ws-shell .comparison-panel tbody td::before { content: attr(data-workshop); max-width: 62%; color: var(--text-muted); font-size: 9px; line-height: 1.35; text-align: left; }
+  .ws-shell .trafico-landings th:first-child, .ws-shell .trafico-tabla th:first-child { width: 100%; }
+  .ws-shell .trafico-visitas { min-width: 120px; }
+  .ws-shell .trafico-tabla table { min-width: 0; }
 }

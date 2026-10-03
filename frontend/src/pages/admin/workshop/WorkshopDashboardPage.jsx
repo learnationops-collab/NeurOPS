@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard } from 'lucide-react';
+import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import './workshop-intel.css';
@@ -9,6 +9,7 @@ import WorkshopTableView from './components/WorkshopTableView';
 import WorkshopFunnelView from './components/WorkshopFunnelView';
 import WorkshopFormModal from './components/WorkshopFormModal';
 import WorkshopLandingView from './components/WorkshopLandingView';
+import WorkshopTraficoView from './components/WorkshopTraficoView';
 import WorkshopDiagnostico from './components/WorkshopDiagnostico';
 import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import WorkshopSimuladorView from './components/WorkshopSimuladorView';
@@ -50,7 +51,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'funnel' | 'simulador' | 'acciones' | 'landing'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'funnel' | 'simulador' | 'acciones' | 'trafico' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
     // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
@@ -472,6 +473,10 @@ const WorkshopDashboardPage = () => {
                         <button type="button" className={activeTab === 'acciones' ? 'active' : ''} onClick={() => setActiveTab('acciones')} aria-current={activeTab === 'acciones' ? 'page' : undefined}>
                             <Zap size={14} /> Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
                         </button>
+                        {/* Visitas de todas las landings de institute-site y clics al grupo de WhatsApp. */}
+                        <button type="button" className={activeTab === 'trafico' ? 'active' : ''} onClick={() => setActiveTab('trafico')} aria-current={activeTab === 'trafico' ? 'page' : undefined}>
+                            <Globe size={14} /> Tráfico landings
+                        </button>
                         {/* La grabación es OTRO embudo que el workshop en vivo: mismo
                             producto, fuente distinta ('workshop landing'). */}
                         <button type="button" className={activeTab === 'landing' ? 'active' : ''} onClick={() => setActiveTab('landing')} aria-current={activeTab === 'landing' ? 'page' : undefined}>
@@ -484,7 +489,9 @@ const WorkshopDashboardPage = () => {
                 {/* La landing va PRIMERO y fuera de los guards de abajo: sus datos
                     no dependen de que haya workshops en vivo cargados, asi que el
                     "no hay workshops registrados" no tiene que taparla. */}
-                {activeTab === 'landing' ? (
+                {activeTab === 'trafico' ? (
+                    <WorkshopTraficoView />
+                ) : activeTab === 'landing' ? (
                     <WorkshopLandingView events={events} onConfigSaved={() => fetchEvents(true)} />
                 ) : loading ? (
                     <section className="empty-state loading-state" role="status">
