@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Loader2, ArrowLeft, ArrowRight, X, Check } from 'lucide-react';
+import { RefreshCw, Loader2, ArrowLeft, ArrowRight, X, Check, Save } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import { extractLoomId } from '../../../../utils/loom';
 
@@ -23,8 +23,40 @@ const WorkshopFormModal = ({
     onPrefill,
     onClose,
     onSubmit,
+    onGuardar,
+    guardando,
     formatCurrency
 }) => {
+    // Guardado parcial: el taller se va completando mientras corre el evento, así que
+    // se guarda sin cerrar el modal. La foto del último guardado dice si quedaron
+    // cambios pendientes; al abrir, lo que trae el formulario cuenta como guardado.
+    const [fotoGuardada, setFotoGuardada] = useState(() => JSON.stringify(formData));
+    const [guardadoA, setGuardadoA] = useState(null);
+    const hayCambios = JSON.stringify(formData) !== fotoGuardada;
+    const puedeGuardar = Boolean(formData.date && formData.name) && !guardando;
+
+    const guardarProgreso = async () => {
+        if (!puedeGuardar) return;
+        const foto = JSON.stringify(formData);
+        const ok = await onGuardar();
+        if (ok) {
+            setFotoGuardada(foto);
+            setGuardadoA(new Date());
+        }
+    };
+
+    // Ctrl/Cmd + S guarda sin salir del campo que se está editando.
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                guardarProgreso();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    });
+
     // "Siguiente" (paso 2) y "Guardar Cambios" (paso 3) caen en la misma posición del
     // pie del modal, así que un doble clic sobre Siguiente guardaba el evento sin querer:
     // el segundo clic aterrizaba sobre el botón de guardar recién renderizado. El botón de
@@ -297,11 +329,27 @@ const WorkshopFormModal = ({
                                     <button type="button" className="secondary-action" onClick={onClose}>Cancelar</button>
                                 )}
                             </div>
-                            <div>
+                            <div className="wizard-acciones">
+                                <span className={`wizard-guardado${hayCambios ? ' pendiente' : ''}`} aria-live="polite">
+                                    {hayCambios
+                                        ? 'Cambios sin guardar'
+                                        : guardadoA
+                                            ? `Guardado ${guardadoA.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
+                                            : ''}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="secondary-action"
+                                    onClick={guardarProgreso}
+                                    disabled={!puedeGuardar}
+                                    title={formData.date && formData.name ? 'Guardar sin cerrar (Ctrl + S)' : 'Completá la fecha y el nombre para guardar'}
+                                >
+                                    {guardando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Guardar
+                                </button>
                                 {currentStep < 3 ? (
                                     <button type="button" className="primary-action" onClick={handleNextStep}>Siguiente <ArrowRight size={16} /></button>
                                 ) : (
-                                    <button type="submit" className="primary-action form-submit" disabled={!guardadoHabilitado}>
+                                    <button type="submit" className="primary-action form-submit" disabled={!guardadoHabilitado || guardando}>
                                         {isEditMode ? 'Guardar cambios' : 'Registrar evento'} <Check size={16} />
                                     </button>
                                 )}

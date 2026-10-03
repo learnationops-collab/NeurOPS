@@ -67,6 +67,7 @@ const WorkshopDashboardPage = () => {
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
     const [prefilledDate, setPrefilledDate] = useState('');
     const [resyncing, setResyncing] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
     // Desglose vivo / grabación del evento abierto en la pestaña de embudo
     const [desglose, setDesglose] = useState(null);
@@ -274,24 +275,33 @@ const WorkshopDashboardPage = () => {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    // Guarda el taller. Con `cerrar: false` es el guardado parcial del wizard: el
+    // director de marketing carga fecha, título e inversión antes del evento y va
+    // actualizando leads, show up y pitch mientras corre, así que el modal queda
+    // abierto. Si el taller todavía no existía, el primer guardado lo crea y el
+    // modal pasa a modo edición para que los siguientes sean un PUT al mismo id.
+    const guardarTaller = async ({ cerrar }) => {
+        if (guardando) return false;
+        // Un campo vaciado (el foco borra el 0) llega como '' y parseInt('') es NaN,
+        // que viaja como null y el backend no lo puede convertir: cuenta como 0.
+        const entero = (v) => parseInt(v) || 0;
+        const decimal = (v) => parseFloat(v) || 0;
         const payload = {
             ...formData,
-            inversion: parseFloat(formData.inversion),
-            cpm: parseFloat(formData.cpm),
-            cpc: parseFloat(formData.cpc),
-            clics: parseInt(formData.clics),
-            leads: parseInt(formData.leads),
-            whatsapp_leads: parseInt(formData.whatsapp_leads),
-            show_up: parseInt(formData.show_up),
-            pitch_leads: parseInt(formData.pitch_leads),
-            pitch_final_leads: parseInt(formData.pitch_final_leads),
-            aplicaciones_form: parseInt(formData.aplicaciones_form),
-            agendas_exitosas: parseInt(formData.agendas_exitosas),
-            show_up_sales_call: parseInt(formData.show_up_sales_call),
-            sales: parseInt(formData.sales),
-            cash_collected: parseFloat(formData.cash_collected),
+            inversion: decimal(formData.inversion),
+            cpm: decimal(formData.cpm),
+            cpc: decimal(formData.cpc),
+            clics: entero(formData.clics),
+            leads: entero(formData.leads),
+            whatsapp_leads: entero(formData.whatsapp_leads),
+            show_up: entero(formData.show_up),
+            pitch_leads: entero(formData.pitch_leads),
+            pitch_final_leads: entero(formData.pitch_final_leads),
+            aplicaciones_form: entero(formData.aplicaciones_form),
+            agendas_exitosas: entero(formData.agendas_exitosas),
+            show_up_sales_call: entero(formData.show_up_sales_call),
+            sales: entero(formData.sales),
+            cash_collected: decimal(formData.cash_collected),
             replay_loom_id: formData.replay_loom_id || null,
             replay_activo_desde: formData.replay_activo_desde || null,
             replay_vence_hasta: formData.replay_vence_hasta || null,
@@ -301,21 +311,42 @@ const WorkshopDashboardPage = () => {
         delete payload.replay_info_minutos;
         delete payload.replay_oferta_minutos;
 
+        setGuardando(true);
         try {
+            let guardado;
             if (isEditMode && selectedEvent) {
-                await api.put(`workshop/events/${selectedEvent.id}`, payload);
-                toast.success("Registro actualizado");
+                const res = await api.put(`workshop/events/${selectedEvent.id}`, payload);
+                guardado = res.data;
+                toast.success(cerrar ? "Registro actualizado" : "Taller guardado");
             } else {
-                await api.post('workshop/events', payload);
-                toast.success("Registro creado con éxito");
+                const res = await api.post('workshop/events', payload);
+                guardado = res.data;
+                toast.success(cerrar ? "Registro creado con éxito" : "Taller creado: seguí cargando y guardando");
             }
-            setModalOpen(false);
-            fetchEvents();
+            if (cerrar) {
+                setModalOpen(false);
+                fetchEvents();
+            } else {
+                if (guardado?.id) {
+                    setSelectedEvent(guardado);
+                    setIsEditMode(true);
+                }
+                fetchEvents(true);
+            }
+            return true;
         } catch (err) {
             console.error("Error saving event:", err);
             const msg = err.response?.data?.error || "Error al guardar el evento";
             toast.error(msg);
+            return false;
+        } finally {
+            setGuardando(false);
         }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        guardarTaller({ cerrar: true });
     };
 
     const handleResyncFunnel = async () => {
@@ -614,6 +645,8 @@ const WorkshopDashboardPage = () => {
                         onPrefill={handlePrefill}
                         onClose={() => setModalOpen(false)}
                         onSubmit={handleSubmit}
+                        onGuardar={() => guardarTaller({ cerrar: false })}
+                        guardando={guardando}
                         formatCurrency={formatCurrency}
                     />
                 )}
