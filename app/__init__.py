@@ -170,6 +170,7 @@ def create_app(config_class=Config):
     # Cuelga las rutas /landing/* del mismo blueprint. Va ANTES de registrarlo:
     # despues de register_blueprint, Flask ya no acepta rutas nuevas.
     from app.api import workshop_landing  # noqa: F401
+    from app.api import workshop_trafico  # noqa: F401
     app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
 
     from app.api.metrics import bp as metrics_bp
