@@ -7,6 +7,12 @@ import logging
 
 bp = Blueprint('metrics', __name__)
 
+# Lo que institute-site puede reportar por track-visit. Cualquier otro valor (o
+# ninguno) es una visita: asi una landing vieja que no manda `evento` sigue igual.
+EVENTO_VISITA = 'visita'
+EVENTO_CLIC_WHATSAPP = 'clic_whatsapp'
+EVENTOS_VALIDOS = {EVENTO_VISITA, EVENTO_CLIC_WHATSAPP}
+
 @bp.route('/track-visit', methods=['POST'])
 def track_visit():
     try:
@@ -32,7 +38,8 @@ def track_visit():
             utm_campaign=data.get('utm_campaign'),
             utm_content=data.get('utm_content'),
             page_path=raw_path,
-            referrer=request.referrer
+            referrer=request.referrer,
+            evento=data.get('evento') if data.get('evento') in EVENTOS_VALIDOS else EVENTO_VISITA
         )
         db.session.add(tracking)
         db.session.commit()
@@ -63,7 +70,11 @@ def get_track_visits():
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
         
-        query = LandingTracking.query
+        # Solo visitas: los clics al grupo de WhatsApp se cuentan en la pestaña
+        # «Tráfico landings» del panel de talleres, no como cargas de pagina.
+        query = LandingTracking.query.filter(
+            db.or_(LandingTracking.evento.is_(None), LandingTracking.evento == EVENTO_VISITA)
+        )
         
         # Filtrar por fecha de inicio si se proporciona (YYYY-MM-DD)
         if start_date_str:

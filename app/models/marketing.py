@@ -160,4 +160,6 @@ class LandingTracking(db.Model):
     utm_content = db.Column(db.String(100))
     page_path = db.Column(db.String(255))
     referrer = db.Column(db.Text)
+    # NULL o 'visita' = carga de la pagina; 'clic_whatsapp' = clic al grupo del evento.
+    evento = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
