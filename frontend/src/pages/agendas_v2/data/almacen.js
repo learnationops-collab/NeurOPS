@@ -3,9 +3,10 @@
 // historial de 80 cambios. El estado es inmutable para que React detecte los cambios.
 
 import { COLECCIONES, NORM, normalInteg, normalPerfil } from '../core/normalizar';
-import { seSolapa } from '../core/disponibilidad';
 import { clonar, uid } from '../core/util';
+import { crearAdaptadorApi } from './adaptadorApi';
 import { crearAdaptadorLocal } from './adaptadorLocal';
+import { MODO_LOCAL } from './modo';
 import { toast } from '../ui/toast';
 
 const PAUSA = 600;
@@ -22,6 +23,7 @@ function msgError(e) {
 export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
     let estado = {
         cargando: true,
+        cargado: false, // true cuando la carga inicial salió bien (no solo terminó)
         d: Object.fromEntries(COLECCIONES.map(c => [c, []])),
         perfil: normalPerfil(null),
         integ: normalInteg(null),
@@ -47,7 +49,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
             const [col, id] = k.split('/');
             d[col] = d[col].map(x => (x.id === id ? NORM[col](id, { ...x, ...clonar(pend[k]) }) : x));
         });
-        set({ cargando: false, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [] });
+        set({ cargando: false, cargado: true, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [] });
     }
 
     function recordar(col, id) {
@@ -59,17 +61,18 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         if (hist.length > MAX_HIST) hist.shift();
     }
 
-    function persistir(col, id) {
+    // campos: solo lo que cambió (el adaptador de la API lo manda como PATCH). Sin campos va el documento entero.
+    function persistir(col, id, campos) {
         const x = buscar(col, id);
         if (!x) return Promise.resolve();
         const data = clonar(x); delete data.id;
-        return adaptador.guardar(col, id, data).catch(fallo);
+        return adaptador.guardar(col, id, data, campos).catch(fallo);
     }
 
     function flush() {
         clearTimeout(pendT);
         const ks = Object.keys(pend);
-        ks.forEach(k => { delete pend[k]; const [col, id] = k.split('/'); persistir(col, id); });
+        ks.forEach(k => { const campos = pend[k]; delete pend[k]; const [col, id] = k.split('/'); persistir(col, id, campos); });
     }
 
     const api = {
@@ -161,27 +164,12 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
     return api;
 }
 
-// Reservas vigentes (agendadas, con closer y horario) de una persona.
-export function reservasDe(reservas, personaId) {
-    return reservas.filter(r => r.estado === 'agendada' && r.closer_id === personaId && r.inicio_ms != null);
-}
-// Funciones que necesita asignacion(): si un closer ya tiene algo en ese rato, y cuántas agendas tiene por delante.
-export function opcionesDeOcupacion(reservas, ahora = Date.now()) {
-    const por = {};
-    reservas.forEach(r => {
-        if (r.estado !== 'agendada' || !r.closer_id || r.inicio_ms == null) return;
-        (por[r.closer_id] = por[r.closer_id] || []).push({ inicio: r.inicio_ms, fin: r.fin_ms });
-    });
-    return {
-        ahora,
-        ocupado: (pid, t, dur) => seSolapa(por[pid] || [], t, dur),
-        cargaDe: (pid) => (por[pid] || []).filter(x => x.inicio >= ahora).length,
-    };
-}
+// Viven en ocupacion.js (la página pública las usa sin el almacén); se reexportan para no cambiar los imports.
+export { opcionesDeOcupacion, reservasDe } from './ocupacion';
 
-// Instancia única de la app, con guardado en este navegador.
+// Instancia única de la app: contra la API por defecto; en este navegador en los tests o con VITE_AGENDAS_LOCAL=1.
 let unico = null;
 export function almacenThalamus() {
-    if (!unico) unico = crearAlmacen(crearAdaptadorLocal(), { avisar: toast });
+    if (!unico) unico = crearAlmacen(MODO_LOCAL ? crearAdaptadorLocal() : crearAdaptadorApi(), { avisar: toast });
     return unico;
 }

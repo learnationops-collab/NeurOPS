@@ -1,17 +1,31 @@
 # Agendas 2.0 — Learnation Thalamus (frontend)
 
-Reemplazo de Calendly + n8n. El frontend está completo y funciona sin backend. Los datos se guardan en el navegador (`localStorage`, claves `thalamus-*`), así que **no toca la operación**: ninguna agenda llega a `FinancialAgenda` ni a `Appointment`.
+Reemplazo de Calendly + n8n. Los datos viven en el backend (`/api/agendas-v2`, contrato en `docs/agendas_v2_api.md`), en tablas `sched_*` propias, así que **no toca la operación**: ninguna agenda llega a `FinancialAgenda` ni a `Appointment`.
+
+## Dónde se guardan los datos
+
+`almacenThalamus()` (`data/almacen.js`) elige el adaptador según `data/modo.js`:
+
+| Cuándo | Adaptador |
+|---|---|
+| Por defecto (desarrollo y producción) | `data/adaptadorApi.js` → `/api/agendas-v2` con la sesión de la app (JWT + CSRF de `services/api.js`) |
+| Tests de vitest (`import.meta.env.MODE === 'test'`) | `data/adaptadorLocal.js` → `localStorage` (claves `thalamus-*`) |
+| `VITE_AGENDAS_LOCAL=1` (p. ej. `VITE_AGENDAS_LOCAL=1 npm run dev`) | `data/adaptadorLocal.js`, para probar sin backend |
+
+Con la API, el almacén guarda con PATCH (solo los campos que cambiaron) o PUT (documento entero: alta y deshacer), y cada 15 s pregunta `/version` para traer lo que guardaron otros. El perfil es del usuario de la sesión; si está vacío arranca con su nombre.
+
+La página pública **no usa el almacén**: la pantalla del lead recibe un *proveedor* (`reserva/proveedores.js`). `proveedorApi()` pide el evento, los horarios y la reserva a `/api/agendas-v2/publico/*` (el servidor asigna el closer); `proveedorLocal()` calcula en el navegador y lo usan la prueba, la vista previa y la página pública en modo local.
 
 | Ruta | Pantalla |
 |---|---|
-| `/agendas-v2` | Thalamus, la herramienta del director comercial: Forms · Team · Events · Stats · Configuración |
-| `/agendas-v2/agenda/:funnel/:evento?o=<origen>` | Página pública de reserva del lead (solo la versión publicada del evento) |
+| `/agendas-v2` | Thalamus, la herramienta del director comercial: Forms · Team · Events · Stats · Configuración. Pide sesión con rol `admin` o `director_comercial` (`AgendasV2Routes.jsx`) |
+| `/agendas-v2/agenda/:funnel/:evento?o=<origen>` | Página pública de reserva del lead (solo la versión publicada del evento). Sin sesión (`AgendasV2Publica.jsx`, que no importa nada de Thalamus) |
 
 ## Estructura
 
 ```
 core/       Lógica pura, sin React. Es lo que se porta a Python (app/agendas_v2/). Tests: core/nucleo.test.js
-data/       Almacén (estado + deshacer) y el ADAPTADOR de guardado. Hoy: adaptadorLocal.js
+data/       Almacén (estado + deshacer) y los ADAPTADORES de guardado: adaptadorApi.js y adaptadorLocal.js
 ui/         Piezas compartidas (íconos, desplegable, modal, avisos, arrastre)
 secciones/  forms · team · eventos · stats · conf
 reserva/    Pantalla del lead (prueba, vista previa embebida y página pública)
@@ -20,7 +34,7 @@ thalamus.css  Estilos del prototipo, encapsulados bajo .thalamus (generado con _
 
 ## Cómo se conecta al backend
 
-Se reemplaza **un solo archivo**: se escribe `data/adaptadorApi.js` con los mismos métodos que `adaptadorLocal.js` (el contrato está en su comentario de cabecera) y se lo usa en `almacenThalamus()` (`data/almacen.js`). Las pantallas no cambian.
+`data/adaptadorApi.js` implementa los mismos métodos que `adaptadorLocal.js` (el contrato está en su comentario de cabecera) y `almacenThalamus()` lo usa por defecto. Las pantallas de Thalamus no cambian.
 
 Lo que el backend tiene que hacer, en el orden del plan (paso 2 aislado, paso 3 conectado):
 

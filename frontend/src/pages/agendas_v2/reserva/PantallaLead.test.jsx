@@ -7,6 +7,7 @@ import { normalEvento, normalForm } from '../core/normalizar';
 import { almacen } from '../data/hooks';
 import PaginaPublica from './PaginaPublica';
 import PantallaLead from './PantallaLead';
+import { proveedorLocal } from './proveedores';
 
 // Lunes 5 de octubre de 2026, 08:00 en La Paz (UTC-4).
 const LUNES = Date.UTC(2026, 9, 5, 12, 0);
@@ -35,6 +36,9 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
+// Proveedor local con los datos del almacén; crear: dónde se agenda (solo el link público).
+const local = (crear = null) => proveedorLocal(almacen.getState().d, almacen.getState().reservas, crear);
+
 const campo = (c) => c.querySelector('[data-rv="in"]');
 function escribirYEnter(c, v) {
     const el = campo(c);
@@ -59,7 +63,7 @@ function elegir(texto) {
 
 describe('PantallaLead', () => {
     it('avanza con los datos de contacto y una opción hasta el calendario', () => {
-        const { container } = render(<PantallaLead fuente={{ form }} modo="prueba" />);
+        const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         responderContacto(container);
         elegir('Lo necesario');
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
@@ -67,14 +71,14 @@ describe('PantallaLead', () => {
     });
 
     it('valida antes de seguir', () => {
-        const { container } = render(<PantallaLead fuente={{ form }} modo="prueba" />);
+        const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         fireEvent.keyDown(campo(container), { key: 'Enter' });
         expect(screen.getByRole('alert')).toHaveTextContent('Completá este dato.');
         expect(screen.getByRole('heading', { name: '¿Cómo te llamás?' })).toBeInTheDocument();
     });
 
     it('una opción que descalifica muestra el cierre', () => {
-        const { container } = render(<PantallaLead fuente={{ form }} modo="prueba" />);
+        const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         responderContacto(container);
         elegir('Nada por ahora');
         expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
@@ -83,7 +87,7 @@ describe('PantallaLead', () => {
 
     it('en el link público, confirmar crea la reserva con closer y teléfono internacional', async () => {
         const spy = vi.spyOn(almacen, 'crearReserva');
-        const { container } = render(<PantallaLead fuente={{ form, evento }} modo="publico" origen="ig" />);
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={local(p => almacen.crearReserva(p))} modo="publico" origen="ig" />);
         expect(screen.queryByText(/no se agenda nada/)).not.toBeInTheDocument();
         responderContacto(container);
         elegir('Lo necesario');

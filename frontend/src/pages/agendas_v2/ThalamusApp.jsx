@@ -4,6 +4,7 @@
 
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import './thalamus.css';
+import { useAuth } from '../../contexts/AuthContext';
 import { SECCIONES } from './core/catalogos';
 import { confVisible, soloLectura } from './core/permisos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
@@ -186,8 +187,23 @@ function Degradados() {
     );
 }
 
+// Con la API, el perfil es del usuario de la sesión. Si está vacío, arranca con su nombre (una sola vez).
+function usePerfilDeLaSesion() {
+    const { user } = useAuth();
+    const { cargado, perfil } = useDatos();
+    const hecho = useRef(false);
+    useEffect(() => {
+        if (hecho.current || !cargado || !user || almacen.adaptador.tipo !== 'api') return;
+        hecho.current = true;
+        if (perfil.nombre || perfil.apellido) return;
+        const partes = String(user.name || user.username || '').trim().split(/\s+/).filter(Boolean);
+        if (partes.length) almacen.guardarPerfil({ nombre: partes[0], apellido: partes.slice(1).join(' ') });
+    }, [cargado, perfil, user]);
+}
+
 export default function ThalamusApp() {
     useIniciarAlmacen();
+    usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();
     const sec = SECCIONES.find(s => s.id === estado.seccion) || SECCIONES[0];

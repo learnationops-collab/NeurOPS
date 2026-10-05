@@ -29,18 +29,37 @@ function claveHoy(tz) { return claveDia(Date.now(), tz); }
 /**
  * acc: {alternarZona, elegirTz, cambiarMes, elegirDia, elegirHora, confirmar}
  * envio: {enviando, error} solo en el link público.
+ * asig null: los horarios todavía no llegaron (buscando) o no se pudieron traer (errorHorarios, con
+ * acc.reintentarHorarios). Con asig y buscando, se siguen mostrando los anteriores hasta que lleguen los nuevos.
  */
-export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija, aviso, envio, acc }) {
+export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija, aviso, envio, acc, buscando = false, errorHorarios = '' }) {
     const tz = s.tz, z = zonaInfo(tz);
-    const dias = diasDeSlots(asig.slots, tz);
+    const slots = asig ? asig.slots : [];
+    const dias = diasDeSlots(slots, tz);
     const keys = Object.keys(dias).sort();
     const dia = diaEfectivo(s, dias, keys);
     const mes = mesEfectivo(s, dia, tz);
-    const hora = s.hora != null && asig.slots.some(x => x.t === s.hora) ? s.hora : null;
+    const hora = s.hora != null && slots.some(x => x.t === s.hora) ? s.hora : null;
     const descHTML = desc ? limpiarHTML(desc) : '';
 
     let cal = null;
-    if (!keys.length) {
+    if (!asig && errorHorarios) {
+        cal = (
+            <div className="rv-cal">
+                <div>
+                    <p className="rv-err" role="alert"><Icono n="alerta" s={16} /><span>{errorHorarios}</span></p>
+                    <button type="button" className="rv-link" onClick={acc.reintentarHorarios}>Buscar de nuevo</button>
+                </div>
+            </div>
+        );
+    } else if (!asig) {
+        // Mismo lugar que ocupa el calendario, para que no salte la pantalla cuando llegan los horarios.
+        cal = (
+            <div className="rv-cal" aria-busy="true" style={{ minHeight: 320 }}>
+                <p className="rv-ayuda" role="status">Buscando horarios…</p>
+            </div>
+        );
+    } else if (!keys.length) {
         cal = <p className="rv-ayuda">No hay horarios en las próximas semanas.</p>;
     } else {
         const [y, m1] = mes.split('-').map(Number), m = m1 - 1;
@@ -59,7 +78,7 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija
         }
         const hs = (dia && dias[dia]) || [];
         cal = (
-            <div className="rv-cal">
+            <div className="rv-cal" aria-busy={buscando ? true : undefined} style={buscando ? { opacity: 0.6, transition: 'opacity .2s' } : undefined}>
                 <div>
                     <div className="rv-mes-cab">
                         <button type="button" className="rv-navbtn" data-mes="-1" aria-label="Mes anterior" disabled={mes <= minM} onClick={() => acc.cambiarMes(mes, -1)}>

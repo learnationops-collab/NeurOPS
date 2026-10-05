@@ -17,6 +17,12 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/manychat-webhook'),
     ('POST', '/api/manychat-webhook'),
     ('POST', '/api/public/assistant-applications'),
+    # Agendas 2.0: la pagina de reserva del lead. Solo la version PUBLICADA de un evento activo; los horarios
+    # salen sin decir de que closer son y el closer lo elige el servidor (ver app/agendas_v2/api_publico.py).
+    ('GET', '/api/agendas-v2/publico/eventos/<evento_slug>'),
+    ('GET', '/api/agendas-v2/publico/eventos/<funnel_slug>/<evento_slug>'),
+    ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/horarios'),
+    ('POST', '/api/agendas-v2/publico/reservas'),
     ('POST', '/api/public/book'),
     # Pagina publica de reservas (BookingPage): el visitante carga el evento con sus preguntas y horarios y
     # comprueba si ya lo conocemos por email o Instagram para precargar el formulario. La comprobacion solo

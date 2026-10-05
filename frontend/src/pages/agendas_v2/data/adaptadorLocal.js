@@ -1,9 +1,9 @@
-// Adaptador de guardado en este navegador (localStorage). Es el único lugar que sabe DÓNDE se guarda:
-// cuando exista app/agendas_v2/, se escribe un adaptadorApi con estos mismos métodos y nada más cambia.
+// Adaptador de guardado en este navegador (localStorage). Junto con adaptadorApi.js (el backend) son los
+// únicos lugares que saben DÓNDE se guarda; almacenThalamus() elige uno (ver data/modo.js).
 //
 // Contrato de un adaptador:
 //   cargar()                      → Promise<{cols, perfil, integ, reservas}>
-//   guardar(col, id, data)        → Promise   (data sin id)
+//   guardar(col, id, data, campos?) → Promise (data sin id; campos: solo lo que cambió, si se sabe)
 //   borrar(col, id)               → Promise
 //   guardarPerfil(perfil)         → Promise
 //   guardarInteg(integ)           → Promise

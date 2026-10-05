@@ -46,6 +46,7 @@ import PlaybookNotification from './components/playbook/PlaybookNotification';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
+import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
@@ -107,7 +108,18 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-            <Route path="/agendas-v2/*" element={<AgendasV2Routes />} />
+            {/* Agendas 2.0: la página de reserva del lead es pública; Thalamus (la gestión) pide sesión
+                de la dirección comercial. Van en rutas y módulos separados para que la página pública
+                no cargue la herramienta de gestión ni sus llamadas a la API. */}
+            <Route path="/agendas-v2/agenda/*" element={<AgendasV2Publica />} />
+            <Route
+              path="/agendas-v2/*"
+              element={
+                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                  <AgendasV2Routes />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected Admin Routes: Hubs */}
             <Route

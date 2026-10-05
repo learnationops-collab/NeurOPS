@@ -4,18 +4,17 @@
 // modo:
 //   'prueba'   → a pantalla completa desde Thalamus (no se agenda nada; Salir/Escape cierra)
 //   'embebida' → vista previa dentro del editor (no se agenda nada; Reiniciar en vez de Salir)
-//   'publico'  → el link real: confirma con almacen.crearReserva y registra a los que no califican
+//   'publico'  → el link real: confirma con proveedor.reservar y registra a los que no califican
+//
+// proveedor (reserva/proveedores.js): de dónde salen los horarios y dónde se agenda. El local calcula
+// todo al instante; el de la API trae los horarios del servidor (con "Buscando horarios…" mientras tanto).
 
 import '../thalamus.css';
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FIN_DEF, conOpciones, detectarPais, paisDe } from '../core/catalogos';
-import { asignacion } from '../core/asignacion';
 import { buscar } from '../core/datos';
 import { limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
-import { normalForm, preguntasFlujo } from '../core/normalizar';
-import { armarReserva } from '../core/reserva';
-import { opcionesDeOcupacion } from '../data/almacen';
-import { almacen, useDatos } from '../data/hooks';
+import { COLECCIONES, normalForm, preguntasFlujo } from '../core/normalizar';
 import { Humo, Icono } from '../ui/base';
 import PasoCalendario from './PasoCalendario';
 import { PasoFin, PasoListo, Respuestas } from './PasoFinal';
@@ -26,6 +25,11 @@ const AUTO_AVANCE = 380;
 const ESPERA_REDIR = 4000;
 const MSG_OCUPADO = 'Ese horario se acaba de ocupar. Elegí otro.';
 const MSG_FALLO = 'No pudimos agendar la llamada. Revisá tu conexión y probá de nuevo.';
+const MSG_LIMITE = 'Demasiados intentos, probá en un minuto.';
+const MSG_HORARIOS = 'No pudimos traer los horarios. Revisá tu conexión y probá de nuevo.';
+// Sin datos locales (proveedor de la API): colecciones vacías para que buscar() no falle.
+const SIN_DATOS = Object.fromEntries(COLECCIONES.map(c => [c, []]));
+const SIN_REMOTO = { clave: '', resp: null, asig: null, error: '' };
 
 // Lo fijo de esta pantalla: preguntas (con las de contacto adelante), textos del evento y reglas de agenda.
 function armarCtx(form, ev, persona, d) {
@@ -92,10 +96,12 @@ function atrapar(e, cont) {
 
 /**
  * fuente: {form, evento?, persona?, desde?, ejemplo?}. En el link público, evento y form son la versión publicada.
- * origen: slug de ?o=; setter: id de la persona del origen (lo resuelve la página pública).
+ * proveedor: proveedorLocal(...) o proveedorApi() (reserva/proveedores.js).
+ * origen: slug de ?o=; setter: id de la persona del origen (lo resuelve la página pública en modo local).
  */
-export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir }) {
-    const { d, reservas } = useDatos();
+export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir }) {
+    const d = proveedor.d || SIN_DATOS;
+    const sinc = proveedor.sinc !== false;
     const prueba = modo !== 'publico';
     const ctx = useMemo(() => armarCtx(fuente.form, fuente.evento || null, fuente.persona || null, d),
         [fuente.form, fuente.evento, fuente.persona, d]);
@@ -111,15 +117,35 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
     const idx = Math.min(s.idx, n);
     const nombre = nombreLead(s.resp, s.ejemplo);
     const enCal = idx >= n && !s.listo && !s.fin;
-    const funnel = ctx.evento ? buscar(d, 'funnels', ctx.evento.funnel) || null : null;
 
     const ctxAsig = (p) => ({ preguntas, resp: p.resp, dur: ctx.dur, ag: ctx.ag, reglas: ctx.reglas, resto: ctx.resto, persona: ctx.persona });
-    // Las reservas locales bloquean horarios; cambiar de zona o un "ocupado" (recalc) vuelve a calcular.
-    const asigViva = useMemo(() => {
-        if (!enCal) return null;
-        return asignacion(ctxAsig(s), d, { ...opcionesDeOcupacion(reservas), prueba });
+    // Proveedor local: la asignación sale al instante (sin parpadeo). Las reservas bloquean horarios;
+    // cambiar de zona o un "ocupado" (recalc) vuelve a calcular.
+    const asigSinc = useMemo(() => {
+        if (!enCal || !sinc) return null;
+        return proveedor.horarios({ ctx: ctxAsig(s), evento: ctx.evento, resp: s.resp, tz: s.tz, prueba });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enCal, ctx, d, reservas, s.resp, s.tz, s.recalc, prueba]);
+    }, [enCal, sinc, proveedor, ctx, s.resp, s.tz, s.recalc, prueba]);
+
+    // Proveedor de la API: los horarios llegan después. Cada pedido tiene una clave (respuestas, zona y
+    // recalc); uno viejo se cancela. Mientras llega el nuevo se siguen mostrando los horarios anteriores
+    // de las mismas respuestas, si los había (cambiar de zona o un "ocupado" no deja la pantalla en blanco).
+    const clavePedido = enCal && !sinc ? JSON.stringify([ctx.evento ? ctx.evento.id : '', s.resp, s.tz, s.recalc]) : '';
+    const [remoto, setRemoto] = useState(SIN_REMOTO);
+    useEffect(() => {
+        if (!clavePedido) return undefined;
+        const ctl = new AbortController(), { resp, tz } = sRef.current;
+        proveedor.horarios({ evento: ctx.evento, resp, tz, signal: ctl.signal }).then((asig) => {
+            if (!ctl.signal.aborted && vivoRef.current) setRemoto({ clave: clavePedido, resp, asig, error: '' });
+        }, (e) => {
+            if (ctl.signal.aborted || !vivoRef.current || (e && e.code === 'cancelado')) return;
+            setRemoto(r => ({ ...r, clave: clavePedido, error: e && e.code === 'limite' ? MSG_LIMITE : MSG_HORARIOS }));
+        });
+        return () => ctl.abort();
+    }, [clavePedido, proveedor, ctx.evento]);
+    const buscando = !!clavePedido && remoto.clave !== clavePedido;
+    const errorHorarios = clavePedido && remoto.clave === clavePedido ? remoto.error : '';
+    const asigViva = sinc ? asigSinc : (remoto.resp === s.resp ? remoto.asig : null);
 
     useEffect(() => {
         vivoRef.current = true;
@@ -146,9 +172,8 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
         try {
-            const asig = asignacion(ctxAsig(s), d, { ...opcionesDeOcupacion(reservas), prueba: false });
-            const payload = armarReserva({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, evento: ctx.evento, funnel, form: ctx.form, asig, slot: null, origen, setter });
-            almacen.crearReserva(payload).catch(() => { /* no frena al lead */ });
+            proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter })
+                .catch(() => { /* no frena al lead */ });
         } catch { /* no frena al lead */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [s.fin]);
@@ -220,6 +245,7 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
         },
         elegirDia(k) { limpiarEnvio(); setS(p => conFoco({ ...p, dia: k, hora: null }, '.rv-dia[data-k="' + k + '"]')); },
         elegirHora(t) { limpiarEnvio(); setS(p => conFoco({ ...p, hora: t }, '[data-rv="confirmar"]')); },
+        reintentarHorarios() { setS(p => ({ ...p, recalc: p.recalc + 1 })); },
         confirmar(hora) {
             const asig = asigViva, slot = asig && asig.slots.find(x => x.t === hora);
             if (!slot) return;
@@ -227,14 +253,11 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
             if (envio.enviando) return;
             setEnvio(x => ({ ...x, enviando: true, error: '' }));
             const p = sRef.current;
-            let payload;
+            let envioP;
             try {
-                payload = armarReserva({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, evento: ctx.evento, funnel, form: ctx.form, asig, slot, origen, setter });
-            } catch {
-                setEnvio(x => ({ enviando: false, error: MSG_FALLO, n: x.n + 1 }));
-                return;
-            }
-            almacen.crearReserva(payload).then(() => {
+                envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter });
+            } catch (e) { envioP = Promise.reject(e); }
+            envioP.then(() => {
                 if (!vivoRef.current) return;
                 setEnvio(x => ({ ...x, enviando: false, error: '' }));
                 setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig }, 'entra'));
@@ -243,7 +266,7 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
                 if (e && e.code === 'ocupado') {
                     setEnvio(x => ({ enviando: false, error: MSG_OCUPADO, n: x.n + 1 }));
                     setS(q => ({ ...q, hora: null, recalc: q.recalc + 1 }));
-                } else setEnvio(x => ({ enviando: false, error: MSG_FALLO, n: x.n + 1 }));
+                } else setEnvio(x => ({ enviando: false, error: e && e.code === 'limite' ? MSG_LIMITE : MSG_FALLO, n: x.n + 1 }));
             });
         },
         reiniciar() {
@@ -316,7 +339,8 @@ export default function PantallaLead({ fuente, modo = 'prueba', prevModo = 'escr
         clave = 'cal';
         paso = (
             <PasoCalendario s={s} asig={asigViva} nombre={nombre} ids={ids} dur={ctx.dur} desc={ctx.desc} tzFija={ctx.tzFija}
-                aviso={prueba ? asigViva.aviso : ''} envio={prueba ? null : envio} acc={acc} />
+                aviso={prueba && asigViva ? asigViva.aviso : ''} envio={prueba ? null : envio} acc={acc}
+                buscando={buscando} errorHorarios={errorHorarios} />
         );
     }
 

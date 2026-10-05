@@ -7,6 +7,7 @@ import { useDatos, useUi } from '../data/hooks';
 import { Icono } from '../ui/base';
 import { ui } from '../ui/estadoUi';
 import PantallaLead from './PantallaLead';
+import { proveedorLocal } from './proveedores';
 
 // ui.prueba acepta los documentos o sus ids.
 function resolver(prueba, d) {
@@ -18,7 +19,9 @@ function resolver(prueba, d) {
 
 export default function PruebaLead() {
     const { prueba, prevModo } = useUi();
-    const { d } = useDatos();
+    const { d, reservas } = useDatos();
+    // La prueba calcula en el navegador con los datos cargados y no agenda nada.
+    const proveedor = useMemo(() => proveedorLocal(d, reservas), [d, reservas]);
     const fuente = useMemo(() => (prueba ? resolver(prueba, d) : null), [prueba, d]);
     const salir = useCallback(() => ui.set({ prueba: null }), []);
 
@@ -40,7 +43,7 @@ export default function PruebaLead() {
     return (
         <>
             <div className="rv-fondo" aria-hidden="true" />
-            <PantallaLead fuente={fuente} modo="prueba" prevModo={prevModo} onSalir={salir} />
+            <PantallaLead fuente={fuente} proveedor={proveedor} modo="prueba" prevModo={prevModo} onSalir={salir} />
             <div className="seg seg--sm rv-dispo" role="group" aria-label="Pantalla">
                 <button type="button" aria-pressed={!cel} onClick={() => dispo('escritorio')}><Icono n="monitor" />Computadora</button>
                 <button type="button" aria-pressed={cel} onClick={() => dispo('celular')}><Icono n="celular" />Teléfono</button>

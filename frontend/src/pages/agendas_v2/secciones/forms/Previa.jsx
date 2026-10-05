@@ -2,11 +2,16 @@
 // o de celular (390×780) achicado para que entre.
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useDatos } from '../../data/hooks';
 import PantallaLead from '../../reserva/PantallaLead';
+import { proveedorLocal } from '../../reserva/proveedores';
 
 export default function Previa({ f, prevModo }) {
     const marco = useRef(null), escala = useRef(null);
     const fuente = useMemo(() => ({ form: f }), [f]);
+    const { d, reservas } = useDatos();
+    // La vista previa calcula en el navegador y no agenda nada.
+    const proveedor = useMemo(() => proveedorLocal(d, reservas), [d, reservas]);
     useLayoutEffect(() => {
         const m = marco.current, e = escala.current;
         if (!m || !e) return;
@@ -21,7 +26,7 @@ export default function Previa({ f, prevModo }) {
         <div className="previa">
             <div className="rv-marco" ref={marco} data-modo={prevModo}>
                 <div className="rv-escala" ref={escala}>
-                    <PantallaLead fuente={fuente} modo="embebida" prevModo={prevModo} />
+                    <PantallaLead fuente={fuente} proveedor={proveedor} modo="embebida" prevModo={prevModo} />
                 </div>
             </div>
         </div>

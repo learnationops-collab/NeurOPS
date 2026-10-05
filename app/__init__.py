@@ -108,6 +108,11 @@ def create_app(config_class=Config):
     from app.api.comercial import bp as comercial_api_bp
     app.register_blueprint(comercial_api_bp, url_prefix='/api/comercial')
 
+    # Agendas 2.0 (Thalamus): gestion para la direccion comercial (guardia en su before_request) y la
+    # pagina publica de reserva (anonima, exenta de CSRF). Modulo aislado: ver app/agendas_v2.
+    from app import agendas_v2
+    agendas_v2.registrar(app, csrf)
+
     # Ficha unificada del lead: la unica superficie que sirve al closer y a la direccion comercial
     # a la vez. Su guardia (sesion + 5 roles) vive en su propio before_request (ver app/api/ficha).
     from app.api.ficha import bp as ficha_api_bp
