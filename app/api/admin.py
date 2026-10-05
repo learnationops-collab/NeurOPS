@@ -378,7 +378,7 @@ def manage_users():
         
     users = users_query.all()
     # Treat None as True for display
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True, "can_view_finance": getattr(u, 'can_view_finance', False)} for u in users]
+    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True, "can_view_finance": getattr(u, 'can_view_finance', False), "persona_id": u.persona_id} for u in users]
     return jsonify(user_list), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
