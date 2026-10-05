@@ -72,13 +72,14 @@ def _pk(motor, tabla):
     return inspect(motor).get_pk_constraint(tabla).get('constrained_columns') or []
 
 
-def unificar(motor, destino, origen, aplicar):
-    informe = {'movidas': {}, 'conflictos': {}, 'alias': [], 'respaldo': {'filas': {}, 'alias_creados': []}}
+def unificar(motor, destino, origen, aplicar, renombrar_destino=None):
+    informe = {'movidas': {}, 'conflictos': {}, 'alias': [], 'heredado': [], 'renombrado': None, 'respaldo': {'filas': {}, 'alias_creados': []}}
     with motor.connect() as conn:
         trans = conn.begin()
         try:
             filas = {r.id: r for r in conn.execute(
-                text('SELECT id, username, email, role, roles_extra, is_active, persona_id FROM users WHERE id IN (:a, :b)'),
+                text('SELECT id, username, email, role, roles_extra, is_active, persona_id, two_chat_number, can_view_finance '
+                     'FROM users WHERE id IN (:a, :b)'),
                 {'a': destino, 'b': origen})}
             if destino not in filas or origen not in filas:
                 sys.exit('Alguna de las cuentas no existe.')
@@ -166,6 +167,29 @@ def unificar(motor, destino, origen, aplicar):
                     extras.append(rol)
             conn.execute(text('UPDATE users SET roles_extra = :r WHERE id = :d'), {'r': ','.join(extras) or None, 'd': destino})
             informe['roles'] = [d.role, *extras]
+
+            # Lo que es de la persona y no del rol: el permiso de finanzas y el teléfono de WhatsApp del
+            # closer. Solo se heredan si el destino no lo tiene; nunca se le quita nada.
+            if o.can_view_finance and not d.can_view_finance:
+                conn.execute(text('UPDATE users SET can_view_finance = :v WHERE id = :d'), {'v': True, 'd': destino})
+                informe['heredado'].append('can_view_finance')
+            if (o.two_chat_number or '').strip() and not (d.two_chat_number or '').strip():
+                conn.execute(text('UPDATE users SET two_chat_number = :t WHERE id = :d'), {'t': o.two_chat_number, 'd': destino})
+                informe['heredado'].append('two_chat_number')
+
+            # Renombrar al destino: el nombre anterior queda como alias (las ventas y agendas guardadas
+            # con ese texto siguen resolviendo a la persona).
+            if renombrar_destino and renombrar_destino != d.username:
+                ocupado = conn.execute(text('SELECT id FROM users WHERE username = :u AND id <> :d'),
+                                       {'u': renombrar_destino, 'd': destino}).first()
+                if ocupado:
+                    sys.exit(f'El usuario "{renombrar_destino}" ya existe (#{ocupado[0]}).')
+                if not conn.execute(text('SELECT 1 FROM closer_aliases WHERE alias_name = :a'), {'a': d.username[:100]}).first():
+                    conn.execute(text('INSERT INTO closer_aliases (user_id, alias_name, created_at) VALUES (:u, :a, CURRENT_TIMESTAMP)'),
+                                 {'u': destino, 'a': d.username[:100]})
+                    informe['respaldo']['alias_creados'].append(d.username[:100])
+                conn.execute(text('UPDATE users SET username = :u WHERE id = :d'), {'u': renombrar_destino, 'd': destino})
+                informe['renombrado'] = f'{d.username} -> {renombrar_destino}'
         except BaseException:
             trans.rollback()
             raise
@@ -182,6 +206,7 @@ def main():
     ap.add_argument('--confirmo-produccion', action='store_true', help='obligatorio con --target produccion')
     ap.add_argument('--destino', type=int, required=True, help='id de la cuenta que queda')
     ap.add_argument('--origen', type=int, required=True, help='id de la cuenta que se absorbe')
+    ap.add_argument('--renombrar-destino', help='nuevo nombre de usuario para la cuenta que queda')
     ap.add_argument('--aplicar', action='store_true', help='sin esto es un ensayo que se revierte')
     args = ap.parse_args()
     if args.destino == args.origen:
@@ -192,7 +217,7 @@ def main():
     if 'roles_extra' not in [c['name'] for c in inspect(motor).get_columns('users')]:
         sys.exit('Falta la columna users.roles_extra: despliega develop (o corre `flask db upgrade`) primero.')
 
-    informe = unificar(motor, args.destino, args.origen, args.aplicar)
+    informe = unificar(motor, args.destino, args.origen, args.aplicar, args.renombrar_destino)
     print('\nFilas pasadas al destino:')
     for k, v in informe['movidas'].items():
         print(f'  {k}: {v}')
@@ -202,6 +227,10 @@ def main():
             print(f'  {k}: {v}')
     print('\nAlias:', ', '.join(informe['alias']) or '-')
     print('Roles del destino:', ', '.join(informe['roles']))
+    if informe['heredado']:
+        print('Heredado del origen:', ', '.join(informe['heredado']))
+    if informe['renombrado']:
+        print('Renombrado:', informe['renombrado'])
     if args.aplicar:
         os.makedirs(os.path.join(RAIZ, 'instance', 'respaldos'), exist_ok=True)
         ruta = os.path.join(RAIZ, 'instance', 'respaldos',

@@ -95,3 +95,33 @@ def test_el_informe_trae_lo_necesario_para_deshacer(db, make_user):
     assert respaldo['antes']['destino']['roles_extra'] is None
     # Las claves de TODAS las filas que apuntaban al origen, también la que chocó y no se movió.
     assert len(respaldo['filas']['closer_daily_reports.closer_id']['valores']) == 2
+
+
+def test_hereda_finanzas_y_telefono_y_renombra_al_destino(db, make_user):
+    operador = make_user(role='operator', username='Mario Opera', email='mario@x.com')
+    admin = make_user(role='admin', username='Mario Administra', email='admin@x.com', can_view_finance=True)
+    closer = make_user(role='closer', username='Mario Closer', email='buhler@x.com', two_chat_number='5541')
+    s = _script()
+
+    s.unificar(db.engine, operador.id, admin.id, aplicar=True, renombrar_destino='Mario Bühler')
+    informe = s.unificar(db.engine, operador.id, closer.id, aplicar=True)
+    db.session.expire_all()
+
+    mario = User.query.get(operador.id)
+    assert mario.username == 'Mario Bühler' and mario.role == 'operator'
+    assert mario.roles == ['operator', 'admin', 'closer']
+    assert mario.can_view_finance is True and mario.two_chat_number == '5541'
+    assert informe['heredado'] == ['two_chat_number']
+    alias = {a.alias_name: a.user_id for a in CloserAlias.query.all()}
+    assert alias['Mario Opera'] == alias['Mario Closer'] == alias['buhler@x.com'] == mario.id
+
+
+def test_no_renombra_a_un_usuario_que_ya_existe(db, make_user):
+    import pytest
+
+    destino = make_user(role='operator', username='Mario Opera')
+    origen = make_user(role='closer', username='Mario Closer')
+    make_user(role='setter', username='Mario Bühler')
+
+    with pytest.raises(SystemExit):
+        _script().unificar(db.engine, destino.id, origen.id, aplicar=False, renombrar_destino='Mario Bühler')
