@@ -17,13 +17,15 @@ import {
     Power,
     Eye,
     EyeOff,
-    Mail
+    Mail,
+    Link2
 } from 'lucide-react';
 import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import VincularCuentasModal from './VincularCuentasModal';
 import { saveSession } from '../../../utils/sessionStore';
 import { roleLandingPath } from '../../../utils/roleLanding';
 
@@ -34,6 +36,7 @@ const TeamManagementPage = () => {
     const [activeRole, setActiveRole] = useState('all');
     const [impersonatingId, setImpersonatingId] = useState(null);
     const [showDeactivated, setShowDeactivated] = useState(false);
+    const [vinculando, setVinculando] = useState(false);
 
     // Modal state
     const [modal, setModal] = useState({ show: false, type: 'create', user: null });
@@ -228,6 +231,14 @@ const TeamManagementPage = () => {
                         {showDeactivated ? 'Ocultar Inactivos' : 'Ver Inactivos'}
                     </Button>
                     <Button
+                        onClick={() => setVinculando(true)}
+                        variant="outline"
+                        className="h-14 px-6 rounded-2xl border-base font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
+                    >
+                        <Link2 size={18} />
+                        Vincular cuentas
+                    </Button>
+                    <Button
                         onClick={() => handleOpenModal('create')}
                         variant="primary"
                         className="h-14 px-8 rounded-2xl shadow-brand-glow font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
@@ -334,6 +345,11 @@ const TeamManagementPage = () => {
                                                     <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
                                                         {getRoleLabel(u.role)}
                                                     </Badge>
+                                                    {u.persona_id && (
+                                                        <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                                            Varios roles
+                                                        </Badge>
+                                                    )}
                                                     {u.role === 'admin' && u.can_view_finance && (
                                                         <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                                                             Finanzas
@@ -368,6 +384,10 @@ const TeamManagementPage = () => {
                     )}
                 </div>
             </div>
+
+            {vinculando && (
+                <VincularCuentasModal users={users} onCerrar={() => setVinculando(false)} onCambio={fetchUsers} />
+            )}
 
             {/* Alta y edición de un miembro. Va sobre el cascarón `Modal` (portal a body, cabecera
                 y pie fijos): montado acá, adentro del `space-y-10`, el velo se corría 40px y un
