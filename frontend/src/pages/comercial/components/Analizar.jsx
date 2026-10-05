@@ -287,7 +287,7 @@ const Vacio = ({ texto }) => <p className="t-cap mut40">{texto}</p>;
  * manda el backend: un Split Pay no es "info" ni una cuota es "idle" — son identidades, no
  * estados. El orden es el de `TIPOS_PAGO`, que es el mismo en el que llega `payment_types`.
  */
-const CAT = ['cat-1', 'cat-2', 'cat-3', 'cat-4'];
+const CAT = ['cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'cat-6'];
 
 const marcaPrograma = (programa) => {
     if (programa === 'Residency Roadmap') return v('prog-elite-b');
@@ -548,7 +548,7 @@ const PanelPagos = ({ bloque, irA }) => {
                             );
                         })}
                     </div>
-                    <div className="grid-sm pareja" style={{ marginTop: 'var(--s4)' }}>
+                    <div className="grid-pagos" style={{ marginTop: 'var(--s4)' }}>
                         {bloque.payment_types.map((t, i) => (
                             <button key={t.key} type="button" className="ficha"
                                 style={{ '--c': v(CAT[i]) }}
@@ -602,7 +602,7 @@ const PanelProgramas = ({ bloque, irA }) => {
             {bloque.programas.length === 0 && <Vacio texto="Sin cobros en el período." />}
 
             {bloque.programas.length > 0 && vista === 'grafico' && (
-                <div className="tdatos tdatos--pagos">
+                <div className="tdatos tdatos--pagos" style={{ '--n': cols.length }}>
                     <div className="tdatos-cab">
                         <span>Programa</span>
                         {cols.map((c, i) => (

@@ -86,7 +86,7 @@
   /* Categorica de formas de pago: identidad, no estado.
      Validada con el script de dataviz: banda de luminosidad, croma,
      separacion CVD y contraste contra la superficie del tema. */
-  --cat-1:#3B9555; --cat-2:#317DE9; --cat-3:#C06F0A; --cat-4:#D6459B;
+  --cat-1:#3B9555; --cat-2:#317DE9; --cat-3:#C06F0A; --cat-4:#D6459B; --cat-5:#17A2B8; --cat-6:#8B6CF0;
   --on-cat:#FFFFFF;
 
   /* Rampa secuencial del embudo: azul de marca -> magenta, luminosidad monotona */
@@ -256,6 +256,8 @@
 .dc-shell .grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
 .dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));
   --min:150px;--g:var(--s3)}
+.dc-shell .grid-pagos{display:grid;gap:var(--s3);grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.dc-shell .grid-pagos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .dc-shell .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:1000px){.dc-shell .grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}
@@ -831,7 +833,7 @@
 /* Payments: una fila por programa, una columna por forma de pago. */
 .dc-shell .tdatos--pagos .tdatos-cab,
 .dc-shell .tdatos--pagos .tdatos-fila{
-  grid-template-columns:minmax(0,1.7fr) repeat(4,minmax(0,1fr));gap:var(--s3);padding:0 4px}
+  grid-template-columns:minmax(0,1.7fr) repeat(var(--n,4),minmax(0,1fr));gap:var(--s3);padding:0 4px}
 .dc-shell .tdatos--pagos .tdatos-fila{min-height:54px}
 .dc-shell .tdatos--pagos .tdatos-cab span{display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .dc-shell .tdatos--pagos .tdatos-cab span:first-child{justify-content:flex-start;padding-left:14px}
@@ -857,7 +859,7 @@
 @media (max-width:560px){
   .dc-shell .tdatos--pagos .tdatos-cab,
   .dc-shell .tdatos--pagos .tdatos-fila{
-    grid-template-columns:minmax(0,1.3fr) repeat(4,minmax(0,1fr));gap:var(--s2);padding:0 2px}
+    grid-template-columns:minmax(0,1.3fr) repeat(var(--n,4),minmax(0,1fr));gap:var(--s2);padding:0 2px}
   .dc-shell .tdatos--pagos .tdatos-cab span{font-size:8.5px;letter-spacing:.04em}
   .dc-shell .cel-pago b{font-size:12.5px}
   .dc-shell .cel-cuenta{font-size:9.5px}
