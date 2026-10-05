@@ -78,7 +78,7 @@ def unificar(motor, destino, origen, aplicar):
         trans = conn.begin()
         try:
             filas = {r.id: r for r in conn.execute(
-                text('SELECT id, username, email, role, roles_extra, is_active FROM users WHERE id IN (:a, :b)'),
+                text('SELECT id, username, email, role, roles_extra, is_active, persona_id FROM users WHERE id IN (:a, :b)'),
                 {'a': destino, 'b': origen})}
             if destino not in filas or origen not in filas:
                 sys.exit('Alguna de las cuentas no existe.')
@@ -140,14 +140,24 @@ def unificar(motor, destino, origen, aplicar):
                 informe['respaldo']['alias_creados'].append(alias[:100])
 
             informe['respaldo']['antes'] = {
-                'destino': {'id': d.id, 'username': d.username, 'email': d.email, 'role': d.role, 'roles_extra': d.roles_extra},
+                'destino': {'id': d.id, 'username': d.username, 'email': d.email, 'role': d.role, 'roles_extra': d.roles_extra,
+                            'persona_id': d.persona_id},
                 'origen': {'id': o.id, 'username': o.username, 'email': o.email, 'role': o.role,
-                           'roles_extra': o.roles_extra, 'is_active': bool(o.is_active)},
+                           'roles_extra': o.roles_extra, 'is_active': bool(o.is_active), 'persona_id': o.persona_id},
             }
 
             # 3) El origen queda inactivo y con identidad inerte (sin borrarlo).
             conn.execute(text('UPDATE users SET is_active = :f, username = :u, email = :e, persona_id = NULL WHERE id = :o'),
                          {'f': False, 'u': f'fusionada_{origen}', 'e': f'fusionada_{origen}@invalid.local', 'o': origen})
+
+            # La persona ya es una sola cuenta: si estaban vinculadas (`persona_id`), el destino se desvincula
+            # salvo que le quede otra cuenta activa con el mismo grupo.
+            if d.persona_id is not None:
+                otras = conn.execute(
+                    text('SELECT COUNT(*) FROM users WHERE persona_id = :p AND id NOT IN (:d, :o) AND is_active'),
+                    {'p': d.persona_id, 'd': destino, 'o': origen}).scalar()
+                if not otras:
+                    conn.execute(text('UPDATE users SET persona_id = NULL WHERE id = :d'), {'d': destino})
 
             # 4) El destino gana el rol del origen.
             extras = [r for r in (d.roles_extra or '').split(',') if r]

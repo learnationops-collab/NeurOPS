@@ -71,3 +71,15 @@ def test_despues_de_unir_el_nombre_viejo_resuelve_a_la_persona(db, make_user):
     assert resolver_nombre_closer('marlon@thelearnation.com') == 'Marlon Garcia'
     assert resolver_nombre_closer('Marlon Closer') == 'Marlon Garcia'
     assert resolver_nombre_closer('marlongarcia@x.com') == 'Marlon Garcia'
+
+
+def test_si_estaban_vinculadas_el_destino_queda_sin_grupo(db, make_user):
+    destino, origen = _preparar(make_user)
+    for uid in (destino, origen):
+        User.query.get(uid).persona_id = 7
+    db.session.commit()
+
+    _script().unificar(db.engine, destino, origen, aplicar=True)
+    db.session.expire_all()
+
+    assert User.query.get(destino).persona_id is None and User.query.get(origen).persona_id is None
