@@ -11,6 +11,7 @@ import { esVenta, esCompleto, quedaSaldo } from './arbolResultado.venta';
 
 export * from './arbolResultado.preguntas';
 export * from './arbolResultado.venta';
+export * from './arbolResultado.revision';
 export { construirPayload, notaFinal, fechaHoraAIso } from './arbolResultado.payload';
 
 // Clave interna donde se anotan los pasos de formulario ya confirmados. Los pasos de opciones no
