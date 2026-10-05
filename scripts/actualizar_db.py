@@ -250,7 +250,7 @@ def _contar(conexion, nombre):
     return conexion.execute(text(f'SELECT COUNT(*) FROM "{nombre}"')).scalar()
 
 
-def actualizar(target='local'):
+def actualizar(target='local', normalizar=True):
     load_dotenv()
     prod_url = os.getenv('DATABASE_PRODUCTION')
 
@@ -359,12 +359,17 @@ def actualizar(target='local'):
                     print(f"  {t.name}: {n_dest} de {n_prod} (faltan {n_prod - n_dest}, deriva en vivo)")
         prod_engine.dispose()
 
-        # 3. Normalización post-sincronización de closers y alias
-        try:
-            from scripts.normalizar_closers import normalizar_closers
-            normalizar_closers()
-        except Exception as norm_err:
-            print(f"Error al ejecutar normalización de closers: {norm_err}")
+        # 3. Normalización post-sincronización de closers y alias. Reescribe datos (el nombre del closer de
+        # las agendas financieras, alias): con `--sin-normalizar` la copia queda IDÉNTICA a producción, que
+        # es lo que se quiere cuando staging tiene que reproducir lo que pasa allí.
+        if normalizar:
+            try:
+                from scripts.normalizar_closers import normalizar_closers
+                normalizar_closers()
+            except Exception as norm_err:
+                print(f"Error al ejecutar normalización de closers: {norm_err}")
+        else:
+            print("Normalización de closers omitida (--sin-normalizar): copia fiel de producción.")
 
         # 4. Ajustar secuencias en PostgreSQL: las filas llegan con su `id`, así que la secuencia
         # queda atrás y el próximo INSERT chocaría con un id que ya existe.
@@ -398,5 +403,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Actualizar base de datos desde Producción hacia Local o Staging.")
     parser.add_argument('--target', choices=['local', 'staging', 'testing'], default='local',
                         help="Destino de la copia: 'local' (por defecto) o 'staging' (Railway Testing)")
+    parser.add_argument('--sin-normalizar', action='store_true',
+                        help="No normaliza closers ni alias después de copiar: la copia queda idéntica a producción")
     args = parser.parse_args()
-    sys.exit(0 if actualizar(target=args.target) else 1)
+    sys.exit(0 if actualizar(target=args.target, normalizar=not args.sin_normalizar) else 1)
