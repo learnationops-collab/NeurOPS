@@ -26,7 +26,8 @@ import {
     Activity,
     UserPlus,
     CheckCircle,
-    AlertTriangle,
+    XCircle,
+    UserX,
     TrendingUp,
     ChevronRight,
     ChevronDown,
@@ -503,14 +504,15 @@ const LeadsManagementPage = () => {
                         </div>
                     </header>
 
-                    {/* KPIs Superiores (5 Tarjetas) */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {/* KPIs Superiores (6 Tarjetas: 2, 3 o 6 por fila, nunca una suelta) */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
                         {[
                             { label: "Agendas Totales", value: stats?.kpis_top?.total_agendas || 0, icon: Layers, color: "text-[#1534ff] bg-[#1534ff]/10" },
                             { label: "Mis Agendas", value: stats?.kpis_top?.mis_agendas || 0, icon: User, color: "text-violet-400 bg-violet-500/10" },
                             { label: "Sin asignar", value: stats?.kpis_top?.sin_assignar || stats?.kpis_top?.sin_asignar || 0, icon: UserPlus, color: "text-rose-400 bg-rose-500/10" },
                             { label: "Realizadas", value: `${stats?.kpis_top?.realizadas || 0} (${stats?.kpis_top?.pct_realizadas || 0}%)`, icon: CheckCircle, color: "text-emerald-400 bg-emerald-500/10" },
-                            { label: "Cancelaciones / No Show", value: `${stats?.kpis_top?.canceladas || 0} (${stats?.kpis_top?.pct_canceladas || 0}%)`, icon: AlertTriangle, color: "text-amber-400 bg-amber-500/10" }
+                            { label: "Canceladas", value: `${stats?.kpis_top?.canceladas || 0} (${stats?.kpis_top?.pct_canceladas || 0}%)`, icon: XCircle, color: "text-amber-400 bg-amber-500/10" },
+                            { label: "No Show", value: `${stats?.kpis_top?.no_show || 0} (${stats?.kpis_top?.pct_no_show || 0}%)`, icon: UserX, color: "text-rose-400 bg-rose-500/10" }
                         ].map((kpi, idx) => (
                             <motion.div
                                 key={idx}
@@ -833,12 +835,13 @@ const LeadsManagementPage = () => {
 
                     </div>
 
-                    {/* Fila de KPIs Inferiores (Footer - 5 Tarjetas) */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 border-t border-slate-800 pt-8 text-left">
+                    {/* Fila de KPIs Inferiores (Footer - 6 Tarjetas) */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 border-t border-slate-800 pt-8 text-left">
                         {[
                             { label: "Llamadas Realizadas Hoy", value: stats?.kpis_bottom?.llamadas_hoy || 0, icon: PhoneCall, color: "text-blue-400 bg-blue-500/10" },
                             { label: "Agendas Confirmadas Hoy", value: stats?.kpis_bottom?.confirmadas_hoy || 0, icon: Calendar, color: "text-emerald-400 bg-emerald-500/10" },
-                            { label: "Cancelaciones de Hoy", value: stats?.kpis_bottom?.cancelaciones_hoy || 0, icon: AlertTriangle, color: "text-rose-400 bg-rose-500/10" },
+                            { label: "Cancelaciones de Hoy", value: stats?.kpis_bottom?.cancelaciones_hoy || 0, icon: XCircle, color: "text-amber-400 bg-amber-500/10" },
+                            { label: "No Show de Hoy", value: stats?.kpis_bottom?.no_show_hoy || 0, icon: UserX, color: "text-rose-400 bg-rose-500/10" },
                             { label: "Reprogramaciones de Hoy", value: stats?.kpis_bottom?.reprogramaciones_hoy || 0, icon: Clock, color: "text-amber-400 bg-amber-500/10" },
                             { label: "Leads Calificados Hoy", value: stats?.kpis_bottom?.calificados_hoy || 0, icon: CheckCircle, color: "text-violet-400 bg-violet-500/10" }
                         ].map((kpi, idx) => (
