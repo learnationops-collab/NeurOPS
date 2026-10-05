@@ -21,6 +21,9 @@ depends_on = None
 
 
 def upgrade():
+    # Idempotente: ver la nota de `b7d3f1a96c52` (esta revisión llegó a `main` antes que a `develop`).
+    if 'roles_extra' in {c['name'] for c in sa.inspect(op.get_bind()).get_columns('users')}:
+        return
     with op.batch_alter_table('users') as batch:
         batch.add_column(sa.Column('roles_extra', sa.String(length=120), nullable=True))
 
