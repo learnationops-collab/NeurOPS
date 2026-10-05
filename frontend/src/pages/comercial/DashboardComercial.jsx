@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation, simularA } from '../../utils/impersonation';
+import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import './comercial.css';
 import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
@@ -597,6 +598,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     const gruposDeSesion = [
+        opcionesDeRol(user, (m) => toast.error(m)),
         SIMULAN_CLOSERS.includes(rolReal) ? [{
             id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
             panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },

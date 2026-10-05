@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { LogOut, Palette, Check, Compass } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import useDockNavigation from '../../hooks/useDockNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -206,6 +208,17 @@ const Dock = () => {
                                         <p className="text-sm font-bold text-white mt-1">{user?.name}</p>
                                         <p className="text-[10px] text-muted truncate">{user?.email}</p>
                                     </div>
+                                    {opcionesDeRol(user, (m) => toast.error(m)).map((op) => (
+                                        <button
+                                            key={op.id}
+                                            onClick={op.onClick}
+                                            title={op.titulo}
+                                            className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/5 transition-colors text-left mb-1"
+                                        >
+                                            <op.Icono size={16} className="text-muted" />
+                                            <span className="text-sm font-bold text-muted">{op.label}</span>
+                                        </button>
+                                    ))}
                                     <button
                                         onClick={logout}
                                         className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-rose-500/10 transition-colors text-left group/item"
