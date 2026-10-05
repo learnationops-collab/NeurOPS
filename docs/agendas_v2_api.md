@@ -34,6 +34,7 @@ Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 40
 |---|---|---|---|
 | GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version}`. `reservas`: las que empiezan o se crearon en los últimos 35 días y todas las futuras, en el formato de `adaptadorLocal` (`inicio_ms`, `fin_ms`, `estado` y los campos del contrato) |
 | GET | `/version` | — | `{version}` (el frontend lo consulta cada 15 s para traer cambios de otros) |
+| GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz}]}`: closers y setters activos de la app. Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
 | PUT | `/<col>/<id>` | documento completo (sin `id`) | `{doc, version}`. Crea o reemplaza |
 | PATCH | `/<col>/<id>` | campos sueltos | `{doc, version}`. Mezcla con lo guardado y normaliza; 404 si no existe |
 | DELETE | `/<col>/<id>` | — | `{ok, version}` |

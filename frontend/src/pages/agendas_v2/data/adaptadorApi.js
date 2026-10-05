@@ -122,6 +122,11 @@ export function crearAdaptadorApi() {
             return escribir(() => api.put('/agendas-v2/integraciones', integ));
         },
 
+        // Closers y setters reales de la app (Team suma personas solo desde acá).
+        async usuarios() {
+            try { const { data } = await api.get('/agendas-v2/usuarios'); return Array.isArray(data && data.usuarios) ? data.usuarios : []; } catch (e) { throw errorDeApi(e); }
+        },
+
         async crearReserva() {
             const e = new Error('Con la API, las reservas se crean solo desde la página pública del lead (POST /api/agendas-v2/publico/reservas).');
             e.code = 'no_soportado';

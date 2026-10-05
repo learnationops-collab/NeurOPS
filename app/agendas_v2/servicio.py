@@ -89,6 +89,17 @@ def _email_de_cuenta(email):
     return u.id if u else None
 
 
+def usuarios_del_equipo(roles):
+    """Usuarios activos de la app con esos roles: {id, nombre, email, rol, tz}. Para sumarlos a Team."""
+    from app.models.user import User
+
+    filas = User.query.filter(User.role.in_(roles), User.is_active.is_(True)).order_by(User.username).all()
+    return [
+        {'id': u.id, 'nombre': u.username or '', 'email': (u.email or '').lower(), 'rol': u.role, 'tz': u.timezone or TZ_DEF}
+        for u in filas
+    ]
+
+
 def guardar_doc(col, doc_id, datos, usuario_id=None, parcial=False):
     """Crea o reemplaza (parcial=False) o mezcla campos (parcial=True). Devuelve el doc normalizado
     o None si `parcial` y el documento no existe."""

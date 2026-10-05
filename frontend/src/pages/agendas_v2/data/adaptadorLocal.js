@@ -10,6 +10,7 @@
 //   crearReserva(payload)         → Promise<reserva>  | rechaza {code:'ocupado'} si el horario ya no está libre
 //   cancelarReserva(id)           → Promise
 //   alCambiar(cb)                 → () => void   (cambios hechos desde otra pestaña u otra persona)
+//   usuarios()                    → Promise<[{id, nombre, email, rol, tz}]>  closers y setters reales (local: ninguno)
 
 import { COLECCIONES } from '../core/normalizar';
 import { uid } from '../core/util';
@@ -42,6 +43,7 @@ export function crearAdaptadorLocal() {
         async borrar(col, id) { escribir(col, leerCol(col).filter(x => x.id !== id)); },
         async guardarPerfil(p) { escribir('perfil', p); },
         async guardarInteg(i) { escribir('integ', i); },
+        async usuarios() { return []; },
         async crearReserva(payload) {
             const rs = leer('reservas', []);
             const inicio = payload.inicio ? Date.parse(payload.inicio) : null;

@@ -143,3 +143,18 @@ def test_el_servicio_no_toca_la_operacion(client, db, dir_h):
     client.put('/api/agendas-v2/funnels/f1', headers=dir_h, json={'nombre': 'W'})
     servicio.guardar_integraciones({})
     assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0
+
+
+def test_usuarios_lista_closers_y_setters_activos(client, gente, dir_h, make_user):
+    make_user(role='closer', email='baja@neuro.com', is_active=False)
+    r = client.get('/api/agendas-v2/usuarios', headers=dir_h)
+    assert r.status_code == 200
+    usuarios = r.get_json()['usuarios']
+    assert {u['rol'] for u in usuarios} == {'closer', 'setter'}
+    assert 'baja@neuro.com' not in {u['email'] for u in usuarios}
+    assert {'id', 'nombre', 'email', 'rol', 'tz'} <= set(usuarios[0])
+
+
+def test_usuarios_es_solo_para_la_direccion(client, gente, auth_headers):
+    assert client.get('/api/agendas-v2/usuarios').status_code == 401
+    assert client.get('/api/agendas-v2/usuarios', headers=auth_headers(gente['closer'])).status_code == 403

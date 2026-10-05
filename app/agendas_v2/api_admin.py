@@ -10,7 +10,7 @@ from flask_login import current_user, login_required
 
 from app.agendas_v2 import servicio
 from app.agendas_v2.nucleo.normalizar import COLECCIONES
-from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
 bp = Blueprint('agendas_v2_admin', __name__)
 
@@ -103,3 +103,9 @@ def cancelar(reserva_id):
     if not r:
         return jsonify({'message': 'Not found'}), 404
     return jsonify({'reserva': r, 'version': servicio.version()})
+
+
+@bp.route('/usuarios', methods=['GET'])
+def usuarios():
+    """Closers y setters activos de la app: Team suma personas solo desde aca, unidas por email."""
+    return jsonify({'usuarios': servicio.usuarios_del_equipo((ROLE_CLOSER, ROLE_SETTER))})
