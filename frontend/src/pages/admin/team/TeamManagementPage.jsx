@@ -7,7 +7,6 @@ import {
     Shield,
     Users,
     Zap,
-    ArrowRight,
     Loader2,
     AlertCircle,
     UserPlus,
@@ -26,10 +25,16 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import VincularCuentasModal from './VincularCuentasModal';
+import { Segmented } from '../../comercial/components/Shared';
+import '../../comercial/comercial.css';
 import { saveSession } from '../../../utils/sessionStore';
 import { roleLandingPath } from '../../../utils/roleLanding';
 
-const TeamManagementPage = () => {
+/**
+ * Gestión de equipo. `embebido`: va dentro de otra pantalla (el espacio del operador), que ya pone su
+ * propio título y su ancho: sin el h1 ni el relleno de página completa.
+ */
+const TeamManagementPage = ({ embebido = false }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -204,25 +209,36 @@ const TeamManagementPage = () => {
         return role ? role.label : roleId.replace('_', ' ').toUpperCase();
     };
 
+    // Una persona con varios roles (`roles`) aparece en la pestaña de cada uno.
+    const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);
     const filteredUsers = users.filter(u => {
         const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRole = activeRole === 'all' || u.role === activeRole;
+            (u.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = activeRole === 'all' || rolesDe(u).includes(activeRole);
         return matchesSearch && matchesRole;
     });
+    const pestanasDeRol = roles.map(r => ({
+        key: r.id,
+        label: r.label,
+        cuenta: r.id === 'all' ? users.length : users.filter(u => rolesDe(u).includes(r.id)).length,
+    }));
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className={embebido
+            ? 'space-y-6 animate-in fade-in duration-700'
+            : 'p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700'}>
+            <header className={`flex flex-col md:flex-row justify-between items-start gap-6 ${embebido ? 'md:items-center' : 'md:items-end'}`}>
                 <div className="space-y-1">
-                    <h1 className="text-5xl font-black italic tracking-tighter text-base uppercase">Gestión de Equipo</h1>
+                    {!embebido && (
+                        <h1 className="text-5xl font-black italic tracking-tighter text-base uppercase">Gestión de Equipo</h1>
+                    )}
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.3em] flex items-center gap-2">
                         <Users size={14} className="text-primary" />
                         Control central de usuarios y simulación de roles
                     </p>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-3">
                     <Button
                         onClick={() => setShowDeactivated(!showDeactivated)}
                         variant="outline"
@@ -249,53 +265,36 @@ const TeamManagementPage = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1">Búsqueda</label>
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Nombre o Email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-surface border border-base rounded-2xl py-4 pl-12 pr-4 text-sm font-bold placeholder:text-muted focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                            />
-                        </div>
-                    </div>
+            <div className="space-y-5">
+                <div className="relative max-w-xl">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre o email..."
+                        aria-label="Buscar miembro"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-surface border border-base rounded-2xl py-4 pl-12 pr-4 text-sm font-bold placeholder:text-muted focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                    />
+                </div>
 
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1">Filtro por Rol</label>
-                        <div className="space-y-2">
-                            {roles.map(role => (
-                                <button
-                                    key={role.id}
-                                    onClick={() => setActiveRole(role.id)}
-                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${activeRole === role.id
-                                        ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
-                                        : 'bg-surface border-base text-muted hover:border-primary/40'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <role.icon size={16} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">{role.label}</span>
-                                    </div>
-                                    {activeRole === role.id && <ArrowRight size={14} />}
-                                </button>
-                            ))}
-                        </div>
+                {/* Las pestañas del sistema del dashboard (`.dc-shell`), como en el mazo y en el espacio
+                    del setter: el filtro por rol dejó de ser una columna vertical. */}
+                <div className="dc-shell dc-shell--embebido" style={{ minHeight: 0, padding: 0, background: 'none' }}>
+                    <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                        <Segmented opciones={pestanasDeRol} valor={activeRole} onChange={setActiveRole}
+                            ariaLabel="Filtrar el equipo por rol" />
                     </div>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div>
                     {loading ? (
                         <div className="h-96 flex flex-col items-center justify-center gap-4 glass-panel rounded-[2.5rem] border border-base">
                             <Loader2 size={40} className="text-primary animate-spin" />
                             <p className="text-xs font-black text-muted uppercase tracking-widest">Sincronizando equipo...</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             <AnimatePresence mode="popLayout">
                                 {filteredUsers.map((u, idx) => (
                                     <motion.div
@@ -340,11 +339,16 @@ const TeamManagementPage = () => {
                                                 </p>
                                             </div>
 
-                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-base/50">
-                                                <div className="flex gap-2 items-center">
+                                            <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-4 border-t border-base/50">
+                                                <div className="flex flex-wrap gap-2 items-center">
                                                     <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
                                                         {getRoleLabel(u.role)}
                                                     </Badge>
+                                                    {(u.roles || []).slice(1).map(r => (
+                                                        <Badge key={r} variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3 opacity-70">
+                                                            {getRoleLabel(r)}
+                                                        </Badge>
+                                                    ))}
                                                     {u.persona_id && (
                                                         <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-sky-500/10 text-sky-400 border border-sky-500/20">
                                                             Varios roles

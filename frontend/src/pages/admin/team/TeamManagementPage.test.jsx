@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../../services/api', () => ({
@@ -57,5 +57,38 @@ describe('TeamManagementPage · modal de miembro', () => {
             username: 'Mario Opera', email: 'mario@thelearnation.com', role: 'operator', password: '',
         }));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+});
+
+describe('TeamManagementPage · pestañas por rol', () => {
+    const EQUIPO = [
+        { ...MARIO, roles: ['operator', 'closer'] },
+        { id: 7, username: 'Ana', email: 'ana@x.com', role: 'setter', roles: ['setter'], is_active: true },
+        { id: 8, username: 'Beto', email: 'beto@x.com', role: 'closer', roles: ['closer'], is_active: true },
+    ];
+
+    beforeEach(() => { api.get.mockResolvedValue({ data: EQUIPO }); });
+
+    it('el filtro es una fila de pestañas con la cuenta de cada rol, no una columna de botones', async () => {
+        render(<TeamManagementPage embebido />);
+
+        const pestanas = await screen.findByRole('tablist', { name: 'Filtrar el equipo por rol' });
+        expect(screen.getByRole('tab', { name: /Todos/ })).toHaveTextContent('3');
+        expect(screen.getByRole('tab', { name: /Closers/ })).toHaveTextContent('2');
+        expect(screen.getByRole('tab', { name: /Setters/ })).toHaveTextContent('1');
+        expect(pestanas).toBeInTheDocument();
+        // Embebido: el título de la página lo pone la pantalla que lo contiene.
+        expect(screen.queryByRole('heading', { name: /Gestión de Equipo/ })).not.toBeInTheDocument();
+    });
+
+    it('una persona con varios roles aparece en la pestaña de cada uno', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByRole('tab', { name: /Closers/ }));
+
+        expect(screen.getByText('Mario Opera')).toBeInTheDocument();
+        expect(screen.getByText('Beto')).toBeInTheDocument();
+        // Las tarjetas que salen se animan antes de irse del DOM.
+        await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument());
     });
 });
