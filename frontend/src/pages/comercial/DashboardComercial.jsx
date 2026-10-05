@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, CalendarClock, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -174,6 +174,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [saliendo, setSaliendo] = useState(false);
 
     const seccion = seccionFija || params.get('s') || 'analizar';
@@ -597,6 +598,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     const gruposDeSesion = [
+        // Agendas 2.0 (Thalamus) pide la sesión con rol de dirección: simulando a un closer no entraría.
+        ['director_comercial', 'admin'].includes(user?.role) ? [{
+            id: 'agendas-v2', label: 'Sistema de agendas 2.0', Icono: CalendarClock,
+            onClick: () => navigate('/agendas-v2'),
+        }] : [],
         SIMULAN_CLOSERS.includes(rolReal) ? [{
             id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
             panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },

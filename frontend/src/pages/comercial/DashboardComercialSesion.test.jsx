@@ -64,7 +64,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         expect(screen.queryByText(/Ir a Ventas/i)).toBeNull();
         await abrirSesion('Dirección');
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Simular a un closer', 'Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Sistema de agendas 2.0', 'Simular a un closer', 'Cerrar sesión']);
 
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
         expect(api.get).toHaveBeenCalledWith('/auth/impersonate/closers');
