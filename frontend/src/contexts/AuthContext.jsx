@@ -15,15 +15,17 @@ export const AuthProvider = ({ children }) => {
         const savedUser = loadSession();
         if (savedUser) {
             setUser(savedUser);
-            // Las cuentas vinculadas se agregaron después del login: una sesión guardada antes no las
-            // trae, y nunca se pedían de nuevo. Se refrescan solo ellas; el rol sigue siendo el guardado.
+            // Las cuentas vinculadas y los roles se agregaron después del login: una sesión guardada antes
+            // no los trae, y nunca se pedían de nuevo. Se refrescan solo ellos; el rol activo sigue siendo el guardado.
             if (!savedUser.is_impersonating) {
                 api.get('/auth/me').then((res) => {
-                    const cuentas = res.data?.user?.cuentas_vinculadas || [];
-                    if (JSON.stringify(cuentas) === JSON.stringify(savedUser.cuentas_vinculadas || [])) return;
-                    const actualizado = { ...savedUser, cuentas_vinculadas: cuentas };
+                    const me = res.data?.user || {};
+                    const cuentas = me.cuentas_vinculadas || [];
+                    const roles = me.roles || [];
+                    if (JSON.stringify([cuentas, roles]) === JSON.stringify([savedUser.cuentas_vinculadas || [], savedUser.roles || []])) return;
+                    const actualizado = { ...savedUser, cuentas_vinculadas: cuentas, roles };
                     saveSession(actualizado);
-                    setUser((u) => (u && u.id === actualizado.id ? { ...u, cuentas_vinculadas: cuentas } : u));
+                    setUser((u) => (u && u.id === actualizado.id ? { ...u, cuentas_vinculadas: cuentas, roles } : u));
                 }).catch(() => { /* sin cuentas que mostrar: el menú queda como estaba */ });
             }
         }

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const post = vi.fn();
 vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
 
-import { otrasCuentas, opcionesDeRol, cambiarDeRol, rotuloDeRol } from './cuentasVinculadas';
+import { otrasCuentas, otrosRoles, opcionesDeRol, cambiarDeRol, cambiarDeRolEnLaCuenta, rotuloDeRol } from './cuentasVinculadas';
 
 const marlon = {
     id: 1, role: 'director_comercial',
@@ -59,5 +59,34 @@ describe('cuentas vinculadas', () => {
         expect(post).toHaveBeenCalledWith('/auth/switch-role', { user_id: 2, isolated: true });
         expect(sessionStorage.getItem('auth_token')).toBe('tk');
         window.location = original;
+    });
+
+    describe('varios roles en una sola cuenta', () => {
+        const unico = { id: 1, role: 'director_comercial', roles: ['director_comercial', 'closer'] };
+
+        it('ofrece los otros roles de la misma cuenta', () => {
+            expect(otrosRoles(unico)).toEqual(['closer']);
+            expect(opcionesDeRol(unico).map((o) => o.label)).toEqual(['Pasar a Closer']);
+        });
+
+        it('con un solo rol, o simulando a otro, no ofrece nada', () => {
+            expect(otrosRoles({ id: 2, role: 'closer', roles: ['closer'] })).toEqual([]);
+            expect(otrosRoles({ ...unico, is_impersonating: true })).toEqual([]);
+            expect(opcionesDeRol({ id: 2, role: 'closer' })).toEqual([]);
+        });
+
+        it('al cambiar pide el rol, guarda la sesión y entra a la pantalla de ese rol', async () => {
+            post.mockResolvedValue({ data: { token: 'tk', user: { id: 1, role: 'closer', roles: unico.roles } } });
+            const original = window.location;
+            delete window.location;
+            window.location = { href: '' };
+
+            await cambiarDeRolEnLaCuenta('closer');
+
+            expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'closer', isolated: false });
+            expect(JSON.parse(localStorage.getItem('user')).role).toBe('closer');
+            expect(window.location.href).toContain('/closer/deck');
+            window.location = original;
+        });
     });
 });
