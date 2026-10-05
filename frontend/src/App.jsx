@@ -26,6 +26,7 @@ import SetterEspacioPage from './pages/setter/SetterEspacioPage';
 import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
+import OpsRuta from './pages/operations/OpsRuta';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
 import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
@@ -126,9 +127,9 @@ function App() {
               path="/ops/dashboard"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <MainLayout>
+                  <OpsRuta>
                     <OperationsSettingsPage />
-                  </MainLayout>
+                  </OpsRuta>
                 </ProtectedRoute>
               }
             />
@@ -138,7 +139,7 @@ function App() {
               path="/ops/agendas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <MainLayout>
+                  <OpsRuta paso="agendas">
                     {/* Estas dos vistas están diseñadas sobre fondo oscuro (venían
                         embebidas en el hub de admin, que lo aportaba). Fuera de ahí
                         necesitan su propia superficie o quedan con texto blanco sobre
@@ -146,7 +147,7 @@ function App() {
                     <div className="min-h-screen bg-slate-950 text-slate-200">
                       <FinancialAgendasPage />
                     </div>
-                  </MainLayout>
+                  </OpsRuta>
                 </ProtectedRoute>
               }
             />
@@ -154,11 +155,11 @@ function App() {
               path="/ops/ventas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <MainLayout>
+                  <OpsRuta paso="ventas">
                     <div className="min-h-screen bg-slate-950 text-slate-200">
                       <PublicFinancialSalesPage />
                     </div>
-                  </MainLayout>
+                  </OpsRuta>
                 </ProtectedRoute>
               }
             />
@@ -298,9 +299,9 @@ function App() {
               path="/ops/course-editor"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <MainLayout>
+                  <OpsRuta paso="curso">
                     <CourseEditorPage />
-                  </MainLayout>
+                  </OpsRuta>
                 </ProtectedRoute>
               }
             />
