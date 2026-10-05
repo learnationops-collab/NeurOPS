@@ -1,4 +1,4 @@
-// «Configuración» del mazo del closer: los ajustes de su cuenta. Por ahora solo Google Calendar,
+// «Configuración» del mazo del closer (se abre desde el menú de sesión del dock): los ajustes de su cuenta. Por ahora solo Google Calendar,
 // que es obligatorio para recibir agendas del sistema de agendas 2.0 (sin él, sus horarios no se
 // ofrecen a los leads; ver app/agendas_v2/servicio.py, solo_elegibles).
 //

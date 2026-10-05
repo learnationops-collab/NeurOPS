@@ -143,7 +143,7 @@ const CloserWorkflowPage = () => {
     // Configuración: es a donde vuelve Google después de conectar el calendario.
     const [activeView, setActiveView] = useState(() => (searchParams.get('vista') === 'configuracion' ? 'configuracion' : 'inbox'));
     // Google Calendar conectado (null mientras no se sabe): sin él, el closer no recibe agendas del
-    // sistema nuevo, así que «Configuración» lleva un aviso en el dock hasta que lo conecte.
+    // sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión hasta que lo conecte.
     const [calendarConectado, setCalendarConectado] = useState(null);
     useEffect(() => {
         let vivo = true;
@@ -1420,8 +1420,6 @@ const CloserWorkflowPage = () => {
         { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
         // Temporal: solo mientras Operaciones la tenga activada (GET /closer/leads-audit/status).
         ...(auditEnabled ? [{ id: 'auditoria', label: 'Auditoría', Icono: FileSearch }] : []),
-        { id: 'configuracion', label: 'Configuración', Icono: Settings, marcas: calendarConectado === false
-            ? [{ tipo: 'aviso', texto: '', titulo: 'Google Calendar sin conectar' }] : [] },
     ];
     const seccionDelDock = activeView === 'inbox' ? activeStep : activeView;
 
@@ -1453,6 +1451,10 @@ const CloserWorkflowPage = () => {
         ],
         opcionesDeRol(user, (m) => toast.error(m)),
         [
+            // Configuración (por ahora, Google Calendar) vive en el menú de sesión, no en el dock.
+            { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => irASeccion('configuracion'),
+                cuenta: calendarConectado === false ? '!' : null,
+                titulo: calendarConectado === false ? 'Google Calendar sin conectar' : null },
             ...(user?.is_impersonating
                 ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
                 : []),

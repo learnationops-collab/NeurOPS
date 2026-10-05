@@ -222,6 +222,8 @@ def test_reservar_crea_la_agenda_en_la_operacion(client, armado, cuentas, google
     fa = FinancialAgenda.query.one()
     assert fa.closer == 'ana' and fa.nombre == 'juan' and fa.date == datetime(2026, 10, 5, 13)
     assert fa.mail == 'lucia@correo.com' and fa.raw_data['agendas_v2']['nota'] == 10
+    # La prioridad que eligio Thalamus queda como `grupo` de la agenda y del cliente.
+    assert fa.grupo == 'Ultra' and appt.client.grupo == 'Ultra'
 
     # El cliente guarda su formulario.
     assert appt.client.formulario_payload['respuestas'][0]['pregunta'] == '¿Cuánto?'

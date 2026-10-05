@@ -56,6 +56,7 @@ def _cliente(payload):
     )
     cliente.formulario_payload = payload
     flag_modified(cliente, 'formulario_payload')
+    cliente.grupo = _grupo(payload) or cliente.grupo
     return cliente
 
 
@@ -106,11 +107,18 @@ def _espejo_de(appt, inicio_anterior):
     ).first()
 
 
+def _grupo(payload):
+    """La prioridad de Thalamus del lead va al campo `grupo` (el «grupo 1/2/3» de Calendly) del cliente y
+    de la agenda: es lo que el closer ve en su mazo y en la ficha."""
+    return (payload.get('prioridad_nombre') or '')[:50] or None
+
+
 def _payload_en_espejo(fa, payload):
     if not fa:
         return
     fa.raw_data = {**(fa.raw_data or {}), 'agendas_v2': payload}
     flag_modified(fa, 'raw_data')
+    fa.grupo = _grupo(payload) or fa.grupo
 
 
 def registrar_agenda(payload, closer, setter, inicio, ahora=None):
