@@ -1,7 +1,7 @@
 """agendas 2.0 escribe en la operacion: payloads en appointments y clients, fuera sched_reservas
 
 Revision ID: d4e8a1c6f203
-Revises: c4e8a2d17f93
+Revises: a5c2e9d71b04
 Create Date: 2026-10-05 21:00:00.000000
 
 Fase 2 de Agendas 2.0: una reserva tomada desde el link publico es una Appointment (con su espejo
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'd4e8a1c6f203'
-down_revision = 'c4e8a2d17f93'
+down_revision = 'a5c2e9d71b04'
 branch_labels = None
 depends_on = None
 

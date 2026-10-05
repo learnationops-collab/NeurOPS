@@ -1,7 +1,7 @@
 """tablas sched_* de Agendas 2.0 (Thalamus)
 
 Revision ID: a5c2e9d71b04
-Revises: 3b8f2d61c4a9
+Revises: c4e8a2d17f93
 Create Date: 2026-10-05 12:00:00.000000
 
 Paso 2 del plan de Agendas 2.0: el modulo nuevo guarda en tablas propias y no toca
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'a5c2e9d71b04'
-down_revision = '3b8f2d61c4a9'
+down_revision = 'c4e8a2d17f93'
 branch_labels = None
 depends_on = None
 
