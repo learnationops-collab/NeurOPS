@@ -9,13 +9,18 @@ cualquier otra de NeurOPS. Mismo camino que la «Nueva agenda» manual del close
      ademas reconcilia duplicados), con el payload en `raw_data['agendas_v2']`.
   4. Evento en el Google Calendar del closer con Meet, invitando al lead. Va DESPUES de guardar: si
      Google falla, la agenda ya existe y se avisa a admin y al closer.
+  5. Aviso al canal de ventas de Discord (webhook en DISCORD_AGENDAS_WEBHOOK). Si falta o falla, solo
+     queda en el log: nunca frena la agenda.
 
 Si el lead ya tiene una agenda futura abierta, no se crea otra: se REPROGRAMA esa (como hace la
 ingesta de n8n), aunque cambie el closer.
 """
 
+import os
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
+import requests
 from flask import current_app
 from sqlalchemy import func, or_
 from sqlalchemy.orm.attributes import flag_modified
@@ -252,3 +257,75 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
     appt.agenda_payload = {**payload, 'meet': meet}
     db.session.commit()
     return True
+
+
+ZONA_EQUIPO = 'America/La_Paz'
+COLOR_NUEVA, COLOR_REPROGRAMADA = 0x2ECC71, 0xF1C40F
+
+
+def _corto(texto, n):
+    texto = str(texto or '').strip()
+    return texto if len(texto) <= n else texto[: n - 1] + '…'
+
+
+def aviso_discord(appt):
+    """El mensaje para Discord de una agenda de Agendas 2.0 (embed con lead, closer, horario y formulario)."""
+    payload = appt.agenda_payload or {}
+    lead = payload.get('lead') or {}
+    closer = db.session.get(User, appt.closer_id)
+    setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
+    local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo(ZONA_EQUIPO))
+    reprogramada = bool(payload.get('reprogramada_desde'))
+    origen = (setter.username if setter else payload.get('origen')) or '-'
+    nota = str(payload['nota']) if payload.get('nota') is not None else '-'
+    campos = [
+        {'name': 'Lead', 'value': _corto(lead.get('nombre') or '-', 256), 'inline': True},
+        {'name': 'Closer', 'value': closer.username if closer else '-', 'inline': True},
+        {'name': 'Horario (Bolivia)', 'value': local.strftime('%d/%m/%Y %H:%M'), 'inline': True},
+        {'name': 'Setter / origen', 'value': origen, 'inline': True},
+        {'name': 'Prioridad', 'value': payload.get('prioridad_nombre') or '-', 'inline': True},
+        {'name': 'Nota', 'value': nota, 'inline': True},
+    ]
+    ig = lead.get('instagram')
+    contacto = ' · '.join(x for x in (lead.get('telefono'), lead.get('email'), ('@' + ig) if ig else None) if x)
+    if contacto:
+        campos.append({'name': 'Contacto', 'value': _corto(contacto, 1024), 'inline': False})
+    respuestas = [r for r in payload.get('respuestas') or [] if r.get('respuesta')]
+    if respuestas:
+        texto = '\n'.join(f'**{_corto(r["pregunta"], 120)}**: {_corto(r["respuesta"], 200)}' for r in respuestas)
+        campos.append({'name': 'Formulario', 'value': _corto(texto, 1024), 'inline': False})
+    if payload.get('meet'):
+        campos.append({'name': 'Meet', 'value': payload['meet'], 'inline': False})
+    titulo = (
+        ('🔁 Agenda reprogramada' if reprogramada else '📅 Nueva agenda')
+        + ': '
+        + (payload.get('evento_nombre') or 'Llamada')
+    )
+    return {
+        'embeds': [
+            {
+                'title': _corto(titulo, 256),
+                'color': COLOR_REPROGRAMADA if reprogramada else COLOR_NUEVA,
+                'fields': campos,
+                'footer': {'text': f'Agendas 2.0 · agenda #{appt.id}'},
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+            }
+        ]
+    }
+
+
+def avisar_discord(appt):
+    """Manda el aviso al canal de ventas. Devuelve True si salio. Nunca lanza."""
+    url = os.environ.get('DISCORD_AGENDAS_WEBHOOK')
+    if not url:
+        current_app.logger.warning('[AGENDAS 2.0] Sin DISCORD_AGENDAS_WEBHOOK: no se avisa a Discord.')
+        return False
+    try:
+        r = requests.post(url, json=aviso_discord(appt), timeout=10)
+        if r.status_code >= 300:
+            current_app.logger.error(f'[AGENDAS 2.0] Discord respondio {r.status_code} para la agenda #{appt.id}')
+            return False
+        return True
+    except Exception as e:  # noqa: BLE001  (Discord nunca puede frenar una agenda)
+        current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar a Discord la agenda #{appt.id}: {e}')
+        return False

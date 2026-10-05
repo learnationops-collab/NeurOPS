@@ -468,4 +468,5 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     _subir_version()
     db.session.commit()
     operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
+    operacion.avisar_discord(appt)
     return _respuesta(appt), True

@@ -143,4 +143,18 @@ describe('adaptadorApi', () => {
         expect(api.post).not.toHaveBeenCalled();
         await expect(ad.crearReserva({})).rejects.toMatchObject({ code: 'no_soportado' });
     });
+
+    it('configuración con IA: trae el prompt, revisa e importa, y pasa los errores de validación', async () => {
+        const ad = crearAdaptadorApi();
+        api.get.mockResolvedValueOnce({ data: { prompt: 'Sos un asistente…' } });
+        await expect(ad.promptPaquete()).resolves.toBe('Sos un asistente…');
+        expect(api.get).toHaveBeenLastCalledWith('/agendas-v2/paquete/prompt');
+
+        api.post.mockResolvedValueOnce({ data: { resumen: { funnel: 'W' } } });
+        await expect(ad.importarPaquete({ a: 1 }, true)).resolves.toEqual({ resumen: { funnel: 'W' } });
+        expect(api.post).toHaveBeenLastCalledWith('/agendas-v2/paquete', { paquete: { a: 1 }, simular: true });
+
+        api.post.mockRejectedValueOnce(errHttp(400, { code: 'invalido', errores: ['funnel: falta "nombre".'] }));
+        await expect(ad.importarPaquete({}, false)).rejects.toMatchObject({ errores: ['funnel: falta "nombre".'] });
+    });
 });

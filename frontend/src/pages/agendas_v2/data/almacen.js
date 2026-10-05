@@ -87,6 +87,9 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
 
         buscar,
 
+        // Vuelve a traer todo (después de una importación que creó varios documentos en el servidor).
+        async recargar() { aplicarCargados(await adaptador.cargar()); },
+
         crear(col, data) {
             const id = uid('d');
             if (!deshaciendo) { hist.push({ k: col + '/' + id, col, id, prev: null, t: 0 }); if (hist.length > MAX_HIST) hist.shift(); }

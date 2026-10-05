@@ -9,7 +9,8 @@ app/agendas_v2/
   nucleo/        Port 1:1 de frontend/src/pages/agendas_v2/core (sin Flask ni base). Mismos nombres, en snake_case.
   modelos.py     Tablas sched_*
   servicio.py    Lectura y escritura de documentos, versión, disponibilidad y reservas con bloqueo
-  operacion.py   Escribe la reserva en la operación: cliente, Appointment, FinancialAgenda y evento de Calendar
+  operacion.py   Escribe la reserva en la operación: cliente, Appointment, FinancialAgenda, evento de Calendar y aviso a Discord
+  paquete.py     Configuración con IA: el prompt que se exporta y la importación del JSON («paquete»)
   api_admin.py   /api/agendas-v2/*          sesión + rol admin o director_comercial (CSRF activo)
   api_publico.py /api/agendas-v2/publico/*  anónimo, exento de CSRF, con límite por IP
 tests/agendas_v2/  test_nucleo.py (mismos casos que core/nucleo.test.js), test_api_admin.py, test_api_publico.py
@@ -48,6 +49,8 @@ Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 40
 | PATCH | `/<col>/<id>` | campos sueltos | `{doc, version}`. Mezcla con lo guardado y normaliza; 404 si no existe |
 | DELETE | `/<col>/<id>` | — | `{ok, version}` |
 | PUT | `/perfil` | perfil | `{perfil}` (del usuario de la sesión) |
+| GET | `/paquete/prompt` | — | `{prompt}`: el prompt para Claude/ChatGPT, con el formato del paquete y el equipo real de Team (por email) |
+| POST | `/paquete` | `{paquete, simular}` | Valida el JSON que devolvió la IA. Con `simular`: 200 `{resumen}` sin escribir. Si no: 201 `{resumen, creados: {prioridades, formulario, funnel, evento}, version}`, todo en una transacción. Inválido: 400 `{code: 'invalido', errores: [...]}` (cada error dice dónde). Siempre crea documentos nuevos (un slug de funnel repetido es error), referencia al equipo por email y deja el evento **sin publicar** |
 | PUT | `/integraciones` | integ | `{integ, version}` |
 
 `col` ∈ `funnels | formularios | personas | grupos | eventos | roles`. `id`: `^[A-Za-z0-9_-]{1,40}$`.
@@ -76,6 +79,8 @@ En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente
    - si el cliente ya tiene una agenda futura abierta (de Agendas 2.0 o de n8n), **la reprograma**: la mueve al horario y closer nuevos, marca `is_rescheduled` y actualiza su `FinancialAgenda`;
    - si no, `BookingService.create_appointment` (notifica al closer y a admin) y el espejo `sync_appointment_to_financial_agenda` (que reconcilia duplicados).
 7. Ya guardada la agenda, crea el evento en el Calendar del closer (`GoogleService.crear_evento_con_meet`): título `<evento>: <lead> y <closer>`, el formulario en la descripción, link de Meet y el lead invitado por mail. Si la agenda se reprogramó, borra el evento anterior. **Si Google falla, la agenda queda igual** y se avisa a admin y al closer (`Notification`) para crearlo a mano.
+
+8. Avisa al canal de ventas de Discord con un embed (lead, closer, horario de Bolivia, setter u origen, prioridad, nota, contacto, formulario y Meet). El webhook se lee de la variable de entorno `DISCORD_AGENDAS_WEBHOOK`; si falta o Discord falla, solo queda en el log.
 
 Si el mismo lead (mismo email) manda dos veces el mismo horario, se devuelve la agenda que ya existe.
 

@@ -8,7 +8,7 @@ import re
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from app.agendas_v2 import servicio
+from app.agendas_v2 import paquete, servicio
 from app.agendas_v2.nucleo.normalizar import COLECCIONES
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
@@ -99,3 +99,23 @@ def integraciones():
 def usuarios():
     """Closers y setters activos de la app: Team suma personas solo desde aca, unidas por email."""
     return jsonify({'usuarios': servicio.usuarios_del_equipo((ROLE_CLOSER, ROLE_SETTER))})
+
+
+@bp.route('/paquete/prompt', methods=['GET'])
+def paquete_prompt():
+    """El prompt para armar un funnel con IA (paquete.py), con el equipo real de Team."""
+    return jsonify({'prompt': paquete.prompt(servicio.colecciones())})
+
+
+@bp.route('/paquete', methods=['POST'])
+def paquete_importar():
+    """{paquete, simular}: revisa el JSON que devolvio la IA y, si no es simulacion, crea todo de una vez."""
+    cuerpo = _cuerpo()
+    d = servicio.colecciones()
+    plan, errores = paquete.revisar(d, cuerpo.get('paquete'))
+    if errores:
+        return jsonify({'code': 'invalido', 'errores': errores}), 400
+    if cuerpo.get('simular'):
+        return jsonify({'resumen': paquete.resumen(plan)})
+    creados = paquete.importar(d, plan, usuario_id=current_user.id)
+    return jsonify({'resumen': paquete.resumen(plan), 'creados': creados, 'version': servicio.version()}), 201

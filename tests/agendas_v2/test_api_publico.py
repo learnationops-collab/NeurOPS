@@ -403,3 +403,54 @@ def test_si_ninguno_tiene_calendar_no_hay_horarios(client, armado, db):
     GoogleCalendarToken.query.delete()
     db.session.commit()
     assert _horarios(client) == []
+
+
+# --- Discord ----------------------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def discord(monkeypatch):
+    enviados = []
+
+    class Respuesta:
+        status_code = 204
+
+    def post(url, json=None, timeout=None):
+        enviados.append({'url': url, 'json': json})
+        return Respuesta()
+
+    monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
+    monkeypatch.setattr('app.agendas_v2.operacion.requests.post', post)
+    return enviados
+
+
+def test_cada_agenda_avisa_a_discord(client, armado, discord):
+    assert _reservar(client).status_code == 201
+    (msg,) = discord
+    assert msg['url'] == 'https://discord.test/webhook'
+    embed = msg['json']['embeds'][0]
+    assert embed['title'] == '📅 Nueva agenda: Llamada'
+    campos = {c['name']: c['value'] for c in embed['fields']}
+    assert campos['Lead'] == 'Lucía Fernández' and campos['Closer'] == 'ana'
+    assert campos['Horario (Bolivia)'] == '05/10/2026 09:00' and campos['Setter / origen'] == 'juan'
+    assert campos['Prioridad'] == 'Ultra' and '¿Cuánto?**: Mucho' in campos['Formulario']
+    assert campos['Meet'] == 'https://meet.google.com/abc-defg-hij'
+
+
+def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, armado, discord):
+    _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
+    assert discord == []
+    _reservar(client)
+    _reservar(client, inicio='2026-10-05T14:00:00.000Z')
+    titulos = [m['json']['embeds'][0]['title'] for m in discord]
+    assert titulos == ['📅 Nueva agenda: Llamada', '🔁 Agenda reprogramada: Llamada']
+
+
+def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
+    def roto(*a, **k):
+        raise ConnectionError('discord caido')
+
+    monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
+    monkeypatch.setattr('app.agendas_v2.operacion.requests.post', roto)
+    assert _reservar(client).status_code == 201
+    assert Appointment.query.count() == 1

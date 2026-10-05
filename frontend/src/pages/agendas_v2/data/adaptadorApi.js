@@ -123,6 +123,25 @@ export function crearAdaptadorApi() {
             return escribir(() => api.put('/agendas-v2/integraciones', integ));
         },
 
+        // Configuración con IA (Configuración › Con IA): el prompt y la importación del JSON.
+        async promptPaquete() {
+            try { const { data } = await api.get('/agendas-v2/paquete/prompt'); return data.prompt; } catch (e) { throw errorDeApi(e); }
+        },
+        // simular: solo valida y devuelve {resumen}. Si no, crea todo y devuelve {resumen, creados}.
+        // Con errores de validación rechaza con e.errores (lista de textos).
+        async importarPaquete(paquete, simular) {
+            try {
+                const r = await api.post('/agendas-v2/paquete', { paquete, simular: !!simular });
+                if (!simular) notar(r.data && r.data.version);
+                return r.data;
+            } catch (e) {
+                const err = errorDeApi(e);
+                const datos = e && e.response && e.response.data;
+                if (datos && Array.isArray(datos.errores)) err.errores = datos.errores;
+                throw err;
+            }
+        },
+
         // Closers y setters reales de la app (Team suma personas solo desde acá).
         async usuarios() {
             try { const { data } = await api.get('/agendas-v2/usuarios'); return Array.isArray(data && data.usuarios) ? data.usuarios : []; } catch (e) { throw errorDeApi(e); }

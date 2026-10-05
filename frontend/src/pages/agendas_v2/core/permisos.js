@@ -30,7 +30,7 @@ export function secOk(d, sim, perfil, id) { return id === 'horas' ? horasOk(d, s
 export function tabConfOk(d, sim, t) {
     if (t === 'perfil') return true;
     if (t === 'miembros' || t === 'roles' || t === 'accesos') return puede(d, sim, 'conf.miembros');
-    if (t === 'funnels') return puede(d, sim, 'conf.funnels');
+    if (t === 'funnels' || t === 'ia') return puede(d, sim, 'conf.funnels');
     if (t === 'integraciones') return puede(d, sim, 'conf.integraciones');
     return true;
 }
