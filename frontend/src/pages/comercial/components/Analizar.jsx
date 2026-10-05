@@ -841,7 +841,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
 
         <div className="grid-2">
             <PanelEstados bloque={bloque} irA={irA} />
-            <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} />
+            <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal />
         </div>
 
         <div className="grid-2">

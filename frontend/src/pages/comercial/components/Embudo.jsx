@@ -8,7 +8,7 @@ import { CardHead, Tip, useMontado } from './Shared';
  * Vive en su propio archivo porque lo usan el dashboard de closers y el de setters, y cada vista
  * le arma los pasos distinto. El contrato es por fila, no global:
  *
- *   <Embudo pasos={[{ paso, n, ayuda, ir }]} sinCuello={false} />
+ *   <Embudo pasos={[{ paso, n, ayuda, ir }]} sinCuello={false} sinFinal={false} />
  *
  * - `paso` es el nombre y `n` el conteo; el array va en orden, de arriba hacia abajo.
  * - `ayuda` es el texto del tooltip de esa fila. Opcional: sin él la fila no muestra el ícono.
@@ -16,13 +16,15 @@ import { CardHead, Tip, useMontado } from './Shared';
  *   un callback genérico porque cada paso lleva a un filtro distinto de Revisar, y quién decide
  *   ese destino es la vista que arma los pasos, no el embudo.
  * - `sinCuello` apaga el cuello de botella para los embudos donde la etiqueta no aporta.
+ * - `sinFinal` quita el "X% final" del pie (primer paso contra el último). El de closers lo apaga:
+ *   ahí sería ventas sobre agendas, una tasa que no se muestra.
  *
  * Cada fila muestra las DOS cifras a la vez, como en el doc 03: la cantidad dentro de la banda y
  * la tasa contra el paso anterior a la derecha. Hubo un selector Cantidad/Tasa que no agregaba
  * nada —en Cantidad la tasa ya estaba a la derecha, y Tasa solo la mudaba a la banda y borraba
  * el conteo—, así que se veía la misma tasa dos veces según el modo. Lo sacó el usuario.
  */
-const Embudo = ({ pasos, sinCuello = false }) => {
+const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
     const montado = useMontado();
     const primero = pasos[0]?.n || 0;
     const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
@@ -111,7 +113,7 @@ const Embudo = ({ pasos, sinCuello = false }) => {
                 <span className="t-cap mut num">
                     de {primero} {pasos[0]?.paso.toLowerCase()} a {pasos[pasos.length - 1]?.n} {pasos[pasos.length - 1]?.paso.toLowerCase()}
                 </span>
-                {irFinal ? (
+                {sinFinal ? null : irFinal ? (
                     <button type="button" className="t-cap num"
                         style={{ background: 'none', border: 0, cursor: 'pointer' }}
                         onClick={irFinal}>
