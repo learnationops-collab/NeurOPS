@@ -21,6 +21,12 @@ const ROTULO_DE_ROL = {
 
 export const rotuloDeRol = (rol) => ROTULO_DE_ROL[rol] || rol;
 
+/** Los OTROS roles de la misma cuenta (vacío si tiene uno solo o está simulando a alguien). */
+export const otrosRoles = (user) => {
+    if (!user || user.is_impersonating) return [];
+    return (user.roles || []).filter((r) => r !== user.role);
+};
+
 /** Las OTRAS cuentas de la persona (vacío si no tiene vínculos o está simulando a alguien). */
 export const otrasCuentas = (user) => {
     if (!user || user.is_impersonating) return [];
@@ -38,20 +44,39 @@ export const cambiarDeRol = async (userId) => {
     window.location.href = roleLandingPath(user.role);
 };
 
+/** Pasa a otro rol de la MISMA cuenta (no es una simulación) y entra a la pantalla de ese rol. */
+export const cambiarDeRolEnLaCuenta = async (rol) => {
+    const res = await api.post('/auth/switch-role', { role: rol, isolated: isIsolatedTab() });
+    const { user, token } = res.data;
+    saveSession(user, token);
+    window.location.href = roleLandingPath(user.role);
+};
+
 /**
  * Las opciones del menú de sesión para cambiar de rol: «Pasar a Closer», una por cuenta. Es una
  * lista vacía si la persona tiene una sola cuenta, así que se puede poner siempre en `grupos`.
  */
-export const opcionesDeRol = (user, onError = () => {}) => otrasCuentas(user).map((c) => ({
-    id: `rol-${c.id}`,
-    label: `Pasar a ${rotuloDeRol(c.role)}`,
-    Icono: ArrowLeftRight,
-    titulo: c.username,
-    onClick: async () => {
+export const opcionesDeRol = (user, onError = () => {}) => {
+    const intentar = (accion) => async () => {
         try {
-            await cambiarDeRol(c.id);
+            await accion();
         } catch (e) {
             onError(e?.response?.data?.message || 'No se pudo cambiar de rol');
         }
-    },
-}));
+    };
+    return [
+        ...otrosRoles(user).map((rol) => ({
+            id: `rol-${rol}`,
+            label: `Pasar a ${rotuloDeRol(rol)}`,
+            Icono: ArrowLeftRight,
+            onClick: intentar(() => cambiarDeRolEnLaCuenta(rol)),
+        })),
+        ...otrasCuentas(user).map((c) => ({
+            id: `rol-${c.id}`,
+            label: `Pasar a ${rotuloDeRol(c.role)}`,
+            Icono: ArrowLeftRight,
+            titulo: c.username,
+            onClick: intentar(() => cambiarDeRol(c.id)),
+        })),
+    ];
+};
