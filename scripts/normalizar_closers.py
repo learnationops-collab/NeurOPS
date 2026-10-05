@@ -20,7 +20,16 @@ def normalizar_closers():
         # 1. Obtener usuarios principales de closers
         jean_carlo = User.query.filter(User.username.ilike('Jean Carlo')).first()
         sebastian = User.query.filter(User.username.ilike('Sebastian')).first()
-        marlon_closer = User.query.filter(User.username.ilike('Marlon Closer')).first()
+        # Desde el 05/10/2026 Marlon es UNA cuenta (la de dirección comercial, con el rol closer en
+        # `roles_extra`) y la de «Marlon Closer» quedó inactiva como `fusionada_<id>`. Buscarlo solo por
+        # «Marlon Closer» o «Marlon» caía en la cuenta antigua e inactiva y le reasignaba las citas de la
+        # cuenta unificada (el paso 5), deshaciendo la unificación en la copia de staging. Se prefiere,
+        # en este orden: una cuenta ACTIVA llamada «Marlon Closer», la cuenta activa con su correo y,
+        # al final, el «Marlon» histórico.
+        marlon_closer = User.query.filter(User.username.ilike('Marlon Closer'), User.is_active.is_(True)).first()
+        if not marlon_closer:
+            marlon_closer = User.query.filter(
+                User.email.ilike('marlongarcia27948@gmail.com'), User.is_active.is_(True)).first()
         if not marlon_closer:
             marlon_closer = User.query.filter(User.username.ilike('Marlon')).first()
 
