@@ -1,6 +1,6 @@
 # Agendas 2.0 — Learnation Thalamus (frontend)
 
-Reemplazo de Calendly + n8n. Los datos viven en el backend (`/api/agendas-v2`, contrato en `docs/agendas_v2_api.md`), en tablas `sched_*` propias, así que **no toca la operación**: ninguna agenda llega a `FinancialAgenda` ni a `Appointment`.
+Reemplazo de Calendly + n8n. Los datos viven en el backend (`/api/agendas-v2`, contrato en `docs/agendas_v2_api.md`), en tablas `sched_*` propias. Las agendas que toma la página pública se escriben en la operación (`Appointment` + `FinancialAgenda`) y crean el evento en el Calendar del closer: ver «API pública» en el contrato.
 
 ## Dónde se guardan los datos
 

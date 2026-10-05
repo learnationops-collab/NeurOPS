@@ -95,16 +95,6 @@ def integraciones():
     return jsonify({'integ': integ, 'version': servicio.version()})
 
 
-@bp.route('/reservas/<reserva_id>/cancelar', methods=['POST'])
-def cancelar(reserva_id):
-    if not ID_VALIDO.match(reserva_id or ''):
-        return jsonify({'message': 'Not found'}), 404
-    r = servicio.cancelar_reserva(reserva_id)
-    if not r:
-        return jsonify({'message': 'Not found'}), 404
-    return jsonify({'reserva': r, 'version': servicio.version()})
-
-
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
     """Closers y setters activos de la app: Team suma personas solo desde aca, unidas por email."""

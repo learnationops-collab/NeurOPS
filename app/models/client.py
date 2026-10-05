@@ -13,6 +13,9 @@ class Client(db.Model):
     observaciones = db.Column(db.Text, nullable=True) # Notas de triage / calificacion
     dolores = db.Column(db.Text, nullable=True) # Dolores del prospecto
     form_data = db.Column(db.JSON, nullable=True) # Datos del formulario de calificacion externa
+    # Agendas 2.0: el ultimo formulario que completo (preguntas y respuestas tal como las vio, nota y
+    # si califico). Lo tienen tambien los que no calificaron y por eso no tienen agenda.
+    formulario_payload = db.Column(db.JSON(none_as_null=True), nullable=True)
     follow_up_status = db.Column(db.String(50), nullable=True, default='Por contactar')
     # Total a pagar por el cliente (ya no por programa/Enrollment: un solo total por cliente).
     # Se autoasigna por programa al registrar el primer pago (AL 1000 / RR 1500 / SI 2000) y

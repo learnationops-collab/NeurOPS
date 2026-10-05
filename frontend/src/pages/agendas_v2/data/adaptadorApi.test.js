@@ -133,14 +133,14 @@ describe('adaptadorApi', () => {
         await expect(ad.borrar('roles', 'r9')).resolves.toBeNull();
     });
 
-    it('perfil, integraciones y cancelar usan sus rutas; crear reservas no se hace desde la gestión', async () => {
+    it('perfil e integraciones usan sus rutas; crear o cancelar reservas no se hace desde la gestión', async () => {
         const ad = crearAdaptadorApi();
         await ad.guardarPerfil({ nombre: 'Mario' });
         expect(api.put).toHaveBeenCalledWith('/agendas-v2/perfil', { nombre: 'Mario' });
         await ad.guardarInteg({ meet: {} });
         expect(api.put).toHaveBeenCalledWith('/agendas-v2/integraciones', { meet: {} });
-        await expect(ad.cancelarReserva('r1')).resolves.toMatchObject({ id: 'r1', estado: 'cancelada' });
-        expect(api.post).toHaveBeenCalledWith('/agendas-v2/reservas/r1/cancelar');
+        await expect(ad.cancelarReserva('r1')).rejects.toMatchObject({ code: 'no_soportado' });
+        expect(api.post).not.toHaveBeenCalled();
         await expect(ad.crearReserva({})).rejects.toMatchObject({ code: 'no_soportado' });
     });
 });

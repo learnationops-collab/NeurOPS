@@ -1,16 +1,18 @@
 """Servicio de Agendas 2.0: documentos de Thalamus, version de cambios y reservas.
 
 Todo documento que entra pasa por el normalizador del nucleo (el mismo esquema que el frontend).
-Las reservas nunca confian en lo que calculo el navegador: se revalidan las respuestas contra la
-version PUBLICADA del evento, se recalcula la asignacion con las reservas reales y, antes de
-insertar, se bloquea la fila del closer y se comprueba que siga libre.
+Las reservas se escriben en la operacion (operacion.py) y nunca confian en lo que calculo el
+navegador: se revalidan las respuestas contra la version PUBLICADA del evento, se recalcula la
+asignacion con las agendas reales y, antes de escribir, se bloquea al closer y se comprueba que
+siga libre.
 """
 
 import time
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil, SchedPersona, SchedReserva
+from app.agendas_v2 import operacion
+from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import PAISES, TZ_DEF, con_opciones, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen
@@ -19,7 +21,7 @@ from app.agendas_v2.nucleo.formulario import limpiar_respuesta, validar_respuest
 from app.agendas_v2.nucleo.normalizar import COLECCIONES, NORM, normal_integ, normal_perfil, preguntas_flujo
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva
-from app.agendas_v2.nucleo.util import slugify, uid
+from app.agendas_v2.nucleo.util import slugify
 
 DIA_MS = 86400000
 # Las agendas de la operacion (Appointment) no guardan duracion: cada una bloquea 60 minutos.
@@ -103,7 +105,8 @@ def usuarios_del_equipo(roles):
             'id': u.id,
             'nombre': u.username or '',
             'email': (u.email or '').lower(),
-            'rol': u.role,
+            # Una cuenta puede tener varios roles (users.roles_extra): vale el primero de `roles` que tenga.
+            'rol': next((r for r in roles if u.tiene_rol(r)), u.role),
             'tz': u.timezone or TZ_DEF,
             'calendar': u.id in con_calendar,
         }
@@ -178,30 +181,41 @@ def guardar_integraciones(datos):
 # --- Reservas -----------------------------------------------------------------------------------
 
 
-def reserva_a_dict(r):
-    """Una reserva en el formato que usa el frontend (el mismo que guarda adaptadorLocal)."""
+def _duracion_min(appt):
+    """Lo que dura una agenda: la de Agendas 2.0 trae su duracion; las de n8n, 60 minutos."""
+    return int((appt.agenda_payload or {}).get('duracion_min') or DURACION_AGENDA_OPERACION_MIN)
+
+
+def _vigente(appt):
+    return not appt.closer_processed and (appt.result or '') not in operacion.RESULTADOS_NO_VIGENTES
+
+
+def reserva_a_dict(appt):
+    """Una agenda de Agendas 2.0 en el formato de reserva que usa el frontend (el de adaptadorLocal)."""
+    inicio = dt_a_ms(appt.start_time)
     return {
-        **(r.payload or {}),
-        'id': r.id,
-        'estado': r.estado,
-        'inicio_ms': dt_a_ms(r.inicio),
-        'fin_ms': dt_a_ms(r.fin),
-        'creada': r.creada_en.replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z') if r.creada_en else None,
+        **(appt.agenda_payload or {}),
+        'id': str(appt.id),
+        'estado': 'agendada' if _vigente(appt) else 'cancelada',
+        'inicio_ms': inicio,
+        'fin_ms': inicio + _duracion_min(appt) * 60000 if inicio is not None else None,
+        'creada': appt.created_at.replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+        if appt.created_at
+        else None,
     }
 
 
 def reservas_para_estado(ahora=None):
+    """Las agendas tomadas por Agendas 2.0 (las que tienen payload) de los ultimos 35 dias y futuras."""
+    from app.models import Appointment
+
     desde = ms_a_dt((ahora or ahora_ms()) - VENTANA_ESTADO_DIAS * DIA_MS)
     filas = (
-        SchedReserva.query.filter(
-            db.or_(
-                SchedReserva.inicio >= desde, db.and_(SchedReserva.inicio.is_(None), SchedReserva.creada_en >= desde)
-            )
-        )
-        .order_by(SchedReserva.creada_en)
+        Appointment.query.filter(Appointment.agenda_payload.isnot(None), Appointment.start_time >= desde)
+        .order_by(Appointment.created_at)
         .all()
     )
-    return [reserva_a_dict(r) for r in filas]
+    return [reserva_a_dict(a) for a in filas]
 
 
 def _usuarios_de_personas(d):
@@ -240,9 +254,9 @@ def solo_elegibles(d):
 
 
 def _agendas_de_operacion(elegibles, desde):
-    """Agendas vigentes de la operacion (Appointment) de esos closers, como reservas del nucleo.
-    Vigente = la misma regla que BookingService: sin procesar y no cancelada ni reprogramada."""
-    from app.models.booking import Appointment
+    """Agendas vigentes de esos closers (Appointment), como reservas del nucleo. Las de Agendas 2.0
+    duran lo que dura su evento; las que entran por n8n, 60 minutos."""
+    from app.models import Appointment
 
     if not elegibles:
         return []
@@ -252,17 +266,15 @@ def _agendas_de_operacion(elegibles, desde):
     filas = Appointment.query.filter(
         Appointment.closer_id.in_(list(persona_de)),
         Appointment.start_time.isnot(None),
-        Appointment.start_time >= desde - timedelta(minutes=DURACION_AGENDA_OPERACION_MIN),
-        Appointment.closer_processed.is_(False),
-        db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada'])),
+        Appointment.start_time >= desde - timedelta(hours=4),
+        *operacion.filtro_vigente(),
     ).all()
-    dur = DURACION_AGENDA_OPERACION_MIN * 60000
     return [
         {
             'estado': 'agendada',
             'closer_id': pid,
             'inicio_ms': dt_a_ms(a.start_time),
-            'fin_ms': dt_a_ms(a.start_time) + dur,
+            'fin_ms': dt_a_ms(a.start_time) + _duracion_min(a) * 60000,
         }
         for a in filas
         for pid in persona_de[a.closer_id]
@@ -270,31 +282,21 @@ def _agendas_de_operacion(elegibles, desde):
 
 
 def _ocupacion(ahora, elegibles=None):
-    """Lo que tiene ocupado cada closer: las reservas de Agendas 2.0 y sus agendas ya planificadas
-    en la operacion (Appointment), en el formato que espera el nucleo."""
-    desde = ms_a_dt(ahora - DIA_MS)
-    filas = SchedReserva.query.filter(
-        SchedReserva.estado == 'agendada',
-        SchedReserva.closer_id.isnot(None),
-        SchedReserva.fin >= desde,
+    """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion, en el formato del nucleo."""
+    return opciones_de_ocupacion(_agendas_de_operacion(elegibles or {}, ms_a_dt(ahora - DIA_MS)), ahora)
+
+
+def _choca(user_id, inicio, fin):
+    """Si el closer ya tiene una agenda vigente que se cruza con [inicio, fin) (ms)."""
+    from app.models import Appointment
+
+    filas = Appointment.query.filter(
+        Appointment.closer_id == user_id,
+        Appointment.start_time < ms_a_dt(fin),
+        Appointment.start_time >= ms_a_dt(inicio) - timedelta(hours=4),
+        *operacion.filtro_vigente(),
     ).all()
-    reservas = [
-        {'estado': r.estado, 'closer_id': r.closer_id, 'inicio_ms': dt_a_ms(r.inicio), 'fin_ms': dt_a_ms(r.fin)}
-        for r in filas
-    ]
-    return opciones_de_ocupacion(reservas + _agendas_de_operacion(elegibles or {}, desde), ahora)
-
-
-def cancelar_reserva(reserva_id):
-    r = db.session.get(SchedReserva, reserva_id)
-    if not r:
-        return None
-    if r.estado != 'cancelada':
-        r.estado = 'cancelada'
-        r.cancelada_en = ms_a_dt(ahora_ms())
-        _subir_version()
-        db.session.commit()
-    return reserva_a_dict(r)
+    return any(dt_a_ms(a.start_time) + _duracion_min(a) * 60000 > inicio for a in filas)
 
 
 # --- Pagina publica -----------------------------------------------------------------------------
@@ -399,8 +401,18 @@ def _setter_de(d, funnel, origen):
     return None
 
 
+def _respuesta(appt):
+    """Lo que la pagina publica le muestra al lead de su agenda."""
+    r = reserva_a_dict(appt)
+    return {'id': r['id'], 'inicio': r['inicio_ms'], 'fin': r['fin_ms'], 'duracion': _duracion_min(appt)}
+
+
 def reservar(d, evento, form, funnel, cuerpo, ahora=None):
-    """Toma la agenda. Devuelve (reserva dict, creada: bool). Lanza ReservaRechazadaError."""
+    """Toma la agenda y la escribe en la operacion (operacion.py). Devuelve (resultado, creada):
+    resultado es {'descalificada': True} o {'id', 'inicio', 'fin', 'duracion'} (ms).
+    Lanza ReservaRechazadaError."""
+    from app.models import User
+
     ahora = ahora or ahora_ms()
     preguntas = preguntas_flujo(form)
     limpias, errores, descalifica = _limpiar_respuestas(preguntas, cuerpo.get('resp'))
@@ -408,18 +420,12 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)
     origen = slugify(str(cuerpo.get('origen') or ''))[:60]
     lead = {'preguntas': preguntas, 'resp': limpias, 'pais': pais, 'tz': tz}
-    base = {
-        'lead': lead,
-        'evento': evento,
-        'funnel': funnel,
-        'form': form,
-        'origen': origen,
-        'setter': _setter_de(d, funnel, origen),
-    }
+    setter_persona = _setter_de(d, funnel, origen)
+    base = {'lead': lead, 'evento': evento, 'funnel': funnel, 'form': form, 'origen': origen, 'setter': setter_persona}
 
     if descalifica:
-        payload = armar_reserva(**base, asig=None, slot=None)
-        return _insertar(payload, 'descalificada', None), True
+        operacion.registrar_descalificado(armar_reserva(**base, asig=None, slot=None))
+        return {'descalificada': True}, True
     if errores:
         raise ReservaRechazadaError('invalido', errores)
 
@@ -428,75 +434,37 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     except (TypeError, ValueError):
         raise ReservaRechazadaError('invalido', {'inicio': 'Elegí un horario.'})
 
-    email = (limpias.get('c-email') or '').lower()
-    if email:
-        previa = SchedReserva.query.filter_by(
-            evento_id=evento['id'], lead_email=email, inicio=ms_a_dt(inicio), estado='agendada'
-        ).first()
-        if previa:  # el mismo lead mando dos veces el mismo horario
-            return reserva_a_dict(previa), False
+    # El mismo lead que confirma dos veces el mismo horario: se devuelve la agenda que ya tiene.
+    cliente = operacion.cliente_por_email(limpias.get('c-email'))
+    previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
+    if previa:
+        return _respuesta(previa), False
 
+    usuarios = _usuarios_de_personas(d)
     d, elegibles = solo_elegibles(d)
     asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
-    if not slot or not slot['p']:
+    if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
 
     # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
-    db.session.query(SchedPersona).filter_by(id=slot['p']).with_for_update().first()
+    closer = db.session.query(User).filter_by(id=elegibles[slot['p']]).with_for_update().first()
     fin = inicio + evento['duracion'] * 60000
-    choque = SchedReserva.query.filter(
-        SchedReserva.closer_id == slot['p'],
-        SchedReserva.estado == 'agendada',
-        SchedReserva.inicio < ms_a_dt(fin),
-        SchedReserva.fin > ms_a_dt(inicio),
-    ).first()
-    if choque or _choca_con_la_operacion(elegibles.get(slot['p']), inicio, fin):
+    if not closer or _choca(closer.id, inicio, fin):
         db.session.rollback()
         raise ReservaRechazadaError('ocupado')
 
-    payload = armar_reserva(**base, asig=asig, slot=slot)
-    return _insertar(payload, 'agendada', (inicio, fin)), True
-
-
-def _choca_con_la_operacion(user_id, inicio, fin):
-    """Si el closer ya tiene en la operacion una agenda que se cruza con [inicio, fin)."""
-    from app.models.booking import Appointment
-
-    if not user_id:
-        return False
-    dur = timedelta(minutes=DURACION_AGENDA_OPERACION_MIN)
-    return (
-        Appointment.query.filter(
-            Appointment.closer_id == user_id,
-            Appointment.start_time < ms_a_dt(fin),
-            Appointment.start_time > ms_a_dt(inicio) - dur,
-            Appointment.closer_processed.is_(False),
-            db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada'])),
-        ).first()
-        is not None
-    )
-
-
-def _insertar(payload, estado, rango):
-    r = SchedReserva(
-        id=uid('rs'),
-        evento_id=payload['evento_id'],
-        funnel_id=payload.get('funnel_id') or None,
-        closer_id=payload.get('closer_id'),
-        estado=estado,
-        inicio=ms_a_dt(rango[0]) if rango else None,
-        fin=ms_a_dt(rango[1]) if rango else None,
-        origen=payload.get('origen') or None,
-        setter_id=payload.get('setter_id'),
-        prioridad_id=payload.get('prioridad_id'),
-        nota=payload.get('nota'),
-        lead_nombre=(payload['lead'].get('nombre') or '')[:120] or None,
-        lead_email=(payload['lead'].get('email') or '')[:120] or None,
-        lead_telefono=(payload['lead'].get('telefono') or '')[:40] or None,
-        payload=payload,
-    )
-    db.session.add(r)
+    setter = db.session.get(User, usuarios[setter_persona]) if setter_persona in usuarios else None
+    payload = {
+        **armar_reserva(**base, asig=asig, slot=slot),
+        'evento_nombre': evento['nombre'],
+        'closer_user_id': closer.id,
+        'setter_user_id': setter.id if setter else None,
+    }
+    appt, evento_viejo = operacion.registrar_agenda(payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora))
+    if not appt:
+        raise ReservaRechazadaError('ocupado')
     _subir_version()
     db.session.commit()
-    return reserva_a_dict(r)
+    operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
+    return _respuesta(appt), True

@@ -152,6 +152,47 @@ class GoogleService:
              return None
 
     @staticmethod
+    def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None):
+        """Crea el evento en el calendario elegido del usuario, con link de Google Meet, e invita a
+        `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0.
+
+        inicio_utc/fin_utc: datetime UTC sin zona. Devuelve (event_id, link_de_meet). A diferencia de
+        create_event, NO se traga los errores: quien llama decide que hacer si Google falla."""
+        import uuid
+
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        token = GoogleCalendarToken.query.filter_by(user_id=user_id).first()
+        calendar_id = (token.google_calendar_id if token else None) or 'primary'
+        cuerpo = {
+            'summary': titulo,
+            'description': descripcion,
+            'start': {'dateTime': inicio_utc.isoformat() + 'Z'},
+            'end': {'dateTime': fin_utc.isoformat() + 'Z'},
+            'conferenceData': {
+                'createRequest': {'requestId': uuid.uuid4().hex, 'conferenceSolutionKey': {'type': 'hangoutsMeet'}}
+            },
+            'reminders': {
+                'useDefault': False,
+                'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}],
+            },
+        }
+        if invitado_email:
+            cuerpo['attendees'] = [{'email': invitado_email}]
+        evt = service.events().insert(
+            calendarId=calendar_id,
+            body=cuerpo,
+            conferenceDataVersion=1,
+            sendUpdates='all' if invitado_email else 'none',
+        ).execute()
+        meet = evt.get('hangoutLink') or next(
+            (p.get('uri') for p in (evt.get('conferenceData') or {}).get('entryPoints', []) if p.get('entryPointType') == 'video'),
+            None,
+        )
+        return evt.get('id'), meet
+
+    @staticmethod
     def delete_event(user_id, event_id):
         service = GoogleService.get_service(user_id)
         if not service or not event_id: return False

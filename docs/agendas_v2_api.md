@@ -1,6 +1,6 @@
-# Agendas 2.0 — backend (paso 2: aislado)
+# Agendas 2.0 — backend
 
-Este es el backend de Learnation Thalamus. Guarda todo en tablas propias `sched_*` y **no toca la operación**: no escribe en `FinancialAgenda` ni en `Appointment`, no llama a n8n, Discord ni WhatsApp, y no crea eventos en Google Calendar. Volcar las reservas al sistema actual es el **paso 3**.
+Este es el backend de Learnation Thalamus. La **configuración** (funnels, formularios, equipo, prioridades, eventos) vive en tablas propias `sched_*`. Las **agendas** no: cada reserva del link público se escribe en la operación como cualquier otra agenda de NeurOPS (`Appointment` + su espejo `FinancialAgenda`) y crea el evento en el Google Calendar del closer con Meet. No pasa por n8n. Discord y WhatsApp al lead todavía no.
 
 ## Módulo
 
@@ -8,7 +8,8 @@ Este es el backend de Learnation Thalamus. Guarda todo en tablas propias `sched_
 app/agendas_v2/
   nucleo/        Port 1:1 de frontend/src/pages/agendas_v2/core (sin Flask ni base). Mismos nombres, en snake_case.
   modelos.py     Tablas sched_*
-  servicio.py    Lectura y escritura de documentos, versión, reservas con bloqueo
+  servicio.py    Lectura y escritura de documentos, versión, disponibilidad y reservas con bloqueo
+  operacion.py   Escribe la reserva en la operación: cliente, Appointment, FinancialAgenda y evento de Calendar
   api_admin.py   /api/agendas-v2/*          sesión + rol admin o director_comercial (CSRF activo)
   api_publico.py /api/agendas-v2/publico/*  anónimo, exento de CSRF, con límite por IP
 tests/agendas_v2/  test_nucleo.py (mismos casos que core/nucleo.test.js), test_api_admin.py, test_api_publico.py
@@ -22,7 +23,15 @@ tests/agendas_v2/  test_nucleo.py (mismos casos que core/nucleo.test.js), test_a
 | `sched_personas` | `id` String(40) | Lo mismo más `email` y `user_id` (users, nullable). `user_id` se completa solo si el email coincide con una cuenta de la app; lo usa el paso 3 |
 | `sched_config` | `clave` String(40) | `datos` JSON. Claves: `integraciones` y `version`, un contador que sube con cada escritura |
 | `sched_perfiles` | `user_id` (users) | `datos` JSON: perfil de Thalamus de cada usuario |
-| `sched_reservas` | `id` String(40) | Columnas: `evento_id`, `funnel_id`, `closer_id` (sched persona), `inicio`, `fin` (UTC naive), `estado` (`agendada` \| `descalificada` \| `cancelada`), `origen`, `setter_id`, `prioridad_id`, `nota`, `lead_nombre`, `lead_email`, `lead_telefono`, `creada_en`, `cancelada_en`. Además `payload` JSON con el contrato completo de `armarReserva` (`version: 1`). Índice en (`closer_id`, `inicio`) |
+
+Columnas que Agendas 2.0 agregó a la operación (opcionales, NULL en lo que entra por n8n):
+
+| Tabla | Columna | Contenido |
+|---|---|---|
+| `appointments` | `agenda_payload` JSON | La agenda completa: el contrato de `armar_reserva` (`version: 1`: respuestas con el texto de cada pregunta, nota, prioridad, regla, origen, duración, lead) más `evento_nombre`, `closer_user_id`, `setter_user_id`, `meet` (link de Meet) y, si se reprogramó, `reprogramada_desde` |
+| `clients` | `formulario_payload` JSON | El último formulario que completó el lead, también si no calificó (los descalificados quedan como cliente, sin agenda) |
+
+`financial_agendas.raw_data['agendas_v2']` lleva el mismo payload que la `Appointment`.
 
 Todo documento que entra pasa por el normalizador de `nucleo/normalizar.py`, el mismo esquema que el frontend. Lo que no cumple el esquema se corrige o se descarta; nunca se guarda tal cual.
 
@@ -32,7 +41,7 @@ Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 40
 
 | Método | Ruta | Cuerpo | Respuesta |
 |---|---|---|---|
-| GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version}`. `reservas`: las que empiezan o se crearon en los últimos 35 días y todas las futuras, en el formato de `adaptadorLocal` (`inicio_ms`, `fin_ms`, `estado` y los campos del contrato) |
+| GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version}`. `reservas`: las `appointments` con `agenda_payload` de los últimos 35 días y futuras, en el formato de `adaptadorLocal` (`id` = id de la Appointment, `inicio_ms`, `fin_ms`, `estado` `agendada` o `cancelada`, y los campos del payload). Thalamus no cancela ni reprograma: eso lo hace el closer en NeurOPS |
 | GET | `/version` | — | `{version}` (el frontend lo consulta cada 15 s para traer cambios de otros) |
 | GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz, calendar}]}`: closers y setters activos de la app. Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
 | PUT | `/<col>/<id>` | documento completo (sin `id`) | `{doc, version}`. Crea o reemplaza |
@@ -40,7 +49,6 @@ Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 40
 | DELETE | `/<col>/<id>` | — | `{ok, version}` |
 | PUT | `/perfil` | perfil | `{perfil}` (del usuario de la sesión) |
 | PUT | `/integraciones` | integ | `{integ, version}` |
-| POST | `/reservas/<id>/cancelar` | — | `{reserva, version}` |
 
 `col` ∈ `funnels | formularios | personas | grupos | eventos | roles`. `id`: `^[A-Za-z0-9_-]{1,40}$`.
 
@@ -54,17 +62,21 @@ Sin sesión. Solo trabaja con la **versión publicada** de un evento activo cuyo
 | POST | `/eventos/<evento_id>/horarios` | `{resp, tz}` | `{slots: [ms...]}`: inicios libres para esas respuestas, calculados en el servidor sin decir de qué closer es cada uno |
 | POST | `/reservas` | `{evento_id, resp, pais, tz, inicio (ISO o null), origen}` | 201 `{reserva: {id, inicio, fin, duracion}}`. Descalificado: 201 `{descalificada: true}`. Horario ocupado: 409 `{code: 'ocupado'}`. Datos inválidos: 400 `{code: 'invalido', errores}` |
 
-**Disponibilidad real.** Los horarios y la reserva usan solo closers **elegibles**: la persona de Team tiene el email de un usuario activo de la app y ese usuario conectó su Google Calendar (`google_calendar_tokens`). Al resto se lo trata como sin horario, así que la prioridad desborda a la siguiente. A cada closer elegible se le resta lo que ya tiene ocupado: las reservas de Agendas 2.0 y sus agendas de la operación (`appointments` sin procesar, ni `Cancelada` ni `Reprogramada`), que bloquean 60 minutos cada una porque esa tabla no guarda duración. Google Calendar no se lee para la disponibilidad.
+**Disponibilidad real.** Los horarios y la reserva usan solo closers **elegibles**: la persona de Team tiene el email de un usuario activo de la app y ese usuario conectó su Google Calendar (`google_calendar_tokens`). Al resto se lo trata como sin horario, así que la prioridad desborda a la siguiente. A cada closer elegible se le resta lo que ya tiene ocupado: sus agendas vigentes en la operación (`appointments` sin procesar, ni canceladas ni reprogramadas). Las de Agendas 2.0 bloquean lo que dura su evento; las que entran por n8n, 60 minutos, porque esa tabla no guarda duración. Google Calendar no se lee para la disponibilidad.
 
 En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente:
 
 1. Valida cada respuesta con `validar_respuesta`, sobre las preguntas de la versión publicada.
-2. Si alguna opción descalifica, guarda la agenda como `descalificada`, sin horario.
-3. Si no, recalcula la asignación con las reservas reales y busca el horario pedido.
-4. Toma el closer de ese horario y bloquea su fila (`SELECT … FOR UPDATE`).
-5. Vuelve a comprobar que el closer no tenga otra reserva ni otra agenda de la operación en ese rato.
-6. Inserta la reserva.
+2. Si alguna opción descalifica, busca o crea el **cliente** con su `formulario_payload` y termina: sin agenda.
+3. Si no, recalcula la asignación con las agendas reales y busca el horario pedido.
+4. Toma el closer de ese horario y bloquea su usuario (`SELECT … FOR UPDATE` sobre `users`).
+5. Vuelve a comprobar que el closer no tenga otra agenda vigente en ese rato.
+6. Escribe en la operación (`operacion.py`), por el mismo camino que la «Nueva agenda» manual del closer:
+   - cliente: `BookingService.find_or_create_client` (email, teléfono, Instagram) y su `formulario_payload`;
+   - si el cliente ya tiene una agenda futura abierta (de Agendas 2.0 o de n8n), **la reprograma**: la mueve al horario y closer nuevos, marca `is_rescheduled` y actualiza su `FinancialAgenda`;
+   - si no, `BookingService.create_appointment` (notifica al closer y a admin) y el espejo `sync_appointment_to_financial_agenda` (que reconcilia duplicados).
+7. Ya guardada la agenda, crea el evento en el Calendar del closer (`GoogleService.crear_evento_con_meet`): título `<evento>: <lead> y <closer>`, el formulario en la descripción, link de Meet y el lead invitado por mail. Si la agenda se reprogramó, borra el evento anterior. **Si Google falla, la agenda queda igual** y se avisa a admin y al closer (`Notification`) para crearlo a mano.
 
-Si el mismo lead (mismo email y evento) manda dos veces el mismo horario, se devuelve la reserva que ya existe.
+Si el mismo lead (mismo email) manda dos veces el mismo horario, se devuelve la agenda que ya existe.
 
 **Límite por IP** (en memoria, por proceso): 30 pedidos por minuto a `/horarios` y 10 por minuto a `/reservas`. Al pasarlo responde 429.

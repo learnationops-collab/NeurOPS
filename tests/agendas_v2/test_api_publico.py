@@ -6,15 +6,16 @@ Fecha fija: lunes 5 de octubre de 2026, 08:00 en La Paz (12:00 UTC).
 """
 
 import calendar
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 from freezegun import freeze_time
 
 from app.agendas_v2 import api_publico, servicio
-from app.agendas_v2.modelos import SchedReserva
 from app.agendas_v2.nucleo.eventos import config_de
-from app.models import Appointment, Client, GoogleCalendarToken
+from app.models import Appointment, Client, GoogleCalendarToken, Notification
+from app.models.financial import FinancialAgenda
+from app.services.google_service import GoogleService
 
 LV9a12 = {str(d): [['09:00', '12:00']] for d in range(1, 6)}
 URL = '/api/agendas-v2/publico'
@@ -41,6 +42,33 @@ def _conectar_calendar(db, user):
     db.session.commit()
 
 
+@pytest.fixture(autouse=True)
+def google(monkeypatch):
+    """Google Calendar simulado: guarda cada evento que se crea o se borra."""
+    llamadas = {'crear': [], 'borrar': [], 'falla': None}
+
+    def crear(user_id, inicio, fin, titulo, descripcion, invitado_email=None):
+        if llamadas['falla']:
+            raise llamadas['falla']
+        llamadas['crear'].append(
+            {
+                'user_id': user_id,
+                'inicio': inicio,
+                'fin': fin,
+                'titulo': titulo,
+                'descripcion': descripcion,
+                'invitado': invitado_email,
+            }
+        )
+        return f'evt{len(llamadas["crear"])}', 'https://meet.google.com/abc-defg-hij'
+
+    monkeypatch.setattr(GoogleService, 'crear_evento_con_meet', staticmethod(crear))
+    monkeypatch.setattr(
+        GoogleService, 'delete_event', staticmethod(lambda u, e: llamadas['borrar'].append((u, e)) or True)
+    )
+    return llamadas
+
+
 @pytest.fixture()
 def cuentas(db, make_user):
     """Las cuentas reales de Ana y Beto, con su Google Calendar conectado (sin eso no son elegibles)."""
@@ -48,7 +76,8 @@ def cuentas(db, make_user):
     beto = make_user(role='closer', username='beto', email='beto@equipo.com')
     for u in (ana, beto):
         _conectar_calendar(db, u)
-    return {'ana': ana, 'beto': beto}
+    juan = make_user(role='setter', username='juan', email='juan@equipo.com')
+    return {'ana': ana, 'beto': beto, 'juan': juan}
 
 
 @pytest.fixture()
@@ -79,7 +108,7 @@ def armado(db, cuentas):
             'orden': 2,
         },
     )
-    g('personas', 'juan', {'nombre': 'Juan Setter', 'rol': 'setter'})
+    g('personas', 'juan', {'nombre': 'Juan Setter', 'email': 'juan@equipo.com', 'rol': 'setter'})
     g('grupos', 'top', {'nombre': 'Ultra', 'estrategia': 'llenar', 'miembros': ['ana', 'beto'], 'orden': 1})
     g(
         'formularios',
@@ -173,26 +202,91 @@ def test_horarios_sin_closer(client, armado):
     assert 'ana' not in r.get_data(as_text=True)
 
 
-def test_reservar_elige_el_closer_en_el_servidor(client, armado):
+def test_reservar_crea_la_agenda_en_la_operacion(client, armado, cuentas, google):
     r = _reservar(client)
     assert r.status_code == 201
-    fila = SchedReserva.query.one()
-    assert fila.closer_id == 'ana' and fila.estado == 'agendada'  # "llenar en orden": la primera
-    assert fila.inicio == datetime(2026, 10, 5, 13) and fila.fin == datetime(2026, 10, 5, 13, 45)
-    assert fila.lead_telefono == '+59171234567' and fila.lead_email == 'lucia@correo.com'
-    assert fila.origen == 'juan-setter' and fila.setter_id == 'juan'
-    assert fila.payload['respuestas'][0]['respuesta'] == 'Mucho' and fila.nota == 10
+    cuerpo = r.get_json()['reserva']
+    assert cuerpo['inicio'] == '2026-10-05T13:00:00.000Z' and cuerpo['fin'] == '2026-10-05T13:45:00.000Z'
+
+    # La Appointment: closer elegido por el servidor ("llenar en orden": Ana), setter del ?o=, payload completo.
+    appt = Appointment.query.one()
+    assert str(appt.id) == cuerpo['id']
+    assert appt.closer_id == cuentas['ana'].id and appt.setter_id == cuentas['juan'].id
+    assert appt.start_time == datetime(2026, 10, 5, 13) and appt.origin == 'juan'
+    assert appt.client.email == 'lucia@correo.com' and appt.client.phone
+    p = appt.agenda_payload
+    assert p['respuestas'][0]['respuesta'] == 'Mucho' and p['nota'] == 10 and p['duracion_min'] == 45
+    assert p['closer_id'] == 'ana' and p['closer_user_id'] == cuentas['ana'].id and p['origen'] == 'juan-setter'
+
+    # Su espejo en el registro de agendas, con el mismo payload.
+    fa = FinancialAgenda.query.one()
+    assert fa.closer == 'ana' and fa.nombre == 'juan' and fa.date == datetime(2026, 10, 5, 13)
+    assert fa.mail == 'lucia@correo.com' and fa.raw_data['agendas_v2']['nota'] == 10
+
+    # El cliente guarda su formulario.
+    assert appt.client.formulario_payload['respuestas'][0]['pregunta'] == '¿Cuánto?'
+
+    # El evento en el Calendar de Ana: 45 min, con Meet, invitando al lead.
+    (evt,) = google['crear']
+    assert evt['user_id'] == cuentas['ana'].id and evt['invitado'] == 'lucia@correo.com'
+    assert evt['fin'] - evt['inicio'] == timedelta(minutes=45)
+    assert evt['titulo'] == 'Llamada: Lucía Fernández y ana' and '¿Cuánto?: Mucho' in evt['descripcion']
+    assert appt.google_event_id == 'evt1' and appt.agenda_payload['meet'] == 'https://meet.google.com/abc-defg-hij'
 
 
-def test_el_mismo_lead_dos_veces_no_duplica(client, armado):
+def test_la_agenda_nueva_ocupa_lo_que_dura_el_evento(client, armado):
+    assert _reservar(client).status_code == 201
+    slots = _horarios(client)
+    # Ana tiene 09:00-09:45; el lead nuevo sigue viendo solo a Ana ("llenar en orden"), desde las 10:00.
+    assert LUNES_9_MS not in slots and LUNES_10_MS in slots
+
+
+def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, google):
+    google['falla'] = RuntimeError('token vencido')
+    assert _reservar(client).status_code == 201
+    appt = Appointment.query.one()
+    assert appt.google_event_id is None and FinancialAgenda.query.count() == 1
+    aviso = Notification.query.filter_by(subject='Agenda sin evento de Google Calendar').one()
+    assert 'token vencido' in aviso.content and cuentas['ana'].id in aviso.target_users
+
+
+def test_el_mismo_lead_dos_veces_no_duplica(client, armado, google):
     a, b = _reservar(client), _reservar(client)
+    assert b.status_code == 201
     assert a.get_json()['reserva']['id'] == b.get_json()['reserva']['id']
-    assert SchedReserva.query.count() == 1
+    assert Appointment.query.count() == 1 and FinancialAgenda.query.count() == 1
+    assert len(google['crear']) == 1
+
+
+def test_si_ya_tiene_una_agenda_futura_se_reprograma(client, armado, cuentas, google):
+    assert _reservar(client).status_code == 201
+    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z')  # el mismo lead elige otra hora
+    assert r.status_code == 201
+    appt = Appointment.query.one()
+    assert str(appt.id) == r.get_json()['reserva']['id']
+    assert appt.start_time == datetime(2026, 10, 5, 14) and appt.is_rescheduled
+    assert appt.agenda_payload['reprogramada_desde'] == '2026-10-05T13:00:00Z'
+    fa = FinancialAgenda.query.one()
+    assert fa.date == datetime(2026, 10, 5, 14)
+    # El evento viejo se borra del Calendar y se crea uno nuevo.
+    assert google['borrar'] == [(cuentas['ana'].id, 'evt1')] and len(google['crear']) == 2
+    assert appt.google_event_id == 'evt2'
+
+
+def test_una_agenda_de_n8n_futura_tambien_se_reprograma(client, armado, cuentas, db):
+    lucia = Client(full_name='Lucía Fernández', email='lucia@correo.com')
+    db.session.add(lucia)
+    db.session.commit()
+    db.session.add(Appointment(closer_id=cuentas['beto'].id, client_id=lucia.id, start_time=datetime(2026, 10, 6, 15)))
+    db.session.commit()
+    assert _reservar(client).status_code == 201
+    appt = Appointment.query.one()
+    assert appt.start_time == datetime(2026, 10, 5, 13) and appt.closer_id == cuentas['ana'].id
 
 
 def test_un_horario_tomado_da_409(client, armado):
     assert _reservar(client).status_code == 201
-    r = _reservar(client, **{'c-email': 'otro@correo.com'})
+    r = _reservar(client, **{'c-email': 'otro@correo.com', 'c-telefono': '7999 9999', 'c-nombre': 'Otra Persona'})
     # Ana ya tiene las 09:00 y con "llenar en orden" el lead solo ve la agenda de Ana.
     assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
 
@@ -209,9 +303,9 @@ def test_dos_leads_a_la_vez_el_bloqueo_frena_al_segundo(client, armado, monkeypa
         '_ocupacion',
         lambda ahora, elegibles=None: {'ahora': ahora, 'ocupado': lambda *a: False, 'carga_de': lambda pid: 0},
     )
-    r = _reservar(client, **{'c-email': 'otro@correo.com'})
+    r = _reservar(client, **{'c-email': 'otro@correo.com', 'c-telefono': '7999 9999', 'c-nombre': 'Otra Persona'})
     assert r.status_code == 409
-    assert SchedReserva.query.count() == 1
+    assert Appointment.query.count() == 1
 
 
 def test_respuestas_invalidas_dan_400(client, armado):
@@ -219,18 +313,28 @@ def test_respuestas_invalidas_dan_400(client, armado):
     assert r.status_code == 400 and 'c-email' in r.get_json()['errores']
     r = _reservar(client, q1='opcion-que-no-existe')
     assert r.status_code == 400 and 'q1' in r.get_json()['errores']
+    assert Appointment.query.count() == 0 and Client.query.count() == 0
 
 
-def test_el_descalificado_queda_registrado_sin_horario(client, armado):
+def test_el_descalificado_queda_como_cliente_sin_agenda(client, armado, google):
     r = _reservar(client, inicio=None, q1='x')
     assert r.status_code == 201 and r.get_json() == {'descalificada': True}
-    fila = SchedReserva.query.one()
-    assert fila.estado == 'descalificada' and fila.inicio is None and fila.closer_id is None
+    cliente = Client.query.one()
+    assert cliente.email == 'lucia@correo.com'
+    assert cliente.formulario_payload['descalificada'] is True and cliente.formulario_payload['inicio'] is None
+    assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0 and google['crear'] == []
 
 
 def test_un_descalificado_no_puede_forzar_un_horario(client, armado):
     _reservar(client, q1='x')
-    assert SchedReserva.query.one().estado == 'descalificada'
+    assert Appointment.query.count() == 0 and Client.query.one().formulario_payload['descalificada'] is True
+
+
+def test_si_el_cliente_ya_existe_se_reusa(client, armado, db):
+    db.session.add(Client(full_name='Lucía F.', email='lucia@correo.com'))
+    db.session.commit()
+    assert _reservar(client).status_code == 201
+    assert Client.query.count() == 1 and Appointment.query.one().client.formulario_payload['nota'] == 10
 
 
 def test_limite_por_ip(client, armado):
@@ -238,13 +342,6 @@ def test_limite_por_ip(client, armado):
         _reservar(client, inicio=None, q1='x')
     r = _reservar(client, inicio=None, q1='x')
     assert r.status_code == 429 and r.get_json()['code'] == 'demasiados'
-
-
-def test_no_toca_la_operacion(client, armado):
-    from app.models import Appointment, FinancialAgenda
-
-    _reservar(client)
-    assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0
 
 
 # --- Etapa 1: disponibilidad real -----------------------------------------------------------------
@@ -289,7 +386,7 @@ def test_sin_calendar_conectado_un_closer_no_recibe_agendas(client, armado, cuen
     db.session.commit()
     r = _reservar(client)
     assert r.status_code == 201
-    assert SchedReserva.query.one().closer_id == 'beto'  # Ana se saltea; Beto, de la misma prioridad
+    assert Appointment.query.one().closer_id == cuentas['beto'].id  # Ana se saltea; Beto, de la misma prioridad
 
 
 def test_una_persona_sin_usuario_real_no_recibe_agendas(client, armado, cuentas, db):

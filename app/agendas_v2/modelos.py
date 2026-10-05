@@ -1,9 +1,8 @@
-"""Tablas de Agendas 2.0 (prefijo sched_). Aisladas de la operacion: nada de aca escribe en
-financial_agendas ni en appointments; eso es el paso 3.
+"""Tablas de Agendas 2.0 (prefijo sched_): la configuracion de Thalamus.
 
 Los documentos de Thalamus (funnels, formularios, personas, prioridades, eventos, roles) se guardan
-como JSON normalizado, el mismo esquema que el frontend (nucleo/normalizar.py). Las reservas, en
-cambio, llevan columnas de verdad: se consultan por closer y horario y ahi se bloquea al reservar.
+como JSON normalizado, el mismo esquema que el frontend (nucleo/normalizar.py). Las agendas NO viven
+aca: se escriben en la operacion (Appointment + su espejo FinancialAgenda), ver operacion.py.
 """
 
 from datetime import datetime, timezone
@@ -91,28 +90,3 @@ class SchedPerfil(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     datos = db.Column(db.JSON, nullable=False, default=dict)
     actualizado_en = db.Column(db.DateTime, nullable=False, default=_ahora, onupdate=_ahora)
-
-
-class SchedReserva(db.Model):
-    """Una agenda tomada desde la pagina publica (o un lead que no califico, sin horario)."""
-
-    __tablename__ = 'sched_reservas'
-    __table_args__ = (db.Index('ix_sched_reservas_closer_inicio', 'closer_id', 'inicio'),)
-
-    id = db.Column(db.String(40), primary_key=True)
-    evento_id = db.Column(db.String(40), nullable=False, index=True)
-    funnel_id = db.Column(db.String(40), nullable=True)
-    closer_id = db.Column(db.String(40), nullable=True)
-    inicio = db.Column(db.DateTime, nullable=True)  # UTC sin zona, como el resto de la app
-    fin = db.Column(db.DateTime, nullable=True)
-    estado = db.Column(db.String(20), nullable=False, default='agendada', index=True)
-    origen = db.Column(db.String(80), nullable=True)
-    setter_id = db.Column(db.String(40), nullable=True)
-    prioridad_id = db.Column(db.String(40), nullable=True)
-    nota = db.Column(db.Float, nullable=True)
-    lead_nombre = db.Column(db.String(120), nullable=True)
-    lead_email = db.Column(db.String(120), nullable=True, index=True)
-    lead_telefono = db.Column(db.String(40), nullable=True)
-    payload = db.Column(db.JSON, nullable=False, default=dict)
-    creada_en = db.Column(db.DateTime, nullable=False, default=_ahora)
-    cancelada_en = db.Column(db.DateTime, nullable=True)

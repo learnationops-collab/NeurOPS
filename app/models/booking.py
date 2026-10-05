@@ -58,6 +58,11 @@ class Appointment(db.Model):
     # real (no String) porque necesita compararse con la hora actual para calcular "vencido"/"hoy".
     pre_call_reminder_at = db.Column(db.DateTime, nullable=True)
 
+    # Agendas 2.0: la agenda completa tal como la tomo el sistema nuevo (respuestas del formulario
+    # con el texto de cada pregunta, nota, prioridad, origen, duracion, evento y link de Meet).
+    # Contrato en app/agendas_v2/nucleo/reserva.py. NULL en las agendas que entran por n8n.
+    agenda_payload = db.Column(db.JSON(none_as_null=True), nullable=True)
+
     # Última vez que se le avisó al closer por WhatsApp (Whatchimp) sobre este seguimiento.
     # Evita repetir el mismo aviso más de una vez por día (ver
     # CloserFollowUpService.send_due_reminders).

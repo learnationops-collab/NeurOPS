@@ -6,7 +6,8 @@
 //     si no (o si el servidor no lo encuentra), PUT con el documento entero.
 //   - alCambiar() consulta /version cada 15 s con la pestaña visible (y al volver a ella). Las versiones
 //     que devuelven nuestras propias escrituras cuentan como conocidas: guardar no provoca una recarga.
-//   - Las reservas las crea solo la página pública (/api/agendas-v2/publico/reservas), no la gestión.
+//   - Las reservas las crea solo la página pública (/api/agendas-v2/publico/reservas), que las escribe
+//     en la operación (Appointment + FinancialAgenda). Thalamus solo las lee; no las cancela.
 
 import api from '../../../services/api';
 import { COLECCIONES } from '../core/normalizar';
@@ -133,9 +134,11 @@ export function crearAdaptadorApi() {
             throw e;
         },
 
-        async cancelarReserva(id) {
-            const data = await escribir(() => api.post(`/agendas-v2/reservas/${id}/cancelar`));
-            return data ? data.reserva : null;
+        // Las agendas viven en la operación (Appointment): las cancela o reprograma el closer en NeurOPS.
+        async cancelarReserva() {
+            const e = new Error('Las agendas se cancelan o reprograman desde NeurOPS.');
+            e.code = 'no_soportado';
+            throw e;
         },
 
         alCambiar(cb) {

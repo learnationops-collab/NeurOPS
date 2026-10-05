@@ -8,7 +8,7 @@ cumple se corrige, nunca se guarda tal cual).
 import pytest
 
 from app.agendas_v2 import servicio
-from app.agendas_v2.modelos import SchedPersona, SchedReserva
+from app.agendas_v2.modelos import SchedPersona
 
 
 @pytest.fixture()
@@ -127,13 +127,9 @@ def test_integraciones_solo_guardan_ids_numericos(client, dir_h):
     }
 
 
-def test_cancelar_una_reserva(client, db, dir_h):
-    db.session.add(SchedReserva(id='rs1', evento_id='e1', estado='agendada', payload={'duracion_min': 45}))
-    db.session.commit()
-    r = client.post('/api/agendas-v2/reservas/rs1/cancelar', headers=dir_h)
-    assert r.status_code == 200 and r.get_json()['reserva']['estado'] == 'cancelada'
-    assert SchedReserva.query.get('rs1').cancelada_en is not None
-    assert client.post('/api/agendas-v2/reservas/nada/cancelar', headers=dir_h).status_code == 404
+def test_cancelar_desde_thalamus_ya_no_existe(client, db, dir_h):
+    # Las cancelaciones y reprogramaciones las hace el closer en NeurOPS, sobre la Appointment.
+    assert client.post('/api/agendas-v2/reservas/1/cancelar', headers=dir_h).status_code in (404, 405)
 
 
 def test_el_servicio_no_toca_la_operacion(client, db, dir_h):
@@ -168,3 +164,11 @@ def test_usuarios_dice_quien_conecto_su_calendar(client, gente, dir_h, db):
 def test_usuarios_es_solo_para_la_direccion(client, gente, auth_headers):
     assert client.get('/api/agendas-v2/usuarios').status_code == 401
     assert client.get('/api/agendas-v2/usuarios', headers=auth_headers(gente['closer'])).status_code == 403
+
+
+def test_usuarios_con_varios_roles_cuentan_como_closer(client, dir_h, make_user, db):
+    u = make_user(role='setter', email='dos@neuro.com')
+    u.roles_extra = 'closer'
+    db.session.commit()
+    usuarios = client.get('/api/agendas-v2/usuarios', headers=dir_h).get_json()['usuarios']
+    assert {x['email']: x['rol'] for x in usuarios}['dos@neuro.com'] == 'closer'

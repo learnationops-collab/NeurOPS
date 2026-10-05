@@ -95,7 +95,12 @@ def reservar():
         if e.code == 'ocupado':
             return jsonify({'code': 'ocupado', 'message': 'Ese horario se acaba de ocupar.'}), 409
         return jsonify({'code': 'invalido', 'errores': e.errores}), 400
-    if r['estado'] == 'descalificada':
+    if r.get('descalificada'):
         return jsonify({'descalificada': True}), 201
-    fin = servicio.ms_a_dt(r['fin_ms']).isoformat(timespec='milliseconds') + 'Z'
-    return jsonify({'reserva': {'id': r['id'], 'inicio': r['inicio'], 'fin': fin, 'duracion': r['duracion_min']}}), 201
+
+    def _iso(ms):
+        return servicio.ms_a_dt(ms).isoformat(timespec='milliseconds') + 'Z'
+
+    return jsonify(
+        {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion']}}
+    ), 201
