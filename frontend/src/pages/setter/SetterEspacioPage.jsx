@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
+import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import OperatorControls from '../../components/modals/OperatorControls';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
@@ -160,6 +161,7 @@ const SetterEspacioPage = () => {
         [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
             cuenta: pendingCount > 0 ? pendingCount : null,
             titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null }],
+        opcionesDeRol(user, (m) => toast.error(m)),
         [
             ...(user?.is_impersonating
                 ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]

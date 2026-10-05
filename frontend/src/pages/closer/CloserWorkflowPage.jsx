@@ -25,6 +25,7 @@ import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import { revertImpersonation } from '../../utils/impersonation';
+import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
@@ -1436,6 +1437,7 @@ const CloserWorkflowPage = () => {
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
         ],
+        opcionesDeRol(user, (m) => toast.error(m)),
         [
             ...(user?.is_impersonating
                 ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
