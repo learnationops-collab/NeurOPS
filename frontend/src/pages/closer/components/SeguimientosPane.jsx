@@ -66,15 +66,6 @@ const TIME_BOX_STYLE = {
     'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
 };
 
-// Tono de la etapa de cobro que manda el backend (lead_cobro_service) → color del chip, con la
-// misma paleta que TIME_BOX_STYLE para que la urgencia se lea igual en toda la fila.
-const TONO_CHIP = {
-    error: { background: 'rgba(232,92,74,.16)', color: '#F5A99C' },
-    warning: { background: 'rgba(217,164,65,.16)', color: '#F3D08A' },
-    primary: { background: 'rgba(78,139,216,.16)', color: '#BFD3FF' },
-    success: { background: 'rgba(52,168,120,.16)', color: '#9AE6C0' },
-};
-
 // Resultado real de la llamada (`closer_result`) → chip de color, mismo idioma de colores que el
 // resto del mazo (ok=verde, w=ámbar, d=rojo, i=azul). Cubre las grafías reales que usa el sistema
 // (ver CloserWorkflowPage: 'Show up', 'No show', 'Cancelado'/'Cancelada', 'Reagendado'/
@@ -137,19 +128,21 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0, escalonar = 
     const potential = estimateEarning(item, tipo, earnings);
 
     let footer;
-    let footerStyle = { color: '#fff', background: 'rgba(255,255,255,.1)' };
+    let footerTono = null;
     if (tipo === 'cerrada') {
         if (item.etapa_cobro) {
             // Mismo texto que el encabezado del modal: el chip y la pantalla que se abre al
             // tocarlo salen del mismo cálculo del backend, así no pueden decir cosas distintas.
             footer = item.etapa_cobro.titulo;
-            footerStyle = TONO_CHIP[item.etapa_cobro.tono] || footerStyle;
+            footerTono = item.etapa_cobro.tono;
         } else if (pc) {
             footer = pc.sin_plan
                 ? `Debe ${money(pc.monto)} · sin plan de cuotas`
                 : `${pc.vencida ? 'Cuota vencida' : 'Cobrar cuota'} ${cuotaDateLabel(pc.fecha_vencimiento)} · ${money(pc.monto)}`;
+            footerTono = pc.sin_plan ? 'warning' : pc.vencida ? 'error' : 'primary';
         } else {
             footer = 'Al día';
+            footerTono = 'success';
         }
     } else {
         footer = item.fecha_seguimiento
@@ -165,26 +158,31 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0, escalonar = 
             <div className="rmain-v6">
                 <b>{item.lead_name}</b>
                 <div className="chips-v6">
-                    <span className="chip-v6 src">📍 {item.origin || 'Sin origen'}</span>
-                    {result && <span className={`chip-v6 ${result.cls}`}>{result.label}</span>}
+                    {/* Un solo chip de estado, el protagonista de la fila: en Cobros reúne deuda, plan
+                        y cuota (el backend ya lo arma en `etapa_cobro`), así que no se repite "Debe $X"
+                        aparte. "Show up" y "Call hace Nd" tampoco van acá: ya se ven en el historial
+                        del lead. */}
+                    <small className={`estado-v6 ${footerTono || ''}`}>
+                        <i aria-hidden="true" />
+                        <span>{footer}</span>
+                    </small>
+                    {tipo !== 'cerrada' && result && <small className={`meta-v6 ${result.cls}`}>{result.label}</small>}
                     {tipo !== 'cerrada' && item.seguimiento_sub && (
-                        <span className={`chip-v6 ${TIPOS[tipo].cls === 'emerald' ? 'ok' : TIPOS[tipo].cls === 'amber' ? 'w' : ''}`}>
+                        <small className={`meta-v6 ${TIPOS[tipo].cls === 'emerald' ? 'ok' : TIPOS[tipo].cls === 'amber' ? 'w' : ''}`}>
                             {item.seguimiento_sub}
-                        </span>
+                        </small>
                     )}
-                    {(item.days_since_call !== null && item.days_since_call !== undefined) && (
-                        <span className="chip-v6">Call hace {item.days_since_call}d</span>
+                    {tipo !== 'cerrada' && (item.days_since_call !== null && item.days_since_call !== undefined) && (
+                        <small className="meta-v6">Call hace {item.days_since_call}d</small>
                     )}
+                    {/* Fuente y programa: etiquetas secundarias, discretas. */}
+                    <small className="meta-v6">{item.origin || 'Sin origen'}</small>
                     {tipo === 'cerrada' && item.programa_nombre && (
-                        <span className="chip-v6">{item.programa_nombre}</span>
-                    )}
-                    {tipo === 'cerrada' && typeof item.deuda === 'number' && item.deuda > 0 && (
-                        <span className="chip-v6 w">Debe {money(item.deuda)}</span>
+                        <small className="meta-v6">{item.programa_nombre}</small>
                     )}
                     {item.owner_closer_name && (
-                        <span className="chip-v6 w">De {item.owner_closer_name} (baja)</span>
+                        <small className="meta-v6 w">De {item.owner_closer_name} (baja)</small>
                     )}
-                    <span className="chip-v6" style={footerStyle}>{footer}</span>
                 </div>
             </div>
             <div
