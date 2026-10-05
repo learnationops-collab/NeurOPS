@@ -6,7 +6,7 @@ import { money } from '../performanceUtils';
 import { tip, destino } from '../metricSources';
 import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 
-const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warning, metric, irA }) => (
+const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warning, metric, irA, bruto }) => (
     <Card
         variant="surface"
         padding={sm ? 'p-5' : 'p-6'}
@@ -21,6 +21,7 @@ const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warn
             envoltura="p">
             {value}
         </MetricaClicable>
+        {bruto && <small className="block mt-1 text-[11px] font-bold text-muted">{bruto}</small>}
         <div className="flex items-center gap-2 mt-3 flex-wrap">
             {previous !== undefined && <DeltaBadge current={current} previous={previous} invert={invert} />}
             {/* Solo texto corto y accionable queda siempre visible (p. ej. "$X vencidos") — el resto
@@ -42,7 +43,9 @@ const PerformanceKpis = ({ current, previous, deuda, irA }) => {
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <KpiCard hero metric="cash_collected" label="Cash collected" value={money(k.cash_collected)} current={k.cash_collected} previous={pk?.cash_collected} irA={irA} />
+            <KpiCard hero metric="cash_collected" label="Cash collected · neto" value={money(k.cash_neto ?? k.cash_collected)}
+                bruto={`bruto ${money(k.cash_collected)}`}
+                current={k.cash_neto ?? k.cash_collected} previous={pk ? (pk.cash_neto ?? pk.cash_collected) : undefined} irA={irA} />
             <KpiCard metric="ventas" label="Ventas cerradas" value={k.ventas} current={k.ventas} previous={pk?.ventas} irA={irA} />
             <KpiCard metric="ticket_promedio" label="Ticket promedio" value={money(k.ticket_promedio)} current={k.ticket_promedio} previous={pk?.ticket_promedio} irA={irA} />
             <KpiCard metric="deuda_total_pendiente" label="Deuda total pendiente" value={money(k.deuda_total_pendiente ?? deuda)}

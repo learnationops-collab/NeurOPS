@@ -16,7 +16,7 @@ const ALERT_STYLES = {
    el selector de miembro del dashboard comercial (`m` en la query string, que el backend usa para
    rearmar el alcance) y no con la faceta Closer: asi la tira de totales y los contadores de faceta
    tambien quedan acotados, y el numero de la celda cierra con lo que se ve abajo. */
-const Celda = ({ fila, metrica, valor, irA, className }) => (
+const Celda = ({ fila, metrica, valor, irA, className, bruto }) => (
     <td className={`py-2.5 text-right ${className || ''}`}>
         <MetricaClicable
             irA={irA ? (tabla, filtro) => irA(tabla, filtro, { miembroId: fila.closer_id }) : null}
@@ -24,6 +24,7 @@ const Celda = ({ fila, metrica, valor, irA, className }) => (
             detalle={`${fila.name} · ${valor}`}>
             {valor}
         </MetricaClicable>
+        {bruto && <small className="block text-[10px] font-bold text-muted whitespace-nowrap">{bruto}</small>}
     </td>
 );
 
@@ -38,7 +39,7 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts, irA }) => {
                             <tr className="text-[8.5px] font-black uppercase tracking-widest text-muted border-b border-base">
                                 <th className="text-left py-2 w-10"></th>
                                 <th className="text-left py-2">Closer</th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Cash <MetricTip iconOnly {...tip('cash_collected')} /></span></th>
+                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Cash neto <MetricTip iconOnly {...tip('cash_collected')} /></span></th>
                                 <th className="text-right py-2"><span className="inline-flex items-center gap-1">Ventas <MetricTip iconOnly {...tip('ventas')} /></span></th>
                                 <th className="text-right py-2"><span className="inline-flex items-center gap-1">Show rate <MetricTip iconOnly {...tip('q_show_rate')} /></span></th>
                                 <th className="text-right py-2"><span className="inline-flex items-center gap-1">Close s/ pres. <MetricTip iconOnly {...tip('q_close_presentacion')} /></span></th>
@@ -60,7 +61,8 @@ const PerformanceRanking = ({ ranking, selectedCloserId, alerts, irA }) => {
                                         {String(r.closer_id) === String(selectedCloserId) && <span className="text-[9px] text-muted ml-2">seleccionado</span>}
                                     </td>
                                     <Celda fila={r} irA={irA} metrica="cash_collected"
-                                        valor={money(r.cash_collected)} className="font-black" />
+                                        valor={money(r.cash_neto ?? r.cash_collected)} className="font-black"
+                                        bruto={`bruto ${money(r.cash_collected)}`} />
                                     <Celda fila={r} irA={irA} metrica="ventas" valor={r.ventas} />
                                     <Celda fila={r} irA={irA} metrica="show_rate" valor={`${r.show_rate}%`} />
                                     <td className="py-2.5 text-right">

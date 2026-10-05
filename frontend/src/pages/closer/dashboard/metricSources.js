@@ -92,7 +92,7 @@ const AV_SENA_ESTADO = 'El estado de una seña no es una columna: sale de buscar
 export const METRICS = {
     // ---------- KPIs principales ----------
     cash_collected: {
-        title: 'Todo el dinero que entró a caja en el período',
+        title: 'Todo el dinero que entró a caja en el período (neto de fees; el bruto va debajo)',
         source: 'ventas',
         formula: 'PIF + Split + señas + cuotas + upsell/renovación + sin clasificar',
         note: 'Cobros con fecha dentro del período, atribuidos al closer por el mail del vendedor. Incluye plata de ventas viejas (cuotas), así que no se mueve igual que "Ventas cerradas".',
