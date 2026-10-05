@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
-  ArrowRight, History, DollarSign,
+  ArrowRight, History, DollarSign, Pencil,
 } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import CampoArbol from '../acciones/CampoArbol';
@@ -30,7 +30,7 @@ import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
-  ventaDirecta, anterior, elegida, fechaCorta, RAICES,
+  ventaDirecta, anterior, elegida, fechaCorta, RAICES, revisionVenta,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -790,46 +790,83 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 function Revision({
   respuestas, contexto, guardando, onGuardar, onCambiar, onVolverA, onAnterior, reducido,
 }) {
-  const filas = resumen(respuestas, contexto);
   const venta = esVenta(respuestas);
-  const saldo = venta ? saldoVenta(respuestas, contexto) : 0;
+  const rev = revisionVenta(respuestas, contexto, resumen(respuestas, contexto));
+  const saldo = rev.numeros.saldo;
+  const errores = rev.avisos.filter((a) => a.nivel === 'error');
+  const avisos = rev.avisos.filter((a) => a.nivel !== 'error');
+  // La llamada sin venta no tiene secciones que armar: es una sola lista de lo contestado.
+  const secciones = venta ? rev.secciones : [{
+    id: 'resumen', titulo: 'Lo que reportaste', filas: rev.secciones.flatMap((s) => s.filas),
+  }];
   return (
-    <>
-      <h3 className="ln-t-h3">{venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3>
-      <p className="ln-t-body-sm ln-muted">Tocá cualquier fila para volver a ese paso y corregirlo. Al terminar, volvés acá.</p>
+    <div className="fi-rev">
+      <header className="fi-rev-cab">
+        <h3 className="ln-t-h3">{venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3>
+        <p className="ln-t-body-sm ln-muted">
+          Cada dato tiene su botón «Editar»: te lleva a ese paso y, al confirmarlo, volvés acá.
+        </p>
+      </header>
 
-      <motion.div
-        className="ln-table"
-        {...CASCADA.contenedor(reducido)}
-        style={{ '--cols': '1.4fr 1fr auto', marginTop: 'var(--space-4)' }}
-      >
-        {filas.map((fila) => (
-          <motion.button
-            key={fila.clave}
-            type="button"
-            className="ln-table-row"
-            {...CASCADA.hijo(reducido)}
-            onClick={() => onVolverA(fila.paso || fila.clave)}
-            style={{ width: '100%', cursor: 'pointer', textAlign: 'left', background: 'var(--bg-element)' }}
-          >
-            <span className="ln-cell-label ln-cell--title">{fila.label}</span>
-            <span className="ln-t-body-sm">{fila.valor}</span>
-            {/* inline-flex: Tailwind pone los svg en bloque y la flecha partía el rótulo en dos. */}
-            <small className="ln-t-caption" style={{ color: 'var(--info)', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-              <ArrowLeft size={11} /> Corregir
-            </small>
-          </motion.button>
-        ))}
-      </motion.div>
+      {venta && <CifrasVenta numeros={rev.numeros} respuestas={respuestas} reducido={reducido} />}
+
+      {errores.length > 0 && (
+        <AvisosRevision
+          nivel="error"
+          titulo={errores.length === 1 ? 'Hay un dato que parece incorrecto' : `Hay ${errores.length} datos que parecen incorrectos`}
+          avisos={errores}
+          onEditar={onVolverA}
+        />
+      )}
+      {avisos.length > 0 && (
+        <AvisosRevision
+          nivel="warning"
+          titulo={avisos.length === 1 ? 'Un dato para mirar' : `${avisos.length} datos para mirar`}
+          avisos={avisos}
+          onEditar={onVolverA}
+        />
+      )}
+
+      {secciones.map((seccion) => (
+        <motion.section
+          key={seccion.id}
+          className="fi-rev-sec"
+          aria-label={seccion.titulo}
+          {...CASCADA.contenedor(reducido)}
+        >
+          <small className="fi-rev-sec-tit">{seccion.titulo}</small>
+          <div className="fi-rev-filas">
+            {seccion.filas.map((fila) => (
+              <motion.div
+                key={fila.clave}
+                className={`fi-rev-fila${fila.vacia ? ' fi-rev-fila--vacia' : ''}`}
+                {...CASCADA.hijo(reducido)}
+              >
+                <span className="fi-rev-rotulo">{fila.label}</span>
+                <span className="fi-rev-valor">{fila.valor}</span>
+                <button
+                  type="button"
+                  className="fi-rev-editar"
+                  aria-label={`${fila.vacia ? 'Completar' : 'Editar'}: ${fila.label}`}
+                  onClick={() => onVolverA(fila.paso || fila.clave)}
+                >
+                  <Pencil size={12} aria-hidden="true" /> {fila.vacia ? 'Completar' : 'Editar'}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      ))}
 
       {venta && armaPlan(respuestas, contexto) && (
-        <div style={{ marginTop: 'var(--space-6)' }}>
+        <section className="fi-rev-sec" aria-label="Cronograma de cuotas">
+          <small className="fi-rev-sec-tit">Cronograma de cuotas</small>
           <CronogramaVenta respuestas={respuestas} contexto={contexto} onCambiar={onCambiar} soloLectura />
-        </div>
+        </section>
       )}
 
       {venta && saldo > 0.009 && (
-        <div className="ln-alert ln-alert--warning" role="status" style={{ marginTop: 'var(--space-4)' }}>
+        <div className="ln-alert ln-alert--warning" role="status">
           <span className="ln-alert-ico"><AlertTriangle /></span>
           <span className="ln-alert-body">
             <span className="ln-alert-title">{`Queda saldo por cobrar: ${moneda(saldo)}`}</span>
@@ -841,7 +878,7 @@ function Revision({
       {/* El único dato que no se pregunta: prendido por defecto para no perder avisos por
           omisión, como en el wizard. Apagarlo es para una venta de prueba o si ya avisó él. */}
       {venta && (
-        <label className="ln-choice" style={{ display: 'block', marginTop: 'var(--space-4)' }}>
+        <label className="ln-choice" style={{ display: 'block' }}>
           <input
             type="checkbox"
             className="ln-choice-input"
@@ -862,7 +899,7 @@ function Revision({
       )}
 
       {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja su margen libre. */}
-      <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
+      <div className="fi-botonera fi-rev-pie">
         {onAnterior && <BotonAnterior onClick={onAnterior} reducido={reducido} disabled={guardando} />}
         <motion.button
           type="button"
@@ -872,10 +909,73 @@ function Revision({
           onClick={onGuardar}
         >
           {guardando ? <span className="ln-spinner" /> : <CheckCircle2 />}
-          {venta ? 'Registrar la venta' : 'Guardar el resultado'}
+          {venta ? (rev.avisos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado'}
         </motion.button>
       </div>
-    </>
+    </div>
+  );
+}
+
+// Lo primero que se lee: cuánto se vendió, cuánto entró hoy y cuánto queda. Tres cifras en una
+// sola fila (en celular, una debajo de otra): nunca dos arriba y una suelta abajo.
+function CifrasVenta({ numeros, respuestas, reducido }) {
+  const { total, cobrado, saldo, antes, programa, tipoPago } = numeros;
+  const debe = saldo > 0.009;
+  return (
+    <motion.section
+      className="fi-rev-hero"
+      aria-label="Total de la venta"
+      initial={reducido ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+    >
+      <div className="fi-rev-total">
+        <small className="fi-rev-sec-tit">Total de la venta</small>
+        <b className="fi-rev-monto ln-mono">{moneda(total)}</b>
+        <small className="ln-t-body-sm ln-muted">
+          {[programa, tipoPago].filter(Boolean).join(' · ') || 'Programa sin elegir'}
+          {antes > 0.009 ? ` · ya había pagado ${moneda(antes)}` : ''}
+        </small>
+      </div>
+      <div className="fi-rev-cifras">
+        <div className="fi-rev-cifra">
+          <small className="fi-rev-sec-tit">Cobrado hoy</small>
+          <b className="ln-t-h3 ln-mono">{moneda(cobrado)}</b>
+        </div>
+        <div className="fi-rev-cifra">
+          <small className="fi-rev-sec-tit">Saldo</small>
+          <b className="ln-t-h3 ln-mono" style={{ color: debe ? 'var(--warning)' : 'var(--success)' }}>
+            {debe ? moneda(saldo) : 'Sin saldo'}
+          </b>
+        </div>
+        <div className="fi-rev-cifra">
+          <small className="fi-rev-sec-tit">Medio de pago</small>
+          <b className="ln-t-body">{respuestas.metodo_pago || 'Sin elegir'}</b>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+// Los datos que faltan o no cuadran, con el botón que lleva directo al paso que los arregla.
+function AvisosRevision({ nivel, titulo, avisos, onEditar }) {
+  return (
+    <div className={`ln-alert ln-alert--${nivel}`} role={nivel === 'error' ? 'alert' : 'status'}>
+      <span className="ln-alert-ico"><AlertTriangle /></span>
+      <span className="ln-alert-body">
+        <span className="ln-alert-title">{titulo}</span>
+        <ul className="fi-rev-avisos">
+          {avisos.map((a) => (
+            <li key={a.id}>
+              <span>{a.texto}</span>
+              <button type="button" className="fi-rev-editar" onClick={() => onEditar(a.paso)}>
+                <Pencil size={12} aria-hidden="true" /> Corregir
+              </button>
+            </li>
+          ))}
+        </ul>
+      </span>
+    </div>
   );
 }
 
