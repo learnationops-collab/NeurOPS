@@ -30,7 +30,7 @@ import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
-  ventaDirecta, anterior, elegida, fechaCorta, RAICES, revisionVenta,
+  ventaDirecta, anterior, elegida, fechaCorta, RAICES, revisionVenta, normalizar, PREGUNTAS, faltantesDe,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -330,6 +330,8 @@ export default function TabResultado({
               guardando={guardando}
               onGuardar={guardar}
               onCambiar={cambiar}
+              onElegir={elegir}
+              precarga={precarga}
               onVolverA={(clave) => setRespuestas((prev) => volverA(prev, clave))}
               onAnterior={volver}
             />
@@ -788,9 +790,12 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 // --- pantalla de revisión -----------------------------------------------------------------
 
 function Revision({
-  respuestas, contexto, guardando, onGuardar, onCambiar, onVolverA, onAnterior, reducido,
+  respuestas, contexto, guardando, onGuardar, onCambiar, onElegir, precarga, onVolverA, onAnterior,
+  reducido,
 }) {
   const venta = esVenta(respuestas);
+  // La fila que se está editando acá mismo, sin salir de la revisión. Solo una a la vez.
+  const [editando, setEditando] = useState(null);
   const rev = revisionVenta(respuestas, contexto, resumen(respuestas, contexto));
   const saldo = rev.numeros.saldo;
   const errores = rev.avisos.filter((a) => a.nivel === 'error');
@@ -804,7 +809,7 @@ function Revision({
       <header className="fi-rev-cab">
         <h3 className="ln-t-h3">{venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3>
         <p className="ln-t-body-sm ln-muted">
-          Cada dato tiene su botón «Editar»: te lleva a ese paso y, al confirmarlo, volvés acá.
+          Tocá «Editar» en cualquier dato para corregirlo ahí mismo.
         </p>
       </header>
 
@@ -836,24 +841,53 @@ function Revision({
         >
           <small className="fi-rev-sec-tit">{seccion.titulo}</small>
           <div className="fi-rev-filas">
-            {seccion.filas.map((fila) => (
-              <motion.div
-                key={fila.clave}
-                className={`fi-rev-fila${fila.vacia ? ' fi-rev-fila--vacia' : ''}`}
-                {...CASCADA.hijo(reducido)}
-              >
-                <span className="fi-rev-rotulo">{fila.label}</span>
-                <span className="fi-rev-valor">{fila.valor}</span>
-                <button
-                  type="button"
-                  className="fi-rev-editar"
-                  aria-label={`${fila.vacia ? 'Completar' : 'Editar'}: ${fila.label}`}
-                  onClick={() => onVolverA(fila.paso || fila.clave)}
+            {seccion.filas.map((fila) => {
+              const paso = fila.paso || fila.clave;
+              const preg = PREGUNTAS.find((q) => q.clave === paso);
+              // Se abre por el paso, no por la clave de la fila: al vaciar un campo la fila pasa a
+              // «Completar» y cambia de clave, y el editor se cerraba a mitad de escribir.
+              const unica = seccion.filas.filter((f) => (f.paso || f.clave) === paso).length === 1;
+              const abierta = editando === paso;
+              const pregunta = preg ? normalizar(preg, respuestas, contexto) : null;
+              // Los pasos con cronograma o el estado del cliente no caben en una fila: esos
+              // siguen llevando a su pantalla.
+              const enLinea = pregunta && !(pregunta.campos || []).some(
+                (c) => c.tipo === 'cronograma' || c.tipo === 'estado_cliente',
+              );
+              return (
+                <motion.div
+                  key={unica ? paso : fila.clave}
+                  className={`fi-rev-fila${fila.vacia ? ' fi-rev-fila--vacia' : ''}${abierta ? ' fi-rev-fila--abierta' : ''}`}
+                  {...CASCADA.hijo(reducido)}
                 >
-                  <Pencil size={12} aria-hidden="true" /> {fila.vacia ? 'Completar' : 'Editar'}
-                </button>
-              </motion.div>
-            ))}
+                  <span className="fi-rev-rotulo">{fila.label}</span>
+                  <span className="fi-rev-valor">{fila.valor}</span>
+                  <button
+                    type="button"
+                    className="fi-rev-editar"
+                    aria-expanded={enLinea ? abierta : undefined}
+                    aria-label={`${abierta ? 'Cerrar' : (fila.vacia ? 'Completar' : 'Editar')}: ${fila.label}`}
+                    onClick={() => (enLinea ? setEditando(abierta ? null : paso) : onVolverA(paso))}
+                  >
+                    {abierta
+                      ? <><X size={12} aria-hidden="true" /> Cerrar</>
+                      : <><Pencil size={12} aria-hidden="true" /> {fila.vacia ? 'Completar' : 'Editar'}</>}
+                  </button>
+                  {abierta && enLinea && (
+                    <EditorEnLinea
+                      pregunta={pregunta}
+                      respuestas={respuestas}
+                      contexto={contexto}
+                      precarga={precarga}
+                      reducido={reducido}
+                      onElegir={(clave, valores) => { setEditando(null); onElegir(clave, valores); }}
+                      onGuardar={(parche) => { onCambiar(parche); setEditando(null); }}
+                      onCerrar={() => setEditando(null)}
+                    />
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </motion.section>
       ))}
@@ -912,6 +946,72 @@ function Revision({
           {venta ? (rev.avisos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado'}
         </motion.button>
       </div>
+    </div>
+  );
+}
+
+// El editor de una fila de la revisión: las mismas opciones o campos de la pregunta, pero ahí
+// mismo, sin cambiar de pantalla. Un campo de formulario se guarda al escribirlo; una opción se
+// aplica al elegirla (y si cambia la rama del reporte, el árbol sigue con lo que falte).
+function EditorEnLinea({ pregunta, respuestas, contexto, precarga, reducido, onElegir, onGuardar, onCerrar }) {
+  // Los campos se editan en un borrador y se aplican con «Guardar cambio». Si cada tecla fuera a
+  // las respuestas, vaciar un dato obligatorio dejaría el reporte incompleto y el modal volvería
+  // a la pregunta, que es justo lo que este editor evita.
+  const [borrador, setBorrador] = useState({});
+  const vista = { ...respuestas, ...borrador };
+  const primero = pregunta.campos.find((c) => TIPOS_DE_TEXTO.has(c.tipo || 'texto'));
+  const falta = pregunta.tipo === 'formulario' ? faltantesDe(pregunta, vista, contexto) : [];
+  const cambio = Object.keys(borrador).length > 0;
+  const guardar = () => { if (!falta.length && cambio) onGuardar(borrador); else if (!cambio) onCerrar(); };
+  return (
+    <div className="fi-rev-editor">
+      {pregunta.tipo !== 'formulario' ? (
+        <div role="group" aria-label={pregunta.enunciado} className="fi-rev-opciones">
+          {pregunta.opciones.map((o) => {
+            const activa = elegida(respuestas, pregunta.campo) === o.valor;
+            return (
+              <button
+                key={String(o.valor)}
+                type="button"
+                className={`fi-rev-opcion${activa ? ' fi-rev-opcion--activa' : ''}`}
+                aria-pressed={activa}
+                onClick={() => (activa
+                  ? onCerrar()
+                  : onElegir(pregunta.clave, valoresDeOpcion(pregunta, o, contexto, respuestas)))}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          <div className="fi-rev-campos">
+            {pregunta.campos.map((campo) => (
+              <CampoArbol
+                key={campo.campo}
+                campo={campo}
+                respuestas={vista}
+                onCambio={(parche) => setBorrador((b) => ({ ...b, ...parche }))}
+                cuotas={campo.tipo === 'cuota' ? cuotasPendientes(respuestas, contexto) : []}
+                autoFocus={campo === primero}
+                onEnter={TIPOS_DE_TEXTO.has(campo.tipo || 'texto') ? guardar : null}
+                origen={origenDe(campo, vista, precarga)}
+              />
+            ))}
+          </div>
+          {cambio && falta.length > 0 && (
+            <p className="ln-t-body-sm fi-rev-falta" role="status">{falta.join(' · ')}</p>
+          )}
+          <div className="fi-rev-editor-pie">
+            <button type="button" className="btn btn--linea btn--sm" onClick={onCerrar}>Cancelar</button>
+            <button type="button" className="btn btn--cta btn--sm" disabled={!cambio || falta.length > 0}
+              onClick={guardar}>
+              <Check size={14} aria-hidden="true" /> Guardar cambio
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

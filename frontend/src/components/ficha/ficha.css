@@ -453,6 +453,18 @@
   color:var(--info);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .dc-shell .fi-rev-editar:hover,
 .dc-shell .fi-rev-editar:focus-visible{background:var(--bg-element-hover);text-decoration:underline}
+.dc-shell .fi-rev-fila--abierta{background:var(--bg-element-hover)}
+.dc-shell .fi-rev-editor{grid-column:1 / -1;margin-top:var(--s3);padding-top:var(--s3);
+  border-top:1px dashed var(--border-subtle)}
+.dc-shell .fi-rev-editor-pie{display:flex;justify-content:flex-end;gap:var(--s2);margin-top:var(--s3)}
+.dc-shell .fi-rev-falta{margin:var(--s2) 0 0;color:var(--warning)}
+.dc-shell .fi-rev-opciones{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .fi-rev-opcion{min-height:36px;padding:0 var(--s3);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-control);background:var(--bg-element);color:var(--text-on-surface);
+  font-size:13px;font-weight:600;cursor:pointer}
+.dc-shell .fi-rev-opcion:hover,.dc-shell .fi-rev-opcion:focus-visible{border-color:var(--info)}
+.dc-shell .fi-rev-opcion--activa{border-color:var(--brand-secondary);color:var(--brand-secondary)}
+.dc-shell .fi-rev-campos{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .dc-shell .fi-rev-avisos{display:grid;gap:var(--s1);margin:var(--s2) 0 0;padding:0;list-style:none}
 .dc-shell .fi-rev-avisos li{display:flex;flex-wrap:wrap;align-items:center;
   justify-content:space-between;gap:var(--s1) var(--s3)}

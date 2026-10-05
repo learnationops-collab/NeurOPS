@@ -241,12 +241,16 @@ describe('TabResultado', () => {
 
     expect(screen.getByRole('heading', { name: /Revisá la venta/ })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Avisar por la automatización/ })).toBeChecked();
-    // El total va destacado y cada dato tiene su «Editar»: lleva al paso y vuelve a la revisión.
+    // El total va destacado y cada dato tiene su «Editar», que abre el campo ahí mismo sin salir de la revisión.
     expect(screen.getByRole('region', { name: 'Total de la venta' })).toHaveTextContent('$1,500');
     await user.click(screen.getByRole('button', { name: 'Editar: Email' }));
-    expect(screen.getByRole('heading', { name: '¿Su email?' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
     expect(screen.getByRole('heading', { name: /Revisá la venta/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '¿Su email?' })).not.toBeInTheDocument();
+    const email = screen.getByRole('textbox', { name: /Email/ });
+    await user.clear(email);
+    await user.type(email, 'kevin@mail.com');
+    await user.click(screen.getByRole('button', { name: 'Guardar cambio' }));
+    expect(screen.queryByRole('textbox', { name: /Email/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Registrar la venta/ }));
 
     const [accion, datos] = p.onAccion.mock.calls[0];
