@@ -173,6 +173,42 @@ def derivar_estado(appt, now_utc):
     return 'reportada_sin_resultado' if appt.closer_processed else 'sin_reportar'
 
 
+def contar_no_show_y_canceladas(start_date=None, desde=None, hasta=None):
+    """Cuántas agendas son «No show» y cuántas «Cancelada», como dos cuentas DISTINTAS.
+
+    Antes los KPI de `/deck/stats/kpis` (closer y setter) sumaban las dos en «canceladas». No son
+    lo mismo: una cancelada avisó antes y no hubo llamada que perder; un no show faltó a una que sí
+    estaba en pie. Mismo criterio que `derivar_estado`, para que el KPI coincida con el libro:
+
+      · No show: `closer_result` o `result` valen «No show» (las cargas viejas lo guardaron en
+        `result`). Gana sobre cancelada: si una fila dice las dos cosas, falló a la llamada.
+      · Cancelada: `closer_result` o `result` valen «Cancelado/Cancelada» y no es no show.
+
+    Efecto sobre los números de antes: «canceladas» deja de incluir los no show y pasa a incluir
+    los «Cancelado» que escribe Confirmación (el KPI solo miraba «Cancelada»). Limitación: no hay
+    forma de saber desde los datos actuales si una fila vieja «Cancelada» era en realidad un no
+    show mal cargado.
+
+    Filtra por `start_time` (>= `start_date`, o dentro de `desde`/`hasta` si se pasan).
+    """
+    cr = func.lower(func.trim(func.coalesce(Appointment.closer_result, '')))
+    res = func.lower(func.trim(func.coalesce(Appointment.result, '')))
+    es_no_show = db.or_(cr.in_(_NO_SHOW), res.in_(_NO_SHOW))
+    es_cancelada = db.and_(db.or_(cr.in_(_CANCELADA), res.in_(_CANCELADA)), db.not_(es_no_show))
+
+    def contar(cond):
+        q = Appointment.query.filter(cond)
+        if start_date:
+            q = q.filter(Appointment.start_time >= start_date)
+        if desde is not None:
+            q = q.filter(Appointment.start_time >= desde)
+        if hasta is not None:
+            q = q.filter(Appointment.start_time <= hasta)
+        return q.count()
+
+    return {'no_show': contar(es_no_show), 'canceladas': contar(es_cancelada)}
+
+
 # Ventana para considerar dos citas del mismo cliente "la misma agenda cargada dos veces". Seis
 # horas: una sincronizacion repetida crea la copia con el mismo horario o a minutos de distancia,
 # y dos llamadas REALES al mismo lead el mismo dia se agendan mas separadas que esto.

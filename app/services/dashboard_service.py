@@ -147,6 +147,9 @@ class DashboardService(BaseService):
             'closing_rate_presentation': safe_div(sales_count, m['completed']),
             'conversion_rate': safe_div(sales_count, m['total']), 
             'closing_rate_global': safe_div(sales_count, m['total']),
+            # Cómo cuenta cada una para las tasas (se desglosan, no se mezclan en la UI):
+            #   · show up / asistencia: la cancelada ENTRA en el denominador (junto al no show).
+            #   · cancelación y no show: cada una sobre el total de agendas, por separado.
             'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), 
             'show_up_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])),
             'cancellation_rate': safe_div(m['canceled'], m['total']),

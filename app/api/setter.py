@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CommentNotification, ManychatLead, LeadAnswer
 from app.decorators import role_required
+from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from app.services.setter_assignment_service import condicion_leads_visibles
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
 from datetime import datetime, date, timedelta
@@ -1168,10 +1169,11 @@ def get_deck_stats_kpis():
     realizadas = query_real.count()
     pct_realizadas = (realizadas / total_agendas * 100) if total_agendas > 0 else 0
     
-    query_canc = Appointment.query.filter(Appointment.result.in_(['Cancelada', 'No Show']))
-    if start_date:
-        query_canc = query_canc.filter(Appointment.start_time >= start_date)
-    canceladas = query_canc.count()
+    # «Cancelada» y «No show» son dos cuentas distintas (antes el KPI las sumaba).
+    perdidas = contar_no_show_y_canceladas(start_date)
+    canceladas = perdidas['canceladas']
+    no_show = perdidas['no_show']
+    pct_no_show = (no_show / total_agendas * 100) if total_agendas > 0 else 0
     pct_canceladas = (canceladas / total_agendas * 100) if total_agendas > 0 else 0
     
     today_start, today_end = limites_dia_utc(current_user, today)
@@ -1184,12 +1186,11 @@ def get_deck_stats_kpis():
         Appointment.result == 'Agendado'
     ).count()
     
-    cancelaciones_hoy = Appointment.query.filter(
-        Appointment.start_time >= today_start,
-        Appointment.start_time <= today_end,
-        Appointment.result == 'Cancelada'
-    ).count()
+    perdidas_hoy = contar_no_show_y_canceladas(desde=today_start, hasta=today_end)
+    cancelaciones_hoy = perdidas_hoy['canceladas']
     
+    no_show_hoy = perdidas_hoy['no_show']
+
     reprogramadas_hoy = Appointment.query.filter(
         Appointment.start_time >= today_start,
         Appointment.start_time <= today_end,
@@ -1238,12 +1239,15 @@ def get_deck_stats_kpis():
             "realizadas": realizadas,
             "pct_realizadas": round(pct_realizadas, 1),
             "canceladas": canceladas,
-            "pct_canceladas": round(pct_canceladas, 1)
+            "pct_canceladas": round(pct_canceladas, 1),
+            "no_show": no_show,
+            "pct_no_show": round(pct_no_show, 1)
         },
         "kpis_bottom": {
             "llamadas_hoy": llamadas_hoy,
             "confirmadas_hoy": confirmadas_hoy,
             "cancelaciones_hoy": cancelaciones_hoy,
+            "no_show_hoy": no_show_hoy,
             "reprogramaciones_hoy": reprogramadas_hoy,
             "calificados_hoy": calificados_hoy
         },
