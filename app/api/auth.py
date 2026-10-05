@@ -3,7 +3,11 @@ from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa
 from app import db
 from app.api import bp
+from app.decorators import operator_required
 from app.models import User
+from app.services.cuentas_vinculadas import (
+    VinculoInvalido, cuentas_de, desvincular, listar_personas, puede_cambiar_a, vincular,
+)
 
 @bp.route('/auth/login', methods=['POST'])
 def login():
@@ -65,7 +69,8 @@ def login():
             "username": user.username,
             "role": user.role,
             "email": user.email,
-            "can_view_finance": getattr(user, 'can_view_finance', False)
+            "can_view_finance": getattr(user, 'can_view_finance', False),
+            "cuentas_vinculadas": cuentas_de(user),
         }
     }), 200
 
@@ -90,7 +95,8 @@ def get_me():
             "email": current_user.email,
             "is_impersonating": is_impersonating,
             "original_user_role": original_user_role,
-            "can_view_finance": getattr(current_user, 'can_view_finance', False)
+            "can_view_finance": getattr(current_user, 'can_view_finance', False),
+            "cuentas_vinculadas": [] if is_impersonating else cuentas_de(current_user),
         }
     }), 200
 
@@ -253,9 +259,92 @@ def revert_impersonation():
             "username": original_user.username,
             "role": original_user.role,
             "email": original_user.email,
-            "can_view_finance": getattr(original_user, 'can_view_finance', False)
+            "can_view_finance": getattr(original_user, 'can_view_finance', False),
+            "cuentas_vinculadas": cuentas_de(original_user),
         }
     }), 200
+
+
+@bp.route('/auth/switch-role', methods=['POST'])
+@login_required
+def switch_role():
+    """Pasa a otra cuenta de la MISMA persona (p. ej. de administrador comercial a closer).
+
+    No es una suplantación: el token no lleva claims de `is_impersonating`, así que no hay «Volver a
+    mi sesión» y se puede cambiar de ida y vuelta. Solo se llega a cuentas activas enlazadas por
+    `persona_id`; quien está simulando a otro usuario tiene que volver a su sesión antes.
+    """
+    from flask import session
+    from app.models import get_impersonation_state
+
+    is_impersonating, _, _ = get_impersonation_state()
+    if is_impersonating:
+        return jsonify({"message": "Volvé a tu sesión antes de cambiar de rol."}), 400
+
+    data = request.get_json() or {}
+    if not isinstance(data, dict):
+        data = {}
+    destino_id = data.get('user_id')
+    if not isinstance(destino_id, int) or isinstance(destino_id, bool):
+        return jsonify({"message": "User ID required"}), 400
+    destino = db.session.get(User, destino_id)
+    if not puede_cambiar_a(current_user, destino):
+        return jsonify({"message": "Forbidden"}), 403
+
+    # Pestaña aislada: solo se emite el JWT, la cookie compartida del navegador no se toca (igual que
+    # la suplantación en pestaña nueva, ver TokenPriorityLoginManager).
+    if not bool(data.get('isolated')):
+        login_user(destino)
+        for clave in ('original_user_id', 'original_user_role', 'is_impersonating'):
+            session.pop(clave, None)
+
+    return jsonify({
+        "message": f"Ahora estás como {destino.username}",
+        "token": destino.get_auth_token(),
+        "user": {
+            "id": destino.id,
+            "username": destino.username,
+            "role": destino.role,
+            "email": destino.email,
+            "can_view_finance": getattr(destino, 'can_view_finance', False),
+            "cuentas_vinculadas": cuentas_de(destino),
+        }
+    }), 200
+
+
+@bp.route('/auth/personas', methods=['GET'])
+@operator_required
+def personas_vinculadas():
+    """Las personas con varias cuentas (gestión de operadores)."""
+    return jsonify({"personas": listar_personas()}), 200
+
+
+@bp.route('/auth/personas/vincular', methods=['POST'])
+@operator_required
+def vincular_cuentas():
+    data = request.get_json() or {}
+    ids = data.get('user_ids') if isinstance(data, dict) else None
+    if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
+        return jsonify({"message": "user_ids debe ser una lista de ids"}), 400
+    try:
+        persona = vincular(ids)
+    except VinculoInvalido as e:
+        return jsonify({"message": str(e)}), 400
+    return jsonify({"persona_id": persona, "personas": listar_personas()}), 200
+
+
+@bp.route('/auth/personas/desvincular', methods=['POST'])
+@operator_required
+def desvincular_cuenta():
+    data = request.get_json() or {}
+    user_id = data.get('user_id') if isinstance(data, dict) else None
+    if not isinstance(user_id, int) or isinstance(user_id, bool):
+        return jsonify({"message": "user_id requerido"}), 400
+    try:
+        desvincular(user_id)
+    except VinculoInvalido as e:
+        return jsonify({"message": str(e)}), 400
+    return jsonify({"personas": listar_personas()}), 200
 
 
 @bp.route('/auth/debug', methods=['GET'])

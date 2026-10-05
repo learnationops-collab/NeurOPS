@@ -99,6 +99,9 @@ class User(UserMixin, db.Model):
     two_chat_number = db.Column(db.String(20), nullable=True)
     can_view_finance = db.Column(db.Boolean, default=False, server_default="0")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Las cuentas con el mismo `persona_id` son la misma persona con varios roles (ver
+    # `app/services/cuentas_vinculadas.py`). NULL: cuenta suelta, que es el caso de casi todas.
+    persona_id = db.Column(db.Integer, index=True, nullable=True)
 
     def get_auth_token(self, expires_in=86400, **extra_claims):
         payload = {'id': self.id, 'exp': time.time() + expires_in}
