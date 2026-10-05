@@ -262,3 +262,16 @@ def test_simulando_a_otro_no_se_cambia_de_rol(client, auth_headers, marlon_unico
                            original_user_role='director_comercial')
 
     assert client.post(CAMBIAR, headers=headers, json={'role': 'closer'}).status_code == 400
+
+
+def test_la_lista_de_usuarios_trae_todos_los_roles_de_cada_uno(client, auth_headers, make_user):
+    gestor = make_user(role='operator', username='ops')
+    make_user(role='operator', username='mario', roles_extra='closer,admin')
+
+    lista = client.get('/api/admin/users', headers=auth_headers(gestor)).get_json()
+
+    mario = next(u for u in lista if u['username'] == 'mario')
+    assert mario['role'] == 'operator' and mario['roles'] == ['operator', 'closer', 'admin']
+    # Y el filtro por rol del servidor también lo encuentra como closer.
+    solo_closers = client.get('/api/admin/users?role=closer', headers=auth_headers(gestor)).get_json()
+    assert [u['username'] for u in solo_closers] == ['mario']
