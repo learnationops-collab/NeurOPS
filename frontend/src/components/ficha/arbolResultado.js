@@ -102,7 +102,11 @@ function faltaDelCampo(campo, respuestas) {
  * saber por qué (misma decisión que el `faltantes[]` de CloserWorkflowPage 3134-3145).
  */
 export function faltantes(respuestas = {}, contexto = {}) {
-  const q = preguntaActual(respuestas, contexto);
+  return faltantesDe(preguntaActual(respuestas, contexto), respuestas, contexto);
+}
+
+/** Lo mismo que `faltantes`, pero para una pregunta dada (la revisión edita una ya contestada). */
+export function faltantesDe(q, respuestas = {}, contexto = {}) {
   if (!q) return [];
   if (q.tipo !== 'formulario') return ['Elegí una de las opciones'];
   const lista = q.campos
