@@ -822,12 +822,13 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 sub={`${bloque.cerradas} de ${fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}`}
                 ver={abrir(irA, D.close_rate)} baja="p-cierre" />
-            <Tile label="Cash collected" valor={fmt.money(bloque.cash)}
-                help={'Dinero que entró en el período: pagos completos, primeras cuotas, cuotas de '
-                    + 'ventas anteriores y señas.'}
-                delta={deltas.cash}
+            <Tile label="Cash collected · neto" valor={fmt.money(bloque.cash_neto)}
+                help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
+                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. El bruto '
+                    + '(antes de fees) se ve debajo.'}
+                delta={deltas.cash_neto || deltas.cash}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
-                sub={`neto ${fmt.money(bloque.cash_neto)} · comisión ${fmt.money(bloque.comision)}`}
+                sub={`bruto ${fmt.money(bloque.cash)} · comisión ${fmt.money(bloque.comision)}`}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
                 help={`Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
