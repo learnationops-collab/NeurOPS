@@ -9,6 +9,20 @@ from app.services.cuentas_vinculadas import (
     VinculoInvalido, cuentas_de, desvincular, listar_personas, puede_cambiar_a, vincular,
 )
 
+def _usuario_json(u, **extra):
+    """El usuario como lo ve el frontend. `role` es el rol ACTIVO; `roles` son todos los que tiene."""
+    return {
+        "id": u.id,
+        "username": u.username,
+        "role": u.role,
+        "roles": u.roles,
+        "email": u.email,
+        "can_view_finance": getattr(u, 'can_view_finance', False),
+        "cuentas_vinculadas": cuentas_de(u),
+        **extra,
+    }
+
+
 @bp.route('/auth/login', methods=['POST'])
 def login():
     """
@@ -44,6 +58,8 @@ def login():
 
     # 4. Login Session (Optional / Legacy support)
     login_user(user, remember=True)
+    from flask import session
+    session.pop('active_role', None)  # se entra siempre con el rol principal
 
     # Sincronizar la timezone del usuario con la detectada por su navegador en cada login,
     # para que los cálculos de "día calendario" en el backend (dashboard, mazo del closer, etc.)
@@ -68,6 +84,7 @@ def login():
             "id": user.id,
             "username": user.username,
             "role": user.role,
+            "roles": user.roles,
             "email": user.email,
             "can_view_finance": getattr(user, 'can_view_finance', False),
             "cuentas_vinculadas": cuentas_de(user),
@@ -92,6 +109,7 @@ def get_me():
             "id": current_user.id,
             "username": current_user.username,
             "role": current_user.role,
+            "roles": [] if is_impersonating else current_user.roles,
             "email": current_user.email,
             "is_impersonating": is_impersonating,
             "original_user_role": original_user_role,
@@ -190,6 +208,7 @@ def impersonate():
             session['original_user_role'] = current_user.role
             session['is_impersonating'] = True
         login_user(target_user)
+        session.pop('active_role', None)
 
     # El estado de suplantación viaja en las claims del propio JWT (no en session) para que
     # cada pestaña con su propio token mantenga su propia identidad simulada.
@@ -244,6 +263,7 @@ def revert_impersonation():
         # Solo restaurar/limpiar la sesión de cookie si el flujo clásico la usó - una pestaña
         # aislada (JWT en sessionStorage) nunca la tocó y revertir ahí no debe empezar a hacerlo.
         login_user(original_user)
+        session.pop('active_role', None)
         session.pop('original_user_id', None)
         session.pop('original_user_role', None)
         session.pop('is_impersonating', None)
@@ -268,7 +288,7 @@ def revert_impersonation():
 @bp.route('/auth/switch-role', methods=['POST'])
 @login_required
 def switch_role():
-    """Pasa a otra cuenta de la MISMA persona (p. ej. de administrador comercial a closer).
+    """Cambia de rol: a otro rol de la MISMA cuenta (`{role}`) o a otra cuenta vinculada (`{user_id}`).
 
     No es una suplantación: el token no lleva claims de `is_impersonating`, así que no hay «Volver a
     mi sesión» y se puede cambiar de ida y vuelta. Solo se llega a cuentas activas enlazadas por
@@ -284,6 +304,27 @@ def switch_role():
     data = request.get_json() or {}
     if not isinstance(data, dict):
         data = {}
+
+    # Otro ROL de la misma cuenta: es el mismo usuario con otro rol. El rol activo viaja en el
+    # token (`active_role`), y en la sesión de cookie si no es una pestaña aislada. Se valida contra los
+    # roles que la persona de verdad tiene.
+    if 'role' in data:
+        rol = data.get('role')
+        if not isinstance(rol, str) or not current_user.tiene_rol(rol):
+            return jsonify({"message": "Forbidden"}), 403
+        principal = rol == current_user._role
+        if not bool(data.get('isolated')):
+            if principal:
+                session.pop('active_role', None)
+            else:
+                session['active_role'] = rol
+        current_user.activar_rol(rol)
+        return jsonify({
+            "message": f"Ahora estás como {rol}",
+            "token": current_user.get_auth_token(**({} if principal else {'active_role': rol})),
+            "user": _usuario_json(current_user),
+        }), 200
+
     destino_id = data.get('user_id')
     if not isinstance(destino_id, int) or isinstance(destino_id, bool):
         return jsonify({"message": "User ID required"}), 400
@@ -295,20 +336,13 @@ def switch_role():
     # la suplantación en pestaña nueva, ver TokenPriorityLoginManager).
     if not bool(data.get('isolated')):
         login_user(destino)
-        for clave in ('original_user_id', 'original_user_role', 'is_impersonating'):
+        for clave in ('original_user_id', 'original_user_role', 'is_impersonating', 'active_role'):
             session.pop(clave, None)
 
     return jsonify({
         "message": f"Ahora estás como {destino.username}",
         "token": destino.get_auth_token(),
-        "user": {
-            "id": destino.id,
-            "username": destino.username,
-            "role": destino.role,
-            "email": destino.email,
-            "can_view_finance": getattr(destino, 'can_view_finance', False),
-            "cuentas_vinculadas": cuentas_de(destino),
-        }
+        "user": _usuario_json(destino),
     }), 200
 
 

@@ -4,6 +4,8 @@ import time
 import jwt
 from flask import current_app, g
 from flask_login import UserMixin
+import sqlalchemy as sa
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login
 
@@ -32,7 +34,13 @@ def _esta_desactivado(user):
 @login.user_loader
 def load_user(id):
     user = User.query.get(int(id))
-    return None if _esta_desactivado(user) else user
+    if _esta_desactivado(user):
+        return None
+    if user is not None:
+        # Flujo de cookie: el rol activo vive en la sesión (el de un token manda en el otro loader).
+        from flask import session, has_request_context
+        user.activar_rol(session.get('active_role') if has_request_context() else None)
+    return user
 
 @login.request_loader
 def load_user_from_request(request):
@@ -51,6 +59,7 @@ def load_user_from_request(request):
                 if _esta_desactivado(user):
                     return None
                 if user:
+                    user.activar_rol(payload.get('active_role'))
                     # Guardado en g (vida = un solo request) para que get_impersonation_state()
                     # pueda leer is_impersonating/original_user_* de ESTE token en vez de la
                     # sesión de cookie compartida por todo el navegador - ver TokenPriorityLoginManager
@@ -87,13 +96,43 @@ def get_impersonation_state():
         session.get('original_user_role'),
     )
 
+class _RolComparator(Comparator):
+    """`User.role == 'closer'` (y `!=`, `in_`) en una consulta: cualquier usuario que TENGA ese rol, sea
+    el principal (`role`) o uno adicional (`roles_extra`). Así una persona con dos roles aparece en las
+    listas de closers, de setters, etc., aunque su rol principal sea otro. El resto de operaciones
+    (ordenar, agrupar, `.like`) actúan sobre el rol principal."""
+
+    @staticmethod
+    def _tiene(rol):
+        extra = (sa.literal(',') + sa.func.coalesce(User.roles_extra, '') + sa.literal(',')).like(f'%,{rol},%')
+        return sa.or_(User._role == rol, extra)
+
+    def __eq__(self, otro):
+        return self._tiene(otro)
+
+    def __ne__(self, otro):
+        return sa.not_(self._tiene(otro))
+
+    def in_(self, otros):
+        return sa.or_(*[self._tiene(r) for r in otros]) if otros else sa.false()
+
+    def not_in(self, otros):
+        return sa.not_(self.in_(otros))
+
+    notin_ = not_in
+
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(256))
-    role = db.Column(db.String(20), default=ROLE_CLOSER)
+    # Rol PRINCIPAL (el de siempre). Una persona con varios roles tiene los demás en `roles_extra`
+    # (separados por comas) y trabaja con uno a la vez: el ACTIVO. `role` lee el activo y las
+    # consultas (`User.role == 'closer'`) encuentran a quien tenga ese rol, principal o no.
+    _role = db.Column('role', db.String(20), default=ROLE_CLOSER)
+    roles_extra = db.Column(db.String(120), nullable=True)
     timezone = db.Column(db.String(50), default='America/La_Paz')
     is_active = db.Column(db.Boolean, default=True)
     two_chat_number = db.Column(db.String(20), nullable=True)
@@ -102,6 +141,36 @@ class User(UserMixin, db.Model):
     # Las cuentas con el mismo `persona_id` son la misma persona con varios roles (ver
     # `app/services/cuentas_vinculadas.py`). NULL: cuenta suelta, que es el caso de casi todas.
     persona_id = db.Column(db.Integer, index=True, nullable=True)
+
+    # El rol activo de ESTE request (lo fija el loader con el claim `active_role` del token o la
+    # sesión). Vive solo en la instancia: no se guarda en la base.
+    _rol_activo = None
+
+    @hybrid_property
+    def role(self):
+        return self._rol_activo or self._role
+
+    @role.setter
+    def role(self, valor):
+        self._role = valor
+
+    @role.comparator
+    def role(cls):
+        return _RolComparator(cls._role)
+
+    @property
+    def roles(self):
+        """Todos los roles de la persona: el principal primero y luego los adicionales."""
+        extra = [r.strip() for r in (self.roles_extra or '').split(',') if r.strip()]
+        return [self._role] + [r for r in extra if r != self._role]
+
+    def tiene_rol(self, rol):
+        return rol in self.roles
+
+    def activar_rol(self, rol):
+        """Fija el rol activo de este request. Un rol que la persona no tiene se ignora (queda el
+        principal): el token puede traer cualquier cosa, así que SIEMPRE se valida acá."""
+        self._rol_activo = rol if rol and rol != self._role and rol in self.roles else None
 
     def get_auth_token(self, expires_in=86400, **extra_claims):
         payload = {'id': self.id, 'exp': time.time() + expires_in}

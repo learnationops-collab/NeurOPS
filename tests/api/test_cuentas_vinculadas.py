@@ -173,3 +173,92 @@ def test_vincular_valida_el_pedido(client, auth_headers, make_user):
 def test_la_columna_persona_id_existe_y_empieza_vacia(make_user):
     assert User.__table__.c.persona_id.nullable
     assert make_user(role='closer').persona_id is None
+
+
+# --- Varios roles en UNA cuenta ---------------------------------------------------------------
+
+@pytest.fixture()
+def marlon_unico(make_user):
+    """La misma persona con una sola cuenta: dirección comercial y, además, closer."""
+    return make_user(role='director_comercial', username='marlon', roles_extra='closer')
+
+
+def test_roles_lista_el_principal_y_los_adicionales(marlon_unico):
+    assert marlon_unico.roles == ['director_comercial', 'closer']
+    assert marlon_unico.tiene_rol('closer') and not marlon_unico.tiene_rol('setter')
+
+
+def test_las_consultas_por_rol_encuentran_a_quien_lo_tiene_como_adicional(marlon_unico, make_user):
+    otro = make_user(role='setter', username='solo_setter')
+
+    closers = {u.id for u in User.query.filter(User.role == 'closer').all()}
+    comercial = {u.id for u in User.query.filter(User.role == 'director_comercial').all()}
+    en_lista = {u.id for u in User.query.filter(User.role.in_(['closer', 'setter'])).all()}
+    sin_closer = {u.id for u in User.query.filter(User.role != 'closer').all()}
+
+    assert closers == {marlon_unico.id}
+    assert comercial == {marlon_unico.id}
+    assert en_lista == {marlon_unico.id, otro.id}
+    assert marlon_unico.id not in sin_closer and otro.id in sin_closer
+
+
+def test_por_defecto_se_trabaja_con_el_rol_principal(client, auth_headers, marlon_unico):
+    me = client.get('/api/auth/me', headers=auth_headers(marlon_unico)).get_json()['user']
+
+    assert me['role'] == 'director_comercial' and me['roles'] == ['director_comercial', 'closer']
+
+
+def test_cambia_de_rol_dentro_de_la_misma_cuenta(client, auth_headers, marlon_unico):
+    r = client.post(CAMBIAR, headers=auth_headers(marlon_unico), json={'role': 'closer'})
+
+    assert r.status_code == 200
+    cuerpo = r.get_json()
+    assert cuerpo['user']['id'] == marlon_unico.id and cuerpo['user']['role'] == 'closer'
+    assert claims(cuerpo['token'])['active_role'] == 'closer'
+    assert 'is_impersonating' not in claims(cuerpo['token'])
+
+    # Con ese token se es closer: el guardián de closer deja pasar y /me lo refleja.
+    yo = client.get('/api/auth/me', headers=bearer(cuerpo['token'])).get_json()['user']
+    assert yo['role'] == 'closer' and yo['roles'] == ['director_comercial', 'closer']
+
+
+def test_se_puede_volver_al_rol_principal(client, marlon_unico):
+    token = client.post(CAMBIAR, headers=bearer(marlon_unico.get_auth_token()),
+                        json={'role': 'closer'}).get_json()['token']
+
+    vuelta = client.post(CAMBIAR, headers=bearer(token), json={'role': 'director_comercial'}).get_json()
+
+    assert vuelta['user']['role'] == 'director_comercial'
+    assert 'active_role' not in claims(vuelta['token'])
+
+
+def test_no_se_activa_un_rol_que_la_cuenta_no_tiene(client, auth_headers, marlon_unico):
+    assert client.post(CAMBIAR, headers=auth_headers(marlon_unico), json={'role': 'admin'}).status_code == 403
+    assert client.post(CAMBIAR, headers=auth_headers(marlon_unico), json={'role': 7}).status_code == 403
+
+
+def test_un_token_con_un_rol_activo_inventado_se_ignora(client, auth_headers, marlon_unico):
+    # Un claim `active_role` que la cuenta no tiene no da ningún permiso: manda el principal.
+    headers = auth_headers(marlon_unico, active_role='admin')
+
+    me = client.get('/api/auth/me', headers=headers).get_json()['user']
+
+    assert me['role'] == 'director_comercial'
+    assert client.get('/api/admin/users', headers=headers).status_code == 403
+
+
+def test_el_rol_activo_decide_los_permisos(client, auth_headers, marlon_unico):
+    # Como director comercial no entra al mazo del closer; como closer sí.
+    como_director = auth_headers(marlon_unico)
+    como_closer = auth_headers(marlon_unico, active_role='closer')
+
+    assert client.get('/api/closer/agendas', headers=como_director).status_code in (401, 403)
+    assert client.get('/api/closer/agendas', headers=como_closer).status_code not in (401, 403)
+
+
+def test_simulando_a_otro_no_se_cambia_de_rol(client, auth_headers, marlon_unico, make_user):
+    otro = make_user(role='closer', username='otro_closer')
+    headers = auth_headers(otro, is_impersonating=True, original_user_id=marlon_unico.id,
+                           original_user_role='director_comercial')
+
+    assert client.post(CAMBIAR, headers=headers, json={'role': 'closer'}).status_code == 400
