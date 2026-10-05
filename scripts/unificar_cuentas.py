@@ -17,12 +17,15 @@ Qué hace, en una sola transacción:
   3. Deja la cuenta `--origen` inactiva y con usuario y correo inertes, sin borrarla (reversible).
   4. Le suma a `--destino` el rol de `--origen` en `users.roles_extra`.
 
-Producción no se acepta como destino: se refiere a la base por la variable del entorno elegido y se
-niega si coincide con DATABASE_PRODUCTION.
+Producción solo con `--target produccion --confirmo-produccion` (y, como siempre, sin `--aplicar` es un
+ensayo). Los otros destinos se niegan si apuntan a DATABASE_PRODUCTION. Al aplicar se escribe un respaldo
+JSON con las filas que se movieron y el estado anterior de las dos cuentas, para poder deshacerlo.
 """
 import argparse
+import json
 import os
 import sys
+from datetime import datetime
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
@@ -37,16 +40,20 @@ def _misma_base(a, b):
     return (ua.hostname, ua.port, ua.path) == (ub.hostname, ub.port, ub.path)
 
 
-def _url_del_destino(target):
+def _url_del_destino(target, confirmo_produccion=False):
     produccion = os.getenv('DATABASE_PRODUCTION') or ''
-    if target == 'staging':
+    if target == 'produccion':
+        if not confirmo_produccion:
+            sys.exit('Producción exige --confirmo-produccion.')
+        url = produccion
+    elif target == 'staging':
         url = os.getenv('DATABASE_STAGING') or os.getenv('DATABASE_TESTING')
     else:
         url = f"sqlite:///{os.path.join(RAIZ, 'instance', 'local.db')}"
     if not url:
         sys.exit(f'No hay base configurada para --target {target}.')
-    if produccion and _misma_base(url, produccion):
-        sys.exit('Este script no corre sobre producción.')
+    if target != 'produccion' and produccion and _misma_base(url, produccion):
+        sys.exit('Ese destino apunta a producción: usa --target produccion --confirmo-produccion.')
     return url
 
 
@@ -66,7 +73,7 @@ def _pk(motor, tabla):
 
 
 def unificar(motor, destino, origen, aplicar):
-    informe = {'movidas': {}, 'conflictos': {}, 'alias': []}
+    informe = {'movidas': {}, 'conflictos': {}, 'alias': [], 'respaldo': {'filas': {}, 'alias_creados': []}}
     with motor.connect() as conn:
         trans = conn.begin()
         try:
@@ -84,6 +91,15 @@ def unificar(motor, destino, origen, aplicar):
                 cuantas = conn.execute(text(f'SELECT COUNT(*) FROM "{tabla}" WHERE "{col}" = :o'), {'o': origen}).scalar()
                 if not cuantas:
                     continue
+                pk = _pk(motor, tabla)
+                # Las claves de las filas que se van a mover: con eso el respaldo permite deshacer.
+                if pk:
+                    cols_pk0 = ', '.join(f'"{c}"' for c in pk)
+                    informe['respaldo']['filas'][f'{tabla}.{col}'] = {
+                        'pk': pk,
+                        'valores': [list(f) for f in conn.execute(
+                            text(f'SELECT {cols_pk0} FROM "{tabla}" WHERE "{col}" = :o'), {'o': origen}).fetchall()],
+                    }
                 sp = conn.begin_nested()
                 try:
                     conn.execute(text(f'UPDATE "{tabla}" SET "{col}" = :d WHERE "{col}" = :o'), {'d': destino, 'o': origen})
@@ -93,7 +109,6 @@ def unificar(motor, destino, origen, aplicar):
                 except IntegrityError:
                     sp.rollback()
                 # Alguna fila choca: se mueve una por una y las que chocan se quedan.
-                pk = _pk(motor, tabla)
                 if not pk:
                     informe['conflictos'][f'{tabla}.{col}'] = cuantas
                     continue
@@ -122,6 +137,13 @@ def unificar(motor, destino, origen, aplicar):
                 conn.execute(text('INSERT INTO closer_aliases (user_id, alias_name, created_at) VALUES (:u, :a, CURRENT_TIMESTAMP)'),
                              {'u': destino, 'a': alias[:100]})
                 informe['alias'].append(alias)
+                informe['respaldo']['alias_creados'].append(alias[:100])
+
+            informe['respaldo']['antes'] = {
+                'destino': {'id': d.id, 'username': d.username, 'email': d.email, 'role': d.role, 'roles_extra': d.roles_extra},
+                'origen': {'id': o.id, 'username': o.username, 'email': o.email, 'role': o.role,
+                           'roles_extra': o.roles_extra, 'is_active': bool(o.is_active)},
+            }
 
             # 3) El origen queda inactivo y con identidad inerte (sin borrarlo).
             conn.execute(text('UPDATE users SET is_active = :f, username = :u, email = :e, persona_id = NULL WHERE id = :o'),
@@ -146,7 +168,8 @@ def unificar(motor, destino, origen, aplicar):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--target', choices=['staging', 'local'], required=True)
+    ap.add_argument('--target', choices=['staging', 'local', 'produccion'], required=True)
+    ap.add_argument('--confirmo-produccion', action='store_true', help='obligatorio con --target produccion')
     ap.add_argument('--destino', type=int, required=True, help='id de la cuenta que queda')
     ap.add_argument('--origen', type=int, required=True, help='id de la cuenta que se absorbe')
     ap.add_argument('--aplicar', action='store_true', help='sin esto es un ensayo que se revierte')
@@ -155,7 +178,7 @@ def main():
         sys.exit('--destino y --origen son la misma cuenta.')
 
     load_dotenv(os.path.join(RAIZ, '.env'))
-    motor = create_engine(_url_del_destino(args.target))
+    motor = create_engine(_url_del_destino(args.target, args.confirmo_produccion))
     if 'roles_extra' not in [c['name'] for c in inspect(motor).get_columns('users')]:
         sys.exit('Falta la columna users.roles_extra: despliega develop (o corre `flask db upgrade`) primero.')
 
