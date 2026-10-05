@@ -134,11 +134,20 @@ TIPOS_PAGO = [
     {'key': 'seña', 'label': 'Depósitos', 'tone': 'warning'},
 ]
 
+# Lo que muestra la tarjeta "Payment types": los cuatro canónicos más las renovaciones y los
+# upsells. Van aparte de `TIPOS_PAGO` porque ese vocabulario también alimenta los formularios de
+# la ficha, donde una venta nueva no se carga como renovación. Sin estos dos, una renovación salía
+# en la tabla de ventas pero no en ninguna tarjeta, y las partes no sumaban el total.
+TIPOS_PAGO_COBROS = TIPOS_PAGO + [
+    {'key': 'renovacion', 'label': 'Renovación', 'tone': 'info'},
+    {'key': 'upsell', 'label': 'Upsell', 'tone': 'success'},
+]
+
 _LABELS = {'pre_call': {e['key']: e for e in PRE_CALL},
            'post_call': {e['key']: e for e in POST_CALL},
            'estado': {e['key']: e for e in ESTADO_LEAD},
            'estado_cartera': {e['key']: e for e in ESTADO_CARTERA},
-           'tipo_pago': {e['key']: e for e in TIPOS_PAGO}}
+           'tipo_pago': {e['key']: e for e in TIPOS_PAGO_COBROS}}
 
 # Estado del libro de agendas -> estado post call de este tablero, para los que no dependen de si
 # hubo venta o seguimiento (esos se resuelven en `post_call_de`).

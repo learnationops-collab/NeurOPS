@@ -17,7 +17,7 @@ from app.models import FinancialSale, User
 from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
-    DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO, ComercialService,
+    DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
     _limpiar_email, _limpiar_ig, chip, pct,
 )
 from app.services.commission_service import CLOSER_RATE
@@ -394,7 +394,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
             {**chip('tipo_pago', t['key']),
              'ventas': por_tipo.get(t['key'], {}).get('ventas', 0),
              'cash': round(por_tipo.get(t['key'], {}).get('cash', 0.0), 2)}
-            for t in TIPOS_PAGO
+            for t in TIPOS_PAGO_COBROS
         ],
         'programas': sorted((
             # `ventas` son ventas de verdad (completo/parcial) y `cobros` todas las filas, cuotas

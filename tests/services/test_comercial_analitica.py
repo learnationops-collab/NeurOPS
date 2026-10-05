@@ -497,8 +497,19 @@ def test_los_cuatro_tipos_de_pago_aparecen_siempre_aunque_esten_en_cero(db, marl
 
     tipos = ca.bloque_closers(DESDE, HASTA)['payment_types']
 
-    assert [t['key'] for t in tipos] == ['completo', 'parcial', 'cuota', 'seña']
-    assert [t['ventas'] for t in tipos] == [1, 0, 0, 0]
+    assert [t['key'] for t in tipos] == ['completo', 'parcial', 'cuota', 'seña', 'renovacion', 'upsell']
+    assert [t['ventas'] for t in tipos] == [1, 0, 0, 0, 0, 0]
+
+
+@freeze_time(HOY)
+def test_las_renovaciones_y_upsells_salen_en_payment_types(db, marlon):
+    venta(db, mail='a@test.local', tipo='AL - Renovacion', monto=529.0)
+    venta(db, mail='b@test.local', tipo='RR - Upsell', monto=100.0)
+
+    tipos = {t['key']: t for t in ca.bloque_closers(DESDE, HASTA)['payment_types']}
+
+    assert (tipos['renovacion']['ventas'], tipos['renovacion']['cash']) == (1, 529.0)
+    assert (tipos['upsell']['ventas'], tipos['upsell']['cash']) == (1, 100.0)
 
 
 @freeze_time(HOY)
