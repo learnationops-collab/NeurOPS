@@ -202,6 +202,13 @@ def main():
             print(f'  {k}: {v}')
     print('\nAlias:', ', '.join(informe['alias']) or '-')
     print('Roles del destino:', ', '.join(informe['roles']))
+    if args.aplicar:
+        os.makedirs(os.path.join(RAIZ, 'instance', 'respaldos'), exist_ok=True)
+        ruta = os.path.join(RAIZ, 'instance', 'respaldos',
+                            f"unificar_{args.target}_{args.origen}_en_{args.destino}_{datetime.now():%Y%m%d_%H%M%S}.json")
+        with open(ruta, 'w', encoding='utf-8') as f:
+            json.dump(informe['respaldo'], f, ensure_ascii=False, indent=1, default=str)
+        print('Respaldo para deshacer:', ruta)
     print('\n' + ('APLICADO.' if args.aplicar else 'ENSAYO: no se cambió nada (usa --aplicar).'))
 
 

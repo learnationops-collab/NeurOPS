@@ -83,3 +83,15 @@ def test_si_estaban_vinculadas_el_destino_queda_sin_grupo(db, make_user):
     db.session.expire_all()
 
     assert User.query.get(destino).persona_id is None and User.query.get(origen).persona_id is None
+
+
+def test_el_informe_trae_lo_necesario_para_deshacer(db, make_user):
+    destino, origen = _preparar(make_user)
+
+    informe = _script().unificar(db.engine, destino, origen, aplicar=True)
+
+    respaldo = informe['respaldo']
+    assert respaldo['antes']['origen']['username'] == 'Marlon Closer' and respaldo['antes']['origen']['is_active'] is True
+    assert respaldo['antes']['destino']['roles_extra'] is None
+    # Las claves de TODAS las filas que apuntaban al origen, también la que chocó y no se movió.
+    assert len(respaldo['filas']['closer_daily_reports.closer_id']['valores']) == 2
