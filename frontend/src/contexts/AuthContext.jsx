@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { browserTimezone } from '../utils/datetime';
-import { loadSession, clearSession } from '../utils/sessionStore';
+import { loadSession, saveSession, clearSession } from '../utils/sessionStore';
 
 const AuthContext = createContext();
 
@@ -15,6 +15,17 @@ export const AuthProvider = ({ children }) => {
         const savedUser = loadSession();
         if (savedUser) {
             setUser(savedUser);
+            // Las cuentas vinculadas se agregaron después del login: una sesión guardada antes no las
+            // trae, y nunca se pedían de nuevo. Se refrescan solo ellas; el rol sigue siendo el guardado.
+            if (!savedUser.is_impersonating) {
+                api.get('/auth/me').then((res) => {
+                    const cuentas = res.data?.user?.cuentas_vinculadas || [];
+                    if (JSON.stringify(cuentas) === JSON.stringify(savedUser.cuentas_vinculadas || [])) return;
+                    const actualizado = { ...savedUser, cuentas_vinculadas: cuentas };
+                    saveSession(actualizado);
+                    setUser((u) => (u && u.id === actualizado.id ? { ...u, cuentas_vinculadas: cuentas } : u));
+                }).catch(() => { /* sin cuentas que mostrar: el menú queda como estaba */ });
+            }
         }
         setLoading(false);
 
