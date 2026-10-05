@@ -1,0 +1,50 @@
+/* ============================================================================
+   ESPACIO DEL OPERADOR — la página que envuelve el panel técnico, los registros y el editor.
+
+   Igual que el espacio del setter (`pages/setter/setterEspacio.css`): el header, las pestañas y el
+   dock son islas del sistema del dashboard comercial (`.dc-shell.dc-shell--embebido`, ver
+   comercial.css), y el contenido del medio NO va dentro de un `.dc-shell`: su reset de botones
+   (`background:none;border:0`) le borraría los estilos de Tailwind a los paneles.
+   ============================================================================ */
+
+/* El mismo fondo que `--gradient-page` del dashboard: el token vive dentro del shell y esta página
+   no es un shell. */
+.operador-espacio{
+  min-height:100vh;
+  background:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%) fixed,#020617;
+  color:#e2e8f0;
+  /* El dock es `position:fixed`: sin este colchón tapa el final de cada lista. */
+  padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
+}
+
+.operador-espacio-wrap{max-width:1340px;margin:0 auto;padding:24px clamp(16px,3vw,22px) 0}
+
+.operador-espacio .tope-acciones{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+/* Los paneles del panel técnico son Tailwind con los tokens genéricos del tema (`bg-main`, `text-base`,
+   `bg-surface`). Con un tema claro pintaban texto oscuro y las pestañas del dock (hechas para fondo
+   oscuro) casi no se leían. `dash-v6` (index.css) fija la paleta oscura para todo lo que lleva
+   adentro, igual que el dashboard del closer: el panel queda a tono con el dock y las pestañas. */
+.operador-panel{
+  background:#05082D;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px;
+  padding:clamp(16px,2.4vw,28px);
+  overflow-x:auto;
+}
+
+/* Registro de agendas y de ventas: pensadas sobre fondo oscuro. */
+.operador-oscuro{
+  background:#020617;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px;
+  color:#e2e8f0;
+  overflow:hidden;
+}
+
+/* Las pestañas del panel técnico son largas («Auditoría de Leads», «Operaciones Críticas»): en un
+   teléfono se desplazan de lado en vez de partir la página. */
+.operador-espacio .dc-shell .barra{overflow-x:auto}
+@media (max-width:440px){
+  .operador-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
+}
