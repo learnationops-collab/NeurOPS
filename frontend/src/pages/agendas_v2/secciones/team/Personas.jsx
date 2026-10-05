@@ -1,6 +1,7 @@
 // People: sumar personas, foto, nombre, rol, nivel (Top 1–3), horario y orden.
 // Con la API, las personas salen de los closers y setters reales de la app: se suman desde esa lista y
 // quedan unidas a su cuenta por el email (es lo que usa el servidor para saber a qué closer va una agenda).
+// Un closer sin Google Calendar conectado en NeurOPS no recibe agendas: se marca en su tarjeta.
 
 import { useCallback, useEffect, useState } from 'react';
 import { TZ_DEF } from '../../core/catalogos';
@@ -36,7 +37,7 @@ function rolDeUsuario(d, u) {
     return r ? r.id : 'setter';
 }
 
-function Persona({ p, ordenable, borrando, setBorrando, sinCuenta }) {
+function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar }) {
     const { d } = useDatos();
     const { yo } = usePermisos();
     const hs = horasSemana(p), closer = esCloser(d, p);
@@ -72,6 +73,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta }) {
                     <span className="pc-sub">
                         {yo && yo.id === p.id && <span className="pc-vos">Vos</span>}
                         {sinCuenta && <span className="pc-vos" title="Su email no coincide con ningún closer o setter activo de la app">Sin usuario</span>}
+                        {closer && sinCalendar && <span className="pc-vos" title="No recibe agendas hasta que conecte su Google Calendar en NeurOPS (Configuración › Agendas)">Sin Calendar</span>}
                         {closer
                             ? <><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></>
                             : <span>No toma llamadas</span>}
@@ -121,7 +123,7 @@ export default function Personas() {
     const reales = almacen.adaptador.tipo === 'api';
     const enTeam = conEmail(ps);
     const disponibles = (usuarios || []).filter(u => u.email && !enTeam.has(u.email.toLowerCase()));
-    const cuentas = new Set((usuarios || []).map(u => (u.email || '').toLowerCase()));
+    const cuentas = new Map((usuarios || []).map(u => [(u.email || '').toLowerCase(), u]));
 
     const sumarUsuarios = (us) => {
         let st = almacen.getState().d, orden0 = maxOrden(st, 'personas');
@@ -159,7 +161,7 @@ export default function Personas() {
             <span className="t-rotulo">De la app</span>
             {disponibles.map(u => (
                 <button key={u.id} type="button" className="sug" title={u.email} onClick={() => sumarUsuarios([u])}>
-                    <Icono n="plus" />{u.nombre}{u.rol === 'setter' ? ' · setter' : ''}
+                    <Icono n="plus" />{u.nombre}{u.rol === 'setter' ? ' · setter' : !u.calendar ? ' · sin Calendar' : ''}
                 </button>
             ))}
             {disponibles.length > 1 && <button type="button" className="sug" onClick={() => sumarUsuarios(disponibles)}><Icono n="users" />Sumar todos</button>}
@@ -178,7 +180,8 @@ export default function Personas() {
                 <div className="lista" ref={ordenCont}>
                     {porIdsOrden(ps, orden.lista).map(p => (
                         <Persona key={p.id} p={p} ordenable={orden} borrando={borrando === p.id} setBorrando={setBorrando}
-                            sinCuenta={reales && usuarios !== null && !cuentas.has((p.email || '').toLowerCase())} />
+                            sinCuenta={reales && usuarios !== null && !cuentas.has((p.email || '').toLowerCase())}
+                            sinCalendar={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).calendar} />
                     ))}
                 </div>
             </div>

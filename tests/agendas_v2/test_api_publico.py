@@ -14,6 +14,7 @@ from freezegun import freeze_time
 from app.agendas_v2 import api_publico, servicio
 from app.agendas_v2.modelos import SchedReserva
 from app.agendas_v2.nucleo.eventos import config_de
+from app.models import Appointment, Client, GoogleCalendarToken
 
 LV9a12 = {str(d): [['09:00', '12:00']] for d in range(1, 6)}
 URL = '/api/agendas-v2/publico'
@@ -35,8 +36,23 @@ def _publicar(evento_id):
     servicio.guardar_doc('eventos', evento_id, {'publicado': config_de(e, fo)}, parcial=True)
 
 
+def _conectar_calendar(db, user):
+    db.session.add(GoogleCalendarToken(user_id=user.id, token_json='{}'))
+    db.session.commit()
+
+
 @pytest.fixture()
-def armado(db):
+def cuentas(db, make_user):
+    """Las cuentas reales de Ana y Beto, con su Google Calendar conectado (sin eso no son elegibles)."""
+    ana = make_user(role='closer', username='ana', email='ana@equipo.com')
+    beto = make_user(role='closer', username='beto', email='beto@equipo.com')
+    for u in (ana, beto):
+        _conectar_calendar(db, u)
+    return {'ana': ana, 'beto': beto}
+
+
+@pytest.fixture()
+def armado(db, cuentas):
     g = servicio.guardar_doc
     g('roles', 'rc', {'nombre': 'Closer', 'atiende': True})
     g(
@@ -51,7 +67,18 @@ def armado(db):
             'orden': 1,
         },
     )
-    g('personas', 'beto', {'nombre': 'Beto Ruiz', 'rol': 'rc', 'tz': 'America/La_Paz', 'horario': LV9a12, 'orden': 2})
+    g(
+        'personas',
+        'beto',
+        {
+            'nombre': 'Beto Ruiz',
+            'email': 'beto@equipo.com',
+            'rol': 'rc',
+            'tz': 'America/La_Paz',
+            'horario': LV9a12,
+            'orden': 2,
+        },
+    )
     g('personas', 'juan', {'nombre': 'Juan Setter', 'rol': 'setter'})
     g('grupos', 'top', {'nombre': 'Ultra', 'estrategia': 'llenar', 'miembros': ['ana', 'beto'], 'orden': 1})
     g(
@@ -178,7 +205,9 @@ def test_dos_leads_a_la_vez_el_bloqueo_frena_al_segundo(client, armado, monkeypa
     """Simula la carrera: el segundo calcula su asignacion antes de que exista la primera reserva."""
     assert _reservar(client).status_code == 201
     monkeypatch.setattr(
-        servicio, '_ocupacion', lambda ahora: {'ahora': ahora, 'ocupado': lambda *a: False, 'carga_de': lambda pid: 0}
+        servicio,
+        '_ocupacion',
+        lambda ahora, elegibles=None: {'ahora': ahora, 'ocupado': lambda *a: False, 'carga_de': lambda pid: 0},
     )
     r = _reservar(client, **{'c-email': 'otro@correo.com'})
     assert r.status_code == 409
@@ -216,3 +245,62 @@ def test_no_toca_la_operacion(client, armado):
 
     _reservar(client)
     assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0
+
+
+# --- Etapa 1: disponibilidad real -----------------------------------------------------------------
+
+
+def _agenda_de_operacion(db, user, inicio, **campos):
+    cliente = Client(full_name='Cliente viejo', email=f'viejo{Client.query.count()}@x.com')
+    db.session.add(cliente)
+    db.session.commit()
+    db.session.add(Appointment(closer_id=user.id, client_id=cliente.id, start_time=inicio, **campos))
+    db.session.commit()
+
+
+def _horarios(client):
+    return client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+
+
+LUNES_9_MS = calendar.timegm((2026, 10, 5, 13, 0, 0)) * 1000
+LUNES_10_MS = calendar.timegm((2026, 10, 5, 14, 0, 0)) * 1000
+
+
+def test_una_agenda_de_la_operacion_ocupa_60_minutos(client, armado, cuentas, db):
+    # Ana tiene una agenda de Calendly el lunes a las 09:00 (La Paz): con "llenar en orden" el lead
+    # sigue viendo solo a Ana, pero sin las 09:00. Las 10:00 siguen libres (60 min, no mas).
+    _agenda_de_operacion(db, cuentas['ana'], datetime(2026, 10, 5, 13))
+    slots = _horarios(client)
+    assert LUNES_9_MS not in slots and LUNES_10_MS in slots
+    r = _reservar(client)
+    assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
+
+
+def test_las_agendas_canceladas_o_procesadas_no_ocupan(client, armado, cuentas, db):
+    _agenda_de_operacion(db, cuentas['ana'], datetime(2026, 10, 5, 13), result='Cancelada')
+    _agenda_de_operacion(db, cuentas['ana'], datetime(2026, 10, 5, 13), result='Reprogramada')
+    _agenda_de_operacion(db, cuentas['ana'], datetime(2026, 10, 5, 13), closer_processed=True)
+    assert LUNES_9_MS in _horarios(client)
+    assert _reservar(client).status_code == 201
+
+
+def test_sin_calendar_conectado_un_closer_no_recibe_agendas(client, armado, cuentas, db):
+    GoogleCalendarToken.query.filter_by(user_id=cuentas['ana'].id).delete()
+    db.session.commit()
+    r = _reservar(client)
+    assert r.status_code == 201
+    assert SchedReserva.query.one().closer_id == 'beto'  # Ana se saltea; Beto, de la misma prioridad
+
+
+def test_una_persona_sin_usuario_real_no_recibe_agendas(client, armado, cuentas, db):
+    cuentas['ana'].is_active = False
+    cuentas['beto'].is_active = False
+    db.session.commit()
+    assert _horarios(client) == []
+    assert _reservar(client).status_code == 409
+
+
+def test_si_ninguno_tiene_calendar_no_hay_horarios(client, armado, db):
+    GoogleCalendarToken.query.delete()
+    db.session.commit()
+    assert _horarios(client) == []

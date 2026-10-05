@@ -34,7 +34,7 @@ Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 40
 |---|---|---|---|
 | GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version}`. `reservas`: las que empiezan o se crearon en los últimos 35 días y todas las futuras, en el formato de `adaptadorLocal` (`inicio_ms`, `fin_ms`, `estado` y los campos del contrato) |
 | GET | `/version` | — | `{version}` (el frontend lo consulta cada 15 s para traer cambios de otros) |
-| GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz}]}`: closers y setters activos de la app. Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
+| GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz, calendar}]}`: closers y setters activos de la app. Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
 | PUT | `/<col>/<id>` | documento completo (sin `id`) | `{doc, version}`. Crea o reemplaza |
 | PATCH | `/<col>/<id>` | campos sueltos | `{doc, version}`. Mezcla con lo guardado y normaliza; 404 si no existe |
 | DELETE | `/<col>/<id>` | — | `{ok, version}` |
@@ -54,13 +54,15 @@ Sin sesión. Solo trabaja con la **versión publicada** de un evento activo cuyo
 | POST | `/eventos/<evento_id>/horarios` | `{resp, tz}` | `{slots: [ms...]}`: inicios libres para esas respuestas, calculados en el servidor sin decir de qué closer es cada uno |
 | POST | `/reservas` | `{evento_id, resp, pais, tz, inicio (ISO o null), origen}` | 201 `{reserva: {id, inicio, fin, duracion}}`. Descalificado: 201 `{descalificada: true}`. Horario ocupado: 409 `{code: 'ocupado'}`. Datos inválidos: 400 `{code: 'invalido', errores}` |
 
+**Disponibilidad real.** Los horarios y la reserva usan solo closers **elegibles**: la persona de Team tiene el email de un usuario activo de la app y ese usuario conectó su Google Calendar (`google_calendar_tokens`). Al resto se lo trata como sin horario, así que la prioridad desborda a la siguiente. A cada closer elegible se le resta lo que ya tiene ocupado: las reservas de Agendas 2.0 y sus agendas de la operación (`appointments` sin procesar, ni `Cancelada` ni `Reprogramada`), que bloquean 60 minutos cada una porque esa tabla no guarda duración. Google Calendar no se lee para la disponibilidad.
+
 En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente:
 
 1. Valida cada respuesta con `validar_respuesta`, sobre las preguntas de la versión publicada.
 2. Si alguna opción descalifica, guarda la agenda como `descalificada`, sin horario.
 3. Si no, recalcula la asignación con las reservas reales y busca el horario pedido.
 4. Toma el closer de ese horario y bloquea su fila (`SELECT … FOR UPDATE`).
-5. Vuelve a comprobar que el closer no tenga otra reserva en ese rato.
+5. Vuelve a comprobar que el closer no tenga otra reserva ni otra agenda de la operación en ese rato.
 6. Inserta la reserva.
 
 Si el mismo lead (mismo email y evento) manda dos veces el mismo horario, se devuelve la reserva que ya existe.

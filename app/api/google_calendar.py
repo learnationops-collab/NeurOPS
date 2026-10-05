@@ -72,6 +72,9 @@ def callback():
         # Use stored origin as primary source, fallback to env var or localhost
         frontend_url = session.get('frontend_origin') or os.environ.get('FRONTEND_URL', 'http://localhost:5173')
         
+        # El closer conecta su calendario desde «Configuración» de su mazo y vuelve ahí.
+        if current_user.role == 'closer':
+            return redirect(f"{frontend_url}/closer/deck?vista=configuracion&google_connected=success")
         target_path = '/admin/settings' if current_user.role == 'admin' else '/closer/settings'
         return redirect(f"{frontend_url}{target_path}?google_connected=success")
     else:

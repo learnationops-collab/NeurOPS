@@ -9,7 +9,7 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil,
     Compass, Sparkles, DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost
+    CalendarPlus, Gift, Hourglass, Ghost, Settings
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,6 +30,7 @@ import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
+import ConfiguracionCloser from './components/ConfiguracionCloser';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -138,8 +139,19 @@ const CloserWorkflowPage = () => {
         return () => clearInterval(id);
     }, []);
 
-    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día)
-    const [activeView, setActiveView] = useState('inbox');
+    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día). `?vista=configuracion` abre
+    // Configuración: es a donde vuelve Google después de conectar el calendario.
+    const [activeView, setActiveView] = useState(() => (searchParams.get('vista') === 'configuracion' ? 'configuracion' : 'inbox'));
+    // Google Calendar conectado (null mientras no se sabe): sin él, el closer no recibe agendas del
+    // sistema nuevo, así que «Configuración» lleva un aviso en el dock hasta que lo conecte.
+    const [calendarConectado, setCalendarConectado] = useState(null);
+    useEffect(() => {
+        let vivo = true;
+        api.get('/google/calendars', { skipBugReport: true })
+            .then(res => { if (vivo) setCalendarConectado(!!res.data?.connected); })
+            .catch(() => {});
+        return () => { vivo = false; };
+    }, [activeView]);
     // Pestaña temporal "Auditoría" — solo visible mientras Operaciones la tenga activada
     // (ver LeadsAuditTogglePanel.jsx y GET /closer/leads-audit/status).
     const [auditEnabled, setAuditEnabled] = useState(false);
@@ -1408,6 +1420,8 @@ const CloserWorkflowPage = () => {
         { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
         // Temporal: solo mientras Operaciones la tenga activada (GET /closer/leads-audit/status).
         ...(auditEnabled ? [{ id: 'auditoria', label: 'Auditoría', Icono: FileSearch }] : []),
+        { id: 'configuracion', label: 'Configuración', Icono: Settings, marcas: calendarConectado === false
+            ? [{ tipo: 'aviso', texto: '', titulo: 'Google Calendar sin conectar' }] : [] },
     ];
     const seccionDelDock = activeView === 'inbox' ? activeStep : activeView;
 
@@ -2300,6 +2314,8 @@ const CloserWorkflowPage = () => {
                 </div>
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
+                ) : activeView === 'configuracion' ? (
+                    <ConfiguracionCloser />
                 ) : activeView === 'cartera' ? (
                     /* "Mi cartera" es la seccion Revisar del director comercial, acotada a este
                        closer POR EL BACKEND (ver `alcance_de` en app/api/comercial.py): sus

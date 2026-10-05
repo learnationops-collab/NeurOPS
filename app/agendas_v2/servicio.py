@@ -7,7 +7,7 @@ insertar, se bloquea la fila del closer y se comprueba que siga libre.
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil, SchedPersona, SchedReserva
@@ -22,6 +22,8 @@ from app.agendas_v2.nucleo.reserva import armar_reserva
 from app.agendas_v2.nucleo.util import slugify, uid
 
 DIA_MS = 86400000
+# Las agendas de la operacion (Appointment) no guardan duracion: cada una bloquea 60 minutos.
+DURACION_AGENDA_OPERACION_MIN = 60
 # Reservas que viajan al panel: las futuras y las de los ultimos 35 dias (Available, KPIs, ocupacion).
 VENTANA_ESTADO_DIAS = 35
 LARGO_MAX_TEXTO = {'texto': 300, 'parrafo': 2000, 'email': 120, 'telefono': 40, 'instagram': 30}
@@ -90,12 +92,21 @@ def _email_de_cuenta(email):
 
 
 def usuarios_del_equipo(roles):
-    """Usuarios activos de la app con esos roles: {id, nombre, email, rol, tz}. Para sumarlos a Team."""
+    """Usuarios activos de la app con esos roles: {id, nombre, email, rol, tz, calendar}. Para sumarlos
+    a Team. `calendar`: si conecto su Google Calendar (sin eso un closer no recibe agendas)."""
     from app.models.user import User
 
     filas = User.query.filter(User.role.in_(roles), User.is_active.is_(True)).order_by(User.username).all()
+    con_calendar = _con_calendar({u.id for u in filas})
     return [
-        {'id': u.id, 'nombre': u.username or '', 'email': (u.email or '').lower(), 'rol': u.role, 'tz': u.timezone or TZ_DEF}
+        {
+            'id': u.id,
+            'nombre': u.username or '',
+            'email': (u.email or '').lower(),
+            'rol': u.role,
+            'tz': u.timezone or TZ_DEF,
+            'calendar': u.id in con_calendar,
+        }
         for u in filas
     ]
 
@@ -193,20 +204,85 @@ def reservas_para_estado(ahora=None):
     return [reserva_a_dict(r) for r in filas]
 
 
-def _ocupacion(ahora):
-    """Reservas vigentes de todos los closers, en el formato que espera el nucleo."""
+def _usuarios_de_personas(d):
+    """{persona_id: user_id} de las personas de Team cuyo email es el de un usuario ACTIVO de la app.
+    Se resuelve en cada pedido (no con sched_personas.user_id) para que una cuenta nueva cuente ya."""
+    from app.models.user import User
+
+    por_email = {}
+    for p in d['personas']:
+        if p.get('email'):
+            por_email.setdefault(p['email'].lower(), []).append(p['id'])
+    if not por_email:
+        return {}
+    usuarios = User.query.filter(db.func.lower(User.email).in_(list(por_email)), User.is_active.is_(True)).all()
+    return {pid: u.id for u in usuarios for pid in por_email.get((u.email or '').lower(), [])}
+
+
+def _con_calendar(user_ids):
+    from app.models.user import GoogleCalendarToken
+
+    if not user_ids:
+        return set()
+    filas = GoogleCalendarToken.query.filter(GoogleCalendarToken.user_id.in_(list(user_ids))).all()
+    return {t.user_id for t in filas}
+
+
+def solo_elegibles(d):
+    """Copia de `d` donde una persona sin usuario activo o sin Google Calendar conectado no tiene
+    horario: no se le ofrece nada y el nucleo la saltea (y desborda) como a un closer sin horas.
+    Devuelve (d, {persona_id: user_id} de las elegibles)."""
+    usuarios = _usuarios_de_personas(d)
+    con_calendar = _con_calendar(set(usuarios.values()))
+    elegibles = {pid: user_id for pid, user_id in usuarios.items() if user_id in con_calendar}
+    personas = [p if p['id'] in elegibles else {**p, 'horario': {}} for p in d['personas']]
+    return {**d, 'personas': personas}, elegibles
+
+
+def _agendas_de_operacion(elegibles, desde):
+    """Agendas vigentes de la operacion (Appointment) de esos closers, como reservas del nucleo.
+    Vigente = la misma regla que BookingService: sin procesar y no cancelada ni reprogramada."""
+    from app.models.booking import Appointment
+
+    if not elegibles:
+        return []
+    persona_de = {}
+    for pid, user_id in elegibles.items():
+        persona_de.setdefault(user_id, []).append(pid)
+    filas = Appointment.query.filter(
+        Appointment.closer_id.in_(list(persona_de)),
+        Appointment.start_time.isnot(None),
+        Appointment.start_time >= desde - timedelta(minutes=DURACION_AGENDA_OPERACION_MIN),
+        Appointment.closer_processed.is_(False),
+        db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada'])),
+    ).all()
+    dur = DURACION_AGENDA_OPERACION_MIN * 60000
+    return [
+        {
+            'estado': 'agendada',
+            'closer_id': pid,
+            'inicio_ms': dt_a_ms(a.start_time),
+            'fin_ms': dt_a_ms(a.start_time) + dur,
+        }
+        for a in filas
+        for pid in persona_de[a.closer_id]
+    ]
+
+
+def _ocupacion(ahora, elegibles=None):
+    """Lo que tiene ocupado cada closer: las reservas de Agendas 2.0 y sus agendas ya planificadas
+    en la operacion (Appointment), en el formato que espera el nucleo."""
+    desde = ms_a_dt(ahora - DIA_MS)
     filas = SchedReserva.query.filter(
         SchedReserva.estado == 'agendada',
         SchedReserva.closer_id.isnot(None),
-        SchedReserva.fin >= ms_a_dt(ahora - DIA_MS),
+        SchedReserva.fin >= desde,
     ).all()
-    return opciones_de_ocupacion(
-        [
-            {'estado': r.estado, 'closer_id': r.closer_id, 'inicio_ms': dt_a_ms(r.inicio), 'fin_ms': dt_a_ms(r.fin)}
-            for r in filas
-        ],
-        ahora,
-    )
+    reservas = [
+        {'estado': r.estado, 'closer_id': r.closer_id, 'inicio_ms': dt_a_ms(r.inicio), 'fin_ms': dt_a_ms(r.fin)}
+        for r in filas
+    ]
+    return opciones_de_ocupacion(reservas + _agendas_de_operacion(elegibles or {}, desde), ahora)
 
 
 def cancelar_reserva(reserva_id):
@@ -309,7 +385,8 @@ def horarios(d, evento, form, resp, ahora=None):
     limpias, _, descalifica = _limpiar_respuestas(preguntas_flujo(form), resp)
     if descalifica:
         return []
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora), 'prueba': False})
+    d, elegibles = solo_elegibles(d)
+    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     return sorted({s['t'] for s in asig['slots']})
 
 
@@ -359,7 +436,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         if previa:  # el mismo lead mando dos veces el mismo horario
             return reserva_a_dict(previa), False
 
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora), 'prueba': False})
+    d, elegibles = solo_elegibles(d)
+    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
     if not slot or not slot['p']:
         raise ReservaRechazadaError('ocupado')
@@ -373,12 +451,31 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         SchedReserva.inicio < ms_a_dt(fin),
         SchedReserva.fin > ms_a_dt(inicio),
     ).first()
-    if choque:
+    if choque or _choca_con_la_operacion(elegibles.get(slot['p']), inicio, fin):
         db.session.rollback()
         raise ReservaRechazadaError('ocupado')
 
     payload = armar_reserva(**base, asig=asig, slot=slot)
     return _insertar(payload, 'agendada', (inicio, fin)), True
+
+
+def _choca_con_la_operacion(user_id, inicio, fin):
+    """Si el closer ya tiene en la operacion una agenda que se cruza con [inicio, fin)."""
+    from app.models.booking import Appointment
+
+    if not user_id:
+        return False
+    dur = timedelta(minutes=DURACION_AGENDA_OPERACION_MIN)
+    return (
+        Appointment.query.filter(
+            Appointment.closer_id == user_id,
+            Appointment.start_time < ms_a_dt(fin),
+            Appointment.start_time > ms_a_dt(inicio) - dur,
+            Appointment.closer_processed.is_(False),
+            db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada'])),
+        ).first()
+        is not None
+    )
 
 
 def _insertar(payload, estado, rango):

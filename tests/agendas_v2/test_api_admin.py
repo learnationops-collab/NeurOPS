@@ -152,7 +152,17 @@ def test_usuarios_lista_closers_y_setters_activos(client, gente, dir_h, make_use
     usuarios = r.get_json()['usuarios']
     assert {u['rol'] for u in usuarios} == {'closer', 'setter'}
     assert 'baja@neuro.com' not in {u['email'] for u in usuarios}
-    assert {'id', 'nombre', 'email', 'rol', 'tz'} <= set(usuarios[0])
+    assert {'id', 'nombre', 'email', 'rol', 'tz', 'calendar'} <= set(usuarios[0])
+    assert not any(u['calendar'] for u in usuarios)
+
+
+def test_usuarios_dice_quien_conecto_su_calendar(client, gente, dir_h, db):
+    from app.models import GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    db.session.commit()
+    usuarios = client.get('/api/agendas-v2/usuarios', headers=dir_h).get_json()['usuarios']
+    assert {u['email']: u['calendar'] for u in usuarios}['ana@neuro.com'] is True
 
 
 def test_usuarios_es_solo_para_la_direccion(client, gente, auth_headers):
