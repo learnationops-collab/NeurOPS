@@ -443,6 +443,8 @@ class CloserDashboardService:
             },
             'kpis': {
                 'cash_collected': round(cash, 2),
+                # Lo cobrado menos las fees de la pasarela: es la cifra que se muestra en grande.
+                'cash_neto': round(sales['totals'].get('cash_neto', 0) or 0, 2),
                 'ventas': ventas,
                 'ticket_promedio': sales['general_average_ticket'],
                 'close_rate_llamada': pct['close_rate'],
@@ -648,6 +650,7 @@ class CloserDashboardService:
                 'closer_id': c.id,
                 'name': c.username,
                 'cash_collected': c_block['kpis']['cash_collected'],
+                'cash_neto': c_block['kpis']['cash_neto'],
                 'ventas': c_block['kpis']['ventas'],
                 'show_rate': c_block['rings']['show_rate'],
                 'close_rate_presentacion': c_block['rings']['close_presentacion'],
@@ -661,7 +664,7 @@ class CloserDashboardService:
                 'presentaciones': c_block['funnel']['values'][4],
                 'reportes_faltantes': (c_coverage or {}).get('faltantes', 0)
             })
-        ranking.sort(key=lambda r: r['cash_collected'], reverse=True)
+        ranking.sort(key=lambda r: (r['cash_neto'], r['cash_collected']), reverse=True)
 
         return {
             'dates': {'start': start.isoformat(), 'end': end.isoformat(),

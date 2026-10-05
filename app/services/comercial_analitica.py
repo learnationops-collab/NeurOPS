@@ -25,7 +25,7 @@ from app.services.commission_service import CLOSER_RATE
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
 DELTAS = {
-    ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'cash': 'pct', 'ventas': 'pct',
+    ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'cash': 'pct', 'cash_neto': 'pct', 'ventas': 'pct',
                   'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
     ROL_SETTERS: {'leads': 'pct', 'respuesta': 'pts', 'cualificacion': 'pts', 'agendas': 'pct',
                   'conversion': 'pts', 'generadas': 'pct', 'mensajes': 'pct'},
