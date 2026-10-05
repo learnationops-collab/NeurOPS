@@ -518,11 +518,14 @@ const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
 /** Payment types: la barra apilada arriba y una tarjeta por forma de pago. */
 const PanelPagos = ({ bloque, irA }) => {
     const montado = useMontado();
-    const total = bloque.payment_types.reduce((a, t) => a + t.cash, 0);
-    const cobros = bloque.payment_types.reduce((a, t) => a + t.ventas, 0);
+    // Los tipos en cero no se dibujan. El color sigue al tipo (su posición en el vocabulario), no
+    // a su lugar en la lista visible: así Renovación no cambia de color según qué otro falte.
+    const tipos = bloque.payment_types.map((t, i) => ({ ...t, i })).filter(t => t.cash > 0 || t.ventas > 0);
+    const total = tipos.reduce((a, t) => a + t.cash, 0);
+    const cobros = tipos.reduce((a, t) => a + t.ventas, 0);
     // El `gap` de 2px entre segmentos se descuenta del ancho de cada uno, o la barra se pasa del
     // 100% y el último tramo queda cortado.
-    const gapPer = ((bloque.payment_types.length - 1) * 2) / bloque.payment_types.length;
+    const gapPer = ((tipos.length - 1) * 2) / tipos.length;
     return (
         <Panel cab={
             <PanelCab titulo="Payment types"
@@ -535,26 +538,26 @@ const PanelPagos = ({ bloque, irA }) => {
             {total === 0 ? <Vacio texto="Sin cobros en el período." /> : (
                 <>
                     <div className="segmentada">
-                        {bloque.payment_types.map((t, i) => {
+                        {tipos.map((t, k) => {
                             const w = (t.cash / total) * 100;
                             if (w <= 0) return null;
                             return (
                                 <span key={t.key} title={`${t.label} · ${fmt.money(t.cash)}`}
                                     style={{
                                         width: montado ? `calc(${w}% - ${gapPer.toFixed(2)}px)` : 0,
-                                        background: v(CAT[i]),
-                                        transitionDelay: `${i * 90}ms`,
+                                        background: v(CAT[t.i]),
+                                        transitionDelay: `${k * 90}ms`,
                                     }} />
                             );
                         })}
                     </div>
-                    <div className="grid-pagos" style={{ marginTop: 'var(--s4)' }}>
-                        {bloque.payment_types.map((t, i) => (
+                    <div className="grid-pagos" data-n={tipos.length} style={{ marginTop: 'var(--s4)' }}>
+                        {tipos.map((t, k) => (
                             <button key={t.key} type="button" className="ficha"
-                                style={{ '--c': v(CAT[i]) }}
+                                style={{ '--c': v(CAT[t.i]) }}
                                 onClick={() => irA('ventas', { tipo_pago: t.label, __de: `Payment types: ${t.label}` })}>
                                 <span className="fila" style={{ gap: 7 }}>
-                                    <span className="dato-punto" style={{ background: v(CAT[i]) }} />
+                                    <span className="dato-punto" style={{ background: v(CAT[t.i]) }} />
                                     <span className="ficha-lbl trunc" style={{ color: v('text-on-surface') }}>
                                         {t.label}
                                     </span>
@@ -563,8 +566,8 @@ const PanelPagos = ({ bloque, irA }) => {
                                 <span className="t-cap mut40 num">
                                     {fmt.pct(tasa(t.cash, total))} · {fmt.plural(t.ventas, 'cobro', 'cobros')}
                                 </span>
-                                <Riel pct={(t.cash / total) * 100} color={v(CAT[i])} fino
-                                    delay={150 + i * 90} />
+                                <Riel pct={(t.cash / total) * 100} color={v(CAT[t.i])} fino
+                                    delay={150 + k * 90} />
                             </button>
                         ))}
                     </div>
@@ -580,7 +583,8 @@ const PanelPagos = ({ bloque, irA }) => {
  */
 const PanelProgramas = ({ bloque, irA }) => {
     const [vista, setVista] = useState('tabla');
-    const cols = bloque.payment_types;
+    const cols = bloque.payment_types.map((t, i) => ({ ...t, i }))
+        .filter(t => t.cash > 0 || t.ventas > 0 || bloque.programas.some(p => p.por_tipo.some(x => x.key === t.key)));
     const totales = cols.map(c => bloque.programas.reduce((a, p) => {
         const seg = p.por_tipo.find(t => t.key === c.key);
         return [a[0] + (seg ? seg.ventas : 0), a[1] + (seg ? seg.cash : 0)];
@@ -605,9 +609,9 @@ const PanelProgramas = ({ bloque, irA }) => {
                 <div className="tdatos tdatos--pagos" style={{ '--n': cols.length }}>
                     <div className="tdatos-cab">
                         <span>Programa</span>
-                        {cols.map((c, i) => (
+                        {cols.map(c => (
                             <span key={c.key}>
-                                <i className="cab-punto" style={{ background: v(CAT[i]) }} />{c.label}
+                                <i className="cab-punto" style={{ background: v(CAT[c.i]) }} />{c.label}
                             </span>
                         ))}
                     </div>

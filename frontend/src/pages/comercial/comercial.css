@@ -256,8 +256,18 @@
 .dc-shell .grid{display:grid;gap:var(--s4);grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
 .dc-shell .grid-sm{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));
   --min:150px;--g:var(--s3)}
-.dc-shell .grid-pagos{display:grid;gap:var(--s3);grid-template-columns:repeat(3,minmax(0,1fr))}
-@media (max-width:560px){.dc-shell .grid-pagos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dc-shell .grid-pagos{display:grid;gap:var(--s3);grid-template-columns:repeat(var(--cols,3),minmax(0,1fr))}
+/* Filas siempre parejas: 1-4 tarjetas en una fila, 5 en una fila, 6 en 3+3. */
+.dc-shell .grid-pagos[data-n="1"]{--cols:1}
+.dc-shell .grid-pagos[data-n="2"]{--cols:2}
+.dc-shell .grid-pagos[data-n="3"]{--cols:3}
+.dc-shell .grid-pagos[data-n="4"]{--cols:4}
+.dc-shell .grid-pagos[data-n="5"]{--cols:5}
+.dc-shell .grid-pagos[data-n="6"]{--cols:3}
+@media (max-width:900px){
+  .dc-shell .grid-pagos[data-n="4"],.dc-shell .grid-pagos[data-n="6"]{--cols:2}
+  .dc-shell .grid-pagos[data-n="3"],.dc-shell .grid-pagos[data-n="5"]{--cols:1}
+}
 .dc-shell .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:1000px){.dc-shell .grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.dc-shell .grid--4{grid-template-columns:minmax(0,1fr)}}
