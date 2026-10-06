@@ -94,6 +94,10 @@ def reservar():
     except servicio.ReservaRechazadaError as e:
         if e.code == 'ocupado':
             return jsonify({'code': 'ocupado', 'message': 'Ese horario se acaba de ocupar.'}), 409
+        if e.code == 'ya_tiene':
+            # Solo el horario (nunca el closer): el lead decide si la cambia o suma otra sesión.
+            inicio = servicio.ms_a_dt(e.errores['inicio']).isoformat(timespec='milliseconds') + 'Z'
+            return jsonify({'code': 'ya_tiene', 'agenda': {'inicio': inicio}}), 409
         return jsonify({'code': 'invalido', 'errores': e.errores}), 400
     if r.get('descalificada'):
         return jsonify({'descalificada': True}), 201

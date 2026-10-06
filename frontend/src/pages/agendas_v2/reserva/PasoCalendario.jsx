@@ -28,7 +28,8 @@ function claveHoy(tz) { return claveDia(Date.now(), tz); }
 
 /**
  * acc: {alternarZona, elegirTz, cambiarMes, elegirDia, elegirHora, confirmar}
- * envio: {enviando, error} solo en el link público.
+ * envio: {enviando, error, yaTiene} solo en el link público. yaTiene: {inicio, hora} cuando el lead ya
+ * tiene otra agenda próxima: se le pregunta si la cambia a este horario o suma una sesión.
  * asig null: los horarios todavía no llegaron (buscando) o no se pudieron traer (errorHorarios, con
  * acc.reintentarHorarios). Con asig y buscando, se siguen mostrando los anteriores hasta que lleguen los nuevos.
  */
@@ -138,7 +139,22 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija
             {envio && envio.error && (
                 <p key={envio.n} className="rv-err rv-sacude" role="alert"><Icono n="alerta" s={16} /><span>{envio.error}</span></p>
             )}
-            {hora != null && (
+            {envio && envio.yaTiene && envio.yaTiene.hora === hora ? (
+                <div className="rv-yatiene" role="alertdialog" aria-labelledby={ids + '-yatiene'}>
+                    <p id={ids + '-yatiene'}>
+                        Vemos que ya tenés una sesión agendada para el <b>{fechaTs(envio.yaTiene.inicio, tz)}</b> a las {horaTxt(envio.yaTiene.inicio, tz)}.
+                        ¿Querías cambiarla a este nuevo horario o te gustaría tener una sesión adicional?
+                    </p>
+                    <div className="rv-acc">
+                        <button type="button" className="rv-seguir" data-rv="confirmar" disabled={!!envio.enviando} onClick={() => acc.confirmar(hora, 'reprogramar')}>
+                            Cambiar la fecha<Icono n="check" s={18} />
+                        </button>
+                        <button type="button" className="rv-link" disabled={!!envio.enviando} onClick={() => acc.confirmar(hora, 'adicional')}>
+                            Quiero una sesión adicional
+                        </button>
+                    </div>
+                </div>
+            ) : hora != null && (
                 <div className="rv-acc">
                     <button type="button" className="rv-seguir" data-rv="confirmar" disabled={!!(envio && envio.enviando)} aria-busy={envio && envio.enviando ? true : undefined}
                         onClick={() => acc.confirmar(hora)}>

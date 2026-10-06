@@ -121,6 +121,29 @@ describe('PantallaLead con la API', () => {
         expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu llamada quedó agendada.' })).toBeInTheDocument();
     });
 
+    it('si ya tiene otra agenda le pregunta y repite el pedido con lo que eligió', async () => {
+        api.post.mockImplementation((url, cuerpo) => {
+            if (esHorarios(url)) return Promise.resolve({ data: { slots: [H10] } });
+            if (!cuerpo.si_ya_tiene) return Promise.reject(errHttp(409, { code: 'ya_tiene', agenda: { inicio: new Date(H9).toISOString() } }));
+            return Promise.resolve({ data: { reserva: { id: 'r2', inicio: new Date(H10).toISOString(), duracion: 45 } } });
+        });
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
+        responderContacto(container);
+        await act(async () => { elegir('Lo necesario'); });
+        fireEvent.click(container.querySelector('.rv-hora'));
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
+
+        // No se agendó nada: le muestra la que ya tiene (09:00 en La Paz) y le pregunta.
+        expect(screen.getByRole('alertdialog')).toHaveTextContent('ya tenés una sesión agendada para el Lunes, 5 de octubre a las 09:00');
+        expect(screen.queryByRole('heading', { name: /Tu llamada quedó agendada/ })).not.toBeInTheDocument();
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Quiero una sesión adicional' })); });
+        const reservas = llamadasA(u => u === '/agendas-v2/publico/reservas');
+        expect(reservas).toHaveLength(2);
+        expect(reservas[1][1]).toMatchObject({ inicio: new Date(H10).toISOString(), si_ya_tiene: 'adicional' });
+        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu llamada quedó agendada.' })).toBeInTheDocument();
+    });
+
     it('el que no califica se registra una vez, sin horario', async () => {
         api.post.mockResolvedValue({ data: { descalificada: true } });
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);

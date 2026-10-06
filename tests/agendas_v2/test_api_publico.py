@@ -168,18 +168,18 @@ def _resp(**extra):
     return base
 
 
-def _reservar(client, inicio=LUNES_9, **extra):
-    return client.post(
-        URL + '/reservas',
-        json={
-            'evento_id': 'ev',
-            'resp': _resp(**extra),
-            'pais': 'BO',
-            'tz': 'America/La_Paz',
-            'inicio': inicio,
-            'origen': 'juan-setter',
-        },
-    )
+def _reservar(client, inicio=LUNES_9, si_ya_tiene=None, **extra):
+    cuerpo = {
+        'evento_id': 'ev',
+        'resp': _resp(**extra),
+        'pais': 'BO',
+        'tz': 'America/La_Paz',
+        'inicio': inicio,
+        'origen': 'juan-setter',
+    }
+    if si_ya_tiene:
+        cuerpo['si_ya_tiene'] = si_ya_tiene
+    return client.post(URL + '/reservas', json=cuerpo)
 
 
 def test_el_link_devuelve_la_version_publicada_sin_datos_del_equipo(client, armado):
@@ -283,9 +283,20 @@ def test_el_mismo_lead_dos_veces_no_duplica(client, armado, google):
     assert len(google['crear']) == 1
 
 
-def test_si_ya_tiene_una_agenda_futura_se_reprograma(client, armado, cuentas, google):
+def test_si_ya_tiene_una_agenda_futura_se_le_pregunta_antes_de_tocar_nada(client, armado, google):
     assert _reservar(client).status_code == 201
     r = _reservar(client, inicio='2026-10-05T14:00:00.000Z')  # el mismo lead elige otra hora
+    assert r.status_code == 409
+    # Solo el horario de la que ya tiene: nada del closer.
+    assert r.get_json() == {'code': 'ya_tiene', 'agenda': {'inicio': '2026-10-05T13:00:00.000Z'}}
+    appt = Appointment.query.one()
+    assert appt.start_time == datetime(2026, 10, 5, 13) and not appt.is_rescheduled
+    assert len(google['crear']) == 1 and google['borrar'] == []
+
+
+def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google):
+    assert _reservar(client).status_code == 201
+    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
     assert r.status_code == 201
     appt = Appointment.query.one()
     assert str(appt.id) == r.get_json()['reserva']['id']
@@ -298,13 +309,42 @@ def test_si_ya_tiene_una_agenda_futura_se_reprograma(client, armado, cuentas, go
     assert appt.google_event_id == 'evt2'
 
 
+def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(client, armado, cuentas, google):
+    assert _reservar(client).status_code == 201
+    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='adicional')
+    assert r.status_code == 201
+    vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
+    assert vieja.start_time == datetime(2026, 10, 5, 13) and not vieja.is_rescheduled
+    assert nueva.start_time == datetime(2026, 10, 5, 14) and str(nueva.id) == r.get_json()['reserva']['id']
+    assert nueva.agenda_payload['sesion_adicional_de']['agenda_id'] == vieja.id
+    # Cada una con su fila en el registro de agendas y su evento en el Calendar; nada se borra.
+    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 14)]
+    assert len(google['crear']) == 2 and google['borrar'] == []
+    aviso = Notification.query.filter_by(subject='Sesión adicional: revisá la agenda anterior').one()
+    assert aviso.associated_id == nueva.id and vieja.closer_id in aviso.target_users
+
+
+def test_un_lead_que_vuelve_tiene_su_propia_fila_y_no_pisa_la_vieja(client, armado, db):
+    # Agendó hace un mes por n8n e hizo no-show: esa fila no se toca, la nueva tiene la suya.
+    lucia = Client(full_name='Lucía Fernández', email='lucia@correo.com')
+    db.session.add(lucia)
+    db.session.add(FinancialAgenda(nombre='workshop', lead='Lucía Fernández', closer='beto', mail='lucia@correo.com',
+                                   estado='No Show', date=datetime(2026, 9, 1, 15), created_at=datetime(2026, 8, 30)))
+    db.session.commit()
+    assert _reservar(client).status_code == 201
+    vieja, nueva = FinancialAgenda.query.order_by(FinancialAgenda.date).all()
+    assert (vieja.nombre, vieja.closer, vieja.estado, vieja.date) == ('workshop', 'beto', 'No Show', datetime(2026, 9, 1, 15))
+    assert nueva.date == datetime(2026, 10, 5, 13) and nueva.closer == 'ana' and nueva.estado == 'Pendiente'
+
+
 def test_una_agenda_de_n8n_futura_tambien_se_reprograma(client, armado, cuentas, db):
     lucia = Client(full_name='Lucía Fernández', email='lucia@correo.com')
     db.session.add(lucia)
     db.session.commit()
     db.session.add(Appointment(closer_id=cuentas['beto'].id, client_id=lucia.id, start_time=datetime(2026, 10, 6, 15)))
     db.session.commit()
-    assert _reservar(client).status_code == 201
+    assert _reservar(client).status_code == 409
+    assert _reservar(client, si_ya_tiene='reprogramar').status_code == 201
     appt = Appointment.query.one()
     assert appt.start_time == datetime(2026, 10, 5, 13) and appt.closer_id == cuentas['ana'].id
 
@@ -467,7 +507,7 @@ def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, ar
     _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
     assert discord == []
     _reservar(client)
-    _reservar(client, inicio='2026-10-05T14:00:00.000Z')
+    _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
     titulos = [m['json']['embeds'][0]['title'] for m in discord]
     assert titulos == ['📅 Nueva agenda: Llamada', '🔁 Agenda reprogramada: Llamada']
 

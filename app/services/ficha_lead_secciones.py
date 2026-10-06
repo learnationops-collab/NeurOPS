@@ -148,10 +148,13 @@ def historial(appts, ahora, tiene_venta=False):
 
 # --- Formulario de origen ---------------------------------------------------------------------
 
-def formulario(client):
+def formulario(client, appt=None):
+    """Las respuestas del formulario: las de esa agenda si es de Agendas 2.0, si no las del viejo
+    `form_data` (ver app/services/formulario_lead.py)."""
     from app.api.closer import _form_data_has_useful_answers, _recover_form_data_by_contact
+    from app.services.formulario_lead import form_data_de
 
-    form_data = client.form_data if (client and isinstance(client.form_data, dict)) else {}
+    form_data = form_data_de(client, appt)
     if client and not _form_data_has_useful_answers(form_data):
         # Mismo rescate que hace el modal del mazo: el formulario a veces quedo en otro Client con
         # el mismo contacto. Solo para una ficha puntual (en una lista seria un N+1).

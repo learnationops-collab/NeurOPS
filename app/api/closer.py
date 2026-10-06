@@ -1435,7 +1435,9 @@ def _format_appointment_for_deck(a, recover_form=False):
     # encuesta propia de la página de reserva, otro origen distinto. La pestaña "Formulario" del
     # modal solo leía survey_answers, así que un lead que sí había respondido el formulario de n8n
     # aparecía como si no hubiera respondido nada.
-    form_data = a.client.form_data if (a.client and isinstance(a.client.form_data, dict)) else {}
+    # Una agenda de Agendas 2.0 trae su propio formulario (agenda_payload): ver formulario_lead.py.
+    from app.services.formulario_lead import form_data_de
+    form_data = form_data_de(a.client, a)
     # Si el cliente vinculado a esta cita no tiene respuestas útiles, se intenta recuperar el
     # formulario real desde otro Client con el mismo teléfono/correo/instagram (ver
     # _recover_form_data_by_contact). Solo se activa cuando `recover_form=True` (vista de un lead

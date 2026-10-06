@@ -10,7 +10,7 @@ Como funciona:
 
   1. `before_flush` anota en `session.info` la fecha de cada FinancialAgenda /
      FinancialSale creada, modificada o borrada, la del formulario de cada Client
-     cuyo `form_data` se crea o cambia, y la de cada WorkshopEvent creado o
+     cuyo `form_data` (o `formulario_payload`, Agendas 2.0) se crea o cambia, y la de cada WorkshopEvent creado o
      borrado. Se anota en el flush y no recien en el commit porque el webhook
      de n8n guarda las agendas de a lotes y la consulta anti-duplicados del
      item siguiente ya flushea el anterior: al llegar al commit `session.new`
@@ -52,16 +52,24 @@ _KEY_TALLERES = 'workshop_sync_talleres'    # dias de WorkshopEvent creados/borr
 
 
 def _formulario_tocado(cliente):
-    """True si este flush crea o cambia el `form_data` del cliente (y no lo deja vacio)."""
+    """True si este flush crea o cambia el formulario del cliente (y no lo deja vacio): el viejo
+    `form_data` o el de Agendas 2.0, `formulario_payload`."""
     # El historial va primero porque no emite SQL; leer `form_data` de un cliente expirado si.
-    return inspect(cliente).attrs.form_data.history.has_changes() and bool(cliente.form_data)
+    attrs = inspect(cliente).attrs
+    return ((attrs.form_data.history.has_changes() and bool(cliente.form_data))
+            or (attrs.formulario_payload.history.has_changes() and bool(cliente.formulario_payload)))
 
 
 def _dia_del_formulario(cliente):
     """Dia (UTC) en que se envio el formulario; sin fecha legible, el del alta del cliente."""
-    datos = cliente.form_data if isinstance(cliente.form_data, dict) else {}
+    if inspect(cliente).attrs.formulario_payload.history.has_changes():
+        datos = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
+        fecha = datos.get('enviado')
+    else:
+        datos = cliente.form_data if isinstance(cliente.form_data, dict) else {}
+        fecha = datos.get('submitted_at')
     try:
-        return datetime.fromisoformat(datos.get('submitted_at')).date()
+        return datetime.fromisoformat(fecha).date()
     except (TypeError, ValueError):
         return (cliente.created_at or datetime.utcnow()).date()
 

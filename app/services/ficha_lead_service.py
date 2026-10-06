@@ -427,7 +427,7 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
         'cobro': _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                         baja),
         'historial': secciones.historial(appts, ahora, tiene_venta=bool(ventas)),
-        'formulario': secciones.formulario(client),
+        'formulario': secciones.formulario(client, appt),
         'comunicacion': {'notas': secciones.notas(client, appt), 'equipo': secciones.equipo()},
         'permisos': permisos_de(usuario, appt),
         'vocabulario': voc.vocabulario(),

@@ -197,7 +197,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         return () => document.removeEventListener('click', fn);
     }, [s.paisAbierto, s.zonaAbierta]);
 
-    const limpiarEnvio = () => setEnvio(x => (x.error ? { ...x, error: '' } : x));
+    const limpiarEnvio = () => setEnvio(x => (x.error || x.yaTiene ? { ...x, error: '', yaTiene: null } : x));
 
     const acc = {
         escribir(v) {
@@ -246,16 +246,17 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         elegirDia(k) { limpiarEnvio(); setS(p => conFoco({ ...p, dia: k, hora: null }, '.rv-dia[data-k="' + k + '"]')); },
         elegirHora(t) { limpiarEnvio(); setS(p => conFoco({ ...p, hora: t }, '[data-rv="confirmar"]')); },
         reintentarHorarios() { setS(p => ({ ...p, recalc: p.recalc + 1 })); },
-        confirmar(hora) {
+        // siYaTiene: la respuesta del lead que ya tenía otra agenda ('reprogramar' | 'adicional').
+        confirmar(hora, siYaTiene) {
             const asig = asigViva, slot = asig && asig.slots.find(x => x.t === hora);
             if (!slot) return;
             if (prueba) { setS(p => conFoco({ ...p, listo: true, slot, asigFinal: asig }, 'entra')); return; }
             if (envio.enviando) return;
-            setEnvio(x => ({ ...x, enviando: true, error: '' }));
+            setEnvio(x => ({ ...x, enviando: true, error: '', yaTiene: null }));
             const p = sRef.current;
             let envioP;
             try {
-                envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter });
+                envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter, siYaTiene });
             } catch (e) { envioP = Promise.reject(e); }
             envioP.then(() => {
                 if (!vivoRef.current) return;
@@ -263,7 +264,10 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
                 setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig }, 'entra'));
             }, (e) => {
                 if (!vivoRef.current) return;
-                if (e && e.code === 'ocupado') {
+                if (e && e.code === 'ya_tiene' && e.agenda) {
+                    // No se agendó nada todavía: se le pregunta qué quiere hacer con la que ya tiene.
+                    setEnvio(x => ({ ...x, enviando: false, yaTiene: { inicio: Date.parse(e.agenda.inicio), hora } }));
+                } else if (e && e.code === 'ocupado') {
                     setEnvio(x => ({ enviando: false, error: MSG_OCUPADO, n: x.n + 1 }));
                     setS(q => ({ ...q, hora: null, recalc: q.recalc + 1 }));
                 } else setEnvio(x => ({ enviando: false, error: e && e.code === 'limite' ? MSG_LIMITE : MSG_FALLO, n: x.n + 1 }));

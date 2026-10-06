@@ -1304,6 +1304,9 @@
 .thalamus .rv-err{margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:var(--rv-error-suave);color:var(--rv-error);font-size:14px;font-weight:700}
 .thalamus .rv-err svg{width:16px;height:16px}
 .thalamus .rv-sacude{animation:lnSacudir .4s ease}
+.thalamus .rv-yatiene{margin-top:clamp(24px,3cqi,40px);padding:clamp(16px,2cqi,24px);border-radius:16px;border:1px solid var(--rv-acento-borde);background:var(--rv-acento-suave)}
+.thalamus .rv-yatiene p{margin:0;font-size:clamp(15px,1.3cqi,18px);line-height:1.5}
+.thalamus .rv-yatiene .rv-acc{margin-top:16px}
 .thalamus .rv-acc{margin-top:clamp(24px,3cqi,40px);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .thalamus .rv-seguir{display:inline-flex;align-items:center;gap:14px;height:clamp(52px,4.8cqi,66px);padding:0 clamp(26px,2.5cqi,36px);border-radius:999px;background:var(--rv-acento);color:var(--rv-on-acento);
   font-size:clamp(14px,1.3cqi,18px);font-weight:900;letter-spacing:.2em;text-transform:uppercase;box-shadow:0 14px 34px -12px rgba(255,63,164,.7);transition:transform .18s var(--spring),filter .18s}

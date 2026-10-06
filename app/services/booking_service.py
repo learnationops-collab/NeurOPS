@@ -847,8 +847,13 @@ class BookingService:
         return filters
 
     @staticmethod
-    def sync_appointment_to_financial_agenda(appt):
-        """Sincroniza un Appointment de vuelta a la tabla de FinancialAgenda (BD de agendas financieras)."""
+    def sync_appointment_to_financial_agenda(appt, cita_nueva=False):
+        """Sincroniza un Appointment de vuelta a la tabla de FinancialAgenda (BD de agendas financieras).
+
+        `cita_nueva`: la cita se acaba de reservar (Agendas 2.0), asi que si no tiene fila a su hora
+        se le crea una. Sin esto, un lead que ya habia agendado otra vez caia en el respaldo de
+        "la agenda mas reciente del lead" y la reserva nueva pisaba la fila de la vieja (estado,
+        closer) en vez de tener la suya: una agenda menos en el tablero y en el workshop."""
         from app.models.financial import FinancialAgenda
         from app.models import User
         from sqlalchemy import or_
@@ -857,9 +862,12 @@ class BookingService:
             return None
             
         client = appt.client
-        # Buscar agenda financiera existente (rango de +/- 36 horas para tolerar desfases UTC/local)
-        start_search = appt.start_time - timedelta(hours=36)
-        end_search = appt.start_time + timedelta(hours=36)
+        # Buscar agenda financiera existente (rango de +/- 36 horas para tolerar desfases UTC/local).
+        # Una cita recien reservada solo es "la misma" que una fila a su misma hora: a menos de 36 h
+        # puede haber otra agenda del mismo lead (una sesion adicional) que no hay que mover.
+        margen = timedelta(minutes=5) if cita_nueva else timedelta(hours=36)
+        start_search = appt.start_time - margen
+        end_search = appt.start_time + margen
 
         filters = BookingService.filtros_de_agenda_del_cliente(client)
 
@@ -884,7 +892,7 @@ class BookingService:
             ).first()
             misma_cita = agenda is not None
 
-            if not agenda:
+            if not agenda and not cita_nueva:
                 agenda = (FinancialAgenda.query
                           .filter(vigente, or_(*filters))
                           .order_by(FinancialAgenda.date.desc()).first())

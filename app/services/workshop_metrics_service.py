@@ -104,16 +104,21 @@ def _contar_aplicaciones(desde, hasta, tz):
     # `submitted_at` es texto ISO en UTC (datetime.utcnow().isoformat()): el orden
     # alfabetico es el cronologico, asi que el rango se compara como texto.
     enviado = Client.form_data['submitted_at'].as_string()
+    # Agendas 2.0 guarda el formulario en `formulario_payload` (con `enviado`): cuenta igual.
+    enviado_v2 = Client.formulario_payload['enviado'].as_string()
     clientes = Client.query.filter(
         or_(
             (Client.created_at >= inicio) & (Client.created_at <= fin),
             (enviado >= inicio.isoformat()) & (enviado <= fin.isoformat()),
+            (enviado_v2 >= inicio.isoformat()) & (enviado_v2 <= fin.isoformat()),
         )
     ).all()
 
+    from app.services.formulario_lead import form_data_de
+
     conteo = {'vivo': 0, 'landing': 0}
     for c in clientes:
-        fd = c.form_data or {}
+        fd = form_data_de(c)
         fuente_form = fd.get('fuente_form')
         grupo = _clasificar_fuente(fuente_form, fd.get('fuente'))
         if not grupo and fuente_form and es_sin_dueno(fuente_form):

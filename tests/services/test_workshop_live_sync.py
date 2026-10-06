@@ -217,3 +217,34 @@ def test_un_formulario_que_llega_por_el_endpoint_refresca_el_taller(client, db, 
     evento = leer(db, taller)
     assert evento.aplicaciones_form == 1
     assert evento.synced_at is not None
+
+
+# --- Agendas 2.0: el formulario vive en `formulario_payload` ----------------------------------
+
+def payload_v2(enviado, origen='workshop'):
+    return {'version': 1, 'respuestas': [{'pregunta': '¿Cuánto?', 'respuesta': 'Mucho'}],
+            'lead': {'nombre': 'Persona'}, 'origen': origen, 'enviado': enviado.isoformat()}
+
+
+def test_un_formulario_de_agendas_v2_refresca_el_taller_y_cuenta_como_aplicacion(db):
+    (taller,) = crear_talleres(db, DIA)
+    existente = cliente(db, creado=ANTES)
+    con_centinela(db)
+
+    existente.formulario_payload = payload_v2(DENTRO)
+    db.session.commit()
+
+    evento = leer(db, taller)
+    assert not sin_recalcular(evento)
+    assert evento.aplicaciones_form == 1
+
+
+def test_un_formulario_de_agendas_v2_que_no_es_del_workshop_no_suma(db):
+    (taller,) = crear_talleres(db, DIA)
+    existente = cliente(db, creado=ANTES)
+    con_centinela(db)
+
+    existente.formulario_payload = payload_v2(DENTRO, origen='instagram')
+    db.session.commit()
+
+    assert leer(db, taller).aplicaciones_form == 0

@@ -14,7 +14,8 @@
 //       → {slots: [{t, p}], aviso, …}   (en la API p es null: el servidor no dice de quién es cada horario)
 //   reservar({lead, ctx, evento, form, asig, slot, origen, setter})  → Promise
 //       slot null = lead que no califica (se registra sin horario). Rechaza con code 'ocupado' (otro
-//       tomó el horario), 'limite' (demasiados pedidos) o 'fallo'.
+//       tomó el horario), 'ya_tiene' (el lead ya tiene una agenda próxima, en err.agenda.inicio: se le
+//       pregunta y se repite con siYaTiene 'reprogramar' o 'adicional'), 'limite' o 'fallo'.
 //   cargarEvento(funnelSlug, eventoSlug)   (solo API) → {evento, form, funnel}; rechaza 'no_disponible' o 'fallo'
 
 import api from '../../../services/api';
@@ -43,7 +44,10 @@ function errorPublico(e) {
     const err = new Error((e && e.message) || 'Falló el pedido');
     err.status = st;
     if (e && (e.code === 'ERR_CANCELED' || e.name === 'CanceledError')) err.code = 'cancelado';
-    else if (st === 409) err.code = 'ocupado';
+    else if (st === 409 && e.response.data && e.response.data.code === 'ya_tiene') {
+        err.code = 'ya_tiene';
+        err.agenda = e.response.data.agenda || null;
+    } else if (st === 409) err.code = 'ocupado';
     else if (st === 429) err.code = 'limite';
     else if (st === 404) err.code = 'no_disponible';
     else err.code = 'fallo';
@@ -76,10 +80,11 @@ export function proveedorApi() {
             } catch (e) { throw errorPublico(e); }
         },
 
-        async reservar({ lead, evento, slot, origen }) {
+        async reservar({ lead, evento, slot, origen, siYaTiene }) {
             const cuerpo = {
                 evento_id: evento.id, resp: lead.resp, pais: lead.pais, tz: lead.tz,
                 inicio: slot ? new Date(slot.t).toISOString() : null, origen: origen || '',
+                ...(siYaTiene ? { si_ya_tiene: siYaTiene } : {}),
             };
             try {
                 const { data } = await api.post('/agendas-v2/publico/reservas', cuerpo, OPC);

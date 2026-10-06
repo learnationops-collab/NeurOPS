@@ -487,6 +487,13 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if previa:
         return _respuesta(previa), False
 
+    # Ya tiene otra agenda próxima: antes de tocar nada se le pregunta si quiere cambiarla de fecha o
+    # sumar una sesión. La página repite el pedido con `si_ya_tiene`.
+    decision = cuerpo.get('si_ya_tiene') if cuerpo.get('si_ya_tiene') in ('reprogramar', 'adicional') else None
+    proxima = operacion.proxima_de(cliente.id, ms_a_dt(ahora)) if cliente else None
+    if proxima and not decision:
+        raise ReservaRechazadaError('ya_tiene', {'inicio': dt_a_ms(proxima.start_time)})
+
     d, elegibles = solo_elegibles(d)
     asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
@@ -508,7 +515,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         'closer_user_id': closer.id,
         'setter_user_id': setter.id if setter else None,
     }
-    appt, evento_viejo = operacion.registrar_agenda(payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora))
+    appt, evento_viejo = operacion.registrar_agenda(
+        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision
+    )
     if not appt:
         raise ReservaRechazadaError('ocupado')
     _subir_version()

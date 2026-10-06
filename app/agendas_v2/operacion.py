@@ -71,7 +71,8 @@ def _cliente(payload):
     for campo, valor in nuevo.items():
         if valor and getattr(cliente, campo) != valor:
             setattr(cliente, campo, valor)
-    cliente.formulario_payload = payload
+    # `enviado`: cuándo lo completó (las estadísticas del workshop cuentan aplicaciones por fecha).
+    cliente.formulario_payload = {**payload, 'enviado': datetime.utcnow().isoformat()}
     flag_modified(cliente, 'formulario_payload')
     cliente.grupo = _grupo(payload) or cliente.grupo
     return cliente
@@ -138,8 +139,24 @@ def _payload_en_espejo(fa, payload):
     fa.grupo = _grupo(payload) or fa.grupo
 
 
-def registrar_agenda(payload, closer, setter, inicio, ahora=None):
+def proxima_de(cliente_id, ahora):
+    """La próxima agenda vigente del cliente (cualquier sistema), o None."""
+    return (
+        Appointment.query.filter(
+            Appointment.client_id == cliente_id,
+            Appointment.start_time >= ahora - MARGEN_REPROGRAMAR,
+            *filtro_vigente(),
+        )
+        .order_by(Appointment.start_time)
+        .first()
+    )
+
+
+def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None):
     """Crea (o reprograma) la agenda en la operacion. `inicio`: datetime UTC sin zona.
+    `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la mueve;
+    cualquier otra cosa ('adicional') crea otra y le avisa al closer, que decide si cancela la
+    anterior. Nunca se borra ni se mueve una agenda sin que el lead lo haya pedido.
     Devuelve (appointment, evento_a_borrar): evento_a_borrar es (user_id, google_event_id) del evento
     viejo de una agenda reprogramada, o None. Hace commit."""
     from app.services.booking_service import BookingService
@@ -148,17 +165,9 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None):
     cliente = _cliente(payload)
     db.session.flush()
 
-    previa = (
-        Appointment.query.filter(
-            Appointment.client_id == cliente.id,
-            Appointment.start_time >= ahora - MARGEN_REPROGRAMAR,
-            *filtro_vigente(),
-        )
-        .order_by(Appointment.start_time)
-        .first()
-    )
+    previa = proxima_de(cliente.id, ahora)
 
-    if previa:
+    if previa and decision == 'reprogramar':
         anterior = previa.start_time
         espejo = _espejo_de(previa, anterior)
         evento_viejo = (previa.closer_id, previa.google_event_id) if previa.google_event_id else None
@@ -192,6 +201,8 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None):
         current_app.logger.info(f'[AGENDAS 2.0] Agenda #{previa.id} reprogramada de {anterior} a {inicio}')
         return previa, evento_viejo
 
+    if previa:
+        payload = {**payload, 'sesion_adicional_de': {'agenda_id': previa.id, 'inicio': previa.start_time.isoformat() + 'Z'}}
     appt = BookingService.create_appointment(
         client_id=cliente.id,
         closer_id=closer.id,
@@ -204,8 +215,23 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None):
         db.session.rollback()
         return None, None
     appt.agenda_payload = payload
+    if previa:
+        db.session.flush()
+        db.session.add(
+            Notification(
+                subject='Sesión adicional: revisá la agenda anterior',
+                content=(
+                    f'{cliente.full_name or "Un lead"} ya tenía una agenda el '
+                    f'{previa.start_time.strftime("%d/%m/%Y %H:%M")} UTC y pidió una sesión adicional el '
+                    f'{inicio.strftime("%d/%m/%Y %H:%M")} UTC. Decidí si cancelás la anterior.'
+                ),
+                target_users=['role:admin', *sorted({int(closer.id), int(previa.closer_id)} - {None})],
+                associated_id=appt.id,
+                associated_type='appointment',
+            )
+        )
     db.session.commit()
-    _payload_en_espejo(BookingService.sync_appointment_to_financial_agenda(appt), payload)
+    _payload_en_espejo(BookingService.sync_appointment_to_financial_agenda(appt, cita_nueva=True), payload)
     db.session.commit()
     return appt, None
 
