@@ -206,3 +206,54 @@ def test_editar_escribe_encima_conserva_los_links_y_queda_en_borrador(client, eq
     # Lo publicado sigue igual hasta que se publique de nuevo.
     r = client.get('/api/agendas-v2/publico/eventos/workshop/diagnostico')
     assert r.get_json()['form']['preguntas'][1]['titulo'] == '¿A qué te dedicás?'
+
+
+# --- Reusar lo que ya existe y completar un funnel sin agendamientos ------------------------------
+
+
+def test_el_prompt_lista_lo_que_ya_existe_para_reusar(client, equipo, dir_h):
+    _importado(client, dir_h)
+    texto = client.get(URL + '/prompt', headers=dir_h).get_json()['prompt']
+    assert 'Lo que ya existe en Thalamus' in texto and '"usar"' in texto
+    assert '"Calificación workshop": 2 preguntas; segmenta a: General, Ultra' in texto
+    assert '"Ultra" (llenar): closer1@empresa.com' in texto
+
+
+def test_reusar_formulario_y_estrategias_no_crea_ni_toca_nada(client, equipo, dir_h):
+    _importado(client, dir_h)
+    antes = servicio.colecciones()
+    otro = _paquete(funnel__slug='vsl', funnel__nombre='VSL', funnel__tipo='vsl', evento__slug='llamada-vsl')
+    otro['formulario'] = {'usar': 'Calificación workshop'}
+    otro['prioridades'] = [{'usar': 'Ultra'}, {'usar': 'General'}]
+    r = client.post(URL, json={'paquete': otro}, headers=dir_h)
+    assert r.status_code == 201
+    res = r.get_json()['resumen']
+    assert res['formulario_existente'] is True and all(g['existente'] for g in res['prioridades'])
+    d = servicio.colecciones()
+    assert len(d['formularios']) == 1 and d['grupos'] == antes['grupos']
+    ev = next(e for e in d['eventos'] if e['slug'] == 'llamada-vsl')
+    assert ev['formulario'] == antes['formularios'][0]['id']
+
+
+def test_reusar_algo_que_no_existe_lo_dice(client, equipo, dir_h):
+    p = _paquete()
+    p['formulario'] = {'usar': 'Nada'}
+    p['prioridades'] = [{'usar': 'Fantasma'}]
+    errores = client.post(URL, json={'paquete': p}, headers=dir_h).get_json()['errores']
+    assert any('"Nada"' in e for e in errores) and any('"Fantasma"' in e for e in errores)
+
+
+def test_completar_un_funnel_sin_agendamientos(client, equipo, dir_h):
+    servicio.guardar_doc('funnels', 'fv', {'nombre': 'VSL octubre', 'slug': 'vsl-octubre', 'tipo': 'vsl', 'origenes': [{'id': 'o1', 'nombre': 'Ads'}]})
+    texto = client.get(URL + '/prompt?funnel=fv', headers=dir_h).get_json()['prompt']
+    assert 'YA EXISTE pero todavía no tiene un agendamiento' in texto and '"vsl-octubre"' in texto
+
+    p = _paquete(funnel__nombre='VSL octubre', funnel__slug='otro', funnel__tipo='vsl')
+    r = client.post(URL, json={'paquete': p, 'funnel': 'fv'}, headers=dir_h)
+    assert r.status_code == 201
+    d = servicio.colecciones()
+    (fu,) = d['funnels']  # no se creó otro funnel
+    assert fu['id'] == 'fv' and fu['slug'] == 'vsl-octubre' and fu['tipo'] == 'vsl'
+    (ev,) = d['eventos']
+    assert ev['funnel'] == 'fv' and ev['publicado'] == ''
+    assert client.get(URL + '/prompt?funnel=nada', headers=dir_h).status_code == 404
