@@ -38,7 +38,7 @@ export default function DetalleEvento({ e, ev }) {
     return (
         <>
             <div className="barra">
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrar}><Icono n="volver" />Eventos</button>
+                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrar}><Icono n="volver" />Funnels</button>
                 <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
                     <button type="button" data-nav="" aria-pressed={ev.tab !== 'flujo'} onClick={() => tab('config')}><Icono n="ajustes" />Configuración</button>
                     <button type="button" data-nav="" aria-pressed={ev.tab === 'flujo'} onClick={() => tab('flujo')}><Icono n="flujo" />Flujo</button>

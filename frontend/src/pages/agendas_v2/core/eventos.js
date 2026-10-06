@@ -89,3 +89,33 @@ export function slugLibre(d, e, slug) {
     while (usado(s)) s = slug + '-' + n++;
     return s;
 }
+
+// Los pasos de un agendamiento (un evento dentro de su funnel), en el orden en que se arma:
+// formulario → equipo → evento → publicado. [{k, ok, n, det}] con `n` corto para la tarjeta del funnel.
+export function pasosAgendamiento(d, e) {
+    const fo = buscar(d, 'formularios', e.formulario);
+    const [, , ruteo, agenda, link] = revision(d, e);
+    const est = estadoEvento(e, fo);
+    return [
+        fo ? { k: 'formulario', ok: true, n: 'Formulario', det: fo.nombre } : { k: 'formulario', ok: false, n: 'Sin formulario', det: 'Elegí o creá el formulario' },
+        { k: 'equipo', ok: !!ruteo[0], n: ruteo[0] ? 'Equipo' : 'Sin equipo', det: ruteo[1] + ' · ' + ruteo[2] },
+        { k: 'evento', ok: !!(agenda[0] && link[0]), n: agenda[0] && link[0] ? e.duracion + ' min' : 'Revisar evento', det: agenda[0] ? (link[0] ? agenda[2] : link[1]) : agenda[1] },
+        { k: 'publicado', ok: est.k === 'vivo', n: est.k === 'vivo' ? 'En vivo' : est.n, det: est.k === 'vivo' ? 'Recibe agendas' : 'El link todavía no recibe agendas con lo último' },
+    ];
+}
+
+// Lo que le falta a un funnel para recibir agendas: {listo, faltas: [texto], porEvento: {id: pasos}}.
+// Listo = activo y con al menos un agendamiento con todos sus pasos en orden.
+export function estadoFunnel(d, f) {
+    const eventos = d.eventos.filter(e => e.funnel === f.id);
+    const porEvento = Object.fromEntries(eventos.map(e => [e.id, pasosAgendamiento(d, e)]));
+    const faltas = [];
+    if (!f.activo) faltas.push('Funnel pausado');
+    if (!eventos.length) faltas.push('Sin agendamientos');
+    const pendientes = new Set();
+    Object.values(porEvento).forEach(ps => ps.forEach(p => { if (!p.ok) pendientes.add(p.k); }));
+    const NOMBRE = { formulario: 'formulario', equipo: 'equipo', evento: 'evento', publicado: 'publicar' };
+    if (pendientes.size) faltas.push('Falta: ' + ['formulario', 'equipo', 'evento', 'publicado'].filter(k => pendientes.has(k)).map(k => NOMBRE[k]).join(', '));
+    const listo = f.activo && Object.values(porEvento).some(ps => ps.every(p => p.ok));
+    return { listo, faltas, porEvento };
+}

@@ -1425,3 +1425,23 @@
   .thalamus .reserva:not(.reserva--embebida) .rv-control .rv-navbtn{display:none}
   .thalamus .rv-horas-lista{max-height:none;overflow:visible}
 }
+
+/* Funnels (ListaFunnels): cada funnel con sus agendamientos y los pasos que le faltan. */
+.thalamus .fu-lista{display:grid;gap:var(--s4)}
+.thalamus .fu-card{display:grid;gap:var(--s3);padding:var(--s5,20px) var(--s5,20px) var(--s4);min-width:0}
+.thalamus .fu-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
+.thalamus .fu-nom{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .fu-faltas{margin:0;color:var(--warning)}
+.thalamus .fu-ags{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.thalamus .fu-ag{display:grid;gap:var(--s2);padding:var(--s3);border-radius:14px;border:1px solid var(--border-subtle);background:rgba(255,255,255,.02)}
+.thalamus .fu-ag-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
+.thalamus .fu-ag-nom{font-weight:900;text-align:left;color:inherit}
+.thalamus .fu-ag-nom:hover{text-decoration:underline}
+.thalamus .fu-ag-link{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.thalamus .fu-pasos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;counter-reset:paso}
+.thalamus .fu-paso{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:800;
+  border:1px solid color-mix(in srgb,var(--warning) 45%,transparent);background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)}
+.thalamus .fu-paso--ok{border-color:color-mix(in srgb,var(--success) 35%,transparent);background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)}
+.thalamus .fu-paso:hover{filter:brightness(1.15)}
+.thalamus .fu-nuevo{display:flex;gap:var(--s2);align-items:center}
+.thalamus .fu-nuevo .input{flex:1;min-width:0}

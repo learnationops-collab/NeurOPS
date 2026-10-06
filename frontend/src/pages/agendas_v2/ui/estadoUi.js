@@ -9,7 +9,7 @@ function guardarPrefs(e) {
 
 const p = leerPrefs();
 let estado = {
-    seccion: ['preguntas', 'team', 'horas', 'eventos', 'estadisticas'].includes(p.seccion) ? p.seccion : 'preguntas',
+    seccion: ['preguntas', 'team', 'horas', 'eventos', 'estadisticas'].includes(p.seccion) ? p.seccion : 'eventos',
     tema: ['oscuro', 'claro', 'sistema'].includes(p.tema) ? p.tema : 'sistema',
     prevModo: p.prevModo === 'celular' ? 'celular' : 'escritorio',   // vista previa del lead
     confVis: p.confVis === 'completa' ? 'completa' : 'flotante',     // Configuración flotante o a pantalla completa

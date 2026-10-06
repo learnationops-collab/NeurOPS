@@ -8,10 +8,11 @@ export const PLANTILLAS_FUNNEL = ['Appointment Setting', 'Workshop', 'VSL', 'Web
 export const TZ_DEF = 'America/La_Paz';
 
 export const SECCIONES = [
-    { id: 'preguntas', num: '1', label: 'Forms', icon: 'pregunta' },
-    { id: 'team', num: '2', label: 'Team', icon: 'users' },
+    // 'eventos' es la sección Funnels (el inicio): el funnel contiene sus agendamientos (eventos).
+    { id: 'eventos', num: '1', label: 'Funnels', icon: 'funnel' },
+    { id: 'preguntas', num: '2', label: 'Forms', icon: 'pregunta' },
+    { id: 'team', num: '3', label: 'Team', icon: 'users' },
     { id: 'horas', num: '', label: 'Hours', icon: 'clock' },
-    { id: 'eventos', num: '3', label: 'Events', icon: 'calendar' },
     { id: 'estadisticas', num: '4', label: 'Stats', icon: 'chart' },
 ];
 
