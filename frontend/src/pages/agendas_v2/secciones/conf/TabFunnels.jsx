@@ -1,10 +1,12 @@
-// Configuración › Funnels: nombre, probar, recibe agendas, eliminar, y sus links.
-//  - Funnel de marketing (workshop, VSL…): un link por procedencia, para saber de dónde viene cada agenda.
-//  - Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda queda a
-//    su nombre. Los setters no van en Team: salen de los usuarios de la app.
+// Configuración › Funnels: nombre, tipo, probar, recibe agendas, eliminar, y sus links.
+//  - Tipo: para qué cuenta en las estadísticas (Workshop, VSL, Setting u Otro; ver operacion._fuente).
+//  - Workshop, VSL, Otro: un link por procedencia, para saber de dónde viene cada agenda. En un workshop,
+//    el origen «Grabación» (o Replay) cuenta como la grabación; el resto, como la clase en vivo.
+//  - Setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda queda a su
+//    nombre. Los setters no van en Team: salen de los usuarios de la app.
 
 import { useEffect, useState } from 'react';
-import { Avatar, Icono, Switch } from '../../ui/base';
+import { Avatar, Icono, Seg, Switch } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { almacen, useDatos } from '../../data/hooks';
@@ -25,6 +27,14 @@ export function crearFunnel(d, nombre) {
 }
 
 const primerEvento = (d, f) => ord(d, 'eventos').find(e => e.funnel === f.id);
+
+const TIPOS = [{ v: 'workshop', n: 'Workshop' }, { v: 'vsl', n: 'VSL' }, { v: 'setting', n: 'Setting' }, { v: 'otro', n: 'Otro' }];
+const AYUDA_TIPO = {
+    workshop: 'Cuenta en el panel del workshop. Un origen llamado «Grabación» cuenta como la grabación; el resto, como la clase en vivo.',
+    vsl: 'Las agendas quedan con fuente VSL.',
+    setting: 'Cada setter tiene su link y la agenda queda a su nombre.',
+    otro: 'La fuente de la agenda es el origen del link.',
+};
 
 function Origenes({ d, f }) {
     const [nuevo, setNuevo] = useState('');
@@ -120,8 +130,9 @@ function Funnel({ d, f, borrar, setBorrar }) {
                 <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar ' + f.nombre} onClick={() => setBorrar(f.id)}><Icono n="basura" s={15} /></button>
             </div>
             <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Switch on={f.setting} label={'Funnel de setting: cada setter tiene su link'} onChange={v => almacen.editar('funnels', f.id, { setting: v }, true)} />
-                <span className="t-sm">Funnel de setting</span>
+                <Seg sm label={'Tipo de ' + f.nombre} valor={f.tipo} opciones={TIPOS}
+                    onChange={v => almacen.editar('funnels', f.id, { tipo: v, setting: v === 'setting' }, true)} />
+                <span className="t-xs mut">{AYUDA_TIPO[f.tipo]}</span>
             </div>
             {f.setting ? <LinksDeSetters d={d} f={f} /> : <Origenes d={d} f={f} />}
             {borrar === f.id && (

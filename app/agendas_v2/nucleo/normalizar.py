@@ -192,10 +192,22 @@ def normal_funnel(id, d):
         'activo': d.get('activo') is not False,
         'orden': _orden(d.get('orden')),
         'origenes': origenes,
+        'tipo': tipo_funnel(d),
         # Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
         # queda a su nombre. No lleva orígenes a mano.
-        'setting': d.get('setting') is True,
+        'setting': tipo_funnel(d) == 'setting',
     }
+
+
+# Para qué cuenta cada funnel en las estadísticas (la «Fuente» de la agenda, ver operacion._fuente):
+# setting → el setter del link; vsl → 'vsl'; workshop → 'workshop' (o 'workshop_landing' si el origen es
+# la grabación); otro → el origen o el funnel. Los funnels viejos traían solo `setting: true`.
+TIPOS_FUNNEL = ('setting', 'vsl', 'workshop', 'otro')
+
+
+def tipo_funnel(d):
+    t = d.get('tipo')
+    return t if t in TIPOS_FUNNEL else ('setting' if d.get('setting') is True else 'otro')
 
 
 def _pos(r, i):

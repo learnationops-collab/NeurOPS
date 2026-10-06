@@ -103,10 +103,22 @@ def cliente_por_email(email):
 
 
 def _fuente(payload, setter):
-    """Lo que va en Appointment.origin / FinancialAgenda.nombre («Fuente»): el setter si lo hay; si no,
-    el origen del link (?o=) o el funnel."""
+    """Lo que va en Appointment.origin / FinancialAgenda.nombre («Fuente»), según el tipo del funnel:
+    - setting: el setter del link ('setting', «sin dueño», si el link no es de un setter activo);
+    - vsl: 'vsl'; workshop: 'workshop', o 'workshop_landing' si el origen es la grabación (?o=grabacion,
+      replay o landing). Son los valores que ya leen el panel del workshop, el mazo y la ficha;
+    - otro: el origen del link (?o=) o el funnel."""
+    from app.services.fuente_service import FUENTE_SETTING, FUENTE_VSL, FUENTE_WORKSHOP_LANDING,         FUENTE_WORKSHOP_VIVO, es_workshop_landing
+
     if setter:
         return setter.username
+    tipo = payload.get('funnel_tipo')
+    if tipo == 'setting':
+        return FUENTE_SETTING
+    if tipo == 'vsl':
+        return FUENTE_VSL
+    if tipo == 'workshop':
+        return FUENTE_WORKSHOP_LANDING if es_workshop_landing(f"workshop {payload.get('origen') or ''}")             else FUENTE_WORKSHOP_VIVO
     return payload.get('origen') or payload.get('funnel_slug') or 'agendas 2.0'
 
 

@@ -18,12 +18,13 @@ def es_payload(p):
 
 
 def _fuente(payload):
-    """Lo mismo que la «Fuente» de la agenda: el setter si entró por su link; si no, el origen o el funnel."""
+    """Lo mismo que la «Fuente» de la agenda (operacion._fuente): el setter si entró por su link; si no,
+    según el tipo del funnel (workshop, vsl…)."""
+    from app.agendas_v2.operacion import _fuente as fuente_de_agenda
     from app.models import User
 
     setter_id = payload.get('setter_user_id')
-    setter = db.session.get(User, setter_id) if setter_id else None
-    return setter.username if setter else (payload.get('origen') or payload.get('funnel_slug') or 'agendas 2.0')
+    return fuente_de_agenda(payload, db.session.get(User, setter_id) if setter_id else None)
 
 
 def desde_payload(payload, enviado=None):

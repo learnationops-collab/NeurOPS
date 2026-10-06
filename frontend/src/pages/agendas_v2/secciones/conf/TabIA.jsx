@@ -19,13 +19,14 @@ export function leerPaquete(texto) {
 }
 
 const ESTRATEGIA = { llenar: 'llenar en orden', horario: 'por horario', repartir: 'repartir parejo' };
+const TIPO = { workshop: 'de workshop', vsl: 'de VSL', setting: 'de setting', otro: '' };
 
 function Resumen({ r }) {
     return (
         <div className="ia-resumen" role="status">
             <p className="t-sm"><b>Se va a crear:</b></p>
             <ul className="t-sm">
-                <li>Funnel <b>{r.funnel}</b> (<code>/{r.slug}</code>) con {r.origenes} {r.origenes === 1 ? 'origen' : 'orígenes'}</li>
+                <li>Funnel {TIPO[r.tipo] ? TIPO[r.tipo] + ' ' : ''}<b>{r.funnel}</b> (<code>/{r.slug}</code>){r.tipo === 'setting' ? ', con un link por setter' : ` con ${r.origenes} ${r.origenes === 1 ? 'origen' : 'orígenes'}`}</li>
                 <li>{r.prioridades.length} {r.prioridades.length === 1 ? 'prioridad' : 'prioridades'}: {r.prioridades.map(g => `${g.nombre} (${ESTRATEGIA[g.estrategia] || g.estrategia}, ${g.closers} ${g.closers === 1 ? 'closer' : 'closers'})`).join(' · ')}</li>
                 <li>Formulario <b>{r.formulario}</b> con {r.preguntas} {r.preguntas === 1 ? 'pregunta' : 'preguntas'} y {r.reglas} {r.reglas === 1 ? 'regla' : 'reglas'}</li>
                 <li>Evento <b>{r.evento}</b> de {r.duracion} min, <b>sin publicar</b></li>

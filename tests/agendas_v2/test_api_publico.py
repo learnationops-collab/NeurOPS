@@ -548,7 +548,38 @@ def test_el_link_del_setter_le_atribuye_la_agenda(client, setting, cuentas, goog
 
 def test_un_link_de_setter_que_no_existe_no_atribuye(client, setting, google):
     assert _reservar_setting(client, 'nadie').status_code == 201
-    assert Appointment.query.one().setter_id is None
+    appt = Appointment.query.one()
+    # Sin setter queda «sin dueño» (como en Calendly): los setters lo ven para reclamarlo.
+    assert appt.setter_id is None and appt.origin == 'setting'
+
+
+# --- Tipo de funnel: la «Fuente» que leen el panel del workshop, el mazo y la ficha ---------------
+
+
+@pytest.mark.parametrize('tipo, origen, fuente', [
+    ('workshop', 'instagram', 'workshop'),
+    ('workshop', 'grabacion', 'workshop_landing'),
+    ('workshop', 'replay', 'workshop_landing'),
+    ('vsl', 'instagram', 'vsl'),
+    ('otro', 'instagram', 'instagram'),
+])
+def test_la_fuente_sale_del_tipo_del_funnel(client, armado, google, tipo, origen, fuente):
+    servicio.guardar_doc('funnels', 'fu', {'tipo': tipo, 'origenes': []}, parcial=True)
+    _publicar('ev')
+    assert _reservar_setting(client, origen).status_code == 201
+    appt = Appointment.query.one()
+    assert appt.origin == fuente and FinancialAgenda.query.one().nombre == fuente
+    assert appt.agenda_payload['funnel_tipo'] == tipo
+    # El formulario del lead también: así cuenta como aplicación del workshop.
+    from app.services.formulario_lead import form_data_de
+    assert form_data_de(appt.client, appt)['fuente_form'] == fuente
+
+
+def test_un_funnel_viejo_con_setting_true_es_de_tipo_setting(armado):
+    assert servicio.colecciones()['funnels'][0]['tipo'] == 'otro'
+    servicio.guardar_doc('funnels', 'fs', {'nombre': 'Viejo', 'slug': 'viejo', 'setting': True})
+    fs = next(f for f in servicio.colecciones()['funnels'] if f['id'] == 'fs')
+    assert fs['tipo'] == 'setting' and fs['setting'] is True
 
 
 def test_el_setter_ve_sus_links(client, setting, cuentas, auth_headers):

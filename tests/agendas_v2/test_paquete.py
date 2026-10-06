@@ -86,7 +86,7 @@ def test_importar_crea_todo_unido_y_sin_publicar(client, equipo, dir_h):
     assert fo['resto'] == general['id']
 
     (fu,) = d['funnels']
-    assert fu['slug'] == 'workshop' and fu['setting'] is False and [o['nombre'] for o in fu['origenes']] == ['Instagram', 'En vivo']
+    assert fu['slug'] == 'workshop' and fu['setting'] is False and [o['nombre'] for o in fu['origenes']] == ['Instagram', 'Grabación']
 
     (ev,) = d['eventos']
     assert ev['id'] == creados['evento'] and ev['funnel'] == fu['id'] and ev['formulario'] == fo['id']
@@ -144,7 +144,7 @@ def test_un_paquete_que_no_es_un_objeto(client, equipo, dir_h):
 
 
 def test_un_funnel_de_setting_no_lleva_origenes(client, equipo, dir_h):
-    r = client.post(URL, json={'paquete': _paquete(funnel__setting=True)}, headers=dir_h)
-    assert r.status_code == 201 and r.get_json()['resumen']['setting'] is True
+    r = client.post(URL, json={'paquete': _paquete(funnel__tipo='setting')}, headers=dir_h)
+    assert r.status_code == 201 and r.get_json()['resumen']['tipo'] == 'setting'
     (fu,) = servicio.colecciones()['funnels']
     assert fu['setting'] is True and fu['origenes'] == []

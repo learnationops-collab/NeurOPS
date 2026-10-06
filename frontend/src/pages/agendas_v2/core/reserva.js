@@ -47,6 +47,7 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
     return {
         version: VERSION_CONTRATO,
         evento_id: evento.id, evento_slug: evento.slug, funnel_id: funnel ? funnel.id : '', funnel_slug: funnel ? funnel.slug : '',
+        funnel_tipo: funnel ? (funnel.tipo || 'otro') : '',
         formulario_id: form ? form.id : '',
         inicio: slot ? new Date(slot.t).toISOString() : null,
         duracion_min: evento.duracion,

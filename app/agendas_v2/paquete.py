@@ -17,7 +17,7 @@ from app import db
 from app.agendas_v2.modelos import MODELOS
 from app.agendas_v2.nucleo.catalogos import DURACIONES, ESTRATEGIAS
 from app.agendas_v2.nucleo.datos import es_closer
-from app.agendas_v2.nucleo.normalizar import NORM
+from app.agendas_v2.nucleo.normalizar import NORM, TIPOS_FUNNEL
 from app.agendas_v2.nucleo.util import slugify, uid
 
 VERSION = 1
@@ -29,8 +29,8 @@ EJEMPLO = {
     'funnel': {
         'nombre': 'Workshop octubre',
         'slug': 'workshop',
-        'setting': False,
-        'origenes': [{'nombre': 'Instagram'}, {'nombre': 'En vivo'}],
+        'tipo': 'workshop',
+        'origenes': [{'nombre': 'Instagram'}, {'nombre': 'Grabación'}],
     },
     'prioridades': [
         {'nombre': 'Ultra', 'estrategia': 'llenar', 'closers': ['closer1@empresa.com']},
@@ -102,7 +102,7 @@ Tu trabajo: entrevistarme hasta tener todo lo necesario y al final devolver UN S
 
 ## Formato del JSON
 - "paquete_thalamus": siempre {VERSION}.
-- "funnel": "nombre", "slug" (minúsculas y guiones; va en el link), "setting" (true si es un funnel de setting: cada setter de la empresa recibe su propio link y la agenda queda a su nombre; no lleva orígenes) y "origenes" (solo si no es de setting): lista de procedencias para armar un link por cada una, cada una {{"nombre": "Instagram"}}. Los setters NO van en el JSON.
+- "funnel": "nombre", "slug" (minúsculas y guiones; va en el link), "tipo" ("workshop", "vsl", "setting" u "otro": para qué cuenta en las estadísticas; en "setting" cada setter de la empresa recibe su propio link y la agenda queda a su nombre, y no lleva orígenes; en "workshop", un origen llamado "Grabación" cuenta como la grabación del workshop) y "origenes" (solo si no es de setting): lista de procedencias para armar un link por cada una, cada una {{"nombre": "Instagram"}}. Los setters NO van en el JSON.
 - "prioridades": lista ordenada (la primera es la más importante). Cada una: "nombre" (único), "estrategia" ("llenar" | "horario" | "repartir"), "closers": emails de closers del equipo, en orden.
 - "formulario":
   - "nombre".
@@ -158,7 +158,7 @@ def revisar(d, paquete):
     for i, o in enumerate(_lista(fu.get('origenes'))):
         o = _obj(o)
         if _txt(o.get('setter')):
-            errores.append(f'funnel.origenes[{i}]: los setters ya no van en los orígenes. Si el funnel es de setting, poné "setting": true y cada setter tiene su link.')
+            errores.append(f'funnel.origenes[{i}]: los setters ya no van en los orígenes. Si el funnel es de setting, poné "tipo": "setting" y cada setter tiene su link.')
         elif _txt(o.get('nombre')):
             origenes.append({'id': uid('o'), 'nombre': _txt(o.get('nombre')), 'setter': ''})
         else:
@@ -262,6 +262,9 @@ def revisar(d, paquete):
     resto = prioridad(fo.get('resto'), 'formulario.resto') if fo.get('resto') else ''
 
     # Evento
+    tipo = fu.get('tipo') if fu.get('tipo') in TIPOS_FUNNEL else ('setting' if fu.get('setting') is True else None)
+    if tipo is None:
+        errores.append(f'funnel: "tipo" tiene que ser uno de {", ".join(TIPOS_FUNNEL)}.')
     ev = _obj(p.get('evento'))
     if not _txt(ev.get('nombre')):
         errores.append('evento: falta "nombre".')
@@ -273,8 +276,8 @@ def revisar(d, paquete):
     return {
         'prioridades': prioridades,
         'formulario': {**fo, 'preguntas': preguntas, 'reglas': reglas, 'resto': resto},
-        'funnel': {**fu, 'slug': fu_slug, 'setting': fu.get('setting') is True,
-                   'origenes': [] if fu.get('setting') is True else origenes},
+        'funnel': {**fu, 'slug': fu_slug, 'tipo': tipo, 'setting': tipo == 'setting',
+                   'origenes': [] if tipo == 'setting' else origenes},
         'evento': ev,
     }, []
 
@@ -286,6 +289,7 @@ def resumen(plan):
         'funnel': plan['funnel']['nombre'],
         'slug': plan['funnel']['slug'],
         'origenes': len(plan['funnel']['origenes']),
+        'tipo': plan['funnel']['tipo'],
         'setting': plan['funnel']['setting'],
         'prioridades': [
             {'nombre': g['nombre'], 'estrategia': g['estrategia'], 'closers': len(g['miembros'])}

@@ -375,6 +375,7 @@ def test_arma_el_contrato_con_copia_de_preguntas_y_respuestas():
         'evento_slug',
         'funnel_id',
         'funnel_slug',
+        'funnel_tipo',
         'formulario_id',
         'inicio',
         'duracion_min',
