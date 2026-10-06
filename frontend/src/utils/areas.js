@@ -2,18 +2,20 @@ import { LayoutGrid } from 'lucide-react';
 
 // Áreas: un mismo rol trabaja en más de una pantalla, cada una con su dock. Se entra siempre a la
 // primera (la de roleLanding.js) y se pasa a las otras desde el menú de sesión del dock, con
-// «Cambiar de área». Por ahora solo la dirección comercial (y admin, que entra a las dos):
+// «Cambiar de área». Por ahora la dirección comercial y admin (que además tiene la suya):
+//   Administración  las páginas del admin (ventas, payroll, formularios, agendas…).
 //   Dirección     el dashboard comercial (analizar, revisar, reportar).
 //   Agendamiento  Agendas 2.0 / Thalamus (formularios, equipo, eventos de agenda).
 
 export const AREAS = {
+    administracion: { id: 'administracion', label: 'Administración', ruta: '/admin/ventas' },
     direccion: { id: 'direccion', label: 'Dirección', ruta: '/admin/comercial' },
     agendamiento: { id: 'agendamiento', label: 'Agendamiento', ruta: '/agendas-v2' },
 };
 
 const AREAS_POR_ROL = {
     director_comercial: ['direccion', 'agendamiento'],
-    admin: ['direccion', 'agendamiento'],
+    admin: ['administracion', 'direccion', 'agendamiento'],
 };
 
 export const areasDe = (rol) => (AREAS_POR_ROL[rol] || []).map((id) => AREAS[id]);

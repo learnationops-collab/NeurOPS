@@ -7,6 +7,7 @@ import OnboardingTour from './modals/OnboardingTour';
 import OperatorControls from './modals/OperatorControls';
 import GlobalSettingsModal from './modals/GlobalSettingsModal';
 import Dock from './shared/Dock';
+import DockAdmin from './shared/DockAdmin';
 import WidgetsPill from './shared/WidgetsPill';
 import HotkeysManager from './admin/HotkeysManager';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -123,12 +124,21 @@ const MainLayout = ({ children }) => {
                         </div>
                     </div>
 
-                    <Dock
-                        isVisible={isDockVisible}
-                        onToggleVisibility={() => setIsDockVisible(!isDockVisible)}
-                        onSettingsClick={() => setShowSettings(true)}
-                        isSettingsOpen={showSettings}
-                    />
+                    {/* El admin usa el dock de los demás roles (secciones + menú de sesión); el resto
+                        de quienes pasan por MainLayout sigue con la píldora de siempre. */}
+                    {user.role === 'admin' ? (
+                        <DockAdmin
+                            onSettingsClick={() => setShowSettings(true)}
+                            onImpersonateClick={() => setShowImpersonation(true)}
+                        />
+                    ) : (
+                        <Dock
+                            isVisible={isDockVisible}
+                            onToggleVisibility={() => setIsDockVisible(!isDockVisible)}
+                            onSettingsClick={() => setShowSettings(true)}
+                            isSettingsOpen={showSettings}
+                        />
+                    )}
 
                     <WidgetsPill
                         isOpen={isPillOpen}
