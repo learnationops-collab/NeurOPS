@@ -1,14 +1,16 @@
 // Learnation Thalamus: la herramienta del director comercial para armar formularios, equipo,
 // prioridades y eventos de agenda. Dock en el orden real de configuración: 1 Forms · 2 Team ·
-// 3 Events · 4 Stats. Configuración (perfil, miembros, funnels) en el botón magenta.
+// 3 Events · 4 Stats · Configuración (perfil, miembros, funnels). Es el área «Agendamiento».
 
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Settings, Users } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { SECCIONES } from './core/catalogos';
 import { confVisible } from './core/permisos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
-import { Dial, Humo, Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
+import { Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
 import { ui } from './ui/estadoUi';
 import { toast } from './ui/toast';
 import { irA } from './ui/navegacion';
@@ -21,42 +23,43 @@ import Configuracion from './secciones/conf/Configuracion';
 import MenuYo from './secciones/conf/MenuYo';
 import CrearRapido from './secciones/conf/CrearRapido';
 import PruebaLead from './reserva/PruebaLead';
+import DockSecciones from '../comercial/components/DockSecciones';
+import MenuSesion from '../comercial/components/MenuSesion';
+import { opcionCambiarDeArea } from '../../utils/areas';
+import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import '../comercial/comercial.css';
 
 // Tema: oscuro, claro o el del sistema. Se aplica a la raíz de Thalamus, no a toda la app.
 function atributoTema(tema) { return tema === 'oscuro' ? 'dark' : tema === 'claro' ? 'light' : undefined; }
 
+// El dock es el MISMO del área Dirección (DockSecciones + MenuSesion del dashboard comercial): son
+// dos áreas de la dirección comercial y se pasa de una a otra con «Cambiar de área» (utils/areas.js).
+// Va fuera de `.thalamus` (sus estilos cuelgan de `.dc-shell`, y los de Thalamus le pisarían el
+// `.dock`). Configuración (perfil, miembros, funnels) es la última sección.
+const ICONO_DE_SECCION = { preguntas: ClipboardList, team: Users, horas: Clock, eventos: CalendarDays, estadisticas: BarChart3 };
+
 function Dock() {
-    const { seccion, sim } = useUi();
+    const { seccion, sim, conf } = useUi();
     const { d } = useDatos();
     const perm = usePermisos();
-    const nav = useRef(null), ind = useRef(null);
-    const visibles = SECCIONES.filter(s => perm.secOk(s.id));
-    let n = 0;
-    useLayoutEffect(() => {
-        const act = nav.current && nav.current.querySelector('[aria-current="page"]');
-        if (act && ind.current) { ind.current.style.setProperty('--w', act.offsetWidth + 'px'); ind.current.style.setProperty('--x', act.offsetLeft + 'px'); }
-    });
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    const secciones = [
+        ...SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || Settings })),
+        ...(confVisible(d, sim) ? [{ id: 'conf', label: 'Configuración', Icono: Settings }] : []),
+    ];
+    const grupos = [
+        opcionCambiarDeArea(user, 'agendamiento', navigate),
+        opcionesDeRol(user, (m) => toast(m, 'error')),
+        [{ id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
+            onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } }],
+    ];
     return (
-        <nav className="dock" aria-label="Secciones">
-            <div className="dock-barra">
-                <Humo clase="humo--barra" />
-                <div className="dock-nav" ref={nav}>
-                    <span className="dock-ind" ref={ind} aria-hidden="true" />
-                    {visibles.map(s => (
-                        <button key={s.id} type="button" className="dock-item" data-nav="" aria-current={s.id === seccion ? 'page' : undefined} onClick={() => irA(s.id)}>
-                            <span className="dock-num" aria-hidden="true">{s.num ? ++n : ''}</span>
-                            <Icono n={s.icon} s={20} />
-                            <span className="dock-label">{s.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-            {confVisible(d, sim) && (
-                <button type="button" className="dock-conf" data-nav="" aria-label="Configuración: perfil y funnels" title="Configuración" onClick={() => ui.set({ conf: { tab: 'perfil' } })}>
-                    <Dial />
-                </button>
-            )}
-        </nav>
+        <div className="dc-shell dc-shell--embebido">
+            <DockSecciones secciones={secciones} activa={conf ? 'conf' : seccion} ariaLabel="Secciones de Agendamiento"
+                onElegir={(id) => (id === 'conf' ? ui.set({ conf: { tab: 'perfil' } }) : irA(id))}
+                despues={<MenuSesion nombre={user?.username || ''} rol="Dirección comercial · Agendamiento" grupos={grupos} />} />
+        </div>
     );
 }
 
@@ -163,6 +166,7 @@ export default function ThalamusApp() {
     const sec = SECCIONES.find(s => s.id === estado.seccion) || SECCIONES[0];
     useEffect(() => { document.title = 'Learnation Thalamus'; }, []);
     return (
+        <>
         <div className="thalamus thalamus-app" data-theme={atributoTema(estado.tema)}>
             <Degradados />
             <div className="wrap">
@@ -175,12 +179,13 @@ export default function ThalamusApp() {
                 </header>
                 <Vista />
             </div>
-            <Dock />
             {estado.conf && <Configuracion />}
             {estado.crear && <CrearRapido />}
             {estado.prueba && <PruebaLead />}
             <Toasts />
             <Tooltip />
         </div>
+        <Dock />
+        </>
     );
 }
