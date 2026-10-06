@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Layers, LogOut } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Layers, Link2, LogOut } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -160,7 +160,11 @@ const SetterEspacioPage = () => {
     const gruposDeSesion = [
         [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
             cuenta: pendingCount > 0 ? pendingCount : null,
-            titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null }],
+            titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null },
+        // Sus links de Agendas 2.0 (uno por evento de cada funnel de setting): lo que entra por ahí
+        // queda a su nombre y aparece en sus agendas, como con Calendly. Tocar uno lo copia.
+        { id: 'links', label: 'Mis links de agendamiento', Icono: Link2,
+            panel: { titulo: 'Mis links de agendamiento', vacio: 'Todavía no hay funnels de setting publicados.', cargar: cargarMisLinks } }],
         opcionesDeRol(user, (m) => toast.error(m)),
         [
             ...(user?.is_impersonating
@@ -245,6 +249,19 @@ const SetterEspacioPage = () => {
             <OperatorControls isOpen={operador} onClose={() => setOperador(false)} />
         </div>
     );
+};
+
+// Tocar un link lo copia: es lo que el setter pega en WhatsApp o Instagram.
+const cargarMisLinks = async () => {
+    const res = await api.get('/setter/agendas-links');
+    return (res.data?.links || []).map((l) => ({
+        id: l.ruta,
+        label: `${l.funnel} · ${l.evento}`,
+        onClick: async () => {
+            const url = window.location.origin + l.ruta;
+            try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
+        },
+    }));
 };
 
 export default SetterEspacioPage;

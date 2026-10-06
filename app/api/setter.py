@@ -1643,3 +1643,12 @@ def get_setter_commission():
 
 
 
+
+
+@bp.route('/agendas-links', methods=['GET'])
+@role_required(ROLE_SETTER)
+def mis_links_de_agendamiento():
+    """Los links de agendamiento del setter (Agendas 2.0): uno por evento de cada funnel de setting. Lo
+    que entra por su link queda a su nombre (Fuente) y aparece en sus agendas como con Calendly."""
+    from app.agendas_v2.servicio import links_de_setter
+    return jsonify({'links': links_de_setter(current_user)}), 200

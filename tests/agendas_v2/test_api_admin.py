@@ -141,12 +141,15 @@ def test_el_servicio_no_toca_la_operacion(client, db, dir_h):
     assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0
 
 
-def test_usuarios_lista_closers_y_setters_activos(client, gente, dir_h, make_user):
+def test_usuarios_lista_los_closers_activos_y_aparte_los_setters(client, gente, dir_h, make_user):
     make_user(role='closer', email='baja@neuro.com', is_active=False)
     r = client.get('/api/agendas-v2/usuarios', headers=dir_h)
     assert r.status_code == 200
     usuarios = r.get_json()['usuarios']
-    assert {u['rol'] for u in usuarios} == {'closer', 'setter'}
+    # Team es de quienes atienden: los setters tienen su link en los funnels de setting, no van en Team.
+    assert {u['rol'] for u in usuarios} == {'closer'}
+    setters = client.get('/api/agendas-v2/usuarios?rol=setter', headers=dir_h).get_json()['usuarios']
+    assert setters and {u['rol'] for u in setters} == {'setter'}
     assert 'baja@neuro.com' not in {u['email'] for u in usuarios}
     assert {'id', 'nombre', 'email', 'rol', 'tz', 'calendar'} <= set(usuarios[0])
     assert not any(u['calendar'] for u in usuarios)

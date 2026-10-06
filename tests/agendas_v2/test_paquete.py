@@ -47,7 +47,7 @@ def test_el_prompt_trae_el_equipo_real_y_el_formato(client, equipo, dir_h):
     r = client.get(URL + '/prompt', headers=dir_h)
     assert r.status_code == 200
     texto = r.get_json()['prompt']
-    assert 'Ana <closer1@empresa.com> (closer)' in texto and 'Juan <setter@empresa.com> (puede ser setter' in texto
+    assert 'Ana <closer1@empresa.com> (closer)' in texto and 'setter@empresa.com' not in texto  # Team es solo de closers
     assert '"paquete_thalamus": 1' in texto and 'Empezá preguntándome' in texto
 
 
@@ -86,7 +86,7 @@ def test_importar_crea_todo_unido_y_sin_publicar(client, equipo, dir_h):
     assert fo['resto'] == general['id']
 
     (fu,) = d['funnels']
-    assert fu['slug'] == 'workshop' and [o['setter'] for o in fu['origenes']] == ['', 'p3']
+    assert fu['slug'] == 'workshop' and fu['setting'] is False and [o['nombre'] for o in fu['origenes']] == ['Instagram', 'En vivo']
 
     (ev,) = d['eventos']
     assert ev['id'] == creados['evento'] and ev['funnel'] == fu['id'] and ev['formulario'] == fo['id']
@@ -128,7 +128,7 @@ def test_importar_dos_veces_no_pisa_nada(client, equipo, dir_h):
         ({'formulario__preguntas__1__id': 'c-mail'}, 'formulario.preguntas[1]: "id" falta o empieza con "c-"'),
         ({'formulario__preguntas__0__tipo': 'checkbox'}, '"tipo" tiene que ser opciones, lista, texto o parrafo'),
         ({'evento__duracion': 50}, '"duracion" tiene que ser uno de 15, 30, 45, 60, 90'),
-        ({'funnel__origenes__1__setter': 'otro@x.com'}, 'funnel.origenes[1]: "otro@x.com" no está en Team'),
+        ({'funnel__origenes__1__setter': 'otro@x.com'}, 'funnel.origenes[1]: los setters ya no van en los orígenes'),
     ],
 )
 def test_errores_que_dicen_donde(client, equipo, dir_h, cambios, esperado):
@@ -141,3 +141,10 @@ def test_errores_que_dicen_donde(client, equipo, dir_h, cambios, esperado):
 def test_un_paquete_que_no_es_un_objeto(client, equipo, dir_h):
     r = client.post(URL, json={'paquete': 'hola'}, headers=dir_h)
     assert r.status_code == 400 and r.get_json()['errores']
+
+
+def test_un_funnel_de_setting_no_lleva_origenes(client, equipo, dir_h):
+    r = client.post(URL, json={'paquete': _paquete(funnel__setting=True)}, headers=dir_h)
+    assert r.status_code == 201 and r.get_json()['resumen']['setting'] is True
+    (fu,) = servicio.colecciones()['funnels']
+    assert fu['setting'] is True and fu['origenes'] == []

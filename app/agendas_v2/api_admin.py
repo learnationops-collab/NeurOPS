@@ -97,8 +97,11 @@ def integraciones():
 
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
-    """Closers y setters activos de la app: Team suma personas solo desde aca, unidas por email."""
-    return jsonify({'usuarios': servicio.usuarios_del_equipo((ROLE_CLOSER, ROLE_SETTER))})
+    """Usuarios activos de la app. Por defecto los closers: Team (quienes atienden) suma personas solo
+    desde aca, unidas por email. Con ?rol=setter, los setters: cada uno tiene su link en los funnels
+    de setting."""
+    rol = ROLE_SETTER if request.args.get('rol') == 'setter' else ROLE_CLOSER
+    return jsonify({'usuarios': servicio.usuarios_del_equipo((rol,))})
 
 
 @bp.route('/paquete/prompt', methods=['GET'])

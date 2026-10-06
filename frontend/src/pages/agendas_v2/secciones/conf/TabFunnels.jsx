@@ -1,13 +1,15 @@
-// Configuración › Funnels: nombre, probar, recibe agendas, eliminar, y un link por procedencia
-// (texto libre o un setter) para saber de dónde viene cada agenda.
+// Configuración › Funnels: nombre, probar, recibe agendas, eliminar, y sus links.
+//  - Funnel de marketing (workshop, VSL…): un link por procedencia, para saber de dónde viene cada agenda.
+//  - Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda queda a
+//    su nombre. Los setters no van en Team: salen de los usuarios de la app.
 
-import { useState } from 'react';
-import { Avatar, Icono, Switch, Sx } from '../../ui/base';
+import { useEffect, useState } from 'react';
+import { Avatar, Icono, Switch } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { almacen, useDatos } from '../../data/hooks';
 import { PLANTILLAS_FUNNEL } from '../../core/catalogos';
-import { buscar, colorLibre, colorVar, maxOrden, nombreOrigen, ord, setters } from '../../core/datos';
+import { buscar, colorLibre, colorVar, maxOrden, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
 import { InputVivo } from './campos';
@@ -27,7 +29,6 @@ const primerEvento = (d, f) => ord(d, 'eventos').find(e => e.funnel === f.id);
 function Origenes({ d, f }) {
     const [nuevo, setNuevo] = useState('');
     const ev = primerEvento(d, f);
-    const sts = setters(d).filter(p => !f.origenes.some(o => o.setter === p.id));
     const sumar = (o) => almacen.editar('funnels', f.id, { origenes: [...f.origenes, { id: uid('o'), ...o }] }, true);
     const crear = (e) => {
         e.preventDefault();
@@ -59,11 +60,44 @@ function Origenes({ d, f }) {
                 <label className="sr" htmlFor={'cfo-' + f.id}>Nuevo link</label>
                 <input id={'cfo-' + f.id} maxLength={60} autoComplete="off" placeholder="+ Link, ej. En vivo" value={nuevo} onChange={e => setNuevo(e.target.value)} />
             </form>
-            {sts.length > 0 && (
-                <Sx sm id={'cfst-' + f.id} label="Link de setter" valor=""
-                    opciones={[{ v: '', n: '+ Setter', icono: 'rayo', color: 'var(--idle)' }, ...sts.map(p => ({ v: p.id, n: p.nombre, icono: 'user', color: 'var(--info)' }))]}
-                    onChange={id => { const p = buscar(d, 'personas', id); if (p && !f.origenes.some(o => o.setter === id)) sumar({ nombre: p.nombre, setter: id }); }} />
-            )}
+        </div>
+    );
+}
+
+// Setters activos de la app. null mientras carga; [] en modo local o si falla.
+function useSetters() {
+    const [lista, setLista] = useState(null);
+    useEffect(() => {
+        let vivo = true;
+        Promise.resolve(almacen.adaptador.usuarios ? almacen.adaptador.usuarios('setter') : [])
+            .then(u => { if (vivo) setLista(u); }, () => { if (vivo) setLista([]); });
+        return () => { vivo = false; };
+    }, []);
+    return lista;
+}
+
+function LinksDeSetters({ d, f }) {
+    const sts = useSetters();
+    const ev = primerEvento(d, f);
+    return (
+        <div className="cf-origenes">
+            <span className="cf-o-tit" title="Cada setter de la app tiene su link: lo que entra por ahí queda a su nombre"><Icono n="link" s={13} />Setters</span>
+            {sts === null ? <span className="t-sm mut">Cargando…</span>
+                : !sts.length ? <span className="t-sm mut">No hay setters activos en la app.</span>
+                    : sts.map(s => {
+                        const url = ev ? window.location.origin + '/agendas-v2' + linkEvento(d, ev) + '?o=' + slugify(s.nombre) : '';
+                        return (
+                            <span key={s.id} className="cf-o cf-o--setter">
+                                {s.nombre}
+                                <button type="button" data-nav="" style={{ color: ev ? 'var(--brand-secondary)' : undefined }} disabled={!ev}
+                                    aria-label={ev ? 'Copiar link de ' + s.nombre : 'Sin link: el funnel no tiene eventos'}
+                                    title={ev ? 'Copiar ' + url : 'Creá un evento en este funnel para tener el link'} onClick={() => copiarTexto(url)}>
+                                    <Icono n="copiar" s={12} />
+                                </button>
+                            </span>
+                        );
+                    })}
+            <span className="t-xs mut" style={{ flexBasis: '100%' }}>Cada setter también ve sus links en su menú de NeurOPS.</span>
         </div>
     );
 }
@@ -85,7 +119,11 @@ function Funnel({ d, f, borrar, setBorrar }) {
                 <Switch on={f.activo} label={f.nombre + ' recibe agendas'} onChange={v => almacen.editar('funnels', f.id, { activo: v }, true)} />
                 <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar ' + f.nombre} onClick={() => setBorrar(f.id)}><Icono n="basura" s={15} /></button>
             </div>
-            <Origenes d={d} f={f} />
+            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Switch on={f.setting} label={'Funnel de setting: cada setter tiene su link'} onChange={v => almacen.editar('funnels', f.id, { setting: v }, true)} />
+                <span className="t-sm">Funnel de setting</span>
+            </div>
+            {f.setting ? <LinksDeSetters d={d} f={f} /> : <Origenes d={d} f={f} />}
             {borrar === f.id && (
                 <div className="cf-borrar ed-pie--borrar">
                     <p className="t-sm">¿Eliminar <b>{f.nombre}</b>? Su link deja de funcionar.</p>

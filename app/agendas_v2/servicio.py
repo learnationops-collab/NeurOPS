@@ -395,13 +395,44 @@ def horarios(d, evento, form, resp, ahora=None):
     return sorted({s['t'] for s in asig['slots']})
 
 
+def setters_activos():
+    """Los setters de NeurOPS (rol principal o extra), activos: los que tienen link en un funnel de setting."""
+    from app.models.user import ROLE_SETTER, User
+
+    return User.query.filter(User.role.in_([ROLE_SETTER]), User.is_active.is_(True)).order_by(User.username).all()
+
+
 def _setter_de(d, funnel, origen):
+    """El usuario setter al que se le atribuye la agenda. En un funnel de setting, el del link
+    (?o=<su usuario en slug>), si sigue activo. En los demás, el de un origen viejo con una persona
+    setter de Team (compatibilidad: los setters ya no van en Team)."""
+    from app.models.user import User
+
     if not funnel or not origen:
         return None
+    if funnel.get('setting'):
+        return next((u for u in setters_activos() if slugify(u.username) == origen), None)
     for o in funnel.get('origenes', []):
         if o.get('setter') and (slugify(nombre_origen(d, o)) or o['id']) == origen:
-            return o['setter']
+            user_id = _usuarios_de_personas(d).get(o['setter'])
+            return db.session.get(User, user_id) if user_id else None
     return None
+
+
+def links_de_setter(user):
+    """Los links de agendamiento de un setter: uno por evento publicado y activo de cada funnel de
+    setting activo. [{funnel, evento, ruta}] con la ruta relativa al sitio."""
+    d = colecciones()
+    slug = slugify(user.username)
+    links = []
+    for f in d['funnels']:
+        if not (f.get('setting') and f.get('activo')):
+            continue
+        for e in d['eventos']:
+            if e.get('funnel') == f['id'] and e.get('activo') is not False and version_publicada(e):
+                links.append({'funnel': f['nombre'], 'evento': e['nombre'],
+                              'ruta': f'/agendas-v2/agenda/{f["slug"]}/{e["slug"]}?o={slug}'})
+    return links
 
 
 def _respuesta(appt):
@@ -423,8 +454,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)
     origen = slugify(str(cuerpo.get('origen') or ''))[:60]
     lead = {'preguntas': preguntas, 'resp': limpias, 'pais': pais, 'tz': tz}
-    setter_persona = _setter_de(d, funnel, origen)
-    base = {'lead': lead, 'evento': evento, 'funnel': funnel, 'form': form, 'origen': origen, 'setter': setter_persona}
+    setter = _setter_de(d, funnel, origen)
+    base = {'lead': lead, 'evento': evento, 'funnel': funnel, 'form': form, 'origen': origen, 'setter': None}
 
     if descalifica:
         operacion.registrar_descalificado(armar_reserva(**base, asig=None, slot=None))
@@ -443,7 +474,6 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if previa:
         return _respuesta(previa), False
 
-    usuarios = _usuarios_de_personas(d)
     d, elegibles = solo_elegibles(d)
     asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
@@ -457,7 +487,6 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         db.session.rollback()
         raise ReservaRechazadaError('ocupado')
 
-    setter = db.session.get(User, usuarios[setter_persona]) if setter_persona in usuarios else None
     payload = {
         **armar_reserva(**base, asig=asig, slot=slot),
         'evento_nombre': evento['nombre'],

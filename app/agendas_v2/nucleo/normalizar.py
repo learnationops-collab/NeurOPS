@@ -192,6 +192,9 @@ def normal_funnel(id, d):
         'activo': d.get('activo') is not False,
         'orden': _orden(d.get('orden')),
         'origenes': origenes,
+        # Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
+        # queda a su nombre. No lleva orígenes a mano.
+        'setting': d.get('setting') is True,
     }
 
 

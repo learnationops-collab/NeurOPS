@@ -142,9 +142,10 @@ export function crearAdaptadorApi() {
             }
         },
 
-        // Closers y setters reales de la app (Team suma personas solo desde acá).
-        async usuarios() {
-            try { const { data } = await api.get('/agendas-v2/usuarios'); return Array.isArray(data && data.usuarios) ? data.usuarios : []; } catch (e) { throw errorDeApi(e); }
+        // Closers reales de la app (Team suma personas solo desde acá). rol 'setter': los setters, que
+        // tienen su link en los funnels de setting.
+        async usuarios(rol) {
+            try { const { data } = await api.get('/agendas-v2/usuarios', { params: rol ? { rol } : undefined }); return Array.isArray(data && data.usuarios) ? data.usuarios : []; } catch (e) { throw errorDeApi(e); }
         },
 
         async crearReserva() {

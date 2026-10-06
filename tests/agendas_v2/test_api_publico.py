@@ -467,3 +467,39 @@ def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
     monkeypatch.setattr('app.agendas_v2.operacion.requests.post', roto)
     assert _reservar(client).status_code == 201
     assert Appointment.query.count() == 1
+
+
+# --- Funnels de setting: cada setter de NeurOPS tiene su link -----------------------------------
+
+
+@pytest.fixture()
+def setting(armado):
+    """Un funnel de setting con el mismo evento: el link de cada setter es ?o=<su usuario>."""
+    servicio.guardar_doc('funnels', 'fs', {'nombre': 'Setting directo', 'slug': 'setting', 'setting': True})
+    servicio.guardar_doc('eventos', 'ev', {'funnel': 'fs'}, parcial=True)
+    _publicar('ev')
+
+
+def _reservar_setting(client, origen):
+    return client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': _resp(), 'pais': 'BO', 'tz': 'America/La_Paz', 'inicio': LUNES_9, 'origen': origen,
+    })
+
+
+def test_el_link_del_setter_le_atribuye_la_agenda(client, setting, cuentas, google):
+    assert _reservar_setting(client, 'juan').status_code == 201
+    appt = Appointment.query.one()
+    assert appt.setter_id == cuentas['juan'].id and appt.origin == 'juan'
+    assert FinancialAgenda.query.one().nombre == 'juan'  # su «Fuente»: así aparece en sus agendas
+
+
+def test_un_link_de_setter_que_no_existe_no_atribuye(client, setting, google):
+    assert _reservar_setting(client, 'nadie').status_code == 201
+    assert Appointment.query.one().setter_id is None
+
+
+def test_el_setter_ve_sus_links(client, setting, cuentas, auth_headers):
+    r = client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['juan']))
+    assert r.status_code == 200
+    assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada', 'ruta': '/agendas-v2/agenda/setting/llamada?o=juan'}]
+    assert client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['ana'])).status_code == 403

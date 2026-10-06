@@ -1,5 +1,5 @@
 // People: sumar personas, foto, nombre, rol, nivel (Top 1–3), horario y orden.
-// Con la API, las personas salen de los closers y setters reales de la app: se suman desde esa lista y
+// Con la API, las personas salen de los closers reales de la app: se suman desde esa lista y
 // quedan unidas a su cuenta por el email (es lo que usa el servidor para saber a qué closer va una agenda).
 // Un closer sin Google Calendar conectado en NeurOPS no recibe agendas: se marca en su tarjeta.
 
@@ -17,7 +17,8 @@ import { abrirHorario } from './Horario';
 
 const OPS_NIVEL = [1, 2, 3].map(n => ({ v: n, n: 'Top ' + n, icono: 'estrellaLlena', color: METAL[n - 1] }));
 
-// Closers y setters reales de la app. null mientras carga; [] en modo local (sin backend).
+// Closers reales de la app (los setters no van en Team: tienen su link en los funnels de setting).
+// null mientras carga; [] en modo local (sin backend).
 function useUsuariosReales() {
     const [usuarios, setUsuarios] = useState(null);
     useEffect(() => {
@@ -72,7 +73,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar }
                     <CampoNombre className="persona-nom" id={'pn-' + p.id} maxLength={60} valor={p.nombre} onGuardar={v => almacen.editar('personas', p.id, { nombre: v })} />
                     <span className="pc-sub">
                         {yo && yo.id === p.id && <span className="pc-vos">Vos</span>}
-                        {sinCuenta && <span className="pc-vos" title="Su email no coincide con ningún closer o setter activo de la app">Sin usuario</span>}
+                        {sinCuenta && <span className="pc-vos" title="Su email no coincide con ningún closer activo de la app">Sin usuario</span>}
                         {closer && sinCalendar && <span className="pc-vos" title="No recibe agendas hasta que conecte su Google Calendar en NeurOPS (Configuración › Agendas)">Sin Calendar</span>}
                         {closer
                             ? <><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></>

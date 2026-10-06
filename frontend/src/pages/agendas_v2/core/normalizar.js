@@ -99,6 +99,9 @@ export function normalFunnel(id, d) {
         origenes: (Array.isArray(d.origenes) ? d.origenes : []).slice(0, 30)
             .map(o => { o = o || {}; return { id: String(o.id || ''), nombre: String(o.nombre || '').slice(0, 60), setter: String(o.setter || '') }; })
             .filter(o => o.id && (o.nombre || o.setter)),
+        // Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
+        // queda a su nombre. No lleva orígenes a mano.
+        setting: d.setting === true,
     };
 }
 

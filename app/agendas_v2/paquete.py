@@ -29,7 +29,8 @@ EJEMPLO = {
     'funnel': {
         'nombre': 'Workshop octubre',
         'slug': 'workshop',
-        'origenes': [{'nombre': 'Instagram'}, {'setter': 'setter@empresa.com'}],
+        'setting': False,
+        'origenes': [{'nombre': 'Instagram'}, {'nombre': 'En vivo'}],
     },
     'prioridades': [
         {'nombre': 'Ultra', 'estrategia': 'llenar', 'closers': ['closer1@empresa.com']},
@@ -66,6 +67,7 @@ EJEMPLO = {
         'paso': {'n': 60, 'u': 'min'},
         'reservas': {'modo': 'dias', 'n': 14, 'tipo': 'corridos'},
         'desc': 'Una llamada de 45 minutos para ver si el programa es para vos.',
+        'indic': 'Conectate desde una computadora y tené a mano tu último simulacro.',
         'redir': '',
     },
 }
@@ -73,9 +75,7 @@ EJEMPLO = {
 
 def _equipo(d):
     closers = [p for p in d['personas'] if es_closer(d, p) and p.get('email')]
-    otros = [p for p in d['personas'] if not es_closer(d, p) and p.get('email')]
     filas = [f'- {p["nombre"]} <{p["email"]}> (closer)' for p in closers]
-    filas += [f'- {p["nombre"]} <{p["email"]}> (puede ser setter de un origen)' for p in otros]
     return '\n'.join(filas) or '- (Team está vacío: sumá a los closers en Thalamus › Team antes de importar)'
 
 
@@ -102,7 +102,7 @@ Tu trabajo: entrevistarme hasta tener todo lo necesario y al final devolver UN S
 
 ## Formato del JSON
 - "paquete_thalamus": siempre {VERSION}.
-- "funnel": "nombre", "slug" (minúsculas y guiones; va en el link), "origenes": lista de procedencias para armar un link por cada una. Cada origen es {{"nombre": "Instagram"}} o {{"setter": "<email de un setter del equipo>"}}.
+- "funnel": "nombre", "slug" (minúsculas y guiones; va en el link), "setting" (true si es un funnel de setting: cada setter de la empresa recibe su propio link y la agenda queda a su nombre; no lleva orígenes) y "origenes" (solo si no es de setting): lista de procedencias para armar un link por cada una, cada una {{"nombre": "Instagram"}}. Los setters NO van en el JSON.
 - "prioridades": lista ordenada (la primera es la más importante). Cada una: "nombre" (único), "estrategia" ("llenar" | "horario" | "repartir"), "closers": emails de closers del equipo, en orden.
 - "formulario":
   - "nombre".
@@ -111,7 +111,7 @@ Tu trabajo: entrevistarme hasta tener todo lo necesario y al final devolver UN S
   - "reglas": lista ordenada. Cada una: "prioridad" (nombre de una prioridad) y "si": lista de condiciones {{"pregunta": "<id de pregunta con opciones>", "respuestas": ["<id de opción>", ...]}}.
   - "resto": nombre de la prioridad para quien no cumple ninguna regla.
   - "fin": "titulo" y "texto" del mensaje para el lead que no califica.
-- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "paso" (cada cuánto se ofrecen horarios: "n" y "u" = "min" | "h"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar).
+- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "paso" (cada cuánto se ofrecen horarios: "n" y "u" = "min" | "h"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar), "indic" (indicaciones para la sesión: qué tiene que tener listo el lead; van en la invitación de Google Calendar).
 
 ## Ejemplo (solo para mostrar la forma; usá los datos reales que te dé)
 ```json
@@ -157,17 +157,12 @@ def revisar(d, paquete):
     origenes = []
     for i, o in enumerate(_lista(fu.get('origenes'))):
         o = _obj(o)
-        email = _txt(o.get('setter')).lower()
-        if email:
-            persona = personas_por_email.get(email)
-            if not persona:
-                errores.append(f'funnel.origenes[{i}]: "{email}" no está en Team.')
-                continue
-            origenes.append({'id': uid('o'), 'nombre': '', 'setter': persona['id']})
+        if _txt(o.get('setter')):
+            errores.append(f'funnel.origenes[{i}]: los setters ya no van en los orígenes. Si el funnel es de setting, poné "setting": true y cada setter tiene su link.')
         elif _txt(o.get('nombre')):
             origenes.append({'id': uid('o'), 'nombre': _txt(o.get('nombre')), 'setter': ''})
         else:
-            errores.append(f'funnel.origenes[{i}]: falta "nombre" o "setter".')
+            errores.append(f'funnel.origenes[{i}]: falta "nombre".')
 
     # Prioridades
     prioridades, ids_prioridad = [], {}
@@ -278,7 +273,8 @@ def revisar(d, paquete):
     return {
         'prioridades': prioridades,
         'formulario': {**fo, 'preguntas': preguntas, 'reglas': reglas, 'resto': resto},
-        'funnel': {**fu, 'slug': fu_slug, 'origenes': origenes},
+        'funnel': {**fu, 'slug': fu_slug, 'setting': fu.get('setting') is True,
+                   'origenes': [] if fu.get('setting') is True else origenes},
         'evento': ev,
     }, []
 
@@ -290,6 +286,7 @@ def resumen(plan):
         'funnel': plan['funnel']['nombre'],
         'slug': plan['funnel']['slug'],
         'origenes': len(plan['funnel']['origenes']),
+        'setting': plan['funnel']['setting'],
         'prioridades': [
             {'nombre': g['nombre'], 'estrategia': g['estrategia'], 'closers': len(g['miembros'])}
             for g in plan['prioridades']
