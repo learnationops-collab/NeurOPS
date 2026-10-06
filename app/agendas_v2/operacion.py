@@ -311,6 +311,9 @@ def aviso_discord(appt):
         + (payload.get('evento_nombre') or 'Llamada')
     )
     return {
+        # @everyone, como el aviso de n8n: el canal de ventas se entera al instante.
+        'content': '@everyone',
+        'allowed_mentions': {'parse': ['everyone']},
         'embeds': [
             {
                 'title': _corto(titulo, 256),
@@ -321,6 +324,56 @@ def aviso_discord(appt):
             }
         ]
     }
+
+
+BANDERAS = {
+    'AR': '🇦🇷', 'BO': '🇧🇴', 'BR': '🇧🇷', 'CL': '🇨🇱', 'CO': '🇨🇴', 'CR': '🇨🇷', 'CU': '🇨🇺', 'DO': '🇩🇴',
+    'EC': '🇪🇨', 'ES': '🇪🇸', 'GT': '🇬🇹', 'HN': '🇭🇳', 'MX': '🇲🇽', 'NI': '🇳🇮', 'PA': '🇵🇦', 'PE': '🇵🇪',
+    'PY': '🇵🇾', 'SV': '🇸🇻', 'US': '🇺🇸', 'UY': '🇺🇾', 'VE': '🇻🇪',
+}
+DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+
+
+def aviso_whatsapp(appt):
+    """Los 8 datos de la plantilla del aviso al closer (la misma del flujo de n8n): día y hora en la zona
+    del lead, con su bandera, como los mandaba n8n."""
+    payload = appt.agenda_payload or {}
+    lead = payload.get('lead') or {}
+    closer = db.session.get(User, appt.closer_id)
+    setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
+    try:
+        zona = ZoneInfo(lead.get('tz') or ZONA_EQUIPO)
+    except Exception:  # noqa: BLE001
+        zona = ZoneInfo(ZONA_EQUIPO)
+    local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(zona)
+    hora = local.strftime('%I:%M').lstrip('0') + (' am' if local.hour < 12 else ' pm')
+    reprogramada = ' (reprogramada)' if payload.get('reprogramada_desde') else ''
+    return {
+        'closer': closer.username if closer else '',
+        'lead': (lead.get('nombre') or 'Lead') + reprogramada,
+        'telefono': lead.get('telefono'),
+        'instagram': ('@' + lead['instagram']) if lead.get('instagram') else None,
+        'dia': f'{DIAS[local.weekday()]} {local.day}',
+        'hora': f'{hora} {BANDERAS.get(lead.get("pais") or "", "🌍")}',
+        'grupo': payload.get('prioridad_nombre'),
+        'fuente': (setter.username if setter else payload.get('origen') or payload.get('funnel_slug')),
+    }
+
+
+def avisar_whatsapp(appt):
+    """Avisa la agenda al WhatsApp del closer (Whatchimp). Devuelve True si salió. Nunca lanza."""
+    from app.services.whatchimp_service import AvisoDeAgenda
+
+    closer = db.session.get(User, appt.closer_id)
+    if not closer or not closer.two_chat_number:
+        current_app.logger.warning(f'[AGENDAS 2.0] El closer de la agenda #{appt.id} no tiene WhatsApp: no se le avisa.')
+        return False
+    try:
+        AvisoDeAgenda.enviar(closer.two_chat_number, **aviso_whatsapp(appt))
+        return True
+    except Exception as e:  # noqa: BLE001  (WhatsApp nunca puede frenar una agenda)
+        current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar por WhatsApp la agenda #{appt.id}: {e}')
+        return False
 
 
 def avisar_discord(appt):

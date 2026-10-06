@@ -471,7 +471,9 @@ def user_operations(id):
             return jsonify({"message": "No podés sacarte el rol de administrador a vos mismo"}), 400
         user.role = roles[0]
         user.roles_extra = ','.join(roles[1]) or None
-        if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
+        if 'two_chat_number' in data and (data['two_chat_number'] or None) != (user.two_chat_number or None):
+            user.two_chat_number = data['two_chat_number']
+            user.whatsapp_confirmado_en = None  # número nuevo: el closer lo vuelve a confirmar
         if 'timezone' in data: user.timezone = data['timezone']
         if 'is_active' in data:
             if user.id == current_user.id and data['is_active'] is False:

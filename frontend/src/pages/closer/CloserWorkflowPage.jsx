@@ -142,16 +142,21 @@ const CloserWorkflowPage = () => {
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día). `?vista=configuracion` abre
     // Configuración: es a donde vuelve Google después de conectar el calendario.
     const [activeView, setActiveView] = useState(() => (searchParams.get('vista') === 'configuracion' ? 'configuracion' : 'inbox'));
-    // Google Calendar conectado (null mientras no se sabe): sin él, el closer no recibe agendas del
-    // sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión hasta que lo conecte.
+    // Google Calendar conectado y WhatsApp confirmado (null mientras no se sabe): sin ellos, el closer
+    // no recibe agendas del sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión.
     const [calendarConectado, setCalendarConectado] = useState(null);
+    const [whatsappConfirmado, setWhatsappConfirmado] = useState(null);
     useEffect(() => {
         let vivo = true;
         api.get('/google/calendars', { params: { solo_estado: 1 }, skipBugReport: true })
             .then(res => { if (vivo) setCalendarConectado(!!res.data?.connected); })
             .catch(() => {});
+        api.get('/auth/me/whatsapp', { skipBugReport: true })
+            .then(res => { if (vivo) setWhatsappConfirmado(!!res.data?.confirmado); })
+            .catch(() => {});
         return () => { vivo = false; };
     }, [activeView]);
+    const faltaConfigurar = [calendarConectado === false && 'Google Calendar sin conectar', whatsappConfirmado === false && 'WhatsApp sin confirmar'].filter(Boolean);
     // Pestaña temporal "Auditoría" — solo visible mientras Operaciones la tenga activada
     // (ver LeadsAuditTogglePanel.jsx y GET /closer/leads-audit/status).
     const [auditEnabled, setAuditEnabled] = useState(false);
@@ -1453,8 +1458,8 @@ const CloserWorkflowPage = () => {
         [
             // Configuración (por ahora, Google Calendar) vive en el menú de sesión, no en el dock.
             { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => irASeccion('configuracion'),
-                cuenta: calendarConectado === false ? '!' : null,
-                titulo: calendarConectado === false ? 'Google Calendar sin conectar' : null },
+                cuenta: faltaConfigurar.length ? '!' : null,
+                titulo: faltaConfigurar.length ? faltaConfigurar.join(' · ') : null },
             ...(user?.is_impersonating
                 ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
                 : []),

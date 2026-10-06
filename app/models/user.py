@@ -136,6 +136,10 @@ class User(UserMixin, db.Model):
     timezone = db.Column(db.String(50), default='America/La_Paz')
     is_active = db.Column(db.Boolean, default=True)
     two_chat_number = db.Column(db.String(20), nullable=True)
+    # Cuándo el closer confirmó que le llega el WhatsApp de prueba a `two_chat_number` (Configuración).
+    # Sin confirmar no recibe agendas de Agendas 2.0: el aviso de cada agenda nueva va a ese número.
+    # Cambiar el número lo vuelve a NULL.
+    whatsapp_confirmado_en = db.Column(db.DateTime, nullable=True)
     can_view_finance = db.Column(db.Boolean, default=False, server_default="0")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Las cuentas con el mismo `persona_id` son la misma persona con varios roles (ver

@@ -38,8 +38,21 @@ def _publicar(evento_id):
 
 
 def _conectar_calendar(db, user):
+    """Lo que un closer necesita para recibir agendas: Google Calendar conectado y su WhatsApp confirmado."""
     db.session.add(GoogleCalendarToken(user_id=user.id, token_json='{}'))
+    user.two_chat_number = '59170000' + str(user.id).zfill(3)
+    user.whatsapp_confirmado_en = datetime(2026, 10, 1)
     db.session.commit()
+
+
+@pytest.fixture(autouse=True)
+def whatsapp(monkeypatch):
+    """Whatchimp simulado: guarda cada aviso al closer."""
+    from app.services.whatchimp_service import AvisoDeAgenda
+
+    enviados = []
+    monkeypatch.setattr(AvisoDeAgenda, 'enviar', staticmethod(lambda numero, **datos: enviados.append({'numero': numero, **datos})))
+    return enviados
 
 
 @pytest.fixture(autouse=True)
@@ -503,3 +516,22 @@ def test_el_setter_ve_sus_links(client, setting, cuentas, auth_headers):
     assert r.status_code == 200
     assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada', 'ruta': '/agendas-v2/agenda/setting/llamada?o=juan'}]
     assert client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['ana'])).status_code == 403
+
+
+
+# --- WhatsApp al closer -------------------------------------------------------------------------
+
+
+def test_la_agenda_se_avisa_al_whatsapp_del_closer(client, armado, cuentas, whatsapp):
+    assert _reservar(client).status_code == 201
+    (aviso,) = whatsapp
+    assert aviso['numero'] == cuentas['ana'].two_chat_number and aviso['closer'] == 'ana'
+    assert aviso['lead'] == 'Lucía Fernández' and aviso['grupo'] == 'Ultra' and aviso['fuente'] == 'juan'
+    assert aviso['dia'] == 'lunes 5' and aviso['hora'] == '9:00 am 🇧🇴'
+
+
+def test_sin_whatsapp_confirmado_no_recibe_agendas(client, armado, cuentas, db, whatsapp):
+    cuentas['ana'].whatsapp_confirmado_en = None
+    db.session.commit()
+    assert _reservar(client).status_code == 201
+    assert Appointment.query.one().closer_id == cuentas['beto'].id  # Ana se saltea, como sin Calendar

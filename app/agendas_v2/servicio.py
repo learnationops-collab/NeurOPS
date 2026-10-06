@@ -100,6 +100,7 @@ def usuarios_del_equipo(roles):
 
     filas = User.query.filter(User.role.in_(roles), User.is_active.is_(True)).order_by(User.username).all()
     con_calendar = _con_calendar({u.id for u in filas})
+    con_whatsapp = _con_whatsapp({u.id for u in filas})
     return [
         {
             'id': u.id,
@@ -109,6 +110,7 @@ def usuarios_del_equipo(roles):
             'rol': next((r for r in roles if u.tiene_rol(r)), u.role),
             'tz': u.timezone or TZ_DEF,
             'calendar': u.id in con_calendar,
+            'whatsapp': u.id in con_whatsapp,
         }
         for u in filas
     ]
@@ -245,13 +247,24 @@ def _con_calendar(user_ids):
     return {t.user_id for t in filas}
 
 
+def _con_whatsapp(user_ids):
+    """Los que confirmaron su WhatsApp en Configuración: ahí les llega el aviso de cada agenda."""
+    from app.models.user import User
+
+    if not user_ids:
+        return set()
+    filas = User.query.filter(User.id.in_(list(user_ids)), User.whatsapp_confirmado_en.isnot(None),
+                              User.two_chat_number.isnot(None), User.two_chat_number != '').all()
+    return {u.id for u in filas}
+
+
 def solo_elegibles(d):
-    """Copia de `d` donde una persona sin usuario activo o sin Google Calendar conectado no tiene
-    horario: no se le ofrece nada y el nucleo la saltea (y desborda) como a un closer sin horas.
+    """Copia de `d` donde una persona sin usuario activo, sin Google Calendar conectado o sin su
+    WhatsApp confirmado no tiene horario: no se le ofrece nada y el nucleo la saltea (y desborda) como a un closer sin horas.
     Devuelve (d, {persona_id: user_id} de las elegibles)."""
     usuarios = _usuarios_de_personas(d)
-    con_calendar = _con_calendar(set(usuarios.values()))
-    elegibles = {pid: user_id for pid, user_id in usuarios.items() if user_id in con_calendar}
+    listos = _con_calendar(set(usuarios.values())) & _con_whatsapp(set(usuarios.values()))
+    elegibles = {pid: user_id for pid, user_id in usuarios.items() if user_id in listos}
     personas = [p if p['id'] in elegibles else {**p, 'horario': {}} for p in d['personas']]
     return {**d, 'personas': personas}, elegibles
 
@@ -502,4 +515,5 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     db.session.commit()
     operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
     operacion.avisar_discord(appt)
+    operacion.avisar_whatsapp(appt)
     return _respuesta(appt), True

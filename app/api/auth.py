@@ -136,6 +136,58 @@ def cargar_mi_email():
     return jsonify({"user": _usuario_json(current_user)}), 200
 
 
+def _whatsapp_json(u):
+    return {"numero": u.two_chat_number or '', "confirmado": bool(u.whatsapp_confirmado_en and u.two_chat_number)}
+
+
+@bp.route('/auth/me/whatsapp', methods=['GET', 'PUT'])
+@login_required
+def mi_whatsapp():
+    """El WhatsApp donde el closer recibe el aviso de cada agenda nueva (y los recordatorios de
+    seguimiento). Cambiarlo obliga a confirmarlo de nuevo con un mensaje de prueba."""
+    if request.method == 'PUT':
+        from app.services.whatchimp_service import WhatchimpService
+        numero = WhatchimpService.normalize_phone((request.get_json(silent=True) or {}).get('numero'))
+        if not 8 <= len(numero) <= 15:
+            return jsonify({"message": "Escribí el número con código de país, sin + ni espacios (ej.: 5491122334455)"}), 400
+        if numero != (current_user.two_chat_number or ''):
+            current_user.two_chat_number = numero
+            current_user.whatsapp_confirmado_en = None
+            db.session.commit()
+    return jsonify(_whatsapp_json(current_user)), 200
+
+
+@bp.route('/auth/me/whatsapp/prueba', methods=['POST'])
+@login_required
+def mi_whatsapp_prueba():
+    """Manda el WhatsApp de prueba (la misma plantilla del aviso de agenda) al número cargado."""
+    from flask import current_app, session
+    from app.services.whatchimp_service import AvisoDeAgenda
+    if not current_user.two_chat_number:
+        return jsonify({"message": "Primero guardá tu número"}), 400
+    try:
+        AvisoDeAgenda.prueba(current_user.two_chat_number, current_user.username)
+    except Exception as e:  # noqa: BLE001  (Whatchimp, red o la clave: se le dice al closer)
+        current_app.logger.warning(f'[WHATSAPP] Falló la prueba al usuario #{current_user.id}: {e}')
+        return jsonify({"message": "No se pudo mandar el mensaje. Revisá el número o avisá a operaciones."}), 502
+    session['whatsapp_prueba'] = current_user.two_chat_number
+    return jsonify({"message": "Mensaje enviado"}), 200
+
+
+@bp.route('/auth/me/whatsapp/confirmar', methods=['POST'])
+@login_required
+def mi_whatsapp_confirmar():
+    """«Me llegó»: solo después de mandar la prueba a ESE número en esta sesión."""
+    from flask import session
+    if not current_user.two_chat_number or session.get('whatsapp_prueba') != current_user.two_chat_number:
+        return jsonify({"message": "Primero mandate el mensaje de prueba"}), 400
+    from datetime import datetime
+    current_user.whatsapp_confirmado_en = datetime.utcnow()
+    db.session.commit()
+    session.pop('whatsapp_prueba', None)
+    return jsonify(_whatsapp_json(current_user)), 200
+
+
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
     logout_user()

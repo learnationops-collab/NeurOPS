@@ -58,3 +58,44 @@ class WhatchimpService:
             return response.json()
         except ValueError:
             return {"status": "ok", "raw": response.text}
+
+
+class AvisoDeAgenda:
+    """El WhatsApp al closer por cada agenda nueva (la plantilla 414407 que usaba el flujo «New Call»
+    de n8n con Calendly): closer, lead, teléfono, Instagram, día, hora, grupo y fuente.
+
+    También es el mensaje de prueba con el que el closer confirma su número en Configuración."""
+
+    TEMPLATE_ID = "414407"
+
+    @staticmethod
+    def enviar(numero, closer, lead, telefono, instagram, dia, hora, grupo, fuente):
+        """Lanza excepción si falta la API key o el número, o si Whatchimp responde error."""
+        api_key = os.environ.get('WHATCHIMP_API_KEY')
+        if not api_key:
+            raise Exception("WHATCHIMP_API_KEY no está configurada en las variables de entorno")
+        numero = WhatchimpService.normalize_phone(numero)
+        if not numero:
+            raise Exception("No hay número de WhatsApp")
+        valores = [closer, lead, telefono, instagram, dia, hora, grupo, fuente]
+        payload = {
+            "apiToken": api_key,
+            "phone_number_id": WhatchimpService.PHONE_NUMBER_ID,
+            "template_id": AvisoDeAgenda.TEMPLATE_ID,
+            "phone_number": numero,
+            **{f"templateVariable-{i}-{i}": (str(v) if v not in (None, '') else '-') for i, v in enumerate(valores, 1)},
+        }
+        response = requests.post(WhatchimpService.BASE_URL, data=payload, timeout=15)
+        response.raise_for_status()
+        try:
+            datos = response.json()
+        except ValueError:
+            return {"status": "ok", "raw": response.text}
+        if isinstance(datos, dict) and str(datos.get('status', '')).lower() in ('error', 'failed', '0', 'false'):
+            raise Exception(datos.get('message') or 'Whatchimp rechazó el mensaje')
+        return datos
+
+    @staticmethod
+    def prueba(numero, nombre):
+        return AvisoDeAgenda.enviar(numero, nombre, 'PRUEBA de NeurOPS', '-', '-', 'hoy', '-', 'Prueba',
+                                    'Confirmación de tu número')

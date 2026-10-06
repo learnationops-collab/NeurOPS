@@ -38,7 +38,7 @@ function rolDeUsuario(d, u) {
     return r ? r.id : 'setter';
 }
 
-function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar }) {
+function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, sinWhatsapp }) {
     const { d } = useDatos();
     const { yo } = usePermisos();
     const hs = horasSemana(p), closer = esCloser(d, p);
@@ -74,7 +74,8 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar }
                     <span className="pc-sub">
                         {yo && yo.id === p.id && <span className="pc-vos">Vos</span>}
                         {sinCuenta && <span className="pc-vos" title="Su email no coincide con ningún closer activo de la app">Sin usuario</span>}
-                        {closer && sinCalendar && <span className="pc-vos" title="No recibe agendas hasta que conecte su Google Calendar en NeurOPS (Configuración › Agendas)">Sin Calendar</span>}
+                        {closer && sinCalendar && <span className="pc-vos" title="No recibe agendas hasta que conecte su Google Calendar en NeurOPS (su menú › Configuración)">Sin Calendar</span>}
+                        {closer && sinWhatsapp && <span className="pc-vos" title="No recibe agendas hasta que confirme su WhatsApp en NeurOPS (su menú › Configuración)">Sin WhatsApp</span>}
                         {closer
                             ? <><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></>
                             : <span>No toma llamadas</span>}
@@ -182,7 +183,8 @@ export default function Personas() {
                     {porIdsOrden(ps, orden.lista).map(p => (
                         <Persona key={p.id} p={p} ordenable={orden} borrando={borrando === p.id} setBorrando={setBorrando}
                             sinCuenta={reales && usuarios !== null && !cuentas.has((p.email || '').toLowerCase())}
-                            sinCalendar={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).calendar} />
+                            sinCalendar={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).calendar}
+                            sinWhatsapp={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).whatsapp} />
                     ))}
                 </div>
             </div>
