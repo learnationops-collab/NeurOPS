@@ -1449,7 +1449,7 @@
 /* ElegirCloser: elegir un closer viendo si está listo (Calendar, WhatsApp, Horarios). */
 .thalamus .ec{position:relative;display:inline-block;max-width:100%}
 .thalamus .ec-btn{justify-content:space-between;min-width:min(260px,100%)}
-.thalamus .ec-pop{position:absolute;z-index:150;top:calc(100% + 6px);left:0;list-style:none;margin:0;padding:6px;min-width:min(420px,calc(100vw - 32px));max-height:340px;overflow:auto;
+.thalamus .ec-pop{position:fixed;z-index:400;list-style:none;margin:0;padding:6px;min-width:min(420px,calc(100vw - 32px));max-height:340px;overflow:auto;
   border-radius:16px;background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:0 24px 60px rgba(2,6,23,.55)}
 .thalamus .ec-op{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;text-align:left;color:inherit}
 .thalamus .ec-op:hover,.thalamus .ec-op:focus-visible{background:rgba(255,255,255,.06)}
@@ -1467,3 +1467,7 @@
 @container (max-width:1180px){.thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.thalamus .ev-grid--3 .ev-rev{grid-column:1 / -1;position:static}}
 @container (max-width:760px){.thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr)}}
 .thalamus .ev-grid--3 .ffila{grid-template-columns:minmax(0,1fr)}
+
+/* Distribuida: porcentaje por closer. */
+.thalamus .pm-pct{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-2,inherit)}
+.thalamus .pm-pct .input{width:58px;height:28px;padding:0 6px;text-align:right}

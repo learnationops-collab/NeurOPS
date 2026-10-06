@@ -2,6 +2,7 @@
 // La segmentación del formulario elige la estrategia; si nadie tiene lugar, pasa a la siguiente.
 
 import { useCallback } from 'react';
+import { pesoDe } from '../../core/asignacion';
 import { COLOR_EST, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
 import { closers, colorVar, esCloser, horasSemana, maxOrden, ord } from '../../core/datos';
 import { almacen, useDatos } from '../../data/hooks';
@@ -47,13 +48,29 @@ function borrarGrupo(g) {
     toast(g.nombre + ' eliminado');
 }
 
-function Miembro({ p, j, g, numerar, ordenable }) {
+// Distribuida: el porcentaje que se ve es el guardado o la parte pareja. Al cambiar uno se guardan
+// todos, para que lo que se ve sea lo que reparte.
+const pctDe = (g, pid) => Math.round(pesoDe(g, pid, g.miembros.length));
+function cambiarPct(g, pid, v) {
+    const pesos = Object.fromEntries(g.miembros.map(id => [id, pctDe(g, id)]));
+    pesos[pid] = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+    almacen.editar('grupos', g.id, { pesos }, true);
+}
+
+function Miembro({ p, j, g, numerar, ordenable, pct }) {
     const { d } = useDatos();
     return (
         <div data-item={p.id} className={'pm' + ordenable.claseItem(p.id)} style={{ '--c': colorVar(p.color) }}>
             <button type="button" className="grip pm-grip" {...ordenable.grip(p.id, 'Mover ' + p.nombre)}><Icono n="grip" /></button>
             <span className="pm-av"><Avatar p={p} clase="avatar--sm" />{numerar && <i className="pm-num num">{j + 1}</i>}</span>
             <span className="pm-txt"><b>{p.nombre}</b>{esCloser(d, p) && <Nivel n={p.nivel} />}</span>
+            {pct && (
+                <label className="pm-pct">
+                    <span className="sr">{'Porcentaje de ' + p.nombre}</span>
+                    <input className="input num" type="number" min={0} max={100} step={5} value={pctDe(g, p.id)}
+                        onChange={ev => cambiarPct(g, p.id, ev.target.value)} />%
+                </label>
+            )}
             {!horasSemana(p) && (
                 <span className="pm-aviso" role="img" aria-label="Sin horario" data-tip="Sin horario|No recibe leads hasta que cargue horario.">
                     <Icono n="alerta" s={13} />
@@ -74,7 +91,9 @@ function Prioridad({ g, i, ordenable, usuarios }) {
     const enOrden = g.estrategia !== 'repartir', pc = colorNivel(i + 1);
     const reordenar = useCallback((ids) => almacen.editar('grupos', g.id, { miembros: ids }, true), [g.id]);
     const { contenedor: omCont, ...om } = useOrdenable(ms.map(p => p.id), reordenar, { horizontal: true });
-    const aviso = avisoPrioridad(d, g);
+    const pct = g.estrategia === 'repartir' && ms.length > 1;
+    const total = pct ? ms.reduce((s, p) => s + pctDe(g, p.id), 0) : 100;
+    const aviso = avisoPrioridad(d, g) || (Math.abs(total - 100) > 1 ? 'Los porcentajes suman ' + total + '%: se reparte en esa proporción.' : '');
     const msOrden = om.lista.map(id => ms.find(p => p.id === id)).filter(Boolean);
 
     return (
@@ -89,7 +108,7 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar estrategia ' + g.nombre} onClick={() => borrarGrupo(g)}><Icono n="basura" s={15} /></button>
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>
-                {msOrden.map((p, j) => <Miembro key={p.id} p={p} j={j} g={g} numerar={enOrden} ordenable={om} />)}
+                {msOrden.map((p, j) => <Miembro key={p.id} p={p} j={j} g={g} numerar={enOrden} ordenable={om} pct={pct} />)}
                 {libres.length > 0 && (
                     <div className="pm-sumar">
                         <ElegirCloser opciones={libres.map(p => listoDe(p, usuarios))}

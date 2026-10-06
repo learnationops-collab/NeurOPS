@@ -28,7 +28,7 @@ describe('calcularCobertura', () => {
 describe('textoEstrategia', () => {
     const d = { personas: [{ id: 'a', nombre: 'Ana' }, { id: 'b', nombre: 'Beto' }] };
     it('explica llenar en orden con la ventana', () => {
-        expect(textoEstrategia(d, { miembros: ['a', 'b'], estrategia: 'llenar' })).toMatch(/Ana recibe todo .* 7 días; después Beto\./);
+        expect(textoEstrategia(d, { miembros: ['a', 'b'], estrategia: 'llenar' })).toMatch(/Los leads van a Ana hasta llenar .* 7 días; después a Beto\./);
         expect(textoEstrategia(d, { miembros: [], estrategia: 'llenar' })).toBe('Sumá closers.');
     });
 });

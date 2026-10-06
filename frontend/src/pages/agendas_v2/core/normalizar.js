@@ -135,8 +135,14 @@ export function normalGrupo(id, d) {
     d = d || {};
     return {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 60), estrategia: ESTRATEGIAS[d.estrategia] ? d.estrategia : 'llenar',
-        miembros: (Array.isArray(d.miembros) ? d.miembros : []).map(String).slice(0, 30), orden: Number(d.orden) || 0,
+        miembros: (Array.isArray(d.miembros) ? d.miembros : []).map(String).slice(0, 30), pesos: normalPesos(d.pesos), orden: Number(d.orden) || 0,
     };
+}
+
+// Distribuida: el porcentaje de cada closer {personaId: 0..100}. Sin dato, todos parejo.
+function normalPesos(v) {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return Object.fromEntries(Object.entries(o).slice(0, 30).map(([k, x]) => [String(k), entero(x, 0, 100, 0)]));
 }
 
 export function normalEvento(id, d) {

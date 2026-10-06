@@ -280,3 +280,17 @@ def test_el_prompt_trae_la_segmentacion_de_los_formularios(client, equipo, dir_h
     texto = client.get(URL + '/prompt', headers=dir_h).get_json()['prompt']
     assert '· si "¿Cuánto podrías invertir en tu formación?" es Más de 1000 USD → Ultra' in texto
     assert '· el resto → General' in texto
+
+
+def test_una_estrategia_distribuida_lleva_sus_porcentajes(client, equipo, dir_h):
+    p = _paquete(prioridades__1__porcentajes={'closer1@empresa.com': 70, 'closer2@empresa.com': 30})
+    r = client.post(URL, json={'paquete': p}, headers=dir_h)
+    assert r.status_code == 201, r.get_json()
+    d = servicio.colecciones()
+    por_email = {x['id']: x['email'] for x in d['personas']}
+    general = next(g for g in d['grupos'] if g['nombre'] == 'General')
+    assert {por_email[k]: v for k, v in general['pesos'].items()} == {'closer1@empresa.com': 70, 'closer2@empresa.com': 30}
+    # Solo en "repartir".
+    malo = _paquete(prioridades__0__porcentajes={'closer1@empresa.com': 100})
+    errores = client.post(URL, json={'paquete': malo, 'simular': True}, headers=dir_h).get_json()['errores']
+    assert any('solo para la estrategia "repartir"' in e for e in errores)

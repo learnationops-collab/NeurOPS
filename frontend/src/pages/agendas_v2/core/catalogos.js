@@ -51,7 +51,9 @@ export const HORAS = (() => {
 })();
 export function aMin(h) { const p = String(h).split(':'); return (+p[0]) * 60 + (+p[1] || 0); }
 
-export const ESTRATEGIAS = { llenar: 'Llenar en orden', horario: 'Por horario', repartir: 'Repartir parejo' };
+// Las claves quedan por compatibilidad: llenar = Llenar agenda, horario = Máxima disponibilidad,
+// repartir = Distribuida (por porcentajes, `pesos` del grupo).
+export const ESTRATEGIAS = { llenar: 'Llenar agenda', horario: 'Máxima disponibilidad', repartir: 'Distribuida' };
 export const ICO_EST = { llenar: 'rayo', horario: 'clock', repartir: 'users' };
 export const COLOR_EST = { llenar: 'var(--brand-secondary)', horario: 'var(--warning)', repartir: 'var(--info)' };
 export const MS_U = { min: 60000, h: 3600000, d: 86400000 };

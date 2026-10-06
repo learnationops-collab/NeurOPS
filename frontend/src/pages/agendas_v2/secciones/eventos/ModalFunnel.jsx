@@ -24,7 +24,7 @@ const AYUDA_TIPO = {
     setting: 'Cada setter tiene su link y la agenda queda a su nombre.',
     otro: 'La fuente de la agenda es el nombre del link.',
 };
-const ESTRATEGIA = { llenar: 'llenar en orden', horario: 'por horario', repartir: 'repartir parejo' };
+const ESTRATEGIA = { llenar: 'llenar agenda', horario: 'máxima disponibilidad', repartir: 'distribuida' };
 
 export function crearFunnel(d, nombre, tipo = 'otro') {
     nombre = String(nombre || '').replace(/\s+/g, ' ').trim();

@@ -97,7 +97,9 @@ def a_min(h):
     return hh * 60 + mm
 
 
-ESTRATEGIAS = {'llenar': 'Llenar en orden', 'horario': 'Por horario', 'repartir': 'Repartir parejo'}
+# Las claves quedan por compatibilidad: llenar = Llenar agenda, horario = Máxima disponibilidad,
+# repartir = Distribuida (por porcentajes, `pesos` del grupo).
+ESTRATEGIAS = {'llenar': 'Llenar agenda', 'horario': 'Máxima disponibilidad', 'repartir': 'Distribuida'}
 MS_U = {'min': 60000, 'h': 3600000, 'd': 86400000}
 
 PAISES = [

@@ -16,6 +16,7 @@ from app.agendas_v2.nucleo.eventos import (
     version_publicada,
 )
 from app.agendas_v2.nucleo.formulario import (
+    texto_regla,
     calificar,
     duplicar_form,
     grupo_por_reglas,
@@ -236,6 +237,25 @@ def test_repartir_parejo_va_a_quien_tiene_menos_agendas_por_delante():
     assert {s['p'] for s in a['slots']} == {'beto'}
 
 
+def test_distribuida_con_porcentajes_va_a_quien_esta_mas_lejos_de_su_parte():
+    g = {'id': 'g1', 'nombre': 'Top', 'estrategia': 'repartir', 'miembros': ['ana', 'beto'], 'pesos': {'ana': 80, 'beto': 20}}
+    a = asignacion(ctx(), datos(roles=ROLES, personas=[ANA, BETO], grupos=[g]), {'ahora': LUNES, 'carga_de': lambda pid: 3 if pid == 'ana' else 1})
+    assert {s['p'] for s in a['slots']} == {'ana'}
+    # Con 0% solo recibe si nadie más está libre.
+    g0 = {**g, 'pesos': {'ana': 0, 'beto': 100}}
+    b = asignacion(ctx(), datos(roles=ROLES, personas=[ANA, BETO], grupos=[g0]), {'ahora': LUNES, 'carga_de': lambda pid: 9 if pid == 'beto' else 0})
+    assert {s['p'] for s in b['slots']} == {'beto'}
+
+
+def test_texto_de_una_regla_de_segmentacion():
+    fo = {
+        'preguntas': [{'id': 'q1', 'titulo': '¿Cuánto?', 'opciones': [{'id': 'a', 'texto': 'Mucho'}, {'id': 'b', 'texto': 'Algo'}]}],
+        'reglas': [{'cond': [{'q': 'q1', 'ops': ['a', 'b']}], 'grupo': 'g1'}],
+    }
+    assert texto_regla(fo, 0) == 'si "¿Cuánto?" es Mucho o Algo'
+    assert texto_regla(fo, None) == 'el resto'
+
+
 def test_desborde_pasa_a_la_siguiente_prioridad():
     d = datos(
         roles=ROLES,
@@ -249,7 +269,7 @@ def test_desborde_pasa_a_la_siguiente_prioridad():
     assert a['grupo']['id'] == 'g2'
     assert a['desborde'] is True
     assert a['grupo_regla'] == 'g1'
-    assert a['regla'] == 'Top sin lugar → Repartir parejo entre 1'
+    assert a['regla'] == 'Top sin lugar → Distribuida entre 1'
 
 
 def test_persona_fija_solo_la_agenda_de_esa_persona():

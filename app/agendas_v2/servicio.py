@@ -14,10 +14,10 @@ from app import db
 from app.agendas_v2 import operacion
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
-from app.agendas_v2.nucleo.catalogos import HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
+from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
 from app.agendas_v2.nucleo.eventos import version_publicada
-from app.agendas_v2.nucleo.formulario import limpiar_respuesta, validar_respuesta
+from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import COLECCIONES, NORM, normal_integ, normal_perfil, preguntas_flujo
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva
@@ -495,6 +495,21 @@ def links_de_setter(user):
     return links
 
 
+def _segmento(d, form, asig):
+    """El segmento del lead con nombres (no solo ids): a qué estrategia lo mandó la segmentación, por
+    qué regla y dónde terminó. Queda en la agenda aunque después se borre la estrategia o la regla."""
+    g0 = buscar(d, 'grupos', asig.get('grupo_regla'))
+    g = asig.get('grupo')
+    return {
+        'formulario': (form or {}).get('nombre') or '',
+        'estrategia': g0['nombre'] if g0 else None,
+        'regla': texto_regla(form, asig.get('regla_idx')) if g0 else '',
+        'asignada': g['nombre'] if g else None,
+        'reparto': ESTRATEGIAS.get(g['estrategia']) if g else None,
+        'desborde': bool(asig.get('desborde')),
+    }
+
+
 def _respuesta(appt):
     """Lo que la pagina publica le muestra al lead de su agenda."""
     r = reserva_a_dict(appt)
@@ -559,6 +574,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         'evento_nombre': evento['nombre'],
         'indicaciones': evento.get('indic') or '',
         'prioridad_nombre': asig['grupo']['nombre'] if asig.get('grupo') else None,
+        'segmento': _segmento(d, form, asig),
         'closer_user_id': closer.id,
         'setter_user_id': setter.id if setter else None,
     }

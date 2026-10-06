@@ -119,10 +119,19 @@ describe('asignacion', () => {
         expect(a.slots.find(s => s.t === t0).p).toBe('beto');
         expect(a.slots.find(s => s.t === t0 + H).p).toBe('ana');
     });
-    it('"Repartir parejo": cada horario va a quien tiene menos agendas por delante', () => {
+    it('"Distribuida" sin porcentajes: cada horario va a quien tiene menos agendas por delante', () => {
         const d = datos({ roles, personas: [ana, beto], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'repartir', miembros: ['ana', 'beto'] }] });
         const a = asignacion(ctx(), d, { ahora: LUNES, cargaDe: pid => (pid === 'ana' ? 3 : 1) });
         expect(new Set(a.slots.map(s => s.p))).toEqual(new Set(['beto']));
+    });
+    it('"Distribuida" con porcentajes: va a quien está más lejos de su parte', () => {
+        // Ana 80% con 3 agendas (3/80) está más lejos de su parte que Beto 20% con 1 (1/20).
+        const g = { id: 'g1', nombre: 'Top', estrategia: 'repartir', miembros: ['ana', 'beto'], pesos: { ana: 80, beto: 20 } };
+        const a = asignacion(ctx(), datos({ roles, personas: [ana, beto], grupos: [g] }), { ahora: LUNES, cargaDe: pid => (pid === 'ana' ? 3 : 1) });
+        expect(new Set(a.slots.map(s => s.p))).toEqual(new Set(['ana']));
+        // Con 0% solo recibe si nadie más está libre.
+        const b = asignacion(ctx(), datos({ roles, personas: [ana, beto], grupos: [{ ...g, pesos: { ana: 0, beto: 100 } }] }), { ahora: LUNES, cargaDe: pid => (pid === 'beto' ? 9 : 0) });
+        expect(new Set(b.slots.map(s => s.p))).toEqual(new Set(['beto']));
     });
     it('desborde: si la prioridad no tiene closers con lugar, pasa a la siguiente', () => {
         const d = datos({

@@ -237,6 +237,12 @@ def test_reservar_crea_la_agenda_en_la_operacion(client, armado, cuentas, google
     assert fa.mail == 'lucia@correo.com' and fa.raw_data['agendas_v2']['nota'] == 10
     # La prioridad que eligio Thalamus queda como `grupo` de la agenda y del cliente.
     assert fa.grupo == 'Ultra' and appt.client.grupo == 'Ultra'
+    # El segmento queda con nombres, por si después se borra la estrategia o la regla.
+    assert p['segmento'] == {
+        'formulario': 'Calificación', 'estrategia': 'Ultra', 'regla': 'el resto',
+        'asignada': 'Ultra', 'reparto': 'Llenar agenda', 'desborde': False,
+    }
+    assert fa.raw_data['agendas_v2']['segmento']['estrategia'] == 'Ultra'
 
     # El cliente guarda su formulario.
     assert appt.client.formulario_payload['respuestas'][0]['pregunta'] == '¿Cuánto?'

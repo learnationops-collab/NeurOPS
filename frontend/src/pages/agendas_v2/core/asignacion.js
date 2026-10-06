@@ -14,7 +14,13 @@ export function miembrosValidos(d, g) {
     return g ? g.miembros.map(id => buscar(d, 'personas', id)).filter(p => p && esCloser(d, p) && horasSemana(p) > 0) : [];
 }
 
-function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }) {
+// El porcentaje de un closer en una estrategia Distribuida; sin cargar, parte pareja.
+export function pesoDe(g, pid, n) {
+    const pesos = (g && g.pesos) || {};
+    return pid in pesos ? pesos[pid] : 100 / n;
+}
+
+function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = null) {
     if (estrategia === 'llenar') {
         const limite = ahora + VENTANA_LLENAR_DIAS * DIA;
         let elegido = null, idx = -1;
@@ -31,19 +37,25 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }) {
     }
     const mapa = new Map();
     if (estrategia === 'horario') {
-        // Por horario: el lead ve todos los horarios; cada uno va al primero de la lista que esté libre.
+        // Máxima disponibilidad: el lead ve todos los horarios del grupo; cada uno va al primero de la
+        // lista que esté libre.
         miembros.forEach(p => slotsDe(p).forEach(t => { if (!mapa.has(t)) mapa.set(t, p.id); }));
     } else {
-        // Repartir parejo: cada horario va a quien tiene menos agendas por delante;
-        // a igual cantidad, a quien tiene más lugar libre; después, el orden de la lista.
-        const carga = {}, libres = {}, pos = {};
-        miembros.forEach((p, i) => { carga[p.id] = cargaDe(p.id); libres[p.id] = slotsDe(p).length; pos[p.id] = i; });
-        const mejor = (a, b) => carga[a] - carga[b] || libres[b] - libres[a] || pos[a] - pos[b];
+        // Distribuida: cada horario va a quien está más lejos de su porcentaje (agendas por delante
+        // / porcentaje); con 0% solo recibe si nadie más está libre. A igual, a quien tiene más lugar
+        // libre; después, el orden de la lista. Sin porcentajes es parejo.
+        const carga = {}, libres = {}, pos = {}, w = {};
+        miembros.forEach((p, i) => { carga[p.id] = cargaDe(p.id); libres[p.id] = slotsDe(p).length; pos[p.id] = i; w[p.id] = pesoDe(g, p.id, miembros.length); });
+        const mejor = (a, b) => {
+            const za = w[a] <= 0, zb = w[b] <= 0;
+            if (za !== zb) return za ? 1 : -1;
+            return (za ? carga[a] - carga[b] : carga[a] * w[b] - carga[b] * w[a]) || libres[b] - libres[a] || pos[a] - pos[b];
+        };
         miembros.forEach(p => slotsDe(p).forEach(t => { const x = mapa.get(t); if (!x || mejor(p.id, x) < 0) mapa.set(t, p.id); }));
     }
     const slots = [...mapa.keys()].sort((a, b) => a - b).map(t => ({ t, p: mapa.get(t) }));
     const nombres = miembros.map(p => p.nombre);
-    return { slots, regla: estrategia === 'horario' ? 'Por horario: ' + nombres.join(' → ') : 'Repartir parejo entre ' + miembros.length };
+    return { slots, regla: estrategia === 'horario' ? 'Máxima disponibilidad: ' + nombres.join(' → ') : 'Distribuida entre ' + miembros.length };
 }
 
 /**
@@ -77,7 +89,7 @@ export function asignacion(ctx, d, opts = {}) {
         for (const g of grupos.slice(desde)) {
             const miembros = miembrosValidos(d, g);
             if (!miembros.length) continue;
-            const x = porEstrategia(g.estrategia, miembros, slotsDe, { ahora, cargaDe });
+            const x = porEstrategia(g.estrategia, miembros, slotsDe, { ahora, cargaDe }, g);
             if (x.slots.length) return { ...res, grupo: g, desborde: g.id !== g0.id, slots: x.slots, regla: (g.id !== g0.id ? g0.nombre + ' sin lugar → ' : '') + x.regla };
         }
     }

@@ -256,8 +256,14 @@ def normal_grupo(id, d):
         'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 60),
         'estrategia': d.get('estrategia') if _en(d.get('estrategia'), ESTRATEGIAS) else 'llenar',
         'miembros': [js_str(x) for x in lista(d.get('miembros'))][:30],
+        'pesos': _pesos(d.get('pesos')),
         'orden': _orden(d.get('orden')),
     }
+
+
+def _pesos(v):
+    """Distribuida: el porcentaje de cada closer {persona_id: 0..100}. Sin dato, todos parejo."""
+    return {js_str(k): entero(x, 0, 100, 0) for k, x in list(obj(v).items())[:30]}
 
 
 def normal_evento(id, d):

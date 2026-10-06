@@ -2,7 +2,8 @@
 // (conectado en NeurOPS), WhatsApp (confirmado) y Horarios (cargados en Team o en su Configuración).
 // Los listos van primero. Se usa al sumar a Team y al sumar a una estrategia.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { almacen } from '../../data/hooks';
 import { Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
@@ -38,10 +39,29 @@ export function ChipsListo({ o }) {
 // opciones: [{id, nombre, calendar?, whatsapp?, horarios?, extra?}]. undefined = no se sabe (sin chip).
 export default function ElegirCloser({ opciones, onElegir, texto = '+ Sumar closer', label = 'Sumar closer', disabled }) {
     const [abierto, setAbierto] = useState(false);
+    const [pos, setPos] = useState(null);
     const caja = useRef(null);
+    const pop = useRef(null);
+    useLayoutEffect(() => {
+        if (!abierto) return;
+        const ubicar = () => {
+            const r = caja.current.getBoundingClientRect();
+            const ancho = Math.min(420, window.innerWidth - 32);
+            const abajo = window.innerHeight - r.bottom - 12, arriba = r.top - 12;
+            const haciaArriba = abajo < 240 && arriba > abajo;
+            setPos({
+                left: Math.max(16, Math.min(r.left, window.innerWidth - ancho - 16)), width: ancho,
+                ...(haciaArriba ? { bottom: window.innerHeight - r.top + 6, maxHeight: Math.min(340, arriba) } : { top: r.bottom + 6, maxHeight: Math.min(340, abajo) }),
+            });
+        };
+        ubicar();
+        window.addEventListener('resize', ubicar);
+        window.addEventListener('scroll', ubicar, true);
+        return () => { window.removeEventListener('resize', ubicar); window.removeEventListener('scroll', ubicar, true); };
+    }, [abierto]);
     useEffect(() => {
         if (!abierto) return;
-        const fuera = (e) => { if (!caja.current?.contains(e.target)) setAbierto(false); };
+        const fuera = (e) => { if (!caja.current?.contains(e.target) && !pop.current?.contains(e.target)) setAbierto(false); };
         const esc = (e) => { if (e.key === 'Escape') { e.preventDefault(); setAbierto(false); } };
         document.addEventListener('mousedown', fuera);
         document.addEventListener('keydown', esc);
@@ -54,8 +74,8 @@ export default function ElegirCloser({ opciones, onElegir, texto = '+ Sumar clos
                 onClick={() => setAbierto(!abierto)}>
                 <span>{texto}</span><Icono n="chevron-down" s={15} />
             </button>
-            {abierto && (
-                <ul className="ec-pop" role="listbox" aria-label={label}>
+            {abierto && createPortal(
+                <ul ref={pop} className="ec-pop" role="listbox" aria-label={label} style={pos || { visibility: 'hidden' }}>
                     {lista.map(o => (
                         <li key={o.id}>
                             <button type="button" role="option" aria-selected="false" className="ec-op" onClick={() => { setAbierto(false); onElegir(o.id); }}>
@@ -64,7 +84,8 @@ export default function ElegirCloser({ opciones, onElegir, texto = '+ Sumar clos
                             </button>
                         </li>
                     ))}
-                </ul>
+                </ul>,
+                caja.current?.closest('.thalamus') || document.body,
             )}
         </div>
     );

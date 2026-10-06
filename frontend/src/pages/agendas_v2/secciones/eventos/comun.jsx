@@ -32,9 +32,9 @@ export function probarEvento(d, e) {
 export function textoEstrategia(d, g) {
     const ns = g.miembros.map(id => { const p = buscar(d, 'personas', id); return p ? p.nombre : ''; }).filter(Boolean);
     if (!ns.length) return 'Sumá closers.';
-    if (g.estrategia === 'repartir') return ns.length > 1 ? 'Se reparte entre todos según su lugar libre.' : 'Todo va a ' + ns[0] + '.';
     if (ns.length === 1) return 'Todo va a ' + ns[0] + '.';
-    if (g.estrategia === 'horario') return 'Cada horario va a ' + ns[0] + '; si está ocupado, a ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
+    if (g.estrategia === 'repartir') return 'Cada closer recibe su porcentaje de las agendas.';
+    if (g.estrategia === 'horario') return 'El lead ve los horarios de todos; cada uno va a ' + ns[0] + ' y, si está ocupado, a ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
     return ns[0] + ' hasta llenar su agenda, después ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
 }
 

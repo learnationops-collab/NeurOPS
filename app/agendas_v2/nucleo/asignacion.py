@@ -28,7 +28,13 @@ def _o(*xs):
     return xs[-1]
 
 
-def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de):
+def peso_de(g, pid, n):
+    """El porcentaje de un closer en una estrategia Distribuida; sin cargar, parte pareja."""
+    pesos = (g or {}).get('pesos') or {}
+    return pesos[pid] if pid in pesos else 100 / n
+
+
+def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
     if estrategia == 'llenar':
         limite = ahora + VENTANA_LLENAR_DIAS * DIA
         elegido, idx = None, -1
@@ -47,19 +53,26 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de):
         }
     mapa = {}
     if estrategia == 'horario':
-        # Por horario: el lead ve todos los horarios; cada uno va al primero de la lista que esté libre.
+        # Máxima disponibilidad: el lead ve todos los horarios del grupo; cada uno va al primero de la
+        # lista que esté libre.
         for p in miembros:
             for t in slots_de(p):
                 mapa.setdefault(t, p['id'])
     else:
-        # Repartir parejo: cada horario va a quien tiene menos agendas por delante;
-        # a igual cantidad, a quien tiene más lugar libre; después, el orden de la lista.
-        carga, libres, pos = {}, {}, {}
+        # Distribuida: cada horario va a quien está más lejos de su porcentaje (agendas por delante
+        # / porcentaje); con 0% solo recibe si nadie más está libre. A igual, a quien tiene más lugar
+        # libre; después, el orden de la lista. Sin porcentajes es parejo.
+        carga, libres, pos, w = {}, {}, {}, {}
         for i, p in enumerate(miembros):
             carga[p['id']], libres[p['id']], pos[p['id']] = carga_de(p['id']), len(slots_de(p)), i
+            w[p['id']] = peso_de(g, p['id'], len(miembros))
 
         def mejor(a, b):
-            return _o(carga[a] - carga[b], libres[b] - libres[a], pos[a] - pos[b])
+            za, zb = w[a] <= 0, w[b] <= 0
+            if za != zb:
+                return 1 if za else -1
+            c = carga[a] - carga[b] if za else carga[a] * w[b] - carga[b] * w[a]
+            return _o(c, libres[b] - libres[a], pos[a] - pos[b])
 
         for p in miembros:
             for t in slots_de(p):
@@ -69,9 +82,9 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de):
     slots = [{'t': t, 'p': mapa[t]} for t in sorted(mapa)]
     nombres = [p['nombre'] for p in miembros]
     regla = (
-        'Por horario: ' + ' → '.join(nombres)
+        'Máxima disponibilidad: ' + ' → '.join(nombres)
         if estrategia == 'horario'
-        else 'Repartir parejo entre ' + str(len(miembros))
+        else 'Distribuida entre ' + str(len(miembros))
     )
     return {'slots': slots, 'regla': regla}
 
@@ -116,7 +129,7 @@ def asignacion(ctx, d, opts=None):
             miembros = miembros_validos(d, g)
             if not miembros:
                 continue
-            x = _por_estrategia(g['estrategia'], miembros, slots_de, ahora, carga_de)
+            x = _por_estrategia(g['estrategia'], miembros, slots_de, ahora, carga_de, g)
             if x['slots']:
                 otro = g['id'] != g0['id']
                 return {

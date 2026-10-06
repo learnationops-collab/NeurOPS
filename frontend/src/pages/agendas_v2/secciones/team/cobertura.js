@@ -118,9 +118,9 @@ export function textoEstrategia(d, g) {
     const ns = g.miembros.map(id => { const p = buscar(d, 'personas', id); return p ? p.nombre : ''; }).filter(Boolean);
     if (!ns.length) return 'Sumá closers.';
     if (ns.length === 1) return 'Todo va a ' + ns[0] + '.';
-    if (g.estrategia === 'repartir') return 'Cada horario va a quien tenga menos agendas por delante.';
-    if (g.estrategia === 'horario') return 'Cada horario va a ' + ns[0] + '; si está ocupado, a ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
-    return ns[0] + ' recibe todo mientras tenga lugar en los próximos ' + VENTANA_LLENAR_DIAS + ' días; después ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
+    if (g.estrategia === 'repartir') return 'Cada closer recibe su porcentaje de las agendas: el horario va a quien está más lejos de su parte.';
+    if (g.estrategia === 'horario') return 'El lead ve los horarios de todos; cada uno va a ' + ns[0] + ' y, si está ocupado, a ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
+    return 'Los leads van a ' + ns[0] + ' hasta llenar su agenda de los próximos ' + VENTANA_LLENAR_DIAS + ' días; después a ' + ns[1] + (ns.length > 2 ? ' y así.' : '.');
 }
 
 // Aviso de la prioridad cuando ningún miembro puede recibir leads.

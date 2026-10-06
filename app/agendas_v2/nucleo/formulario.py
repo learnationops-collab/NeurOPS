@@ -60,6 +60,22 @@ def grupo_por_reglas(fo, resp):
     return {'grupo': fo.get('resto') or '', 'regla': None}
 
 
+def texto_regla(fo, i):
+    """Una regla de segmentación en palabras: 'si "¿Cuánto invertís?" es Más de 1000' (None = el resto)."""
+    if i is None:
+        return 'el resto'
+    reglas = (fo or {}).get('reglas') or []
+    if not 0 <= i < len(reglas):
+        return ''
+    preguntas = {q['id']: q for q in fo.get('preguntas') or []}
+    conds = []
+    for c in reglas[i]['cond']:
+        q = preguntas.get(c.get('q'))
+        textos = [next((o['texto'] for o in (q or {}).get('opciones', []) if o['id'] == x), x) for x in c.get('ops') or []]
+        conds.append(f'"{q["titulo"] if q else c.get("q")}" es {" o ".join(textos)}')
+    return 'si ' + ' y '.join(conds)
+
+
 def grupos_de_form(fo):
     ids = []
     if not fo:
