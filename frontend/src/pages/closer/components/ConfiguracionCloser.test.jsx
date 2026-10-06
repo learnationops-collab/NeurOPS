@@ -18,10 +18,11 @@ describe('Configuración del closer', () => {
     });
 
     it('conectado muestra el estado y el calendario de destino', async () => {
-        api.get.mockResolvedValue({ data: { connected: true, selected_calendar: 'primary', calendars: [{ id: 'primary', summary: 'Ana', primary: true }] } });
+        const calendar = { connected: true, selected_calendar: 'primary', calendars: [{ id: 'primary', summary: 'Ana', primary: true }] };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/google/calendars' ? calendar : {} }));
         render(<ConfiguracionCloser />);
 
         expect(await screen.findByText(/Conectado/)).toBeTruthy();
-        expect(screen.getByRole('combobox')).toBeTruthy();
+        expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
     });
 });

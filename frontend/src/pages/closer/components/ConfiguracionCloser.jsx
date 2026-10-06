@@ -8,6 +8,7 @@
 
 import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
 import WhatsappCloser from './WhatsappCloser';
+import DisponibilidadCloser from './DisponibilidadCloser';
 
 export default function ConfiguracionCloser() {
     return (
@@ -29,6 +30,10 @@ export default function ConfiguracionCloser() {
                     Confirmá tu número: ahí te llega cada agenda nueva. Sin confirmarlo, el sistema de agendas no te ofrece a los leads.
                 </p>
                 <WhatsappCloser />
+            </div>
+            <div className="space-y-3">
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">Disponibilidad</h3>
+                <DisponibilidadCloser />
             </div>
         </section>
     );

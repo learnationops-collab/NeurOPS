@@ -30,6 +30,59 @@ function useUsuariosReales() {
     return usuarios;
 }
 
+// Para sumar a Team: primero los que ya pueden recibir agendas (Calendar conectado y WhatsApp confirmado),
+// después los que tienen una de las dos y al final el resto; cada grupo por nombre.
+export function ordenarParaSumar(usuarios) {
+    const faltan = (u) => (u.calendar ? 0 : 1) + (u.whatsapp ? 0 : 1);
+    return [...usuarios].sort((a, b) => faltan(a) - faltan(b) || a.nombre.localeCompare(b.nombre, 'es'));
+}
+export function estadoParaSumar(u) {
+    if (u.calendar && u.whatsapp) return 'listo para recibir agendas';
+    if (!u.calendar && !u.whatsapp) return 'sin Calendar ni WhatsApp';
+    return u.calendar ? 'sin WhatsApp confirmado' : 'sin Calendar';
+}
+
+// Con la API: un desplegable con los closers de la app que todavía no están en Team.
+function SumarDeLaApp({ disponibles, cargando, vacio, onSumar, bloqueado }) {
+    const lista = ordenarParaSumar(disponibles);
+    const [elegido, setElegido] = useState('');
+    const sel = lista.find(u => String(u.id) === elegido) || lista[0];
+    const listos = lista.filter(u => u.calendar && u.whatsapp);
+    return (
+        <section className={'compo caja' + (vacio ? ' compo--solo' : '')}>
+            <Humo clase="humo--hero" cols={HUMO_PERSONA} />
+            <div className="compo-txt">
+                <span className="compo-icono"><Icono n="plus" s={19} /></span>
+                <div style={{ display: 'grid', gap: 4 }}><h2 className="t-h3">{vacio ? 'Sumá a tu equipo' : 'Sumar persona'}</h2></div>
+            </div>
+            <div className="compo-accion">
+                {cargando ? <p className="t-sm mut">Cargando la lista de closers…</p>
+                    : !lista.length ? <p className="t-sm mut">Todos los closers activos de la app ya están en Team.</p> : (
+                        <div className="entrada" style={{ gap: 8 }}>
+                            <Sx id="sumar-persona" label="Closer de la app" valor={sel ? String(sel.id) : ''} onChange={setElegido} disabled={bloqueado}
+                                style={{ flex: 1, minWidth: 0 }}
+                                opciones={lista.map(u => ({
+                                    v: String(u.id), n: u.nombre + ' · ' + estadoParaSumar(u),
+                                    icono: u.calendar && u.whatsapp ? 'check' : 'alerta',
+                                    color: u.calendar && u.whatsapp ? 'var(--success)' : 'var(--warning)',
+                                }))} />
+                            <button type="button" className="btn btn--cta btn--sm" disabled={bloqueado || !sel} onClick={() => sel && onSumar([sel])}>
+                                <Icono n="plus" />Sumar
+                            </button>
+                        </div>
+                    )}
+                {listos.length > 1 && (
+                    <div className="compo-sug">
+                        <button type="button" className="sug" disabled={bloqueado} onClick={() => onSumar(listos)}>
+                            <Icono n="users" />Sumar los {listos.length} listos
+                        </button>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
 const conEmail = (ps) => new Set(ps.map(p => (p.email || '').toLowerCase()).filter(Boolean));
 
 function rolDeUsuario(d, u) {
@@ -140,16 +193,10 @@ export default function Personas() {
         toast(us.length === 1 ? us[0].nombre + ' sumado' : us.length + ' personas sumadas');
     };
 
-    // Con la API solo se suman usuarios reales (por nombre o desde la lista); en modo local, cualquier nombre.
+    // Con la API solo se suman usuarios reales, desde el desplegable; en modo local, cualquier nombre.
     const crear = (v) => {
         const n = String(v || '').replace(/\s+/g, ' ').trim();
         if (!n) return 'Escribí un nombre.';
-        if (reales) {
-            const u = disponibles.find(x => x.nombre.toLowerCase() === n.toLowerCase());
-            if (!u) return usuarios === null ? 'Cargando la lista de closers…' : 'No hay un closer o setter activo con ese nombre que no esté ya en Team.';
-            sumarUsuarios([u]);
-            return '';
-        }
         almacen.crear('personas', {
             nombre: n, rol: rolCloser(d), nivel: Math.min(3, closers(d).length + 1), color: colorLibre(d, 'personas'),
             tz: TZ_DEF, horario: horarioLaV(), orden: maxOrden(d, 'personas') + 1,
@@ -158,21 +205,11 @@ export default function Personas() {
         return '';
     };
 
-    const sug = reales && disponibles.length > 0 && (
-        <div className="compo-sug">
-            <span className="t-rotulo">De la app</span>
-            {disponibles.map(u => (
-                <button key={u.id} type="button" className="sug" title={u.email} onClick={() => sumarUsuarios([u])}>
-                    <Icono n="plus" />{u.nombre}{u.rol === 'setter' ? ' · setter' : !u.calendar ? ' · sin Calendar' : ''}
-                </button>
-            ))}
-            {disponibles.length > 1 && <button type="button" className="sug" onClick={() => sumarUsuarios(disponibles)}><Icono n="users" />Sumar todos</button>}
-        </div>
-    );
-
-    const compo = (
-        <Compo vacio={!ps.length} tit="Sumar persona" soloTit="Sumá a tu equipo" ph={reales ? 'Nombre del closer en la app' : 'Nombre, ej. Giancarlo'} onCrear={crear}
-            sug={sug} nav={!!sim && sumar} bloqueado={!!sim && !sumar} />
+    const compo = reales ? (
+        <SumarDeLaApp disponibles={disponibles} cargando={usuarios === null} vacio={!ps.length} onSumar={sumarUsuarios} bloqueado={!!sim && !sumar} />
+    ) : (
+        <Compo vacio={!ps.length} tit="Sumar persona" soloTit="Sumá a tu equipo" ph="Nombre, ej. Giancarlo" onCrear={crear}
+            nav={!!sim && sumar} bloqueado={!!sim && !sumar} />
     );
     if (!ps.length) return compo;
     return (

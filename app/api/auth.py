@@ -188,6 +188,23 @@ def mi_whatsapp_confirmar():
     return jsonify(_whatsapp_json(current_user)), 200
 
 
+@bp.route('/auth/me/disponibilidad', methods=['GET', 'PUT'])
+@login_required
+def mi_disponibilidad():
+    """El horario semanal del closer y su zona horaria. Es el de su persona de Team en Agendamiento:
+    lo edita él acá o la dirección comercial allá. PUT {horario, tz}."""
+    from app.agendas_v2 import servicio
+    if not current_user.tiene_rol('closer'):
+        return jsonify({"message": "Solo los closers tienen disponibilidad"}), 403
+    if request.method == 'PUT':
+        datos = request.get_json(silent=True) or {}
+        try:
+            return jsonify(servicio.guardar_disponibilidad(current_user, datos.get('horario'), datos.get('tz'))), 200
+        except ValueError as e:
+            return jsonify({"message": str(e)}), 400
+    return jsonify(servicio.disponibilidad_de(current_user)), 200
+
+
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
     logout_user()

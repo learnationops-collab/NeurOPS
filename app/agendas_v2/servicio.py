@@ -14,14 +14,14 @@ from app import db
 from app.agendas_v2 import operacion
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
-from app.agendas_v2.nucleo.catalogos import PAISES, TZ_DEF, con_opciones, zona_valida
-from app.agendas_v2.nucleo.datos import buscar, nombre_origen
+from app.agendas_v2.nucleo.catalogos import HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
+from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
 from app.agendas_v2.nucleo.eventos import version_publicada
 from app.agendas_v2.nucleo.formulario import limpiar_respuesta, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import COLECCIONES, NORM, normal_integ, normal_perfil, preguntas_flujo
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva
-from app.agendas_v2.nucleo.util import slugify
+from app.agendas_v2.nucleo.util import slugify, uid
 
 DIA_MS = 86400000
 # Las agendas de la operacion (Appointment) no guardan duracion: cada una bloquea 60 minutos.
@@ -93,6 +93,53 @@ def _email_de_cuenta(email):
     return u.id if u else None
 
 
+def zona_de_usuario(u):
+    """La zona horaria de un usuario: la que eligió (users.timezone) si no es la de por defecto; si no,
+    la del país de su WhatsApp; si no, la de por defecto."""
+    if u.timezone and u.timezone != TZ_DEF and zona_valida(u.timezone):
+        return u.timezone
+    return zona_por_telefono(u.two_chat_number) or TZ_DEF
+
+
+def persona_de_usuario(d, user):
+    """La persona de Team de ese usuario (por email), o None."""
+    email = (user.email or '').strip().lower()
+    return next((p for p in d['personas'] if email and (p.get('email') or '').lower() == email), None)
+
+
+def disponibilidad_de(user):
+    """Lo que el closer ve en su Configuración: su horario semanal (el de su persona de Team, el mismo que
+    edita la dirección comercial en Agendamiento) y su zona horaria."""
+    p = persona_de_usuario(colecciones(), user)
+    return {
+        'en_team': bool(p),
+        'horario': p['horario'] if p else NORM['personas']('x', {'horario': {}})['horario'],
+        'tz': p['tz'] if p and p['tz'] != TZ_DEF else zona_de_usuario(user),
+        'zonas': [{'tz': z['tz'], 'n': z['n']} for z in ZONAS],
+        'horas': HORAS,
+    }
+
+
+def guardar_disponibilidad(user, horario, tz):
+    """Guarda el horario y la zona del closer en su persona de Team (si no está en Team, la crea: así la
+    dirección comercial lo ve y lo puede sumar a una prioridad). La zona también queda en su cuenta."""
+    if not zona_valida(tz):
+        raise ValueError('Elegí una zona horaria de la lista.')
+    d = colecciones()
+    p = persona_de_usuario(d, user)
+    if p:
+        guardar_doc('personas', p['id'], {'horario': horario, 'tz': tz}, usuario_id=user.id, parcial=True)
+    else:
+        guardar_doc('personas', uid('d'), {
+            'nombre': user.username, 'email': (user.email or '').lower(), 'rol': rol_closer(d),
+            'horario': horario, 'tz': tz,
+            'orden': max([x.get('orden') or 0 for x in ordenados(d, 'personas')] or [0]) + 1,
+        }, usuario_id=user.id)
+    user.timezone = tz
+    db.session.commit()
+    return disponibilidad_de(user)
+
+
 def usuarios_del_equipo(roles):
     """Usuarios activos de la app con esos roles: {id, nombre, email, rol, tz, calendar}. Para sumarlos
     a Team. `calendar`: si conecto su Google Calendar (sin eso un closer no recibe agendas)."""
@@ -108,7 +155,7 @@ def usuarios_del_equipo(roles):
             'email': (u.email or '').lower(),
             # Una cuenta puede tener varios roles (users.roles_extra): vale el primero de `roles` que tenga.
             'rol': next((r for r in roles if u.tiene_rol(r)), u.role),
-            'tz': u.timezone or TZ_DEF,
+            'tz': zona_de_usuario(u),
             'calendar': u.id in con_calendar,
             'whatsapp': u.id in con_whatsapp,
         }
