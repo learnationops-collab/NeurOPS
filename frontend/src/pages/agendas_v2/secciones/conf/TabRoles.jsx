@@ -1,16 +1,15 @@
-// Configuración › Roles (nombre, abreviación, ícono, color, cuántas personas) y › Accesos (la matriz
-// de permisos por rol, con "Recibe llamadas").
+// Configuración › Roles: nombre, abreviación, ícono, color, si recibe llamadas (closer) y cuántas personas.
+// Thalamus no tiene permisos propios por rol: quién entra lo deciden los roles de NeurOPS.
 
-import { Fragment, useCallback, useState } from 'react';
-import { Icono, Sx } from '../../ui/base';
+import { useCallback, useState } from 'react';
+import { Icono, Switch, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { almacen, useDatos } from '../../data/hooks';
-import { COLORES, ICONOS_ROL, PERMISOS, accesosPorNombre } from '../../core/catalogos';
+import { COLORES, ICONOS_ROL, accesosPorNombre } from '../../core/catalogos';
 import { colorRol, colorVar, maxOrden, ord } from '../../core/datos';
 import { mayus } from '../../core/util';
 import { InputVivo } from './campos';
-import { iniciarSim } from './simulacion';
 
 const SUGERIDOS = ['CEO', 'Director comercial', 'Closer', 'Setter'];
 const filtroAbrev = (t) => t.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g, '').toUpperCase().slice(0, 4);
@@ -39,9 +38,9 @@ function Rol({ d, r, claseItem, grip }) {
                 opciones={[{ v: '', n: 'Auto', icono: 'sistema', color: r.atiende ? 'var(--success)' : 'var(--info)' },
                     ...COLORES.map(k => ({ v: k, n: mayus(k === 'ambar' ? 'ámbar' : k), icono: 'estrellaLlena', color: colorVar(k) }))]} />
             <span className="rl-n num" title="Personas con este rol"><Icono n="user" s={13} />{n}</span>
-            <button type="button" className="ibtn ibtn--xs" aria-label={'Simular ' + r.nombre} title="Simular" onClick={() => iniciarSim({ tipo: 'rol', id: r.id })}>
-                <Icono n="ojo" />
-            </button>
+            <span title="Las personas con este rol toman llamadas (son closers)">
+                <Switch on={r.atiende} label={'Recibe llamadas: ' + r.nombre} onChange={v => almacen.editar('roles', r.id, { atiende: v }, true)} />
+            </span>
             <button type="button" className="ibtn ibtn--xs ibtn--peligro" aria-label={'Eliminar ' + r.nombre} disabled={n > 0} title={n ? 'Tiene personas asignadas' : undefined}
                 onClick={() => { almacen.borrar('roles', r.id); toast(r.nombre + ' eliminado'); }}>
                 <Icono n="basura" />
@@ -77,53 +76,5 @@ export function TabRoles() {
                 </div>
             )}
         </>
-    );
-}
-
-export function TabAccesos() {
-    const { d } = useDatos();
-    const rs = ord(d, 'roles');
-    if (!rs.length) return <p className="t-sm mut">Creá roles primero.</p>;
-    const cols = { gridTemplateColumns: 'minmax(200px,1.6fr) repeat(' + rs.length + ',minmax(76px,1fr))' };
-    const alternar = (r, k) => {
-        if (k === 'atiende') { almacen.editar('roles', r.id, { atiende: !r.atiende }, true); return; }
-        almacen.editar('roles', r.id, { accesos: r.accesos.includes(k) ? r.accesos.filter(x => x !== k) : [...r.accesos, k] }, true);
-    };
-    const celda = (r, k, etiqueta) => {
-        const on = k === 'atiende' ? r.atiende : r.accesos.includes(k);
-        return (
-            <span key={r.id} role="cell">
-                <button type="button" className="chk" aria-pressed={on} aria-label={r.nombre + ': ' + etiqueta} onClick={() => alternar(r, k)}><Icono n="check" s={15} /></button>
-            </span>
-        );
-    };
-    return (
-        <div className="matriz">
-            <div className="prm" role="table" aria-label="Accesos por rol" style={{ minWidth: 200 + rs.length * 80 }}>
-                <div className="prm-f prm-cab" role="row" style={cols}>
-                    <span role="columnheader" />
-                    {rs.map(r => (
-                        <span key={r.id} role="columnheader" className="prm-rol" title={r.nombre} style={{ '--c': colorRol(r) }}>
-                            <span className="rol-ico"><Icono n={r.icono} s={15} /></span><b>{r.abrev}</b>
-                        </span>
-                    ))}
-                </div>
-                <div className="prm-f" role="row" style={cols}>
-                    <span role="rowheader" className="prm-p"><Icono n="clock" s={14} />Recibe llamadas</span>
-                    {rs.map(r => celda(r, 'atiende', 'Recibe llamadas'))}
-                </div>
-                {PERMISOS.map(g => (
-                    <Fragment key={g.sec}>
-                        <div className="prm-sec" role="row"><span role="rowheader"><Icono n={g.ico} s={14} />{g.n}</span></div>
-                        {g.items.map(([k, n]) => (
-                            <div key={k} className="prm-f" role="row" style={cols}>
-                                <span role="rowheader" className="prm-p">{n}</span>
-                                {rs.map(r => celda(r, k, n))}
-                            </div>
-                        ))}
-                    </Fragment>
-                ))}
-            </div>
-        </div>
     );
 }

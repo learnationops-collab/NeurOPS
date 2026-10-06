@@ -1,4 +1,4 @@
-// Configuración › Miembros: personas con nombre, correo y rol; sumar una nueva; simular a cada una.
+// Configuración › Miembros: personas con nombre, correo y rol; sumar una nueva.
 
 import { useState } from 'react';
 import { Avatar, Icono, Sx } from '../../ui/base';
@@ -9,7 +9,6 @@ import { buscar, colorLibre, colorRol, maxOrden, ord } from '../../core/datos';
 import { emailOk } from '../../core/normalizar';
 import { mayus } from '../../core/util';
 import { InputVivo } from './campos';
-import { iniciarSim } from './simulacion';
 
 // Opciones de rol: los roles creados, o closer/setter si todavía no hay. Un rol viejo que ya no
 // existe se muestra igual para no perderlo.
@@ -34,9 +33,6 @@ function Miembro({ d, p }) {
                     onCambio={v => { const ok = !v.trim() || emailOk(v); setMal(!ok); if (ok) almacen.editar('personas', p.id, { email: emailOk(v) }); }} />
             </div>
             <Sx sm id={'mbr-' + p.id} label="Rol" valor={p.rol} opciones={opcionesRol(d, p.rol)} onChange={v => almacen.editar('personas', p.id, { rol: v }, true)} />
-            <button type="button" className="ibtn ibtn--sm" aria-label={'Simular a ' + p.nombre} title="Simular" onClick={() => iniciarSim({ tipo: 'persona', id: p.id })}>
-                <Icono n="ojo" s={15} />
-            </button>
         </div>
     );
 }

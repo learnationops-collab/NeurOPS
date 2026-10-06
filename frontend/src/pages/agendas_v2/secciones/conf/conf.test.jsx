@@ -36,17 +36,22 @@ describe('Stats', () => {
 });
 
 describe('Configuración', () => {
-    it('crea un funnel con slug único y cambia accesos', () => {
+    it('crea un funnel con slug único', () => {
         act(() => ui.set({ conf: { tab: 'funnels' } }));
         render(envolver(<Configuracion />));
         fireEvent.change(document.getElementById('cf-nuevo'), { target: { value: 'Webinar' } });
         fireEvent.submit(document.getElementById('cf-nuevo').closest('form'));
         const slugs = almacen.getState().d.funnels.map(f => f.slug).sort();
         expect(slugs).toEqual(['webinar', 'webinar-2']);
-        fireEvent.click(screen.getByRole('tab', { name: 'Accesos' }));
+        expect(screen.queryByRole('tab', { name: 'Accesos' })).toBeNull();  // sin permisos propios de Thalamus
+    });
+
+    it('«Recibe llamadas» se marca en la fila del rol', () => {
+        act(() => ui.set({ conf: { tab: 'roles' } }));
+        render(envolver(<Configuracion />));
         const ceo = almacen.getState().d.roles.find(r => r.nombre === 'CEO');
-        fireEvent.click(screen.getByRole('button', { name: 'CEO: Ver formularios' }));
-        expect(almacen.getState().d.roles.find(r => r.id === ceo.id).accesos).toContain('forms.ver');
+        fireEvent.click(screen.getByRole('switch', { name: 'Recibe llamadas: CEO' }));
+        expect(almacen.getState().d.roles.find(r => r.id === ceo.id).atiende).toBe(!ceo.atiende);
     });
 
     it('roles sugeridos usan los accesos por nombre', () => {
@@ -70,16 +75,13 @@ describe('Configuración', () => {
 });
 
 describe('Menú del perfil', () => {
-    it('simula un rol y vuelve a la sesión', () => {
+    it('no tiene simulador propio: ofrece la simulación oficial de NeurOPS', () => {
         render(envolver(<MenuYo />));
         fireEvent.click(document.getElementById('yo'));
-        fireEvent.click(screen.getByRole('menuitem', { name: /Simular un rol/ }));
-        fireEvent.click(screen.getByRole('menuitemradio', { name: /CEO/ }));
-        expect(ui.getState().sim).toMatchObject({ tipo: 'rol' });
-        expect(ui.getState().menu).toBe(null);
-        fireEvent.click(document.getElementById('yo'));
-        fireEvent.click(screen.getByRole('menuitem', { name: /Volver a mi sesión/ }));
-        expect(ui.getState().sim).toBe(null);
+        expect(screen.queryByRole('menuitem', { name: /Simular un rol/ })).toBeNull();
+        expect(screen.queryByRole('menuitem', { name: /Simular a una persona/ })).toBeNull();
+        fireEvent.click(screen.getByRole('menuitem', { name: /Simular a un closer/ }));
+        expect(ui.getState().menu).toBe('closers');
     });
 });
 

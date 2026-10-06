@@ -8,13 +8,13 @@ import { almacen, useDatos, useUi } from '../../data/hooks';
 import { tabConfOk } from '../../core/permisos';
 import TabPerfil from './TabPerfil';
 import TabMiembros from './TabMiembros';
-import { TabAccesos, TabRoles } from './TabRoles';
+import { TabRoles } from './TabRoles';
 import TabFunnels from './TabFunnels';
 import TabIntegraciones from './TabIntegraciones';
 import TabIA from './TabIA';
 
 const TABS = [
-    ['perfil', 'Perfil', 'ojo'], ['miembros', 'Miembros', 'user'], ['roles', 'Roles', 'users'], ['accesos', 'Accesos', 'candado'],
+    ['perfil', 'Perfil', 'ojo'], ['miembros', 'Miembros', 'user'], ['roles', 'Roles', 'users'],
     ['funnels', 'Funnels', 'funnel'], ['ia', 'Con IA', 'rayo'], ['integraciones', 'Integraciones', 'enchufe'],
 ];
 const VISTAS = [['completa', 'Pantalla completa'], ['flotante', 'Ventana flotante']];
@@ -83,7 +83,6 @@ export default function Configuracion() {
     let cuerpo;
     if (tab === 'miembros') cuerpo = <TabMiembros />;
     else if (tab === 'roles') cuerpo = <TabRoles />;
-    else if (tab === 'accesos') cuerpo = <TabAccesos />;
     else if (tab === 'funnels') cuerpo = <TabFunnels borrar={borrar} setBorrar={setBorrar} />;
     else if (tab === 'integraciones') cuerpo = <TabIntegraciones />;
     else if (tab === 'ia') cuerpo = <TabIA />;
