@@ -338,6 +338,37 @@ def get_setter_performance():
     
     return jsonify(data), 200
 
+ROLES_DE_EQUIPO = ('admin', 'operator', 'director_comercial', 'director_marketing', 'closer', 'setter', 'triage', 'hiring')
+
+
+def _roles_pedidos(data, actual=None):
+    """De `{role, roles}` saca (principal, extra). `roles` son todos los roles de la persona y `role` el
+    principal, con el que entra (si no viene o no está en la lista, el primero). Sin `roles`, la lógica
+    vieja de un solo rol: `role` y, al editar, los extra que ya tenía. Error: (None, mensaje)."""
+    roles = data.get('roles')
+    if roles is None:
+        principal = data.get('role') or (actual._role if actual else 'closer')
+        if principal not in ROLES_DE_EQUIPO:
+            return None, f'Rol desconocido: {principal}'
+        extra = [r for r in (actual.roles[1:] if actual else []) if r != principal]
+        return (principal, extra), None
+    if not isinstance(roles, list) or not roles or any(r not in ROLES_DE_EQUIPO for r in roles):
+        return None, 'Elegí al menos un rol válido'
+    roles = list(dict.fromkeys(roles))
+    principal = data.get('role') if data.get('role') in roles else roles[0]
+    return (principal, [r for r in roles if r != principal]), None
+
+
+def _usuario_de_equipo(u, con_calendar):
+    return {
+        "id": u.id, "username": u.username, "email": u.email, "role": u._role, "roles": u.roles,
+        "timezone": u.timezone, "two_chat_number": u.two_chat_number,
+        "is_active": u.is_active if u.is_active is not None else True,
+        "can_view_finance": getattr(u, 'can_view_finance', False), "persona_id": u.persona_id,
+        "calendar": u.id in con_calendar,
+    }
+
+
 @bp.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -347,15 +378,18 @@ def manage_users():
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role', 'closer')
-        
+
         if not username or not password:
             return jsonify({"message": "Username and password required"}), 400
             
         if User.query.filter((User.username == username) | (User.email == email)).first():
              return jsonify({"message": "User already exists"}), 409
              
-        user = User(username=username, email=email, role=role)
+        roles, error = _roles_pedidos(data)
+        if error:
+            return jsonify({"message": error}), 400
+        user = User(username=username, email=email, role=roles[0])
+        user.roles_extra = ','.join(roles[1]) or None
         user.set_password(password)
         if 'timezone' in data: user.timezone = data['timezone']
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
@@ -377,9 +411,9 @@ def manage_users():
         users_query = users_query.filter(or_(User.is_active == True, User.is_active == None))
         
     users = users_query.all()
-    # Treat None as True for display
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "roles": u.roles, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True, "can_view_finance": getattr(u, 'can_view_finance', False), "persona_id": u.persona_id} for u in users]
-    return jsonify(user_list), 200
+    from app.models import GoogleCalendarToken
+    con_calendar = {t.user_id for t in GoogleCalendarToken.query.filter(GoogleCalendarToken.vencido_en.is_(None)).all()}
+    return jsonify([_usuario_de_equipo(u, con_calendar) for u in users]), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
 @login_required
@@ -430,7 +464,13 @@ def user_operations(id):
             if not alias_exists:
                 db.session.add(CloserAlias(user_id=user.id, alias_name=old_username))
         user.email = email or user.email
-        user.role = data.get('role', user.role)
+        roles, error = _roles_pedidos(data, actual=user)
+        if error:
+            return jsonify({"message": error}), 400
+        if user.id == current_user.id and 'admin' not in [roles[0], *roles[1]]:
+            return jsonify({"message": "No podés sacarte el rol de administrador a vos mismo"}), 400
+        user.role = roles[0]
+        user.roles_extra = ','.join(roles[1]) or None
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
         if 'timezone' in data: user.timezone = data['timezone']
         if 'is_active' in data:

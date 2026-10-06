@@ -54,7 +54,7 @@ describe('TeamManagementPage · modal de miembro', () => {
         await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
 
         expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
-            username: 'Mario Opera', email: 'mario@thelearnation.com', role: 'operator', password: '',
+            username: 'Mario Opera', email: 'mario@thelearnation.com', role: 'operator', roles: ['operator'], password: '',
         }));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -88,7 +88,32 @@ describe('TeamManagementPage · pestañas por rol', () => {
 
         expect(screen.getByText('Mario Opera')).toBeInTheDocument();
         expect(screen.getByText('Beto')).toBeInTheDocument();
-        // Las tarjetas que salen se animan antes de irse del DOM.
         await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument());
+    });
+});
+
+describe('TeamManagementPage · varios roles', () => {
+    beforeEach(() => {
+        api.get.mockResolvedValue({ data: [{ ...MARIO, roles: ['operator', 'closer'] }] });
+        api.put.mockResolvedValue({ data: {} });
+    });
+
+    it('muestra todos los roles y el principal marcado', async () => {
+        render(<TeamManagementPage />);
+        expect(await screen.findByTitle('Rol principal: entra con este')).toHaveTextContent('Operador');
+        expect(screen.getAllByText('Closer').length).toBeGreaterThan(0);
+    });
+
+    it('suma un rol y cambia con cuál entra', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByTitle('Editar'));
+        await usuario.click(screen.getByLabelText(/Dirección comercial/));
+        await usuario.click(screen.getByRole('button', { name: 'Entra como Dirección comercial' }));
+        await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
+
+        expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
+            roles: ['operator', 'closer', 'director_comercial'], role: 'director_comercial',
+        }));
     });
 });

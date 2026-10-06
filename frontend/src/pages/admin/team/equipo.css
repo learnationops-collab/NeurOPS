@@ -1,0 +1,60 @@
+/* Gestión de equipo: sistema de diseño Learnation (ln-*) sobre su propio fondo navy, para verse igual
+   con cualquier tema de la app. Los tokens vienen de `.dc-shell` (learnation-ds.css). */
+
+.dc-shell.equipo {
+    background: radial-gradient(120% 80% at 0% 0%, rgba(19, 35, 198, 0.35), transparent 60%), var(--brand-navy);
+    color: var(--text-on-surface);
+    border-radius: var(--radius-main);
+    border: 1px solid var(--border-main);
+    padding: var(--space-8);
+    max-width: 1280px;
+    margin: var(--space-6) auto;
+}
+.dc-shell.equipo--embebido { margin: 0; padding: var(--space-6); }
+
+.equipo .eq-cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); }
+.equipo .eq-cab .ln-t-h1 { margin: 0 0 var(--space-2); }
+.equipo .eq-cab p { margin: 0; max-width: 60ch; }
+
+.equipo .eq-barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-5, 20px); }
+.equipo .eq-busca { flex: 1 1 260px; max-width: 380px; }
+.equipo .eq-pestanas { overflow-x: auto; max-width: 100%; }
+
+.equipo .eq-tabla { --cols: minmax(220px, 1.6fr) 1.6fr 1fr auto; }
+.equipo .eq-persona { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.equipo .eq-persona-txt { min-width: 0; }
+.equipo .eq-persona-txt .ln-cell-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.equipo .eq-mail { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.equipo .eq-avatar {
+    flex: none; width: 40px; height: 40px; border-radius: var(--radius-pill);
+    display: grid; place-items: center; font-weight: 900; font-size: 14px; color: var(--ink);
+    background: linear-gradient(135deg, var(--brand-secondary), var(--brand-secondary-light));
+}
+.equipo .eq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.equipo .eq-acciones { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-end; }
+.equipo .eq-borrar:hover:not(:disabled) { color: var(--error); border-color: var(--error-border); }
+.equipo .eq-fila--inactiva { opacity: .55; }
+
+/* Modal: el cuerpo y el pie van en portal, cada uno con su `.dc-shell` para los tokens. */
+.dc-shell.eq-form { background: none; display: flex; flex-direction: column; gap: var(--space-6); color: var(--text-on-surface); }
+.dc-shell.eq-pie { background: none; justify-content: flex-end; }
+.eq-form .eq-roles { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); }
+.eq-form .eq-roles legend { grid-column: 1 / -1; margin-bottom: var(--space-2); }
+.eq-form .eq-rol {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2);
+    padding: var(--space-3); border-radius: var(--radius-control);
+    border: 1px solid var(--border-subtle); background: var(--bg-element);
+}
+.eq-form .eq-rol--on { border-color: var(--brand-secondary-border); background: var(--brand-secondary-surface); }
+.eq-form .eq-estrella {
+    flex: none; width: 32px; height: 32px; border-radius: var(--radius-pill); display: grid; place-items: center;
+    background: transparent; border: 1px solid var(--border-control); color: var(--text-muted); cursor: pointer;
+}
+.eq-form .eq-estrella--on { background: var(--brand-secondary); border-color: var(--brand-secondary); color: var(--ink); }
+.eq-form .eq-estrella--on svg { fill: currentColor; }
+.eq-form .eq-switches { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+
+@media (max-width: 640px) {
+    .dc-shell.equipo { padding: var(--space-4); border-radius: var(--radius-control); }
+    .equipo .eq-acciones { width: 100%; justify-content: flex-start; }
+}
