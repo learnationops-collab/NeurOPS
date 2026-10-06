@@ -106,19 +106,32 @@ def usuarios():
 
 @bp.route('/paquete/prompt', methods=['GET'])
 def paquete_prompt():
-    """El prompt para armar un funnel con IA (paquete.py), con el equipo real de Team."""
-    return jsonify({'prompt': paquete.prompt(servicio.colecciones())})
+    """El prompt para armar un funnel con IA (paquete.py), con el equipo real de Team. Con ?evento=<id>,
+    el de editar ese evento: trae su configuración actual."""
+    d = servicio.colecciones()
+    evento_id = request.args.get('evento')
+    if not evento_id:
+        return jsonify({'prompt': paquete.prompt(d)})
+    actual = paquete.exportar(d, evento_id)
+    if not actual:
+        return jsonify({'code': 'no_existe', 'message': 'Ese evento ya no existe.'}), 404
+    return jsonify({'prompt': paquete.prompt(d, actual)})
 
 
 @bp.route('/paquete', methods=['POST'])
 def paquete_importar():
-    """{paquete, simular}: revisa el JSON que devolvio la IA y, si no es simulacion, crea todo de una vez."""
+    """{paquete, simular, evento?}: revisa el JSON que devolvio la IA y, si no es simulacion, crea todo
+    de una vez. Con `evento`, lo escribe encima de ese evento (edicion con IA)."""
     cuerpo = _cuerpo()
     d = servicio.colecciones()
-    plan, errores = paquete.revisar(d, cuerpo.get('paquete'))
+    evento_id = cuerpo.get('evento') or None
+    plan, errores = paquete.revisar(d, cuerpo.get('paquete'), editando=evento_id)
     if errores:
         return jsonify({'code': 'invalido', 'errores': errores}), 400
     if cuerpo.get('simular'):
         return jsonify({'resumen': paquete.resumen(plan)})
+    if evento_id:
+        tocados = paquete.aplicar(d, plan, evento_id, usuario_id=current_user.id)
+        return jsonify({'resumen': paquete.resumen(plan), 'editados': tocados, 'version': servicio.version()})
     creados = paquete.importar(d, plan, usuario_id=current_user.id)
     return jsonify({'resumen': paquete.resumen(plan), 'creados': creados, 'version': servicio.version()}), 201

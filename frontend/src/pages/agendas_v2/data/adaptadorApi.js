@@ -124,14 +124,21 @@ export function crearAdaptadorApi() {
         },
 
         // Configuración con IA (Configuración › Con IA): el prompt y la importación del JSON.
-        async promptPaquete() {
-            try { const { data } = await api.get('/agendas-v2/paquete/prompt'); return data.prompt; } catch (e) { throw errorDeApi(e); }
-        },
-        // simular: solo valida y devuelve {resumen}. Si no, crea todo y devuelve {resumen, creados}.
-        // Con errores de validación rechaza con e.errores (lista de textos).
-        async importarPaquete(paquete, simular) {
+        // Con `evento`, el prompt para editar ese evento (lleva su configuración actual).
+        async promptPaquete(evento) {
             try {
-                const r = await api.post('/agendas-v2/paquete', { paquete, simular: !!simular });
+                const { data } = evento
+                    ? await api.get('/agendas-v2/paquete/prompt', { params: { evento } })
+                    : await api.get('/agendas-v2/paquete/prompt');
+                return data.prompt;
+            } catch (e) { throw errorDeApi(e); }
+        },
+        // simular: solo valida y devuelve {resumen}. Si no, crea todo y devuelve {resumen, creados}; con
+        // `evento`, lo escribe encima de ese evento y devuelve {resumen, editados}.
+        // Con errores de validación rechaza con e.errores (lista de textos).
+        async importarPaquete(paquete, simular, evento) {
+            try {
+                const r = await api.post('/agendas-v2/paquete', { paquete, simular: !!simular, ...(evento ? { evento } : {}) });
                 if (!simular) notar(r.data && r.data.version);
                 return r.data;
             } catch (e) {

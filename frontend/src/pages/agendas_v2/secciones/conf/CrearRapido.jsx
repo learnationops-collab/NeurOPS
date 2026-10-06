@@ -11,7 +11,7 @@ import { normalPregunta } from '../../core/normalizar';
 
 export const CREAR = [
     ['pregunta', 'Pregunta', 'pregunta'], ['formulario', 'Formulario', 'form'], ['persona', 'Persona', 'user'], ['grupo', 'Prioridad', 'rayo'],
-    ['evento', 'Evento', 'calendar'], ['funnel', 'Funnel', 'funnel'], ['rol', 'Rol', 'users'],
+    ['evento', 'Evento', 'calendar'], ['funnel', 'Funnel', 'funnel'],
 ];
 
 // Enfoca un campo cuando aparece: las secciones se pintan después de navegar.
@@ -43,9 +43,9 @@ export function crearDesdeAtajo(v) {
         enfocarCuandoAparezca('#pt-' + nq.id);
         return;
     }
-    if (v === 'funnel' || v === 'rol') {
-        ui.set({ conf: { tab: v === 'funnel' ? 'funnels' : 'roles' } });
-        enfocarCuandoAparezca(v === 'funnel' ? '#cf-nuevo' : '#rol-nuevo');
+    if (v === 'funnel') {
+        ui.set({ funnel: {} });
+        enfocarCuandoAparezca('#fm-nombre');
         return;
     }
     if (v === 'formulario') ui.set({ seccion: 'preguntas', form: null });
@@ -57,8 +57,8 @@ export function crearDesdeAtajo(v) {
 export default function CrearRapido() {
     const [volver] = useState(() => document.activeElement);
 
-    // Crear rápido reemplaza a Configuración si estaba abierta.
-    useEffect(() => { if (ui.getState().conf) ui.set({ conf: null }); }, []);
+    // Crear rápido reemplaza al modal del funnel si estaba abierto.
+    useEffect(() => { if (ui.getState().funnel) ui.set({ funnel: null }); }, []);
 
     const cerrar = () => {
         ui.set({ crear: false });

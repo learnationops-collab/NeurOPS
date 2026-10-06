@@ -36,7 +36,6 @@ function MenuPrincipal() {
     const { d, perfil } = useDatos();
     const nom = (perfil.nombre + ' ' + perfil.apellido).trim() || 'Tu perfil';
     const yo = yoPersona(d, null, perfil);
-    const abrirPerfil = () => ui.set({ menu: null, conf: { tab: 'perfil' }, crear: false });
     return (
         <>
             <div className="ym-cab">
@@ -47,12 +46,7 @@ function MenuPrincipal() {
                 <button type="button" className="ym-op" role="menuitem" onClick={() => { ui.set({ menu: null }); irA('horas'); }}>
                     <Icono n="clock" /><span>Hours<em>{horasSemana(yo) ? fmt(horasSemana(yo), 1) + ' h/sem' : 'Sin cargar'}</em></span>
                 </button>
-            ) : !yo ? (
-                <button type="button" className="ym-op" role="menuitem" onClick={abrirPerfil}>
-                    <Icono n="clock" /><span>Mi horario<em>Vinculá tu persona de Team</em></span>
-                </button>
             ) : null}
-            <button type="button" className="ym-op" role="menuitem" onClick={abrirPerfil}><Icono n="ajustes" /><span>Mi perfil</span></button>
             <i className="ym-sep" />
             <button type="button" className="ym-op" role="menuitem" aria-haspopup="menu" onClick={() => ui.set({ menu: 'closers' })}>
                 <Icono n="mascara" /><span>Simular a un closer<em>Entrás a su NeurOPS</em></span><Icono n="chevron-right" s={15} />

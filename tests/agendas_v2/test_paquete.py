@@ -148,3 +148,61 @@ def test_un_funnel_de_setting_no_lleva_origenes(client, equipo, dir_h):
     assert r.status_code == 201 and r.get_json()['resumen']['tipo'] == 'setting'
     (fu,) = servicio.colecciones()['funnels']
     assert fu['setting'] is True and fu['origenes'] == []
+
+
+# --- Edición con IA: el funnel actual va en el prompt y el JSON editado se escribe encima ---------
+
+
+def _importado(client, dir_h):
+    r = client.post(URL, json={'paquete': EJEMPLO}, headers=dir_h)
+    return r.get_json()['creados']
+
+
+def test_el_prompt_de_edicion_trae_el_funnel_como_esta(client, equipo, dir_h):
+    creados = _importado(client, dir_h)
+    r = client.get(URL + '/prompt?evento=' + creados['evento'], headers=dir_h)
+    assert r.status_code == 200
+    texto = r.get_json()['prompt']
+    assert 'TAL COMO ESTÁ HOY' in texto and 'qué quiero cambiar' in texto
+    assert '¿Cuánto podrías invertir en tu formación?' in texto and '"closer2@empresa.com"' in texto
+    assert client.get(URL + '/prompt?evento=nada', headers=dir_h).status_code == 404
+
+
+def test_exportar_y_volver_a_aplicar_no_cambia_nada(client, equipo, dir_h):
+    from app.agendas_v2 import paquete
+    creados = _importado(client, dir_h)
+    antes = servicio.colecciones()
+    actual = paquete.exportar(antes, creados['evento'])
+    r = client.post(URL, json={'paquete': actual, 'evento': creados['evento']}, headers=dir_h)
+    assert r.status_code == 200
+    despues = servicio.colecciones()
+    for col in ('funnels', 'formularios', 'grupos', 'eventos'):
+        assert despues[col] == antes[col], col
+
+
+def test_editar_escribe_encima_conserva_los_links_y_queda_en_borrador(client, equipo, dir_h):
+    from app.agendas_v2 import paquete
+    creados = _importado(client, dir_h)
+    d = servicio.colecciones()
+    ev, fo = d['eventos'][0], d['formularios'][0]
+    servicio.guardar_doc('eventos', ev['id'], {'publicado': config_de(ev, fo)}, parcial=True)
+
+    editado = paquete.exportar(servicio.colecciones(), creados['evento'])
+    editado['funnel'].update({'slug': 'otro-link', 'tipo': 'vsl'})
+    editado['evento'].update({'slug': 'otro', 'duracion': 60})
+    editado['formulario']['preguntas'][1]['titulo'] = '¿A qué te dedicás hoy?'
+    editado['prioridades'][0]['closers'] = ['closer2@empresa.com']
+    editado['prioridades'].append({'nombre': 'Nueva', 'estrategia': 'llenar', 'closers': ['closer1@empresa.com']})
+    r = client.post(URL, json={'paquete': editado, 'evento': creados['evento']}, headers=dir_h)
+    assert r.status_code == 200
+
+    d = servicio.colecciones()
+    (fu,), (ev,), (fo,) = d['funnels'], d['eventos'], d['formularios']
+    assert fu['id'] == creados['funnel'] and fu['slug'] == 'workshop' and fu['tipo'] == 'vsl'  # el link no cambia
+    assert ev['id'] == creados['evento'] and ev['slug'] == 'diagnostico' and ev['duracion'] == 60
+    assert fo['preguntas'][1]['titulo'] == '¿A qué te dedicás hoy?'
+    ultra = next(g for g in d['grupos'] if g['nombre'] == 'Ultra')
+    assert ultra['miembros'] == ['p2'] and len(d['grupos']) == 3  # Ultra se edita; Nueva se crea
+    # Lo publicado sigue igual hasta que se publique de nuevo.
+    r = client.get('/api/agendas-v2/publico/eventos/workshop/diagnostico')
+    assert r.get_json()['form']['preguntas'][1]['titulo'] == '¿A qué te dedicás?'

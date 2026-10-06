@@ -1,10 +1,10 @@
-// Pruebas de humo de Stats, Configuración, el menú del perfil y Crear rápido.
+// Pruebas de humo de Stats, el modal del funnel, el menú del perfil y Crear rápido.
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { almacen } from '../../data/hooks';
 import { ui } from '../../ui/estadoUi';
 import Stats from '../stats/Stats';
-import Configuracion from './Configuracion';
+import ModalFunnel, { leerPaquete } from '../eventos/ModalFunnel';
 import MenuYo from './MenuYo';
 import CrearRapido from './CrearRapido';
 
@@ -21,7 +21,7 @@ beforeAll(() => {
         almacen.crear('eventos', { nombre: 'Llamada', slug: 'llamada', funnel: fu, formulario: fo, orden: 1 });
     });
 });
-beforeEach(() => { cleanup(); act(() => ui.set({ sim: null, menu: null, conf: null, crear: false, seccion: 'estadisticas' })); });
+beforeEach(() => { cleanup(); act(() => ui.set({ sim: null, menu: null, funnel: null, crear: false, seccion: 'estadisticas' })); });
 
 describe('Stats', () => {
     it('muestra KPIs y gráficos con datos de ejemplo', () => {
@@ -35,42 +35,31 @@ describe('Stats', () => {
     });
 });
 
-describe('Configuración', () => {
-    it('crea un funnel con slug único', () => {
-        act(() => ui.set({ conf: { tab: 'funnels' } }));
-        render(envolver(<Configuracion />));
-        fireEvent.change(document.getElementById('cf-nuevo'), { target: { value: 'Webinar' } });
-        fireEvent.submit(document.getElementById('cf-nuevo').closest('form'));
-        const slugs = almacen.getState().d.funnels.map(f => f.slug).sort();
-        expect(slugs).toEqual(['webinar', 'webinar-2']);
-        expect(screen.queryByRole('tab', { name: 'Accesos' })).toBeNull();  // sin permisos propios de Thalamus
+describe('Modal del funnel', () => {
+    it('crea un funnel con slug único y su tipo, y pasa a editarlo', () => {
+        act(() => ui.set({ funnel: {} }));
+        render(envolver(<ModalFunnel estado={{}} />));
+        fireEvent.change(document.getElementById('fm-nombre'), { target: { value: 'Webinar' } });
+        fireEvent.click(screen.getByRole('button', { name: 'VSL' }));
+        fireEvent.submit(document.getElementById('fm-nombre').closest('form'));
+        const nuevo = almacen.getState().d.funnels.find(f => f.slug === 'webinar-2');
+        expect(nuevo.tipo).toBe('vsl');
+        expect(ui.getState().funnel).toEqual({ id: nuevo.id });
     });
 
-    it('«Recibe llamadas» se marca en la fila del rol', () => {
-        act(() => ui.set({ conf: { tab: 'roles' } }));
-        render(envolver(<Configuracion />));
-        const ceo = almacen.getState().d.roles.find(r => r.nombre === 'CEO');
-        fireEvent.click(screen.getByRole('switch', { name: 'Recibe llamadas: CEO' }));
-        expect(almacen.getState().d.roles.find(r => r.id === ceo.id).atiende).toBe(!ceo.atiende);
+    it('edita el tipo de un funnel y ofrece editarlo con IA', () => {
+        const fu = almacen.getState().d.funnels.find(f => f.slug === 'webinar');
+        render(envolver(<ModalFunnel estado={{ id: fu.id }} />));
+        fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+        const f = almacen.getState().d.funnels.find(x => x.id === fu.id);
+        expect(f.tipo).toBe('setting');
+        expect(f.setting).toBe(true);
+        expect(screen.getByRole('heading', { name: 'Editar con IA' })).toBeTruthy();
     });
 
-    it('roles sugeridos usan los accesos por nombre', () => {
-        act(() => ui.set({ conf: { tab: 'roles' } }));
-        render(envolver(<Configuracion />));
-        fireEvent.click(screen.getByRole('button', { name: 'Setter' }));
-        const st = almacen.getState().d.roles.find(r => r.nombre === 'Setter');
-        expect(st.accesos).toEqual(['events.ver', 'events.links', 'stats.ver']);
-    });
-
-    it('Sumarme a Team crea la persona y la vincula', () => {
-        act(() => ui.set({ conf: { tab: 'perfil' } }));
-        render(envolver(<Configuracion />));
-        fireEvent.click(screen.getByRole('button', { name: /Sumarme a Team/ }));
-        const { perfil, d } = almacen.getState();
-        const yo = d.personas.find(p => p.id === perfil.persona);
-        expect(yo).toBeTruthy();
-        expect(d.roles.find(r => r.id === yo.rol).atiende).toBe(true);
-        expect(yo.horario[1]).toEqual([['09:00', '18:00']]);
+    it('lee el JSON de la IA aunque venga dentro de un bloque con texto', () => {
+        expect(leerPaquete('Listo:\n```json\n{"a": 1}\n```\nSaludos').paquete).toEqual({ a: 1 });
+        expect(leerPaquete('no es json').error).toMatch(/No es un JSON válido/);
     });
 });
 
@@ -86,11 +75,11 @@ describe('Menú del perfil', () => {
 });
 
 describe('Crear rápido', () => {
-    it('la tecla 7 abre Configuración en Roles', () => {
+    it('la tecla 6 abre el modal de nuevo funnel', () => {
         act(() => ui.set({ crear: true }));
         render(envolver(<CrearRapido />));
-        fireEvent.keyDown(document, { key: '7' });
+        fireEvent.keyDown(document, { key: '6' });
         expect(ui.getState().crear).toBe(false);
-        expect(ui.getState().conf).toEqual({ tab: 'roles' });
+        expect(ui.getState().funnel).toEqual({});
     });
 });

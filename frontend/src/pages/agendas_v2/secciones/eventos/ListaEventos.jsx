@@ -126,6 +126,7 @@ export default function ListaEventos() {
                         </button>
                     ))}
                 </div>
+                {!cm && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
                 <form className="entrada ev-nuevo" noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
                     <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
                     <span className="prefijo"><Icono n="plus" /></span>
@@ -144,6 +145,10 @@ export default function ListaEventos() {
                                 {agrupar === 'funnel' && ref ? <span className="cf-punto" style={{ '--c': colorVar(ref.color) }} /> : <Icono n={agrupar === 'funnel' ? 'funnel' : 'form'} />}
                                 <span className="t-rotulo">{ref ? ref.nombre : 'Sin ' + agrupar}</span>
                                 <span className="t-cap mut40">{lista.length}</span>
+                                {agrupar === 'funnel' && ref && (
+                                    <button type="button" className="ibtn ibtn--sm" aria-label={'Editar funnel ' + ref.nombre} title="Editar funnel"
+                                        onClick={() => ui.set({ funnel: { id: ref.id } })}><Icono n="ajustes" s={15} /></button>
+                                )}
                             </div>
                         )}
                         <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div>

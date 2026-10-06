@@ -1,14 +1,13 @@
 // Learnation Thalamus: la herramienta del director comercial para armar formularios, equipo,
 // prioridades y eventos de agenda. Dock en el orden real de configuración: 1 Forms · 2 Team ·
-// 3 Events · 4 Stats · Configuración (perfil, miembros, funnels). Es el área «Agendamiento».
+// 3 Events · 4 Stats. Es el área «Agendamiento». Los funnels se crean y editan desde Events (ModalFunnel).
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Settings, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Users } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { SECCIONES } from './core/catalogos';
-import { confVisible } from './core/permisos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
 import { Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
 import { ui } from './ui/estadoUi';
@@ -19,7 +18,7 @@ import Team from './secciones/team/Team';
 import Horas from './secciones/team/Horas';
 import Eventos from './secciones/eventos/Eventos';
 import Stats from './secciones/stats/Stats';
-import Configuracion from './secciones/conf/Configuracion';
+import ModalFunnel from './secciones/eventos/ModalFunnel';
 import MenuYo from './secciones/conf/MenuYo';
 import CrearRapido from './secciones/conf/CrearRapido';
 import PruebaLead from './reserva/PruebaLead';
@@ -35,19 +34,15 @@ function atributoTema(tema) { return tema === 'oscuro' ? 'dark' : tema === 'clar
 // El dock es el MISMO del área Dirección (DockSecciones + MenuSesion del dashboard comercial): son
 // dos áreas de la dirección comercial y se pasa de una a otra con «Cambiar de área» (utils/areas.js).
 // Va fuera de `.thalamus` (sus estilos cuelgan de `.dc-shell`, y los de Thalamus le pisarían el
-// `.dock`). Configuración (perfil, miembros, funnels) es la última sección.
+// `.dock`).
 const ICONO_DE_SECCION = { preguntas: ClipboardList, team: Users, horas: Clock, eventos: CalendarDays, estadisticas: BarChart3 };
 
 function Dock() {
-    const { seccion, sim, conf } = useUi();
-    const { d } = useDatos();
+    const { seccion } = useUi();
     const perm = usePermisos();
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const secciones = [
-        ...SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || Settings })),
-        ...(confVisible(d, sim) ? [{ id: 'conf', label: 'Configuración', Icono: Settings }] : []),
-    ];
+    const secciones = SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || CalendarDays }));
     const grupos = [
         opcionCambiarDeArea(user, 'agendamiento', navigate),
         opcionesDeRol(user, (m) => toast(m, 'error')),
@@ -56,8 +51,8 @@ function Dock() {
     ];
     return (
         <div className="dc-shell dc-shell--embebido">
-            <DockSecciones secciones={secciones} activa={conf ? 'conf' : seccion} ariaLabel="Secciones de Agendamiento"
-                onElegir={(id) => (id === 'conf' ? ui.set({ conf: { tab: 'perfil' } }) : irA(id))}
+            <DockSecciones secciones={secciones} activa={seccion} ariaLabel="Secciones de Agendamiento"
+                onElegir={irA}
                 despues={<MenuSesion nombre={user?.username || ''} rol="Dirección comercial · Agendamiento" grupos={grupos} />} />
         </div>
     );
@@ -74,8 +69,7 @@ function Vista() {
         cuerpo = (
             <div className="panel vacio">
                 <Icono n="clock" s={22} />
-                <p className="t-sm mut">Vinculá tu persona de Team para ver tus horas.</p>
-                <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ conf: { tab: 'perfil' } })}>Ir a Perfil</button>
+                <p className="t-sm mut">Pedile a la dirección comercial que te sume en Team para ver tus horas.</p>
             </div>
         );
     } else if (!perm.secOk(seccion)) {
@@ -122,7 +116,7 @@ function useAtajos() {
                 return;
             }
             // Ctrl/Cmd+N donde el navegador lo deja; N sola como respaldo.
-            if (!e0.prueba && !enLead && e.key && e.key.toLowerCase() === 'n' && !e.altKey && ((e.ctrlKey || e.metaKey) || (!escribe && !e.shiftKey && !e0.crear && !e0.conf))) {
+            if (!e0.prueba && !enLead && e.key && e.key.toLowerCase() === 'n' && !e.altKey && ((e.ctrlKey || e.metaKey) || (!escribe && !e.shiftKey && !e0.crear && !e0.funnel))) {
                 e.preventDefault();
                 ui.set({ crear: true });
             }
@@ -179,7 +173,7 @@ export default function ThalamusApp() {
                 </header>
                 <Vista />
             </div>
-            {estado.conf && <Configuracion />}
+            {estado.funnel && <ModalFunnel estado={estado.funnel} />}
             {estado.crear && <CrearRapido />}
             {estado.prueba && <PruebaLead />}
             <Toasts />

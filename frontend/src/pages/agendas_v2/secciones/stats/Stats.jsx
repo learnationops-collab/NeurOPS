@@ -45,7 +45,7 @@ function Delta({ x, y, inv, dec = 0, dias }) {
     );
 }
 
-const irAFunnels = () => ui.set({ conf: { tab: 'funnels' } });
+const irAFunnels = () => ui.set({ funnel: {} });
 
 export default function Stats() {
     const { d } = useDatos();

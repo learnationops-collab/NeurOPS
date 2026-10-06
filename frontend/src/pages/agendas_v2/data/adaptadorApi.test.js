@@ -156,5 +156,13 @@ describe('adaptadorApi', () => {
 
         api.post.mockRejectedValueOnce(errHttp(400, { code: 'invalido', errores: ['funnel: falta "nombre".'] }));
         await expect(ad.importarPaquete({}, false)).rejects.toMatchObject({ errores: ['funnel: falta "nombre".'] });
+
+        // Editar con IA: el prompt y el pedido llevan el evento.
+        api.get.mockResolvedValueOnce({ data: { prompt: 'Editá…' } });
+        await ad.promptPaquete('e1');
+        expect(api.get).toHaveBeenLastCalledWith('/agendas-v2/paquete/prompt', { params: { evento: 'e1' } });
+        api.post.mockResolvedValueOnce({ data: { resumen: {} } });
+        await ad.importarPaquete({ a: 1 }, true, 'e1');
+        expect(api.post).toHaveBeenLastCalledWith('/agendas-v2/paquete', { paquete: { a: 1 }, simular: true, evento: 'e1' });
     });
 });

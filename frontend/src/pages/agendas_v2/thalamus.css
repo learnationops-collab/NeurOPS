@@ -868,6 +868,14 @@
 .thalamus .conf-cab .tabs{grid-column:1 / -1;grid-row:2;justify-self:start}
 .thalamus .conf-cab > .ibtn{grid-column:4;grid-row:1}
 .thalamus .conf-cuerpo{padding:var(--s6);display:grid;gap:var(--s6)}
+.thalamus .fm-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);padding:var(--s6) var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
+.thalamus .fm-bloque{display:grid;gap:var(--s3);justify-items:start}
+.thalamus .fm-bloque > .input,.thalamus .fm-bloque .ia{width:100%}
+.thalamus .fm-nuevo{display:grid;gap:var(--s3);width:100%;justify-items:start}
+.thalamus .fm-nuevo .input{width:100%}
+.thalamus .fm-fila{display:flex;align-items:center;gap:var(--s2)}
+.thalamus .fm-acc{display:flex;align-items:center;gap:var(--s2);justify-content:flex-end;flex-wrap:wrap;width:100%}
+.thalamus .ia{display:grid;gap:var(--s3);justify-items:start}
 .thalamus .perfil{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s6);align-items:center}
 @media (max-width:620px){.thalamus .perfil{grid-template-columns:minmax(0,1fr)}}
 .thalamus .avatar-g{width:128px;height:128px;border-radius:50%;display:grid;place-items:center;background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);

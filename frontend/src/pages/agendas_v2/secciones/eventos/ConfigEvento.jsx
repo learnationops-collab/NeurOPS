@@ -122,7 +122,7 @@ function General({ d, e, f, cm }) {
                         })}
                     </div>
                 ) : (
-                    <button type="button" className="link-btn link-btn--sutil" onClick={() => ui.set({ conf: { tab: 'funnels' } })}>
+                    <button type="button" className="link-btn link-btn--sutil" onClick={() => ui.set({ funnel: { id: e.funnel } })}>
                         <Icono n="plus" />Links por procedencia
                     </button>
                 )}
@@ -202,7 +202,7 @@ function Disponibilidad({ e }) {
     );
 }
 
-function Pagina({ e, integ }) {
+function Pagina({ e }) {
     const redir = useBorrador(e.redir);
     const redirMal = redir.escribiendo && !!redir.value.trim() && !urlOk(redir.value.trim());
     return (
@@ -217,9 +217,8 @@ function Pagina({ e, integ }) {
             </Fila>
             <Fila l="Ubicación">
                 <span className="meet"><MeetLogo /><b>Google Meet</b></span>
-                {integ.meet.activo
-                    ? <span className="chip chip--n" style={{ '--c': 'var(--success)' }}><Icono n="check" />Automático</span>
-                    : <button type="button" className="link-btn" onClick={() => ui.set({ conf: { tab: 'integraciones' } })}><Icono n="enchufe" />Conectar</button>}
+                {/* El Meet lo crea siempre el servidor con el Calendar del closer (operacion.crear_evento). */}
+                <span className="chip chip--n" style={{ '--c': 'var(--success)' }}><Icono n="check" />Automático</span>
             </Fila>
             <Fila l="Redirigir a">
                 <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
@@ -240,7 +239,7 @@ function Pagina({ e, integ }) {
 }
 
 export default function ConfigEvento({ e }) {
-    const { d, integ } = useDatos();
+    const { d } = useDatos();
     const { modoCloser: cm } = usePermisos();
     const [borrar, setBorrar] = useState(false);
     const f = buscar(d, 'funnels', e.funnel);
@@ -255,7 +254,7 @@ export default function ConfigEvento({ e }) {
             <div className="ev-col">
                 <Bloque tit="General" icono="ajustes" i={0}><General d={d} e={e} f={f} cm={cm} /></Bloque>
                 <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
-                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina e={e} integ={integ} /></Bloque>
+                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina e={e} /></Bloque>
                 {borrar ? (
                     <div className="ed-pie--borrar">
                         <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
