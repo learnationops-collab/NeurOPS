@@ -342,11 +342,14 @@ def test_un_descalificado_no_puede_forzar_un_horario(client, armado):
     assert Appointment.query.count() == 0 and Client.query.one().formulario_payload['descalificada'] is True
 
 
-def test_si_el_cliente_ya_existe_se_reusa(client, armado, db):
-    db.session.add(Client(full_name='Lucía F.', email='lucia@correo.com'))
+def test_si_el_cliente_ya_existe_se_reusa_y_toma_los_datos_nuevos(client, armado, db):
+    db.session.add(Client(full_name='Gabriela Zapata', email='lucia@correo.com', phone='19567772077', instagram='viejo'))
     db.session.commit()
     assert _reservar(client).status_code == 201
-    assert Client.query.count() == 1 and Appointment.query.one().client.formulario_payload['nota'] == 10
+    (cliente,) = Client.query.all()
+    assert Appointment.query.one().client_id == cliente.id and cliente.formulario_payload['nota'] == 10
+    # El formulario más reciente manda en el nombre y el teléfono; lo que no escribió queda.
+    assert cliente.full_name == 'Lucía Fernández' and cliente.phone != '19567772077' and cliente.instagram == 'viejo'
 
 
 def test_limite_por_ip(client, armado):

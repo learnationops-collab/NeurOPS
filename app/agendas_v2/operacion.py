@@ -59,6 +59,18 @@ def _cliente(payload):
         instagram=_o_none(lead.get('instagram')),
         phone=_o_none(lead.get('telefono')),
     )
+    # El formulario más reciente manda: un cliente que vuelve a agendar actualiza su nombre y su
+    # contacto con lo que acaba de escribir (pedido del 06/10/2026). Se lo encontró por email o
+    # teléfono, así que un email distinto acá no lo tiene ningún otro cliente.
+    nuevo = {
+        'full_name': _o_none(lead.get('nombre')),
+        'email': (_o_none(lead.get('email')) or '').strip().lower() or None,
+        'phone': _o_none(lead.get('telefono')),
+        'instagram': (_o_none(lead.get('instagram')) or '').strip().lstrip('@').lower() or None,
+    }
+    for campo, valor in nuevo.items():
+        if valor and getattr(cliente, campo) != valor:
+            setattr(cliente, campo, valor)
     cliente.formulario_payload = payload
     flag_modified(cliente, 'formulario_payload')
     cliente.grupo = _grupo(payload) or cliente.grupo
