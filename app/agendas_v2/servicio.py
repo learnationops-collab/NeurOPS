@@ -238,7 +238,10 @@ def _con_calendar(user_ids):
 
     if not user_ids:
         return set()
-    filas = GoogleCalendarToken.query.filter(GoogleCalendarToken.user_id.in_(list(user_ids))).all()
+    # Un token que Google rechazó (vencido_en) no cuenta: sin él no hay evento ni Meet.
+    filas = GoogleCalendarToken.query.filter(
+        GoogleCalendarToken.user_id.in_(list(user_ids)), GoogleCalendarToken.vencido_en.is_(None)
+    ).all()
     return {t.user_id for t in filas}
 
 

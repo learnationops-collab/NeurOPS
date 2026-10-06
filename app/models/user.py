@@ -235,6 +235,9 @@ class GoogleCalendarToken(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     token_json = db.Column(db.Text, nullable=False) 
     google_calendar_id = db.Column(db.String(255), default='primary')
+    # Cuándo Google rechazó el token (revocado o emitido por otro cliente OAuth). Un token vencido
+    # no cuenta como conectado: el usuario tiene que volver a conectar. Al reconectar vuelve a NULL.
+    vencido_en = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref=db.backref('google_token', uselist=False, cascade="all, delete-orphan"))

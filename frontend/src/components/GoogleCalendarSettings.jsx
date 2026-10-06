@@ -6,6 +6,8 @@ import Button from './ui/Button';
 const GoogleCalendarSettings = () => {
     const [loading, setLoading] = useState(true);
     const [connected, setConnected] = useState(false);
+    // Google rechazó el token guardado (revocado o de otro cliente): hay que volver a conectar.
+    const [vencido, setVencido] = useState(false);
     const [calendars, setCalendars] = useState([]);
     const [selectedCalendar, setSelectedCalendar] = useState('primary');
     const [message, setMessage] = useState(null);
@@ -16,9 +18,14 @@ const GoogleCalendarSettings = () => {
 
         // Check URL params for success message
         const params = new URLSearchParams(window.location.search);
-        if (params.get('google_connected') === 'success') {
-            setMessage("Cuenta de Google conectada exitosamente");
-            window.history.replaceState({}, document.title, window.location.pathname);
+        const resultado = params.get('google_connected');
+        if (resultado === 'success') setMessage("Cuenta de Google conectada exitosamente");
+        else if (resultado === 'cancelado') setError("Cancelaste la conexión con Google. Sin el calendario conectado no recibís agendas.");
+        else if (resultado === 'error') setError("Google no pudo completar la conexión. Probá de nuevo; si sigue fallando, avisá a operaciones.");
+        if (resultado) {
+            params.delete('google_connected');
+            const resto = params.toString();
+            window.history.replaceState({}, document.title, window.location.pathname + (resto ? '?' + resto : ''));
         }
     }, []);
 
@@ -26,6 +33,7 @@ const GoogleCalendarSettings = () => {
         try {
             const res = await api.get('/google/calendars');
             setConnected(res.data.connected);
+            setVencido(!!res.data.vencido);
             if (res.data.connected) {
                 setCalendars(res.data.calendars || []);
                 setSelectedCalendar(res.data.selected_calendar || 'primary');
@@ -97,9 +105,13 @@ const GoogleCalendarSettings = () => {
 
             {!connected ? (
                 <div className="bg-main/50 p-6 rounded-2xl border border-dashed border-base text-center space-y-4">
-                    <p className="text-xs text-muted">Conecta tu cuenta para sincronizar automáticamente las agendas creadas.</p>
+                    <p className="text-xs text-muted">
+                        {vencido
+                            ? 'Google dejó de aceptar tu conexión. Volvé a conectar tu cuenta para seguir recibiendo agendas.'
+                            : 'Conecta tu cuenta para sincronizar automáticamente las agendas creadas.'}
+                    </p>
                     <Button onClick={handleConnect} variant="primary" icon={Calendar}>
-                        Conectar con Google
+                        {vencido ? 'Volver a conectar' : 'Conectar con Google'}
                     </Button>
                 </div>
             ) : (

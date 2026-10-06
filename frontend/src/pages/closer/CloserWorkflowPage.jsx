@@ -147,7 +147,7 @@ const CloserWorkflowPage = () => {
     const [calendarConectado, setCalendarConectado] = useState(null);
     useEffect(() => {
         let vivo = true;
-        api.get('/google/calendars', { skipBugReport: true })
+        api.get('/google/calendars', { params: { solo_estado: 1 }, skipBugReport: true })
             .then(res => { if (vivo) setCalendarConectado(!!res.data?.connected); })
             .catch(() => {});
         return () => { vivo = false; };

@@ -1,117 +1,104 @@
-from flask import Blueprint, redirect, request, jsonify, session, url_for
-from flask_login import current_user, login_required
-from app.services.google_service import GoogleService
-from app.models import db, GoogleCalendarToken
+"""Conectar Google Calendar: el usuario da permiso en Google, vuelve a /google/callback y se guarda
+su token. Ver app/services/google_service.py para las variables de entorno."""
+
 import os
-from urllib.parse import urlparse
+
+from flask import Blueprint, current_app, jsonify, redirect, request, session
+from flask_login import current_user, login_required
+
+from app.models import db, GoogleCalendarToken
+from app.services.google_service import GoogleService
 
 bp = Blueprint('google_calendar_bp', __name__)
 
-# To allow HTTP for local dev
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-# Relax scope validation as Google might return extra scopes (e.g. calendar.readonly)
+# Solo en local: oauthlib exige https, y el servidor de desarrollo corre en http.
+if os.environ.get('FLASK_ENV') != 'production':
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+# Google puede devolver scopes de más (p. ej. calendar.readonly si ya los había dado antes).
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
+
+def _volver(resultado):
+    """A la pantalla desde donde se conecta, según el rol activo. Mismo dominio que el backend salvo
+    en local, donde FRONTEND_URL apunta al servidor de Vite."""
+    base = os.environ.get('FRONTEND_URL', '').rstrip('/')
+    if current_user.is_authenticated and current_user.role == 'closer':
+        destino = '/closer/deck?vista=configuracion&'
+    elif current_user.is_authenticated and current_user.role == 'admin':
+        destino = '/admin/settings?'
+    else:
+        destino = '/closer/settings?'
+    return redirect(f'{base}{destino}google_connected={resultado}')
+
 
 @bp.route('/api/google/login', methods=['GET'])
 @login_required
 def login():
-    # Construct redirect URI based on request
-    # If local: http://127.0.0.1:5000/api/google/callback ... wait, redirect is usually separate. 
-    # Let's keep callback separate or also under api?
-    # Google console allows specific URIs.
-    # The user said: http://127.0.0.1:5000/google/callback
-    # note: the CALLBACK route is distinct from the login route. The login route is internal. 
-    # Callback determines where Google sends user back. 
-    # If I change login route, it's fine.
-    # But callback route must match Google Console.
-    
-    # Prioritize environment variable if set (e.g. for localhost:5173 or Prod)
-    redirect_uri = os.environ.get('REDIRECT_URI_PROD') or os.environ.get('REDIRECT_URI_DEV')
-    if not redirect_uri:
-        base_url = request.url_root.rstrip('/')
-        redirect_uri = f"{base_url}/google/callback"
-
-    # Capture frontend origin from Referer to ensure redirect back to correct domain (fix for prod defaulting to localhost)
-    referer = request.headers.get('Referer')
-    if referer:
-        parsed = urlparse(referer)
-        session['frontend_origin'] = f"{parsed.scheme}://{parsed.netloc}"
-    
-    flow = GoogleService.get_flow(redirect_uri=redirect_uri)
-    authorization_url, state = flow.authorization_url(
+    redirect_uri = GoogleService.redirect_uri()
+    flow = GoogleService.get_flow(redirect_uri)
+    auth_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
-        prompt='consent' # Force consent to get refresh token
+        prompt='consent',  # siempre pide el permiso: así Google devuelve un refresh token
     )
-    
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
-    return jsonify({"auth_url": authorization_url})
+    return jsonify({'auth_url': auth_url})
+
 
 @bp.route('/google/callback', methods=['GET'])
 def callback():
-    state = session.get('google_oauth_state')
-    redirect_uri = session.get('google_redirect_uri')
-    
-    if not state or not redirect_uri:
-        return "Invalid Session State", 400
+    state = session.pop('google_oauth_state', None)
+    redirect_uri = session.pop('google_redirect_uri', None)
+    if not current_user.is_authenticated:
+        return 'Tu sesión se cerró mientras conectabas Google. Volvé a entrar y probá de nuevo.', 401
+    if request.args.get('error'):  # el usuario canceló en la pantalla de Google
+        return _volver('cancelado')
+    if not state or not redirect_uri or request.args.get('state') != state:
+        return _volver('error')
+    try:
+        flow = GoogleService.get_flow(redirect_uri)
+        flow.fetch_token(authorization_response=request.url)
+    except Exception as e:  # noqa: BLE001  (código vencido, cliente mal configurado, red...)
+        current_app.logger.warning(f'[GOOGLE] No se pudo conectar el calendario del usuario #{current_user.id}: {e}')
+        return _volver('error')
+    GoogleService.save_credentials(current_user.id, flow.credentials)
+    return _volver('success')
 
-    flow = GoogleService.get_flow(redirect_uri=redirect_uri)
-    flow.fetch_token(authorization_response=request.url)
-
-    credentials = flow.credentials
-    
-    # We need the user to be logged in. Since callback comes from Google, 
-    # session cookie should persist if SameSite is lax/none. 
-    # If using token auth (header), this flow is tricky for SPA.
-    # Usually SPA opens a popup. 
-    # If session usage is valid:
-    if current_user.is_authenticated:
-        GoogleService.save_credentials(current_user.id, credentials)
-        # Redirect to frontend settings with success param
-        # Use stored origin as primary source, fallback to env var or localhost
-        frontend_url = session.get('frontend_origin') or os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-        
-        # El closer conecta su calendario desde «Configuración» de su mazo y vuelve ahí.
-        if current_user.role == 'closer':
-            return redirect(f"{frontend_url}/closer/deck?vista=configuracion&google_connected=success")
-        target_path = '/admin/settings' if current_user.role == 'admin' else '/closer/settings'
-        return redirect(f"{frontend_url}{target_path}?google_connected=success")
-    else:
-        # If no user session (e.g. cross domain issue), store token in temp session and let frontend claim it?
-        # Or return error. Assuming cookie session works for now.
-        return "User not logged in", 401
 
 @bp.route('/api/google/calendars', methods=['GET', 'POST'])
 @login_required
 def manage_calendars():
     if request.method == 'POST':
-        data = request.get_json() or {}
-        calendar_id = data.get('calendar_id')
-        if not calendar_id: return jsonify({"error": "Missing calendar_id"}), 400
-        
-        token = GoogleCalendarToken.query.filter_by(user_id=current_user.id).first()
-        if token:
-            token.google_calendar_id = calendar_id
-            db.session.commit()
-            return jsonify({"message": "Calendar preference saved"}), 200
-        return jsonify({"error": "No token found"}), 404
+        calendar_id = (request.get_json() or {}).get('calendar_id')
+        if not calendar_id:
+            return jsonify({'error': 'Missing calendar_id'}), 400
+        token = GoogleService.token_vigente(current_user.id)
+        if not token:
+            return jsonify({'error': 'No token found'}), 404
+        token.google_calendar_id = calendar_id
+        db.session.commit()
+        return jsonify({'message': 'Calendar preference saved'}), 200
 
-    # GET
+    # GET. Con ?solo_estado=1 responde desde la base, sin llamar a Google (el aviso del menú).
     token = GoogleCalendarToken.query.filter_by(user_id=current_user.id).first()
-    if not token:
-        return jsonify({"connected": False}), 200
-        
-    calendars = GoogleService.list_calendars(current_user.id)
+    if request.args.get('solo_estado'):
+        return jsonify({'connected': bool(token and token.vencido_en is None), 'vencido': bool(token and token.vencido_en)}), 200
+
+    calendars = GoogleService.list_calendars(current_user.id)  # si Google rechaza el token, lo marca vencido
+    if not token or token.vencido_en is not None:
+        return jsonify({'connected': False, 'vencido': bool(token)}), 200
     return jsonify({
-        "connected": True,
-        "selected_calendar": token.google_calendar_id,
-        "calendars": calendars
+        'connected': True,
+        'vencido': False,
+        'selected_calendar': token.google_calendar_id,
+        'calendars': calendars,
     }), 200
+
 
 @bp.route('/api/google/disconnect', methods=['POST'])
 @login_required
 def disconnect():
     GoogleCalendarToken.query.filter_by(user_id=current_user.id).delete()
     db.session.commit()
-    return jsonify({"message": "Disconnected"}), 200
+    return jsonify({'message': 'Disconnected'}), 200
