@@ -1,6 +1,8 @@
 // Último paso del lead: día y horario, en su zona horaria. Port de rvCalendarioHTML.
 // Solo se puede ir a meses con horarios; los días sin horarios quedan deshabilitados.
 
+import { useEffect } from 'react';
+
 import { ZONAS, zonaInfo } from '../core/catalogos';
 import { limpiarHTML } from '../core/normalizar';
 import { claveDia, fechaClave, fechaTs, gmtTxt, horaTxt, mesTitulo } from '../core/tiempo';
@@ -35,6 +37,12 @@ function claveHoy(tz) { return claveDia(Date.now(), tz); }
  */
 export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija, aviso, envio, acc, buscando = false, errorHorarios = '' }) {
     const tz = s.tz, z = zonaInfo(tz);
+    // Al elegir la hora, que se vea el «Confirmar»: en el celular queda debajo de la lista de horas.
+    useEffect(() => {
+        if (s.hora == null) return;
+        const btn = document.querySelector('[data-rv="confirmar"]');
+        if (btn && btn.scrollIntoView) btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, [s.hora]);
     const slots = asig ? asig.slots : [];
     const dias = diasDeSlots(slots, tz);
     const keys = Object.keys(dias).sort();

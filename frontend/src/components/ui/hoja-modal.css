@@ -1,0 +1,61 @@
+/* La hoja de `HojaModal.jsx`. Comparte el velo (`.modal-fondo`) y el z-index de `modal.css`: tapa el
+   dock y queda por debajo del widget de bugs. En el celular sube desde abajo; desde 640px, centrada. */
+.hoja-velo {
+    position: fixed;
+    inset: 0;
+    z-index: 170;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin: 0;
+}
+
+.hoja-panel {
+    position: relative;
+    width: 100%;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 1.75rem 1.75rem 0 0;
+    box-shadow: 0 30px 80px rgba(2, 6, 23, 0.55);
+}
+
+.hoja-cuerpo {
+    padding: 3.25rem 1.25rem 1.75rem;
+}
+
+.hoja-flotante {
+    position: sticky;
+    top: 0;
+    height: 0;
+    z-index: 2;
+}
+
+.hoja-cerrar {
+    position: absolute;
+    top: 0.875rem;
+    left: 0.875rem;
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.hoja-acciones {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+}
+
+@media (min-width: 640px) {
+    .hoja-velo {
+        align-items: center;
+        padding: 24px;
+    }
+    .hoja-panel {
+        max-width: 48rem;
+        max-height: calc(100dvh - 48px);
+        border-radius: 2rem;
+    }
+    .hoja-cuerpo {
+        padding: 3.5rem 2.5rem 2.25rem;
+    }
+}

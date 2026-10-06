@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
@@ -89,6 +89,16 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   return children;
 };
 
+// Páginas que ve un lead o cualquiera sin cuenta: ni el widget de bugs ni los avisos del Playbook,
+// aunque quien las abra tenga la sesión del equipo iniciada.
+const RUTAS_PUBLICAS = ['/agendas-v2/agenda', '/book/', '/politica-de-privacidad', '/privacy-policy', '/terminos-de-servicio', '/terms-of-service'];
+const esRutaPublica = (pathname) => RUTAS_PUBLICAS.some((r) => pathname === r || pathname.startsWith(r.endsWith('/') ? r : r + '/'));
+
+function SoloInterno({ children }) {
+  const { pathname } = useLocation();
+  return esRutaPublica(pathname) ? null : children;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -97,9 +107,11 @@ function App() {
         <Router>
           <PixelTracker />
           <Toaster position="top-right" />
-          <BugReportWidget />
-          <PlaybookOverlay />
-          <PlaybookNotification />
+          <SoloInterno>
+            <BugReportWidget />
+            <PlaybookOverlay />
+            <PlaybookNotification />
+          </SoloInterno>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />

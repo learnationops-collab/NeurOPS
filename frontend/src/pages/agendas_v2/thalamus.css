@@ -1417,3 +1417,11 @@
 .thalamus .reserva .rv-input:focus-visible{box-shadow:none}
 
 @media (prefers-reduced-motion:reduce){.thalamus .humo i{animation:none}.thalamus,.thalamus *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+/* Reserva en el celular (donde la ve casi todo lead): sin las flechas de navegación, que flotaban
+   encima de los horarios y del «Confirmar» (en el celular se navega con el dedo); la lista de horas
+   sin scroll propio dentro del scroll de la página (al elegir la hora, PasoCalendario desliza hasta
+   el «Confirmar»). */
+@media (max-width:640px){
+  .thalamus .reserva:not(.reserva--embebida) .rv-control .rv-navbtn{display:none}
+  .thalamus .rv-horas-lista{max-height:none;overflow:visible}
+}

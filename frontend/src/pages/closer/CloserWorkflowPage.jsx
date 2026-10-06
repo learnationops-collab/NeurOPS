@@ -31,6 +31,7 @@ import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import ConfiguracionCloser from './components/ConfiguracionCloser';
+import HojaModal from '../../components/ui/HojaModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -139,9 +140,19 @@ const CloserWorkflowPage = () => {
         return () => clearInterval(id);
     }, []);
 
-    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día). `?vista=configuracion` abre
-    // Configuración: es a donde vuelve Google después de conectar el calendario.
-    const [activeView, setActiveView] = useState(() => (searchParams.get('vista') === 'configuracion' ? 'configuracion' : 'inbox'));
+    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día).
+    const [activeView, setActiveView] = useState('inbox');
+    // Configuración se abre en una hoja encima del mazo. `?vista=configuracion` la abre: es a donde
+    // vuelve Google después de conectar el calendario.
+    const [configAbierta, setConfigAbierta] = useState(() => searchParams.get('vista') === 'configuracion');
+    const cerrarConfig = () => {
+        setConfigAbierta(false);
+        if (searchParams.get('vista') === 'configuracion') {
+            const resto = new URLSearchParams(searchParams);
+            ['vista', 'google_connected', 'google_error'].forEach((k) => resto.delete(k));
+            setSearchParams(resto, { replace: true });
+        }
+    };
     // Google Calendar conectado y WhatsApp confirmado (null mientras no se sabe): sin ellos, el closer
     // no recibe agendas del sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión.
     const [calendarConectado, setCalendarConectado] = useState(null);
@@ -155,7 +166,7 @@ const CloserWorkflowPage = () => {
             .then(res => { if (vivo) setWhatsappConfirmado(!!res.data?.confirmado); })
             .catch(() => {});
         return () => { vivo = false; };
-    }, [activeView]);
+    }, [activeView, configAbierta]);
     const faltaConfigurar = [calendarConectado === false && 'Google Calendar sin conectar', whatsappConfirmado === false && 'WhatsApp sin confirmar'].filter(Boolean);
     // Pestaña temporal "Auditoría" — solo visible mientras Operaciones la tenga activada
     // (ver LeadsAuditTogglePanel.jsx y GET /closer/leads-audit/status).
@@ -1457,7 +1468,7 @@ const CloserWorkflowPage = () => {
         opcionesDeRol(user, (m) => toast.error(m)),
         [
             // Configuración (por ahora, Google Calendar) vive en el menú de sesión, no en el dock.
-            { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => irASeccion('configuracion'),
+            { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => setConfigAbierta(true),
                 cuenta: faltaConfigurar.length ? '!' : null,
                 titulo: faltaConfigurar.length ? faltaConfigurar.join(' · ') : null },
             ...(user?.is_impersonating
@@ -2321,8 +2332,6 @@ const CloserWorkflowPage = () => {
                 </div>
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
-                ) : activeView === 'configuracion' ? (
-                    <ConfiguracionCloser />
                 ) : activeView === 'cartera' ? (
                     /* "Mi cartera" es la seccion Revisar del director comercial, acotada a este
                        closer POR EL BACKEND (ver `alcance_de` en app/api/comercial.py): sus
@@ -2370,6 +2379,11 @@ const CloserWorkflowPage = () => {
                 entero del lead: ni la deuda, ni el formulario con el que entro, ni el hilo
                 del equipo. Las acciones rapidas siguen viviendo en la tarjeta, que es donde
                 estan: esto reemplaza el modal, no el mazo. */}
+            {configAbierta && (
+                <HojaModal titulo="Configuración" onCerrar={cerrarConfig}>
+                    <ConfiguracionCloser user={user} />
+                </HojaModal>
+            )}
             {selectedLead && (
                 <FichaLeadModal
                     appointmentId={selectedLead.id > 0 ? selectedLead.id : null}
