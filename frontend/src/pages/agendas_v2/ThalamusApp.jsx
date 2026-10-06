@@ -19,7 +19,6 @@ import Horas from './secciones/team/Horas';
 import Eventos from './secciones/eventos/Eventos';
 import Stats from './secciones/stats/Stats';
 import ModalFunnel from './secciones/eventos/ModalFunnel';
-import MenuYo from './secciones/conf/MenuYo';
 import CrearRapido from './secciones/conf/CrearRapido';
 import PruebaLead from './reserva/PruebaLead';
 import DockSecciones from '../comercial/components/DockSecciones';
@@ -169,9 +168,8 @@ export default function ThalamusApp() {
                         <LogoThalamus />
                         <h1 className="t-h1">{sec.label}</h1>
                     </div>
-                    {/* El evento abierto pone acá su barra (volver, vistas, publicar): DetalleEvento. */}
+                    {/* Los botones y filtros de la sección van acá, a la derecha del título (ui/EnTope). */}
                     <div className="tope-acc" id="tope-acc" />
-                    <MenuYo />
                 </header>
                 <Vista />
             </div>

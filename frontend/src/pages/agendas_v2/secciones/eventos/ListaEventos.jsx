@@ -9,6 +9,7 @@ import { slugify } from '../../core/util';
 import { almacen, useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
+import EnTope from '../../ui/EnTope';
 import { EstadoEv, abrirEvento, copiarLink, probarEvento } from './comun';
 
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
@@ -116,25 +117,27 @@ export default function ListaEventos() {
 
     return (
         <>
-            <div className="ev-top">
-                {cm && <span className="ev-mios"><Icono n="user" s={14} />Tus eventos</span>}
-                <div hidden={!!cm} className="seg seg--sm ev-agr" role="group" aria-label="Agrupar">
-                    <span className="ev-agr-ico" title="Agrupar"><Icono n="capas" s={15} /></span>
-                    {AGRUPAR.map(o => (
-                        <button key={o[0]} type="button" data-nav="" aria-pressed={agrupar === o[0]} onClick={() => ui.set({ evAgrupar: o[0] })}>
-                            <Icono n={o[2]} s={13} />{o[1]}
-                        </button>
-                    ))}
+            <EnTope>
+                <div className="ev-top">
+                    {cm && <span className="ev-mios"><Icono n="user" s={14} />Tus eventos</span>}
+                    <div hidden={!!cm} className="seg seg--sm ev-agr" role="group" aria-label="Agrupar">
+                        <span className="ev-agr-ico" title="Agrupar"><Icono n="capas" s={15} /></span>
+                        {AGRUPAR.map(o => (
+                            <button key={o[0]} type="button" data-nav="" aria-pressed={agrupar === o[0]} onClick={() => ui.set({ evAgrupar: o[0] })}>
+                                <Icono n={o[2]} s={13} />{o[1]}
+                            </button>
+                        ))}
+                    </div>
+                    {!cm && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
+                    <form className="entrada ev-nuevo" noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
+                        <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
+                        <span className="prefijo"><Icono n="plus" /></span>
+                        <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Diagnóstico Workshop"
+                            aria-describedby="nuevo-err" aria-invalid={!!err} onChange={() => { if (err) setErr(''); }} />
+                        <button type="submit" className="btn btn--cta btn--sm">Crear</button>
+                    </form>
                 </div>
-                {!cm && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
-                <form className="entrada ev-nuevo" noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
-                    <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
-                    <span className="prefijo"><Icono n="plus" /></span>
-                    <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Diagnóstico Workshop"
-                        aria-describedby="nuevo-err" aria-invalid={!!err} onChange={() => { if (err) setErr(''); }} />
-                    <button type="submit" className="btn btn--cta btn--sm">Crear</button>
-                </form>
-            </div>
+            </EnTope>
             <ErrNuevo err={err} clase="err-nuevo" />
             {[...grupos.entries()].map(([k, lista]) => {
                 const ref = agrupar === 'nada' ? null : buscar(d, agrupar === 'funnel' ? 'funnels' : 'formularios', k);

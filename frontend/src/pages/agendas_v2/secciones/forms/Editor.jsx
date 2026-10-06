@@ -7,6 +7,7 @@ import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
+import EnTope from '../../ui/EnTope';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { mutarForm, setFormUi, useBorrador, useEnfocar } from './comun';
 import { borrarForm } from './ListaForms';
@@ -172,7 +173,7 @@ export default function Editor() {
 
     return (
         <div ref={raiz} style={{ display: 'contents' }}>
-            <Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} />
+            <EnTope reemplaza><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} /></EnTope>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
                 : vista === 'ruteo' ? <div className="columna"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></div>
                     : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={o => { if (fuentesImport(d, f.id).length) abrir('imp', o); else toast('No hay otros formularios con preguntas.', 'error'); }} />}

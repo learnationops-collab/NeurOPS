@@ -1459,10 +1459,13 @@
 .thalamus .lc--no{color:var(--error);background:color-mix(in srgb,var(--error) 12%,transparent);border:1px solid color-mix(in srgb,var(--error) 35%,transparent)}
 
 /* Editor de evento: la barra en la fila del título (sin el h1, que ya dice la sección) y 3 columnas. */
-.thalamus .tope-acc{flex:1 1 auto;min-width:0;display:flex}
+/* Fila del título: título a la izquierda; botones y filtros de la sección a la derecha (ui/EnTope). */
+.thalamus .tope-acc{flex:1 1 auto;min-width:0;display:flex;justify-content:flex-end}
 .thalamus .tope-acc:empty{display:none}
-.thalamus .tope-acc > .barra{flex:1;min-width:0}
-.thalamus .tope:has(.tope-acc:not(:empty)) .tope-id h1{display:none}
+.thalamus .tope-barra{flex:1;min-width:0;display:flex;justify-content:flex-end}
+.thalamus .tope-barra > .barra,.thalamus .tope-barra > .ev-top{flex:1;min-width:0;justify-content:flex-end;margin:0}
+.thalamus .tope-barra--reemplaza > .barra{justify-content:flex-start}
+.thalamus .tope:has(.tope-barra--reemplaza) .tope-id h1{display:none}
 .thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(260px,.8fr)}
 @container (max-width:1180px){.thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.thalamus .ev-grid--3 .ev-rev{grid-column:1 / -1;position:static}}
 @container (max-width:760px){.thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr)}}

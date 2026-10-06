@@ -5,6 +5,7 @@ import { fmt } from '../../core/util';
 import { usePermisos, useUi } from '../../data/hooks';
 import { Avatar, Humo, Seg } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
+import EnTope from '../../ui/EnTope';
 import Available from './Available';
 import { HorarioEditor } from './Horario';
 import { HUMO_PERSONA } from './comun';
@@ -18,14 +19,16 @@ export default function Horas() {
     const tab = horasTab === 'schedule' ? 'schedule' : 'available', hs = horasSemana(yo);
     return (
         <>
-            <div className="barra">
-                <Seg nav label="Hours" valor={tab} opciones={TABS} onChange={v => ui.set({ horasTab: v })} />
-                <div className="barra-der hrs-yo">
-                    <Avatar p={yo} clase="avatar--sm" />
-                    <b>{yo.nombre}</b>
-                    <span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span>
+            <EnTope>
+                <div className="barra">
+                    <Seg nav label="Hours" valor={tab} opciones={TABS} onChange={v => ui.set({ horasTab: v })} />
+                    <div className="barra-der hrs-yo">
+                        <Avatar p={yo} clase="avatar--sm" />
+                        <b>{yo.nombre}</b>
+                        <span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span>
+                    </div>
                 </div>
-            </div>
+            </EnTope>
             {tab === 'available'
                 ? <Available solo={yo} />
                 : (

@@ -13,6 +13,7 @@ import { slugify } from '../../core/util';
 import { almacen, useDatos } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
+import EnTope from '../../ui/EnTope';
 import { abrirEvento, copiarLink, probarEvento } from './comun';
 
 const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
@@ -123,9 +124,11 @@ export default function ListaFunnels() {
     }
     return (
         <>
-            <div className="ev-top">
-                <button type="button" className="btn btn--cta btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="plus" />Nuevo funnel</button>
-            </div>
+            <EnTope>
+                <div className="ev-top">
+                    <button type="button" className="btn btn--cta btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="plus" />Nuevo funnel</button>
+                </div>
+            </EnTope>
             <div className="fu-lista">
                 {fs.map(f => <TarjetaFunnel key={f.id} d={d} f={f} />)}
                 {sueltos.length > 0 && (

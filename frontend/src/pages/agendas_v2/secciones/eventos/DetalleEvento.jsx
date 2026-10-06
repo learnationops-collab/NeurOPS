@@ -1,12 +1,12 @@
 // Evento abierto: barra con estado, copiar link, probar, descartar y publicar; pestañas Configuración y Flujo.
 // La barra va en la fila del título de la página (#tope-acc en ThalamusApp) para no gastar alto.
 
-import { createPortal } from 'react-dom';
 
 import { buscar } from '../../core/datos';
 import { camposPublicados, configDe, estadoEvento, sinPublicar } from '../../core/eventos';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
+import EnTope from '../../ui/EnTope';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import ConfigEvento from './ConfigEvento';
@@ -25,7 +25,6 @@ export default function DetalleEvento({ e, ev }) {
     const sinPermiso = puedePublicar ? undefined : 'Este rol no puede publicar cambios';
 
     // El evento se abre después de que la página ya está montada: la fila del título ya existe.
-    const destino = typeof document !== 'undefined' ? document.getElementById('tope-acc') : null;
     const cerrar = () => { almacen.flush(); ui.set({ ev: null }); };
     const tab = (t) => { almacen.flush(); ui.set({ ev: { ...ev, tab: t, nodo: null } }); };
     const publicar = () => {
@@ -66,7 +65,7 @@ export default function DetalleEvento({ e, ev }) {
     );
     return (
         <>
-            {destino ? createPortal(barra, destino) : barra}
+            <EnTope reemplaza>{barra}</EnTope>
             <div data-id={e.id}>
                 {ev.tab === 'flujo' ? <Flujo e={e} ev={ev} /> : <ConfigEvento e={e} />}
             </div>

@@ -5,7 +5,6 @@ import { almacen } from '../../data/hooks';
 import { ui } from '../../ui/estadoUi';
 import Stats from '../stats/Stats';
 import ModalFunnel, { leerPaquete } from '../eventos/ModalFunnel';
-import MenuYo from './MenuYo';
 import CrearRapido from './CrearRapido';
 
 const envolver = (el) => <div className="thalamus thalamus-app">{el}</div>;
@@ -60,17 +59,6 @@ describe('Modal del funnel', () => {
     it('lee el JSON de la IA aunque venga dentro de un bloque con texto', () => {
         expect(leerPaquete('Listo:\n```json\n{"a": 1}\n```\nSaludos').paquete).toEqual({ a: 1 });
         expect(leerPaquete('no es json').error).toMatch(/No es un JSON válido/);
-    });
-});
-
-describe('Menú del perfil', () => {
-    it('no tiene simulador propio: ofrece la simulación oficial de NeurOPS', () => {
-        render(envolver(<MenuYo />));
-        fireEvent.click(document.getElementById('yo'));
-        expect(screen.queryByRole('menuitem', { name: /Simular un rol/ })).toBeNull();
-        expect(screen.queryByRole('menuitem', { name: /Simular a una persona/ })).toBeNull();
-        fireEvent.click(screen.getByRole('menuitem', { name: /Simular a un closer/ }));
-        expect(ui.getState().menu).toBe('closers');
     });
 });
 

@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import { Avatar, Humo, HUMO_MARCA, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
+import EnTope from '../../ui/EnTope';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { COLORES } from '../../core/catalogos';
 import { buscar, closers, colorVar, ord, setters } from '../../core/datos';
@@ -165,16 +166,18 @@ export default function Stats() {
 
     return (
         <>
-            <div className="barra">
-                <Seg label="Período" nav valor={st.dias} onChange={v => setEst({ dias: v })} opciones={[7, 30, 90].map(n => ({ v: n, n: n + ' días' }))} />
-                <Sx label="Evento" nav valor={st.evento} onChange={v => setEst({ evento: v })}
-                    opciones={[{ v: '', n: 'Todos los eventos' }, ...ord(d, 'eventos').map(e => ({ v: e.id, n: e.nombre }))]} />
-                {!cm && (
-                    <Sx label="Closer" nav valor={st.closer} onChange={v => setEst({ closer: v })}
-                        opciones={[{ v: '', n: 'Todos los closers' }, ...closers(d).map(p => ({ v: p.id, n: p.nombre }))]} />
-                )}
-                <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>
-            </div>
+            <EnTope>
+                <div className="barra">
+                    <Seg label="Período" nav valor={st.dias} onChange={v => setEst({ dias: v })} opciones={[7, 30, 90].map(n => ({ v: n, n: n + ' días' }))} />
+                    <Sx label="Evento" nav valor={st.evento} onChange={v => setEst({ evento: v })}
+                        opciones={[{ v: '', n: 'Todos los eventos' }, ...ord(d, 'eventos').map(e => ({ v: e.id, n: e.nombre }))]} />
+                    {!cm && (
+                        <Sx label="Closer" nav valor={st.closer} onChange={v => setEst({ closer: v })}
+                            opciones={[{ v: '', n: 'Todos los closers' }, ...closers(d).map(p => ({ v: p.id, n: p.nombre }))]} />
+                    )}
+                    <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>
+                </div>
+            </EnTope>
             <div className="kpis">
                 {kpis.map(k => (
                     <div key={k[0]} className="kpi">
