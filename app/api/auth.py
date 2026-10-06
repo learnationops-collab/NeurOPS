@@ -1,3 +1,5 @@
+import re
+
 from flask import request, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa
@@ -90,6 +92,49 @@ def login():
             "cuentas_vinculadas": cuentas_de(user),
         }
     }), 200
+
+@bp.route('/auth/google', methods=['GET'])
+def login_con_google():
+    """Arranca «Entrar con Google»: devuelve la URL de Google. Ver app/services/login_google.py."""
+    from app.services.login_google import url_de_login
+    return jsonify({"auth_url": url_de_login()}), 200
+
+
+@bp.route('/auth/google/sesion', methods=['POST'])
+def sesion_de_google():
+    """Después de entrar con Google (que deja la sesión de cookie), la pantalla de login canjea esa
+    sesión por el token, igual que POST /auth/login. Solo una vez y solo si la sesión viene de Google."""
+    from flask import session
+    usuario_id = session.pop('google_login', None)
+    if not current_user.is_authenticated or usuario_id != current_user.id:
+        return jsonify({"message": "No hay un inicio de sesión con Google pendiente"}), 401
+    return jsonify({"message": "Login successful", "token": current_user.get_auth_token(),
+                    "user": _usuario_json(current_user)}), 200
+
+
+EMAIL_VALIDO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+@bp.route('/auth/me/email', methods=['PUT'])
+@login_required
+def cargar_mi_email():
+    """El usuario sin email lo carga (se le pide al entrar), para poder entrar con Google la próxima.
+    Solo si no tenía: cambiar un email existente lo hace un admin (Team y Agendas 2.0 lo usan)."""
+    from app.models import get_impersonation_state
+    if get_impersonation_state()[0]:
+        return jsonify({"message": "No se puede cargar el email mientras simulás a otro usuario"}), 403
+    if current_user.email:
+        return jsonify({"message": "Ya tenés un email cargado. Para cambiarlo, pedíselo a un administrador."}), 409
+    email = ((request.get_json(silent=True) or {}).get('email') or '')
+    email = email.strip().lower() if isinstance(email, str) else ''
+    if not EMAIL_VALIDO.match(email) or len(email) > 120:
+        return jsonify({"message": "Ese email no es válido"}), 400
+    if db.session.scalar(sa.select(User.id).where(sa.func.lower(User.email) == email)):
+        return jsonify({"message": "Ese email ya lo usa otra cuenta"}), 409
+    current_user.email = email
+    db.session.commit()
+    return jsonify({"user": _usuario_json(current_user)}), 200
+
 
 @bp.route('/auth/logout', methods=['POST'])
 def logout():

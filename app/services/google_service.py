@@ -49,7 +49,7 @@ class GoogleService:
         return request.url_root.rstrip('/') + '/google/callback'
 
     @staticmethod
-    def get_flow(redirect_uri):
+    def get_flow(redirect_uri, scopes=SCOPES):
         client_id, client_secret = _cliente()
         config = {
             'web': {
@@ -60,7 +60,7 @@ class GoogleService:
                 'redirect_uris': [redirect_uri],
             }
         }
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(config, scopes=SCOPES)
+        flow = google_auth_oauthlib.flow.Flow.from_client_config(config, scopes=scopes)
         flow.redirect_uri = redirect_uri
         return flow
 

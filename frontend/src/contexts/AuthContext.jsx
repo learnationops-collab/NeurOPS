@@ -42,16 +42,36 @@ export const AuthProvider = ({ children }) => {
         };
     }, []);
 
-    const login = async (username, password) => {
-        const response = await api.post('/auth/login', { username, password, timezone: browserTimezone() });
-        const { user: userData, token } = response.data;
-
+    const guardar = ({ user: userData, token }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         if (token) {
             localStorage.setItem('auth_token', token);
         }
         return userData;
+    };
+
+    const login = async (username, password) => {
+        const response = await api.post('/auth/login', { username, password, timezone: browserTimezone() });
+        return guardar(response.data);
+    };
+
+    // «Entrar con Google»: va a Google y vuelve a /login?google=ok con la sesión de cookie, que
+    // completarLoginGoogle canjea por el token (ver app/services/login_google.py).
+    const entrarConGoogle = async () => {
+        const response = await api.get('/auth/google');
+        window.location.href = response.data.auth_url;
+    };
+
+    const completarLoginGoogle = async () => {
+        const response = await api.post('/auth/google/sesion');
+        return guardar(response.data);
+    };
+
+    // El usuario sin email lo carga al entrar, para poder entrar con Google la próxima vez.
+    const cargarEmail = async (email) => {
+        const response = await api.put('/auth/me/email', { email });
+        return guardar({ user: { ...user, ...response.data.user } });
     };
 
     const logout = async () => {
@@ -74,6 +94,9 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         loading,
         login,
+        entrarConGoogle,
+        completarLoginGoogle,
+        cargarEmail,
         logout,
         setUser
     }), [user, loading]);

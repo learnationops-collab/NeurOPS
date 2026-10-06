@@ -43,13 +43,50 @@ def login():
     )
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
+    session.pop('google_oauth_proposito', None)  # es conectar el calendario, no entrar con Google
     return jsonify({'auth_url': auth_url})
+
+
+def _vuelta_del_login(state, redirect_uri):
+    """Entrar con Google (app/services/login_google.py). Vuelve a /login con el resultado; si entró,
+    la pantalla de login canjea la sesión por el token con POST /api/auth/google/sesion."""
+    from flask_login import login_user
+
+    from app.services import login_google
+
+    base = os.environ.get('FRONTEND_URL', '').rstrip('/')
+
+    def a_login(resultado):
+        return redirect(f'{base}/login?google={resultado}')
+
+    if request.args.get('error'):
+        return a_login('cancelado')
+    if not state or not redirect_uri or request.args.get('state') != state:
+        return a_login('error')
+    try:
+        email = login_google.email_de_la_vuelta(redirect_uri, request.url)
+    except Exception as e:  # noqa: BLE001  (código vencido, cliente mal configurado, red...)
+        current_app.logger.warning(f'[GOOGLE] Falló el login con Google: {e}')
+        return a_login('error')
+    if not email:
+        return a_login('sin_verificar')
+    usuario = login_google.usuario_por_email(email)
+    if usuario is None:
+        return a_login('sin_cuenta')
+    if not usuario.is_active:
+        return a_login('desactivada')
+    login_user(usuario, remember=True)
+    session.pop('active_role', None)  # se entra siempre con el rol principal, como con la clave
+    session['google_login'] = usuario.id
+    return a_login('ok')
 
 
 @bp.route('/google/callback', methods=['GET'])
 def callback():
     state = session.pop('google_oauth_state', None)
     redirect_uri = session.pop('google_redirect_uri', None)
+    if session.pop('google_oauth_proposito', None) == 'login':
+        return _vuelta_del_login(state, redirect_uri)
     if not current_user.is_authenticated:
         return 'Tu sesión se cerró mientras conectabas Google. Volvé a entrar y probá de nuevo.', 401
     if request.args.get('error'):  # el usuario canceló en la pantalla de Google

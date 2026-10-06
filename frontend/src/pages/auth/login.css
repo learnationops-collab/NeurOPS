@@ -1,0 +1,122 @@
+/* Inicio de sesión: pantalla de bloqueo estilo Windows con la marca Learnation (navy, azul y rosa).
+   No sigue el tema elegido por el usuario: todavía no se sabe quién es. */
+
+.lg {
+    --lg-navy: var(--brand-navy, #0a0e3d);
+    --lg-azul: var(--brand-primary, #1323c6);
+    --lg-rosa: var(--brand-secondary, #ff3fa4);
+    --lg-vidrio: rgba(255, 255, 255, 0.08);
+    --lg-borde: rgba(255, 255, 255, 0.16);
+    --lg-texto: #ffffff;
+    --lg-suave: rgba(255, 255, 255, 0.72);
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: var(--lg-navy);
+    color: var(--lg-texto);
+    font-family: var(--font-body);
+}
+
+/* Fondo: manchas de color que se mueven lento; al desbloquear se desenfoca, como en Windows. */
+.lg-fondo { position: absolute; inset: 0; transition: filter 0.6s ease, transform 0.6s ease; }
+.lg--abierto .lg-fondo { filter: blur(28px) saturate(1.2); transform: scale(1.08); }
+.lg-fondo i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.75; animation: lg-flota 22s ease-in-out infinite alternate; }
+.lg-fondo i:nth-child(1) { width: 55vmax; height: 55vmax; left: -15vmax; top: -20vmax; background: var(--lg-azul); }
+.lg-fondo i:nth-child(2) { width: 42vmax; height: 42vmax; right: -12vmax; bottom: -16vmax; background: var(--lg-rosa); opacity: 0.55; animation-delay: -7s; }
+.lg-fondo i:nth-child(3) { width: 30vmax; height: 30vmax; left: 40%; top: 45%; background: #5b3df5; opacity: 0.45; animation-delay: -14s; }
+@keyframes lg-flota { to { transform: translate(6vmax, 4vmax) scale(1.1); } }
+
+/* Bloqueo: hora grande abajo a la izquierda. */
+.lg-bloqueo {
+    position: relative; z-index: 1; width: 100%; min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
+    padding: 0 clamp(20px, 6vw, 72px) clamp(40px, 10vh, 96px);
+    background: none; border: 0; color: inherit; cursor: pointer; text-align: left;
+    animation: lg-aparece 0.5s ease both;
+}
+.lg-reloj { display: flex; flex-direction: column; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.25); }
+.lg-hora { font-family: var(--font-header); font-size: clamp(72px, 14vw, 132px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.lg-fecha { font-size: clamp(20px, 3vw, 30px); font-weight: 500; margin-top: 8px; text-transform: capitalize; }
+.lg-pista { margin-top: 32px; font-size: 13px; color: var(--lg-suave); animation: lg-late 2.4s ease-in-out infinite; }
+@keyframes lg-late { 50% { opacity: 0.4; } }
+
+/* Panel centrado: avatar redondo, nombre y campos, como el inicio de sesión de Windows. */
+.lg-centro { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.lg-panel { width: min(340px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; animation: lg-sube 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes lg-sube { from { opacity: 0; transform: translateY(24px); } }
+@keyframes lg-aparece { from { opacity: 0; } }
+
+.lg-avatar {
+    width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--lg-azul), var(--lg-rosa));
+    border: 3px solid rgba(255, 255, 255, 0.35); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    font-family: var(--font-header); font-size: 40px; font-weight: 700; letter-spacing: 0.02em;
+}
+.lg-avatar-l { font-style: italic; font-weight: 900; }
+.lg-titulo { margin: 4px 0 6px; font-family: var(--font-header); font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 0.12em; }
+.lg-titulo span { color: var(--lg-rosa); }
+.lg-hola { margin: 4px 0 0; font-family: var(--font-header); font-size: 26px; font-weight: 600; }
+.lg-texto { margin: 0 0 4px; font-size: 14px; color: var(--lg-suave); line-height: 1.5; display: inline-flex; align-items: center; gap: 8px; }
+
+.lg-form { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.lg-clave { position: relative; display: flex; }
+.lg-input {
+    width: 100%; height: 46px; padding: 0 14px; border-radius: 10px;
+    background: var(--lg-vidrio); border: 1px solid var(--lg-borde); color: var(--lg-texto);
+    font-size: 15px; outline: none; backdrop-filter: blur(12px); transition: border-color 0.15s, background 0.15s;
+}
+.lg-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.lg-input:focus { border-color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.12); }
+.lg-clave .lg-input { padding-right: 92px; }
+.lg-clave .lg-input--icono { padding-left: 38px; }
+.lg-icono { position: absolute; left: 13px; top: 15px; color: var(--lg-suave); pointer-events: none; }
+.lg-ojo, .lg-ir { position: absolute; top: 5px; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; border: 0; cursor: pointer; }
+.lg-ojo { right: 46px; background: none; color: var(--lg-suave); }
+.lg-ojo:hover { color: var(--lg-texto); }
+.lg-ir { right: 5px; background: var(--lg-azul); color: #fff; transition: background 0.15s, transform 0.15s; }
+.lg-ir:hover:not(:disabled) { background: var(--lg-rosa); }
+.lg-ir:disabled { opacity: 0.6; cursor: default; }
+
+.lg-o { width: 100%; display: flex; align-items: center; gap: 12px; color: var(--lg-suave); font-size: 12px; }
+.lg-o::before, .lg-o::after { content: ''; flex: 1; height: 1px; background: var(--lg-borde); }
+
+.lg-google {
+    width: 100%; height: 46px; border-radius: 10px; border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #1f1f1f; font-size: 15px; font-weight: 600; transition: transform 0.15s, box-shadow 0.15s;
+}
+.lg-google:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); transform: translateY(-1px); }
+.lg-google:disabled { opacity: 0.7; cursor: default; }
+
+.lg-link { background: none; border: 0; color: var(--lg-suave); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lg-link:hover { color: var(--lg-texto); }
+
+.lg-error {
+    width: 100%; margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4;
+    background: rgba(255, 63, 164, 0.16); border: 1px solid rgba(255, 63, 164, 0.4); color: #fff;
+}
+
+/* Elegir rol: una fila por rol, como la lista de cuentas de Windows. */
+.lg-roles { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.lg-rol {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    background: var(--lg-vidrio); border: 1px solid var(--lg-borde); color: var(--lg-texto); text-align: left;
+    backdrop-filter: blur(12px); transition: background 0.15s, border-color 0.15s;
+}
+.lg-rol:hover:not(:disabled), .lg-rol:focus-visible { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.5); outline: none; }
+.lg-rol:disabled { opacity: 0.6; cursor: default; }
+.lg-rol-ini { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: linear-gradient(135deg, var(--lg-azul), var(--lg-rosa)); }
+.lg-rol-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.lg-rol-txt b { font-size: 15px; font-weight: 600; }
+.lg-rol-txt em { font-style: normal; font-size: 12px; color: var(--lg-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lg-gira { animation: lg-gira 0.8s linear infinite; }
+@keyframes lg-gira { to { transform: rotate(360deg); } }
+
+.lg .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .lg-fondo i, .lg-pista, .lg-panel, .lg-bloqueo { animation: none; }
+    .lg-fondo { transition: none; }
+}

@@ -1,111 +1,258 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Inicio de sesión al estilo de la pantalla de bloqueo de Windows, con la marca Learnation.
+//   bloqueo  → la hora y la fecha; un clic o una tecla lo levanta.
+//   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
+//   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
+//   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra.
+
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { roleLandingPath } from '../../utils/roleLanding';
-import { Lock, User, Eye, EyeOff } from 'lucide-react';
-import Button from '../../components/ui/Button';
+import { cambiarDeRol, cambiarDeRolEnLaCuenta, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
 import DebugConsole from '../../components/modals/DebugConsole';
+import './login.css';
 
-const LoginPage = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const user = await login(username, password);
-      // Un solo mapa rol -> pantalla (utils/roleLanding.js), compartido con
-      // ProtectedRoute y con la simulación desde Equipo. Tener la lista repetida
-      // acá dejaba afuera a los roles nuevos (`hiring` se quedaba en el login).
-      navigate(roleLandingPath(user.role));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen w-full bg-main flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-black text-base tracking-widest italic uppercase">
-            LEARNATION<span className="text-primary"> WORKERS</span>
-          </h1>
-          <p className="text-muted mt-2 font-medium uppercase tracking-tighter">Panel de Gestión</p>
-        </div>
-
-        <div className="bg-surface backdrop-blur-xl p-8 rounded-[2rem] border border-base shadow-2xl">
-          {error && (
-            <div className="mb-6 p-4 bg-accent/10 border border-accent/20 rounded-xl text-accent text-sm font-bold text-center">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest ml-1 opacity-60" style={{ color: 'var(--text-on-card)' }}>Usuario</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-colors" style={{ color: 'var(--text-on-card)' }}>
-                  <User size={18} />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="input-theme block w-full pl-11 pr-4 py-4 placeholder:opacity-40 focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                  placeholder="Nombre de usuario"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest ml-1 opacity-60" style={{ color: 'var(--text-on-card)' }}>Contraseña</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-colors" style={{ color: 'var(--text-on-card)' }}>
-                  <Lock size={18} />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-theme block w-full pl-11 pr-12 py-4 placeholder:opacity-40 focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center opacity-60 hover:opacity-100 transition-all"
-                  style={{ color: 'var(--text-on-card)' }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              loading={loading}
-              variant="primary"
-              className="w-full h-16"
-            >
-              Iniciar Sesión
-            </Button>
-          </form>
-        </div>
-      </div>
-      <DebugConsole />
-    </div>
-  );
+const MENSAJE_GOOGLE = {
+    cancelado: 'Cancelaste el ingreso con Google.',
+    error: 'Google no pudo completar el ingreso. Probá de nuevo.',
+    sin_verificar: 'Tu cuenta de Google no tiene el email verificado.',
+    sin_cuenta: 'Ninguna cuenta tiene ese email de Google. Entrá con tu usuario y clave y cargá tu email.',
+    desactivada: 'Tu cuenta está desactivada. Contactá a un administrador.',
 };
 
-export default LoginPage;
+const iniciales = (nombre) => (nombre || '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+
+function Reloj() {
+    const [ahora, setAhora] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setAhora(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
+    return (
+        <div className="lg-reloj">
+            <span className="lg-hora">{ahora.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="lg-fecha">{ahora.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        </div>
+    );
+}
+
+function Avatar({ texto }) {
+    return <div className="lg-avatar" aria-hidden="true">{texto || <span className="lg-avatar-l">L</span>}</div>;
+}
+
+function LogoGoogle() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+        </svg>
+    );
+}
+
+function Entrar({ onEntrar, errorInicial }) {
+    const { login, entrarConGoogle } = useAuth();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [ver, setVer] = useState(false);
+    const [cargando, setCargando] = useState(null); // null | 'clave' | 'google'
+    const [error, setError] = useState(errorInicial);
+    const ref = useRef(null);
+    useEffect(() => { ref.current?.focus(); }, []);
+
+    const conClave = async (e) => {
+        e.preventDefault();
+        setCargando('clave');
+        setError(null);
+        try {
+            onEntrar(await login(username, password));
+        } catch (err) {
+            setError(err.response?.data?.message === 'Invalid credentials' || !err.response?.data?.message
+                ? 'Usuario o contraseña incorrectos'
+                : err.response.data.message);
+            setCargando(null);
+        }
+    };
+
+    const conGoogle = async () => {
+        setCargando('google');
+        setError(null);
+        try {
+            await entrarConGoogle();
+        } catch {
+            setError('No se pudo abrir Google. Probá de nuevo.');
+            setCargando(null);
+        }
+    };
+
+    return (
+        <div className="lg-panel">
+            <Avatar texto={iniciales(username)} />
+            <h1 className="lg-titulo">LEARNATION<span> WORKERS</span></h1>
+            <form className="lg-form" onSubmit={conClave}>
+                <label className="sr-only" htmlFor="lg-usuario">Usuario o email</label>
+                <input id="lg-usuario" ref={ref} className="lg-input" autoComplete="username" required
+                    placeholder="Usuario o email" value={username} onChange={(e) => setUsername(e.target.value)} />
+                <div className="lg-clave">
+                    <label className="sr-only" htmlFor="lg-clave">Contraseña</label>
+                    <input id="lg-clave" className="lg-input" type={ver ? 'text' : 'password'} autoComplete="current-password"
+                        required placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button type="button" className="lg-ojo" onClick={() => setVer(!ver)} aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                        {ver ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    <button type="submit" className="lg-ir" disabled={!!cargando} aria-label="Iniciar sesión">
+                        {cargando === 'clave' ? <Loader2 size={18} className="lg-gira" /> : <ArrowRight size={18} />}
+                    </button>
+                </div>
+            </form>
+            {error && <p className="lg-error" role="alert">{error}</p>}
+            <div className="lg-o"><span>o</span></div>
+            <button type="button" className="lg-google" onClick={conGoogle} disabled={!!cargando}>
+                {cargando === 'google' ? <Loader2 size={18} className="lg-gira" /> : <LogoGoogle />}
+                Entrar con Google
+            </button>
+        </div>
+    );
+}
+
+function PedirEmail({ user, onListo }) {
+    const { cargarEmail } = useAuth();
+    const [email, setEmail] = useState('');
+    const [guardando, setGuardando] = useState(false);
+    const [error, setError] = useState(null);
+
+    const guardar = async (e) => {
+        e.preventDefault();
+        setGuardando(true);
+        setError(null);
+        try {
+            onListo(await cargarEmail(email));
+        } catch (err) {
+            setError(err.response?.data?.message || 'No se pudo guardar el email');
+            setGuardando(false);
+        }
+    };
+
+    return (
+        <div className="lg-panel">
+            <Avatar texto={iniciales(user.username)} />
+            <h2 className="lg-hola">Hola, {user.username}</h2>
+            <p className="lg-texto">Cargá tu email de Google y la próxima vez entrás con un clic, sin clave.</p>
+            <form className="lg-form" onSubmit={guardar}>
+                <div className="lg-clave">
+                    <label className="sr-only" htmlFor="lg-email">Tu email</label>
+                    <input id="lg-email" className="lg-input lg-input--icono" type="email" autoComplete="email" required autoFocus
+                        placeholder="tu@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Mail size={16} className="lg-icono" aria-hidden="true" />
+                    <button type="submit" className="lg-ir" disabled={guardando} aria-label="Guardar email">
+                        {guardando ? <Loader2 size={18} className="lg-gira" /> : <ArrowRight size={18} />}
+                    </button>
+                </div>
+            </form>
+            {error && <p className="lg-error" role="alert">{error}</p>}
+            <button type="button" className="lg-link" onClick={() => onListo(user)}>Ahora no</button>
+        </div>
+    );
+}
+
+function ElegirRol({ user, onElegido }) {
+    const [eligiendo, setEligiendo] = useState(null);
+    const [error, setError] = useState(null);
+    const opciones = [
+        ...(user.roles?.length ? user.roles : [user.role]).map((rol) => ({ clave: `rol-${rol}`, rol, entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
+        ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, rol: c.role, detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
+    ];
+
+    const elegir = async (o) => {
+        setEligiendo(o.clave);
+        setError(null);
+        try {
+            await o.entrar();
+        } catch (err) {
+            setError(err.response?.data?.message || 'No se pudo entrar con ese rol');
+            setEligiendo(null);
+        }
+    };
+
+    return (
+        <div className="lg-panel">
+            <Avatar texto={iniciales(user.username)} />
+            <h2 className="lg-hola">Hola, {user.username}</h2>
+            <p className="lg-texto">¿Con qué rol entrás? Después podés cambiar desde tu menú.</p>
+            <div className="lg-roles" role="group" aria-label="Roles">
+                {opciones.map((o) => (
+                    <button key={o.clave} type="button" className="lg-rol" disabled={!!eligiendo} onClick={() => elegir(o)}>
+                        <span className="lg-rol-ini">{iniciales(rotuloDeRol(o.rol))}</span>
+                        <span className="lg-rol-txt"><b>{rotuloDeRol(o.rol)}</b>{o.detalle && <em>{o.detalle}</em>}</span>
+                        {eligiendo === o.clave ? <Loader2 size={16} className="lg-gira" /> : <ArrowRight size={16} />}
+                    </button>
+                ))}
+            </div>
+            {error && <p className="lg-error" role="alert">{error}</p>}
+        </div>
+    );
+}
+
+const tieneVariosRoles = (user) => (user.roles?.length || 0) > 1 || otrasCuentas(user).length > 0;
+
+export default function LoginPage() {
+    const navigate = useNavigate();
+    const { completarLoginGoogle } = useAuth();
+    const [params, setParams] = useSearchParams();
+    const [google] = useState(() => params.get('google'));
+    const [entrandoGoogle, setEntrandoGoogle] = useState(google === 'ok');
+    const [paso, setPaso] = useState(google ? 'entrar' : 'bloqueo');
+    const [user, setUser] = useState(null);
+    const [errorGoogle, setErrorGoogle] = useState(google && google !== 'ok' ? MENSAJE_GOOGLE[google] || MENSAJE_GOOGLE.error : null);
+
+    const seguir = (u) => {
+        setUser(u);
+        if (tieneVariosRoles(u)) setPaso('rol');
+        else navigate(roleLandingPath(u.role));
+    };
+    const alEntrar = (u) => {
+        if (!u.email) { setUser(u); setPaso('email'); } else seguir(u);
+    };
+
+    // Vuelta de «Entrar con Google»: se canjea la sesión por el token una sola vez.
+    useEffect(() => {
+        if (!google) return;
+        setParams({}, { replace: true });
+        if (google !== 'ok') return;
+        completarLoginGoogle()
+            .then(alEntrar)
+            .catch(() => { setErrorGoogle(MENSAJE_GOOGLE.error); setEntrandoGoogle(false); });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Pantalla de bloqueo: cualquier tecla la levanta, como en Windows.
+    useEffect(() => {
+        if (paso !== 'bloqueo') return undefined;
+        const levantar = () => setPaso('entrar');
+        window.addEventListener('keydown', levantar);
+        return () => window.removeEventListener('keydown', levantar);
+    }, [paso]);
+
+    return (
+        <div className={`lg ${paso === 'bloqueo' ? '' : 'lg--abierto'}`}>
+            <div className="lg-fondo" aria-hidden="true"><i /><i /><i /></div>
+            {paso === 'bloqueo' ? (
+                <button type="button" className="lg-bloqueo" onClick={() => setPaso('entrar')} aria-label="Desbloquear e iniciar sesión">
+                    <Reloj />
+                    <span className="lg-pista">Hacé clic o presioná una tecla para entrar</span>
+                </button>
+            ) : (
+                <main className="lg-centro">
+                    {paso === 'entrar' && (entrandoGoogle
+                        ? <div className="lg-panel"><Avatar /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
+                        : <Entrar onEntrar={alEntrar} errorInicial={errorGoogle} />)}
+                    {paso === 'email' && user && <PedirEmail user={user} onListo={seguir} />}
+                    {paso === 'rol' && user && <ElegirRol user={user} onElegido={(u) => navigate(roleLandingPath(u.role))} />}
+                </main>
+            )}
+            <DebugConsole />
+        </div>
+    );
+}

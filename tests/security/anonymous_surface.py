@@ -12,6 +12,8 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/auth/csrf-token'),
     ('GET', '/api/auth/debug'),
     ('POST', '/api/auth/login'),
+    # Entrar con Google: solo devuelve la URL de Google; quién entra lo decide el callback.
+    ('GET', '/api/auth/google'),
     ('POST', '/api/auth/logout'),
     ('GET', '/api/health'),
     ('GET', '/api/manychat-webhook'),
@@ -41,7 +43,6 @@ PUBLICAS_POR_DISENO = frozenset({
     ('POST', '/api/v1/metrics/track-visit'),
     ('POST', '/api/workshop/interaction'),
     ('POST', '/api/workshop/plantilla-sent'),
-    ('GET', '/google/callback'),
 })
 
 # Rutas de la herramienta interna que responden a CUALQUIERA en internet y no deberian. Estuvo llena: 91
