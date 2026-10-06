@@ -17,7 +17,6 @@ const montar = (url = '/login') => render(<MemoryRouter initialEntries={[url]}><
 const entrar = async (user) => {
     auth.login.mockResolvedValue(user);
     montar();
-    fireEvent.keyDown(window, { key: 'Enter' });
     fireEvent.change(screen.getByPlaceholderText('Usuario o email'), { target: { value: 'ana' } });
     fireEvent.change(screen.getByPlaceholderText('Contraseña'), { target: { value: 'x' } });
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
@@ -26,10 +25,9 @@ const entrar = async (user) => {
 describe('LoginPage', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('arranca bloqueada y una tecla muestra el inicio de sesión', () => {
+    it('arranca directo en el inicio de sesión', () => {
         montar();
-        expect(screen.getByRole('button', { name: /desbloquear/i })).toBeTruthy();
-        fireEvent.keyDown(window, { key: 'a' });
+        expect(screen.getByPlaceholderText('Usuario o email')).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Entrar con Google' })).toBeTruthy();
     });
 

@@ -1,5 +1,4 @@
-// Inicio de sesión al estilo de la pantalla de bloqueo de Windows, con la marca Learnation.
-//   bloqueo  → la hora y la fecha; un clic o una tecla lo levanta.
+// Inicio de sesión al estilo del de Windows, con la marca Learnation. Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
 //   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra.
@@ -22,20 +21,6 @@ const MENSAJE_GOOGLE = {
 };
 
 const iniciales = (nombre) => (nombre || '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
-
-function Reloj() {
-    const [ahora, setAhora] = useState(() => new Date());
-    useEffect(() => {
-        const t = setInterval(() => setAhora(new Date()), 1000);
-        return () => clearInterval(t);
-    }, []);
-    return (
-        <div className="lg-reloj">
-            <span className="lg-hora">{ahora.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span className="lg-fecha">{ahora.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-        </div>
-    );
-}
 
 function Avatar({ texto }) {
     return <div className="lg-avatar" aria-hidden="true">{texto || <span className="lg-avatar-l">L</span>}</div>;
@@ -203,7 +188,7 @@ export default function LoginPage() {
     const [params, setParams] = useSearchParams();
     const [google] = useState(() => params.get('google'));
     const [entrandoGoogle, setEntrandoGoogle] = useState(google === 'ok');
-    const [paso, setPaso] = useState(google ? 'entrar' : 'bloqueo');
+    const [paso, setPaso] = useState('entrar');
     const [user, setUser] = useState(null);
     const [errorGoogle, setErrorGoogle] = useState(google && google !== 'ok' ? MENSAJE_GOOGLE[google] || MENSAJE_GOOGLE.error : null);
 
@@ -227,31 +212,16 @@ export default function LoginPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Pantalla de bloqueo: cualquier tecla la levanta, como en Windows.
-    useEffect(() => {
-        if (paso !== 'bloqueo') return undefined;
-        const levantar = () => setPaso('entrar');
-        window.addEventListener('keydown', levantar);
-        return () => window.removeEventListener('keydown', levantar);
-    }, [paso]);
-
     return (
-        <div className={`lg ${paso === 'bloqueo' ? '' : 'lg--abierto'}`}>
+        <div className="lg lg--abierto">
             <div className="lg-fondo" aria-hidden="true"><i /><i /><i /></div>
-            {paso === 'bloqueo' ? (
-                <button type="button" className="lg-bloqueo" onClick={() => setPaso('entrar')} aria-label="Desbloquear e iniciar sesión">
-                    <Reloj />
-                    <span className="lg-pista">Hacé clic o presioná una tecla para entrar</span>
-                </button>
-            ) : (
-                <main className="lg-centro">
+            <main className="lg-centro">
                     {paso === 'entrar' && (entrandoGoogle
                         ? <div className="lg-panel"><Avatar /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
                         : <Entrar onEntrar={alEntrar} errorInicial={errorGoogle} />)}
                     {paso === 'email' && user && <PedirEmail user={user} onListo={seguir} />}
                     {paso === 'rol' && user && <ElegirRol user={user} onElegido={(u) => navigate(roleLandingPath(u.role))} />}
-                </main>
-            )}
+            </main>
             <DebugConsole />
         </div>
     );
