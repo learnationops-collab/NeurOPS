@@ -3,7 +3,7 @@
 // quedan unidas a su cuenta por el email (es lo que usa el servidor para saber a qué closer va una agenda).
 // Un closer sin Google Calendar conectado en NeurOPS no recibe agendas: se marca en su tarjeta.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { TZ_DEF } from '../../core/catalogos';
 import { closers, colorLibre, colorVar, esCloser, horasSemana, maxOrden, ord, rolCloser } from '../../core/datos';
 import { fmt, iniciales } from '../../core/util';
@@ -14,40 +14,15 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { horarioLaV } from './cobertura';
 import { CampoNombre, Compo, HUMO_PERSONA, METAL, SemanaMini, opcionesRol } from './comun';
 import { abrirHorario } from './Horario';
+import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 
 const OPS_NIVEL = [1, 2, 3].map(n => ({ v: n, n: 'Top ' + n, icono: 'estrellaLlena', color: METAL[n - 1] }));
 
-// Closers reales de la app (los setters no van en Team: tienen su link en los funnels de setting).
-// null mientras carga; [] en modo local (sin backend).
-function useUsuariosReales() {
-    const [usuarios, setUsuarios] = useState(null);
-    useEffect(() => {
-        let vivo = true;
-        Promise.resolve(almacen.adaptador.usuarios ? almacen.adaptador.usuarios() : [])
-            .then(u => { if (vivo) setUsuarios(u); }, () => { if (vivo) { setUsuarios([]); toast('No se pudo traer la lista de closers.', 'error'); } });
-        return () => { vivo = false; };
-    }, []);
-    return usuarios;
-}
-
-// Para sumar a Team: primero los que ya pueden recibir agendas (Calendar conectado y WhatsApp confirmado),
-// después los que tienen una de las dos y al final el resto; cada grupo por nombre.
-export function ordenarParaSumar(usuarios) {
-    const faltan = (u) => (u.calendar ? 0 : 1) + (u.whatsapp ? 0 : 1);
-    return [...usuarios].sort((a, b) => faltan(a) - faltan(b) || a.nombre.localeCompare(b.nombre, 'es'));
-}
-export function estadoParaSumar(u) {
-    if (u.calendar && u.whatsapp) return 'listo para recibir agendas';
-    if (!u.calendar && !u.whatsapp) return 'sin Calendar ni WhatsApp';
-    return u.calendar ? 'sin WhatsApp confirmado' : 'sin Calendar';
-}
-
-// Con la API: un desplegable con los closers de la app que todavía no están en Team.
+// Con la API: los closers de la app que todavía no están en Team, con lo que les falta para recibir
+// agendas (ElegirCloser). Los listos van primero.
 function SumarDeLaApp({ disponibles, cargando, vacio, onSumar, bloqueado }) {
-    const lista = ordenarParaSumar(disponibles);
-    const [elegido, setElegido] = useState('');
-    const sel = lista.find(u => String(u.id) === elegido) || lista[0];
-    const listos = lista.filter(u => u.calendar && u.whatsapp);
+    const opciones = disponibles.map(u => ({ id: String(u.id), nombre: u.nombre, calendar: !!u.calendar, whatsapp: !!u.whatsapp, horarios: false }));
+    const listos = disponibles.filter(u => u.calendar && u.whatsapp);
     return (
         <section className={'compo caja' + (vacio ? ' compo--solo' : '')}>
             <Humo clase="humo--hero" cols={HUMO_PERSONA} />
@@ -57,24 +32,13 @@ function SumarDeLaApp({ disponibles, cargando, vacio, onSumar, bloqueado }) {
             </div>
             <div className="compo-accion">
                 {cargando ? <p className="t-sm mut">Cargando la lista de closers…</p>
-                    : !lista.length ? <p className="t-sm mut">Todos los closers activos de la app ya están en Team.</p> : (
-                        <div className="entrada" style={{ gap: 8 }}>
-                            <Sx id="sumar-persona" label="Closer de la app" valor={sel ? String(sel.id) : ''} onChange={setElegido} disabled={bloqueado}
-                                style={{ flex: 1, minWidth: 0 }}
-                                opciones={lista.map(u => ({
-                                    v: String(u.id), n: u.nombre + ' · ' + estadoParaSumar(u),
-                                    icono: u.calendar && u.whatsapp ? 'check' : 'alerta',
-                                    color: u.calendar && u.whatsapp ? 'var(--success)' : 'var(--warning)',
-                                }))} />
-                            <button type="button" className="btn btn--cta btn--sm" disabled={bloqueado || !sel} onClick={() => sel && onSumar([sel])}>
-                                <Icono n="plus" />Sumar
-                            </button>
-                        </div>
-                    )}
+                    : !opciones.length ? <p className="t-sm mut">Todos los closers activos de la app ya están en Team.</p>
+                        : <ElegirCloser opciones={opciones} texto="Elegí un closer de la app" label="Closer de la app" disabled={bloqueado}
+                            onElegir={id => onSumar(disponibles.filter(u => String(u.id) === id))} />}
                 {listos.length > 1 && (
                     <div className="compo-sug">
                         <button type="button" className="sug" disabled={bloqueado} onClick={() => onSumar(listos)}>
-                            <Icono n="users" />Sumar los {listos.length} listos
+                            <Icono n="users" />Sumar los {listos.length} con Calendar y WhatsApp
                         </button>
                     </div>
                 )}
@@ -150,7 +114,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
             {borrando && (
                 <div style={{ padding: '0 10px 10px' }}>
                     <div className="ed-pie--borrar" role="alertdialog" aria-label={'Eliminar a ' + p.nombre}>
-                        <p className="t-sm">¿Eliminar a <b>{p.nombre}</b>? Sale de todas las prioridades.</p>
+                        <p className="t-sm">¿Eliminar a <b>{p.nombre}</b>? Sale de todas las estrategias.</p>
                         <div className="der">
                             <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrando(null)}>Cancelar</button>
                             <button type="button" className="btn btn--borrar btn--sm" onClick={borrar}><Icono n="basura" />Eliminar</button>

@@ -118,7 +118,7 @@ export default function Stats() {
         const gs = ord(d, 'grupos');
         const gauges = Object.keys(porG).map(k => {
             const g = buscar(d, 'grupos', k), gi = gs.indexOf(g);
-            return { k: g ? g.nombre : 'Sin prioridad', v: porG[k][0] / porG[k][1], n: porG[k][1], c: g ? colorNivel(gi + 1) : 'var(--idle)', i: gi < 0 ? 99 : gi };
+            return { k: g ? g.nombre : 'Sin estrategia', v: porG[k][0] / porG[k][1], n: porG[k][1], c: g ? colorNivel(gi + 1) : 'var(--idle)', i: gi < 0 ? 99 : gi };
         }).sort((x, y) => x.i - y.i);
 
         // Embudo del evento elegido (o el que más leads tiene).
@@ -155,7 +155,7 @@ export default function Stats() {
                             return { k: x[0], v: x[1], c: p ? colorVar(p.color) : 'var(--fc-violeta)', av: p ? <Avatar p={p} clase="avatar--xs" /> : null };
                         })} />}
                 </Grafico>
-                <Grafico t="Calificación por prioridad" sub="Promedio de 0 a 10 de los leads que agendaron" ancho aura={['var(--success)', 'var(--brand-primary)', 'var(--fc-turquesa)', 'var(--brand-navy)']}>
+                <Grafico t="Calificación por estrategia" sub="Promedio de 0 a 10 de los leads que agendaron" ancho aura={['var(--success)', 'var(--brand-primary)', 'var(--fc-turquesa)', 'var(--brand-navy)']}>
                     <Gauges items={gauges} prom={tot[1] ? tot[0] / tot[1] : null} />
                 </Grafico>
                 {embudo}

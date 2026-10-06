@@ -125,10 +125,12 @@ export function crearAdaptadorApi() {
 
         // Configuración con IA (Configuración › Con IA): el prompt y la importación del JSON.
         // Con `evento`, el prompt para editar ese evento (lleva su configuración actual).
-        async promptPaquete(evento) {
+        // destino: el id de un evento (editarlo), {funnel} (completar ese funnel) o nada (uno nuevo).
+        async promptPaquete(destino) {
+            const params = typeof destino === 'string' ? { evento: destino } : destino;
             try {
-                const { data } = evento
-                    ? await api.get('/agendas-v2/paquete/prompt', { params: { evento } })
+                const { data } = params
+                    ? await api.get('/agendas-v2/paquete/prompt', { params })
                     : await api.get('/agendas-v2/paquete/prompt');
                 return data.prompt;
             } catch (e) { throw errorDeApi(e); }
@@ -136,9 +138,10 @@ export function crearAdaptadorApi() {
         // simular: solo valida y devuelve {resumen}. Si no, crea todo y devuelve {resumen, creados}; con
         // `evento`, lo escribe encima de ese evento y devuelve {resumen, editados}.
         // Con errores de validación rechaza con e.errores (lista de textos).
-        async importarPaquete(paquete, simular, evento) {
+        async importarPaquete(paquete, simular, destino) {
+            const extra = typeof destino === 'string' ? { evento: destino } : (destino || {});
             try {
-                const r = await api.post('/agendas-v2/paquete', { paquete, simular: !!simular, ...(evento ? { evento } : {}) });
+                const r = await api.post('/agendas-v2/paquete', { paquete, simular: !!simular, ...extra });
                 if (!simular) notar(r.data && r.data.version);
                 return r.data;
             } catch (e) {

@@ -127,5 +127,5 @@ export function textoEstrategia(d, g) {
 export function avisoPrioridad(d, g) {
     const ms = g.miembros.map(id => buscar(d, 'personas', id)).filter(Boolean);
     if (!ms.length || miembrosValidos(d, g).length) return '';
-    return 'Nadie tiene horario: los leads pasan a la siguiente prioridad con lugar y, si no hay, a todos los closers.';
+    return 'Nadie tiene horario: los leads pasan a la siguiente estrategia con lugar y, si no hay, a todos los closers.';
 }

@@ -1,4 +1,7 @@
 // Evento abierto: barra con estado, copiar link, probar, descartar y publicar; pestañas Configuración y Flujo.
+// La barra va en la fila del título de la página (#tope-acc en ThalamusApp) para no gastar alto.
+
+import { createPortal } from 'react-dom';
 
 import { buscar } from '../../core/datos';
 import { camposPublicados, configDe, estadoEvento, sinPublicar } from '../../core/eventos';
@@ -21,6 +24,8 @@ export default function DetalleEvento({ e, ev }) {
     const puedePublicar = modoCloser || puede('events.publicar');
     const sinPermiso = puedePublicar ? undefined : 'Este rol no puede publicar cambios';
 
+    // El evento se abre después de que la página ya está montada: la fila del título ya existe.
+    const destino = typeof document !== 'undefined' ? document.getElementById('tope-acc') : null;
     const cerrar = () => { almacen.flush(); ui.set({ ev: null }); };
     const tab = (t) => { almacen.flush(); ui.set({ ev: { ...ev, tab: t, nodo: null } }); };
     const publicar = () => {
@@ -35,8 +40,7 @@ export default function DetalleEvento({ e, ev }) {
         toast('Volviste a la versión publicada');
     };
 
-    return (
-        <>
+    const barra = (
             <div className="barra">
                 <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrar}><Icono n="volver" />Funnels</button>
                 <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
@@ -59,6 +63,10 @@ export default function DetalleEvento({ e, ev }) {
                     </button>
                 </div>
             </div>
+    );
+    return (
+        <>
+            {destino ? createPortal(barra, destino) : barra}
             <div data-id={e.id}>
                 {ev.tab === 'flujo' ? <Flujo e={e} ev={ev} /> : <ConfigEvento e={e} />}
             </div>

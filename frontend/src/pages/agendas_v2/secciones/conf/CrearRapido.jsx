@@ -10,7 +10,7 @@ import { buscar, ord } from '../../core/datos';
 import { normalPregunta } from '../../core/normalizar';
 
 export const CREAR = [
-    ['pregunta', 'Pregunta', 'pregunta'], ['formulario', 'Formulario', 'form'], ['persona', 'Persona', 'user'], ['grupo', 'Prioridad', 'rayo'],
+    ['pregunta', 'Pregunta', 'pregunta'], ['formulario', 'Formulario', 'form'], ['persona', 'Persona', 'user'], ['grupo', 'Estrategia', 'rayo'],
     ['evento', 'Evento', 'calendar'], ['funnel', 'Funnel', 'funnel'],
 ];
 

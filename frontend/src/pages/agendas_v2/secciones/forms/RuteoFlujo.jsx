@@ -38,7 +38,7 @@ export default function RuteoFlujo({ f, d, rotas = [] }) {
                             <div className="rf-prio" style={{ '--c': g ? colorNivel(gi + 1) : 'var(--warning)' }}>
                                 <div className="rf-prio-cab">
                                     <span className="prio num">{g ? gi + 1 : '!'}</span>
-                                    <b>{g ? g.nombre : 'Sin prioridad'}</b>
+                                    <b>{g ? g.nombre : 'Sin estrategia'}</b>
                                     {g && <span className="rf-est"><Icono n={ICO_EST[g.estrategia]} s={13} />{ESTRATEGIAS[g.estrategia]}</span>}
                                 </div>
                                 {ms.length ? (
@@ -50,7 +50,7 @@ export default function RuteoFlujo({ f, d, rotas = [] }) {
                                             </React.Fragment>
                                         ))}
                                     </div>
-                                ) : <span className="t-cap mut40">{g ? 'Sin closers: pasa a la siguiente prioridad' : 'Sin closers'}</span>}
+                                ) : <span className="t-cap mut40">{g ? 'Sin closers: pasa a la siguiente estrategia' : 'Sin closers'}</span>}
                             </div>
                         </div>
                     );

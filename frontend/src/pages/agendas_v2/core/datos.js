@@ -16,7 +16,7 @@ export function setters(d) {
     return ord(d, 'personas').filter(p => { const r = buscar(d, 'roles', p.rol); return r ? /setter/i.test(r.nombre) : p.rol === 'setter'; });
 }
 export function nombreRol(d, id) { const r = buscar(d, 'roles', id); return r ? r.nombre : id ? mayus(id) : ''; }
-export function nombreGrupo(d, id) { const g = buscar(d, 'grupos', id); return g ? g.nombre : 'sin prioridad'; }
+export function nombreGrupo(d, id) { const g = buscar(d, 'grupos', id); return g ? g.nombre : 'sin estrategia'; }
 export function colorVar(k) { return 'var(--fc-' + (COLORES.includes(k) ? k : 'azul') + ')'; }
 export function colorRol(r) { return r && r.color ? colorVar(r.color) : r && r.atiende ? 'var(--success)' : 'var(--info)'; }
 export function colorLibre(d, col) {

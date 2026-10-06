@@ -111,17 +111,62 @@ Abajo está el funnel TAL COMO ESTÁ HOY, en JSON. Tu trabajo: preguntarme qué 
 """
 
 
-def prompt(d, actual=None):
-    """El prompt para la IA, con el equipo real de Team. Con `actual` (el paquete de `exportar`) es para
-    editar ese funnel en vez de crear uno."""
-    tarea = TAREA_EDITAR.format(actual=json.dumps(actual, ensure_ascii=False, indent=2)) if actual else TAREA_CREAR
-    cierre = 'Empezá preguntándome qué quiero cambiar.' if actual else 'Empezá preguntándome para qué es el funnel.'
-    return tarea + f"""
+TAREA_COMPLETAR = """Sos un asistente que configura funnels de agendamiento en «Learnation Thalamus» (el sistema de agendas de Learnation, que reemplaza a Calendly + Typeform).
+
+El funnel de abajo YA EXISTE pero todavía no tiene un agendamiento armado: le falta lo necesario para recibir agendas (estrategias de closers, formulario con su segmentación y el evento). Tu trabajo: entrevistarme y devolver UN SOLO bloque JSON con el funnel completo.
+
+## Cómo trabajar
+1. Mirá lo que ya existe en Thalamus (más abajo). Proponeme reusar lo que sirva (un formulario o estrategias que ya están armados) y crear de cero solo lo que falte. Preguntame antes de decidir.
+2. Preguntame, de a pocas preguntas por vez, lo que necesites: las preguntas del formulario y sus opciones, cuáles descalifican, cómo segmentar a los leads, qué closers atienden cada estrategia, la duración de la llamada y con cuánta anticipación se puede agendar.
+3. Mantené el "nombre", el "slug" y el "tipo" del funnel salvo que te pida cambiarlos.
+4. Devolvé SOLO el JSON (sin comentarios dentro), en un bloque ```json.
+
+## El funnel hoy
+```json
+{actual}
+```
+"""
+
+
+def _existente(d):
+    """Lo que ya está armado en Thalamus y la IA puede reusar con {"usar": "<nombre>"}."""
+    emails = {p['id']: p.get('email') for p in d['personas']}
+    nombre_g = {g['id']: g['nombre'] for g in d['grupos']}
+    estrategias = [
+        f'- "{g["nombre"]}" ({g["estrategia"]}): ' + (', '.join(e for e in (emails.get(m) for m in g['miembros']) if e) or 'sin closers')
+        for g in d['grupos']
+    ]
+    formularios = []
+    for f in d['formularios']:
+        destinos = sorted({nombre_g.get(r['grupo'], '?') for r in f['reglas']} | ({nombre_g.get(f['resto'], '?')} if f.get('resto') else set()))
+        formularios.append(f'- "{f["nombre"]}": {len(f["preguntas"])} preguntas; segmenta a: {", ".join(destinos) or "(sin segmentación)"}')
+    return (
+        '## Lo que ya existe en Thalamus (podés reusarlo)\n'
+        'Para reusar algo, en vez de definirlo poné {"usar": "<nombre exacto>"}: en "formulario" (reusa ese formulario con su segmentación) o como un elemento de "prioridades" (reusa esa estrategia tal como está). Lo reusado no se modifica. Si reusás un formulario, sus reglas ya apuntan a sus estrategias: no hace falta listarlas.\n'
+        '### Estrategias (en el JSON, "prioridades")\n' + ('\n'.join(estrategias) or '- (ninguna todavía: hay que crearlas)') + '\n'
+        '### Formularios\n' + ('\n'.join(formularios) or '- (ninguno todavía: hay que crearlo)') + '\n'
+    )
+
+
+def prompt(d, actual=None, completar=None):
+    """El prompt para la IA, con el equipo real de Team y lo que ya existe para reusar. Con `actual`
+    (el paquete de `exportar`) es para editar ese agendamiento; con `completar` (el funnel de
+    `exportar_funnel`), para armarle a un funnel su primer agendamiento."""
+    if completar:
+        tarea = TAREA_COMPLETAR.format(actual=json.dumps(completar, ensure_ascii=False, indent=2))
+        cierre = 'Empezá contándome qué ya existe que sirva para este funnel y qué falta crear.'
+    elif actual:
+        tarea = TAREA_EDITAR.format(actual=json.dumps(actual, ensure_ascii=False, indent=2))
+        cierre = 'Empezá preguntándome qué quiero cambiar.'
+    else:
+        tarea = TAREA_CREAR
+        cierre = 'Empezá preguntándome para qué es el funnel.'
+    return tarea + '\n' + _existente(d) + f"""
 
 ## Cómo funciona Thalamus (para que la configuración tenga sentido)
 - El lead completa el formulario (datos de contacto + preguntas). Si elige una opción con "descalifica": true, no agenda: ve el mensaje de "fin".
-- Las REGLAS se miran en orden: la primera que se cumple decide la PRIORIDAD del lead. Una regla se cumple si, en cada condición, el lead eligió alguna de las respuestas listadas. Si ninguna se cumple, va a la prioridad "resto".
-- Cada PRIORIDAD es un grupo de closers con una estrategia: "llenar" (se llena el primer closer y después el siguiente), "horario" (el lead ve todos los horarios; cada uno va al primer closer libre de la lista) o "repartir" (cada horario va a quien tenga menos agendas). Si una prioridad no tiene lugar, el lead pasa a la siguiente.
+- SEGMENTACIÓN: las REGLAS del formulario se miran en orden y la primera que se cumple decide a qué ESTRATEGIA (en el JSON, "prioridad") va el lead. Una regla se cumple si, en cada condición, el lead eligió alguna de las respuestas listadas. Si ninguna se cumple, va a la estrategia "resto".
+- Cada ESTRATEGIA es un grupo de closers con una forma de repartir: "llenar" (se llena el primer closer y después el siguiente), "horario" (el lead ve todos los horarios; cada uno va al primer closer libre de la lista) o "repartir" (cada horario va a quien tenga menos agendas). Si una estrategia no tiene lugar, el lead pasa a la siguiente.
 - Los "puntos" (0 a 10) de cada opción y el "peso" (0 a 5) de cada pregunta arman una nota del lead que ve el closer. No rutean.
 - Los horarios de cada closer NO van en el JSON: cada closer ya tiene su horario en Team.
 
@@ -164,18 +209,26 @@ def _obj(x):
     return x if isinstance(x, dict) else {}
 
 
-def revisar(d, paquete, editando=None):
+def revisar(d, paquete, editando=None, en_funnel=None):
     """Valida el paquete contra los datos de Thalamus. Devuelve (plan, errores): `plan` es lo que hace
     falta para crear (o None si hay errores) y cada error dice dónde está el problema.
     `editando`: id del evento que se edita. Sus links no cambian (se conservan los slugs) y las
-    prioridades y los orígenes que ya existen (por nombre) se actualizan en vez de crearse."""
+    prioridades y los orígenes que ya existen (por nombre) se actualizan en vez de crearse.
+    `en_funnel`: id de un funnel que ya existe y se completa (su primer agendamiento): no se crea
+    otro funnel y su link no cambia.
+    En cualquier modo, {"usar": "<nombre>"} en el formulario o en una prioridad reutiliza lo que ya
+    existe con ese nombre, sin tocarlo."""
     errores = []
     p = _obj(paquete)
     ev_actual = buscar(d, 'eventos', editando) if editando else None
     if editando and not ev_actual:
         return None, ['El evento que querés editar ya no existe.']
-    fu_actual = buscar(d, 'funnels', ev_actual['funnel']) if ev_actual else None
+    fu_actual = buscar(d, 'funnels', ev_actual['funnel']) if ev_actual else (buscar(d, 'funnels', en_funnel) if en_funnel else None)
+    if en_funnel and not fu_actual:
+        return None, ['El funnel que querés completar ya no existe.']
     grupos_por_nombre = {g['nombre'].lower(): g['id'] for g in d['grupos']} if editando else {}
+    existentes = {g['nombre'].lower(): g for g in d['grupos']}
+    usadas = []
     fo_actual = buscar(d, 'formularios', ev_actual['formulario']) if ev_actual else None
     ids_reglas = [r['id'] for r in (fo_actual or {}).get('reglas', [])]
     if p.get('paquete_thalamus') != VERSION:
@@ -207,6 +260,14 @@ def revisar(d, paquete, editando=None):
     prioridades, ids_prioridad = [], {}
     for i, g in enumerate(_lista(p.get('prioridades'))):
         g = _obj(g)
+        if _txt(g.get('usar')):
+            previa = existentes.get(_txt(g.get('usar')).lower())
+            if not previa:
+                errores.append(f'prioridades[{i}]: no existe una estrategia llamada "{g.get("usar")}" para reusar.')
+            else:
+                ids_prioridad[previa['nombre'].lower()] = previa['id']
+                usadas.append(previa)
+            continue
         nombre = _txt(g.get('nombre'))
         if not nombre:
             errores.append(f'prioridades[{i}]: falta "nombre".')
@@ -234,8 +295,8 @@ def revisar(d, paquete, editando=None):
         prioridades.append(
             {'id': ids_prioridad[nombre.lower()], 'nombre': nombre, 'estrategia': estrategia, 'miembros': miembros}
         )
-    if not prioridades:
-        errores.append('prioridades: hace falta al menos una.')
+    if not prioridades and not usadas:
+        errores.append('prioridades: hace falta al menos una (nueva, o {"usar": "<nombre>"} de una que ya existe).')
 
     def prioridad(nombre, donde):
         gid = ids_prioridad.get(_txt(nombre).lower())
@@ -245,7 +306,13 @@ def revisar(d, paquete, editando=None):
 
     # Formulario
     fo = _obj(p.get('formulario'))
-    if not _txt(fo.get('nombre')):
+    fo_usado = None
+    if _txt(fo.get('usar')):
+        fo_usado = next((x for x in d['formularios'] if x['nombre'].lower() == _txt(fo.get('usar')).lower()), None)
+        if not fo_usado:
+            errores.append(f'formulario: no existe un formulario llamado "{fo.get("usar")}" para reusar.')
+        fo = {}
+    elif not _txt(fo.get('nombre')):
         errores.append('formulario: falta "nombre".')
     preguntas, opciones_de = [], {}
     for i, q in enumerate(_lista(fo.get('preguntas'))):
@@ -300,6 +367,8 @@ def revisar(d, paquete, editando=None):
         reglas.append({'id': ids_reglas[i] if i < len(ids_reglas) else uid('r'),
                        'grupo': prioridad(r.get('prioridad'), donde), 'cond': cond})
     resto = prioridad(fo.get('resto'), 'formulario.resto') if fo.get('resto') else ''
+    if not fo_usado and not reglas and not resto:
+        errores.append('formulario: falta la segmentación: "reglas" y/o "resto" (a qué estrategia va cada lead).')
 
     # Evento
     tipo = fu.get('tipo') if fu.get('tipo') in TIPOS_FUNNEL else ('setting' if fu.get('setting') is True else None)
@@ -317,7 +386,10 @@ def revisar(d, paquete, editando=None):
         return None, errores
     return {
         'prioridades': prioridades,
-        'formulario': {**fo, 'preguntas': preguntas, 'reglas': reglas, 'resto': resto},
+        'usadas': [{'id': g['id'], 'nombre': g['nombre'], 'estrategia': g['estrategia'], 'miembros': g['miembros']} for g in usadas],
+        'formulario_usado': {'id': fo_usado['id'], 'nombre': fo_usado['nombre']} if fo_usado else None,
+        'formulario': ({'nombre': fo_usado['nombre'], 'preguntas': fo_usado['preguntas'], 'reglas': fo_usado['reglas']} if fo_usado
+                       else {**fo, 'preguntas': preguntas, 'reglas': reglas, 'resto': resto}),
         'funnel': {**fu, 'slug': fu_slug, 'tipo': tipo, 'setting': tipo == 'setting',
                    'origenes': [] if tipo == 'setting' else origenes},
         'evento': ev,
@@ -336,8 +408,12 @@ def resumen(plan):
         'prioridades': [
             {'nombre': g['nombre'], 'estrategia': g['estrategia'], 'closers': len(g['miembros'])}
             for g in plan['prioridades']
+        ] + [
+            {'nombre': g['nombre'], 'estrategia': g['estrategia'], 'closers': len(g['miembros']), 'existente': True}
+            for g in plan.get('usadas', [])
         ],
         'formulario': fo['nombre'],
+        'formulario_existente': bool(plan.get('formulario_usado')),
         'preguntas': len(fo['preguntas']),
         'reglas': len(fo['reglas']),
         'evento': ev['nombre'],
@@ -352,8 +428,10 @@ def _siguiente_orden(d, col):
     return max([x.get('orden') or 0 for x in d[col]] or [0]) + 1
 
 
-def importar(d, plan, usuario_id=None):
-    """Crea todo en una transacción. Devuelve los ids creados. El evento queda sin publicar."""
+def importar(d, plan, usuario_id=None, en_funnel=None):
+    """Crea todo en una transacción. Devuelve los ids creados. El evento queda sin publicar.
+    `en_funnel`: el agendamiento va en ese funnel (que toma el nombre, el tipo y los links del paquete)
+    en vez de crear uno. Lo reutilizado ({"usar": …}) no se crea ni se toca."""
     from app.agendas_v2.servicio import _subir_version
 
     creados = {'prioridades': []}
@@ -371,8 +449,18 @@ def importar(d, plan, usuario_id=None):
         creados['prioridades'].append(g['id'])
 
     fo_id, fu_id, ev_id = uid('d'), uid('d'), uid('d')
-    crear('formularios', fo_id, {**plan['formulario'], 'orden': _siguiente_orden(d, 'formularios')})
-    crear('funnels', fu_id, {**plan['funnel'], 'orden': _siguiente_orden(d, 'funnels')})
+    if plan.get('formulario_usado'):
+        fo_id = plan['formulario_usado']['id']
+    else:
+        crear('formularios', fo_id, {**plan['formulario'], 'orden': _siguiente_orden(d, 'formularios')})
+    if en_funnel:
+        fu_id = en_funnel
+        fila = db.session.get(MODELOS['funnels'], fu_id)
+        doc = NORM['funnels'](fu_id, {**(fila.datos or {}), **{k: plan['funnel'][k] for k in ('nombre', 'tipo', 'setting', 'origenes')}})
+        fila.datos = {k: v for k, v in doc.items() if k != 'id'}
+        fila.actualizado_por_id = usuario_id
+    else:
+        crear('funnels', fu_id, {**plan['funnel'], 'orden': _siguiente_orden(d, 'funnels')})
     crear(
         'eventos',
         ev_id,
@@ -453,6 +541,22 @@ def exportar(d, evento_id):
     }
 
 
+def exportar_funnel(d, funnel_id):
+    """Un funnel sin agendamiento, con el formato del paquete y lo demás vacío: lo que se le pasa a la IA
+    para que lo complete. None si no existe."""
+    fu = buscar(d, 'funnels', funnel_id)
+    if not fu:
+        return None
+    return {
+        'paquete_thalamus': VERSION,
+        'funnel': {'nombre': fu['nombre'], 'slug': fu['slug'], 'tipo': fu.get('tipo', 'otro'),
+                   'origenes': [{'nombre': o['nombre']} for o in fu.get('origenes', []) if o.get('nombre') and not o.get('setter')]},
+        'prioridades': [],
+        'formulario': None,
+        'evento': None,
+    }
+
+
 def aplicar(d, plan, evento_id, usuario_id=None):
     """Escribe el paquete editado ENCIMA del evento, su funnel, su formulario y sus prioridades (mismos
     ids). Las prioridades nuevas se crean. Lo que el paquete no trae (publicación, colores, orden, la
@@ -474,11 +578,14 @@ def aplicar(d, plan, evento_id, usuario_id=None):
 
     for g in plan['prioridades']:
         escribir('grupos', g['id'], {k: g[k] for k in ('nombre', 'estrategia', 'miembros')})
-    fo = plan['formulario']
-    # Lo que el paquete no trae de cada pregunta (el placeholder) queda como estaba.
-    previas = {q['id']: q for q in (buscar(d, 'formularios', ev['formulario']) or {}).get('preguntas', [])}
-    fo = {**fo, 'preguntas': [{**previas.get(q['id'], {}), **q} for q in fo['preguntas']]}
-    escribir('formularios', ev['formulario'], {k: fo[k] for k in ('nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin') if k in fo})
+    # Un formulario reusado ({"usar": …}) pasa a ser el del evento, sin tocarlo; si no, se edita el suyo.
+    formulario_id = plan['formulario_usado']['id'] if plan.get('formulario_usado') else ev['formulario']
+    if not plan.get('formulario_usado'):
+        fo = plan['formulario']
+        # Lo que el paquete no trae de cada pregunta (el placeholder) queda como estaba.
+        previas = {q['id']: q for q in (buscar(d, 'formularios', ev['formulario']) or {}).get('preguntas', [])}
+        fo = {**fo, 'preguntas': [{**previas.get(q['id'], {}), **q} for q in fo['preguntas']]}
+        escribir('formularios', ev['formulario'], {k: fo[k] for k in ('nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin') if k in fo})
     fu = plan['funnel']
     escribir('funnels', ev['funnel'], {k: fu[k] for k in ('nombre', 'tipo', 'setting', 'origenes')})
     nuevo = plan['evento']
@@ -486,8 +593,9 @@ def aplicar(d, plan, evento_id, usuario_id=None):
         **{k: nuevo[k] for k in ('nombre', 'duracion', 'antel', 'desc', 'indic', 'redir') if k in nuevo},
         **({'paso': {**ev['paso'], **nuevo['paso']}} if isinstance(nuevo.get('paso'), dict) else {}),
         **({'reservas': {**ev['reservas'], **nuevo['reservas']}} if isinstance(nuevo.get('reservas'), dict) else {}),
+        'formulario': formulario_id,
     })
     _subir_version()
     db.session.commit()
-    return {'evento': evento_id, 'formulario': ev['formulario'], 'funnel': ev['funnel'],
+    return {'evento': evento_id, 'formulario': formulario_id, 'funnel': ev['funnel'],
             'prioridades': [g['id'] for g in plan['prioridades']]}

@@ -106,10 +106,17 @@ def usuarios():
 
 @bp.route('/paquete/prompt', methods=['GET'])
 def paquete_prompt():
-    """El prompt para armar un funnel con IA (paquete.py), con el equipo real de Team. Con ?evento=<id>,
-    el de editar ese evento: trae su configuración actual."""
+    """El prompt para armar un funnel con IA (paquete.py), con el equipo real de Team y lo que ya
+    existe para reusar. Con ?evento=<id>, el de editar ese evento (trae su configuración actual); con
+    ?funnel=<id>, el de completar ese funnel (armarle su primer agendamiento)."""
     d = servicio.colecciones()
     evento_id = request.args.get('evento')
+    funnel_id = request.args.get('funnel')
+    if funnel_id:
+        completar = paquete.exportar_funnel(d, funnel_id)
+        if not completar:
+            return jsonify({'code': 'no_existe', 'message': 'Ese funnel ya no existe.'}), 404
+        return jsonify({'prompt': paquete.prompt(d, completar=completar)})
     if not evento_id:
         return jsonify({'prompt': paquete.prompt(d)})
     actual = paquete.exportar(d, evento_id)
@@ -120,12 +127,14 @@ def paquete_prompt():
 
 @bp.route('/paquete', methods=['POST'])
 def paquete_importar():
-    """{paquete, simular, evento?}: revisa el JSON que devolvio la IA y, si no es simulacion, crea todo
-    de una vez. Con `evento`, lo escribe encima de ese evento (edicion con IA)."""
+    """{paquete, simular, evento?, funnel?}: revisa el JSON que devolvio la IA y, si no es simulacion,
+    crea todo de una vez. Con `evento`, lo escribe encima de ese evento (edicion con IA); con `funnel`,
+    arma el agendamiento adentro de ese funnel en vez de crear otro."""
     cuerpo = _cuerpo()
     d = servicio.colecciones()
     evento_id = cuerpo.get('evento') or None
-    plan, errores = paquete.revisar(d, cuerpo.get('paquete'), editando=evento_id)
+    funnel_id = None if evento_id else (cuerpo.get('funnel') or None)
+    plan, errores = paquete.revisar(d, cuerpo.get('paquete'), editando=evento_id, en_funnel=funnel_id)
     if errores:
         return jsonify({'code': 'invalido', 'errores': errores}), 400
     if cuerpo.get('simular'):
@@ -133,5 +142,5 @@ def paquete_importar():
     if evento_id:
         tocados = paquete.aplicar(d, plan, evento_id, usuario_id=current_user.id)
         return jsonify({'resumen': paquete.resumen(plan), 'editados': tocados, 'version': servicio.version()})
-    creados = paquete.importar(d, plan, usuario_id=current_user.id)
+    creados = paquete.importar(d, plan, usuario_id=current_user.id, en_funnel=funnel_id)
     return jsonify({'resumen': paquete.resumen(plan), 'creados': creados, 'version': servicio.version()}), 201

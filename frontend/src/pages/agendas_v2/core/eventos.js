@@ -66,11 +66,11 @@ export function revision(d, e) {
             return !g || !g.miembros.some(pid => { const p = buscar(d, 'personas', pid); return p && horasSemana(p) > 0; });
         });
         const rotas = reglasRotas(fo);
-        out.push(!fo ? [0, 'Sin ruteo', 'Elegí un formulario']
-            : !gids.length ? [0, 'El formulario no tiene ruteo', 'Configuralo en Forms']
-                : rotas.length ? [0, rotas.length === 1 ? 'Una regla apunta a una pregunta borrada' : rotas.length + ' reglas apuntan a preguntas borradas', 'Revisá el ruteo en Forms']
-                    : vacios.length ? [0, 'Hay prioridades sin closers con horario', 'Si no hay lugar, pasa a la siguiente prioridad']
-                        : [1, 'Ruteo completo', gids.length + (gids.length === 1 ? ' prioridad' : ' prioridades')]);
+        out.push(!fo ? [0, 'Sin segmentación', 'Elegí un formulario']
+            : !gids.length ? [0, 'El formulario no tiene segmentación', 'Configurala en Forms']
+                : rotas.length ? [0, rotas.length === 1 ? 'Una regla apunta a una pregunta borrada' : rotas.length + ' reglas apuntan a preguntas borradas', 'Revisá la segmentación en Forms']
+                    : vacios.length ? [0, 'Hay estrategias sin closers con horario', 'Si no hay lugar, pasa a la siguiente estrategia']
+                        : [1, 'Segmentación completa', gids.length + (gids.length === 1 ? ' estrategia' : ' estrategias')]);
     }
     const rr = e.reservas;
     out.push(rr.modo === 'rango' && (!rr.desde || !rr.hasta || rr.hasta < rr.desde) ? [0, 'Fechas inválidas', 'Revisá el rango de reservas'] : [1, 'Agenda', resumenAgenda(e)]);
@@ -91,14 +91,21 @@ export function slugLibre(d, e, slug) {
 }
 
 // Los pasos de un agendamiento (un evento dentro de su funnel), en el orden en que se arma:
-// formulario → equipo → evento → publicado. [{k, ok, n, det}] con `n` corto para la tarjeta del funnel.
+// equipo (estrategias con closers con horario) → formulario (con su segmentación) → evento → publicado.
+// [{k, ok, n, det}] con `n` corto para la tarjeta del funnel.
 export function pasosAgendamiento(d, e) {
     const fo = buscar(d, 'formularios', e.formulario);
     const [, , ruteo, agenda, link] = revision(d, e);
     const est = estadoEvento(e, fo);
+    const conHorario = (g) => g && g.miembros.some(pid => { const p = buscar(d, 'personas', pid); return p && horasSemana(p) > 0; });
+    const usadas = e.persona ? [] : gruposDeForm(fo);
+    const equipoOk = e.persona ? !!ruteo[0]
+        : usadas.length ? usadas.every(id => conHorario(buscar(d, 'grupos', id))) : d.grupos.some(conHorario);
+    const segmentacionOk = !!fo && (!!e.persona || (usadas.length > 0 && !reglasRotas(fo).length));
     return [
-        fo ? { k: 'formulario', ok: true, n: 'Formulario', det: fo.nombre } : { k: 'formulario', ok: false, n: 'Sin formulario', det: 'Elegí o creá el formulario' },
-        { k: 'equipo', ok: !!ruteo[0], n: ruteo[0] ? 'Equipo' : 'Sin equipo', det: ruteo[1] + ' · ' + ruteo[2] },
+        { k: 'equipo', ok: equipoOk, n: equipoOk ? 'Equipo' : 'Sin equipo', det: equipoOk ? 'Estrategias con closers con horario' : 'Armá estrategias con closers que tengan horario en Team' },
+        !fo ? { k: 'formulario', ok: false, n: 'Sin formulario', det: 'Elegí o creá el formulario' }
+            : { k: 'formulario', ok: segmentacionOk, n: segmentacionOk ? 'Formulario' : 'Sin segmentación', det: segmentacionOk ? fo.nombre : ruteo[1] + ' · ' + ruteo[2] },
         { k: 'evento', ok: !!(agenda[0] && link[0]), n: agenda[0] && link[0] ? e.duracion + ' min' : 'Revisar evento', det: agenda[0] ? (link[0] ? agenda[2] : link[1]) : agenda[1] },
         { k: 'publicado', ok: est.k === 'vivo', n: est.k === 'vivo' ? 'En vivo' : est.n, det: est.k === 'vivo' ? 'Recibe agendas' : 'El link todavía no recibe agendas con lo último' },
     ];
@@ -115,7 +122,7 @@ export function estadoFunnel(d, f) {
     const pendientes = new Set();
     Object.values(porEvento).forEach(ps => ps.forEach(p => { if (!p.ok) pendientes.add(p.k); }));
     const NOMBRE = { formulario: 'formulario', equipo: 'equipo', evento: 'evento', publicado: 'publicar' };
-    if (pendientes.size) faltas.push('Falta: ' + ['formulario', 'equipo', 'evento', 'publicado'].filter(k => pendientes.has(k)).map(k => NOMBRE[k]).join(', '));
+    if (pendientes.size) faltas.push('Falta: ' + ['equipo', 'formulario', 'evento', 'publicado'].filter(k => pendientes.has(k)).map(k => NOMBRE[k]).join(', '));
     const listo = f.activo && Object.values(porEvento).some(ps => ps.every(p => p.ok));
     return { listo, faltas, porEvento };
 }

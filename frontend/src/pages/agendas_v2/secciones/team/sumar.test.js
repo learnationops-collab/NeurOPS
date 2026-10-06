@@ -1,17 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { estadoParaSumar, ordenarParaSumar } from './Personas';
+import { ordenarListos } from './ElegirCloser';
 
-describe('Sumar a Team', () => {
-    it('primero los que ya pueden recibir agendas, después los que tienen una de las dos, cada grupo por nombre', () => {
-        const us = [
-            { nombre: 'Zoe', calendar: false, whatsapp: false },
-            { nombre: 'Beto', calendar: true, whatsapp: false },
-            { nombre: 'Mario', calendar: true, whatsapp: true },
-            { nombre: 'Ana', calendar: true, whatsapp: true },
+describe('Elegir closer', () => {
+    it('primero los que tienen Calendar, WhatsApp y horarios; después a los que les falta menos; cada grupo por nombre', () => {
+        const os = [
+            { nombre: 'Zoe', calendar: false, whatsapp: false, horarios: false },
+            { nombre: 'Beto', calendar: true, whatsapp: false, horarios: true },
+            { nombre: 'Mario', calendar: true, whatsapp: true, horarios: true },
+            { nombre: 'Ana', calendar: true, whatsapp: true, horarios: true },
+            { nombre: 'Luz', horarios: true },  // modo local: Calendar y WhatsApp no se saben y no cuentan
         ];
-        expect(ordenarParaSumar(us).map(u => u.nombre)).toEqual(['Ana', 'Mario', 'Beto', 'Zoe']);
-        expect(us.map(estadoParaSumar)).toEqual([
-            'sin Calendar ni WhatsApp', 'sin WhatsApp confirmado', 'listo para recibir agendas', 'listo para recibir agendas',
-        ]);
+        expect(ordenarListos(os).map(o => o.nombre)).toEqual(['Ana', 'Luz', 'Mario', 'Beto', 'Zoe']);
     });
 });

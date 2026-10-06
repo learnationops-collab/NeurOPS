@@ -169,6 +169,8 @@ export default function ThalamusApp() {
                         <LogoThalamus />
                         <h1 className="t-h1">{sec.label}</h1>
                     </div>
+                    {/* El evento abierto pone acá su barra (volver, vistas, publicar): DetalleEvento. */}
+                    <div className="tope-acc" id="tope-acc" />
                     <MenuYo />
                 </header>
                 <Vista />

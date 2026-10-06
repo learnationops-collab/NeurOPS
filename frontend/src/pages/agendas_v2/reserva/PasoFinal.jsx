@@ -28,7 +28,7 @@ export function Respuestas({ preguntas, resp, pais, nombre, asig, slot, d }) {
                     <span>
                         <b>{per ? per.nombre : 'Sin closer'}</b>
                         {asig.grupo ? ' · ' + asig.grupo.nombre : ''} · {asig.regla}
-                        {asig.desborde ? ' · Pasó a la siguiente prioridad por falta de lugar' : ''}
+                        {asig.desborde ? ' · Pasó a la siguiente estrategia por falta de lugar' : ''}
                     </span>
                 </div>
             )}

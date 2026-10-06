@@ -11,7 +11,7 @@ import { statsEvento } from '../stats/datosEjemplo';
 import { armarFlujo, caminoArista } from './armarFlujo';
 import { textoEstrategia } from './comun';
 
-const LEYENDA = [['var(--info)', 'Preguntas'], ['var(--brand-secondary)', 'Función'], ['var(--warning)', 'Prioridad'], ['var(--success)', 'Agenda'], ['var(--error)', 'No califica']];
+const LEYENDA = [['var(--info)', 'Preguntas'], ['var(--brand-secondary)', 'Función'], ['var(--warning)', 'Estrategia'], ['var(--success)', 'Agenda'], ['var(--error)', 'No califica']];
 
 function setEv(parcial) { const ev = ui.getState().ev; if (ev) ui.set({ ev: { ...ev, ...parcial } }); }
 
@@ -74,7 +74,7 @@ function Inspector({ d, e, n }) {
     } else if (n === 'calif') {
         cuerpo = (
             <>
-                {cab('Ruteo')}
+                {cab('Segmentación')}
                 {fo ? (
                     <>
                         {fo.reglas.map((r, i) => (
@@ -94,7 +94,7 @@ function Inspector({ d, e, n }) {
         );
     } else if (n.startsWith('g-')) {
         const g = buscar(d, 'grupos', n.slice(2));
-        cuerpo = !g ? <>{cab('Prioridad')}<p className="t-sm mut">Elegí una prioridad en el ruteo.</p></> : (
+        cuerpo = !g ? <>{cab('Estrategia')}<p className="t-sm mut">Elegí una estrategia en la segmentación.</p></> : (
             <>
                 {cab(g.nombre)}
                 <div style={{ display: 'grid', gap: 10 }}>

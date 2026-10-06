@@ -64,7 +64,7 @@ function TarjetaEvento({ d, e }) {
     const f = buscar(d, 'funnels', e.funnel), fo = buscar(d, 'formularios', e.formulario);
     const pfx = e.persona && buscar(d, 'personas', e.persona);
     let rut = pfx ? [pfx.nombre + ' (fijo)'] : gruposDeForm(fo).map(id => nombreGrupo(d, id));
-    if (!rut.length) rut = ['Sin ruteo'];
+    if (!rut.length) rut = ['Sin segmentación'];
     const cc = f ? colorVar(f.color) : 'var(--brand-secondary)';
     return (
         <article className="tarjeta ev-card caja" data-id={e.id}>

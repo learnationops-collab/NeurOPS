@@ -1,17 +1,29 @@
-// Priorities: cada prioridad es una lista ordenada de closers y una forma de repartir los leads.
-// Las reglas del formulario eligen la prioridad; si nadie tiene lugar, pasa a la siguiente.
+// Estrategias: cada una es una lista ordenada de closers y una forma de repartir los leads.
+// La segmentación del formulario elige la estrategia; si nadie tiene lugar, pasa a la siguiente.
 
 import { useCallback } from 'react';
 import { COLOR_EST, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
 import { closers, colorVar, esCloser, horasSemana, maxOrden, ord } from '../../core/datos';
 import { almacen, useDatos } from '../../data/hooks';
-import { HUMO_MARCA, Avatar, Humo, Icono, Sx } from '../../ui/base';
+import { HUMO_MARCA, Avatar, Humo, Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
+import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
+
+// Lo que le falta a un closer de Team para recibir agendas. Calendar y WhatsApp salen de su cuenta
+// de la app (por email); en modo local no se saben y no llevan chip.
+function listoDe(p, usuarios) {
+    const u = usuarios && usuarios.find(x => x.email && x.email.toLowerCase() === (p.email || '').toLowerCase());
+    const sabe = Array.isArray(usuarios) && usuarios.length > 0;
+    return {
+        id: p.id, nombre: p.nombre, extra: 'Top ' + p.nivel, horarios: horasSemana(p) > 0,
+        calendar: sabe ? !!(u && u.calendar) : undefined, whatsapp: sabe ? !!(u && u.whatsapp) : undefined,
+    };
+}
 
 export function crearGrupo(d, nombre) {
     nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
@@ -55,7 +67,7 @@ function Miembro({ p, j, g, numerar, ordenable }) {
     );
 }
 
-function Prioridad({ g, i, ordenable }) {
+function Prioridad({ g, i, ordenable, usuarios }) {
     const { d } = useDatos();
     const ms = g.miembros.map(id => d.personas.find(p => p.id === id)).filter(Boolean);
     const libres = closers(d).filter(p => !g.miembros.includes(p.id));
@@ -69,19 +81,19 @@ function Prioridad({ g, i, ordenable }) {
         <article data-item={g.id} className={'tarjeta pr caja' + ordenable.claseItem(g.id)} style={{ '--pc': pc }}>
             <Humo clase={'humo--tarjeta' + (i ? ' humo--suave' : '')} cols={i ? ['var(--brand-primary)', 'var(--brand-navy)', pc, 'var(--brand-navy)'] : HUMO_MARCA} />
             <div className="pr-cab">
-                <button type="button" className="grip" {...ordenable.grip(g.id, 'Mover prioridad ' + g.nombre)}><Icono n="grip" /></button>
-                <span className="pr-n num" title={'Prioridad ' + (i + 1)}>{i + 1}</span>
-                <label className="sr" htmlFor={'gn-' + g.id}>Nombre de la prioridad</label>
+                <button type="button" className="grip" {...ordenable.grip(g.id, 'Mover estrategia ' + g.nombre)}><Icono n="grip" /></button>
+                <span className="pr-n num" title={'Estrategia ' + (i + 1)}>{i + 1}</span>
+                <label className="sr" htmlFor={'gn-' + g.id}>Nombre de la estrategia</label>
                 <CampoNombre className="pr-nom" id={'gn-' + g.id} maxLength={60} valor={g.nombre} onGuardar={v => almacen.editar('grupos', g.id, { nombre: v })} />
                 <span className="pr-cuenta num">{ms.length}{ms.length === 1 ? ' closer' : ' closers'}</span>
-                <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar prioridad ' + g.nombre} onClick={() => borrarGrupo(g)}><Icono n="basura" s={15} /></button>
+                <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar estrategia ' + g.nombre} onClick={() => borrarGrupo(g)}><Icono n="basura" s={15} /></button>
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>
                 {msOrden.map((p, j) => <Miembro key={p.id} p={p} j={j} g={g} numerar={enOrden} ordenable={om} />)}
                 {libres.length > 0 && (
                     <div className="pm-sumar">
-                        <Sx sm label="Sumar closer" valor="" opciones={[{ v: '', n: '+ Sumar closer' }, ...libres.map(p => ({ v: p.id, n: p.nombre + ' · Top ' + p.nivel }))]}
-                            onChange={v => { if (v) almacen.editar('grupos', g.id, { miembros: g.miembros.concat([v]) }, true); }} />
+                        <ElegirCloser opciones={libres.map(p => listoDe(p, usuarios))}
+                            onElegir={v => almacen.editar('grupos', g.id, { miembros: g.miembros.concat([v]) }, true)} />
                     </div>
                 )}
                 {!ms.length && <span className="t-cap mut40">Sin closers todavía</span>}
@@ -106,6 +118,7 @@ function Prioridad({ g, i, ordenable }) {
 
 export default function Grupos() {
     const { d } = useDatos();
+    const usuarios = useUsuariosReales();
     const gs = ord(d, 'grupos');
     const usados = gs.map(g => g.nombre.toLowerCase());
     const sug = SUGERIDAS.filter(n => !usados.includes(n.toLowerCase()));
@@ -116,7 +129,7 @@ export default function Grupos() {
     const { contenedor: ordenCont, ...orden } = useOrdenable(gs.map(g => g.id), reordenar);
 
     const compo = (
-        <Compo vacio={!gs.length} tit="Nueva prioridad" soloTit="Creá tus prioridades" ph="Nombre, ej. Ultra cualificado" onCrear={v => crearGrupo(d, v)}
+        <Compo vacio={!gs.length} tit="Nueva estrategia" soloTit="Creá tus estrategias" ph="Nombre, ej. Ultra cualificado" onCrear={v => crearGrupo(d, v)}
             sug={sug.length > 0 && (
                 <div className="compo-sug">
                     <span className="t-rotulo">Rápido</span>
@@ -130,7 +143,7 @@ export default function Grupos() {
             {compo}
             <div className="lista" ref={ordenCont}>
                 {orden.lista.map(id => gs.find(g => g.id === id)).filter(Boolean).map((g, i) => (
-                    <Prioridad key={g.id} g={g} i={i} ordenable={orden} />
+                    <Prioridad key={g.id} g={g} i={i} ordenable={orden} usuarios={usuarios} />
                 ))}
             </div>
         </>

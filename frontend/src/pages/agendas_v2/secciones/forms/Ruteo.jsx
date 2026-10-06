@@ -1,4 +1,4 @@
-// Ruteo: reglas en orden; la primera que se cumple elige la prioridad. Lo que no cumple ninguna va a "Todo lo demás".
+// Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
 
 import { useCallback, useEffect, useRef } from 'react';
 import { almacen } from '../../data/hooks';
@@ -11,7 +11,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
 
-const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la prioridad. En cada condición alcanza cualquiera de las respuestas marcadas.';
+const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
 function opsTxt(q, ops) { return q ? q.opciones.filter(o => ops.includes(o.id)).map(o => o.texto) : []; }
 
@@ -98,7 +98,7 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                     </p>
                 )}
             </div>
-            <Destino d={d} valor={r.grupo} label="Prioridad" onChange={v => cambiar(x => { x.grupo = v; })} />
+            <Destino d={d} valor={r.grupo} label="Estrategia" onChange={v => cambiar(x => { x.grupo = v; })} />
             <button type="button" className="ibtn ibtn--xs ibtn--peligro regla-x" aria-label={'Eliminar regla ' + (i + 1)}
                 onClick={() => { mutarForm(f.id, 'reglas', rs => rs.filter(y => y.id !== r.id)); enfocar('[data-regla-add]'); }}>
                 <Icono n="basura" />
@@ -116,7 +116,7 @@ export default function Ruteo({ f, d, modo, msel }) {
     const ord = useOrdenable(f.reglas.map(r => r.id), reordenar);
     const { contenedor, lista } = ord;
     const porId = Object.fromEntries(f.reglas.map(r => [r.id, r]));
-    const resto = <Destino d={d} valor={f.resto} label="Prioridad" onChange={v => almacen.editar('formularios', f.id, { resto: v })} />;
+    const resto = <Destino d={d} valor={f.resto} label="Estrategia" onChange={v => almacen.editar('formularios', f.id, { resto: v })} />;
 
     const agregar = () => {
         const q1 = f.preguntas.find(x => conOpciones(x.tipo)), g1 = ordCol(d, 'grupos')[0];
@@ -128,7 +128,7 @@ export default function Ruteo({ f, d, modo, msel }) {
         <section className="ruteo caja" ref={raiz}>
             <Humo clase="humo--tarjeta humo--suave" cols={HUMO_MARCA} />
             <div className="ruteo-cab">
-                <h2 className="t-h3">Ruteo</h2>
+                <h2 className="t-h3">Segmentación</h2>
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
                 <div className="seg seg--sm" role="group" aria-label="Vista del ruteo" style={{ marginLeft: 'auto' }}>
                     <button type="button" data-nav="" aria-pressed={modo === 'reglas'} onClick={() => setFormUi({ ruteoModo: 'reglas', msel: null })}><Icono n="lista" />Reglas</button>

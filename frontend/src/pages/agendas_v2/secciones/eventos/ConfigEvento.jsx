@@ -8,7 +8,7 @@ import { fechaOk, urlOk } from '../../core/normalizar';
 import { claveDia, gmtTxt } from '../../core/tiempo';
 import { clonar, entero, slugify } from '../../core/util';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
-import { Avatar, HUMO_MARCA, Humo, Icono, MeetLogo, Seg, Sx } from '../../ui/base';
+import { Avatar, HUMO_MARCA, Humo, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import EditorDescripcion from './EditorDescripcion';
@@ -52,11 +52,10 @@ function IndicacionesVivas({ e }) {
     return (
         <div style={{ flex: '1 1 100%', minWidth: 0 }}>
             <textarea id="ev-indic" className="input" rows={4} maxLength={2000} aria-label="Indicaciones para el lead"
-                placeholder="Ej.: Tené a mano tu último resumen de ingresos y conectate desde una computadora."
+                placeholder="Lo que el lead tiene que tener listo. Va en su invitación de Google Calendar."
                 value={b.value} style={{ width: '100%', resize: 'vertical' }}
                 onChange={ev => { b.set(ev.target.value); almacen.editar('eventos', e.id, { indic: ev.target.value }); }}
                 onBlur={() => { b.soltar(); almacen.flush(); }} />
-            <p className="t-xs mut" style={{ marginTop: 4 }}>Van en la invitación de Google Calendar que recibe el lead.</p>
         </div>
     );
 }
@@ -137,10 +136,6 @@ function General({ d, e, f, cm }) {
                     )}
                 </Fila>
             )}
-            <Fila l="Recibe agendas">
-                <button type="button" className="switch" role="switch" aria-checked={e.activo} aria-label="Recibe agendas"
-                    onClick={() => almacen.editar('eventos', e.id, { activo: !e.activo }, true)} />
-            </Fila>
         </>
     );
 }
@@ -215,11 +210,6 @@ function Pagina({ e }) {
                         opciones={ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz) }))} />
                 )}
             </Fila>
-            <Fila l="Ubicación">
-                <span className="meet"><MeetLogo /><b>Google Meet</b></span>
-                {/* El Meet lo crea siempre el servidor con el Calendar del closer (operacion.crear_evento). */}
-                <span className="chip chip--n" style={{ '--c': 'var(--success)' }}><Icono n="check" />Automático</span>
-            </Fila>
             <Fila l="Redirigir a">
                 <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
                     <span className="prefijo"><Icono n="link" /></span>
@@ -250,11 +240,9 @@ export default function ConfigEvento({ e }) {
         toast(e.nombre + ' eliminado');
     };
     return (
-        <div className="ev-grid">
+        <div className="ev-grid ev-grid--3">
             <div className="ev-col">
                 <Bloque tit="General" icono="ajustes" i={0}><General d={d} e={e} f={f} cm={cm} /></Bloque>
-                <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
-                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina e={e} /></Bloque>
                 {borrar ? (
                     <div className="ed-pie--borrar">
                         <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
@@ -267,10 +255,14 @@ export default function ConfigEvento({ e }) {
                     <div><button type="button" className="btn btn--peligro btn--sm" onClick={() => setBorrar(true)}><Icono n="basura" />Eliminar evento</button></div>
                 )}
             </div>
+            <div className="ev-col">
+                <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
+                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina e={e} /></Bloque>
+            </div>
             <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">
                 <Humo clase="humo--tarjeta humo--suave" cols={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
                 <div className="panel-cab"><span className="t-rotulo">Revisión</span></div>
-                {revision(d, e).map((c, i) => (
+                {revision(d, e).filter((c, i) => i > 0 || !c[0]).map((c, i) => (
                     <div key={i} className="check" style={{ '--c': c[0] ? 'var(--success)' : 'var(--warning)' }}>
                         <Icono n={c[0] ? 'check' : 'alerta'} />
                         <div><b>{c[1]}</b><span>{c[2]}</span></div>

@@ -55,8 +55,8 @@ function Resumen({ r }) {
             <p className="t-sm"><b>Va a quedar así:</b></p>
             <ul className="t-sm">
                 <li>Funnel {tipo ? tipo + ' ' : ''}<b>{r.funnel}</b> (<code>/{r.slug}</code>){r.tipo === 'setting' ? ', con un link por setter' : ` con ${r.origenes} ${r.origenes === 1 ? 'link' : 'links'}`}</li>
-                <li>{r.prioridades.length} {r.prioridades.length === 1 ? 'prioridad' : 'prioridades'}: {r.prioridades.map(g => `${g.nombre} (${ESTRATEGIA[g.estrategia] || g.estrategia}, ${g.closers} ${g.closers === 1 ? 'closer' : 'closers'})`).join(' · ')}</li>
-                <li>Formulario <b>{r.formulario}</b> con {r.preguntas} {r.preguntas === 1 ? 'pregunta' : 'preguntas'} y {r.reglas} {r.reglas === 1 ? 'regla' : 'reglas'}</li>
+                <li>{r.prioridades.length} {r.prioridades.length === 1 ? 'estrategia' : 'estrategias'}: {r.prioridades.map(g => `${g.nombre} (${ESTRATEGIA[g.estrategia] || g.estrategia}, ${g.closers} ${g.closers === 1 ? 'closer' : 'closers'}${g.existente ? ', la que ya existe' : ''})`).join(' · ')}</li>
+                <li>Formulario <b>{r.formulario}</b>{r.formulario_existente ? ' (el que ya existe)' : ` con ${r.preguntas} ${r.preguntas === 1 ? 'pregunta' : 'preguntas'} y ${r.reglas} ${r.reglas === 1 ? 'regla' : 'reglas'} de segmentación`}</li>
                 <li>Evento <b>{r.evento}</b> de {r.duracion} min</li>
             </ul>
         </div>
@@ -65,7 +65,8 @@ function Resumen({ r }) {
 
 // Copiar el prompt → la IA devuelve un JSON → pegarlo, revisarlo y aplicarlo. Con `evento`, edita ese
 // evento (y su funnel, formulario y prioridades); sin él, crea un funnel nuevo con todo.
-function ConIA({ evento, onListo }) {
+function ConIA({ evento, funnel, onListo }) {
+    const destino = evento || (funnel ? { funnel } : undefined);
     const ad = almacen.adaptador;
     const [texto, setTexto] = useState('');
     const [paso, setPaso] = useState('editar'); // editar | revisando | listo | aplicando
@@ -75,7 +76,7 @@ function ConIA({ evento, onListo }) {
     if (!ad.promptPaquete) return <p className="t-sm mut">La IA necesita el servidor (no funciona en modo local).</p>;
 
     const copiarPrompt = async () => {
-        try { copiarTexto(await ad.promptPaquete(evento), 'Prompt copiado: pegalo en Claude o ChatGPT'); }
+        try { copiarTexto(await ad.promptPaquete(destino), 'Prompt copiado: pegalo en Claude o ChatGPT'); }
         catch { toast('No se pudo armar el prompt. Revisá la conexión.', 'error'); }
     };
     const enviar = async (simular) => {
@@ -83,7 +84,7 @@ function ConIA({ evento, onListo }) {
         if (error) { setErrores([error]); setResumen(null); return; }
         setPaso(simular ? 'revisando' : 'aplicando');
         try {
-            const r = await ad.importarPaquete(paquete, simular, evento);
+            const r = await ad.importarPaquete(paquete, simular, destino);
             setErrores([]);
             setResumen(r.resumen);
             if (simular) { setPaso('listo'); return; }
@@ -99,9 +100,9 @@ function ConIA({ evento, onListo }) {
     return (
         <div className="ia">
             <p className="t-sm mut">
-                {evento
-                    ? '1. Copiá el prompt: lleva el funnel tal como está. Pegalo en Claude o ChatGPT y contale qué querés cambiar. 2. Pegá acá el JSON que te devuelva.'
-                    : '1. Copiá el prompt y pegalo en Claude o ChatGPT: te va a preguntar por el formulario, la segmentación y los closers. 2. Pegá acá el JSON que te devuelva.'}
+                {evento ? 'Copiá el prompt (lleva el agendamiento como está), contale a la IA qué cambiar y pegá acá el JSON.'
+                    : funnel ? 'Copiá el prompt (lleva este funnel y lo que ya existe para reusar), la IA arma lo que falta y pegá acá el JSON.'
+                        : 'Copiá el prompt, la IA te pregunta lo necesario (y reusa lo que ya existe) y pegá acá el JSON.'}
             </p>
             <button type="button" className="btn btn--cta btn--sm" onClick={copiarPrompt}><Icono n="copiar" />Copiar prompt</button>
             <label className="sr" htmlFor="ia-json">JSON del funnel</label>
@@ -121,7 +122,7 @@ function ConIA({ evento, onListo }) {
                     {paso === 'revisando' ? 'Revisando…' : 'Revisar'}
                 </button>
                 <button type="button" className="btn btn--cta btn--sm" disabled={paso !== 'listo'} onClick={() => enviar(false)}>
-                    <Icono n="check" />{paso === 'aplicando' ? 'Aplicando…' : evento ? 'Aplicar cambios' : 'Crear todo'}
+                    <Icono n="check" />{paso === 'aplicando' ? 'Aplicando…' : evento ? 'Aplicar cambios' : funnel ? 'Completar funnel' : 'Crear todo'}
                 </button>
             </div>
         </div>
@@ -236,7 +237,7 @@ function NuevoFunnel({ d, cerrar }) {
                     <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm" disabled={!nombre.trim()}><Icono n="plus" />Crear</button></div>
                 </form>
             </Bloque>
-            <Bloque titulo="Con IA: el funnel completo, con formulario, prioridades y evento">
+            <Bloque titulo="Con IA: el funnel completo (estrategias, formulario y evento)">
                 <ConIA onListo={conIA} />
             </Bloque>
         </>
@@ -264,8 +265,14 @@ function EditarFunnel({ d, f, cerrar }) {
             <Bloque titulo={f.setting ? 'Links de los setters' : 'Links'}>
                 {f.setting ? <LinksDeSetters d={d} f={f} /> : <Origenes d={d} f={f} />}
             </Bloque>
-            <Bloque titulo="Editar con IA">
-                {!eventos.length ? <p className="t-sm mut">Creá un evento en este funnel para editarlo con IA.</p> : (
+            <Bloque titulo={eventos.length ? 'Editar con IA' : 'Completar con IA'}>
+                {!eventos.length ? (
+                    <ConIA funnel={f.id} onListo={(r) => {
+                        toast('Funnel completo. Revisá el agendamiento y publicalo.');
+                        cerrar();
+                        ui.set({ seccion: 'eventos', ev: { id: r.creados.evento, tab: 'config', nodo: null, calor: true } });
+                    }} />
+                ) : (
                     <>
                         {eventos.length > 1 && (
                             <Seg sm label="Qué agendamiento editar" valor={eventoIA} onChange={setEventoIA}

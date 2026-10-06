@@ -9,9 +9,11 @@ export const TZ_DEF = 'America/La_Paz';
 
 export const SECCIONES = [
     // 'eventos' es la sección Funnels (el inicio): el funnel contiene sus agendamientos (eventos).
+    // Orden de armado: el equipo (estrategias de closers listos) va antes que los formularios (que
+    // segmentan a los leads hacia esas estrategias).
     { id: 'eventos', num: '1', label: 'Funnels', icon: 'funnel' },
-    { id: 'preguntas', num: '2', label: 'Forms', icon: 'pregunta' },
-    { id: 'team', num: '3', label: 'Team', icon: 'users' },
+    { id: 'team', num: '2', label: 'Team', icon: 'users' },
+    { id: 'preguntas', num: '3', label: 'Forms', icon: 'pregunta' },
     { id: 'horas', num: '', label: 'Hours', icon: 'clock' },
     { id: 'estadisticas', num: '4', label: 'Stats', icon: 'chart' },
 ];
@@ -96,7 +98,7 @@ export function detectarPais(tz) {
 // Permisos por rol, agrupados por sección.
 export const PERMISOS = [
     { sec: 'forms', n: 'Forms', ico: 'pregunta', items: [['forms.ver', 'Ver formularios'], ['forms.editar', 'Crear y editar preguntas'], ['forms.ruteo', 'Editar el ruteo']] },
-    { sec: 'team', n: 'Team', ico: 'users', items: [['team.ver', 'Ver el equipo'], ['team.sumar', 'Sumar personas'], ['team.horarios', 'Cambiar horarios de otros'], ['team.prioridades', 'Editar prioridades']] },
+    { sec: 'team', n: 'Team', ico: 'users', items: [['team.ver', 'Ver el equipo'], ['team.sumar', 'Sumar personas'], ['team.horarios', 'Cambiar horarios de otros'], ['team.prioridades', 'Editar estrategias']] },
     { sec: 'events', n: 'Events', ico: 'calendar', items: [['events.ver', 'Ver eventos'], ['events.editar', 'Crear y editar eventos'], ['events.publicar', 'Publicar cambios'], ['events.links', 'Crear links']] },
     { sec: 'stats', n: 'Stats', ico: 'chart', items: [['stats.ver', 'Ver estadísticas']] },
     { sec: 'conf', n: 'Configuración', ico: 'ajustes', items: [['conf.miembros', 'Miembros y roles'], ['conf.funnels', 'Funnels'], ['conf.integraciones', 'Integraciones']] },

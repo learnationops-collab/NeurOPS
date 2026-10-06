@@ -1,6 +1,7 @@
 // Funnels: la pantalla de inicio de Agendamiento. El funnel es el contenedor: cada uno muestra su tipo,
 // sus agendamientos (los eventos que viven adentro) y lo que le falta para recibir agendas, en el orden
-// en que se arma: formulario → equipo → evento → publicado. Tocar un paso pendiente lleva a resolverlo.
+// en que se arma: equipo → formulario (con su segmentación) → evento → publicado. Tocar un paso pendiente
+// lleva a resolverlo.
 // Los agendamientos se crean adentro de su funnel: no hay eventos sueltos. Los que quedaron sin funnel
 // (de antes) se listan aparte para no perderlos.
 // Formularios y Team son bibliotecas que se reutilizan entre funnels (sus secciones del dock).
@@ -26,14 +27,13 @@ function crearAgendamiento(d, f, nombre) {
     }));
 }
 
-// A dónde lleva cada paso pendiente.
-function irAlPaso(d, e, k) {
+// A dónde lleva cada paso pendiente: el equipo a las estrategias de Team; un formulario sin
+// segmentación, a su segmentación; lo demás, al agendamiento.
+function irAlPaso(d, e, k, ok) {
     const fo = buscar(d, 'formularios', e.formulario);
-    if (k === 'equipo' && fo) {
-        almacen.flush();
-        ui.set({ seccion: 'preguntas', form: { id: fo.id, vista: 'ruteo', sel: null } });
-        return;
-    }
+    almacen.flush();
+    if (k === 'equipo') { ui.set(s => ({ seccion: 'team', team: { ...s.team, tab: 'grupos' } })); return; }
+    if (k === 'formulario' && fo && !ok) { ui.set({ seccion: 'preguntas', form: { id: fo.id, vista: 'ruteo', sel: null } }); return; }
     abrirEvento(e.id);
 }
 
@@ -52,7 +52,7 @@ function Agendamiento({ d, e }) {
             <ol className="fu-pasos" aria-label={'Pasos de ' + e.nombre}>
                 {pasos.map(p => (
                     <li key={p.k}>
-                        <button type="button" className={'fu-paso' + (p.ok ? ' fu-paso--ok' : '')} title={p.det} onClick={() => irAlPaso(d, e, p.k)}>
+                        <button type="button" className={'fu-paso' + (p.ok ? ' fu-paso--ok' : '')} title={p.det} onClick={() => irAlPaso(d, e, p.k, p.ok)}>
                             <Icono n={p.ok ? 'check' : 'alerta'} s={13} />{p.n}
                         </button>
                     </li>
@@ -92,7 +92,11 @@ function TarjetaFunnel({ d, f }) {
                 </div>
             </header>
             {est.faltas.length > 0 && <p className="t-sm fu-faltas">{est.faltas.join(' · ')}</p>}
-            {eventos.length > 0 && <ul className="fu-ags">{eventos.map(e => <Agendamiento key={e.id} d={d} e={e} />)}</ul>}
+            {eventos.length > 0 ? <ul className="fu-ags">{eventos.map(e => <Agendamiento key={e.id} d={d} e={e} />)}</ul> : (
+                <button type="button" className="btn btn--linea btn--sm fu-ia" onClick={() => ui.set({ funnel: { id: f.id } })}>
+                    <Icono n="rayo" />Completar con IA
+                </button>
+            )}
             <NuevoAgendamiento d={d} f={f} />
         </article>
     );

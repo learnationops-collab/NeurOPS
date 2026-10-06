@@ -10,7 +10,7 @@ import { setTeam } from './comun';
 
 const TABS = [
     { v: 'personas', n: 'People', icono: 'users' },
-    { v: 'grupos', n: 'Priorities', icono: 'rayo' },
+    { v: 'grupos', n: 'Estrategias', icono: 'rayo' },
     { v: 'available', n: 'Available', icono: 'calendar' },
 ];
 

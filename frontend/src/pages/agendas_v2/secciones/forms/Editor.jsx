@@ -16,7 +16,7 @@ import Previa from './Previa';
 import { ModalImportar, ModalNoCalifica, fuentesImport } from './Modales';
 import { toast } from '../../ui/toast';
 
-const VISTAS = [{ v: 'preguntas', n: 'Questions', icono: 'lista' }, { v: 'ruteo', n: 'Routing', icono: 'flujo' }, { v: 'previa', n: 'Preview', icono: 'ojo' }];
+const VISTAS = [{ v: 'preguntas', n: 'Questions', icono: 'lista' }, { v: 'ruteo', n: 'Segmentación', icono: 'flujo' }, { v: 'previa', n: 'Preview', icono: 'ojo' }];
 
 function cerrarForm() { almacen.flush(); ui.set({ form: null }); window.scrollTo({ top: 0 }); }
 

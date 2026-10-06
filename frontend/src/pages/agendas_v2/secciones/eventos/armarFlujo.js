@@ -75,7 +75,7 @@ export function armarFlujo(d, e, reach, calor) {
         const rutas = fo
             ? fo.reglas.map((rg, i) => ({ t: 'Regla ' + (i + 1) + ' → ' + nombreGrupo(d, rg.grupo), g: rg.grupo })).concat([{ t: 'Todo lo demás → ' + nombreGrupo(d, fo.resto), g: fo.resto }])
             : [{ t: 'Todos', g: '' }];
-        const nf = nodo({ id: 'calif', col: col++, y: 60, tipo: 'Función', c: 'var(--brand-secondary)', ico: 'rayo', tit: 'Elegir prioridad por respuestas', filas: rutas.map(x => ({ t: x.t })), calor: rFin(2) });
+        const nf = nodo({ id: 'calif', col: col++, y: 60, tipo: 'Función', c: 'var(--brand-secondary)', ico: 'rayo', tit: 'Segmentar por respuestas', filas: rutas.map(x => ({ t: x.t })), calor: rFin(2) });
         unir(prev, nf);
         if (hayNo()) nodoNo(nf);
         const gcol = col++, ngs = [], porG = {}, grupos = ord(d, 'grupos');
@@ -85,8 +85,8 @@ export function armarFlujo(d, e, reach, calor) {
             const g = buscar(d, 'grupos', rt.g);
             const ms = g ? g.miembros.map(id => buscar(d, 'personas', id)).filter(Boolean) : [];
             const ng = nodo({
-                id: 'g-' + (g ? g.id : i), g: g ? g.id : null, col: gcol, y: gy, tipo: 'Prioridad ' + (g ? grupos.indexOf(g) + 1 : ''), c: 'var(--warning)', ico: 'users',
-                tit: g ? g.nombre : 'Sin prioridad', var_: g ? ESTRATEGIAS[g.estrategia] : '',
+                id: 'g-' + (g ? g.id : i), g: g ? g.id : null, col: gcol, y: gy, tipo: 'Estrategia ' + (g ? grupos.indexOf(g) + 1 : ''), c: 'var(--warning)', ico: 'users',
+                tit: g ? g.nombre : 'Sin estrategia', var_: g ? ESTRATEGIAS[g.estrategia] : '',
                 filas: ms.length ? ms.map((p, j) => ({ t: (j + 1) + '. ' + p.nombre, pts: 'Top ' + p.nivel })) : [{ t: 'Sin closers' }],
             });
             aristas.push([nf, i, ng, 'fn']);

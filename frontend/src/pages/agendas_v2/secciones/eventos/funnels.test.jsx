@@ -30,12 +30,13 @@ describe('Funnels', () => {
         const { d } = almacen.getState();
         expect(pasosAgendamiento(d, buscar(d, 'eventos', evListo)).map(p => p.ok)).toEqual([true, true, true, true]);
         const borrador = pasosAgendamiento(d, buscar(d, 'eventos', evBorrador));
-        expect(borrador.map(p => p.k)).toEqual(['formulario', 'equipo', 'evento', 'publicado']);
-        expect(borrador.filter(p => !p.ok).map(p => p.n)).toEqual(['Sin formulario', 'Sin equipo', 'Borrador']);
+        expect(borrador.map(p => p.k)).toEqual(['equipo', 'formulario', 'evento', 'publicado']);
+        // Ana tiene horario en la estrategia Ultra: el equipo está; falta el formulario y publicar.
+        expect(borrador.filter(p => !p.ok).map(p => p.n)).toEqual(['Sin formulario', 'Borrador']);
 
         const listo = estadoFunnel(d, buscar(d, 'funnels', fuListo));
         expect(listo.listo).toBe(true);  // con un agendamiento completo ya recibe agendas
-        expect(listo.faltas).toEqual(['Falta: formulario, equipo, publicar']);
+        expect(listo.faltas).toEqual(['Falta: formulario, publicar']);
         expect(estadoFunnel(d, buscar(d, 'funnels', fuVacio))).toMatchObject({ listo: false, faltas: ['Sin agendamientos'] });
     });
 
@@ -52,7 +53,7 @@ describe('Funnels', () => {
         expect(ui.getState().ev).toMatchObject({ id: nuevo.id });  // abre el agendamiento para seguir armándolo
     });
 
-    it('un paso de equipo pendiente lleva al ruteo del formulario', () => {
+    it('un formulario sin segmentación lleva a su segmentación', () => {
         act(() => {
             const fo = almacen.getState().d.formularios[0];
             almacen.editar('eventos', evBorrador, { formulario: fo.id }, true);
@@ -60,7 +61,7 @@ describe('Funnels', () => {
         });
         render(envolver(<ListaFunnels />));
         const pasos = screen.getByRole('list', { name: 'Pasos de Seguimiento' });
-        fireEvent.click(within(pasos).getByRole('button', { name: /Sin equipo/ }));
+        fireEvent.click(within(pasos).getByRole('button', { name: /Sin segmentación/ }));
         expect(ui.getState()).toMatchObject({ seccion: 'preguntas', form: { vista: 'ruteo' } });
     });
 });

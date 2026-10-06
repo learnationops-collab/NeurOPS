@@ -13,7 +13,7 @@ export function colorNivel(n) {
 
 // Opciones del desplegable de prioridad (las mismas en reglas y en "Todo lo demás").
 export function opcionesPrioridad(d) {
-    return [{ v: '', n: 'Elegí prioridad', icono: 'rayo', color: 'var(--idle)' }]
+    return [{ v: '', n: 'Elegí estrategia', icono: 'rayo', color: 'var(--idle)' }]
         .concat(ord(d, 'grupos').map((g, i) => ({ v: g.id, n: (i + 1) + ' · ' + g.nombre, icono: 'estrella', color: colorNivel(i + 1) })));
 }
 
