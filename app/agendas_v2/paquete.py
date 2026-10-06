@@ -21,7 +21,7 @@ import json
 from app import db
 from app.agendas_v2.modelos import MODELOS
 from app.agendas_v2.nucleo.catalogos import DURACIONES, ESTRATEGIAS
-from app.agendas_v2.nucleo.datos import buscar, es_closer
+from app.agendas_v2.nucleo.datos import buscar, es_closer, rol_closer
 from app.agendas_v2.nucleo.normalizar import NORM, TIPOS_FUNNEL
 from app.agendas_v2.nucleo.util import slugify, uid
 
@@ -78,10 +78,36 @@ EJEMPLO = {
 }
 
 
+LAV = {str(dia): ([['09:00', '18:00']] if 1 <= dia <= 5 else []) for dia in range(7)}
+
+
+def _closers_app():
+    """Los closers activos de la app: {email: {nombre, email, tz, calendar, whatsapp}}."""
+    from app.agendas_v2.servicio import usuarios_del_equipo
+    from app.models.user import ROLE_CLOSER
+
+    return {u['email']: u for u in usuarios_del_equipo((ROLE_CLOSER,)) if u['email']}
+
+
 def _equipo(d):
-    closers = [p for p in d['personas'] if es_closer(d, p) and p.get('email')]
-    filas = [f'- {p["nombre"]} <{p["email"]}> (closer)' for p in closers]
-    return '\n'.join(filas) or '- (Team está vacío: sumá a los closers en Thalamus › Team antes de importar)'
+    """Los closers que la IA puede usar: los de Team y los de la app que todavía no están (se suman
+    solos al importar), con lo que les falta para recibir agendas."""
+    from app.agendas_v2.nucleo.datos import horas_semana
+
+    app = _closers_app()
+    en_team = {(p.get('email') or '').lower(): p for p in d['personas'] if p.get('email') and es_closer(d, p)}
+    filas = []
+    for email in sorted(set(app) | set(en_team)):
+        u, p = app.get(email), en_team.get(email)
+        nombre = (p or {}).get('nombre') or (u or {}).get('nombre') or email
+        horario = bool(p and horas_semana(p))
+        estado = [
+            'Calendar ✓' if u and u['calendar'] else 'sin Calendar',
+            'WhatsApp ✓' if u and u['whatsapp'] else 'sin WhatsApp',
+            'horarios ✓' if horario else ('sin horarios' if p else 'no está en Team: se suma con horario de lunes a viernes de 9 a 18'),
+        ]
+        filas.append(f'- {nombre} <{email}> (closer) · ' + ' · '.join(estado))
+    return '\n'.join(filas) or '- (no hay closers activos en la app)'
 
 
 TAREA_CREAR = """Sos un asistente que configura funnels de agendamiento en «Learnation Thalamus» (el sistema de agendas de Learnation, que reemplaza a Calendly + Typeform).
@@ -140,6 +166,17 @@ def _existente(d):
     for f in d['formularios']:
         destinos = sorted({nombre_g.get(r['grupo'], '?') for r in f['reglas']} | ({nombre_g.get(f['resto'], '?')} if f.get('resto') else set()))
         formularios.append(f'- "{f["nombre"]}": {len(f["preguntas"])} preguntas; segmenta a: {", ".join(destinos) or "(sin segmentación)"}')
+        # Su segmentación, para copiarla o adaptarla en un formulario nuevo.
+        preguntas = {q['id']: q for q in f['preguntas']}
+        for r in f['reglas']:
+            conds = []
+            for c in r['cond']:
+                q = preguntas.get(c['q'])
+                textos = [next((o['texto'] for o in (q or {}).get('opciones', []) if o['id'] == x), x) for x in c['ops']]
+                conds.append(f'"{q["titulo"] if q else c["q"]}" es {" o ".join(textos)}')
+            formularios.append(f'    · si {" y ".join(conds)} → {nombre_g.get(r["grupo"], "?")}')
+        if f.get('resto'):
+            formularios.append(f'    · el resto → {nombre_g.get(f["resto"], "?")}')
     return (
         '## Lo que ya existe en Thalamus (podés reusarlo)\n'
         'Para reusar algo, en vez de definirlo poné {"usar": "<nombre exacto>"}: en "formulario" (reusa ese formulario con su segmentación) o como un elemento de "prioridades" (reusa esa estrategia tal como está). Lo reusado no se modifica. Si reusás un formulario, sus reglas ya apuntan a sus estrategias: no hace falta listarlas.\n'
@@ -170,7 +207,8 @@ def prompt(d, actual=None, completar=None):
 - Los "puntos" (0 a 10) de cada opción y el "peso" (0 a 5) de cada pregunta arman una nota del lead que ve el closer. No rutean.
 - Los horarios de cada closer NO van en el JSON: cada closer ya tiene su horario en Team.
 
-## Equipo disponible (usá EXACTAMENTE estos emails; no inventes personas)
+## Closers disponibles (usá EXACTAMENTE estos emails; no inventes personas)
+Si uno no está en Team se suma solo al importar. Para que reciba agendas necesita Calendar y WhatsApp (los confirma cada closer en su Configuración de NeurOPS) y horarios; preferí a los que ya tienen todo y avisame si elegís a alguien al que le falta algo.
 {_equipo(d)}
 
 ## Formato del JSON
@@ -235,6 +273,8 @@ def revisar(d, paquete, editando=None, en_funnel=None):
         errores.append(f'"paquete_thalamus" tiene que ser {VERSION}.')
 
     personas_por_email = {(x.get('email') or '').lower(): x for x in d['personas'] if x.get('email')}
+    app = _closers_app()
+    personas_nuevas = {}
 
     # Funnel
     fu = _obj(p.get('funnel'))
@@ -281,9 +321,17 @@ def revisar(d, paquete, editando=None, en_funnel=None):
         miembros = []
         for email in _lista(g.get('closers')):
             persona = personas_por_email.get(_txt(email).lower())
+            u = app.get(_txt(email).lower())
+            if not persona and u:
+                # Un closer de la app que no está en Team: se suma (con su zona y lunes a viernes de 9 a 18).
+                persona = personas_nuevas.get(u['email']) or {
+                    'id': uid('d'), 'nombre': u['nombre'], 'email': u['email'], 'rol': rol_closer(d),
+                    'tz': u['tz'], 'horario': LAV, 'nuevo': True,
+                }
+                personas_nuevas[u['email']] = persona
             if not persona:
-                errores.append(f'prioridades[{i}] ({nombre}): "{email}" no está en Team.')
-            elif not es_closer(d, persona):
+                errores.append(f'prioridades[{i}] ({nombre}): "{email}" no es un closer activo de la app.')
+            elif not persona.get('nuevo') and not es_closer(d, persona):
                 errores.append(
                     f'prioridades[{i}] ({nombre}): {persona["nombre"]} no tiene un rol que atienda llamadas.'
                 )
@@ -386,6 +434,7 @@ def revisar(d, paquete, editando=None, en_funnel=None):
         return None, errores
     return {
         'prioridades': prioridades,
+        'personas_nuevas': [{k: v for k, v in x.items() if k != 'nuevo'} for x in personas_nuevas.values()],
         'usadas': [{'id': g['id'], 'nombre': g['nombre'], 'estrategia': g['estrategia'], 'miembros': g['miembros']} for g in usadas],
         'formulario_usado': {'id': fo_usado['id'], 'nombre': fo_usado['nombre']} if fo_usado else None,
         'formulario': ({'nombre': fo_usado['nombre'], 'preguntas': fo_usado['preguntas'], 'reglas': fo_usado['reglas']} if fo_usado
@@ -414,6 +463,7 @@ def resumen(plan):
         ],
         'formulario': fo['nombre'],
         'formulario_existente': bool(plan.get('formulario_usado')),
+        'personas_nuevas': [x['nombre'] for x in plan.get('personas_nuevas', [])],
         'preguntas': len(fo['preguntas']),
         'reglas': len(fo['reglas']),
         'evento': ev['nombre'],
@@ -426,6 +476,20 @@ def resumen(plan):
 
 def _siguiente_orden(d, col):
     return max([x.get('orden') or 0 for x in d[col]] or [0]) + 1
+
+
+def _sumar_personas(d, plan, usuario_id):
+    """Suma a Team a los closers de la app que el paquete usa y no estaban (unidos a su cuenta)."""
+    from app.agendas_v2.servicio import _email_de_cuenta
+
+    orden = _siguiente_orden(d, 'personas')
+    for i, x in enumerate(plan.get('personas_nuevas', [])):
+        doc = NORM['personas'](x['id'], {**x, 'orden': orden + i})
+        fila = MODELOS['personas'](id=x['id'], datos={k: v for k, v in doc.items() if k != 'id'}, orden=doc['orden'])
+        fila.email = doc['email'] or None
+        fila.user_id = _email_de_cuenta(fila.email)
+        fila.actualizado_por_id = usuario_id
+        db.session.add(fila)
 
 
 def importar(d, plan, usuario_id=None, en_funnel=None):
@@ -443,6 +507,7 @@ def importar(d, plan, usuario_id=None, en_funnel=None):
         db.session.add(fila)
         return doc
 
+    _sumar_personas(d, plan, usuario_id)
     orden = _siguiente_orden(d, 'grupos')
     for i, g in enumerate(plan['prioridades']):
         crear('grupos', g['id'], {**g, 'orden': orden + i})
@@ -576,6 +641,7 @@ def aplicar(d, plan, evento_id, usuario_id=None):
         fila.orden = doc.get('orden') or 0
         fila.actualizado_por_id = usuario_id
 
+    _sumar_personas(d, plan, usuario_id)
     for g in plan['prioridades']:
         escribir('grupos', g['id'], {k: g[k] for k in ('nombre', 'estrategia', 'miembros')})
     # Un formulario reusado ({"usar": …}) pasa a ser el del evento, sin tocarlo; si no, se edita el suyo.

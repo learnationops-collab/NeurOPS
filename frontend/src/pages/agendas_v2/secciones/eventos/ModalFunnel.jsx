@@ -58,6 +58,7 @@ function Resumen({ r }) {
                 <li>{r.prioridades.length} {r.prioridades.length === 1 ? 'estrategia' : 'estrategias'}: {r.prioridades.map(g => `${g.nombre} (${ESTRATEGIA[g.estrategia] || g.estrategia}, ${g.closers} ${g.closers === 1 ? 'closer' : 'closers'}${g.existente ? ', la que ya existe' : ''})`).join(' · ')}</li>
                 <li>Formulario <b>{r.formulario}</b>{r.formulario_existente ? ' (el que ya existe)' : ` con ${r.preguntas} ${r.preguntas === 1 ? 'pregunta' : 'preguntas'} y ${r.reglas} ${r.reglas === 1 ? 'regla' : 'reglas'} de segmentación`}</li>
                 <li>Evento <b>{r.evento}</b> de {r.duracion} min</li>
+                {r.personas_nuevas && r.personas_nuevas.length > 0 && <li>Se suman a Team: <b>{r.personas_nuevas.join(', ')}</b> (de lunes a viernes de 9 a 18; ajustalo en Team)</li>}
             </ul>
         </div>
     );

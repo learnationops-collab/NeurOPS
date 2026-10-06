@@ -116,7 +116,7 @@ def test_importar_dos_veces_no_pisa_nada(client, equipo, dir_h):
     'cambios, esperado',
     [
         ({'paquete_thalamus': 2}, '"paquete_thalamus" tiene que ser 1'),
-        ({'prioridades__0__closers': ['nadie@x.com']}, 'prioridades[0] (Ultra): "nadie@x.com" no está en Team'),
+        ({'prioridades__0__closers': ['nadie@x.com']}, 'prioridades[0] (Ultra): "nadie@x.com" no es un closer activo de la app'),
         ({'prioridades__0__closers': ['setter@empresa.com']}, 'Juan no tiene un rol que atienda llamadas'),
         ({'prioridades__1__nombre': 'Ultra'}, 'el nombre "Ultra" está repetido'),
         ({'formulario__reglas__0__prioridad': 'VIP'}, 'la prioridad "VIP" no está en "prioridades"'),
@@ -257,3 +257,26 @@ def test_completar_un_funnel_sin_agendamientos(client, equipo, dir_h):
     (ev,) = d['eventos']
     assert ev['funnel'] == 'fv' and ev['publicado'] == ''
     assert client.get(URL + '/prompt?funnel=nada', headers=dir_h).status_code == 404
+
+
+def test_un_closer_de_la_app_que_no_esta_en_team_se_suma_solo(client, equipo, dir_h, make_user):
+    make_user(role='closer', username='santiago', email='santiago@x.com')
+    texto = client.get(URL + '/prompt', headers=dir_h).get_json()['prompt']
+    assert 'santiago <santiago@x.com> (closer) · sin Calendar · sin WhatsApp · no está en Team' in texto
+
+    p = _paquete(prioridades__0__closers=['santiago@x.com'], prioridades__1__closers=['santiago@x.com', 'closer1@empresa.com'])
+    r = client.post(URL, json={'paquete': p}, headers=dir_h)
+    assert r.status_code == 201 and r.get_json()['resumen']['personas_nuevas'] == ['santiago']
+    d = servicio.colecciones()
+    santi = next(x for x in d['personas'] if x['email'] == 'santiago@x.com')  # una sola vez, aunque esté en dos
+    assert sum(x['email'] == 'santiago@x.com' for x in d['personas']) == 1
+    assert santi['horario'][1] == [['09:00', '18:00']] and santi['horario'][6] == []
+    ultra, general = d['grupos']
+    assert ultra['miembros'] == [santi['id']] and general['miembros'] == [santi['id'], 'p1']
+
+
+def test_el_prompt_trae_la_segmentacion_de_los_formularios(client, equipo, dir_h):
+    _importado(client, dir_h)
+    texto = client.get(URL + '/prompt', headers=dir_h).get_json()['prompt']
+    assert '· si "¿Cuánto podrías invertir en tu formación?" es Más de 1000 USD → Ultra' in texto
+    assert '· el resto → General' in texto
