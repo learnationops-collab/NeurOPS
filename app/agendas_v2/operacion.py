@@ -198,20 +198,17 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None):
     return appt, None
 
 
+INDICACIONES_POR_DEFECTO = (
+    'Entrá a la videollamada con el link de Google Meet de esta invitación a la hora indicada, '
+    'desde un lugar tranquilo y con buena conexión.'
+)
+
+
 def _descripcion(payload):
-    lead = payload.get('lead') or {}
-    lineas = [f'Lead: {lead.get("nombre") or "-"}']
-    for etiqueta, k in (('WhatsApp', 'telefono'), ('Email', 'email'), ('Instagram', 'instagram')):
-        if lead.get(k):
-            lineas.append(f'{etiqueta}: {lead[k]}')
-    respuestas = [r for r in payload.get('respuestas') or [] if r.get('respuesta')]
-    if respuestas:
-        lineas += ['', 'Formulario:'] + [f'• {r["pregunta"]}: {r["respuesta"]}' for r in respuestas]
-    if payload.get('nota') is not None:
-        lineas += ['', f'Nota: {payload["nota"]}']
-    if payload.get('origen'):
-        lineas.append(f'Origen: {payload["origen"]}')
-    return '\n'.join(lineas)
+    """La descripción del evento, que también ve el lead en su invitación: solo las indicaciones para
+    la sesión que configura la dirección en el evento (Thalamus › Events › Indicaciones). Los datos y
+    las respuestas del lead NO van acá: el closer los ve en NeurOPS."""
+    return (payload.get('indicaciones') or '').strip() or INDICACIONES_POR_DEFECTO
 
 
 def crear_evento(appt, nombre_evento, evento_a_borrar=None):

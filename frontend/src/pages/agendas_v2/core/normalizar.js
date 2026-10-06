@@ -144,6 +144,8 @@ export function normalEvento(id, d) {
         paso: { n: entero(pa.n, 1, 720, dur <= 30 ? 30 : 60), u: pa.u === 'h' ? 'h' : 'min', pers: pa.pers === true },
         zona: { modo: zn.modo === 'fija' ? 'fija' : 'auto', tz: zonaValida(zn.tz) ? zn.tz : TZ_DEF },
         desc: limpiarHTML(d.desc), redir: urlOk(d.redir),
+        // Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).
+        indic: typeof d.indic === 'string' ? d.indic.slice(0, 2000) : '',
     };
 }
 

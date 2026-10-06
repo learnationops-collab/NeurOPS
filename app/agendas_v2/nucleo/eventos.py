@@ -25,6 +25,7 @@ CAMPOS_EV = [
     'zona',
     'desc',
     'redir',
+    'indic',
 ]
 CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin']
 

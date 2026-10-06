@@ -280,6 +280,8 @@ def normal_evento(id, d):
         },
         'desc': limpiar_html(d.get('desc')),
         'redir': url_ok(d.get('redir')),
+        # Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).
+        'indic': cortar(d['indic'], 2000) if isinstance(d.get('indic'), str) else '',
     }
 
 

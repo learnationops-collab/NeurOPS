@@ -6,7 +6,7 @@ import { normalEvento, normalForm } from './normalizar';
 import { fechaCorta } from './tiempo';
 import { fmt } from './util';
 
-const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir'];
+const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'indic'];
 const CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin'];
 const tomar = (o, ks) => ks.reduce((a, k) => { a[k] = o[k]; return a; }, {});
 

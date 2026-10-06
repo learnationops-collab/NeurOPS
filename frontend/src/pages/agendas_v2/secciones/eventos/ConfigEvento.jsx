@@ -44,6 +44,23 @@ function Num({ id, valor, min, max, label, onGuardar }) {
     );
 }
 
+// Lo que el lead lee en su invitación de Google Calendar: qué tener listo para la sesión. Texto
+// plano; vacío usa un texto genérico (operacion.INDICACIONES_POR_DEFECTO). Sus datos y respuestas
+// no van en la invitación.
+function IndicacionesVivas({ e }) {
+    const b = useBorrador(e.indic || '');
+    return (
+        <div style={{ flex: '1 1 100%', minWidth: 0 }}>
+            <textarea id="ev-indic" className="input" rows={4} maxLength={2000} aria-label="Indicaciones para el lead"
+                placeholder="Ej.: Tené a mano tu último resumen de ingresos y conectate desde una computadora."
+                value={b.value} style={{ width: '100%', resize: 'vertical' }}
+                onChange={ev => { b.set(ev.target.value); almacen.editar('eventos', e.id, { indic: ev.target.value }); }}
+                onBlur={() => { b.soltar(); almacen.flush(); }} />
+            <p className="t-xs mut" style={{ marginTop: 4 }}>Van en la invitación de Google Calendar que recibe el lead.</p>
+        </div>
+    );
+}
+
 function General({ d, e, f, cm }) {
     const fs = ord(d, 'funnels'), fos = ord(d, 'formularios');
     const cambiarFunnel = (v) => {
@@ -77,6 +94,9 @@ function General({ d, e, f, cm }) {
             <Fila l="Duración">
                 <Seg sm label="Duración" valor={e.duracion} onChange={v => almacen.editar('eventos', e.id, { duracion: v }, true)}
                     opciones={DURACIONES.map(m => ({ v: m, n: m + ' min' }))} />
+            </Fila>
+            <Fila l="Indicaciones" cls="ffila--top">
+                <IndicacionesVivas e={e} />
             </Fila>
             <Fila l="Link" cls="ffila--top">
                 <div className="entrada" style={{ flex: '1 1 100%', minWidth: 0 }}>

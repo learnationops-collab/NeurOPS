@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.agendas_v2 import api_publico, servicio
+from app.agendas_v2 import operacion, api_publico, servicio
 from app.agendas_v2.nucleo.eventos import config_de
 from app.models import Appointment, Client, GoogleCalendarToken, Notification
 from app.models.financial import FinancialAgenda
@@ -232,8 +232,18 @@ def test_reservar_crea_la_agenda_en_la_operacion(client, armado, cuentas, google
     (evt,) = google['crear']
     assert evt['user_id'] == cuentas['ana'].id and evt['invitado'] == 'lucia@correo.com'
     assert evt['fin'] - evt['inicio'] == timedelta(minutes=45)
-    assert evt['titulo'] == 'Llamada: Lucía Fernández y ana' and '¿Cuánto?: Mucho' in evt['descripcion']
+    assert evt['titulo'] == 'Llamada: Lucía Fernández y ana'
+    # El lead ve la descripción en su invitación: solo indicaciones, nunca sus datos ni sus respuestas.
+    assert evt['descripcion'] == operacion.INDICACIONES_POR_DEFECTO
     assert appt.google_event_id == 'evt1' and appt.agenda_payload['meet'] == 'https://meet.google.com/abc-defg-hij'
+
+
+def test_la_invitacion_lleva_las_indicaciones_del_evento(client, armado, google):
+    servicio.guardar_doc('eventos', 'ev', {'indic': 'Tené a mano tu último resumen bancario.'}, parcial=True)
+    _publicar('ev')
+    assert _reservar(client).status_code == 201
+    (evt,) = google['crear']
+    assert evt['descripcion'] == 'Tené a mano tu último resumen bancario.'
 
 
 def test_la_agenda_nueva_ocupa_lo_que_dura_el_evento(client, armado):

@@ -461,6 +461,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     payload = {
         **armar_reserva(**base, asig=asig, slot=slot),
         'evento_nombre': evento['nombre'],
+        'indicaciones': evento.get('indic') or '',
         'prioridad_nombre': asig['grupo']['nombre'] if asig.get('grupo') else None,
         'closer_user_id': closer.id,
         'setter_user_id': setter.id if setter else None,
