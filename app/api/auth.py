@@ -205,6 +205,55 @@ def mi_disponibilidad():
     return jsonify(servicio.disponibilidad_de(current_user)), 200
 
 
+@bp.route('/auth/me/foto', methods=['GET', 'PUT'])
+@login_required
+def mi_foto():
+    """La foto de la cuenta (la ve el lead en su consultor y el equipo en Team). PUT {foto}: data URL
+    JPG/PNG/WEBP chica, o '' para sacarla."""
+    from app.agendas_v2 import servicio
+    if request.method == 'PUT':
+        datos = request.get_json(silent=True) or {}
+        try:
+            return jsonify({'foto': servicio.guardar_foto(current_user, datos.get('foto') or '')}), 200
+        except ValueError as e:
+            return jsonify({"message": str(e)}), 400
+    return jsonify({'foto': servicio.foto_de(current_user)}), 200
+
+
+@bp.route('/auth/me/eventos', methods=['GET'])
+@login_required
+def mis_eventos():
+    """Los eventos propios del closer en Agendamiento (link directo con él) y los formularios que puede usar."""
+    from app.agendas_v2 import servicio
+    if not current_user.tiene_rol('closer'):
+        return jsonify({"message": "Solo los closers tienen eventos propios"}), 403
+    return jsonify(servicio.eventos_de_closer(current_user)), 200
+
+
+@bp.route('/auth/me/eventos/<evento_id>', methods=['PUT', 'DELETE'])
+@login_required
+def mi_evento(evento_id):
+    """Crea, edita (y publica) o borra un evento propio. Nunca toca los de otros. PUT {nombre, duracion,
+    formulario ('' = solo datos de contacto), activo, desc, redir, indic, reservas, antel, paso, zona}."""
+    import re
+    from app.agendas_v2 import servicio
+    if not current_user.tiene_rol('closer'):
+        return jsonify({"message": "Solo los closers tienen eventos propios"}), 403
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', evento_id or ''):
+        return jsonify({"message": "Not found"}), 404
+    try:
+        if request.method == 'DELETE':
+            servicio.borrar_evento_de_closer(current_user, evento_id)
+            return jsonify({'ok': True}), 200
+        datos = request.get_json(silent=True)
+        evento = servicio.guardar_evento_de_closer(current_user, evento_id, datos if isinstance(datos, dict) else {})
+        return jsonify({'evento': evento}), 200
+    except PermissionError as e:
+        return jsonify({"message": str(e)}), 403
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
+
+
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
     logout_user()

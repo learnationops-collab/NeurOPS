@@ -177,13 +177,16 @@ def revision(d, e):
             if f.get('activo')
             else [0, 'Funnel ' + f['nombre'] + ' pausado', 'Activalo en Configuración']
         )
+    elif e.get('persona'):
+        out.append([1, 'Sin funnel', 'Link directo'])
     else:
         out.append([0, 'Falta el funnel', 'Elegilo arriba'])
-    out.append(
-        [1, 'Formulario ' + fo['nombre'], str(len(fo['preguntas']) + 4) + ' preguntas']
-        if fo
-        else [0, 'Falta el formulario', 'Elegilo arriba']
-    )
+    if fo:
+        out.append([1, 'Formulario ' + fo['nombre'], str(len(fo['preguntas']) + 4) + ' preguntas'])
+    elif e.get('persona'):
+        out.append([1, 'Sin formulario', 'Pide solo los datos de contacto'])
+    else:
+        out.append([0, 'Falta el formulario', 'Elegilo arriba'])
     if e.get('persona'):
         pf = buscar(d, 'personas', e['persona'])
         if not pf:
