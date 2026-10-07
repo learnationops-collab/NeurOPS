@@ -143,6 +143,24 @@ def ver_assistant_application(app_id):
     return jsonify(data), 200
 
 
+@bp.route('/assistant-applications/<int:app_id>', methods=['DELETE'])
+@login_required
+@hiring_required
+def eliminar_assistant_application(app_id):
+    """Borra de verdad la postulación (registros indeseados: pruebas, spam,
+    duplicados). No hay papelera ni restauración: el panel difiere la llamada
+    durante su ventana de «Deshacer»."""
+    app_row = AssistantApplication.query.get_or_404(app_id)
+    try:
+        db.session.delete(app_row)
+        db.session.commit()
+        return jsonify({"status": "success", "id": app_id}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.error("[assistant-applications] Error al eliminar %s: %s", app_id, e)
+        return jsonify({"message": "Error interno al eliminar la postulación"}), 500
+
+
 @bp.route('/assistant-applications/<int:app_id>/estado', methods=['POST'])
 @login_required
 @hiring_required

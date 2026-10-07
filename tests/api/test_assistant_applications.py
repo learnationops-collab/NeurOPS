@@ -104,3 +104,47 @@ def test_el_total_cuenta_solo_las_postulaciones_completas(client, auth_headers, 
 def test_el_total_sigue_la_modalidad(client, auth_headers, admin, postulaciones):
     assert pedir(client, auth_headers, admin, modalidad='hibrido').get_json()['total'] == 2
     assert pedir(client, auth_headers, admin, modalidad='online').get_json()['total'] == 3
+
+
+# --- Eliminar ---------------------------------------------------------------------------------
+
+@pytest.mark.parametrize('rol', ['admin', 'hiring'])
+def test_borra_de_verdad_la_postulacion(client, auth_headers, make_user, postulaciones, rol):
+    objetivo = postulaciones[0]
+    quedan = AssistantApplication.query.count() - 1
+
+    respuesta = client.delete(f'{LISTA}/{objetivo.id}', headers=auth_headers(make_user(role=rol)))
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json() == {'status': 'success', 'id': objetivo.id}
+    assert AssistantApplication.query.get(objetivo.id) is None
+    assert AssistantApplication.query.count() == quedan
+
+
+def test_borrar_una_que_no_existe_da_404(client, auth_headers, admin, postulaciones):
+    respuesta = client.delete(f'{LISTA}/99999', headers=auth_headers(admin))
+
+    assert respuesta.status_code == 404
+    assert AssistantApplication.query.count() == len(postulaciones)
+
+
+def test_borrar_una_ya_borrada_da_404(client, auth_headers, admin, postulaciones):
+    ruta = f'{LISTA}/{postulaciones[0].id}'
+    assert client.delete(ruta, headers=auth_headers(admin)).status_code == 200
+
+    assert client.delete(ruta, headers=auth_headers(admin)).status_code == 404
+
+
+def test_sin_sesion_no_borra(client, postulaciones):
+    respuesta = client.delete(f'{LISTA}/{postulaciones[0].id}')
+
+    assert respuesta.status_code == 401
+    assert AssistantApplication.query.count() == len(postulaciones)
+
+
+@pytest.mark.parametrize('rol', ['operator', 'closer', 'setter', 'triage', 'director_comercial', 'director_marketing'])
+def test_los_roles_sin_acceso_a_hiring_no_borran(client, auth_headers, make_user, postulaciones, rol):
+    respuesta = client.delete(f'{LISTA}/{postulaciones[0].id}', headers=auth_headers(make_user(role=rol)))
+
+    assert respuesta.status_code == 403
+    assert AssistantApplication.query.count() == len(postulaciones)
