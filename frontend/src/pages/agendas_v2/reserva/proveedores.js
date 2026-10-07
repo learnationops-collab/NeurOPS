@@ -19,7 +19,7 @@
 //   avance({evento, resp, origen, enCalendario, datosGuardados})  (solo API) el lead avanzó un paso
 //       después de dejar sus datos: queda para Stats (dónde se caen). Nunca falla ni frena al lead.
 //   cargarEvento(funnelSlug, eventoSlug)   (solo API) → {evento, form, funnel}; rechaza 'no_disponible' o 'fallo'
-//   conocido({evento, email})  → Promise<{conocido, completos, datos: {nombre, telefono, instagram} (tapados),
+//   conocido({evento, email})  → Promise<{conocido, completos, datos: {nombre, nombre_completo, telefono, instagram} (tapados),
 //       proxima: {inicio (ms)} | null, resp?}>. El lead que ya agendó antes: no se le piden de nuevo sus
 //       datos. resp (solo local): las respuestas de contacto completas; en la API las pone el servidor.
 //   reservar(...) devuelve {reserva: {…, consultor: {nombre, color}}} en la API y la reserva en local.
@@ -30,11 +30,12 @@ import { buscar } from '../core/datos';
 import { armarReserva } from '../core/reserva';
 import { opcionesDeOcupacion } from '../data/ocupacion';
 
-// Lo que el lead que vuelve ve de sus datos: el primer nombre y lo demás tapado (igual que el servidor).
+// Lo que el lead que vuelve ve de sus datos: su nombre (se precarga) y el contacto tapado (igual que el servidor).
 export function datosTapados(lead) {
     const tel = String(lead.telefono || '').replace(/\D/g, ''), ig = String(lead.instagram || '');
     return {
         nombre: String(lead.nombre || '').split(' ')[0],
+        nombre_completo: String(lead.nombre || ''),
         telefono: tel ? '+' + tel.slice(0, 2) + ' ••• ' + tel.slice(-3) : '',
         instagram: ig ? '@' + ig.slice(0, 2) + '•••' : '',
     };

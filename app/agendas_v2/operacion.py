@@ -28,6 +28,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models import Appointment, Client, Notification, User
 from app.models.financial import FinancialAgenda
+from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono
 
 # Resultados de una Appointment que ya no ocupan el horario del closer. Incluye las dos grafias que
 # hay en la base: las que pone el closer (Cancelada/Reprogramada) y las del sync de n8n (Cancelado/Reagendado).
@@ -323,20 +324,34 @@ def _corto(texto, n):
     return texto if len(texto) <= n else texto[: n - 1] + '…'
 
 
+def zona_del_lead(lead):
+    """(zona, país) del lead para mostrarle la hora al equipo. Manda el país del WhatsApp: la zona del
+    navegador puede caer en la del equipo (Bolivia) aunque el número sea de otro país. Si la zona que
+    eligió el lead es de ese mismo país (Brasil, México, EE. UU. tienen varias), se respeta."""
+    tz = lead.get('tz')
+    pais = pais_por_telefono(lead.get('telefono')) or pais_de(lead.get('pais'))
+    zonas = [z[0] for z in pais['z']]
+    try:
+        return ZoneInfo(tz if tz in zonas else zonas[0]), pais
+    except Exception:  # noqa: BLE001
+        return ZoneInfo(ZONA_EQUIPO), pais_de('BO')
+
+
 def aviso_discord(appt):
     """El mensaje para Discord de una agenda de Agendas 2.0 (embed con lead, closer, horario y formulario)."""
     payload = appt.agenda_payload or {}
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
     setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
-    local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo(ZONA_EQUIPO))
+    zona, pais = zona_del_lead(lead)
+    local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(zona)
     reprogramada = bool(payload.get('reprogramada_desde'))
     origen = (setter.username if setter else payload.get('origen')) or '-'
     nota = str(payload['nota']) if payload.get('nota') is not None else '-'
     campos = [
         {'name': 'Lead', 'value': _corto(lead.get('nombre') or '-', 256), 'inline': True},
         {'name': 'Closer', 'value': closer.username if closer else '-', 'inline': True},
-        {'name': 'Horario (Bolivia)', 'value': local.strftime('%d/%m/%Y %H:%M'), 'inline': True},
+        {'name': 'Horario del lead', 'value': f"{local.strftime('%d/%m/%Y %H:%M')} {BANDERAS.get(pais['c'], '🌍')} {pais['n']}", 'inline': True},
         {'name': 'Setter / origen', 'value': origen, 'inline': True},
         {'name': 'Prioridad', 'value': payload.get('prioridad_nombre') or '-', 'inline': True},
         {'name': 'Nota', 'value': nota, 'inline': True},
@@ -387,10 +402,7 @@ def aviso_whatsapp(appt):
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
     setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
-    try:
-        zona = ZoneInfo(lead.get('tz') or ZONA_EQUIPO)
-    except Exception:  # noqa: BLE001
-        zona = ZoneInfo(ZONA_EQUIPO)
+    zona, pais = zona_del_lead(lead)
     local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(zona)
     hora = local.strftime('%I:%M').lstrip('0') + (' am' if local.hour < 12 else ' pm')
     reprogramada = ' (reprogramada)' if payload.get('reprogramada_desde') else ''
@@ -400,7 +412,7 @@ def aviso_whatsapp(appt):
         'telefono': lead.get('telefono'),
         'instagram': ('@' + lead['instagram']) if lead.get('instagram') else None,
         'dia': f'{DIAS[local.weekday()]} {local.day}',
-        'hora': f'{hora} {BANDERAS.get(lead.get("pais") or "", "🌍")}',
+        'hora': f'{hora} {BANDERAS.get(pais['c'], "🌍")}',
         'grupo': payload.get('prioridad_nombre'),
         'fuente': (setter.username if setter else payload.get('origen') or payload.get('funnel_slug')),
     }

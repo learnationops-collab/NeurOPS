@@ -524,9 +524,19 @@ def test_cada_agenda_avisa_a_discord(client, armado, discord):
     assert embed['title'] == '📅 Nueva agenda: Llamada'
     campos = {c['name']: c['value'] for c in embed['fields']}
     assert campos['Lead'] == 'Lucía Fernández' and campos['Closer'] == 'ana'
-    assert campos['Horario (Bolivia)'] == '05/10/2026 09:00' and campos['Setter / origen'] == 'juan'
+    assert campos['Horario del lead'] == '05/10/2026 09:00 🇧🇴 Bolivia' and campos['Setter / origen'] == 'juan'
     assert campos['Prioridad'] == 'Ultra' and '¿Cuánto?**: Mucho' in campos['Formulario']
     assert campos['Meet'] == 'https://meet.google.com/abc-defg-hij'
+
+
+def test_la_hora_del_aviso_va_en_la_zona_del_pais_del_whatsapp(client, armado, discord, whatsapp):
+    # El navegador quedó en la zona del equipo, pero el número es argentino: manda el número.
+    cuerpo = {'evento_id': 'ev', 'resp': _resp(**{'c-telefono': '11 2345 6789'}), 'pais': 'AR',
+              'tz': 'America/La_Paz', 'inicio': LUNES_9, 'origen': 'juan-setter'}
+    assert client.post(URL + '/reservas', json=cuerpo).status_code == 201
+    campos = {c['name']: c['value'] for c in discord[0]['json']['embeds'][0]['fields']}
+    assert campos['Horario del lead'] == '05/10/2026 10:00 🇦🇷 Argentina'
+    assert whatsapp[0]['hora'] == '10:00 am 🇦🇷'
 
 
 def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, armado, discord):
@@ -650,7 +660,7 @@ def test_el_lead_que_vuelve_ve_sus_datos_tapados_y_su_proxima_agenda(client, arm
     assert _reservar(client).status_code == 201
     r = _conocido(client, 'LUCIA@correo.com').get_json()
     assert r['conocido'] is True and r['completos'] is True
-    assert r['datos'] == {'nombre': 'Lucía', 'telefono': '+59 ••• 567', 'instagram': ''}
+    assert r['datos'] == {'nombre': 'Lucía', 'nombre_completo': 'Lucía Fernández', 'telefono': '+59 ••• 567', 'instagram': ''}
     assert r['proxima'] == {'inicio': '2026-10-05T13:00:00.000Z'}
     # Nada que sirva para contactarlo: ni el número entero ni el correo.
     texto = _conocido(client, 'lucia@correo.com').get_data(as_text=True)

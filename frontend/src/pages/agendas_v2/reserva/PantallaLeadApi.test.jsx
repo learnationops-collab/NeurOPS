@@ -66,6 +66,9 @@ function elegir(texto) {
     act(() => { vi.advanceTimersByTime(400); });
 }
 
+// Los horarios aparecen recién al elegir un día: el primero con horarios.
+const elegirDia = (container) => fireEvent.click(container.querySelector('.rv-dia:not(:disabled)'));
+
 describe('PantallaLead con la API', () => {
     it('muestra "Buscando horarios…" hasta que llegan, y un ocupado avisa y los vuelve a pedir', async () => {
         const primera = diferida(), segunda = diferida();
@@ -89,6 +92,7 @@ describe('PantallaLead con la API', () => {
 
         await act(async () => { primera.resolver({ data: { slots: [H10, H9] } }); });
         expect(screen.queryByText('Buscando horarios…')).not.toBeInTheDocument();
+        elegirDia(container);
         expect([...container.querySelectorAll('.rv-hora')].map(b => Number(b.dataset.t))).toEqual([H9, H10]);
 
         fireEvent.click(container.querySelector('.rv-hora'));
@@ -115,6 +119,7 @@ describe('PantallaLead con la API', () => {
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
         responderContacto(container);
         await act(async () => { elegir('Lo necesario'); });
+        elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
         expect(screen.getByRole('alert')).toHaveTextContent('Demasiados intentos, probá en un minuto.');
@@ -131,6 +136,7 @@ describe('PantallaLead con la API', () => {
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
         responderContacto(container);
         await act(async () => { elegir('Lo necesario'); });
+        elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
 
