@@ -52,10 +52,14 @@ MODALIDADES_VALIDAS = ('hibrido', 'online')
 
 
 def _weights_map():
-    filas = AssistantClarityWeight.query.all()
-    if not filas:
-        return dict(assistant_clarity.DEFAULT_WEIGHTS)
-    return {f.criterion: f.weight for f in filas}
+    """Los pesos vigentes: los de fábrica y, encima, los guardados. Solo cuentan los
+    criterios de la rúbrica actual: una fila de un criterio que ya no existe (o que
+    todavía no se sembró) no deja afuera ni distorsiona el score."""
+    pesos = dict(assistant_clarity.DEFAULT_WEIGHTS)
+    for fila in AssistantClarityWeight.query.all():
+        if fila.criterion in pesos:
+            pesos[fila.criterion] = fila.weight
+    return pesos
 
 
 def _aplica_filtro(app_row, filtro):
@@ -197,16 +201,16 @@ def decidir_assistant_application(app_id):
 @login_required
 @hiring_required
 def ver_clarity_weights():
-    filas = AssistantClarityWeight.query.order_by(AssistantClarityWeight.id).all()
-    if not filas:
-        return jsonify([
-            {
-                "criterion": c['criterion'], "label": c['label'],
-                "weight": c['default_weight'], "default_weight": c['default_weight'],
-            }
-            for c in CLARITY_CRITERIA
-        ]), 200
-    return jsonify([f.to_dict() for f in filas]), 200
+    # Siempre los criterios de la rúbrica vigente, en su orden, con el rótulo y la
+    # explicación del código; del guardado sale solo el peso.
+    pesos = _weights_map()
+    return jsonify([
+        {
+            "criterion": c['criterion'], "label": c['label'], "detalle": c.get('detalle', ''),
+            "weight": pesos[c['criterion']], "default_weight": c['default_weight'],
+        }
+        for c in CLARITY_CRITERIA
+    ]), 200
 
 
 @bp.route('/assistant-applications/clarity-weights', methods=['PUT'])
@@ -288,13 +292,17 @@ def stats_assistant_applications():
     pool = finalistas if segmento == 'finalistas' else todas_las_filas
     scores = [assistant_clarity.score_de(a, weights) for a in pool]
 
-    def distribucion(campo, etiquetas=None):
+    def distribucion(campo, etiquetas=None, multiple=False):
+        """`multiple`: la respuesta es de opción múltiple y llega con las marcadas unidas por
+        « | » (ia_avanzado): se cuenta cada opción, no cada combinación."""
         conteo = Counter()
         for a in pool:
             valor = getattr(a, campo)
             if not valor:
                 continue
-            conteo[etiquetas(valor) if etiquetas else valor] += 1
+            valores = [v.strip() for v in str(valor).split('|') if v.strip()] if multiple else [valor]
+            for v in valores:
+                conteo[etiquetas(v) if etiquetas else v] += 1
         conteo.pop(None, None)
         return [{"opcion": k, "cantidad": v} for k, v in conteo.most_common()]
 
@@ -337,9 +345,12 @@ def stats_assistant_applications():
         return round(sum(valores) / len(valores))
 
     def media_criterio(grupo, clave):
-        if not grupo:
+        # Solo las postulaciones a las que ese criterio les aplica (el aporte no se
+        # le pidió a quien contestó el formulario viejo).
+        vals = [assistant_clarity.compute_criteria_values(a).get(clave, 0)
+                for a in grupo if assistant_clarity.aplica(a, clave)]
+        if not vals:
             return 0
-        vals = [assistant_clarity.compute_criteria_values(a).get(clave, 0) for a in grupo]
         return round(100 * sum(vals) / len(vals))
 
     comparacion = {
@@ -371,7 +382,7 @@ def stats_assistant_applications():
             {"grupo": "Herramientas e idiomas"},
             {"label": "Nivel de IA", "tipo": "n", "valores": por_pais(lambda g: media_criterio(g, 'ia'))},
             {"label": "Herramientas", "tipo": "n", "valores": por_pais(lambda g: media_criterio(g, 'herramientas'))},
-            {"label": "Escritura (delegar)", "tipo": "n", "valores": por_pais(lambda g: media_criterio(g, 'escritura'))},
+            {"label": "Aporte concreto", "tipo": "n", "valores": por_pais(lambda g: media_criterio(g, 'aporte'))},
             {"label": "Criterio operativo", "tipo": "n", "valores": por_pais(lambda g: media_criterio(g, 'criterio'))},
             {"grupo": "Plata"},
             {"label": "Pide por mes", "tipo": "usd", "menor_mejor": True, "valores": por_pais(media_pide)},
@@ -414,7 +425,7 @@ def stats_assistant_applications():
         "distribucion_edad": distribucion('edad', lambda v: _tramo(v, TRAMOS_EDAD)),
         "distribucion_presupuesto": distribucion('remuneracion', lambda v: _tramo(v, TRAMOS_PRESUPUESTO)),
         "distribucion_ia": distribucion('ia_nivel'),
-        "distribucion_ia_avanzado": distribucion('ia_avanzado'),
+        "distribucion_ia_avanzado": distribucion('ia_avanzado', multiple=True),
         "distribucion_ingles": distribucion('ingles'),
         "distribucion_idioma2": distribucion('idioma2'),
         "distribucion_sheets": distribucion('sheets'),
