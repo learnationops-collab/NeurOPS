@@ -1,4 +1,5 @@
-// Inicio de sesión al estilo del de Windows, con la marca Learnation. Arranca directo en el panel.
+// Inicio de sesión con la marca Learnation, en el mismo marco que la elección de rol y de área (hora,
+// fondo a elección y el isotipo con anillos). Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
 //   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra (Eleccion).
@@ -11,8 +12,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Mail, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { destinoDeEntrada } from '../../utils/areas';
 import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
-import { Isotipo } from '../comercial/components/Shared';
-import Eleccion from './Eleccion';
+import Eleccion, { LogoEntrada, MarcoEntrada } from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
 
@@ -78,8 +78,9 @@ function Entrar({ onEntrar, errorInicial }) {
 
     return (
         <div className="lg-panel">
-            <span className="lg-logo"><Isotipo idGrad="lnGradLogin" /></span>
-            <h1 className="lg-titulo">LEARNATION<span> ACQUISITIONS</span></h1>
+            <LogoEntrada idGrad="lnGradLogin" />
+            <h1 className="lg-titulo"><small>Learnation</small>Acquisitions</h1>
+            <p className="lg-texto">Entrá con tu cuenta del equipo.</p>
             <form className="lg-form" onSubmit={conClave}>
                 <label className="sr-only" htmlFor="lg-usuario">Usuario o email</label>
                 <input id="lg-usuario" ref={ref} className="lg-input" autoComplete="username" required
@@ -214,15 +215,14 @@ export default function LoginPage() {
     if (paso === 'rol' && user) return <ElegirRol user={user} onElegido={(u) => navigate(destinoDeEntrada(u))} />;
 
     return (
-        <div className="lg lg--abierto">
-            <div className="lg-fondo" aria-hidden="true"><i /><i /><i /></div>
+        <MarcoEntrada clase="lg--login">
             <main className="lg-centro">
                     {paso === 'entrar' && (entrandoGoogle
-                        ? <div className="lg-panel"><span className="lg-logo"><Isotipo idGrad="lnGradLogin" /></span><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
+                        ? <div className="lg-panel"><LogoEntrada idGrad="lnGradLogin" /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
                         : <Entrar onEntrar={alEntrar} errorInicial={errorGoogle} />)}
                     {paso === 'email' && user && <PedirEmail user={user} onListo={seguir} />}
             </main>
             <DebugConsole />
-        </div>
+        </MarcoEntrada>
     );
 }
