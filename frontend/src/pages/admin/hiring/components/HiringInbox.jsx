@@ -145,6 +145,7 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
+    const [errorBorrado, setErrorBorrado] = useState('');
 
     // Al cambiar de destino (Pendientes ↔ Analizados ↔ Finalistas) se vuelve al
     // primer sub-filtro de ese grupo y se limpia la modalidad: mantener el
@@ -197,6 +198,28 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
 
     // Tras decidir se recarga conservando la modalidad elegida.
     const onDecidido = () => cargar(filtroEfectivo, modalidadEfectiva);
+
+    // La vista vigente, para que la recarga posterior a un borrado no use el
+    // filtro de hace cinco segundos (la ventana de «Deshacer») si mientras tanto
+    // se cambió de pestaña.
+    const vigente = useRef({ f: filtroEfectivo, m: modalidadEfectiva });
+    useEffect(() => { vigente.current = { f: filtroEfectivo, m: modalidadEfectiva }; });
+
+    // Borrado real (no hay papelera). InlineConfirm lo difiere hasta que vence
+    // su ventana de «Deshacer»; si la llamada falla relanza para que el botón
+    // vuelva a reposo, y el motivo queda arriba de la tabla.
+    const eliminar = useCallback(async (id) => {
+        try {
+            await api.delete(`/assistant-applications/${id}`);
+        } catch (err) {
+            setErrorBorrado(err.response?.data?.message || 'No se pudo eliminar la postulación.');
+            throw err;
+        }
+        setErrorBorrado('');
+        setPostulaciones((prev) => prev.filter((p) => p.id !== id));
+        // Conteos y KPI frescos, sin el parpadeo de «Cargando…».
+        cargar(vigente.current.f, vigente.current.m, { silencioso: true });
+    }, [cargar]);
 
     // Qué cuenta cada tarjeta KPI (todas siguen la modalidad elegida):
     //   · Postulaciones: solo las que terminaron el formulario (`total`; las
@@ -273,6 +296,12 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
                 </div>
             )}
 
+            {errorBorrado && (
+                <p role="alert" className="rounded-2xl border border-[#E85C4A]/40 bg-[#E85C4A]/10 px-5 py-3 text-[13px] font-bold text-[#F5A99C]">
+                    {errorBorrado}
+                </p>
+            )}
+
             <div className="overflow-x-auto rounded-[24px] border border-white/[.12] bg-white/[.02]">
                 <table className="w-full min-w-[1120px] border-collapse text-left">
                     <thead>
@@ -288,6 +317,7 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
                             <th className="px-4 py-4">WhatsApp</th>
                             <th className="px-4 py-4 text-right">Score</th>
                             <th className="px-4 py-4">Estado</th>
+                            <th className="w-12 px-1 py-4"><span className="sr-only">Eliminar</span></th>
                             <th className="w-6 px-2 py-4" />
                         </tr>
                     </thead>
@@ -408,6 +438,27 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
                                             </span>
                                         )}
                                     </td>
+                                    {/* Papelera: no abre el modal de la candidata. La caja de 34px
+                                        fija el lugar en la fila; el InlineConfirm se despliega hacia
+                                        la izquierda sobre un fondo opaco para no dejar ver las celdas
+                                        de abajo mientras pregunta. */}
+                                    <td className="px-1 py-4" onClick={(e) => e.stopPropagation()}>
+                                        <div className="relative ml-auto h-[34px] w-[34px]">
+                                            <div className="absolute right-0 top-0 z-10 rounded-[17px] bg-[#0B0F26]">
+                                                <InlineConfirm
+                                                    compacto
+                                                    alto={34}
+                                                    corner={17}
+                                                    tamIcono={15}
+                                                    title={`Eliminar la postulación de ${p.nombre}`}
+                                                    question="¿Borrar?"
+                                                    confirmLabel="Sí, borrar"
+                                                    doneLabel="Eliminada"
+                                                    onConfirm={() => eliminar(p.id)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td className="px-2 py-4">
                                         <ChevronRight size={16} className="text-white/25" />
                                     </td>
@@ -415,11 +466,11 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
                             );
                         })}
                         {loading && (
-                            <tr><td colSpan={12} className="px-6 py-12 text-center text-white/40">Cargando…</td></tr>
+                            <tr><td colSpan={13} className="px-6 py-12 text-center text-white/40">Cargando…</td></tr>
                         )}
                         {!loading && filas.length === 0 && (
                             <tr>
-                                <td colSpan={12} className="px-6 py-14 text-center">
+                                <td colSpan={13} className="px-6 py-14 text-center">
                                     <span className="block text-[16px] font-bold text-white/70">
                                         {query ? 'Nadie coincide con esa búsqueda' : grupo === 'pendientes' ? 'No te queda nada acá' : 'Todavía nada en este estado'}
                                     </span>
