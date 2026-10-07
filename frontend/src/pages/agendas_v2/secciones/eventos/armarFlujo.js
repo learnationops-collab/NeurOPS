@@ -11,7 +11,8 @@ export const NW = 236, NGAP = 84, ROW0 = 90, ROWH = 36;
  * Devuelve {nodos, aristas, W, H, cuello, max}.
  * Nodo: {id, col, x, y, h, tipo, c, ico, tit, var_, filas:[{t, pts?, no?}], calor, q?, g?}
  * Arista: [origen, fila, destino, tipo?] con tipo 'no' | 'fn' | 'ok' | 'g' | undefined.
- * `reach` sale de statsEvento: [entraron, contacto, …preguntas, calendario, agendaron].
+ * `reach` sale de reachEvento (stats/leads.js): [entraron, contacto, …preguntas, calendario, agendaron].
+ * Con datos reales `entraron` es null: se cuenta desde que el lead deja sus datos.
  */
 export function armarFlujo(d, e, reach, calor) {
     const fo = buscar(d, 'formularios', e.formulario), f = buscar(d, 'funnels', e.funnel);
@@ -106,7 +107,7 @@ export function armarFlujo(d, e, reach, calor) {
     }
     let W = 0, H = 0;
     nodos.forEach(n => { W = Math.max(W, n.x + NW + 40); H = Math.max(H, n.y + n.h + 50); });
-    return { nodos, aristas, W, H, cuello, max: reach ? reach[0] || 1 : 1 };
+    return { nodos, aristas, W, H, cuello, max: reach ? reach[0] || reach[1] || 1 : 1 };
 }
 
 // Curva de una arista: sale de la fila del origen y entra por la cabecera del destino.

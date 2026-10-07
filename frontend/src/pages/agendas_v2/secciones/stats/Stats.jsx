@@ -1,5 +1,6 @@
-// Stats: agendas, calificación, rankings, embudo y horarios más elegidos. Por ahora con datos de
-// ejemplo (deterministas) hasta que el backend registre leads reales.
+// Stats: agendas, calificación, rankings, embudo y horarios más elegidos, con los leads reales
+// (stats/leads.js): los que agendaron y los que dejaron sus datos y se cayeron antes. El embudo arranca
+// en «Datos de contacto»: las visitas al link sin datos no se registran. En modo local, datos de ejemplo.
 // En vista de closer se ve solo lo propio: sin "No califican" ni los rankings del equipo.
 
 import { useMemo } from 'react';
@@ -11,7 +12,7 @@ import { COLORES } from '../../core/catalogos';
 import { buscar, closers, colorVar, ord, setters } from '../../core/datos';
 import { fmt } from '../../core/util';
 import { irA } from '../../ui/navegacion';
-import { datosEjemplo } from './datosEjemplo';
+import { useLeads } from './leads';
 import { Embudo, Gauges, Grafico, Linea, MapaHorarios, Ranking, VacioGrafico } from './graficos';
 
 const DIA = 86400000;
@@ -55,15 +56,17 @@ export default function Stats() {
     const st = { ...EST_DEF, ...(estado.est || {}) };
     const setEst = (parcial) => ui.set(e => ({ est: { ...EST_DEF, ...(e.est || {}), ...parcial } }));
 
+    const { leads, ejemplo, error } = useLeads();
+    const hayEventos = ord(d, 'eventos').length > 0;
+
     const calc = useMemo(() => {
-        const datos = datosEjemplo(d);
-        if (!datos) return null;
-        // Los datos de ejemplo se miden contra el momento actual.
+        if (!leads || !hayEventos) return null;
+        // Los leads se miden contra el momento actual.
         // eslint-disable-next-line react-hooks/purity
         const ahora = Date.now(), dur = st.dias * DIA;
         const filtro = (l) => (!st.evento || l.ev === st.evento) && (cm ? l.closer === cm.id : !st.closer || l.closer === st.closer);
-        const act = datos.leads.filter(l => l.t >= ahora - dur && filtro(l));
-        const ant = datos.leads.filter(l => l.t < ahora - dur && l.t >= ahora - 2 * dur && filtro(l));
+        const act = leads.filter(l => l.t >= ahora - dur && filtro(l));
+        const ant = leads.filter(l => l.t < ahora - dur && l.t >= ahora - 2 * dur && filtro(l));
         const serie = [], serieAnt = [];
         for (let i = st.dias - 1; i >= 0; i--) {
             const ini = ahora - (i + 1) * DIA, fin = ahora - i * DIA;
@@ -71,8 +74,17 @@ export default function Stats() {
             serieAnt.push(ant.filter(l => l.agenda && l.t >= ini - dur && l.t < fin - dur).length);
         }
         return { ahora, act, ant, a: kp(act), b: kp(ant), serie, serieAnt, ag: act.filter(l => l.agenda) };
-    }, [d, st.dias, st.evento, st.closer, cm]);
+    }, [leads, hayEventos, st.dias, st.evento, st.closer, cm]);
 
+    if (hayEventos && !calc) {
+        return (
+            <div className="panel vacio">
+                <span className="icono-m"><Icono n="chart" s={19} /></span>
+                <h2 className="t-h3">{error ? 'No se pudieron traer las estadísticas' : 'Cargando estadísticas…'}</h2>
+                {error && <p className="t-sm mut">Revisá la conexión y volvé a entrar a Stats.</p>}
+            </div>
+        );
+    }
     if (!calc) {
         return (
             <div className="panel vacio">
@@ -127,12 +139,13 @@ export default function Stats() {
         let embudo = null;
         if (e) {
             const fo = buscar(d, 'formularios', e.formulario), qs = fo ? fo.preguntas : [], ls = act.filter(l => l.ev === e.id);
-            const pasos = [['Entraron al link', 0, 'link'], ['Datos de contacto', 1, 'user']]
+            // Con datos reales se cuenta desde que el lead deja sus datos (las visitas sin datos no quedan).
+            const pasos = (ejemplo ? [['Entraron al link', 0, 'link']] : []).concat([['Datos de contacto', 1, 'user']])
                 .concat(qs.map((q, j) => [q.titulo || 'Pregunta ' + (j + 1), 2 + j, 'pregunta']))
                 .concat([['Calendario', 2 + qs.length, 'calendar'], ['Agendaron', 3 + qs.length, 'check']]);
             const vals = pasos.map(p => ls.filter(l => l.llego >= p[1]).length);
             embudo = (
-                <Grafico t={'Embudo · ' + e.nombre} sub="Cuántos leads siguen en cada paso" ancho aura={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--error)', 'var(--brand-navy)']}>
+                <Grafico t={'Embudo · ' + e.nombre} sub={ejemplo ? 'Cuántos leads siguen en cada paso' : 'De los que dejaron sus datos, cuántos siguen en cada paso'} ancho aura={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--error)', 'var(--brand-navy)']}>
                     <Embudo pasos={pasos} vals={vals} />
                 </Grafico>
             );
@@ -175,7 +188,7 @@ export default function Stats() {
                         <Sx label="Closer" nav valor={st.closer} onChange={v => setEst({ closer: v })}
                             opciones={[{ v: '', n: 'Todos los closers' }, ...closers(d).map(p => ({ v: p.id, n: p.nombre }))]} />
                     )}
-                    <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>
+                    {ejemplo && <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>}
                 </div>
             </EnTope>
             <div className="kpis">

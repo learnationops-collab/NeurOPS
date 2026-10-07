@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.agendas_v2 import operacion
-from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
+from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
@@ -40,6 +40,8 @@ VENTANA_ESTADO_DIAS = 35
 # Conflictos en Google Calendar: hasta cuántos días se miran y cuánto se guarda lo leído de cada closer.
 VENTANA_GOOGLE_DIAS = 60
 CACHE_GOOGLE_S = 120
+# Stats: cuántos días de leads viajan (el período más largo, 90 días, y el anterior para comparar).
+VENTANA_STATS_DIAS = 180
 LARGO_MAX_TEXTO = {'texto': 300, 'parrafo': 2000, 'email': 120, 'telefono': 40, 'instagram': 30}
 
 
@@ -637,6 +639,127 @@ def conocido(form, email, ahora=None):
     }
 
 
+# --- Intentos: los que dejaron sus datos y no agendaron (Stats) --------------------------------
+
+
+def _paso_de(form, resp, en_calendario):
+    """Hasta dónde llegó: 1 dejó el contacto, 2+j respondió la pregunta j, n+2 llegó al calendario."""
+    qs = form.get('preguntas', [])
+    if en_calendario:
+        return len(qs) + 2
+    ultima = max((j for j, q in enumerate(qs) if resp.get(q['id'])), default=-1)
+    return 2 + ultima if ultima >= 0 else 1
+
+
+def _intento_de(evento_id, email):
+    return SchedIntento.query.filter_by(evento_id=evento_id, email=email, estado='incompleta').first()
+
+
+def registrar_avance(d, evento, form, funnel, cuerpo):
+    """El lead del link avanzó un paso: se guardan sus respuestas y hasta dónde llegó. Recién cuenta
+    con un email válido (ya dejó sus datos). Un registro por lead y evento; el paso nunca retrocede.
+    Devuelve False si no hay email válido."""
+    crudas = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
+    if cuerpo.get('datos_guardados') is True:
+        crudas = {**crudas, **datos_guardados(form, crudas.get('c-email'))[1]}
+    resp = {}
+    for q in preguntas_flujo(form):
+        crudo = crudas.get(q['id'])
+        if not isinstance(crudo, str) or not crudo:
+            continue
+        if con_opciones(q['tipo']):
+            if any(o['id'] == crudo for o in q['opciones']):
+                resp[q['id']] = crudo
+        else:
+            v = limpiar_respuesta(q, crudo)[: LARGO_MAX_TEXTO.get(q['tipo'], 300)]
+            if v and not validar_respuesta(q, v):
+                resp[q['id']] = v
+    email = (resp.get('c-email') or '').lower()
+    if not email:
+        return False
+    paso = _paso_de(form, resp, cuerpo.get('en_calendario') is True)
+    intento = _intento_de(evento['id'], email)
+    if not intento:
+        origen = slugify(str(cuerpo.get('origen') or ''))[:60]
+        setter = _setter_de(d, funnel, origen)
+        intento = SchedIntento(
+            evento_id=evento['id'], funnel_id=funnel['id'] if funnel else None, email=email, estado='incompleta',
+            paso=paso, resp=resp, origen=origen or None, setter_user_id=setter.id if setter else None,
+        )
+        db.session.add(intento)
+    else:
+        intento.paso = max(intento.paso or 0, paso)
+        intento.resp = {**(intento.resp or {}), **resp}
+    db.session.commit()
+    return True
+
+
+def _cerrar_intento(evento, form, funnel, limpias, origen, setter, descalificada):
+    """El lead terminó. Si no calificó, su intento queda como descalificado (con lo que respondió).
+    Si agendó, se borran sus intentos incompletos: desde ahí lo cuenta la Appointment."""
+    email = (limpias.get('c-email') or '').lower()
+    if not email:
+        return
+    if not descalificada:
+        SchedIntento.query.filter_by(email=email, estado='incompleta').delete(synchronize_session=False)
+        return
+    intento = _intento_de(evento['id'], email)
+    if not intento:
+        intento = SchedIntento(
+            evento_id=evento['id'], funnel_id=funnel['id'] if funnel else None, email=email,
+            origen=origen or None, setter_user_id=setter.id if setter else None,
+        )
+        db.session.add(intento)
+    intento.estado = 'descalificada'
+    intento.resp = limpias
+    intento.paso = _paso_de(form, limpias, False)
+
+
+def _nombres_de_usuarios(ids):
+    from app.models.user import User
+
+    ids = {i for i in ids if isinstance(i, int)}
+    return {u.id: u.username for u in User.query.filter(User.id.in_(ids))} if ids else {}
+
+
+def _leads_de_intentos(desde):
+    filas = SchedIntento.query.filter(SchedIntento.creado_en >= desde).all()
+    setters = _nombres_de_usuarios(f.setter_user_id for f in filas)
+    return [
+        {
+            't': dt_a_ms(f.creado_en), 'ev': f.evento_id, 'llego': f.paso, 'desc': f.estado == 'descalificada',
+            'agenda': False, 'score': None, 'closer': None, 'setter': setters.get(f.setter_user_id),
+            'origen': f.origen or '', 'grupo': None, 'inicio': None,
+        }
+        for f in filas
+    ]
+
+
+def _leads_de_agendas(desde):
+    from app.models import Appointment
+
+    filas = Appointment.query.filter(Appointment.agenda_payload.isnot(None), Appointment.created_at >= desde).all()
+    setters = _nombres_de_usuarios((a.agenda_payload or {}).get('setter_user_id') for a in filas)
+    leads = []
+    for a in filas:
+        p = a.agenda_payload or {}
+        leads.append({
+            't': dt_a_ms(a.created_at), 'ev': p.get('evento_id') or '', 'llego': 999, 'desc': False, 'agenda': True,
+            'score': p.get('nota'), 'closer': p.get('closer_id'), 'setter': setters.get(p.get('setter_user_id')),
+            'origen': p.get('origen') or '', 'grupo': p.get('prioridad_id'), 'inicio': dt_a_ms(a.start_time),
+            'cancelada': not _vigente(a),
+        })
+    return leads
+
+
+def estadisticas(ahora=None):
+    """Los leads de los últimos 180 días para Stats, en el formato de datosEjemplo.js: los que agendaron
+    (Appointment de Agendas 2.0) y los que dejaron sus datos y no (sched_intentos). `t` es cuándo
+    entró; `inicio`, el horario de la agenda; `llego` 999 = agendó."""
+    desde = ms_a_dt((ahora or ahora_ms()) - VENTANA_STATS_DIAS * DIA_MS)
+    return _leads_de_agendas(desde) + _leads_de_intentos(desde)
+
+
 def _consultor(d, closer):
     """Lo que el lead ve de su closer: el nombre que tiene en Team y su color. Nada de contacto."""
     email = (closer.email or '').lower()
@@ -671,6 +794,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     base = {'lead': lead, 'evento': evento, 'funnel': funnel, 'form': form, 'origen': origen, 'setter': None}
 
     if descalifica:
+        _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
         operacion.registrar_descalificado(armar_reserva(**base, asig=None, slot=None))
         return {'descalificada': True}, True
     if errores:
@@ -721,6 +845,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     )
     if not appt:
         raise ReservaRechazadaError('ocupado')
+    _cerrar_intento(evento, form, funnel, limpias, origen, setter, False)
     _subir_version()
     db.session.commit()
     operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)

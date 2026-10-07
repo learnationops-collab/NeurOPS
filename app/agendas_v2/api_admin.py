@@ -50,6 +50,12 @@ def estado():
     )
 
 
+@bp.route('/estadisticas', methods=['GET'])
+def estadisticas():
+    """Los leads de los últimos 180 días para Stats: los que agendaron y los que se cayeron antes."""
+    return jsonify({'leads': servicio.estadisticas()})
+
+
 @bp.route('/version', methods=['GET'])
 def version():
     return jsonify({'version': servicio.version()})

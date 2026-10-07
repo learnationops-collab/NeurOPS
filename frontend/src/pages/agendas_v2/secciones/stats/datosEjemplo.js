@@ -1,5 +1,5 @@
-// Datos de ejemplo para Stats y el mapa de calor del flujo de un evento. Son sintéticos y
-// deterministas (misma semilla, mismos números) hasta que el backend registre leads reales.
+// Datos de ejemplo para Stats y el mapa de calor del flujo en modo local (tests, VITE_AGENDAS_LOCAL).
+// Son sintéticos y deterministas (misma semilla, mismos números). Con la API, los reales: leads.js.
 // Cada lead: {t, ev, llego, desc, agenda, score, closer, setter, origen, grupo, hora, dow}.
 // `llego`: 0 entró, 1 dejó el contacto, 2..n+1 respondió cada pregunta, n+2 llegó al calendario, n+3 agendó.
 
@@ -71,14 +71,3 @@ export function datosEjemplo(d, ahora = Date.now()) {
     return cache;
 }
 
-// Alcance por paso de un evento en los últimos 30 días, para el mapa de calor del flujo.
-// reach: [0] entraron, [1] contacto, [2..n+1] preguntas, [n+2] llegaron al calendario, [n+3] agendaron.
-export function statsEvento(d, e, ahora = Date.now()) {
-    const datos = datosEjemplo(d, ahora);
-    if (!datos) return null;
-    const fo = buscar(d, 'formularios', e.formulario), n = fo ? fo.preguntas.length : 0, desde = ahora - 30 * DIA;
-    const ls = datos.leads.filter(l => l.ev === e.id && l.t >= desde);
-    const reach = [];
-    for (let i = 0; i <= n + 3; i++) reach.push(ls.filter(l => l.llego >= i).length);
-    return { reach };
-}
