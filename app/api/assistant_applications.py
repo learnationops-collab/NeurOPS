@@ -17,7 +17,9 @@ from flask_login import login_required
 from app import db
 from app.decorators import hiring_required
 from app.models import AssistantApplication, AssistantClarityWeight
-from app.models.assistant_application import BLOQUES, ESTADOS, VERIFICADO_OK
+from app.models.assistant_application import (
+    BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK,
+)
 from app.services import assistant_clarity
 from app.services.assistant_clarity import CLARITY_CRITERIA
 from flask_login import current_user
@@ -367,6 +369,10 @@ def stats_assistant_applications():
         "score_85": sum(1 for s in scores if s >= 85),
         "pretension_media": round(sum(pretensiones) / len(pretensiones)) if pretensiones else 0,
         "embudo": embudo,
+        # Dónde se queda la gente DENTRO del formulario. Sobre todas las filas
+        # (no el pool), igual que `excluyentes`: el segmento «finalistas» ya
+        # filtra a quien llegó al final.
+        "embudo_formulario": _embudo_formulario(todas_las_filas),
         "por_dia": linea_por_dia,
         "comparacion": comparacion,
         "distribucion_pais": distribucion('pais'),
@@ -395,3 +401,52 @@ def stats_assistant_applications():
             )
         ],
     }), 200
+
+
+def _embudo_formulario(filas):
+    """Una entrada por pregunta del formulario, en el orden en que se hacen.
+
+    `cantidad`: postulaciones que LLEGARON hasta esa pregunta, o sea cuya
+    última pregunta contestada es esa o una posterior (o que terminaron). Se
+    mide por «última contestada» y no por «contestó ésta» para que una
+    pregunta opcional saltada no parezca un abandono.
+    `abandonaron_aca`: las que se quedaron exactamente ahí sin terminar.
+    `descartadas_aca`: de esas, las que cortó el propio formulario (respuesta
+    excluyente) y no se fueron solas.
+    `pct_abandono`: abandonaron_aca sobre las que llegaron a la pregunta.
+
+    Ojo: el primer guardado exige el nombre, así que quien se fue antes de
+    contestarlo no existe en la base y País/Provincia/Nombre siempre dan 100 %.
+    """
+    total = len(filas)
+    llegaron = [0] * len(CAMPOS_FORMULARIO)
+    quedaron = [0] * len(CAMPOS_FORMULARIO)
+    cortadas = [0] * len(CAMPOS_FORMULARIO)
+
+    for a in filas:
+        ultima = len(CAMPOS_FORMULARIO) - 1 if a.completo else a.ultima_contestada()
+        for pos in range(ultima + 1):
+            llegaron[pos] += 1
+        if not a.completo and ultima >= 0:
+            quedaron[ultima] += 1
+            if a.descartado or a.auto_ko():
+                cortadas[ultima] += 1
+
+    salida = []
+    pos = 0
+    for bloque, campos in BLOQUES:
+        for campo in campos:
+            salida.append({
+                "campo": campo,
+                "etapa": ETIQUETAS_PREGUNTA.get(campo, campo),
+                "bloque": bloque,
+                "orden": pos + 1,
+                "opcional": campo in OPCIONALES,
+                "cantidad": llegaron[pos],
+                "pct_del_total": round(100 * llegaron[pos] / total, 1) if total else 0,
+                "abandonaron_aca": quedaron[pos],
+                "descartadas_aca": cortadas[pos],
+                "pct_abandono": round(100 * quedaron[pos] / llegaron[pos], 1) if llegaron[pos] else 0,
+            })
+            pos += 1
+    return salida
