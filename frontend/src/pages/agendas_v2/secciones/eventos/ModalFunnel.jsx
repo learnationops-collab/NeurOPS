@@ -1,6 +1,7 @@
 // El funnel es una categoría simple de los eventos: «Nuevo funnel» y el engranaje de cada grupo en
-// Eventos abren este modal.
-//  - Nuevo: nombre y tipo. Armarlo con IA (formulario, estrategias y evento de una) queda plegado aparte.
+// Eventos abren este modal. Un funnel existe para generar agendamientos: no se crea vacío.
+//  - Nuevo: nombre, tipo y su primer agendamiento, que se abre al crearlo. Armarlo con IA (formulario,
+//    estrategias y evento de una) queda plegado aparte.
 //  - Editar: nombre, tipo, si recibe agendas, sus links (en setting, los de cada setter por evento), sus
 //    eventos y, plegado, «Editar con IA»: el prompt lleva el funnel tal como está, la IA lo cambia y el
 //    JSON se escribe encima (mismos links). El evento queda como borrador hasta publicarlo.
@@ -16,7 +17,7 @@ import { almacen, useDatos } from '../../data/hooks';
 import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
-import { LinksSetters, abrirEvento } from './comun';
+import { LinksSetters, abrirEvento, crearEvento } from './comun';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -208,12 +209,14 @@ function PlegableIA({ titulo, children }) {
 function NuevoFunnel({ d, cerrar }) {
     const [nombre, setNombre] = useState('');
     const [tipo, setTipo] = useState('workshop');
+    const [evento, setEvento] = useState('');
     const crear = (e) => {
         e.preventDefault();
         const id = crearFunnel(d, nombre, tipo);
         if (!id) return;
-        toast('Funnel creado');
-        ui.set({ funnel: { id } });
+        cerrar();
+        crearEvento(d, evento.trim() || nombre, { funnel: id });
+        toast('Funnel creado. Configurá su agendamiento y publicalo.');
     };
     const conIA = (r) => {
         toast('Funnel creado. Revisá el evento y publicalo.');
@@ -228,6 +231,10 @@ function NuevoFunnel({ d, cerrar }) {
                     value={nombre} onChange={e => setNombre(e.target.value)} />
                 <span className="t-rotulo">Tipo</span>
                 <Tipos valor={tipo} onChange={setTipo} />
+                <label className="t-rotulo" htmlFor="fm-evento">Primer agendamiento</label>
+                <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
+                    placeholder={nombre.trim() ? 'Ej. Diagnóstico (si lo dejás vacío: ' + nombre.trim() + ')' : 'Ej. Diagnóstico'}
+                    value={evento} onChange={e => setEvento(e.target.value)} />
                 <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm" disabled={!nombre.trim()}><Icono n="plus" />Crear funnel</button></div>
             </form>
             <PlegableIA titulo="Armarlo con IA: formulario, estrategias y evento de una">
@@ -250,6 +257,25 @@ function LinksDelFunnel({ d, f, eventos }) {
             ))}
             <p className="t-xs mut">Cada setter también ve sus links en su menú de NeurOPS.</p>
         </div>
+    );
+}
+
+// Un funnel sin agendamientos no genera agendas: lo primero que se ofrece es crearle uno.
+function AgregarAgendamiento({ d, f, cerrar }) {
+    const [nombre, setNombre] = useState('');
+    const crear = (e) => {
+        e.preventDefault();
+        cerrar();
+        crearEvento(d, nombre.trim() || f.nombre, { funnel: f.id });
+    };
+    return (
+        <form className="fm-nuevo" noValidate onSubmit={crear}>
+            <p className="t-sm">Sin agendamientos, este funnel no genera agendas.</p>
+            <label className="sr" htmlFor="fm-evento">Nombre del agendamiento</label>
+            <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
+                placeholder={'Ej. Diagnóstico (si lo dejás vacío: ' + f.nombre + ')'} value={nombre} onChange={e => setNombre(e.target.value)} />
+            <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm"><Icono n="plus" />Agregar agendamiento</button></div>
+        </form>
     );
 }
 
@@ -284,7 +310,7 @@ function EditarFunnel({ d, f, cerrar }) {
                             </li>
                         ))}
                     </ul>
-                ) : <p className="t-sm mut">Todavía no tiene eventos. Creá uno desde «Nuevo evento» y elegí este funnel.</p>}
+                ) : <AgregarAgendamiento d={d} f={f} cerrar={cerrar} />}
             </Bloque>
             <PlegableIA titulo={eventos.length ? 'Editar con IA' : 'Completar con IA: formulario, estrategias y evento'}>
                 {!eventos.length ? (
