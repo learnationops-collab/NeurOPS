@@ -170,24 +170,32 @@ export const escalaDe = (campo, valor) => {
  * escala 0..max. Escalas de distinto largo caen todas en el mismo 1-5. */
 export const estrellas = (n, max) => 1 + Math.round((n / max) * 4);
 
-// --- Techo de uso de IA: 8 opciones de "casi no la usa" a "construyó algo
-// funcional", comprimidas a una escala de 0-4 para los 4 puntitos. ---
+// --- Techo de uso de IA: «lo más avanzado que hiciste» es de opción múltiple y
+// llega con las marcadas unidas por « | »: cuenta la más alta. `pts` es el mismo
+// de cada opción del formulario (0-6, y el backend, `assistant_clarity.IA_TECHO`,
+// usa los mismos); se comprime a 0-4 para los 4 puntitos. Las últimas filas son
+// las opciones del formulario anterior (una sola respuesta), por si hay
+// postulaciones viejas. Se matchea por expresión regular, como en el backend:
+// si el formulario retoca una opción, no se rompe en silencio. ---
 
+const IA_PTS_MAX = 6;
 const TECHO_IA = [
-    { full: 'Casi no la uso', corto: 'Casi no la usa' },
-    { full: 'Le hago preguntas sueltas y uso lo que me devuelve', corto: 'Preguntas sueltas' },
-    { full: 'La uso para redactar, resumir o corregir textos', corto: 'Redacta/resume' },
-    { full: 'Escribo prompts con contexto y ejemplos, y voy corrigiendo hasta que sale lo que quiero', corto: 'Prompts con contexto' },
-    { full: 'Uso GPTs, proyectos o plugins que ya existen, con prompts armados por mí', corto: 'Usa GPTs existentes' },
-    { full: 'Creé mis propios GPTs o asistentes personalizados para tareas que repito', corto: 'Creó GPTs propios' },
-    { full: 'Armé agentes o flujos donde la IA se conecta con otras aplicaciones y ejecuta tareas', corto: 'Armó agentes/flujos' },
-    { full: 'Construí algo funcional con IA: una herramienta, un dashboard, un script o una automatización que después corre sola', corto: 'Construyó herramientas' },
+    { re: /construí herramientas o automatizaciones|construí algo funcional|agentes o flujos/i, pts: 6, corto: 'Construyó herramientas' },
+    { re: /mis propios GPTs|asistentes personalizados/i, pts: 5, corto: 'Creó GPTs propios' },
+    { re: /asistentes que ya existen con prompts propios|GPTs, proyectos o plugins|prompts con contexto/i, pts: 4, corto: 'Prompts con contexto' },
+    { re: /redactar, resumir/i, pts: 2, corto: 'Redacta/resume' },
+    { re: /preguntas sueltas/i, pts: 1, corto: 'Preguntas sueltas' },
+    { re: /casi no la uso/i, pts: 0, corto: 'Casi no la usa' },
 ];
 
 export const techoIA = (valor) => {
-    const idx = TECHO_IA.findIndex((o) => o.full === valor);
-    if (idx < 0) return { n: 0, max: 4, ok: false, label: valor ? valor.slice(0, 28) : 'Sin respuesta' };
-    return { n: Math.round((idx / (TECHO_IA.length - 1)) * 4), max: 4, ok: true, label: TECHO_IA[idx].corto };
+    let mejor = null;
+    String(valor || '').split('|').forEach((opcion) => {
+        const o = TECHO_IA.find((t) => t.re.test(opcion));
+        if (o && (!mejor || o.pts > mejor.pts)) mejor = o;
+    });
+    if (!mejor) return { n: 0, max: 4, ok: false, label: valor ? String(valor).slice(0, 28) : 'Sin respuesta' };
+    return { n: Math.round((mejor.pts / IA_PTS_MAX) * 4), max: 4, ok: true, label: mejor.corto };
 };
 
 // --- Encabezados cortos para las 41 preguntas (rieles y grilla de respuestas) ---

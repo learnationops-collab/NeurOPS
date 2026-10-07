@@ -4,7 +4,9 @@ import api from '../../../../services/api';
 import { BANDERA } from '../lib/escalas';
 
 // Panel de pesos del score. Los criterios son los del puesto de Asistente
-// (criterio operativo, escritura, IA real, Sheets…), no los del Closer.
+// (criterio operativo, aporte, IA real, Sheets, idiomas…), no los del Closer, y los
+// define el backend (`assistant_clarity.CLARITY_CRITERIA`): rótulo, pesos de fábrica y
+// `detalle`, la línea que explica qué se está pesando.
 const HiringClarityTab = () => {
     const [pesos, setPesos] = useState([]);
     const [guardado, setGuardado] = useState(true);
@@ -75,6 +77,7 @@ const HiringClarityTab = () => {
                                 <span className="text-[13.5px] font-bold text-white/80">{p.label}</span>
                                 <span className="text-[13px] font-black tabular-nums text-[#8AA3FF]">{p.weight} pts</span>
                             </span>
+                            {p.detalle && <span className="text-[12px] leading-snug text-white/40">{p.detalle}</span>}
                             <input
                                 type="range"
                                 min="0"
