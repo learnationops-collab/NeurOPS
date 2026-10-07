@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../../services/api';
 import HiringInbox from './HiringInbox';
@@ -153,6 +153,92 @@ describe('contadores y tarjetas KPI', () => {
         await screen.findByText('Ana Pérez');
 
         expect(onConteos).toHaveBeenCalledWith({ pendientes: 7, analizados: 2, finalistas: 0 });
+    });
+});
+
+describe('eliminar una postulación', () => {
+    /** Reloj falso DESPUÉS de que la lista cargó: así solo el temporizador de «Deshacer» es controlable. */
+    const conRelojFalso = () => vi.useFakeTimers({ shouldAdvanceTime: true });
+    const avanzar = (ms) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    const papelera = (nombre) => screen.getByRole('button', { name: `Eliminar la postulación de ${nombre}` });
+
+    it('la papelera pregunta en el lugar, sin abrir el modal de la candidata', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+
+        fireEvent.click(papelera('Ana Pérez'));
+
+        expect(screen.getByText('¿Borrar?')).toBeInTheDocument();
+        expect(screen.queryByTestId('modal-candidata')).not.toBeInTheDocument();
+        expect(api.delete).not.toHaveBeenCalled();
+    });
+
+    it('al confirmar espera la ventana de «Deshacer», borra, quita la fila y refresca los conteos sin parpadear', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+        api.delete.mockResolvedValue({ data: { status: 'success' } });
+        const cargasAntes = pedidos().length;
+        conRelojFalso();
+
+        fireEvent.click(papelera('Ana Pérez'));
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+        expect(screen.getByRole('button', { name: /Deshacer/ })).toBeInTheDocument();
+        await avanzar(4000);
+        expect(api.delete).not.toHaveBeenCalled();
+
+        montarApi({ postulaciones: [fila(2, 'Bea Gómez')], conteos: { ...CONTEOS, sin_analizar: 6 }, total: 8 });
+        await avanzar(1500);
+
+        expect(api.delete).toHaveBeenCalledWith('/assistant-applications/1');
+        await waitFor(() => expect(screen.queryByText('Ana Pérez')).not.toBeInTheDocument());
+        expect(screen.getByText('Bea Gómez')).toBeInTheDocument();
+        expect(screen.queryByText('Cargando…')).not.toBeInTheDocument();
+        await waitFor(() => expect(pedidos()).toHaveLength(cargasAntes + 1));
+        await waitFor(() => expect(screen.getAllByText('6').length).toBeGreaterThan(0));
+    });
+
+    it('Deshacer cancela: no se borra nada', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+        conRelojFalso();
+
+        fireEvent.click(papelera('Ana Pérez'));
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+        fireEvent.click(screen.getByRole('button', { name: /Deshacer/ }));
+        await avanzar(6000);
+
+        expect(api.delete).not.toHaveBeenCalled();
+        expect(screen.getByText('Ana Pérez')).toBeInTheDocument();
+    });
+
+    it('si el borrado falla la fila se queda y se explica por qué', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+        api.delete.mockRejectedValue({ response: { data: { message: 'Error interno al eliminar la postulación' } } });
+        conRelojFalso();
+
+        fireEvent.click(papelera('Ana Pérez'));
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+        await avanzar(5500);
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Error interno al eliminar la postulación');
+        expect(screen.getByText('Ana Pérez')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Eliminar la postulación de Ana Pérez' })).toBeInTheDocument();
+    });
+
+    it('la recarga posterior al borrado usa la vista de ahora y no la del momento de confirmar', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+        api.delete.mockResolvedValue({ data: { status: 'success' } });
+        conRelojFalso();
+
+        fireEvent.click(papelera('Ana Pérez'));
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+        fireEvent.click(screen.getByRole('button', { name: /Online/ }));
+        await avanzar(5500);
+
+        await waitFor(() => expect(api.delete).toHaveBeenCalled());
+        await waitFor(() => expect(pedidos().at(-1)).toBe('/assistant-applications?filtro=sin_analizar&modalidad=online'));
     });
 });
 
