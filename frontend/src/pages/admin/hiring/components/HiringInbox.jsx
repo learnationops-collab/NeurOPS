@@ -64,7 +64,14 @@ const Pastilla = ({ activo, onClick, icon: Icon, iconColor, label, n }) => (
     </button>
 );
 
-const BARRA = 'inline-flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5';
+/** Lo que cuenta cada destino del dock a partir de los conteos del listado. */
+const resumenDock = (c) => ({
+    pendientes: c.sin_analizar || 0,
+    analizados: (c.seleccionadas || 0) + (c.en_reserva || 0) + (c.descartadas || 0),
+    finalistas: (c.testeo || 0) + (c.winners || 0) + (c.top_tier || 0) + (c.bajas || 0),
+});
+
+const BARRA ='inline-flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5';
 
 export const VEREDICTO = {
     seleccionada: { label: 'Seleccionada', fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
@@ -131,7 +138,10 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
     // propios sub-filtros de estado debajo de las tarjetas.
     const [modalidad, setModalidad] = useState(null);
     const [postulaciones, setPostulaciones] = useState([]);
+    // `conteos` respeta la modalidad elegida (sub-pestañas y tarjetas KPI);
+    // `globales` es el pool entero, que es lo que muestran los badges del dock.
     const [conteos, setConteos] = useState({});
+    const [globales, setGlobales] = useState({});
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
@@ -145,29 +155,35 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
     const filtroEfectivo = grupo === 'busqueda' ? 'todas' : sub;
     const modalidadEfectiva = grupo === 'pendientes' ? modalidad : null;
 
-    const cargar = useCallback(async (f, m) => {
-        setLoading(true);
+    // Orden de llegada: si dos pedidos se cruzan, gana el último que salió.
+    const pedido = useRef(0);
+
+    const cargar = useCallback(async (f, m, { silencioso = false } = {}) => {
+        const mio = ++pedido.current;
+        if (!silencioso) setLoading(true);
         try {
             const res = await api.get(`/assistant-applications?filtro=${f}${m ? `&modalidad=${m}` : ''}`);
+            if (mio !== pedido.current) return;
             setPostulaciones(res.data.postulaciones);
             setConteos(res.data.conteos);
+            // Un backend sin `conteos_globales` (versión vieja) cae en los conteos a secas.
+            setGlobales(res.data.conteos_globales || res.data.conteos);
             setTotal(res.data.total);
         } catch (err) {
             console.error('Error al cargar postulaciones de Asistente:', err);
         } finally {
-            setLoading(false);
+            if (mio === pedido.current) setLoading(false);
         }
     }, []);
 
     useEffect(() => { cargar(filtroEfectivo, modalidadEfectiva); }, [filtroEfectivo, modalidadEfectiva, cargar]);
 
-    // Los badges del dock los mantiene el padre; se los pasamos al cargar.
+    // Los badges del dock los mantiene el padre; se los pasamos al cargar. Salen
+    // de los conteos GLOBALES: elegir Híbridos no cambia cuánto hay en cada vista.
     useEffect(() => {
-        if (!onConteos || !conteos.todas) return;
-        const analizados = (conteos.seleccionadas || 0) + (conteos.en_reserva || 0) + (conteos.descartadas || 0);
-        const finalistas = (conteos.testeo || 0) + (conteos.winners || 0) + (conteos.top_tier || 0) + (conteos.bajas || 0);
-        onConteos({ pendientes: conteos.sin_analizar || 0, analizados, finalistas });
-    }, [conteos, onConteos]);
+        if (!onConteos || !globales.todas) return;
+        onConteos(resumenDock(globales));
+    }, [globales, onConteos]);
 
     const filas = useMemo(() => {
         if (!query) return postulaciones;
@@ -179,10 +195,18 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
 
     const ids = useMemo(() => filas.map((p) => p.id), [filas]);
 
-    const onDecidido = () => cargar(filtroEfectivo);
+    // Tras decidir se recarga conservando la modalidad elegida.
+    const onDecidido = () => cargar(filtroEfectivo, modalidadEfectiva);
 
-    const analizadas = (conteos.seleccionadas || 0) + (conteos.en_reserva || 0)
-        + (conteos.testeo || 0) + (conteos.descartadas || 0) + (conteos.bajas || 0);
+    // Qué cuenta cada tarjeta KPI (todas siguen la modalidad elegida):
+    //   · Postulaciones: solo las que terminaron el formulario (`total`; las
+    //     incompletas son gente que lo abandonó y no cuentan).
+    //   · Sin analizar: completas sin veredicto (`conteos.sin_analizar`).
+    //   · Analizadas: las que ya tienen veredicto de un revisor, o sea Analizados
+    //     + Finalistas del dock (`resumenDock`).
+    //   · Con video verificado: `conteos.con_video`.
+    const { analizados, finalistas } = resumenDock(conteos);
+    const analizadas = analizados + finalistas;
 
     const enPendientes = grupo === 'pendientes';
 
