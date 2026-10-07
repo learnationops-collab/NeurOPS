@@ -40,6 +40,17 @@ BLOQUES = [
 # que se preguntan.
 CAMPOS_FORMULARIO = [campo for _, campos in BLOQUES for campo in campos]
 
+# Preguntas que NO penalizan la completitud (ver `completitud()`), según la
+# lógica del formulario:
+#   · `automatizacion_ejemplo` es opcional (`req: false`, «si nunca armaste una,
+#     seguí de largo»): nunca se espera.
+#   · `meta_presupuesto` solo se muestra (y entonces es obligatoria) si en
+#     `meta` eligió la opción de quien gestionó cuentas publicitarias de forma
+#     habitual: solo se espera en ese caso.
+# El resto de las 35 son siempre obligatorias para terminar.
+OPCIONALES = ('automatizacion_ejemplo',)
+META_CON_PRESUPUESTO = 'Gestioné cuentas publicitarias de forma habitual'
+
 # Preguntas de la versión anterior del formulario (41 preguntas) que el actual
 # ya no hace. Las columnas se conservan: las postulaciones viejas siguen siendo
 # consultables (y el score las usa), pero no cuentan para el embudo ni para la
@@ -169,6 +180,33 @@ class AssistantApplication(db.Model):
     def respondidas(self):
         return sum(1 for campo in CAMPOS_FORMULARIO if not _vacio(getattr(self, campo)))
 
+    def preguntas_esperadas(self):
+        """Columnas que el formulario le pide de verdad a ESTA postulación:
+        las 35 menos la opcional y menos la condicional que no le tocó ver."""
+        esperadas = []
+        for campo in CAMPOS_FORMULARIO:
+            if campo in OPCIONALES:
+                continue
+            if campo == 'meta_presupuesto' and self.meta != META_CON_PRESUPUESTO:
+                continue
+            esperadas.append(campo)
+        return esperadas
+
+    def completitud(self):
+        """Porcentaje entero 0-100 de las preguntas del formulario contestadas.
+
+        Denominador: `preguntas_esperadas()` (33 siempre, 34 si gestionó
+        cuentas de Meta). Así una opcional salteada o una condicional que no le
+        apareció no baja el porcentaje de nadie. Si `completo` es True, 100
+        (terminó el formulario, aunque falte alguna). Mientras no esté
+        completa, tope 99: llegar a 100 es terminar.
+        """
+        if self.completo:
+            return 100
+        esperadas = self.preguntas_esperadas()
+        contestadas = sum(1 for campo in esperadas if not _vacio(getattr(self, campo)))
+        return min(99, round(100 * contestadas / len(esperadas)))
+
     def auto_ko(self):
         """True si alguna respuesta del bloque Requisitos es excluyente. Es lo
         que distingue "lo cortó el formulario" de "lo descartó un revisor"."""
@@ -231,6 +269,7 @@ class AssistantApplication(db.Model):
             "completo": self.completo,
             "respondidas": self.respondidas(),
             "total_preguntas": len(CAMPOS_FORMULARIO),
+            "completitud": self.completitud(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "score": assistant_clarity.score_de(self, criterios),
