@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bug, AlertTriangle, X, History, PenLine } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import BugReportChat from './BugReportChat';
 import BugReportHistory from './BugReportHistory';
-import { BUG_REPORT_EVENT } from '../../utils/bugReportBus';
+import { BUG_REPORT_EVENT, BUG_REPORT_VISTA_EVENT, publicarEstadoDeReportes } from '../../utils/bugReportBus';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Botón flotante global + orquestador del disparador reactivo. Se monta a nivel de App
+// Orquestador global del reporte de bugs: el chat, «Mis reportes» y el disparador reactivo. Desde el
+// 07/10/2026 NO dibuja el botón flotante rosado: «Reportar un problema» y «Mis reportes» son opciones
+// del menú de sesión que abre el avatar del dock (`MenuSesion`), que le pide a este componente que
+// abra una vista con BUG_REPORT_VISTA_EVENT y lee de acá, por el bus (`publicarEstadoDeReportes`), cuántas
+// respuestas hay sin leer y si quedó un reporte en progreso. Se monta a nivel de App
 // (no dentro de MainLayout) porque no todas las vistas autenticadas usan MainLayout —
 // CloserWorkflowPage ("/closer/deck", donde los closers pasan todo su tiempo) corre
 // standalone a propósito, y montarlo solo en MainLayout dejaba a los closers sin forma
@@ -23,6 +27,9 @@ const BugReportWidget = () => {
     const [technicalContext, setTechnicalContext] = useState(null);
     const [pendingPrompt, setPendingPrompt] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    // La vista de ahora para los listeners de eventos, que no deben re-suscribirse en cada cambio.
+    const viewRef = useRef(view);
+    useEffect(() => { viewRef.current = view; }, [view]);
 
     useEffect(() => {
         if (!user) return;
@@ -39,8 +46,31 @@ const BugReportWidget = () => {
         return () => window.removeEventListener(BUG_REPORT_EVENT, handleTrigger);
     }, [user]);
 
+    // El menú del usuario pide abrir una vista. «chat» retoma el reporte en progreso si lo hay (el
+    // contexto técnico y el estado del chat siguen vivos) y si no, abre uno nuevo.
+    useEffect(() => {
+        if (!user) return;
+        const alPedirVista = (e) => {
+            const vista = e.detail?.vista;
+            if (vista === 'historial') {
+                setUnreadCount(0);
+                setView('history');
+            } else if (vista === 'chat') {
+                if (viewRef.current !== 'minimized') setTechnicalContext(null);
+                setView('chat');
+            }
+        };
+        window.addEventListener(BUG_REPORT_VISTA_EVENT, alPedirVista);
+        return () => window.removeEventListener(BUG_REPORT_VISTA_EVENT, alPedirVista);
+    }, [user]);
+
+    // Lo que ve el menú: respuestas sin leer y si hay un reporte a medias.
+    useEffect(() => {
+        publicarEstadoDeReportes({ sinLeer: unreadCount, enProgreso: view === 'minimized' });
+    }, [unreadCount, view]);
+
     // Fetch pasivo (solo la lista, nunca abre un hilo) para saber si hay mensajes nuevos y
-    // mostrar el badge en el botón flotante — se consume de verdad al abrir "Mis reportes"
+    // mostrar la cuenta sobre el avatar del dock — se consume de verdad al abrir "Mis reportes"
     // y entrar a la conversación (GET /bug-reports/<id>/messages marca la lectura ahí).
     // Antes solo se pedía una vez al montar (con el login) — si te respondían mientras ya
     // tenías la app abierta, el badge no aparecía hasta recargar. El poll cada 45s lo detecta
@@ -70,16 +100,6 @@ const BugReportWidget = () => {
         setTechnicalContext(pendingPrompt);
         setPendingPrompt(null);
         setView('chat');
-    };
-
-    const openManually = () => {
-        setTechnicalContext(null);
-        setView('chat');
-    };
-
-    const openHistory = () => {
-        setUnreadCount(0);
-        setView('history');
     };
 
     if (!user) return null;
@@ -115,75 +135,6 @@ const BugReportWidget = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {view === 'closed' && (
-                // "group" cubre el bug y el historial (incluido el espacio entre ambos): el
-                // historial aparece al entrar el puntero a esta zona, que en la práctica significa
-                // pasar por encima del ícono del bug (es el único visible antes del hover, y el
-                // historial ocupa el lugar justo arriba de él). Evita el parpadeo que daría usar
-                // "peer" con hover exclusivo del botón del bug: al mover el cursor hacia el
-                // historial recién revelado, cruzar el espacio entre ambos apagaría el hover antes
-                // de llegar a poder hacer clic.
-                <div data-bug-report-ignore="true" className="group fixed bottom-8 right-24 z-[190] flex flex-col items-center gap-2">
-                    <button
-                        onClick={openHistory}
-                        className="relative w-9 h-9 rounded-full bg-surface border border-base shadow-lg flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-all active:scale-95 opacity-0 -translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto"
-                        title="Mis reportes"
-                    >
-                        <History size={16} />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        // Con algo sin leer, el clic va directo a "Mis reportes" en vez de abrir el chat de
-                        // reporte nuevo -- pedido explícito: antes había que abrir el historial a mano para
-                        // enterarte de una respuesta pendiente, y no tenía sentido tapar ese aviso con un
-                        // formulario en blanco. Sin nada pendiente, el botón vuelve a su función normal.
-                        onClick={unreadCount > 0 ? openHistory : openManually}
-                        // Rosado fijo de marca (#FF3FA4, ver --brand-secondary/--v6-pink en index.css) en vez
-                        // de bg-primary/bg-secondary: esos tokens cambian de color según el tema elegido
-                        // (azul, índigo, custom...), y este botón necesita quedar siempre rosado y llamativo
-                        // sin importar el tema activo — a diferencia del resto de la UI, que sí debe seguirlo.
-                        className="relative w-12 h-12 rounded-full bg-[#FF3FA4] shadow-2xl shadow-[#FF3FA4]/50 flex items-center justify-center text-white hover:bg-[#FF6AD5] hover:shadow-[#FF3FA4]/70 hover:scale-105 transition-all active:scale-95"
-                        title={unreadCount > 0 ? `Tenés ${unreadCount} respuesta(s) sin leer` : 'Reportar un problema o feedback'}
-                    >
-                        <Bug size={20} />
-                        {unreadCount > 0 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 border-2 border-[#0d0b1a] text-white text-[10px] font-black flex items-center justify-center"
-                            >
-                                <motion.span
-                                    animate={{ scale: [1, 1.25, 1] }}
-                                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                                    className="absolute inset-0 rounded-full bg-rose-500 -z-10"
-                                />
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </motion.span>
-                        )}
-                    </button>
-                </div>
-            )}
-
-            {view === 'minimized' && (
-                // Pestaña de retomar: reemplaza a los botones normales (no tendría sentido
-                // ofrecer "reportar" de nuevo mientras ya hay uno a medio llenar) y reabre el
-                // mismo drawer con isOpen=true sin tocar technicalContext ni el estado interno
-                // del chat, que sigue vivo porque BugReportChat nunca se desmonta.
-                <button
-                    data-bug-report-ignore="true"
-                    onClick={() => setView('chat')}
-                    className="fixed bottom-8 right-24 z-[190] flex items-center gap-2 bg-surface border border-[#FF3FA4]/50 rounded-full pl-4 pr-5 py-3 shadow-2xl text-xs font-bold text-white hover:border-[#FF3FA4] transition-all active:scale-95"
-                    title="Continuar reporte en progreso"
-                >
-                    <PenLine size={16} className="text-[#FF3FA4]" />
-                    Reporte en progreso
-                </button>
-            )}
 
             <BugReportChat
                 isOpen={view === 'chat'}

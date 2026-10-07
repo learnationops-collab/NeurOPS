@@ -265,7 +265,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
         expect(screen.getByText('Setter')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Playbook, 3 pendientes', 'Mis links de agendamiento', 'Cerrar sesión']);
+            .toEqual(['Playbook, 3 pendientes', 'Mis links de agendamiento', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
 
         fireEvent.click(screen.getByRole('menuitem', { name: 'Playbook, 3 pendientes' }));
         expect(sesion.openPlaybook).toHaveBeenCalledWith('pending');
@@ -282,6 +282,6 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter');
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Playbook', 'Mis links de agendamiento', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Playbook', 'Mis links de agendamiento', 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 });

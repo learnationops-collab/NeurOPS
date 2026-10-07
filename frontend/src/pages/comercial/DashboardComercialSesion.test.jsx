@@ -64,7 +64,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         expect(screen.queryByText(/Ir a Ventas/i)).toBeNull();
         await abrirSesion('Dirección');
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Cambiar de área', 'Simular a un closer', 'Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Cambiar de área', 'Simular a un closer', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
 
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
         expect(api.get).toHaveBeenCalledWith('/auth/impersonate/closers');
@@ -80,7 +80,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
 
         expect(screen.getByRole('link', { name: 'Volver al mazo' })).toBeTruthy();
         await abrirSesion('Marlon Closer');
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
         expect(api.get).not.toHaveBeenCalled();
     });
 
@@ -93,7 +93,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         await abrirSesion('Marlon Closer');
         expect(screen.getByText('Closer · simulación')).toBeTruthy();
         expect(screen.getAllByRole('menuitem').map(i => i.textContent))
-            .toEqual(['Simular a un closer', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Simular a un closer', 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Volver a mi sesión' }));
         expect(impersonation.revertImpersonation).toHaveBeenCalledTimes(1);
     });

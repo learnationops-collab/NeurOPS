@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { CalendarPlus, Compass, LogOut } from 'lucide-react';
 import MenuSesion from './MenuSesion';
+import { BUG_REPORT_VISTA_EVENT, publicarEstadoDeReportes } from '../../../utils/bugReportBus';
 
 /**
  * La sesión al final del dock: lo que antes eran botones del header del mazo. Lo que importa es
@@ -20,6 +21,8 @@ const renderMenu = (acciones = { agenda: vi.fn(), playbook: vi.fn(), salir: vi.f
 };
 
 describe('MenuSesion', () => {
+    beforeEach(() => publicarEstadoDeReportes({ sinLeer: 0, enProgreso: false }));
+
     it('el botón es el avatar, dice de quién es la sesión y lleva la cuenta de lo pendiente', () => {
         renderMenu(undefined, { texto: 5, titulo: '5 videos pendientes del Playbook' });
         const boton = screen.getByRole('button', { name: 'Tu sesión: Marlon Closer, 5 videos pendientes del Playbook' });
@@ -33,9 +36,10 @@ describe('MenuSesion', () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
         const menu = screen.getByRole('menu', { name: 'Tu sesión' });
         expect(menu.textContent).toContain('Marlon Closer');
-        expect(screen.getAllByRole('group')).toHaveLength(3);
+        expect(screen.getAllByRole('group')).toHaveLength(4);
+        // «Reportar un problema» y «Mis reportes» se agregan solos, antes del último grupo (cerrar sesión).
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Cerrar sesión']);
+            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Nueva agenda' }));
     });
 
@@ -46,9 +50,49 @@ describe('MenuSesion', () => {
         expect(document.activeElement.getAttribute('aria-label')).toBe('Playbook, 5 pendientes');
         fireEvent.keyDown(document, { key: 'ArrowDown' });
         fireEvent.keyDown(document, { key: 'ArrowDown' });
+        fireEvent.keyDown(document, { key: 'ArrowDown' });
+        fireEvent.keyDown(document, { key: 'ArrowDown' });
         expect(document.activeElement.textContent).toBe('Nueva agenda');
         fireEvent.keyDown(document, { key: 'ArrowUp' });
         expect(document.activeElement.textContent).toBe('Cerrar sesión');
+    });
+
+    it('«Reportar un problema» y «Mis reportes» le piden al widget que abra su vista', async () => {
+        const pedidos = [];
+        const alPedir = (e) => pedidos.push(e.detail.vista);
+        window.addEventListener(BUG_REPORT_VISTA_EVENT, alPedir);
+        renderMenu();
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reportar un problema' }));
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Mis reportes' }));
+
+        window.removeEventListener(BUG_REPORT_VISTA_EVENT, alPedir);
+        expect(pedidos).toEqual(['chat', 'historial']);
+    });
+
+    it('las respuestas sin leer a tus reportes se suman a la cuenta del avatar y se ven en el menú', async () => {
+        publicarEstadoDeReportes({ sinLeer: 2, enProgreso: false });
+        renderMenu(undefined, { texto: 5, titulo: '5 videos pendientes del Playbook' });
+        const boton = screen.getByRole('button', {
+            name: 'Tu sesión: Marlon Closer, 5 videos pendientes del Playbook, 2 respuestas sin leer a tus reportes',
+        });
+        expect(boton.querySelector('.dock-sesion-aviso').textContent).toBe('7');
+
+        await act(async () => { fireEvent.click(boton); });
+        expect(screen.getByRole('menuitem', { name: 'Mis reportes, 2 respuestas sin leer' }).textContent).toContain('2');
+
+        publicarEstadoDeReportes({ sinLeer: 0, enProgreso: true });
+    });
+
+    it('con un reporte a medias el menú ofrece retomarlo', async () => {
+        publicarEstadoDeReportes({ sinLeer: 0, enProgreso: true });
+        renderMenu();
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
+        expect(screen.getByRole('menuitem', { name: 'Continuar reporte en progreso' })).toBeTruthy();
+        expect(screen.queryByRole('menuitem', { name: 'Reportar un problema' })).toBeNull();
+        publicarEstadoDeReportes({ sinLeer: 0, enProgreso: false });
     });
 
     it('elegir cierra el menú y después corre la acción', async () => {

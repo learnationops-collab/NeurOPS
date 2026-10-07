@@ -6,11 +6,13 @@ import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import useDockNavigation from '../../hooks/useDockNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
+import useOpcionesDeReporte from '../feedback/useOpcionesDeReporte';
 
 const Dock = () => {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
     const { pendingCount, openPlaybook } = usePlaybook();
+    const reportes = useOpcionesDeReporte();
     const {
         pages,
         activePageIndex,
@@ -196,8 +198,13 @@ const Dock = () => {
                         </div>
 
                         <div className="relative group">
-                            <button className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted font-bold text-sm hover:bg-white/10 transition-all">
+                            <button className="relative w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted font-bold text-sm hover:bg-white/10 transition-all">
                                 {userInitial}
+                                {reportes.sinLeer > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
+                                        {reportes.sinLeer}
+                                    </span>
+                                )}
                             </button>
 
                             {/* Dropdown Menu */}
@@ -216,6 +223,21 @@ const Dock = () => {
                                         >
                                             <op.Icono size={16} className="text-muted" />
                                             <span className="text-sm font-bold text-muted">Pasar a {op.label}</span>
+                                        </button>
+                                    ))}
+                                    {reportes.opciones.map((op) => (
+                                        <button
+                                            key={op.id}
+                                            onClick={op.onClick}
+                                            className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/5 transition-colors text-left mb-1"
+                                        >
+                                            <op.Icono size={16} className="text-muted" />
+                                            <span className="text-sm font-bold text-muted">{op.label}</span>
+                                            {op.cuenta != null && (
+                                                <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+                                                    {op.cuenta}
+                                                </span>
+                                            )}
                                         </button>
                                     ))}
                                     <button

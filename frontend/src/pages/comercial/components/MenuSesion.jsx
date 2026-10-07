@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal, flushSync } from 'react-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { fmt } from './Shared';
+import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
 
 /**
  * La sesión al final del dock: quién está conectado y lo que no es una sección —crear algo, el
@@ -10,7 +11,12 @@ import { fmt } from './Shared';
  * buscador en la parte superior").
  *
  * El botón es el avatar con las iniciales. Si hay algo que mirar (los videos pendientes del
- * Playbook) lleva la cuenta encima, para que guardarlo en un menú no lo esconda.
+ * Playbook, las respuestas sin leer a tus reportes) lleva la cuenta encima, para que guardarlo en un
+ * menú no lo esconda.
+ *
+ * «Reportar un problema» y «Mis reportes» (el botón flotante rosado de antes, desde el 07/10/2026) se
+ * agregan solos a TODOS los menús, en el grupo previo al último (el de cerrar sesión): ningún dock
+ * tiene que acordarse de ponerlos.
  *
  * El menú se dibuja en un portal colgado de `<body>`, como la burbuja de `Tip`: el dock tiene
  * `overflow` y `backdrop-filter`, y adentro un menú quedaría recortado (el `backdrop-filter` además
@@ -144,7 +150,16 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     };
 
     const iniciales = fmt.iniciales(nombre);
-    const etiqueta = [`Tu sesión: ${nombre}`, aviso?.titulo].filter(Boolean).join(', ');
+
+    // Los reportes: sus opciones van antes del último grupo (cerrar sesión) y las respuestas sin leer
+    // se suman a la cuenta del avatar.
+    const reportes = useOpcionesDeReporte();
+    const conGrupos = grupos.filter(g => g.length);
+    const todosLosGrupos = [...conGrupos.slice(0, -1), reportes.opciones, ...conGrupos.slice(-1)];
+    const enCuenta = (Number(aviso?.texto) || 0) + reportes.sinLeer;
+    const cuenta = enCuenta > 0 ? enCuenta : aviso?.texto;
+    const titulos = [aviso?.titulo, reportes.sinLeer ? `${reportes.sinLeer} ${reportes.sinLeer === 1 ? 'respuesta sin leer' : 'respuestas sin leer'} a tus reportes` : null];
+    const etiqueta = [`Tu sesión: ${nombre}`, ...titulos].filter(Boolean).join(', ');
 
     return (
         <>
@@ -152,7 +167,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                 title={etiqueta} aria-haspopup="menu" aria-expanded={abierto}
                 onClick={() => (abierto ? cerrar() : setAbierto(true))}>
                 <span className="avatar" aria-hidden="true">{iniciales}</span>
-                {aviso?.texto && <span className="dock-sesion-aviso" aria-hidden="true">{aviso.texto}</span>}
+                {cuenta && <span className="dock-sesion-aviso" aria-hidden="true">{cuenta}</span>}
             </button>
             {abierto && createPortal(
                 <div className="dc-shell menu-capa">
@@ -200,7 +215,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                                         {rol && <small>{rol}</small>}
                                     </span>
                                 </div>
-                                {grupos.filter(g => g.length).map((grupo, i) => (
+                                {todosLosGrupos.map((grupo, i) => (
                                     <div key={grupo[0].id} role="group">
                                         {i > 0 && <hr className="menu-sep" />}
                                         {grupo.map(op => (
