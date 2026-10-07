@@ -136,6 +136,38 @@ const Puntos = ({ n, color = '#5B7CFF' }) => (
     </span>
 );
 
+// Qué tan completo quedó el formulario del registro. El número lo calcula el
+// backend (`completitud`, entero 0-100); acá solo se dibuja. Sin dato, nada.
+export const colorCompletitud = (pct) => (pct >= 100 ? '#2FBF8F' : pct >= 50 ? '#D9A441' : '#E85C4A');
+
+export const Completitud = ({ valor }) => {
+    const n = typeof valor === 'number' ? valor : (valor == null || valor === '' ? NaN : Number(valor));
+    if (!Number.isFinite(n)) return null;
+    const pct = Math.max(0, Math.min(100, Math.round(n)));
+    const color = colorCompletitud(pct);
+    return (
+        <span
+            className="flex w-[190px] flex-none flex-col justify-center gap-1.5 px-1"
+            data-testid="completitud"
+            title="Qué parte del formulario completó la persona"
+        >
+            <span className="whitespace-nowrap text-[13px] font-bold leading-none text-white/65">
+                Formulario completo al <span className="tabular-nums" style={{ color }}>{pct} %</span>
+            </span>
+            <span
+                role="progressbar"
+                aria-label="Formulario completo"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+                className="block h-1.5 w-full overflow-hidden rounded-full bg-white/[.12]"
+            >
+                <span className="block h-full rounded-full transition-[width] duration-300" style={{ width: `${pct}%`, background: color }} />
+            </span>
+        </span>
+    );
+};
+
 const Riel = ({ titulo, icono: Icono, className = '', children }) => (
     <section className={`flex min-w-0 flex-col rounded-2xl border border-white/[.09] bg-white/[.03] px-4 pb-2 pt-3.5 ${className}`}>
         <small className="flex items-center gap-2 pb-3 text-[11.5px] font-extrabold uppercase leading-none tracking-[.1em] text-white/55">
@@ -636,6 +668,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                         {d.score ?? '—'}
                                     </span>
                                 </span>
+                                <Completitud valor={d.completitud} />
                             </>
                         )}
 
