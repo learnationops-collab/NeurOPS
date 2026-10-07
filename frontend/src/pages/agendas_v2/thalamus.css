@@ -1527,6 +1527,10 @@
 .thalamus .fm-tipo[aria-checked="true"] .fm-tipo-ico{background:var(--brand-secondary);color:var(--on-brand)}
 .thalamus .fm-ia{width:100%}
 .thalamus .fm-evlinks{display:grid;gap:var(--s3);width:100%}
+.thalamus .fm-setters{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
+.thalamus .fm-setters .t-xs{flex-basis:100%}
+.thalamus .fm-setter{cursor:pointer;border:0}
+.thalamus .fm-setter[aria-pressed="false"]{opacity:.65}
 .thalamus .fm-evlink{display:grid;gap:6px;padding:12px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--mat-1)}
 .thalamus .fm-evlink .ls-tit{display:none}
 .thalamus .fm-evs{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s3)}

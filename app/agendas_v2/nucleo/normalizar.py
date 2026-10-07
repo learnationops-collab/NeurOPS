@@ -196,6 +196,8 @@ def normal_funnel(id, d):
         # Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
         # queda a su nombre. No lleva orígenes a mano.
         'setting': tipo_funnel(d) == 'setting',
+        # Los setters que trabajan este funnel (ids de usuario). Vacío: todos los setters activos.
+        'setters': sorted({int(x) for x in (d.get('setters') or [])[:200] if isinstance(x, int) or (isinstance(x, str) and x.isdigit())}),
     }
 
 

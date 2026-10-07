@@ -4,6 +4,7 @@ import { render, screen, fireEvent, act, cleanup, within } from '@testing-librar
 import { almacen } from '../../data/hooks';
 import { ui } from '../../ui/estadoUi';
 import { configDe, estadoFunnel, pasosAgendamiento } from '../../core/eventos';
+import { settersDe } from './comun';
 import { buscar } from '../../core/datos';
 import ListaEventos from './ListaEventos';
 
@@ -74,5 +75,13 @@ describe('Eventos', () => {
         const pasos = screen.getByRole('list', { name: 'Lo que le falta a Seguimiento' });
         fireEvent.click(within(pasos).getByRole('button', { name: /Sin segmentación/ }));
         expect(ui.getState()).toMatchObject({ seccion: 'preguntas', form: { vista: 'ruteo' } });
+    });
+    it('cada funnel dice si recibe agendas, y uno de setting tiene solo los setters elegidos', () => {
+        render(envolver(<ListaEventos />));
+        expect(screen.getAllByText('Activo').length).toBeGreaterThan(0);
+        const sts = [{ id: 1, nombre: 'juan' }, { id: 2, nombre: 'eva' }];
+        expect(settersDe({ setters: [] }, sts)).toEqual(sts);
+        expect(settersDe({ setters: [2] }, sts).map(x => x.nombre)).toEqual(['eva']);
+        expect(settersDe({ setters: [2] }, null)).toBeNull();
     });
 });

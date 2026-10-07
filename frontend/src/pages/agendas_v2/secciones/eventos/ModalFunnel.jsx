@@ -7,7 +7,8 @@
 //    JSON se escribe encima (mismos links). El evento queda como borrador hasta publicarlo.
 // Tipo: para qué cuenta en las estadísticas (Workshop, VSL, Setting u Otro; ver operacion._fuente). En
 // un workshop, el origen «Grabación» (o Replay) cuenta como la grabación; el resto, como la clase en vivo.
-// Setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda queda a su nombre.
+// Setting: cada setter del funnel tiene su link (?o=<su usuario>) y la agenda queda a su nombre. Se eligen
+// cuáles trabajan el funnel; sin elegir ninguno, son todos los setters activos de NeurOPS.
 
 import { useState } from 'react';
 import { Avatar, Icono, Modal, Seg, Switch } from '../../ui/base';
@@ -17,7 +18,7 @@ import { almacen, useDatos } from '../../data/hooks';
 import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
-import { LinksSetters, abrirEvento, crearEvento } from './comun';
+import { LinksSetters, abrirEvento, crearEvento, useSetters } from './comun';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -244,6 +245,35 @@ function NuevoFunnel({ d, cerrar }) {
     );
 }
 
+// Qué setters trabajan este funnel. Sin ninguno marcado, todos los activos (como antes de poder elegir).
+function SettersDelFunnel({ f, editar }) {
+    const sts = useSetters();
+    if (sts === null) return <p className="t-sm mut">Cargando setters…</p>;
+    if (!sts.length) return <p className="t-sm mut">No hay setters activos en la app.</p>;
+    const el = new Set(f.setters);
+    const todos = !el.size;
+    const alternar = (id) => {
+        const n = new Set(todos ? sts.map(s => Number(s.id)) : el);
+        if (n.has(id)) n.delete(id); else n.add(id);
+        // Todos marcados vuelve a «todos» (los setters nuevos se suman solos).
+        editar({ setters: n.size === sts.length ? [] : [...n] }, true);
+    };
+    return (
+        <div className="fm-setters" role="group" aria-label="Setters del funnel">
+            {sts.map(s => {
+                const on = todos || el.has(Number(s.id));
+                return (
+                    <button key={s.id} type="button" className="chip chip--n fm-setter" aria-pressed={on}
+                        style={{ '--c': on ? 'var(--brand-secondary)' : 'var(--idle)' }} onClick={() => alternar(Number(s.id))}>
+                        <Icono n={on ? 'check' : 'plus'} s={13} />{s.nombre}
+                    </button>
+                );
+            })}
+            <p className="t-xs mut">{todos ? 'Todos los setters activos trabajan este funnel. Desmarcá los que no.' : el.size + ' de ' + sts.length + ' setters trabajan este funnel.'}</p>
+        </div>
+    );
+}
+
 function LinksDelFunnel({ d, f, eventos }) {
     if (!f.setting) return <Origenes d={d} f={f} />;
     if (!eventos.length) return <p className="t-sm mut">Creá un evento en este funnel y acá aparecen los links de cada setter.</p>;
@@ -296,6 +326,11 @@ function EditarFunnel({ d, f, cerrar }) {
                     <span className="t-sm">Recibe agendas</span>
                 </label>
             </Bloque>
+            {f.setting && (
+                <Bloque titulo="Setters" ayuda="Quiénes trabajan este funnel: cada uno tiene su link y ve sus links en su menú de NeurOPS.">
+                    <SettersDelFunnel f={f} editar={editar} />
+                </Bloque>
+            )}
             <Bloque titulo={f.setting ? 'Links de setters' : 'Links por procedencia'}
                 ayuda={f.setting ? 'Un link por setter y por evento: la agenda que entra por ahí queda a su nombre.'
                     : 'Cada link suma ?o=nombre al del evento, para saber de dónde vino cada agenda.'}>

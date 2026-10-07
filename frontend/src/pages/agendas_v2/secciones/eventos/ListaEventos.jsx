@@ -11,7 +11,7 @@ import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import EnTope from '../../ui/EnTope';
-import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento } from './comun';
+import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, settersDe, useSetters } from './comun';
 
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
 const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
@@ -84,6 +84,23 @@ function TarjetaEvento({ d, e }) {
     );
 }
 
+// En el título de cada funnel: si recibe agendas y, si es de setting, quiénes son sus setters.
+function EstadoFunnel({ f }) {
+    const sts = useSetters();
+    const suyos = f.setting ? settersDe(f, sts) : null;
+    return (
+        <>
+            <EstadoEv est={f.activo ? { n: 'Activo', c: 'var(--success)' } : { n: 'Pausado', c: 'var(--idle)' }} />
+            {f.setting && (
+                <span className="chip chip--n" style={{ '--c': 'var(--brand-secondary)' }} title="Setters de este funnel">
+                    <Icono n="users" s={13} />
+                    {suyos === null ? 'Setters…' : !suyos.length ? 'Sin setters' : suyos.length > 3 ? suyos.length + ' setters' : suyos.map(x => x.nombre).join(', ')}
+                </span>
+            )}
+        </>
+    );
+}
+
 export default function ListaEventos() {
     const { d } = useDatos();
     const { evAgrupar } = useUi();
@@ -142,6 +159,7 @@ export default function ListaEventos() {
                                 {agrupar === 'funnel' && ref ? <span className="cf-punto" style={{ '--c': colorVar(ref.color) }} /> : <Icono n={agrupar === 'funnel' ? 'funnel' : 'form'} />}
                                 <span className="t-rotulo">{ref ? ref.nombre : 'Sin ' + agrupar}</span>
                                 {agrupar === 'funnel' && ref && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{TIPO[ref.tipo] || 'Otro'}</span>}
+                                {agrupar === 'funnel' && ref && <EstadoFunnel f={ref} />}
                                 <span className="t-cap mut40">{lista.length}</span>
                                 {agrupar === 'funnel' && ref && (
                                     <button type="button" className="ibtn ibtn--sm" aria-label={'Editar funnel ' + ref.nombre} title="Editar funnel"
