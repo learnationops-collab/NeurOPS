@@ -67,6 +67,15 @@ def _aplica_filtro(app_row, filtro):
     return app_row.veredicto() == esperado
 
 
+def _conteos(filas):
+    """Cuántas postulaciones hay por filtro del inbox, más `completas` (terminaron
+    el formulario) y `con_video` (video verificado)."""
+    conteos = {f: sum(1 for a in filas if _aplica_filtro(a, f)) for f in FILTROS_VALIDOS}
+    conteos['completas'] = sum(1 for a in filas if a.completo)
+    conteos['con_video'] = sum(1 for a in filas if a.video_ok())
+    return conteos
+
+
 @bp.route('/assistant-applications', methods=['GET'])
 @login_required
 @hiring_required
@@ -96,18 +105,26 @@ def listar_assistant_applications():
 
     filtradas.sort(key=lambda a: assistant_clarity.score_de(a, weights), reverse=True)
 
-    conteos = {f: len([a for a in todas if _aplica_filtro(a, f)]) for f in FILTROS_VALIDOS}
+    # `conteos` (sub-pestañas y tarjetas KPI) respeta la modalidad pedida: con
+    # Híbridos elegido, «Sin analizar» e «Incompletas» cuentan solo híbridos.
+    # `conteos_globales` es lo mismo sobre TODO el pool, para los badges del dock,
+    # que no cambian al filtrar por modalidad.
+    base = [a for a in todas if not modalidad or a.modalidad() == modalidad]
+    conteos = _conteos(base)
     conteos.update(conteos_modalidad)
-    completas = [a for a in todas if a.completo]
-    conteos['completas'] = len(completas)
-    conteos['con_video'] = sum(1 for a in todas if a.video_ok())
 
     return jsonify({
         "postulaciones": [
             a.to_dict(include_respuestas=False, criterios=weights) for a in filtradas
         ],
         "conteos": conteos,
-        "total": len(todas),
+        "conteos_globales": _conteos(todas),
+        # KPI «Postulaciones»: solo las que terminaron el formulario (las
+        # incompletas son gente que lo abandonó a medias y no cuentan). Sigue la
+        # modalidad igual que el resto de las tarjetas. Los demás KPI salen de
+        # `conteos`: «Sin analizar» (completas sin veredicto), «Analizadas»
+        # (sumando los veredictos de revisor) y «Con video verificado».
+        "total": conteos['completas'],
     }), 200
 
 
