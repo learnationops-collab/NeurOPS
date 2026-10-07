@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { saveSession } from '../../utils/sessionStore';
 import { roleLandingPath } from '../../utils/roleLanding';
 import { revertImpersonation } from '../../utils/impersonation';
+import ElegirRolAlSimular, { rolesDePersona, tieneVariosRoles } from '../shared/ElegirRolAlSimular';
 
 const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
@@ -13,6 +14,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
     const [activeRoleFilter, setActiveRoleFilter] = useState('all');
     const [loading, setLoading] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState('');
+    const [eligiendoRol, setEligiendoRol] = useState(null); // { nuevaPestana }: eligiendo con qué rol simular
 
     useEffect(() => {
         if (!isOpen) return;
@@ -47,16 +49,17 @@ const OperatorControls = ({ isOpen, onClose }) => {
         if (activeRoleFilter === 'all') {
             setFilteredTargets(targets.filter(u => u.username !== 'admin'));
         } else {
-            setFilteredTargets(targets.filter(u => u.role === activeRoleFilter && u.username !== 'admin'));
+            setFilteredTargets(targets.filter(u => rolesDePersona(u).includes(activeRoleFilter) && u.username !== 'admin'));
         }
         setSelectedUserId(''); // Reset selection when filter changes
     }, [activeRoleFilter, targets]);
 
-    const handleImpersonate = async () => {
-        if (!selectedUserId) return;
+    // Una persona con varios roles se simula con uno: se pregunta con cuál (ElegirRolAlSimular).
+    // `rol` null: el principal. Con `elegirRol`, el error lo muestra esa pantalla y no un alert.
+    const simular = async (rol = null, elegirRol = false) => {
         setLoading(true);
         try {
-            const res = await api.post('/auth/impersonate', { user_id: selectedUserId });
+            const res = await api.post('/auth/impersonate', { user_id: selectedUserId, ...(rol ? { role: rol } : {}) });
             const { user: targetUser, token } = res.data;
 
             // Sincronizar estado local (mismo store que ya esté usando esta pestaña)
@@ -64,9 +67,18 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
             window.location.href = roleLandingPath(targetUser.role);
         } catch (err) {
-            alert(err.response?.data?.message || 'Error executing impersonation');
             setLoading(false);
+            if (elegirRol) throw err;
+            alert(err.response?.data?.message || 'Error executing impersonation');
         }
+    };
+
+    const objetivo = targets.find(u => String(u.id) === String(selectedUserId));
+
+    const handleImpersonate = () => {
+        if (!selectedUserId) return;
+        if (tieneVariosRoles(objetivo)) setEligiendoRol({ nuevaPestana: false });
+        else simular();
     };
 
     // Clic derecho sobre "Iniciar Simulación": abre al usuario elegido en una pestaña NUEVA,
@@ -74,14 +86,18 @@ const OperatorControls = ({ isOpen, onClose }) => {
     // usuarios a la vez en el mismo navegador. window.open() se llama síncrono, antes del
     // await, porque los navegadores bloquean como popup un window.open() disparado después
     // de una espera asíncrona; se navega la pestaña ya abierta recién cuando llega la respuesta.
-    const handleImpersonateNewTab = async (e) => {
+    const handleImpersonateNewTab = (e) => {
         e.preventDefault();
         if (!selectedUserId || loading) return;
+        if (tieneVariosRoles(objetivo)) setEligiendoRol({ nuevaPestana: true });
+        else simularEnPestanaNueva();
+    };
 
+    const simularEnPestanaNueva = async (rol = null, elegirRol = false) => {
         const newTab = window.open('', '_blank');
         setLoading(true);
         try {
-            const res = await api.post('/auth/impersonate', { user_id: selectedUserId, isolated: true });
+            const res = await api.post('/auth/impersonate', { user_id: selectedUserId, isolated: true, ...(rol ? { role: rol } : {}) });
             const { user: targetUser, token } = res.data;
 
             const params = new URLSearchParams({
@@ -98,9 +114,20 @@ const OperatorControls = ({ isOpen, onClose }) => {
             }
         } catch (err) {
             if (newTab) newTab.close();
+            if (elegirRol) throw err;
             alert(err.response?.data?.message || 'Error executing impersonation');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Ya eligió el rol (pantalla ElegirRolAlSimular): la pestaña nueva cierra la elección, la misma entra.
+    const simularConRol = async (rol) => {
+        if (eligiendoRol.nuevaPestana) {
+            await simularEnPestanaNueva(rol, true);
+            setEligiendoRol(null);
+        } else {
+            await simular(rol, true);
         }
     };
 
@@ -131,6 +158,10 @@ const OperatorControls = ({ isOpen, onClose }) => {
     ];
 
     return (
+        <>
+        {eligiendoRol && objetivo && (
+            <ElegirRolAlSimular persona={objetivo} onElegir={simularConRol} onCancelar={() => setEligiendoRol(null)} />
+        )}
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -258,6 +289,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
                 </>
             )}
         </AnimatePresence>
+        </>
     );
 };
 

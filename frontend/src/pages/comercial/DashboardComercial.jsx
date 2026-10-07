@@ -114,7 +114,7 @@ const cargarCloseresParaSimular = async () => {
         onClick: async () => {
             const aviso = toast.loading(`Entrando como ${c.username}…`);
             try {
-                await simularA(c.id);
+                await simularA(c.id, null, 'closer');
             } catch (error) {
                 toast.error(error?.response?.status === 403
                     ? `No podés simular a ${c.username}`

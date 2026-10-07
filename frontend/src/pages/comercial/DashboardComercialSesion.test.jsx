@@ -69,7 +69,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
         expect(api.get).toHaveBeenCalledWith('/auth/impersonate/closers');
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Marlon Closer' })); });
-        expect(impersonation.simularA).toHaveBeenCalledWith(21);
+        expect(impersonation.simularA).toHaveBeenCalledWith(21, null, 'closer');
     });
 
     it('un closer en "Mis datos" no ve "Simular a un closer", y sigue teniendo la vuelta al mazo', async () => {

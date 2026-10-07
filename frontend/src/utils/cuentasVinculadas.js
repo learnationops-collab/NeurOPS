@@ -1,4 +1,4 @@
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, Briefcase, Filter, Megaphone, MessageCircle, PhoneCall, Settings2, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { saveSession, isIsolatedTab } from './sessionStore';
 import { destinoDeEntrada } from './areas';
@@ -20,6 +20,12 @@ const ROTULO_DE_ROL = {
 };
 
 export const rotuloDeRol = (rol) => ROTULO_DE_ROL[rol] || rol;
+
+// El ícono de cada rol en las pantallas donde se elige uno (el login y la simulación).
+export const ICONO_DE_ROL = {
+    admin: Settings2, director_comercial: BarChart3, director_marketing: Megaphone, closer: PhoneCall,
+    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
+};
 
 /** Los OTROS roles de la misma cuenta (vacío si tiene uno solo o está simulando a alguien). */
 export const otrosRoles = (user) => {

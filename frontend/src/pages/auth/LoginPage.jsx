@@ -7,10 +7,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, BarChart3, Briefcase, Eye, EyeOff, Filter, Loader2, Mail, Megaphone, MessageCircle, PhoneCall, Settings2, User, UserPlus } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, Mail, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { destinoDeEntrada } from '../../utils/areas';
-import { cambiarDeRol, cambiarDeRolEnLaCuenta, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
+import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
 import { Isotipo } from '../comercial/components/Shared';
 import Eleccion from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
@@ -145,11 +145,6 @@ function PedirEmail({ user, onListo }) {
         </div>
     );
 }
-
-const ICONO_DE_ROL = {
-    admin: Settings2, director_comercial: BarChart3, director_marketing: Megaphone, closer: PhoneCall,
-    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
-};
 
 function ElegirRol({ user, onElegido }) {
     const [eligiendo, setEligiendo] = useState(null);

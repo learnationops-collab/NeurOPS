@@ -15,7 +15,7 @@ export const SIMULAN_CLOSERS = ['director_comercial', 'admin', 'operator'];
 export const CONFIG_DEL_CLOSER = '/closer/deck?vista=configuracion';
 
 export async function simularParaConfigurar(userId) {
-    try { await simularA(userId, CONFIG_DEL_CLOSER); } catch (e) { toast(e?.response?.data?.message || 'No se pudo simular a esa persona.', 'error'); }
+    try { await simularA(userId, CONFIG_DEL_CLOSER, 'closer'); } catch (e) { toast(e?.response?.data?.message || 'No se pudo simular a esa persona.', 'error'); }
 }
 
 function Marca({ ok, n }) {

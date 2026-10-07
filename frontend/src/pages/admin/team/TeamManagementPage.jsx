@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Calendar, Check, Ghost, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
+import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
 import VincularCuentasModal from './VincularCuentasModal';
 import { Segmented } from '../../comercial/components/Shared';
 import '../../comercial/comercial.css';
@@ -102,6 +103,7 @@ const TeamManagementPage = ({ embebido = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeRole, setActiveRole] = useState('all');
     const [impersonatingId, setImpersonatingId] = useState(null);
+    const [simulando, setSimulando] = useState(null); // { persona, nuevaPestana }: eligiendo con qué rol
     const [showDeactivated, setShowDeactivated] = useState(false);
     const [vinculando, setVinculando] = useState(false);
 
@@ -164,36 +166,63 @@ const TeamManagementPage = ({ embebido = false }) => {
         }
     };
 
-    const handleImpersonate = async (targetUser) => {
+    // Simular: con varios roles se pregunta con cuál (ElegirRolAlSimular); con uno, entra directo.
+    // `nuevaPestana` recuerda si fue clic derecho para seguir después de elegir.
+    const iniciarSimulacion = (targetUser, nuevaPestana) => {
         if (!targetUser.is_active) return;
+        if (tieneVariosRoles(targetUser)) setSimulando({ persona: targetUser, nuevaPestana });
+        else return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
+    };
+
+    const simularAqui = async (targetUser, rol = null) => {
         setImpersonatingId(targetUser.id);
         try {
-            const res = await api.post('/auth/impersonate', { user_id: targetUser.id });
+            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
             saveSession(impersonatedUser, token);
             window.location.href = roleLandingPath(impersonatedUser.role);
         } catch (err) {
-            alert(err.response?.data?.message || 'Error al iniciar simulación');
             setImpersonatingId(null);
+            throw err;
         }
     };
 
     // Clic derecho sobre "Simular": abre al usuario simulado en una pestaña NUEVA, aislada (se pueden
     // simular varios a la vez). window.open() va síncrono, antes del await: los navegadores bloquean
     // como popup cualquier window.open() después de una espera.
-    const handleImpersonateNewTab = async (e, targetUser) => {
-        e.preventDefault();
-        if (!targetUser.is_active) return;
+    const simularEnPestanaNueva = async (targetUser, rol = null) => {
         const newTab = window.open('', '_blank');
         try {
-            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true });
+            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
             const params = new URLSearchParams({ token, u: JSON.stringify(impersonatedUser), next: roleLandingPath(impersonatedUser.role) });
             if (newTab) newTab.location.href = `/session-entry?${params.toString()}`;
             else alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
         } catch (err) {
             if (newTab) newTab.close();
-            alert(err.response?.data?.message || 'Error al iniciar simulación');
+            throw err;
+        }
+    };
+
+    const handleImpersonate = (targetUser) => {
+        const r = iniciarSimulacion(targetUser, false);
+        r?.catch((err) => alert(err.response?.data?.message || 'Error al iniciar simulación'));
+    };
+
+    const handleImpersonateNewTab = (e, targetUser) => {
+        e.preventDefault();
+        const r = iniciarSimulacion(targetUser, true);
+        r?.catch((err) => alert(err.response?.data?.message || 'Error al iniciar simulación'));
+    };
+
+    // Ya eligió el rol: aquí no se captura el error, ElegirRolAlSimular lo muestra en su pantalla.
+    const simularConRol = async (rol) => {
+        const { persona, nuevaPestana } = simulando;
+        if (nuevaPestana) {
+            await simularEnPestanaNueva(persona, rol);
+            setSimulando(null);
+        } else {
+            await simularAqui(persona, rol);
         }
     };
 
@@ -301,6 +330,10 @@ const TeamManagementPage = ({ embebido = false }) => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {simulando && (
+                <ElegirRolAlSimular persona={simulando.persona} onElegir={simularConRol} onCancelar={() => setSimulando(null)} />
             )}
 
             {vinculando && <VincularCuentasModal users={users} onCerrar={() => setVinculando(false)} onCambio={fetchUsers} />}
