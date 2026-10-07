@@ -18,12 +18,13 @@ from app.api.public import bp
 MAX_CORTO = 300
 MAX_LARGO = 4000
 
-# {campo del formulario: largo máximo}. El orden es el de las 41 preguntas
-# (ver app/models/assistant_application.py). Los largos son los mismos que
-# declaran las columnas — recortar acá evita que una respuesta pegada de más
-# haga fallar el INSERT entero en Postgres.
+# {campo del formulario: largo máximo}. El orden es el del formulario actual
+# (ver BLOQUES en app/models/assistant_application.py). Los largos son los
+# mismos que declaran las columnas — recortar acá evita que una respuesta
+# pegada de más haga fallar el INSERT entero en Postgres.
 CAMPOS = {
-    # Bloque 1 · Identificación ('nombre' se trata aparte: es obligatorio)
+    # Bloque 1 · Identificación ('nombre' se trata aparte: es obligatorio).
+    # La provincia/estado llega como `ciudad` (ver ALIAS).
     'pais': 60, 'provincia': 80, 'email': 160, 'whatsapp': 40, 'edad': 40,
     # Bloque 2 · Requisitos
     'equipo': 200, 'disponibilidad': 200, 'horario': 200, 'empleo': 200,
@@ -35,23 +36,40 @@ CAMPOS = {
     # Bloque 5 · Idiomas
     'idioma2': 60, 'ingles': 60,
     # Bloque 6 · Herramientas
-    'sheets': 120, 'ia_nivel': 120, 'ia_avanzado': 300,
-    'ia_construido': MAX_LARGO, 'ia_uso': MAX_LARGO,
+    'sheets': 120, 'ia_nivel': 120, 'ia_avanzado': MAX_LARGO,
     'meta': 200, 'meta_presupuesto': MAX_LARGO,
-    'notion': 200, 'wa_tools': 200, 'automatizaciones': 200,
-    'automatizacion_ejemplo': MAX_LARGO, 'diseno': 300, 'diseno_link': 500,
-    # Bloque 7 · Organización
-    'pendientes': 200, 'instrucciones': MAX_LARGO,
-    # Bloque 8 · Cómo resolvés
-    'retraso': MAX_LARGO, 'monitor': 300, 'martes': MAX_LARGO,
-    # Bloque 9 · Video y CV
+    'notion': 200, 'wa_tools': 200, 'automatizacion_ejemplo': MAX_LARGO,
+    # Bloque 7 · Criterio
+    'aporte': MAX_LARGO,
+    # Bloque 8 · Organización
+    'pendientes': 200,
+    # Bloque 9 · Cómo resolvés
+    'retraso': MAX_LARGO,
+    # Bloque 10 · Video y CV
     'video': 500, 'video_verificado': 60, 'cv': 500,
+    # Preguntas de la versión anterior del formulario. Ya no se hacen, pero se
+    # siguen aceptando por si una pestaña vieja todavía las manda.
+    'ia_construido': MAX_LARGO, 'ia_uso': MAX_LARGO, 'automatizaciones': 200,
+    'diseno': 300, 'diseno_link': 500, 'instrucciones': MAX_LARGO,
+    'monitor': 300, 'martes': MAX_LARGO,
 }
+
+# {campo que manda el formulario: columna donde se guarda}. El formulario
+# llama `ciudad` a la pregunta «¿en qué provincia/estado vivís?»; la columna
+# (y todo el panel: modalidad híbrida/online) la llama `provincia`.
+ALIAS = {'ciudad': 'provincia'}
+
+# Separador de las opciones de una pregunta multi-select (ia_avanzado).
+SEPARADOR_MULTIPLE = ' | '
 
 
 def _texto(valor, largo=MAX_CORTO):
     if valor is None:
         return None
+    if isinstance(valor, (list, tuple)):
+        # Multi-select: un str(lista) guardaría los corchetes y las comillas.
+        partes = [str(v).strip() for v in valor if str(v).strip()]
+        valor = SEPARADOR_MULTIPLE.join(partes)
     texto = str(valor).strip()
     if not texto:
         return None
@@ -104,6 +122,8 @@ def crear_assistant_application():
         app_row.nombre = nombre
         for campo, largo in CAMPOS.items():
             _set_si_presente(app_row, campo, _texto(data.get(campo), largo))
+        for campo_form, columna in ALIAS.items():
+            _set_si_presente(app_row, columna, _texto(data.get(campo_form), CAMPOS[columna]))
 
         # Solo se prenden, nunca se apagan: un request viejo (completo=False)
         # no debe borrar una postulación que otro más nuevo ya marcó terminada,
