@@ -242,6 +242,26 @@ describe('eliminar una postulación', () => {
     });
 });
 
+describe('completitud en la fila', () => {
+    it('muestra el porcentaje y la barra pegados a la candidata', async () => {
+        montarApi({ postulaciones: [fila(1, 'Ana Pérez', { completitud: 63 }), fila(2, 'Bea Gómez', { completitud: 100 })] });
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+
+        const barras = screen.getAllByRole('progressbar', { name: 'Completitud del formulario' });
+        expect(barras.map((b) => b.getAttribute('aria-valuenow'))).toEqual(['63', '100']);
+        expect(screen.getByText('63%')).toBeInTheDocument();
+        expect(screen.getByText('Ana Pérez').closest('td')).toContainElement(barras[0]);
+    });
+
+    it('si el backend no manda completitud no dibuja nada', async () => {
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+});
+
 describe('Analizados, Finalistas y búsqueda', () => {
     it('Analizados mantiene su título y sus sub-filtros de estado', async () => {
         render(<HiringInbox grupo="analizados" titulo="Analizados" />);
