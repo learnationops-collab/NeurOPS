@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Calendar, Check, Eye, EyeOff, Ghost, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
+import { AlertCircle, Calendar, Check, Copy, Eye, EyeOff, Ghost, KeyRound, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
 import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
@@ -226,6 +226,20 @@ const TeamManagementPage = ({ embebido = false }) => {
         }
     };
 
+    // Contraseña temporal nueva: se muestra una sola vez para pasársela a la persona.
+    const [reseteada, setReseteada] = useState(null); // {username, password}
+    const [copiada, setCopiada] = useState(false);
+    const handleReset = async (user) => {
+        if (!window.confirm(`¿Resetear la contraseña de ${user.username}? La actual deja de servir.`)) return;
+        try {
+            const r = await api.post(`/admin/users/${user.id}/reset-password`);
+            setCopiada(false);
+            setReseteada(r.data);
+        } catch (err) {
+            alert(err.response?.data?.message || 'No se pudo resetear la contraseña');
+        }
+    };
+
     const handleDelete = async (user) => {
         if (!window.confirm(`¿Eliminar a ${user.username}? Si solo deja de trabajar, mejor desactivalo.`)) return;
         try {
@@ -320,6 +334,9 @@ const TeamManagementPage = ({ embebido = false }) => {
                                     title="Clic: simular en esta pestaña. Clic derecho: en una pestaña nueva.">
                                     {impersonatingId === u.id ? <span className="ln-spinner" /> : <Ghost />}Simular
                                 </button>
+                                <button type="button" className="ibtn ibtn--sm" title="Resetear contraseña" aria-label={`Resetear la contraseña de ${u.username}`} onClick={() => handleReset(u)}>
+                                    <KeyRound />
+                                </button>
                                 <button type="button" className="ibtn ibtn--sm" title="Editar" aria-label={`Editar a ${u.username}`} onClick={() => handleOpenModal('edit', u)}>
                                     <Pencil />
                                 </button>
@@ -334,6 +351,21 @@ const TeamManagementPage = ({ embebido = false }) => {
 
             {simulando && (
                 <ElegirRolAlSimular persona={simulando.persona} onElegir={simularConRol} onCancelar={() => setSimulando(null)} />
+            )}
+
+            {reseteada && (
+                <Modal tono="slate" titulo="Contraseña nueva" subtitulo={reseteada.username} onCerrar={() => setReseteada(null)}>
+                    <div className="eq-reset">
+                        <p>Pasásela a {reseteada.username}. No se vuelve a mostrar; puede cambiarla después.</p>
+                        <div className="eq-reset-clave">
+                            <code>{reseteada.password}</code>
+                            <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm"
+                                onClick={() => navigator.clipboard?.writeText(reseteada.password).then(() => setCopiada(true), () => {})}>
+                                {copiada ? <Check /> : <Copy />}{copiada ? 'Copiada' : 'Copiar'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             )}
 
             {vinculando && <VincularCuentasModal users={users} onCerrar={() => setVinculando(false)} onCambio={fetchUsers} />}
