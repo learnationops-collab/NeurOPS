@@ -58,3 +58,8 @@
     .dc-shell.equipo { padding: var(--space-4); border-radius: var(--radius-control); }
     .equipo .eq-acciones { width: 100%; justify-content: flex-start; }
 }
+
+/* Contraseña temporal recién reseteada */
+.eq-reset{display:grid;gap:12px}
+.eq-reset-clave{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eq-reset-clave code{font-size:18px;font-weight:800;letter-spacing:.04em;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.08);user-select:all}
