@@ -789,3 +789,46 @@ def test_stats_junta_las_agendas_y_los_que_se_cayeron(client, armado, cuentas, a
     assert agenda['closer'] in ('ana', 'beto') and agenda['score'] == 10 and agenda['setter'] == 'juan'
     assert agenda['inicio'] == calendar.timegm(datetime(2026, 10, 5, 13).timetuple()) * 1000
     assert client.get('/api/agendas-v2/estadisticas', headers=auth_headers(cuentas['ana'])).status_code == 403
+
+
+# --- Eventos propios del closer: link directo con él, formulario opcional --------------------------
+
+
+def test_el_closer_crea_su_evento_sin_formulario_y_el_lead_agenda_solo_con_su_contacto(client, armado, cuentas, auth_headers):
+    h = auth_headers(cuentas['ana'])
+    r = client.put('/api/auth/me/eventos/mio1', json={'nombre': 'Seguimiento', 'duracion': 30, 'formulario': '', 'antel': {'n': 0, 'u': 'h'}, 'paso': {'n': 60, 'u': 'min'}}, headers=h)
+    assert r.status_code == 200, r.get_json()
+    ev = r.get_json()['evento']
+    assert ev['persona'] == 'ana' and ev['funnel'] == '' and ev['link'] == '/agenda/ana-paz-seguimiento'
+    # Publicado al guardar: el link anda y pide solo nombre, WhatsApp y correo (Instagram opcional).
+    pub = client.get(URL + '/eventos/ana-paz-seguimiento').get_json()
+    assert pub['evento']['id'] == 'mio1' and pub['form']['preguntas'] == []
+    r = client.post(URL + '/reservas', json={'evento_id': 'mio1', 'resp': {k: v for k, v in _resp().items() if k != 'q1'},
+                                            'pais': 'BO', 'tz': 'America/La_Paz', 'inicio': LUNES_9})
+    assert r.status_code == 201, r.get_json()
+    assert Appointment.query.one().closer_id == cuentas['ana'].id
+    # Lo ve en su lista; el admin lo ve en las colecciones como cualquier evento.
+    mios = client.get('/api/auth/me/eventos', headers=h).get_json()
+    assert [e['id'] for e in mios['eventos']] == ['mio1'] and {'id': 'fo', 'nombre': 'Calificación'} in mios['formularios']
+    assert any(e['id'] == 'mio1' for e in servicio.colecciones()['eventos'])
+
+
+def test_el_closer_no_toca_eventos_ajenos(client, armado, cuentas, auth_headers):
+    h = auth_headers(cuentas['beto'])
+    assert client.put('/api/auth/me/eventos/ev', json={'nombre': 'Mío'}, headers=h).status_code == 403
+    assert client.delete('/api/auth/me/eventos/ev', headers=h).status_code == 403
+    assert client.put('/api/auth/me/eventos/x1', json={'formulario': 'nada'}, headers=h).status_code == 400
+    assert client.get('/api/auth/me/eventos', headers=auth_headers(cuentas['juan'])).status_code == 403
+    # El suyo sí lo borra.
+    assert client.put('/api/auth/me/eventos/b1', json={'nombre': 'Charla', 'formulario': 'fo'}, headers=h).status_code == 200
+    assert client.delete('/api/auth/me/eventos/b1', headers=h).status_code == 200
+    assert not any(e['id'] == 'b1' for e in servicio.colecciones()['eventos'])
+
+
+def test_la_foto_queda_en_su_persona_de_team(client, armado, cuentas, auth_headers):
+    h = auth_headers(cuentas['ana'])
+    foto = 'data:image/jpeg;base64,' + 'A' * 100
+    assert client.put('/api/auth/me/foto', json={'foto': foto}, headers=h).get_json() == {'foto': foto}
+    assert next(p for p in servicio.colecciones()['personas'] if p['id'] == 'ana')['foto'] == foto
+    assert client.get('/api/auth/me/foto', headers=h).get_json() == {'foto': foto}
+    assert client.put('/api/auth/me/foto', json={'foto': 'javascript:x'}, headers=h).status_code == 400

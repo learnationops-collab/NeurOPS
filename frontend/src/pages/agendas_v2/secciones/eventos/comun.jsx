@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { buscar, maxOrden, nombreOrigen, ord } from '../../core/datos';
-import { linkEvento, pasosAgendamiento, slugLibre } from '../../core/eventos';
+import { formDeEvento, linkEvento, pasosAgendamiento, slugLibre } from '../../core/eventos';
 import { slugify } from '../../core/util';
 import { almacen } from '../../data/hooks';
 import { Icono } from '../../ui/base';
@@ -115,7 +115,7 @@ export function abrirEvento(id) {
 
 export function probarEvento(d, e) {
     almacen.flush();
-    ui.set({ prueba: { evento: e, form: buscar(d, 'formularios', e.formulario) || null } });
+    ui.set({ prueba: { evento: e, form: formDeEvento(d, e) } });
 }
 
 // Qué pasa con los leads de una prioridad, en una línea.

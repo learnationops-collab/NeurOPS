@@ -18,12 +18,13 @@ from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
 from app.agendas_v2.nucleo.disponibilidad import se_solapa
-from app.agendas_v2.nucleo.eventos import con_form_al_dia, version_publicada
+from app.agendas_v2.nucleo.eventos import con_form_al_dia, config_de, link_evento, slug_libre, version_publicada
 from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import (
     COLECCIONES,
     NORM,
     contacto_preguntas,
+    foto_ok,
     normal_integ,
     normal_perfil,
     preguntas_flujo,
@@ -134,6 +135,16 @@ def disponibilidad_de(user):
     }
 
 
+def _persona_nueva(d, user, **campos):
+    """Crea la persona de Team de un closer que todavía no está (así la dirección comercial lo ve)."""
+    pid = uid('d')
+    guardar_doc('personas', pid, {
+        'nombre': user.username, 'email': (user.email or '').lower(), 'rol': rol_closer(d),
+        'orden': max([x.get('orden') or 0 for x in ordenados(d, 'personas')] or [0]) + 1, **campos,
+    }, usuario_id=user.id)
+    return buscar(colecciones(), 'personas', pid)
+
+
 def guardar_disponibilidad(user, horario, tz):
     """Guarda el horario y la zona del closer en su persona de Team (si no está en Team, la crea: así la
     dirección comercial lo ve y lo puede sumar a una prioridad). La zona también queda en su cuenta."""
@@ -144,14 +155,87 @@ def guardar_disponibilidad(user, horario, tz):
     if p:
         guardar_doc('personas', p['id'], {'horario': horario, 'tz': tz}, usuario_id=user.id, parcial=True)
     else:
-        guardar_doc('personas', uid('d'), {
-            'nombre': user.username, 'email': (user.email or '').lower(), 'rol': rol_closer(d),
-            'horario': horario, 'tz': tz,
-            'orden': max([x.get('orden') or 0 for x in ordenados(d, 'personas')] or [0]) + 1,
-        }, usuario_id=user.id)
+        _persona_nueva(d, user, horario=horario, tz=tz)
     user.timezone = tz
     db.session.commit()
     return disponibilidad_de(user)
+
+
+# --- Lo propio de cada closer: su foto y sus eventos ------------------------------------------
+
+
+def foto_de(user):
+    """La foto de la cuenta: la de su persona de Team, o la de su perfil de Agendamiento."""
+    p = persona_de_usuario(colecciones(), user)
+    return (p or {}).get('foto') or perfil_de(user.id).get('foto') or ''
+
+
+def guardar_foto(user, foto):
+    """Guarda la foto (data URL JPG/PNG/WEBP chica, o '' para sacarla) en su persona de Team y en su perfil."""
+    f = foto_ok(foto) if foto else ''
+    if foto and not f:
+        raise ValueError('La foto tiene que ser JPG, PNG o WEBP y pesar menos de 100 KB.')
+    p = persona_de_usuario(colecciones(), user)
+    if p:
+        guardar_doc('personas', p['id'], {'foto': f}, usuario_id=user.id, parcial=True)
+    guardar_perfil(user.id, {**perfil_de(user.id), 'foto': f})
+    return f
+
+
+# Lo que el closer puede tocar de sus eventos. La persona (él) y el funnel (ninguno) los pone el servidor.
+CAMPOS_EVENTO_CLOSER = ('nombre', 'duracion', 'formulario', 'activo', 'desc', 'redir', 'indic', 'reservas', 'antel', 'paso', 'zona')
+
+
+def _evento_de_closer(d, e):
+    return {**e, 'link': link_evento(d, e)}
+
+
+def eventos_de_closer(user):
+    """Los eventos propios del closer (persona fija = él) y los formularios que puede usar."""
+    d = colecciones()
+    p = persona_de_usuario(d, user)
+    evs = [_evento_de_closer(d, e) for e in ordenados(d, 'eventos') if p and e.get('persona') == p['id']]
+    return {
+        'eventos': evs,
+        'formularios': [{'id': f['id'], 'nombre': f['nombre']} for f in ordenados(d, 'formularios')],
+    }
+
+
+def guardar_evento_de_closer(user, evento_id, cuerpo):
+    """Crea o edita un evento propio del closer y lo publica (no tiene borrador). Lanza PermissionError
+    si el evento es de otro y ValueError si el formulario no existe. Sin formulario, pide solo el contacto."""
+    d = colecciones()
+    p = persona_de_usuario(d, user) or _persona_nueva(d, user)
+    d = colecciones()
+    previo = buscar(d, 'eventos', evento_id)
+    if previo and previo.get('persona') != p['id']:
+        raise PermissionError('Ese evento no es tuyo.')
+    datos = {k: cuerpo[k] for k in CAMPOS_EVENTO_CLOSER if k in cuerpo}
+    if datos.get('formulario') and not buscar(d, 'formularios', datos['formulario']):
+        raise ValueError('Ese formulario no existe.')
+    base = {**(previo or {}), **datos, 'persona': p['id'], 'funnel': ''}
+    if not previo:
+        base['orden'] = max([x.get('orden') or 0 for x in d['eventos']] or [0]) + 1
+        nombre = str(base.get('nombre') or 'llamada')
+        base['slug'] = slug_libre(d, {'id': evento_id, 'funnel': ''}, slugify(p['nombre'] + ' ' + nombre) or evento_id)
+    e = NORM['eventos'](evento_id, base)
+    form = buscar(d, 'formularios', e['formulario']) if e['formulario'] else None
+    e['publicado'] = config_de(e, form)
+    guardar_doc('eventos', evento_id, e, usuario_id=user.id)
+    d = colecciones()
+    return _evento_de_closer(d, buscar(d, 'eventos', evento_id))
+
+
+def borrar_evento_de_closer(user, evento_id):
+    """Borra un evento propio. PermissionError si es de otro; False si ya no estaba."""
+    d = colecciones()
+    p = persona_de_usuario(d, user)
+    e = buscar(d, 'eventos', evento_id)
+    if not e:
+        return False
+    if not p or e.get('persona') != p['id']:
+        raise PermissionError('Ese evento no es tuyo.')
+    return borrar_doc('eventos', evento_id)
 
 
 def usuarios_del_equipo(roles):
@@ -438,16 +522,28 @@ def _choca(user_id, inicio, fin):
 CAMPOS_EVENTO_PUBLICO = ('id', 'nombre', 'slug', 'duracion', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir')
 
 
+# El formulario de un evento con persona fija que no eligió uno: solo los datos de contacto.
+FORM_SOLO_CONTACTO = {'nombre': 'Datos de contacto', 'contacto': {'nombre': True, 'telefono': True, 'email': True, 'instagram': False}}
+
+
+def form_solo_contacto():
+    return NORM['formularios']('contacto', FORM_SOLO_CONTACTO)
+
+
 def _disponible(d, e):
     """(evento publicado, form publicado, funnel) o None. Manda la version PUBLICADA: lo que se
-    edita en Thalamus sin publicar (incluido el funnel o el link) no cambia lo que esta en vivo."""
+    edita en Thalamus sin publicar (incluido el funnel o el link) no cambia lo que esta en vivo.
+    Un evento con persona fija sin formulario (los que crea cada closer) pide solo el contacto."""
     pub = version_publicada(e)
-    if not pub or not pub.get('form') or not pub['evento'].get('activo'):
+    if not pub or not pub['evento'].get('activo'):
+        return None
+    form = pub.get('form') or (form_solo_contacto() if pub['evento'].get('persona') else None)
+    if not form:
         return None
     funnel = buscar(d, 'funnels', pub['evento'].get('funnel'))
     if funnel and not funnel.get('activo'):
         return None
-    return pub['evento'], pub['form'], funnel
+    return pub['evento'], form, funnel
 
 
 def evento_disponible(d, funnel_slug, evento_slug):

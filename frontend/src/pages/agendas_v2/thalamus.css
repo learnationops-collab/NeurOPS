@@ -1618,3 +1618,25 @@
   background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent)}
 .thalamus .revision-item svg{flex-shrink:0;margin-top:2px;color:var(--c)}
 .thalamus .revision-ok{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--success)}
+
+/* Foto de la cuenta (conf/FotoCuenta.jsx) */
+.thalamus .cu-foto{display:grid;gap:10px;justify-items:center}
+.thalamus .cu-foto-acc{display:flex;align-items:center;gap:6px}
+/* Configuración del closer: pestañas arriba, como la de Agendamiento */
+.thalamus.cu-hoja > .tabs{justify-self:start}
+.thalamus .cu-cuerpo{display:grid;gap:var(--s4);min-width:0}
+/* Disponibilidad a lo ancho: un día por columna cuando entra (Configuración). */
+@container (min-width:900px){
+  .thalamus .horario--horizontal .dias{grid-template-columns:repeat(7,minmax(0,1fr));column-gap:10px}
+  .thalamus .horario--horizontal .dia{grid-template-columns:minmax(0,1fr);justify-items:start;border-top:0;border-left:1px solid var(--border-subtle);padding:4px 0 4px 10px}
+  .thalamus .horario--horizontal .dia:first-child{border-left:0;padding-left:0}
+  .thalamus .horario--horizontal .rango{flex-direction:column;align-items:stretch;gap:4px;padding-bottom:6px;border-bottom:1px dashed var(--border-subtle)}
+  .thalamus .horario--horizontal .rango .sx{width:100%}
+}
+.thalamus .horario--horizontal{container-type:inline-size}
+/* Mis eventos del closer (conf/MisEventos.jsx) */
+.thalamus .me-ev{display:grid;gap:10px;padding:var(--s4)}
+.thalamus .me-fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.thalamus .me-nom{flex:1 1 220px;font-weight:800}
+.thalamus .me-activo{display:inline-flex;align-items:center;gap:8px}
+.thalamus .me-link{flex:1 1 240px;min-width:0}

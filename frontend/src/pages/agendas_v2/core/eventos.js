@@ -61,11 +61,19 @@ export function resumenAgenda(e) {
     return hasta + ' · ' + a.n + ' ' + ({ min: 'min', h: 'h', d: 'd' })[a.u] + ' antes · cada ' + (pm % 60 === 0 && pm >= 60 ? pm / 60 + ' h' : pm + ' min');
 }
 
+// Un evento con persona fija sin formulario (los que crea cada closer) pide solo los datos de contacto.
+export const FORM_SOLO_CONTACTO = { nombre: 'Datos de contacto', contacto: { nombre: true, telefono: true, email: true, instagram: false } };
+export function formDeEvento(d, e) {
+    return buscar(d, 'formularios', e.formulario) || (e.persona ? normalForm('contacto', FORM_SOLO_CONTACTO) : null);
+}
+
 // Checklist del evento: [ok (1|0), título, detalle].
 export function revision(d, e) {
     const f = buscar(d, 'funnels', e.funnel), fo = buscar(d, 'formularios', e.formulario), out = [];
-    out.push(f ? (f.activo ? [1, 'Funnel ' + f.nombre, 'Recibe agendas'] : [0, 'Funnel ' + f.nombre + ' pausado', 'Activalo en Configuración']) : [0, 'Falta el funnel', 'Elegilo arriba']);
-    out.push(fo ? [1, 'Formulario ' + fo.nombre, (fo.preguntas.length + 4) + ' preguntas'] : [0, 'Falta el formulario', 'Elegilo arriba']);
+    out.push(f ? (f.activo ? [1, 'Funnel ' + f.nombre, 'Recibe agendas'] : [0, 'Funnel ' + f.nombre + ' pausado', 'Activalo en Configuración'])
+        : e.persona ? [1, 'Sin funnel', 'Link directo'] : [0, 'Falta el funnel', 'Elegilo arriba']);
+    out.push(fo ? [1, 'Formulario ' + fo.nombre, (fo.preguntas.length + 4) + ' preguntas']
+        : e.persona ? [1, 'Sin formulario', 'Pide solo los datos de contacto'] : [0, 'Falta el formulario', 'Elegilo arriba']);
     if (e.persona) {
         const pf = buscar(d, 'personas', e.persona);
         out.push(!pf ? [0, 'Falta la persona', 'Elegila arriba'] : horasSemana(pf) ? [1, 'Link directo a ' + pf.nombre, fmt(horasSemana(pf), 1) + ' h/sem'] : [0, pf.nombre + ' no tiene horario', 'Cargalo en Team']);
@@ -114,7 +122,8 @@ export function pasosAgendamiento(d, e) {
     const segmentacionOk = !!fo && (!!e.persona || (usadas.length > 0 && !reglasRotas(fo).length));
     return [
         { k: 'equipo', ok: equipoOk, n: equipoOk ? 'Equipo' : 'Sin equipo', det: equipoOk ? 'Estrategias con closers con horario' : 'Armá estrategias con closers que tengan horario en Team' },
-        !fo ? { k: 'formulario', ok: false, n: 'Sin formulario', det: 'Elegí o creá el formulario' }
+        !fo && e.persona ? { k: 'formulario', ok: true, n: 'Solo contacto', det: 'Sin formulario: pide nombre, WhatsApp y correo' }
+        : !fo ? { k: 'formulario', ok: false, n: 'Sin formulario', det: 'Elegí o creá el formulario' }
             : { k: 'formulario', ok: segmentacionOk, n: segmentacionOk ? 'Formulario' : 'Sin segmentación', det: segmentacionOk ? fo.nombre : ruteo[1] + ' · ' + ruteo[2] },
         { k: 'evento', ok: !!(agenda[0] && link[0]), n: agenda[0] && link[0] ? e.duracion + ' min' : 'Revisar evento', det: agenda[0] ? (link[0] ? agenda[2] : link[1]) : agenda[1] },
         { k: 'publicado', ok: est.k === 'vivo', n: est.k === 'vivo' ? 'En vivo' : est.n, det: est.k === 'vivo' ? 'Recibe agendas' : 'El link todavía no recibe agendas con lo último' },

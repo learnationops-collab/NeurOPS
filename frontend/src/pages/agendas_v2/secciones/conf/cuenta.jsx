@@ -10,8 +10,7 @@ import api from '../../../../services/api';
 import { rotuloDeRol } from '../../../../utils/cuentasVinculadas';
 import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
-
-const iniciales = (nombre) => (nombre || '?').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+import FotoCuenta from './FotoCuenta';
 
 function Estado({ ok, si, no }) {
     return ok
@@ -42,7 +41,7 @@ function Mensajes({ error, aviso }) {
     );
 }
 
-/** Quién es la cuenta: iniciales, usuario, email y roles. Sin email lo puede cargar (para entrar con Google). */
+/** Quién es la cuenta: su foto, usuario, email y roles. Sin email lo puede cargar (para entrar con Google). */
 export function DatosCuenta({ user }) {
     const [email, setEmail] = useState('');
     const [guardado, setGuardado] = useState(user?.email || '');
@@ -62,7 +61,7 @@ export function DatosCuenta({ user }) {
     };
     return (
         <section className="panel cu-tarjeta cu-datos">
-            <span className="avatar-g">{iniciales(user.username)}</span>
+            <FotoCuenta nombre={user.username} />
             <div className="cu-datos-txt">
                 <p className="t-eyebrow">Tu cuenta</p>
                 <h3 className="t-h2">{user.username}</h3>
@@ -281,7 +280,7 @@ export function TarjetaDisponibilidad() {
         <Tarjeta icono="clock" titulo="Disponibilidad" texto="Los horarios en los que el sistema te ofrece a los leads. La dirección comercial también puede ajustarlos.">
             {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
                 <>
-                    <HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={editar} />
+                    <div className="horario--horizontal"><HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={editar} /></div>
                     <div className="cu-fila cu-fila--fin">
                         <Mensajes error={error} aviso={aviso} />
                         <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || !cambios} onClick={guardar}>
