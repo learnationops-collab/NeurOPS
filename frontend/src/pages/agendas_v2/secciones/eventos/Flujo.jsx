@@ -1,4 +1,4 @@
-// Flujo del evento: lienzo con los pasos del lead, mapa de calor con datos de ejemplo e inspector por paso.
+// Flujo del evento: lienzo navegable con los pasos del lead, mapa de calor con datos de ejemplo e inspector por paso.
 
 import { useMemo } from 'react';
 import { ESTRATEGIAS, conOpciones } from '../../core/catalogos';
@@ -6,6 +6,7 @@ import { buscar, nombreGrupo, ord } from '../../core/datos';
 import { linkEvento, slugLibre } from '../../core/eventos';
 import { almacen, useDatos } from '../../data/hooks';
 import { Icono, Sx } from '../../ui/base';
+import Lienzo from '../../ui/Lienzo';
 import { ui } from '../../ui/estadoUi';
 import { reachEvento, useLeads } from '../stats/leads';
 import { armarFlujo, caminoArista } from './armarFlujo';
@@ -152,7 +153,7 @@ export default function Flujo({ e, ev }) {
                 </div>
             </div>
             <div className="flujo">
-                <div className="flujo-scroll">
+                <Lienzo ancho={W} alto="min(72vh, 760px)" etiqueta="Flujo del evento" encima={ev.nodo ? <Inspector d={d} e={e} n={ev.nodo} /> : null}>
                     <div className="flujo-lienzo" style={{ width: W, height: H }}>
                         <svg className="aristas" width={W} height={H} aria-hidden="true">
                             {aristas.map((a, i) => {
@@ -168,8 +169,7 @@ export default function Flujo({ e, ev }) {
                         </svg>
                         {nodos.map(n => <Nodo key={n.id} n={n} sel={ev.nodo === n.id} cuello={cuello === n.id} calor={calor} max={max} />)}
                     </div>
-                </div>
-                {ev.nodo && <Inspector d={d} e={e} n={ev.nodo} />}
+                </Lienzo>
             </div>
         </>
     );

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { asignacion, VENTANA_LLENAR_DIAS } from './asignacion';
 import { agendaOpt, diasDelHorizonte, slotsPersona } from './disponibilidad';
 import { configDe, camposPublicados, linkEvento, revision, sinPublicar, versionPublicada } from './eventos';
-import { calificar, duplicarForm, grupoPorReglas, personalizar, reglasRotas, validarRespuesta } from './formulario';
+import { calificar, duplicarForm, grupoPorReglas, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
 import { normalEvento, normalForm, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
 import { armarReserva, telefonoE164 } from './reserva';
 import { opcionesDeOcupacion } from '../data/almacen';
@@ -71,6 +71,30 @@ describe('formulario', () => {
     it('detecta reglas que apuntan a opciones borradas', () => {
         expect(reglasRotas({ ...f, reglas: [{ id: 'r', grupo: 'g', cond: [{ q: 'q1', ops: ['zz'] }] }] })).toEqual([0]);
         expect(reglasRotas(f)).toEqual([]);
+    });
+    it('la revisión avisa respuestas sin regla, reglas vacías, repetidas y que se pisan', () => {
+        const ks = (fo) => revisarSegmentacion(fo).map(a => a.k + (a.regla != null ? a.regla : ''));
+        // r1 cubre A con C o D; B no está en ninguna regla (va al resto); r2 está vacía.
+        expect(ks(f)).toEqual(['sin-regla1', 'sin-cubrir']);
+        expect(revisarSegmentacion(f).find(a => a.k === 'sin-cubrir')).toMatchObject({ nivel: 'info', t: expect.stringContaining('2 combinaciones') });
+        const pisan = normalForm('f', {
+            preguntas: f.preguntas,
+            reglas: [
+                { id: 'r1', grupo: 'g1', cond: [{ q: 'q1', ops: ['a', 'b'] }] },
+                { id: 'r2', grupo: 'g2', cond: [{ q: 'q1', ops: ['a'] }] },              // nunca decide
+                { id: 'r3', grupo: 'g3', cond: [{ q: 'q2', ops: ['c'] }] },              // la r1 le gana siempre
+            ],
+            resto: '',
+        });
+        expect(ks(pisan)).toEqual(['nunca1', 'nunca2']);
+        const solapan = normalForm('f', {
+            preguntas: f.preguntas,
+            reglas: [{ id: 'r1', grupo: 'g1', cond: [{ q: 'q1', ops: ['a'] }] }, { id: 'r2', grupo: 'g2', cond: [{ q: 'q2', ops: ['c'] }] }],
+            resto: '',
+        });
+        // A+C cumple las dos (gana r1); B+D no cumple ninguna y el resto no tiene estrategia.
+        expect(ks(solapan)).toEqual(['repetida1', 'sin-cubrir']);
+        expect(revisarSegmentacion(solapan).at(-1)).toMatchObject({ nivel: 'error', t: expect.stringContaining('B + D') });
     });
     it('duplicar remapea las reglas a las preguntas y opciones nuevas', () => {
         const c = duplicarForm(f);

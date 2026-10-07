@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { almacen } from '../../data/hooks';
 import { conOpciones } from '../../core/catalogos';
-import { buscar, ord as ordCol } from '../../core/datos';
-import { reglasRotas } from '../../core/formulario';
+import { buscar, nombreGrupo, ord as ordCol } from '../../core/datos';
+import { reglasRotas, revisarSegmentacion } from '../../core/formulario';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
+import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
@@ -14,6 +15,20 @@ import RuteoFlujo from './RuteoFlujo';
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
 function opsTxt(q, ops) { return q ? q.opciones.filter(o => ops.includes(o.id)).map(o => o.texto) : []; }
+
+const NIVEL = { error: ['var(--error)', 'alerta'], warning: ['var(--warning)', 'alerta'], info: ['var(--info)', 'flujo'] };
+
+// Lo que no cierra de la segmentación: casos sin cubrir, reglas que se pisan, repetidas o vacías.
+function Revision({ avisos }) {
+    if (!avisos.length) return <p className="revision-ok" role="status"><Icono n="check" s={15} />Cada combinación de respuestas tiene un solo destino.</p>;
+    return (
+        <ul className="revision" aria-label="Revisión de la segmentación">
+            {avisos.map((a, i) => (
+                <li key={i} className="revision-item" style={{ '--c': NIVEL[a.nivel][0] }}><Icono n={NIVEL[a.nivel][1]} s={15} /><span>{a.t}</span></li>
+            ))}
+        </ul>
+    );
+}
 
 function Destino({ d, valor, onChange, label }) {
     const gs = ordCol(d, 'grupos'), g = buscar(d, 'grupos', valor), i = gs.indexOf(g);
@@ -112,6 +127,8 @@ export default function Ruteo({ f, d, modo, msel }) {
     const enfocar = useEnfocar(raiz);
     const qs = f.preguntas.filter(q => conOpciones(q.tipo) && q.opciones.some(o => o.texto.trim()));
     const rotas = reglasRotas(f);
+    const avisos = revisarSegmentacion(f, (id) => nombreGrupo(d, id));
+    const conAviso = [...new Set(avisos.filter(a => a.regla != null && a.nivel !== 'info').map(a => a.regla))];
     const reordenar = useCallback((nuevos) => mutarForm(f.id, 'reglas', rs => nuevos.map(id => rs.find(r => r.id === id)).filter(Boolean)), [f.id]);
     const ord = useOrdenable(f.reglas.map(r => r.id), reordenar);
     const { contenedor, lista } = ord;
@@ -135,7 +152,8 @@ export default function Ruteo({ f, d, modo, msel }) {
                     <button type="button" data-nav="" aria-pressed={modo === 'flujo'} onClick={() => setFormUi({ ruteoModo: 'flujo', msel: null })}><Icono n="flujo" />Flujo</button>
                 </div>
             </div>
-            {modo === 'flujo' ? <RuteoFlujo f={f} d={d} rotas={rotas} />
+            <Revision avisos={avisos} />
+            {modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>
                 : !qs.length ? (
                     <>
                         <p className="t-sm mut">Agregá preguntas de opción para armar reglas.</p>
