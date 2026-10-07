@@ -4,7 +4,6 @@
 import { useEffect } from 'react';
 
 import { ZONAS, zonaInfo } from '../core/catalogos';
-import { limpiarHTML } from '../core/normalizar';
 import { claveDia, fechaClave, fechaTs, gmtTxt, horaTxt, mesTitulo } from '../core/tiempo';
 import { mayus, pad } from '../core/util';
 import { Bandera, Icono, MeetLogo } from '../ui/base';
@@ -35,7 +34,7 @@ function claveHoy(tz) { return claveDia(Date.now(), tz); }
  * asig null: los horarios todavía no llegaron (buscando) o no se pudieron traer (errorHorarios, con
  * acc.reintentarHorarios). Con asig y buscando, se siguen mostrando los anteriores hasta que lleguen los nuevos.
  */
-export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija, aviso, envio, acc, buscando = false, errorHorarios = '' }) {
+export default function PasoCalendario({ s, asig, nombre, ids, dur, tzFija, aviso, envio, acc, buscando = false, errorHorarios = '' }) {
     const tz = s.tz, z = zonaInfo(tz);
     // Al elegir la hora, que se vea el «Confirmar»: en el celular queda debajo de la lista de horas.
     useEffect(() => {
@@ -49,7 +48,6 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija
     const dia = diaEfectivo(s, dias, keys);
     const mes = mesEfectivo(s, dia, tz);
     const hora = s.hora != null && slots.some(x => x.t === s.hora) ? s.hora : null;
-    const descHTML = desc ? limpiarHTML(desc) : '';
 
     let cal = null;
     if (!asig && errorHorarios) {
@@ -126,8 +124,6 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, desc, tzFija
                 <span><Icono n="clock" s={16} />{dur} min</span>
                 <span><MeetLogo />Google Meet</span>
             </div>
-            {/* La descripción ya viene saneada (solo negrita, cursiva, listas y links http/https). */}
-            {descHTML && <div className="rv-desc" dangerouslySetInnerHTML={{ __html: descHTML }} />}
             <div className="rv-tzbar">
                 <Icono n={tzFija ? 'candado' : 'globo'} s={16} />
                 <span>{z.c && <Bandera c={z.c} />}<b>{mayus(z.largo)}</b> · {gmtTxt(tz)}</span>

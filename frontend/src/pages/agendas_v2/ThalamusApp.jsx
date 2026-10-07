@@ -1,10 +1,10 @@
 // Learnation Thalamus: la herramienta del director comercial para armar formularios, equipo,
 // prioridades y eventos de agenda. Dock en el orden real de configuración: 1 Forms · 2 Team ·
-// 3 Events · 4 Stats. Es el área «Agendamiento». Los funnels se crean y editan desde Events (ModalFunnel).
+// 3 Eventos · 4 Stats. Es el área «Agendamiento». Los funnels se crean y editan desde Eventos (ModalFunnel).
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, Filter, LogOut, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Users } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { SECCIONES } from './core/catalogos';
@@ -34,7 +34,7 @@ function atributoTema(tema) { return tema === 'oscuro' ? 'dark' : tema === 'clar
 // dos áreas de la dirección comercial y se pasa de una a otra con «Cambiar de área» (utils/areas.js).
 // Va fuera de `.thalamus` (sus estilos cuelgan de `.dc-shell`, y los de Thalamus le pisarían el
 // `.dock`).
-const ICONO_DE_SECCION = { preguntas: ClipboardList, team: Users, horas: Clock, eventos: Filter, estadisticas: BarChart3 };
+const ICONO_DE_SECCION = { preguntas: ClipboardList, team: Users, horas: Clock, eventos: CalendarDays, estadisticas: BarChart3 };
 
 function Dock() {
     const { seccion } = useUi();

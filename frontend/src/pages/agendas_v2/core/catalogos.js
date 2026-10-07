@@ -8,12 +8,11 @@ export const PLANTILLAS_FUNNEL = ['Appointment Setting', 'Workshop', 'VSL', 'Web
 export const TZ_DEF = 'America/La_Paz';
 
 export const SECCIONES = [
-    // 'eventos' es la sección Funnels (el inicio): el funnel contiene sus agendamientos (eventos).
-    // Orden de armado: el equipo (estrategias de closers listos) va antes que los formularios (que
-    // segmentan a los leads hacia esas estrategias).
-    { id: 'eventos', num: '1', label: 'Funnels', icon: 'funnel' },
+    // Orden real de armado, como Thalamus: formularios, equipo y eventos. El evento es el eje; el funnel
+    // es una categoría simple del evento (nombre, tipo y links) que se edita desde Eventos.
+    { id: 'preguntas', num: '1', label: 'Forms', icon: 'pregunta' },
     { id: 'team', num: '2', label: 'Team', icon: 'users' },
-    { id: 'preguntas', num: '3', label: 'Forms', icon: 'pregunta' },
+    { id: 'eventos', num: '3', label: 'Eventos', icon: 'calendar' },
     { id: 'horas', num: '', label: 'Hours', icon: 'clock' },
     { id: 'estadisticas', num: '4', label: 'Stats', icon: 'chart' },
 ];

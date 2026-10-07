@@ -39,21 +39,23 @@ describe('Modal del funnel', () => {
         act(() => ui.set({ funnel: {} }));
         render(envolver(<ModalFunnel estado={{}} />));
         fireEvent.change(document.getElementById('fm-nombre'), { target: { value: 'Webinar' } });
-        fireEvent.click(screen.getByRole('button', { name: 'VSL' }));
+        fireEvent.click(screen.getByRole('radio', { name: /^VSL/ }));
         fireEvent.submit(document.getElementById('fm-nombre').closest('form'));
         const nuevo = almacen.getState().d.funnels.find(f => f.slug === 'webinar-2');
         expect(nuevo.tipo).toBe('vsl');
         expect(ui.getState().funnel).toEqual({ id: nuevo.id });
     });
 
-    it('edita el tipo de un funnel y ofrece editarlo con IA', () => {
+    it('edita el tipo de un funnel; en setting muestra los links de setters', () => {
         const fu = almacen.getState().d.funnels.find(f => f.slug === 'webinar');
         render(envolver(<ModalFunnel estado={{ id: fu.id }} />));
-        fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+        fireEvent.click(screen.getByRole('radio', { name: /^Setting/ }));
         const f = almacen.getState().d.funnels.find(x => x.id === fu.id);
         expect(f.tipo).toBe('setting');
         expect(f.setting).toBe(true);
-        expect(screen.getByRole('heading', { name: 'Editar con IA' })).toBeTruthy();
+        // Setting: los links son los de cada setter. La IA queda plegada aparte.
+        expect(screen.getByRole('heading', { name: 'Links de setters' })).toBeTruthy();
+        expect(document.querySelector('details.fm-ia').open).toBe(false);
     });
 
     it('lee el JSON de la IA aunque venga dentro de un bloque con texto', () => {

@@ -44,7 +44,7 @@ function armarCtx(form, ev, persona, d) {
         dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45,
         reglas: fo ? fo.reglas || [] : null, resto: fo ? fo.resto || '' : '', persona: perId,
         ag: ev ? { reservas: ev.reservas, antel: ev.antel, paso: ev.paso } : null,
-        desc: ev ? ev.desc : '', redir: ev ? ev.redir : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
+        redir: ev ? ev.redir : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
     };
 }
 
@@ -395,7 +395,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     } else {
         clave = 'cal';
         paso = (
-            <PasoCalendario s={s} asig={asigViva} nombre={nombre} ids={ids} dur={ctx.dur} desc={ctx.desc} tzFija={ctx.tzFija}
+            <PasoCalendario s={s} asig={asigViva} nombre={nombre} ids={ids} dur={ctx.dur} tzFija={ctx.tzFija}
                 aviso={prueba && asigViva ? asigViva.aviso : ''} envio={prueba ? null : envio} acc={acc}
                 buscando={buscando} errorHorarios={errorHorarios} />
         );

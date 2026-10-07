@@ -1,10 +1,11 @@
 // Piezas compartidas por la lista, el detalle y el flujo de un evento.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { buscar, nombreOrigen } from '../../core/datos';
-import { linkEvento } from '../../core/eventos';
+import { linkEvento, pasosAgendamiento } from '../../core/eventos';
 import { slugify } from '../../core/util';
 import { almacen } from '../../data/hooks';
+import { Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto } from '../../ui/toast';
 
@@ -16,6 +17,71 @@ export function urlPublica(d, e, o) {
     return window.location.origin + '/agendas-v2' + linkEvento(d, e) + (o ? '?o=' + slugOrigen(d, o) : '');
 }
 export function copiarLink(d, e, o) { copiarTexto(urlPublica(d, e, o)); }
+
+// Setters activos de la app (cada uno tiene su link en los funnels de setting). null mientras carga;
+// [] en modo local o si falla. Se piden una vez y se comparten entre las tarjetas.
+let settersCache = null;
+export function useSetters() {
+    const [lista, setLista] = useState(settersCache);
+    useEffect(() => {
+        if (settersCache) return undefined;
+        let vivo = true;
+        Promise.resolve(almacen.adaptador.usuarios ? almacen.adaptador.usuarios('setter') : [])
+            .then(u => { settersCache = u; if (vivo) setLista(u); }, () => { if (vivo) setLista([]); });
+        return () => { vivo = false; };
+    }, []);
+    return lista;
+}
+export const urlSetter = (d, e, s) => window.location.origin + '/agendas-v2' + linkEvento(d, e) + '?o=' + slugify(s.nombre);
+
+/**
+ * «Links de setters» de un evento de un funnel de setting: uno por setter, para copiar y mandar.
+ * La agenda que entra por ese link queda a nombre del setter.
+ */
+export function LinksSetters({ d, e, compacto = false }) {
+    const sts = useSetters();
+    const lista = sts === null ? <span className="t-sm mut">Cargando setters…</span>
+        : !sts.length ? <span className="t-sm mut">No hay setters activos en la app.</span>
+            : sts.map(s => (
+                <button key={s.id} type="button" className="ls-b" data-nav="" title={'Copiar ' + urlSetter(d, e, s)}
+                    aria-label={'Copiar link de ' + s.nombre} onClick={() => copiarTexto(urlSetter(d, e, s), 'Link de ' + s.nombre + ' copiado')}>
+                    <b>{s.nombre}</b>{!compacto && <span>?o={slugify(s.nombre)}</span>}<Icono n="copiar" s={13} />
+                </button>
+            ));
+    return (
+        <div className={'ls' + (compacto ? ' ls--compacto' : '')}>
+            <span className="ls-tit"><Icono n="users" s={14} />Links de setters</span>
+            <div className="ls-lista">{lista}</div>
+        </div>
+    );
+}
+
+// A dónde lleva cada paso pendiente de un evento: el equipo a las estrategias de Team; un formulario
+// sin segmentación, a su segmentación; lo demás, al evento.
+function irAlPaso(d, e, k, ok) {
+    const fo = buscar(d, 'formularios', e.formulario);
+    almacen.flush();
+    if (k === 'equipo') { ui.set(s => ({ seccion: 'team', team: { ...s.team, tab: 'grupos' } })); return; }
+    if (k === 'formulario' && fo && !ok) { ui.set({ seccion: 'preguntas', form: { id: fo.id, vista: 'ruteo', sel: null } }); return; }
+    abrirEvento(e.id);
+}
+
+// Lo que le falta a un evento para recibir agendas (solo lo pendiente); tocarlo lleva a resolverlo.
+export function PasosPendientes({ d, e }) {
+    const pend = pasosAgendamiento(d, e).filter(p => !p.ok);
+    if (!pend.length) return null;
+    return (
+        <ol className="fu-pasos" aria-label={'Lo que le falta a ' + e.nombre}>
+            {pend.map(p => (
+                <li key={p.k}>
+                    <button type="button" className="fu-paso" title={p.det} onClick={() => irAlPaso(d, e, p.k, p.ok)}>
+                        <Icono n="alerta" s={13} />{p.n}
+                    </button>
+                </li>
+            ))}
+        </ol>
+    );
+}
 
 export function abrirEvento(id) {
     almacen.flush();

@@ -1,14 +1,14 @@
-// El funnel, desde Eventos: «Nuevo funnel» y el engranaje de cada grupo abren este modal.
-//  - Nuevo: en blanco (nombre y tipo) o con IA (el prompt arma el funnel completo: formulario,
-//    prioridades y evento).
-//  - Editar: nombre, tipo, si recibe agendas, sus links y «Editar con IA»: el prompt lleva el funnel tal
-//    como está, la IA lo cambia y el JSON se escribe encima (mismos links). El evento y el formulario
-//    quedan como borrador hasta publicarlos; el resto se aplica en el momento.
+// El funnel es una categoría simple de los eventos: «Nuevo funnel» y el engranaje de cada grupo en
+// Eventos abren este modal.
+//  - Nuevo: nombre y tipo. Armarlo con IA (formulario, estrategias y evento de una) queda plegado aparte.
+//  - Editar: nombre, tipo, si recibe agendas, sus links (en setting, los de cada setter por evento), sus
+//    eventos y, plegado, «Editar con IA»: el prompt lleva el funnel tal como está, la IA lo cambia y el
+//    JSON se escribe encima (mismos links). El evento queda como borrador hasta publicarlo.
 // Tipo: para qué cuenta en las estadísticas (Workshop, VSL, Setting u Otro; ver operacion._fuente). En
 // un workshop, el origen «Grabación» (o Replay) cuenta como la grabación; el resto, como la clase en vivo.
 // Setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda queda a su nombre.
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Avatar, Icono, Modal, Seg, Switch } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
@@ -16,14 +16,28 @@ import { almacen, useDatos } from '../../data/hooks';
 import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
+import { LinksSetters, abrirEvento } from './comun';
 
-const TIPOS = [{ v: 'workshop', n: 'Workshop' }, { v: 'vsl', n: 'VSL' }, { v: 'setting', n: 'Setting' }, { v: 'otro', n: 'Otro' }];
-const AYUDA_TIPO = {
-    workshop: 'Cuenta en el panel del workshop. Un link llamado «Grabación» cuenta como la grabación; el resto, como la clase en vivo.',
-    vsl: 'Las agendas quedan con fuente VSL.',
-    setting: 'Cada setter tiene su link y la agenda queda a su nombre.',
-    otro: 'La fuente de la agenda es el nombre del link.',
-};
+const TIPOS = [
+    { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
+    { v: 'vsl', n: 'VSL', ico: 'play', ayuda: 'Las agendas quedan con fuente VSL.' },
+    { v: 'setting', n: 'Setting', ico: 'users', ayuda: 'Cada setter tiene su link y la agenda queda a su nombre.' },
+    { v: 'otro', n: 'Otro', ico: 'link', ayuda: 'La fuente de la agenda es el nombre del link.' },
+];
+
+// El tipo del funnel en tarjetas: qué es cada uno se lee sin abrir nada.
+function Tipos({ valor, onChange }) {
+    return (
+        <div className="fm-tipos" role="radiogroup" aria-label="Tipo del funnel">
+            {TIPOS.map(t => (
+                <button key={t.v} type="button" role="radio" className="fm-tipo" aria-checked={valor === t.v} onClick={() => onChange(t.v)}>
+                    <span className="fm-tipo-ico"><Icono n={t.ico} s={17} /></span>
+                    <b>{t.n}</b><span>{t.ayuda}</span>
+                </button>
+            ))}
+        </div>
+    );
+}
 const ESTRATEGIA = { llenar: 'llenar agenda', horario: 'máxima disponibilidad', repartir: 'distribuida' };
 
 export function crearFunnel(d, nombre, tipo = 'otro') {
@@ -46,6 +60,7 @@ export function leerPaquete(texto) {
 }
 
 const primerEvento = (d, f) => ord(d, 'eventos').find(e => e.funnel === f.id);
+const eventosDe = (d, f) => ord(d, 'eventos').filter(e => e.funnel === f.id);
 const urlDe = (d, ev, o) => window.location.origin + '/agendas-v2' + linkEvento(d, ev) + '?o=' + o;
 
 function Resumen({ r }) {
@@ -170,45 +185,24 @@ function Origenes({ d, f }) {
     );
 }
 
-// Setters activos de la app. null mientras carga; [] en modo local o si falla.
-function useSetters() {
-    const [lista, setLista] = useState(null);
-    useEffect(() => {
-        let vivo = true;
-        Promise.resolve(almacen.adaptador.usuarios ? almacen.adaptador.usuarios('setter') : [])
-            .then(u => { if (vivo) setLista(u); }, () => { if (vivo) setLista([]); });
-        return () => { vivo = false; };
-    }, []);
-    return lista;
-}
-
-function LinksDeSetters({ d, f }) {
-    const sts = useSetters();
-    const ev = primerEvento(d, f);
-    if (sts === null) return <p className="t-sm mut">Cargando…</p>;
-    if (!sts.length) return <p className="t-sm mut">No hay setters activos en la app.</p>;
+function Bloque({ titulo, ayuda, children }) {
     return (
-        <div className="cf-origenes">
-            {sts.map(s => {
-                const url = ev ? urlDe(d, ev, slugify(s.nombre)) : '';
-                return (
-                    <span key={s.id} className="cf-o cf-o--setter">
-                        {s.nombre}
-                        <button type="button" style={{ color: ev ? 'var(--brand-secondary)' : undefined }} disabled={!ev}
-                            aria-label={ev ? 'Copiar link de ' + s.nombre : 'Sin link: el funnel no tiene eventos'}
-                            title={ev ? 'Copiar ' + url : 'Creá un evento en este funnel para tener el link'} onClick={() => copiarTexto(url)}>
-                            <Icono n="copiar" s={12} />
-                        </button>
-                    </span>
-                );
-            })}
-            <span className="t-xs mut" style={{ flexBasis: '100%' }}>Cada setter también ve sus links en su menú de NeurOPS.</span>
-        </div>
+        <section className="fm-bloque">
+            <h3 className="t-rotulo">{titulo}</h3>
+            {ayuda && <p className="t-sm mut">{ayuda}</p>}
+            {children}
+        </section>
     );
 }
 
-function Bloque({ titulo, children }) {
-    return <section className="fm-bloque"><h3 className="t-rotulo">{titulo}</h3>{children}</section>;
+// Armar o editar con IA: plegado, para que no tape la configuración a mano.
+function PlegableIA({ titulo, children }) {
+    return (
+        <details className="plegable fm-ia">
+            <summary><Icono n="rayo" />{titulo}<Icono n="chevron-down" className="chev" /></summary>
+            <div className="cuerpo">{children}</div>
+        </details>
+    );
 }
 
 function NuevoFunnel({ d, cerrar }) {
@@ -228,25 +222,39 @@ function NuevoFunnel({ d, cerrar }) {
     };
     return (
         <>
-            <Bloque titulo="En blanco">
-                <form className="fm-nuevo" noValidate onSubmit={crear}>
-                    <label className="sr" htmlFor="fm-nombre">Nombre del funnel</label>
-                    <input id="fm-nombre" className="input" type="text" maxLength={80} autoComplete="off" placeholder="Nombre, ej. Workshop octubre"
-                        value={nombre} onChange={e => setNombre(e.target.value)} />
-                    <Seg sm label="Tipo del funnel" valor={tipo} opciones={TIPOS} onChange={setTipo} />
-                    <span className="t-xs mut">{AYUDA_TIPO[tipo]}</span>
-                    <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm" disabled={!nombre.trim()}><Icono n="plus" />Crear</button></div>
-                </form>
-            </Bloque>
-            <Bloque titulo="Con IA: el funnel completo (estrategias, formulario y evento)">
+            <form className="fm-nuevo" noValidate onSubmit={crear}>
+                <label className="t-rotulo" htmlFor="fm-nombre">Nombre</label>
+                <input id="fm-nombre" className="input" type="text" maxLength={80} autoComplete="off" placeholder="Ej. Workshop octubre"
+                    value={nombre} onChange={e => setNombre(e.target.value)} />
+                <span className="t-rotulo">Tipo</span>
+                <Tipos valor={tipo} onChange={setTipo} />
+                <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm" disabled={!nombre.trim()}><Icono n="plus" />Crear funnel</button></div>
+            </form>
+            <PlegableIA titulo="Armarlo con IA: formulario, estrategias y evento de una">
                 <ConIA onListo={conIA} />
-            </Bloque>
+            </PlegableIA>
         </>
     );
 }
 
+function LinksDelFunnel({ d, f, eventos }) {
+    if (!f.setting) return <Origenes d={d} f={f} />;
+    if (!eventos.length) return <p className="t-sm mut">Creá un evento en este funnel y acá aparecen los links de cada setter.</p>;
+    return (
+        <div className="fm-evlinks">
+            {eventos.map(e => (
+                <div key={e.id} className="fm-evlink">
+                    <b className="t-sm">{e.nombre}</b>
+                    <LinksSetters d={d} e={e} />
+                </div>
+            ))}
+            <p className="t-xs mut">Cada setter también ve sus links en su menú de NeurOPS.</p>
+        </div>
+    );
+}
+
 function EditarFunnel({ d, f, cerrar }) {
-    const eventos = ord(d, 'eventos').filter(e => e.funnel === f.id);
+    const eventos = eventosDe(d, f);
     const [eventoIA, setEventoIA] = useState(eventos[0] ? eventos[0].id : '');
     const [borrar, setBorrar] = useState(false);
     const editar = (cambios, ya) => almacen.editar('funnels', f.id, cambios, ya);
@@ -256,33 +264,45 @@ function EditarFunnel({ d, f, cerrar }) {
                 <label className="sr" htmlFor="fm-nombre">Nombre del funnel</label>
                 <input id="fm-nombre" className="input" type="text" maxLength={80} defaultValue={f.nombre}
                     onBlur={e => { const v = e.target.value.trim(); if (v && v !== f.nombre) editar({ nombre: v }, true); }} />
-                <Seg sm label="Tipo del funnel" valor={f.tipo} opciones={TIPOS} onChange={v => editar({ tipo: v, setting: v === 'setting' }, true)} />
-                <span className="t-xs mut">{AYUDA_TIPO[f.tipo]}</span>
+                <Tipos valor={f.tipo} onChange={v => editar({ tipo: v, setting: v === 'setting' }, true)} />
                 <label className="fm-fila">
                     <Switch on={f.activo} label={f.nombre + ' recibe agendas'} onChange={v => editar({ activo: v }, true)} />
                     <span className="t-sm">Recibe agendas</span>
                 </label>
             </Bloque>
-            <Bloque titulo={f.setting ? 'Links de los setters' : 'Links'}>
-                {f.setting ? <LinksDeSetters d={d} f={f} /> : <Origenes d={d} f={f} />}
+            <Bloque titulo={f.setting ? 'Links de setters' : 'Links por procedencia'}
+                ayuda={f.setting ? 'Un link por setter y por evento: la agenda que entra por ahí queda a su nombre.'
+                    : 'Cada link suma ?o=nombre al del evento, para saber de dónde vino cada agenda.'}>
+                <LinksDelFunnel d={d} f={f} eventos={eventos} />
             </Bloque>
-            <Bloque titulo={eventos.length ? 'Editar con IA' : 'Completar con IA'}>
+            <Bloque titulo="Eventos de este funnel">
+                {eventos.length ? (
+                    <ul className="fm-evs">
+                        {eventos.map(e => (
+                            <li key={e.id}>
+                                <button type="button" className="link-btn" onClick={() => { cerrar(); abrirEvento(e.id); }}><Icono n="calendar" />{e.nombre}</button>
+                            </li>
+                        ))}
+                    </ul>
+                ) : <p className="t-sm mut">Todavía no tiene eventos. Creá uno desde «Nuevo evento» y elegí este funnel.</p>}
+            </Bloque>
+            <PlegableIA titulo={eventos.length ? 'Editar con IA' : 'Completar con IA: formulario, estrategias y evento'}>
                 {!eventos.length ? (
                     <ConIA funnel={f.id} onListo={(r) => {
-                        toast('Funnel completo. Revisá el agendamiento y publicalo.');
+                        toast('Funnel completo. Revisá el evento y publicalo.');
                         cerrar();
                         ui.set({ seccion: 'eventos', ev: { id: r.creados.evento, tab: 'config', nodo: null, calor: true } });
                     }} />
                 ) : (
                     <>
                         {eventos.length > 1 && (
-                            <Seg sm label="Qué agendamiento editar" valor={eventoIA} onChange={setEventoIA}
+                            <Seg sm label="Qué evento editar" valor={eventoIA} onChange={setEventoIA}
                                 opciones={eventos.map(e => ({ v: e.id, n: e.nombre }))} />
                         )}
                         <ConIA key={eventoIA} evento={eventoIA} onListo={() => toast('Cambios aplicados. Revisá el evento y publicalo para que los vea el lead.')} />
                     </>
                 )}
-            </Bloque>
+            </PlegableIA>
             <div className="fm-acc">
                 {borrar ? (
                     <>

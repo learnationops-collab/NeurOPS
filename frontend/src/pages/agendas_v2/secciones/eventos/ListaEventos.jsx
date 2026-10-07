@@ -1,4 +1,6 @@
-// Lista de eventos: agrupada por funnel, por formulario o toda junta, con la caja para crear uno.
+// Lista de eventos (el eje de Agendamiento, como Thalamus): agrupada por funnel, por formulario o toda
+// junta, con la caja para crear uno. Cada tarjeta dice lo que le falta y, en un funnel de setting, los
+// links de cada setter. El funnel se crea y se edita desde acá (ModalFunnel).
 // En la vista de closer solo aparecen sus eventos propios, sin agrupar.
 
 import React, { useRef, useState } from 'react';
@@ -10,9 +12,10 @@ import { almacen, useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import EnTope from '../../ui/EnTope';
-import { EstadoEv, abrirEvento, copiarLink, probarEvento } from './comun';
+import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, probarEvento } from './comun';
 
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
+const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
 
 function crearEvento(d, nombre, cm) {
     nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
@@ -75,6 +78,8 @@ function TarjetaEvento({ d, e }) {
                 <EstadoEv est={estadoEvento(e, fo)} />
             </div>
             <div className="ev-fila"><span className="ev-link"><Icono n="link" /><span>{linkEvento(d, e)}</span></span></div>
+            {f && f.setting && <LinksSetters d={d} e={e} compacto />}
+            <PasosPendientes d={d} e={e} />
             <div className="ev-fila">
                 {f ? <span className="chip chip--n" style={{ '--c': colorVar(f.color) }}>{f.nombre}</span>
                     : <span className="chip" style={{ '--c': 'var(--warning)' }}>Sin funnel</span>}
@@ -147,6 +152,7 @@ export default function ListaEventos() {
                             <div className="ev-grupo-tit">
                                 {agrupar === 'funnel' && ref ? <span className="cf-punto" style={{ '--c': colorVar(ref.color) }} /> : <Icono n={agrupar === 'funnel' ? 'funnel' : 'form'} />}
                                 <span className="t-rotulo">{ref ? ref.nombre : 'Sin ' + agrupar}</span>
+                                {agrupar === 'funnel' && ref && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{TIPO[ref.tipo] || 'Otro'}</span>}
                                 <span className="t-cap mut40">{lista.length}</span>
                                 {agrupar === 'funnel' && ref && (
                                     <button type="button" className="ibtn ibtn--sm" aria-label={'Editar funnel ' + ref.nombre} title="Editar funnel"

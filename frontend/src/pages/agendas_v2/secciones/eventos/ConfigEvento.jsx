@@ -1,4 +1,5 @@
 // Configuración de un evento: General, Disponibilidad, Página de reserva, eliminar y la Revisión al costado.
+// En un funnel de setting el link muestra los de cada setter; en los otros, los links por procedencia.
 
 import { useState } from 'react';
 import { DURACIONES, TZ_DEF, ZONAS } from '../../core/catalogos';
@@ -11,8 +12,8 @@ import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { Avatar, HUMO_MARCA, Humo, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
-import EditorDescripcion from './EditorDescripcion';
-import { InputVivo, slugOrigen, urlPublica, useBorrador } from './comun';
+import { ModalNoCalifica } from '../forms/Modales';
+import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 
 const PASOS = [5, 10, 15, 20, 30, 45, 60];
 const DIA = 86400000;
@@ -41,22 +42,6 @@ function Num({ id, valor, min, max, label, onGuardar }) {
     return (
         <InputVivo className="input input--num num" type="number" inputMode="numeric" id={id} min={min} max={max} aria-label={label}
             valor={String(valor)} guardar={t => { const v = t.trim(); if (v === '') return false; onGuardar(entero(v, min, max, min)); }} />
-    );
-}
-
-// Lo que el lead lee en su invitación de Google Calendar: qué tener listo para la sesión. Texto
-// plano; vacío usa un texto genérico (operacion.INDICACIONES_POR_DEFECTO). Sus datos y respuestas
-// no van en la invitación.
-function IndicacionesVivas({ e }) {
-    const b = useBorrador(e.indic || '');
-    return (
-        <div style={{ flex: '1 1 100%', minWidth: 0 }}>
-            <textarea id="ev-indic" className="input" rows={4} maxLength={2000} aria-label="Indicaciones para el lead"
-                placeholder="Lo que el lead tiene que tener listo. Va en su invitación de Google Calendar."
-                value={b.value} style={{ width: '100%', resize: 'vertical' }}
-                onChange={ev => { b.set(ev.target.value); almacen.editar('eventos', e.id, { indic: ev.target.value }); }}
-                onBlur={() => { b.soltar(); almacen.flush(); }} />
-        </div>
     );
 }
 
@@ -94,9 +79,6 @@ function General({ d, e, f, cm }) {
                 <Seg sm label="Duración" valor={e.duracion} onChange={v => almacen.editar('eventos', e.id, { duracion: v }, true)}
                     opciones={DURACIONES.map(m => ({ v: m, n: m + ' min' }))} />
             </Fila>
-            <Fila l="Indicaciones" cls="ffila--top">
-                <IndicacionesVivas e={e} />
-            </Fila>
             <Fila l="Link" cls="ffila--top">
                 <div className="entrada" style={{ flex: '1 1 100%', minWidth: 0 }}>
                     <span className="prefijo"><Icono n="link" />/agenda/{f ? f.slug + '/' : ''}</span>
@@ -108,7 +90,7 @@ function General({ d, e, f, cm }) {
                             if (libre !== sl) toast('Ese link ya existe: quedó /' + libre);
                         }} />
                 </div>
-                {f && f.origenes.length ? (
+                {f && f.setting ? <LinksSetters d={d} e={e} /> : f && f.origenes.length ? (
                     <div className="ev-origenes">
                         {f.origenes.map(o => {
                             const u = linkEvento(d, e) + '?o=' + slugOrigen(d, o), p = o.setter && buscar(d, 'personas', o.setter);
@@ -197,8 +179,10 @@ function Disponibilidad({ e }) {
     );
 }
 
-function Pagina({ e }) {
+function Pagina({ d, e }) {
     const redir = useBorrador(e.redir);
+    const [fin, setFin] = useState(false);
+    const fo = buscar(d, 'formularios', e.formulario);
     const redirMal = redir.escribiendo && !!redir.value.trim() && !urlOk(redir.value.trim());
     return (
         <>
@@ -223,7 +207,15 @@ function Pagina({ e }) {
                         onBlur={() => { redir.soltar(); almacen.flush(); }} />
                 </div>
             </Fila>
-            <Fila l="Descripción" cls="ffila--top"><EditorDescripcion e={e} /></Fila>
+            <Fila l="Si no califica">
+                {fo ? (
+                    <>
+                        <span className="t-sm trunc" style={{ flex: '1 1 160px' }}>«{fo.fin.titulo}»</span>
+                        <button type="button" className="btn btn--linea btn--sm" onClick={() => setFin(true)}><Icono n="edit" />Editar</button>
+                    </>
+                ) : <span className="t-sm mut">Elegí un formulario.</span>}
+            </Fila>
+            {fin && fo && <ModalNoCalifica f={fo} onCerrar={() => setFin(false)} />}
         </>
     );
 }
@@ -257,7 +249,7 @@ export default function ConfigEvento({ e }) {
             </div>
             <div className="ev-col">
                 <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
-                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina e={e} /></Bloque>
+                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina d={d} e={e} /></Bloque>
             </div>
             <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">
                 <Humo clase="humo--tarjeta humo--suave" cols={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />

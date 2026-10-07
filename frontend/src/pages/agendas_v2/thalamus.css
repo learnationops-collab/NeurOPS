@@ -1426,25 +1426,11 @@
   .thalamus .rv-horas-lista{max-height:none;overflow:visible}
 }
 
-/* Funnels (ListaFunnels): cada funnel con sus agendamientos y los pasos que le faltan. */
-.thalamus .fu-lista{display:grid;gap:var(--s4)}
-.thalamus .fu-card{display:grid;gap:var(--s3);padding:var(--s5,20px) var(--s5,20px) var(--s4);min-width:0}
-.thalamus .fu-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
-.thalamus .fu-nom{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.thalamus .fu-faltas{margin:0;color:var(--warning)}
-.thalamus .fu-ags{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
-.thalamus .fu-ag{display:grid;gap:var(--s2);padding:var(--s3);border-radius:14px;border:1px solid var(--border-subtle);background:rgba(255,255,255,.02)}
-.thalamus .fu-ag-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
-.thalamus .fu-ag-nom{font-weight:900;text-align:left;color:inherit}
-.thalamus .fu-ag-nom:hover{text-decoration:underline}
-.thalamus .fu-ag-link{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* Lo que le falta a un evento (tarjetas de Eventos). */
 .thalamus .fu-pasos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;counter-reset:paso}
 .thalamus .fu-paso{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:800;
   border:1px solid color-mix(in srgb,var(--warning) 45%,transparent);background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--warning)}
-.thalamus .fu-paso--ok{border-color:color-mix(in srgb,var(--success) 35%,transparent);background:color-mix(in srgb,var(--success) 10%,transparent);color:var(--success)}
 .thalamus .fu-paso:hover{filter:brightness(1.15)}
-.thalamus .fu-nuevo{display:flex;gap:var(--s2);align-items:center}
-.thalamus .fu-nuevo .input{flex:1;min-width:0}
 
 /* ElegirCloser: elegir un closer viendo si está listo (Calendar, WhatsApp, Horarios). */
 .thalamus .ec{position:relative;display:inline-block;max-width:100%}
@@ -1529,3 +1515,29 @@
 .thalamus .rv-conocido{display:grid;gap:clamp(18px,2.2cqi,26px);width:min(100%,640px)}
 .thalamus .rv-conocido .rv-q{max-width:24ch}
 .thalamus .rv-conocido .rv-acc{margin-top:0}
+/* Funnel (categoría simple de los eventos): tipo en tarjetas, links de setters a la vista, IA plegada. */
+.thalamus .fm-tipos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s2);width:100%}
+@media (max-width:640px){.thalamus .fm-tipos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.thalamus .fm-tipo{display:grid;gap:4px;align-content:start;justify-items:start;text-align:left;padding:12px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--mat-1);
+  transition:border-color .16s,background-color .16s}
+.thalamus .fm-tipo:hover{border-color:var(--border-control)}
+.thalamus .fm-tipo[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--brand-secondary-surface)}
+.thalamus .fm-tipo b{font-size:14px;font-weight:900}
+.thalamus .fm-tipo span:last-child{font-size:12px;line-height:1.4;color:var(--text-muted)}
+.thalamus .fm-tipo-ico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--hundido);color:var(--text-muted)}
+.thalamus .fm-tipo[aria-checked="true"] .fm-tipo-ico{background:var(--brand-secondary);color:var(--on-brand)}
+.thalamus .fm-ia{width:100%}
+.thalamus .fm-evlinks{display:grid;gap:var(--s3);width:100%}
+.thalamus .fm-evlink{display:grid;gap:6px;padding:12px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--mat-1)}
+.thalamus .fm-evlink .ls-tit{display:none}
+.thalamus .fm-evs{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s3)}
+.thalamus .ls{display:grid;gap:6px;width:100%;min-width:0}
+.thalamus .ls-tit{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-secondary)}
+.thalamus .ls-lista{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.thalamus .ls-b{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;background:var(--hundido);border:1px solid var(--brand-secondary-border);font-size:12px;color:var(--text-muted);min-width:0}
+.thalamus .ls-b b{color:var(--text-on-surface);font-weight:800}
+.thalamus .ls-b span{color:var(--text-muted-40);font-weight:600}
+.thalamus .ls-b > svg{color:var(--brand-secondary)}
+.thalamus .ls-b:hover{background:var(--brand-secondary-surface)}
+.thalamus .ls--compacto{grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:10px}
+.thalamus .ev-card .fu-pasos{margin-top:2px}
