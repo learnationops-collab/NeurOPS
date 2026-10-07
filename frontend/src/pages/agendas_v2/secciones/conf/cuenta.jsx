@@ -127,6 +127,13 @@ export function TarjetaCalendar({ volver }) {
         await api.post('/google/calendars', { calendar_id: v });
         setMsg({ aviso: 'Las agendas nuevas se crean en ese calendario.' });
     });
+    // Como en Calendly: en qué calendarios se miran los conflictos antes de ofrecerte a un lead.
+    const alternarConflicto = (id, on) => correr(async () => {
+        const actual = st.conflicto || [];
+        const nuevo = on ? [...actual, id] : actual.filter(x => x !== id);
+        const r = await api.post('/google/calendars', { conflicto: nuevo });
+        setSt(x => ({ ...x, conflicto: r.data?.conflicto || nuevo }));
+    });
     const desconectar = () => correr(async () => {
         await api.post('/google/disconnect');
         setSt({ connected: false });
@@ -144,6 +151,25 @@ export function TarjetaCalendar({ volver }) {
                     <Sx id="cu-cal" label="Calendario de destino" valor={destino} disabled={ocupado} onChange={elegir}
                         opciones={(st.calendars || []).map((c) => ({ v: c.id, n: c.summary + (c.primary ? ' (principal)' : ''), icono: 'calendar', color: 'var(--info)' }))} />
                     <button type="button" className="btn btn--peligro btn--sm" disabled={ocupado} onClick={desconectar}>Desconectar</button>
+                    {(st.todos || []).length > 0 && (
+                        <div className="cu-cals" role="group" aria-labelledby="cu-conf-tit">
+                            <span className="t-rotulo" id="cu-conf-tit">Revisar conflictos en</span>
+                            <p className="t-cap mut">Si tenés algo en estos calendarios, en ese horario no te ofrecemos a los leads.</p>
+                            {st.todos.map((c) => {
+                                const on = (st.conflicto || []).includes(c.id);
+                                return (
+                                    <label key={c.id} className="cu-cal">
+                                        <button type="button" className="switch" role="switch" aria-checked={on} disabled={ocupado}
+                                            aria-label={'Revisar conflictos en ' + c.summary} onClick={() => alternarConflicto(c.id, !on)} />
+                                        <span className="trunc">{c.summary}</span>
+                                        {c.primary && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>Principal</span>}
+                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Destino</span>}
+                                        {!c.escribe && <span className="t-cap mut40">solo lectura</span>}
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="cu-fila">

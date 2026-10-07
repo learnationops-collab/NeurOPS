@@ -19,6 +19,20 @@ describe('Cuenta', () => {
         expect(api.get).toHaveBeenCalledWith('/google/login', { params: { volver: 'agendamiento' } });
     });
 
+    it('Calendar: se eligen los calendarios donde revisar conflictos', async () => {
+        const cal = { connected: true, selected_calendar: 'primary', calendars: [{ id: 'primary', summary: 'Ana', primary: true, escribe: true }],
+            todos: [{ id: 'primary', summary: 'Ana', primary: true, escribe: true }, { id: 'facu', summary: 'Facultad', escribe: false }], conflicto: ['primary'] };
+        api.get.mockResolvedValue({ data: cal });
+        api.post.mockImplementation((url, cuerpo) => Promise.resolve({ data: { conflicto: cuerpo.conflicto } }));
+        render(envolver(<TarjetaCalendar />));
+        const facu = await screen.findByRole('switch', { name: 'Revisar conflictos en Facultad' });
+        expect(facu).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('switch', { name: 'Revisar conflictos en Ana' })).toHaveAttribute('aria-checked', 'true');
+        await act(async () => { fireEvent.click(facu); });
+        expect(api.post).toHaveBeenCalledWith('/google/calendars', { conflicto: ['primary', 'facu'] });
+        expect(facu).toHaveAttribute('aria-checked', 'true');
+    });
+
     it('WhatsApp: guarda, manda la prueba y confirma', async () => {
         api.get.mockResolvedValue({ data: { numero: '', confirmado: false } });
         api.put.mockResolvedValue({ data: { numero: '5491122334455', confirmado: false } });

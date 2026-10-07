@@ -140,18 +140,23 @@ class GoogleService:
         return (token.google_calendar_id if token else None) or 'primary'
 
     @staticmethod
-    def list_calendars(user_id):
-        """Calendarios donde el usuario puede escribir. [] si no hay conexión o Google falla."""
+    def list_calendars(user_id, todos=False):
+        """Calendarios donde el usuario puede escribir (con `todos`, también los que solo puede leer:
+        sirven para revisar conflictos). [] si no hay conexión o Google falla."""
         service = GoogleService.get_service(user_id)
         if not service:
             return []
+        roles = ('owner', 'writer', 'reader', 'freeBusyReader') if todos else ('owner', 'writer')
         try:
             calendarios, pagina = [], None
             while True:
                 respuesta = service.calendarList().list(pageToken=pagina).execute()
                 for c in respuesta.get('items', []):
-                    if c.get('accessRole') in ('owner', 'writer'):
-                        calendarios.append({'id': c['id'], 'summary': c['summary'], 'primary': c.get('primary', False)})
+                    if c.get('accessRole') in roles:
+                        calendarios.append({
+                            'id': c['id'], 'summary': c.get('summaryOverride') or c['summary'], 'primary': c.get('primary', False),
+                            'escribe': c.get('accessRole') in ('owner', 'writer'),
+                        })
                 pagina = respuesta.get('nextPageToken')
                 if not pagina:
                     return calendarios
@@ -229,6 +234,58 @@ class GoogleService:
             None,
         )
         return evt.get('id'), meet
+
+    @staticmethod
+    def calendarios_de_conflicto(token):
+        """Los calendarios que se revisan antes de ofrecer al usuario: los que eligió o, si no eligió,
+        el de destino y el principal."""
+        if token is None:
+            return []
+        elegidos = token.calendarios_conflicto
+        if isinstance(elegidos, list):
+            return [c for c in elegidos if isinstance(c, str) and c][:20]
+        return list(dict.fromkeys([token.google_calendar_id or 'primary', 'primary']))
+
+    @staticmethod
+    def franjas_ocupadas(user_id, desde, hasta):
+        """[(inicio, fin)] en ms de lo que el usuario tiene ocupado en sus calendarios de conflicto
+        entre `desde` y `hasta` (datetime UTC sin zona). Los eventos marcados como «Disponible» y los
+        cancelados no cuentan (así responde freebusy). None si no se pudo saber: quien llama sigue
+        como si no hubiera nada (se prefiere ofrecer de más a perder agendas)."""
+        token = GoogleService.token_vigente(user_id)
+        calendarios = GoogleService.calendarios_de_conflicto(token)
+        if not calendarios:
+            return []
+        try:
+            service = GoogleService.get_service(user_id)
+        except Exception as e:  # noqa: BLE001  (un token que no se puede leer no frena a nadie)
+            current_app.logger.warning(f'[GOOGLE] Sin servicio para leer la ocupación del usuario #{user_id}: {e}')
+            return None
+        if not service:
+            return None
+
+        def iso(dt):
+            return dt.replace(microsecond=0).isoformat() + 'Z'
+
+        def ms(texto):
+            return int(datetime.datetime.fromisoformat(texto.replace('Z', '+00:00')).timestamp() * 1000)
+
+        try:
+            r = service.freebusy().query(body={
+                'timeMin': iso(desde), 'timeMax': iso(hasta), 'items': [{'id': c} for c in calendarios],
+            }).execute()
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.warning(f'[GOOGLE] No se pudo leer la ocupación del usuario #{user_id}: {e}')
+            return None
+        franjas = []
+        for cal in (r.get('calendars') or {}).values():
+            # Un calendario que ya no existe o no se puede leer viene con `errors`: se ignora.
+            for b in cal.get('busy') or []:
+                try:
+                    franjas.append((ms(b['start']), ms(b['end'])))
+                except (KeyError, ValueError):
+                    continue
+        return sorted(franjas)
 
     @staticmethod
     def evento_cancelado(user_id, event_id):

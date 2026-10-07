@@ -58,7 +58,8 @@ def whatsapp(monkeypatch):
 @pytest.fixture(autouse=True)
 def google(monkeypatch):
     """Google Calendar simulado: guarda cada evento que se crea o se borra."""
-    llamadas = {'crear': [], 'borrar': [], 'falla': None, 'cancelados': set()}
+    llamadas = {'crear': [], 'borrar': [], 'falla': None, 'cancelados': set(), 'ocupado': {}}
+    servicio._google_cache.clear()
 
     def crear(user_id, inicio, fin, titulo, descripcion, invitado_email=None):
         if llamadas['falla']:
@@ -80,6 +81,8 @@ def google(monkeypatch):
         GoogleService, 'delete_event', staticmethod(lambda u, e: llamadas['borrar'].append((u, e)) or True)
     )
     monkeypatch.setattr(GoogleService, 'evento_cancelado', staticmethod(lambda u, e: e in llamadas['cancelados']))
+    # Lo ocupado en sus calendarios de conflicto: {user_id: [(inicio_ms, fin_ms)]}.
+    monkeypatch.setattr(GoogleService, 'franjas_ocupadas', staticmethod(lambda u, desde, hasta: llamadas['ocupado'].get(u, [])))
     return llamadas
 
 
@@ -679,3 +682,31 @@ def test_al_agendar_el_lead_ve_el_nombre_de_su_consultor_y_nada_de_contacto(clie
     consultor = r.get_json()['reserva']['consultor']
     assert consultor['nombre'] and consultor['color']
     assert set(consultor) == {'nombre', 'color'} and '@equipo.com' not in r.get_data(as_text=True)
+
+
+# --- Conflictos en Google Calendar --------------------------------------------------------------
+
+H9, H10 = 1791205200000, 1791208800000  # lunes 5/10 09:00 y 10:00 en La Paz (13 y 14 UTC)
+
+
+def test_lo_ocupado_en_google_no_se_ofrece(client, armado, cuentas, google):
+    google['ocupado'] = {cuentas['ana'].id: [(H9, H10)], cuentas['beto'].id: [(H9, H10)]}
+    slots = client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+    assert H9 not in slots and H10 in slots
+
+
+def test_si_uno_esta_ocupado_en_google_la_agenda_va_al_otro(client, armado, cuentas, google):
+    # Máxima disponibilidad: cada horario va al primero libre; Ana tiene algo en su Google a las 9.
+    servicio.guardar_doc('grupos', 'top', {'estrategia': 'horario'}, parcial=True)
+    google['ocupado'] = {cuentas['ana'].id: [(H9, H10)]}
+    assert _reservar(client).status_code == 201
+    assert Appointment.query.one().closer_id == cuentas['beto'].id
+
+
+def test_si_se_ocupa_en_google_mientras_elige_el_horario_se_avisa(client, armado, cuentas, google, monkeypatch):
+    # Los horarios salieron libres; al confirmar, Google ya dice que los dos están ocupados.
+    monkeypatch.setattr(servicio, '_franjas_google', lambda u, desde, hasta: [])
+    google['ocupado'] = {cuentas['ana'].id: [(H9, H10)], cuentas['beto'].id: [(H9, H10)]}
+    r = _reservar(client)
+    assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
+    assert Appointment.query.count() == 0

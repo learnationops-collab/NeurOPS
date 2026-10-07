@@ -211,3 +211,56 @@ def test_desde_agendamiento_vuelve_a_su_configuracion(client, make_user, auth_he
     state = _login(client, h)['state'][0]
     r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
     assert r.location == '/closer/settings?google_connected=cancelado'
+
+
+class _Freebusy:
+    """Lo mínimo de freebusy().query(body).execute()."""
+
+    def __init__(self, respuesta=None, error=None):
+        self.respuesta, self.error, self.body = respuesta, error, None
+
+    def freebusy(self):
+        return self
+
+    def query(self, body):
+        self.body = body
+        return self
+
+    def execute(self):
+        if self.error:
+            raise self.error
+        return self.respuesta
+
+
+def test_por_defecto_se_revisan_el_de_destino_y_el_principal(db, closer):
+    token = GoogleCalendarToken(user_id=closer.id, token_json='{}', google_calendar_id='ventas@group')
+    assert GoogleService.calendarios_de_conflicto(token) == ['ventas@group', 'primary']
+    token.calendarios_conflicto = ['facu@group']
+    assert GoogleService.calendarios_de_conflicto(token) == ['facu@group']
+    token.calendarios_conflicto = []  # eligió no revisar ninguno
+    assert GoogleService.calendarios_de_conflicto(token) == []
+
+
+def test_franjas_ocupadas_lee_freebusy_e_ignora_calendarios_con_error(db, closer, monkeypatch):
+    import datetime as dt
+    db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}'))
+    db.session.commit()
+    fb = _Freebusy({'calendars': {
+        'primary': {'busy': [{'start': '2026-10-05T13:00:00Z', 'end': '2026-10-05T14:00:00Z'}]},
+        'borrado@group': {'errors': [{'reason': 'notFound'}]},
+    }})
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: fb))
+    franjas = GoogleService.franjas_ocupadas(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6))
+    assert franjas == [(1791205200000, 1791208800000)]
+    assert fb.body['timeMin'] == '2026-10-05T00:00:00Z' and fb.body['items'] == [{'id': 'primary'}]
+    # Si Google falla: None, y quien llama ofrece igual.
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: _Freebusy(error=OSError('sin red'))))
+    assert GoogleService.franjas_ocupadas(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
+
+
+def test_el_closer_elige_en_que_calendarios_revisar_conflictos(client, db, closer, auth_headers):
+    db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}'))
+    db.session.commit()
+    r = client.post('/api/google/calendars', json={'conflicto': ['primary', 'facu@group', 3]}, headers=auth_headers(closer))
+    assert r.status_code == 200 and r.get_json()['conflicto'] == ['primary', 'facu@group']
+    assert GoogleCalendarToken.query.one().calendarios_conflicto == ['primary', 'facu@group']

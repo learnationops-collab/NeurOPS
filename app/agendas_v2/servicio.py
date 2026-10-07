@@ -17,6 +17,7 @@ from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
+from app.agendas_v2.nucleo.disponibilidad import se_solapa
 from app.agendas_v2.nucleo.eventos import con_form_al_dia, version_publicada
 from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import (
@@ -36,6 +37,9 @@ DIA_MS = 86400000
 DURACION_AGENDA_OPERACION_MIN = 60
 # Reservas que viajan al panel: las futuras y las de los ultimos 35 dias (Available, KPIs, ocupacion).
 VENTANA_ESTADO_DIAS = 35
+# Conflictos en Google Calendar: hasta cuántos días se miran y cuánto se guarda lo leído de cada closer.
+VENTANA_GOOGLE_DIAS = 60
+CACHE_GOOGLE_S = 120
 LARGO_MAX_TEXTO = {'texto': 300, 'parrafo': 2000, 'email': 120, 'telefono': 40, 'instagram': 30}
 
 
@@ -366,9 +370,46 @@ def _agendas_de_operacion(elegibles, desde):
     ]
 
 
+# {user_id: (vence (monotonic), desde_ms, hasta_ms, [(inicio, fin)])}: lo leído de Google por closer.
+_google_cache = {}
+
+
+def _franjas_google(user_id, desde, hasta):
+    """Lo ocupado en los calendarios de conflicto del closer entre desde y hasta (ms), con caché corta
+    para no consultar a Google en cada clic del lead. [] si Google no respondió (se ofrece igual)."""
+    from app.services.google_service import GoogleService
+
+    ahora = time.monotonic()
+    guardado = _google_cache.get(user_id)
+    if guardado and guardado[0] > ahora and guardado[1] <= desde and guardado[2] >= hasta:
+        return guardado[3]
+    franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(desde), ms_a_dt(hasta))
+    if franjas is None:
+        return []
+    if len(_google_cache) > 500:
+        _google_cache.clear()
+    _google_cache[user_id] = (ahora + CACHE_GOOGLE_S, desde, hasta, franjas)
+    return franjas
+
+
+def _ocupado_en_google(elegibles, ahora):
+    """{persona_id: [{inicio, fin}]} de lo que cada closer elegible tiene en sus calendarios de Google."""
+    desde, hasta = ahora - 3600000, ahora + VENTANA_GOOGLE_DIAS * DIA_MS
+    por_usuario = {u: _franjas_google(u, desde, hasta) for u in set(elegibles.values())}
+    return {pid: [{'inicio': a, 'fin': b} for a, b in por_usuario[u]] for pid, u in elegibles.items() if por_usuario[u]}
+
+
 def _ocupacion(ahora, elegibles=None):
-    """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion, en el formato del nucleo."""
-    return opciones_de_ocupacion(_agendas_de_operacion(elegibles or {}, ms_a_dt(ahora - DIA_MS)), ahora)
+    """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion y lo que tiene en sus
+    calendarios de Google (los de conflicto), en el formato del nucleo. Lo de Google bloquea el horario
+    pero no suma a su carga (no son agendas)."""
+    elegibles = elegibles or {}
+    base = opciones_de_ocupacion(_agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS)), ahora)
+    google = _ocupado_en_google(elegibles, ahora)
+    if not google:
+        return base
+    ocupado = base['ocupado']
+    return {**base, 'ocupado': lambda pid, t, dur: ocupado(pid, t, dur) or se_solapa(google.get(pid, []), t, dur)}
 
 
 def _choca(user_id, inicio, fin):
@@ -381,7 +422,13 @@ def _choca(user_id, inicio, fin):
         Appointment.start_time >= ms_a_dt(inicio) - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
-    return any(dt_a_ms(a.start_time) + _duracion_min(a) * 60000 > inicio for a in filas)
+    if any(dt_a_ms(a.start_time) + _duracion_min(a) * 60000 > inicio for a in filas):
+        return True
+    # Lo de Google se vuelve a mirar en el momento (sin caché): algo agendado recién también cuenta.
+    from app.services.google_service import GoogleService
+
+    franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio), ms_a_dt(fin)) or []
+    return any(a < fin and inicio < b for a, b in franjas)
 
 
 # --- Pagina publica -----------------------------------------------------------------------------

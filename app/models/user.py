@@ -242,6 +242,9 @@ class GoogleCalendarToken(db.Model):
     # Cuándo Google rechazó el token (revocado o emitido por otro cliente OAuth). Un token vencido
     # no cuenta como conectado: el usuario tiene que volver a conectar. Al reconectar vuelve a NULL.
     vencido_en = db.Column(db.DateTime, nullable=True)
+    # En qué calendarios se revisan los conflictos antes de ofrecerlo a un lead (ids de Google).
+    # NULL = el de destino y el principal (GoogleService.calendarios_de_conflicto).
+    calendarios_conflicto = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref=db.backref('google_token', uselist=False, cascade="all, delete-orphan"))

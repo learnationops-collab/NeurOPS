@@ -114,29 +114,36 @@ def callback():
 @login_required
 def manage_calendars():
     if request.method == 'POST':
-        calendar_id = (request.get_json() or {}).get('calendar_id')
-        if not calendar_id:
+        # {calendar_id}: el calendario de destino. {conflicto: [ids]}: en cuáles se revisan los conflictos.
+        datos = request.get_json(silent=True) or {}
+        calendar_id, conflicto = datos.get('calendar_id'), datos.get('conflicto')
+        if not calendar_id and not isinstance(conflicto, list):
             return jsonify({'error': 'Missing calendar_id'}), 400
         token = GoogleService.token_vigente(current_user.id)
         if not token:
             return jsonify({'error': 'No token found'}), 404
-        token.google_calendar_id = calendar_id
+        if calendar_id:
+            token.google_calendar_id = calendar_id
+        if isinstance(conflicto, list):
+            token.calendarios_conflicto = [c for c in conflicto if isinstance(c, str) and c][:20]
         db.session.commit()
-        return jsonify({'message': 'Calendar preference saved'}), 200
+        return jsonify({'message': 'Calendar preference saved', 'conflicto': GoogleService.calendarios_de_conflicto(token)}), 200
 
     # GET. Con ?solo_estado=1 responde desde la base, sin llamar a Google (el aviso del menú).
     token = GoogleCalendarToken.query.filter_by(user_id=current_user.id).first()
     if request.args.get('solo_estado'):
         return jsonify({'connected': bool(token and token.vencido_en is None), 'vencido': bool(token and token.vencido_en)}), 200
 
-    calendars = GoogleService.list_calendars(current_user.id)  # si Google rechaza el token, lo marca vencido
+    todos = GoogleService.list_calendars(current_user.id, todos=True)  # si Google rechaza el token, lo marca vencido
     if not token or token.vencido_en is not None:
         return jsonify({'connected': False, 'vencido': bool(token)}), 200
     return jsonify({
         'connected': True,
         'vencido': False,
         'selected_calendar': token.google_calendar_id,
-        'calendars': calendars,
+        'calendars': [c for c in todos if c.get('escribe')],  # el de destino tiene que ser uno donde escribe
+        'todos': todos,  # para revisar conflictos alcanza con poder leerlo
+        'conflicto': GoogleService.calendarios_de_conflicto(token),
     }), 200
 
 

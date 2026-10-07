@@ -1581,3 +1581,7 @@
 .thalamus .eq-marca{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:800;color:var(--warning);background:var(--warning-surface);border:1px solid var(--warning-border)}
 .thalamus .eq-marca--ok{color:var(--success);background:var(--success-surface);border-color:var(--success-border)}
 @media (max-width:720px){.thalamus .eq-fila{grid-template-columns:28px minmax(0,1fr)}.thalamus .eq-marcas,.thalamus .eq-fila > .btn{grid-column:2}}
+/* Calendar › Revisar conflictos en: un interruptor por calendario de Google. */
+.thalamus .cu-cals{flex:1 1 100%;display:grid;gap:6px;margin-top:4px;padding:14px;border-radius:20px;background:var(--hundido);border:1px solid var(--border-subtle)}
+.thalamus .cu-cal{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 0;font-size:14px;font-weight:700}
+.thalamus .cu-cal .trunc{flex:0 1 auto}
