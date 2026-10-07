@@ -10,7 +10,7 @@ import {
     PREGUNTA_CORTA, CAMPOS_ESCRITOS, VAL_CORTO, AREA_CORTO,
     escalaDe, nivelDe, techoIA, nivelCorto, estrellas, BANDERA, soloDigitos, href, MODALIDAD,
 } from '../lib/escalas';
-import { Dots, VEREDICTO } from './HiringInbox';
+import { VEREDICTO } from './HiringInbox';
 import logoSheets from '../assets/apps/google-sheets.png';
 import logoChatgpt from '../assets/apps/chatgpt.png';
 import logoClaude from '../assets/apps/claude.png';
@@ -78,27 +78,68 @@ const NIVELES = {
     pendientes: (valor) => escalaDe('pendientes', valor),
 };
 
+// --- Tamaño del panel ---
+
+// El panel usa casi toda la pantalla (hasta 1600px de ancho, con un margen del
+// 2% del alto) y lo diseñado entra sin scrollear en 1404 x 864 de panel (un
+// monitor de 1440 x 900). En pantallas más grandes no se estira el espacio en
+// blanco: todo el contenido se agranda en bloque (`zoom`) hasta llenar el panel,
+// así el texto crece con el monitor. En pantallas bajas o angostas va a pantalla
+// completa y sin escalar.
+const BASE_ANCHO = 1404;
+const BASE_ALTO = 864;
+const ESCALA_MAX = 1.35;
+
+export const dimensionesPanel = (ancho, alto) => {
+    if (ancho < 640 || alto < 681) return null;
+    const margen = Math.round(alto * 0.02);
+    const w = Math.min(ancho - margen * 2, 1600);
+    const h = alto - margen * 2;
+    const zoom = Math.max(1, Math.min(w / BASE_ANCHO, h / BASE_ALTO, ESCALA_MAX));
+    return { zoom, width: Math.floor(w / zoom), height: Math.floor(h / zoom) };
+};
+
+const useDimensionesPanel = () => {
+    const leer = () => (typeof window === 'undefined' ? null : dimensionesPanel(window.innerWidth, window.innerHeight));
+    const [dim, setDim] = useState(leer);
+    useEffect(() => {
+        const onResize = () => setDim(leer());
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+    return dim;
+};
+
 // --- Piezas chicas ---
 
-const BOTON_CABECERA = 'inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[11px] border text-[11.5px] font-bold transition-all';
-const PILDORA = `${BOTON_CABECERA} min-w-[112px] px-3`;
+const BOTON_CABECERA = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border text-[13.5px] font-bold transition-all';
+const PILDORA = `${BOTON_CABECERA} px-3`;
 const PILDORA_NEUTRA = `${PILDORA} border-white/[.32] bg-white/[.04] hover:bg-[#5B7CFF]/20`;
 const PILDORA_AUSENTE = `${PILDORA} border-[#4C2227] bg-[#1B0F1D] text-[#E85C4A]`;
-const BOTON_ICONO = 'flex h-8 w-8 flex-none items-center justify-center rounded-[11px] border border-white/[.32] bg-white/[.04] transition-all hover:bg-[#5B7CFF]/20 disabled:opacity-30';
+const BOTON_ICONO = 'flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border border-white/[.32] bg-white/[.04] transition-all hover:bg-[#5B7CFF]/20 disabled:opacity-30';
 
 // Las etiquetas en mayúsculas van en <small>: el reset tipográfico global
 // (index.html) pisa el peso y el tracking de span/div/button/h*, pero no el de
 // <small> — el mismo truco que ya usa el encabezado del panel.
 const Etiqueta = ({ children, className = '' }) => (
-    <small className={`block text-[8px] font-extrabold uppercase leading-none tracking-[.1em] text-white/40 ${className}`}>
+    <small className={`block text-[11px] font-extrabold uppercase leading-none tracking-[.08em] text-white/45 ${className}`}>
         {children}
     </small>
 );
 
+// Los cuatro puntitos del nivel (0-4), más grandes que los del listado.
+const Puntos = ({ n, color = '#5B7CFF' }) => (
+    <span className="flex flex-none gap-1">
+        {[1, 2, 3, 4].map((j) => (
+            <span key={j} className="h-[7px] w-[7px] rounded-full" style={{ background: j <= n ? color : 'rgba(255,255,255,.14)' }} />
+        ))}
+    </span>
+);
+
 const Riel = ({ titulo, icono: Icono, className = '', children }) => (
-    <section className={`flex min-w-0 flex-col rounded-[14px] border border-white/[.09] bg-white/[.03] px-3 pb-1.5 pt-2.5 ${className}`}>
-        <small className="flex items-center gap-1.5 pb-2 text-[8px] font-extrabold uppercase leading-none tracking-[.12em] text-white/50">
-            <Icono size={11} className="flex-none text-[#5B7CFF]" />
+    <section className={`flex min-w-0 flex-col rounded-2xl border border-white/[.09] bg-white/[.03] px-4 pb-2 pt-3.5 ${className}`}>
+        <small className="flex items-center gap-2 pb-3 text-[11.5px] font-extrabold uppercase leading-none tracking-[.1em] text-white/55">
+            <Icono size={15} className="flex-none text-[#5B7CFF]" />
             {titulo}
         </small>
         {children}
@@ -107,29 +148,29 @@ const Riel = ({ titulo, icono: Icono, className = '', children }) => (
 
 // Una fila de los rieles angostos: etiqueta (y medidor) arriba, valor abajo.
 const FilaRiel = ({ k, title, medidor, children }) => (
-    <div className="border-t border-white/[.07] py-[7px]" title={title}>
+    <div className="border-t border-white/[.07] py-2" title={title}>
         <div className="flex items-center justify-between gap-2">
             <Etiqueta>{k}</Etiqueta>
             {medidor}
         </div>
-        <div className="mt-1 text-[11.5px] font-bold leading-snug">{children}</div>
+        <div className="mt-1.5 text-[14px] font-bold leading-snug">{children}</div>
     </div>
 );
 
 const Contacto = ({ tile, texto, vacio, onCopiar }) => (
-    <div className="flex items-center gap-2 rounded-[10px] border border-white/[.08] bg-white/[.03] p-1.5">
+    <div className="flex items-center gap-2 rounded-xl border border-white/[.08] bg-white/[.03] p-2">
         {tile}
         {texto ? (
             <button
                 type="button"
                 onClick={onCopiar}
                 title="Copiar"
-                className="group flex min-w-0 flex-1 items-center gap-1.5 text-left text-[10.5px] font-semibold tabular-nums hover:text-white"
+                className="group flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] font-semibold tabular-nums hover:text-white"
             >
                 <span className="truncate">{texto}</span>
-                <Copy size={11} className="flex-none text-white/30 transition-colors group-hover:text-white/70" />
+                <Copy size={14} className="flex-none text-white/30 transition-colors group-hover:text-white/70" />
             </button>
-        ) : <span className="text-[10.5px] text-white/35">{vacio}</span>}
+        ) : <span className="text-[13px] text-white/35">{vacio}</span>}
     </div>
 );
 
@@ -161,19 +202,19 @@ const BANDERA_IDIOMA = {
 };
 
 const Bandera = ({ idioma }) => (
-    <span className="block h-5 w-5 flex-none overflow-hidden rounded-full ring-1 ring-white/20">
+    <span className="block h-6 w-6 flex-none overflow-hidden rounded-full ring-1 ring-white/20">
         <svg viewBox="0 0 20 20" className="h-full w-full" aria-hidden="true">{BANDERA_IDIOMA[idioma]}</svg>
     </span>
 );
 
 const Logo = ({ src, className = '' }) => (
-    <img src={src} alt="" width="20" height="20" draggable={false} className={`h-5 w-5 flex-none rounded-[5px] ${className}`} />
+    <img src={src} alt="" width="24" height="24" draggable={false} className={`h-6 w-6 flex-none rounded-[6px] ${className}`} />
 );
 
 const LogosIA = () => (
     <span className="flex flex-none">
         <Logo src={logoChatgpt} />
-        <Logo src={logoClaude} className="-ml-1.5 ring-1 ring-[#0B0F26]" />
+        <Logo src={logoClaude} className="-ml-2 ring-1 ring-[#0B0F26]" />
     </span>
 );
 
@@ -193,7 +234,7 @@ const HERRAMIENTAS = [
     { campo: 'meta', etiqueta: 'Meta Ads', icono: <Logo src={logoMeta} />, escala: 'meta' },
     { campo: 'notion', etiqueta: 'Notion', icono: <Logo src={logoNotion} />, escala: 'notion' },
     { campo: 'wa_tools', etiqueta: 'WhatsApp', icono: <Logo src={logoWhatsapp} />, escala: 'wa_tools' },
-    { campo: 'automatizaciones', etiqueta: 'Zapier (o análogas)', icono: <Logo src={logoZapier} />, escala: 'automatizaciones' },
+    { campo: 'automatizaciones', etiqueta: 'Zapier', icono: <Logo src={logoZapier} />, escala: 'automatizaciones' },
 ];
 
 // Todo lo que ya tiene lugar propio arriba (cabecera, rieles, herramientas):
@@ -207,40 +248,40 @@ const YA_MOSTRADAS = new Set([
 ]);
 
 const Celda = ({ etiqueta, icono, label, n, title }) => (
-    <div className="flex min-w-0 items-center gap-2 border-t border-white/[.07] px-0.5 py-2" title={title}>
+    <div className="flex min-w-0 items-center gap-3 border-t border-white/[.07] px-0.5 py-2.5" title={title}>
         {icono}
         <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1.5">
-                <Etiqueta className="truncate">{etiqueta}</Etiqueta>
-                <Dots n={n} redondos />
+            <Etiqueta className="truncate">{etiqueta}</Etiqueta>
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+                <span
+                    className="min-w-0 truncate text-[14px] font-bold leading-none"
+                    style={{ color: n > 0 ? '#fff' : 'rgba(255,255,255,.45)' }}
+                >
+                    {label}
+                </span>
+                <Puntos n={n} />
             </div>
-            <span
-                className="mt-1 block truncate text-[11px] font-bold leading-none"
-                style={{ color: n > 0 ? '#fff' : 'rgba(255,255,255,.45)' }}
-            >
-                {label}
-            </span>
         </div>
     </div>
 );
 
 const Estrellas = ({ n }) => (
     <span
-        className="inline-flex flex-none items-center gap-1 rounded-full border border-[#FF3FA4]/45 bg-[#FF3FA4]/10 py-[2px] pl-1.5 pr-2"
+        className="inline-flex flex-none items-center gap-1 rounded-full border border-[#FF3FA4]/45 bg-[#FF3FA4]/10 py-[3px] pl-2 pr-2.5"
         title={`${n} de 5`}
     >
         <span className="flex gap-px">
             {[1, 2, 3, 4, 5].map((i) => (
                 <Star
                     key={i}
-                    size={8}
+                    size={11}
                     strokeWidth={2}
                     fill={i <= n ? 'currentColor' : 'none'}
                     className={i <= n ? 'text-[#FF6AD5]' : 'text-white/25'}
                 />
             ))}
         </span>
-        <span className="text-[9.5px] font-bold leading-none tabular-nums text-[#FF6AD5]">{n}/5</span>
+        <span className="text-[12px] font-bold leading-none tabular-nums text-[#FF6AD5]">{n}/5</span>
     </span>
 );
 
@@ -281,7 +322,7 @@ const useCortado = (colapsado, texto) => {
     return [ref, cortado];
 };
 
-const CLASE_TARJETA = 'min-w-0 rounded-xl border border-white/[.1] bg-white/[.04] transition-colors hover:border-[#5B7CFF]/45 hover:bg-[#5B7CFF]/[.07]';
+const CLASE_TARJETA = 'min-w-0 rounded-2xl border border-white/[.1] bg-white/[.04] transition-colors hover:border-[#5B7CFF]/45 hover:bg-[#5B7CFF]/[.07]';
 
 const TarjetaRespuesta = ({ campo, valor, abierta, onToggle }) => {
     const texto = String(valor);
@@ -293,16 +334,16 @@ const TarjetaRespuesta = ({ campo, valor, abierta, onToggle }) => {
 
     const titulo = (
         <span className="flex items-center gap-2">
-            <span className="truncate text-[11.5px] font-bold">{PREGUNTA_CORTA[campo] || campo}</span>
+            <span className="truncate text-[13px] font-bold">{PREGUNTA_CORTA[campo] || campo}</span>
             {puntos && <Estrellas n={puntos} />}
         </span>
     );
 
     if (enlace) {
         return (
-            <div className={`${CLASE_TARJETA} px-3 py-1.5`}>
+            <div className={`${CLASE_TARJETA} px-4 py-2`}>
                 {titulo}
-                <a href={enlace} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-[10.5px] leading-snug text-[#8AA3FF] hover:underline">
+                <a href={enlace} target="_blank" rel="noreferrer" className="mt-1 block truncate text-[14.5px] leading-snug text-[#8AA3FF] hover:underline">
                     {texto}
                 </a>
             </div>
@@ -316,20 +357,20 @@ const TarjetaRespuesta = ({ campo, valor, abierta, onToggle }) => {
                 disabled={!expandible}
                 onClick={onToggle}
                 aria-expanded={expandible ? abierta : undefined}
-                className="flex w-full items-start gap-2 px-3 py-1.5 text-left disabled:cursor-default"
+                className="flex w-full items-start gap-2 px-4 py-2 text-left disabled:cursor-default"
             >
                 <span className="min-w-0 flex-1">
                     {titulo}
                     <span
                         ref={textoRef}
-                        className={`mt-0.5 block text-[10.5px] leading-snug text-white/65 ${abierta ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
+                        className={`mt-1 block text-[14.5px] leading-snug text-white/75 ${abierta ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
                     >
                         {texto}
                     </span>
                 </span>
                 {expandible && (
                     <ChevronDown
-                        size={14}
+                        size={18}
                         className="mt-0.5 flex-none text-white/35 transition-transform duration-200"
                         style={{ transform: abierta ? 'rotate(180deg)' : 'none' }}
                     />
@@ -347,12 +388,12 @@ const GrupoRespuestas = ({ icono: Icono, titulo, campos, d, columnas, cerrado, o
                 type="button"
                 onClick={onToggleGrupo}
                 aria-expanded={!cerrado}
-                className="flex items-center gap-1.5 py-1 text-white/50 transition-colors hover:text-white/80"
+                className="flex items-center gap-2 py-1 text-white/55 transition-colors hover:text-white/85"
             >
-                <Icono size={11} className="text-[#5B7CFF]" />
-                <small className="text-[8.5px] font-extrabold uppercase leading-none tracking-[.16em]">{titulo}</small>
-                <small className="rounded-full bg-white/10 px-1.5 py-[2px] text-[8.5px] font-extrabold leading-none tabular-nums">{campos.length}</small>
-                <ChevronDown size={11} className="transition-transform duration-200" style={{ transform: cerrado ? 'rotate(-90deg)' : 'none' }} />
+                <Icono size={15} className="text-[#5B7CFF]" />
+                <small className="text-[11.5px] font-extrabold uppercase leading-none tracking-[.14em]">{titulo}</small>
+                <small className="rounded-full bg-white/10 px-2 py-[3px] text-[11px] font-extrabold leading-none tabular-nums">{campos.length}</small>
+                <ChevronDown size={14} className="transition-transform duration-200" style={{ transform: cerrado ? 'rotate(-90deg)' : 'none' }} />
             </button>
             <Plegable abierto={!cerrado}>
                 <div className={`grid items-start gap-2 pb-1 pt-1 ${columnas}`}>
@@ -382,6 +423,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     const [motivo, setMotivo] = useState('');
     const [copiado, setCopiado] = useState(null);
     const cuerpo = useRef(null);
+    const dim = useDimensionesPanel();
 
     // Al navegar rápido (flechas, auto-avance) puede haber dos pedidos en vuelo:
     // si el de la postulación anterior llega tarde, no debe pisar a la actual —
@@ -507,21 +549,22 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
 
     return (
         <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 p-0 backdrop-blur-sm [@media(min-width:640px)_and_(min-height:681px)]:p-3"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 p-0 backdrop-blur-sm [@media(min-width:640px)_and_(min-height:681px)]:p-[2vh]"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15 }}
         >
-            {/* En pantallas altas el diálogo mide lo que su contenido (mínimo 700px,
-                para que no cambie de tamaño entre una postulación y otra); en las
-                bajas —un notebook— ocupa toda la pantalla, sin margen ni bordes
-                redondeados, para que todo entre sin scrollear. */}
+            {/* El diálogo ocupa casi toda la pantalla y mide siempre lo mismo, venga
+                la postulación que venga (ver `dimensionesPanel`); en las pantallas
+                bajas —un notebook chico— va a pantalla completa, sin margen ni
+                bordes redondeados, para que todo entre sin scrollear. */}
             <motion.div
                 role="dialog"
                 aria-modal="true"
                 aria-label={d.nombre ? `Postulación de ${d.nombre}` : 'Postulación'}
-                className="flex max-h-full min-h-[min(100%,700px)] w-full max-w-[1280px] flex-col overflow-hidden border-white/[.12] bg-[#0B0F26] shadow-2xl [@media(min-width:640px)_and_(min-height:681px)]:rounded-[20px] [@media(min-width:640px)_and_(min-height:681px)]:border"
+                className={`flex flex-col overflow-hidden ${dim ? '' : 'h-full w-full'} border-white/[.12] bg-[#0B0F26] shadow-2xl [@media(min-width:640px)_and_(min-height:681px)]:rounded-[24px] [@media(min-width:640px)_and_(min-height:681px)]:border`}
+                style={dim ? { zoom: dim.zoom, width: dim.width, height: dim.height } : undefined}
                 onClick={(e) => e.stopPropagation()}
                 initial={{ opacity: 0, y: 10, scale: 0.985 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -529,83 +572,85 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
             >
                 {/* Cabecera fija: identidad a la izquierda; acceso rápido al video, al
                     CV, el veredicto, lo que pide y el score a la derecha. */}
-                <header className="flex flex-none flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 bg-[#020617]/95 px-4 py-2 sm:px-6">
-                    <div className="flex min-w-0 flex-1 basis-[260px] items-center gap-3">
+                <header className="flex flex-none flex-wrap items-center gap-x-4 gap-y-2.5 border-b border-white/10 bg-[#020617]/95 px-5 py-2.5 sm:px-6">
+                    <div className="flex min-w-0 flex-1 basis-[280px] items-center gap-3.5">
                         <span
-                            className="grid h-9 w-9 flex-none place-items-center rounded-[11px] text-[16px] font-black"
+                            className="grid h-11 w-11 flex-none place-items-center rounded-[13px] text-[20px] font-black"
                             style={{ background: 'linear-gradient(135deg,#1323C6,#5B7CFF)' }}
                         >
                             {(d.nombre || '?')[0]}
                         </span>
                         <div className="min-w-0">
-                            <small className="block text-[8.5px] font-extrabold uppercase leading-none tracking-[.2em] text-[#FF3FA4]">Postulación</small>
-                            <h2 className="truncate text-[18px] font-black leading-[1.15] tracking-tight">{d.nombre || '—'}</h2>
-                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] leading-none text-white/50">
-                                <span className="h-2.5 w-3.5 flex-none rounded-[2px]" style={{ background: BANDERA[d.pais] || 'rgba(255,255,255,.2)' }} />
-                                {ubicacion}
+                            <span className="mb-1 flex items-center gap-2">
+                                <small className="block text-[11px] font-extrabold uppercase leading-none tracking-[.18em] text-[#FF3FA4]">Postulación</small>
                                 {d.modalidad && (
                                     <span
-                                        className="rounded-full border px-2 py-[2px] text-[8.5px] font-black uppercase tracking-[.12em]"
+                                        className="flex-none rounded-full border px-2 py-[2px] text-[10px] font-black uppercase leading-none tracking-[.1em]"
                                         style={{ color: MODALIDAD[d.modalidad]?.fg, borderColor: MODALIDAD[d.modalidad]?.bd, background: MODALIDAD[d.modalidad]?.bg }}
                                     >
                                         {MODALIDAD[d.modalidad]?.label}
                                     </span>
                                 )}
                             </span>
+                            <h2 className="truncate text-[26px] font-black leading-[1.1] tracking-tight" title={d.nombre || undefined}>{d.nombre || '—'}</h2>
+                            <span className="mt-1 flex items-center gap-2.5 text-[13.5px] leading-none text-white/55">
+                                <span className="h-3.5 w-5 flex-none rounded-[3px]" style={{ background: BANDERA[d.pais] || 'rgba(255,255,255,.2)' }} />
+                                <span className="min-w-0 truncate">{ubicacion}</span>
+                            </span>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
                         {!cargando && !fallo && (
                             <>
                                 {videoHref ? (
                                     <a href={videoHref} target="_blank" rel="noreferrer" className={PILDORA_NEUTRA}>
-                                        <PlayCircle size={14} /> Presentación
-                                        {!d.video_ok && <span className="text-[9px] font-bold text-[#FF6AD5]">· sin verificar</span>}
+                                        <PlayCircle size={17} /> Presentación
+                                        {!d.video_ok && <span className="text-[11.5px] font-bold text-[#FF6AD5]">· sin verificar</span>}
                                     </a>
                                 ) : (
-                                    <span className={PILDORA_AUSENTE}><PlayCircle size={14} /> Sin video</span>
+                                    <span className={PILDORA_AUSENTE}><PlayCircle size={17} /> Sin video</span>
                                 )}
                                 {cvHref ? (
                                     <a href={cvHref} target="_blank" rel="noreferrer" className={PILDORA_NEUTRA}>
-                                        <FileText size={14} /> CV
+                                        <FileText size={17} /> CV
                                     </a>
                                 ) : (
-                                    <span className={PILDORA_AUSENTE}><FileText size={14} /> Sin CV</span>
+                                    <span className={PILDORA_AUSENTE}><FileText size={17} /> Sin CV</span>
                                 )}
                                 <span className={`${PILDORA} border`} style={{ color: veredicto.fg, background: veredicto.bg, borderColor: veredicto.bd }}>
-                                    <IconoVeredicto size={13} /> {veredicto.label}
+                                    <IconoVeredicto size={16} /> {veredicto.label}
                                 </span>
                                 <span className={`${PILDORA} gap-2 border-[#5B7CFF]/50 bg-[#1323C6]/[.14]`}>
-                                    <span className="grid h-[18px] w-[18px] flex-none place-items-center rounded-full border border-[#8AA3FF]/60 text-[#8AA3FF]">
-                                        <DollarSign size={10} strokeWidth={2.6} />
+                                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full border border-[#8AA3FF]/60 text-[#8AA3FF]">
+                                        <DollarSign size={13} strokeWidth={2.6} />
                                     </span>
-                                    <span className="text-[15px] font-black tabular-nums" style={{ color: Number(d.remuneracion) > 400 ? '#FF6AD5' : '#fff' }}>
+                                    <span className="text-[19px] font-black tabular-nums" style={{ color: Number(d.remuneracion) > 400 ? '#FF6AD5' : '#fff' }}>
                                         {d.remuneracion || '—'}
                                     </span>
                                     <Etiqueta>USD / mes</Etiqueta>
                                 </span>
                                 <span className={`${PILDORA} gap-2 border-white/[.32] bg-white/[.04]`}>
                                     <Etiqueta>Score</Etiqueta>
-                                    <span className="text-[16px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
+                                    <span className="text-[20px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
                                         {d.score ?? '—'}
                                     </span>
                                 </span>
                             </>
                         )}
 
-                        <span className="ml-1 flex flex-none items-center gap-1.5">
+                        <span className="flex flex-none items-center gap-1.5">
                             <button type="button" onClick={anterior} disabled={idx <= 0} aria-label="Anterior" className={BOTON_ICONO}>
-                                <ChevronLeft size={15} />
+                                <ChevronLeft size={19} />
                             </button>
                             {idx >= 0 && (
-                                <span className="min-w-[30px] text-center text-[10.5px] font-bold tabular-nums text-white/45">{idx + 1}/{ids.length}</span>
+                                <span className="min-w-[36px] text-center text-[13px] font-bold tabular-nums text-white/50">{idx + 1}/{ids.length}</span>
                             )}
                             <button type="button" onClick={siguiente} disabled={idx >= ids.length - 1} aria-label="Siguiente" className={BOTON_ICONO}>
-                                <ChevronRight size={15} />
+                                <ChevronRight size={19} />
                             </button>
                             <button type="button" onClick={onClose} aria-label="Cerrar" className={`${BOTON_ICONO} ml-1`}>
-                                <X size={15} />
+                                <X size={19} />
                             </button>
                         </span>
                     </div>
@@ -614,39 +659,39 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                 {/* Cuerpo: lo único que puede scrollear, y solo si la pantalla es
                     más chica que la postulación. */}
                 <div ref={cuerpo} className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                    {cargando && <div className="px-7 py-20 text-center text-[13px] text-white/40">Cargando la postulación…</div>}
-                    {fallo && !data && <div className="px-7 py-20 text-center text-[13px] text-[#E85C4A]">No se pudo cargar la postulación.</div>}
+                    {cargando && <div className="px-7 py-24 text-center text-[16px] text-white/40">Cargando la postulación…</div>}
+                    {fallo && !data && <div className="px-7 py-24 text-center text-[16px] text-[#E85C4A]">No se pudo cargar la postulación.</div>}
 
                     {data && (
                         <motion.div
                             key={applicationId}
-                            className="mx-auto flex w-full max-w-[1180px] flex-col gap-2.5 px-4 py-2.5 sm:px-6"
+                            className="flex w-full flex-col gap-3 px-5 py-3 sm:px-6"
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.16 }}
                         >
                             {(d.descartado || d.auto_ko) && (
-                                <div className="flex items-start gap-2.5 rounded-xl border border-[#4C2227] bg-[#1B0F1D] px-3.5 py-2.5">
-                                    <AlertTriangle size={15} className="mt-px flex-none text-[#E85C4A]" />
-                                    <span className="text-[11.5px] leading-snug text-white/60">
+                                <div className="flex items-start gap-3 rounded-2xl border border-[#4C2227] bg-[#1B0F1D] px-4 py-3">
+                                    <AlertTriangle size={19} className="mt-px flex-none text-[#E85C4A]" />
+                                    <span className="text-[14px] leading-snug text-white/60">
                                         <span className="font-bold text-[#E85C4A]">El formulario cortó esta postulación · </span>
                                         {d.motivo_descarte || 'Una respuesta del bloque Requisitos es excluyente. No llegó a completar el resto.'}
                                     </span>
                                 </div>
                             )}
 
-                            <div className="grid items-stretch gap-2.5 sm:grid-cols-2 lg:grid-cols-[156px_156px_minmax(0,1fr)]">
+                            <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-[236px_236px_minmax(0,1fr)]">
                                 <Riel titulo="Filtros y jornada" icono={CheckCircle2}>
                                     {REQUISITOS.map(([campo, ok]) => {
                                         const valor = d[campo];
                                         return (
                                             <FilaRiel key={campo} k={PREGUNTA_CORTA[campo]} title={valor || 'Sin respuesta'}>
-                                                <span className="flex items-start gap-1.5">
+                                                <span className="flex items-start gap-2">
                                                     {valor
                                                         ? (ok(valor)
-                                                            ? <CheckCircle2 size={13} className="mt-px flex-none text-[#2FBF8F]" />
-                                                            : <AlertTriangle size={13} className="mt-px flex-none text-[#D9A441]" />)
-                                                        : <XCircle size={13} className="mt-px flex-none text-white/25" />}
+                                                            ? <CheckCircle2 size={17} className="mt-px flex-none text-[#2FBF8F]" />
+                                                            : <AlertTriangle size={17} className="mt-px flex-none text-[#D9A441]" />)
+                                                        : <XCircle size={17} className="mt-px flex-none text-white/25" />}
                                                     <span className={valor ? '' : 'text-white/35'}>
                                                         {VAL_CORTO[valor] || valor || 'Sin respuesta'}
                                                     </span>
@@ -654,9 +699,9 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                             </FilaRiel>
                                         );
                                     })}
-                                    <div className="flex flex-col gap-1.5 border-t border-white/[.07] pb-1 pt-2.5">
+                                    <div className="flex flex-col gap-2 border-t border-white/[.07] pb-1.5 pt-3">
                                         <Contacto
-                                            tile={<span className="grid h-6 w-6 flex-none place-items-center rounded-lg bg-white/[.07] text-white/65"><Inbox size={13} /></span>}
+                                            tile={<span className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-white/[.07] text-white/65"><Inbox size={16} /></span>}
                                             texto={d.email}
                                             vacio="Sin correo"
                                             onCopiar={() => copiar(d.email, 'correo')}
@@ -669,12 +714,12 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                                     rel="noreferrer"
                                                     aria-label="Abrir WhatsApp"
                                                     title="Abrir WhatsApp"
-                                                    className="grid h-6 w-6 flex-none place-items-center rounded-lg bg-[#25D366]/20 text-[#25D366] transition-colors hover:bg-[#25D366]/35"
+                                                    className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-[#25D366]/20 text-[#25D366] transition-colors hover:bg-[#25D366]/35"
                                                 >
-                                                    <MessageCircle size={13} />
+                                                    <MessageCircle size={16} />
                                                 </a>
                                             ) : (
-                                                <span className="grid h-6 w-6 flex-none place-items-center rounded-lg bg-white/[.07] text-white/30"><MessageCircle size={13} /></span>
+                                                <span className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-white/[.07] text-white/30"><MessageCircle size={16} /></span>
                                             )}
                                             texto={digitos ? d.whatsapp : null}
                                             vacio="Sin WhatsApp"
@@ -687,7 +732,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                     {EXPERIENCIA.map((campo) => {
                                         const e = escalaDe(campo, d[campo]);
                                         return (
-                                            <FilaRiel key={campo} k={PREGUNTA_CORTA[campo]} title={d[campo] || 'Sin respuesta'} medidor={<Dots n={e.n} redondos />}>
+                                            <FilaRiel key={campo} k={PREGUNTA_CORTA[campo]} title={d[campo] || 'Sin respuesta'} medidor={<Puntos n={e.n} />}>
                                                 <span className={e.ok ? '' : 'text-white/35'}>{e.label}</span>
                                             </FilaRiel>
                                         );
@@ -697,9 +742,9 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                     </FilaRiel>
                                 </Riel>
 
-                                <div className="flex min-w-0 flex-col gap-2.5 sm:col-span-2 lg:col-span-1">
+                                <div className="flex min-w-0 flex-col gap-3 sm:col-span-2 lg:col-span-1">
                                     <Riel titulo="Idiomas y herramientas" icono={Filter}>
-                                        <div className="grid grid-cols-2 gap-x-3 min-[1240px]:grid-cols-4">
+                                        <div className="grid grid-cols-2 gap-x-5 min-[1240px]:grid-cols-4">
                                             {HERRAMIENTAS.map((h) => {
                                                 const valor = d[h.campo];
                                                 const nivel = h.escala ? escalaDe(h.escala, valor) : { n: nivelDe(valor), label: nivelCorto(valor) };
@@ -719,20 +764,20 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                     </Riel>
 
                                     <section className="flex min-w-0 flex-col">
-                                        <div className="flex flex-wrap items-center justify-between gap-2 pb-1 pt-0.5">
-                                            <small className="text-[8.5px] font-extrabold uppercase leading-none tracking-[.16em] text-white/50">Respuestas</small>
+                                        <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 pt-0.5">
+                                            <small className="text-[11.5px] font-extrabold uppercase leading-none tracking-[.14em] text-white/55">Respuestas</small>
                                             <button
                                                 type="button"
                                                 onClick={() => { setTodasAbiertas((v) => !v); setAbiertas(new Set()); }}
-                                                className="inline-flex h-7 items-center gap-1.5 rounded-[10px] border border-white/[.32] bg-white/[.04] px-3 text-[10.5px] font-bold transition-all hover:bg-[#5B7CFF]/20"
+                                                className="inline-flex h-8 items-center gap-2 rounded-xl border border-white/[.32] bg-white/[.04] px-4 text-[13px] font-bold transition-all hover:bg-[#5B7CFF]/20"
                                             >
                                                 {todasAbiertas ? 'Cerrar las respuestas largas' : 'Abrir todas las respuestas'}
-                                                <ChevronDown size={12} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
+                                                <ChevronDown size={15} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
                                             </button>
                                         </div>
 
                                         {opcion.length === 0 && escritas.length === 0 && (
-                                            <span className="py-3 text-[11.5px] text-white/35">Todavía no hay más respuestas para revisar.</span>
+                                            <span className="py-4 text-[14px] text-white/35">Todavía no hay más respuestas para revisar.</span>
                                         )}
 
                                         <GrupoRespuestas
@@ -773,37 +818,37 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                     Deja libre el costado derecho, donde flota el botón global de
                     reportar un problema. */}
                 {data && (
-                    <footer className="flex-none border-t border-white/10 bg-[#020617]/95 px-4 py-2 pr-[156px] sm:px-6 sm:pr-[168px]">
+                    <footer className="flex-none border-t border-white/10 bg-[#020617]/95 px-5 py-2.5 pr-[156px] sm:px-6 sm:pr-[168px]">
                         {bajaAbierta ? (
-                            <div className="flex flex-wrap items-center justify-end gap-2.5">
-                                <span className="text-[12px] font-bold text-white/70">Motivo de la baja de {d.nombre}:</span>
+                            <div className="flex flex-wrap items-center justify-end gap-3">
+                                <span className="text-[14.5px] font-bold text-white/70">Motivo de la baja de {d.nombre}:</span>
                                 <input
                                     type="text"
                                     autoFocus
                                     value={motivo}
                                     onChange={(e) => setMotivo(e.target.value)}
                                     placeholder="Por qué se fue…"
-                                    className="h-9 min-w-[200px] flex-1 rounded-xl border border-white/[.38] bg-black/30 px-3 text-[12.5px] text-white outline-none focus:border-[#5B7CFF]"
+                                    className="h-11 min-w-[240px] flex-1 rounded-xl border border-white/[.38] bg-black/30 px-4 text-[14.5px] text-white outline-none focus:border-[#5B7CFF]"
                                 />
                                 <button
                                     type="button"
                                     disabled={motivo.trim().length < 4}
                                     onClick={() => decidir('baja', motivo.trim())}
-                                    className="h-9 rounded-xl border border-[#4C2227] px-4 text-[12px] font-black transition-all disabled:opacity-50"
+                                    className="h-11 rounded-xl border border-[#4C2227] px-5 text-[14px] font-black transition-all disabled:opacity-50"
                                     style={motivo.trim().length >= 4
                                         ? { background: '#E85C4A', color: '#1B0808' }
                                         : { background: 'transparent', color: '#E85C4A' }}
                                 >
                                     Confirmar baja
                                 </button>
-                                <button type="button" onClick={() => { setBajaAbierta(false); setMotivo(''); }} className="text-[12px] font-bold text-white/50 hover:text-white">
+                                <button type="button" onClick={() => { setBajaAbierta(false); setMotivo(''); }} className="px-1 text-[14px] font-bold text-white/50 hover:text-white">
                                     Cancelar
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex flex-wrap items-center justify-end gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2.5">
                                 {estadoTexto && (
-                                    <span className="mr-auto min-w-0 truncate text-[11px] font-semibold text-white/40">{estadoTexto}</span>
+                                    <span className="mr-auto min-w-0 truncate text-[13.5px] font-semibold text-white/45">{estadoTexto}</span>
                                 )}
                                 {botones.map((a) => {
                                     const activo = d.estado === a.id;
@@ -815,7 +860,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                             whileHover={{ y: -2 }}
                                             whileTap={{ scale: 0.95 }}
                                             transition={{ duration: 0.12 }}
-                                            className="flex h-8 items-center gap-2 rounded-xl border px-4 text-[12px] font-bold"
+                                            className="flex h-10 items-center gap-2.5 rounded-xl border px-5 text-[14.5px] font-bold"
                                             style={{
                                                 borderColor: a.bd,
                                                 background: activo ? a.fg : a.bg,
@@ -823,7 +868,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                             }}
                                             title={activo ? 'Tocar otra vez lo deshace' : a.label}
                                         >
-                                            <a.icon size={14} /> {a.label}
+                                            <a.icon size={18} /> {a.label}
                                         </motion.button>
                                     );
                                 })}
