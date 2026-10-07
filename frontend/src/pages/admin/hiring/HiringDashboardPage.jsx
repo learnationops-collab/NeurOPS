@@ -101,6 +101,8 @@ const HiringDashboardPage = () => {
     // sea: si alguien escribe un nombre no le importa en qué pestaña quedó ni
     // si estaba mirando estadísticas. Se vuelve a la vista al limpiar (Escape).
     const enBusqueda = query.trim().length > 0;
+    const enListas = vista === 'pendientes' || vista === 'analizados' || vista === 'finalistas' || enBusqueda;
+    const titulo = enBusqueda ? `Resultados para «${query.trim()}»` : TITULOS[vista];
 
     return (
         <div
@@ -241,16 +243,21 @@ const HiringDashboardPage = () => {
             <OperatorControls isOpen={showOperatorControls} onClose={() => setShowOperatorControls(false)} />
 
             <main className="px-4 py-8 sm:px-8 lg:px-14">
-                <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-black leading-none tracking-tight">
-                    {enBusqueda ? `Resultados para «${query.trim()}»` : TITULOS[vista]}
-                </h1>
+                {/* En las vistas de lista el título lo pinta el inbox (prop `titulo`):
+                    en Pendientes comparte línea con los toggles de modalidad. */}
+                {!enListas && (
+                    <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-black leading-none tracking-tight">
+                        {titulo}
+                    </h1>
+                )}
 
                 {/* El inbox se monta en las dos vistas de lista; `grupo` decide qué
                     sub-filtros ofrece, igual que en el panel de Closer. */}
-                {(vista === 'pendientes' || vista === 'analizados' || vista === 'finalistas' || enBusqueda) && (
+                {enListas && (
                     <HiringInbox
                         grupo={enBusqueda ? 'busqueda' : vista}
                         query={enBusqueda ? query.trim() : ''}
+                        titulo={titulo}
                         onConteos={setBadges}
                     />
                 )}
