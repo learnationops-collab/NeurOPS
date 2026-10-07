@@ -121,6 +121,41 @@ const MetricCard = ({ icon: Icon, n, label, color = '#fff', bg = 'rgba(255,255,2
     </div>
 );
 
+/** Cuánto del formulario respondió (0..100), pegado al nombre de la candidata.
+ * Si el backend todavía no manda `completitud` no se dibuja nada. */
+const Completitud = ({ valor }) => {
+    if (typeof valor !== 'number' || Number.isNaN(valor)) return null;
+    const pct = Math.max(0, Math.min(100, Math.round(valor)));
+    return (
+        <span
+            className="ml-auto flex w-[58px] flex-none flex-col items-end gap-1"
+            title={`Completó el ${pct} % del formulario`}
+        >
+            <span className="text-[10.5px] font-black tabular-nums" style={{ color: pct >= 100 ? '#2FBF8F' : 'rgba(255,255,255,.55)' }}>
+                {pct}%
+            </span>
+            <span
+                className="block h-[3px] w-full overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-label="Completitud del formulario"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+            >
+                <span
+                    className="block h-full rounded-full"
+                    style={{
+                        width: `${pct}%`,
+                        background: pct >= 100
+                            ? 'linear-gradient(90deg,#1FA37A,#2FBF8F)'
+                            : 'linear-gradient(90deg,#1323C6,#5B7CFF)',
+                    }}
+                />
+            </span>
+        </span>
+    );
+};
+
 const AVATARES = [
     'linear-gradient(135deg,#1323C6,#5B7CFF)',
     'linear-gradient(135deg,#5B7CFF,#8AA3FF)',
@@ -358,6 +393,7 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) =>
                                                     </span>
                                                 </span>
                                             </span>
+                                            <Completitud valor={p.completitud} />
                                         </div>
                                     </td>
                                     <td className="px-4 py-4">
