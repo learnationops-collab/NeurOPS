@@ -1460,10 +1460,8 @@
 .thalamus .pm-pct{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-2,inherit)}
 .thalamus .pm-pct .input{width:58px;height:28px;padding:0 6px;text-align:right}
 
-/* Pantalla final (como Thalamus): cuándo y con quién arriba, los datos del lead abajo. */
-.thalamus .rv-ok{width:min(100%,1040px);grid-template-columns:minmax(0,1fr);gap:clamp(22px,3cqi,40px);align-items:start}
-@container (min-width:860px){.thalamus .rv-ok{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}.thalamus .rv-ok-b{padding-top:52px}}
-.thalamus .rv-ok-a,.thalamus .rv-ok-b{display:grid;gap:clamp(18px,2.2cqi,26px);min-width:0;align-content:start}
+/* Pantalla final: una tarjeta con la síntesis (cuándo, con quién y los datos del lead) y «Confirmar». */
+.thalamus .rv-ok{width:min(100%,600px);grid-template-columns:minmax(0,1fr);gap:clamp(18px,2.2cqi,26px);align-items:start}
 .thalamus .rv-ok-eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:var(--rv-ok)}
 .thalamus .rv-ok-punto{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--rv-ok);color:#02150E;animation:lnRvPop .5s .1s var(--spring) both}
 .thalamus .rv-ok .rv-q{max-width:18ch}
@@ -1497,12 +1495,14 @@
 .thalamus .rv-dl{display:grid;border-radius:20px;background:var(--rv-campo);border:1px solid var(--rv-campo-borde);padding:4px 16px}
 .thalamus .rv-dato{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--rv-linea)}
 .thalamus .rv-dato:first-child{border-top:0}
+.thalamus .rv-dl--tk{background:rgba(0,0,0,.16);border-color:rgba(255,255,255,.1)}
 .thalamus .rv-dato-ico{grid-row:1 / span 2;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--rv-acento)}
 .thalamus .rv-dato dt{grid-column:2;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--rv-mut40)}
 .thalamus .rv-dato dd{margin:0;grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:15.5px;font-weight:700;overflow-wrap:anywhere;min-width:0}
 .thalamus .rv-dato dd small{font-size:13px;font-weight:600;color:var(--rv-mut)}
 .thalamus .rv-dato .bandera{width:20px;height:14px}
 .thalamus .rv-acc--ok{margin-top:6px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.thalamus .rv-ok .rv-acc--ok{grid-template-columns:minmax(0,1fr)}
 .thalamus .rv-acc--ok .rv-seguir{justify-content:center;text-decoration:none}
 .thalamus .rv-sec{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:clamp(52px,4.8cqi,66px);padding:0 clamp(20px,2cqi,30px);border-radius:999px;border:1px solid var(--rv-campo-borde);
   background:rgba(255,255,255,.04);color:var(--rv-fg);font-size:clamp(13px,1.15cqi,15px);font-weight:900;letter-spacing:.14em;text-transform:uppercase;transition:border-color .16s,background-color .16s}

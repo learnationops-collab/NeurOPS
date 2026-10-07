@@ -220,15 +220,20 @@ def zona_valida(tz):
     return any(z['tz'] == tz for z in ZONAS)
 
 
-def zona_por_telefono(numero):
-    """La zona horaria del país del número (con código de país, con o sin +), o None. Si el país tiene
-    varias zonas, la primera (la de su capital)."""
+def pais_por_telefono(numero):
+    """El país del número (con código de país, con o sin +), o None."""
     digitos = re.sub(r'\D', '', str(numero or ''))
-    pais = max(
+    return max(
         (p for p in PAISES if digitos and digitos.startswith(p['d'].lstrip('+'))),
         key=lambda p: len(p['d']),
         default=None,
     )
+
+
+def zona_por_telefono(numero):
+    """La zona horaria del país del número, o None. Si el país tiene varias zonas, la primera (la de su
+    capital)."""
+    pais = pais_por_telefono(numero)
     return pais['z'][0][0] if pais else None
 
 

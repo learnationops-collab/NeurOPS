@@ -61,12 +61,17 @@ function elegir(texto) {
     act(() => { vi.advanceTimersByTime(400); });
 }
 
+// Los horarios aparecen recién al elegir un día: el primero con horarios.
+const elegirDia = (container) => fireEvent.click(container.querySelector('.rv-dia:not(:disabled)'));
+
 describe('PantallaLead', () => {
     it('avanza con los datos de contacto y una opción hasta el calendario', () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         responderContacto(container);
         elegir('Lo necesario');
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+        expect(container.querySelector('.rv-hora')).toBeNull();
+        elegirDia(container);
         expect(container.querySelectorAll('.rv-hora').length).toBeGreaterThan(0);
     });
 
@@ -95,6 +100,7 @@ describe('PantallaLead', () => {
         expect(screen.queryByText(/no se agenda nada/)).not.toBeInTheDocument();
         responderContacto(container);
         elegir('Lo necesario');
+        elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
         expect(spy).toHaveBeenCalledTimes(1);
@@ -106,7 +112,7 @@ describe('PantallaLead', () => {
         expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
         expect(screen.getByText('Ana Pérez')).toBeInTheDocument(); // su consultor
         expect(screen.queryByText(/Vista del closer/)).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: /Es correcto/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Confirmar/ }));
         expect(screen.getByRole('heading', { name: /^Nos vemos el lunes, Ana\.$/ })).toBeInTheDocument();
     });
 
@@ -119,13 +125,23 @@ describe('PantallaLead', () => {
         await act(async () => { escribirYEnter(container, 'ANA@correo.com'); });
         expect(screen.getByRole('heading', { name: 'Detectamos que no es tu primera vez agendando una sesión con nosotros.' })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Agendar una nueva/ }));
-        expect(screen.getByRole('heading', { name: '¿Son correctos tus datos?' })).toBeInTheDocument();
-        expect(screen.getByText('+59 ••• 567')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: /Sí, son correctos/ }));
-        // Sin volver a escribir nombre ni WhatsApp: directo a las preguntas.
+        // Sin confirmar ni volver a escribir nombre y WhatsApp: directo a las preguntas.
         expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
         elegir('Lo necesario');
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+    });
+});
+
+describe('PantallaLead, el lead que vuelve sin todos sus datos', () => {
+    it('le precarga el nombre y sigue después del correo', async () => {
+        const reservas = [{
+            id: 'r0', estado: 'hecha', inicio_ms: Date.UTC(2026, 8, 1, 13), fin_ms: Date.UTC(2026, 8, 1, 14), closer_id: 'ana',
+            lead: { nombre: 'Ana Gómez', telefono: '', email: 'ana@correo.com', instagram: '' },
+        }];
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, reservas)} modo="prueba" />);
+        await act(async () => { escribirYEnter(container, 'ana@correo.com'); });
+        expect(screen.queryByRole('heading', { name: /no es tu primera vez/ })).not.toBeInTheDocument();
+        expect(container.querySelector('[data-rv="in"]').value).toBe('Ana Gómez');
     });
 });
 

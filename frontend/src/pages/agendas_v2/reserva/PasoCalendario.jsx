@@ -17,14 +17,11 @@ export function diasDeSlots(slots, tz) {
     return dias;
 }
 
-// Día que se muestra: el elegido; si no, el primero con horarios del mes visible (o el primero de todos).
-export function diaEfectivo(s, dias, keys) {
-    if (s.dia && dias[s.dia]) return s.dia;
-    if (s.mes) return keys.find(k => k.slice(0, 7) === s.mes) || null;
-    return keys[0] || null;
-}
+// Día elegido, si todavía tiene horarios. Los horarios aparecen recién cuando el lead elige un día.
+export function diaEfectivo(s, dias) { return s.dia && dias[s.dia] ? s.dia : null; }
 
-export function mesEfectivo(s, dia, tz) { return s.mes || (dia || claveHoy(tz)).slice(0, 7); }
+// Mes visible: el que eligió; si no, el del día elegido o el primero con horarios.
+export function mesEfectivo(s, dia, tz, keys = []) { return s.mes || (dia || keys[0] || claveHoy(tz)).slice(0, 7); }
 function claveHoy(tz) { return claveDia(Date.now(), tz); }
 
 /**
@@ -45,8 +42,8 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, tzFija, avis
     const slots = asig ? asig.slots : [];
     const dias = diasDeSlots(slots, tz);
     const keys = Object.keys(dias).sort();
-    const dia = diaEfectivo(s, dias, keys);
-    const mes = mesEfectivo(s, dia, tz);
+    const dia = diaEfectivo(s, dias);
+    const mes = mesEfectivo(s, dia, tz, keys);
     const hora = s.hora != null && slots.some(x => x.t === s.hora) ? s.hora : null;
 
     let cal = null;

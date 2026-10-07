@@ -620,8 +620,8 @@ def _tapar(v, ver):
 
 
 def conocido(form, email, ahora=None):
-    """Lo que ve el lead que vuelve: su primer nombre, el WhatsApp y el Instagram tapados (nadie
-    saca los datos de otro con su email) y el horario de su próxima agenda, si tiene."""
+    """Lo que ve el lead que vuelve: su nombre (para precargarlo), el WhatsApp y el Instagram tapados
+    (nadie saca el contacto de otro con su email) y el horario de su próxima agenda, si tiene."""
     cliente, resp, completos = datos_guardados(form, email)
     if not cliente:
         return {'conocido': False}
@@ -632,6 +632,7 @@ def conocido(form, email, ahora=None):
         'completos': completos,
         'datos': {
             'nombre': (resp.get('c-nombre') or '').split(' ')[0],
+            'nombre_completo': resp.get('c-nombre') or '',
             'telefono': '+' + tel[:2] + ' ••• ' + tel[-3:] if tel else '',
             'instagram': '@' + _tapar(resp.get('c-instagram', ''), 2) if resp.get('c-instagram') else '',
         },

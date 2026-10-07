@@ -57,7 +57,7 @@ function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
         fin: false, listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
         // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
         // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
-        buscando: '', recoN: 0, reco: null, recoPaso: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
+        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
         foco: enfocar ? 'entra' : null, focoN: enfocar ? 1 : 0,
     };
 }
@@ -89,7 +89,7 @@ function seguirDe(p, preguntas, reconocer = false) {
 function atrasDe(p, preguntas) {
     if (p.listo || p.fin) return p;
     // Desde "no es tu primera vez" se vuelve al correo.
-    if (p.reco) return conFoco({ ...p, reco: null, recoPaso: null, siYaTiene: null }, 'entra');
+    if (p.reco) return conFoco({ ...p, reco: null, siYaTiene: null }, 'entra');
     if (p.idx === 0) return p;
     const p1 = fijarTexto(p, preguntas);
     let idx = Math.min(p1.idx, preguntas.length) - 1;
@@ -99,6 +99,23 @@ function atrasDe(p, preguntas) {
         return conFoco({ ...p1, idx, guardados: false, tapados: null, siYaTiene: null, error: '', busca: '' }, 'entra');
     }
     return conFoco({ ...p1, idx, error: '', busca: '', paisAbierto: false, zonaAbierta: false }, 'entra');
+}
+
+// El lead que vuelve: su nombre viene escrito (lo puede corregir en la pregunta).
+function conNombre(p, r) {
+    const nom = r && r.datos ? r.datos.nombre_completo || r.datos.nombre : '';
+    return nom && !p.resp['c-nombre'] ? { ...p, resp: { ...p.resp, 'c-nombre': nom } } : p;
+}
+
+// El lead que vuelve con los datos completos no los escribe de nuevo: se saltean las preguntas de contacto.
+// Si le faltan, sigue después del correo con el nombre precargado.
+function usarGuardados(p, r, preguntas) {
+    const base = { ...p, buscando: '', reco: null, busca: '' };
+    if (!r.completos) return conFoco({ ...conNombre(base, r), idx: p.idx + 1 }, 'entra');
+    const i = preguntas.findIndex(q => !q.id.startsWith('c-'));
+    const resp = { ...p.resp, ...(r.resp || {}) };
+    if (!resp['c-nombre'] && r.datos.nombre) resp['c-nombre'] = r.datos.nombre;
+    return conFoco({ ...base, resp, guardados: true, tapados: r.datos, idx: i < 0 ? preguntas.length : i }, 'entra');
 }
 
 // Tab no sale de la pantalla a pantalla completa.
@@ -215,8 +232,9 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             if (!vivo || !vivoRef.current) return;
             setS(p => {
                 if (p.recoN !== n0 || !p.buscando) return p;
-                if (!r || !r.conocido || (!r.proxima && !r.completos)) return seguir(p);
-                return conFoco({ ...p, buscando: '', reco: r, recoPaso: r.proxima ? 'proxima' : 'datos' }, 'entra');
+                if (!r || !r.conocido) return seguir(p);
+                if (!r.proxima) return usarGuardados(p, r, preguntas);
+                return conFoco({ ...p, buscando: '', reco: r }, 'entra');
             });
         }, () => { if (vivo && vivoRef.current) setS(p => (p.recoN === n0 && p.buscando ? seguir(p) : p)); });
         return () => { vivo = false; };
@@ -260,24 +278,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         },
         buscar(v) { setS(p => ({ ...p, busca: v })); },
         seguir() { setS(p => seguirDe(p, preguntas, reconocer)); },
-        // El lead que vuelve: qué hace con la sesión que ya tiene, y si sus datos guardados están bien.
-        elegirProxima(v) {
-            setS(p => {
-                if (!p.reco) return p;
-                if (p.reco.completos) return conFoco({ ...p, siYaTiene: v, recoPaso: 'datos' }, 'entra');
-                return conFoco({ ...p, siYaTiene: v, reco: null, recoPaso: null, idx: p.idx + 1 }, 'entra');
-            });
-        },
-        datosOk() {
-            setS(p => {
-                if (!p.reco) return p;
-                const i = preguntas.findIndex(q => !q.id.startsWith('c-'));
-                const resp = { ...p.resp, ...(p.reco.resp || {}) };
-                if (!resp['c-nombre'] && p.reco.datos.nombre) resp['c-nombre'] = p.reco.datos.nombre;
-                return conFoco({ ...p, resp, guardados: true, tapados: p.reco.datos, reco: null, recoPaso: null, idx: i < 0 ? n : i }, 'entra');
-            });
-        },
-        datosNo() { setS(p => (p.reco ? conFoco({ ...p, reco: null, recoPaso: null, idx: p.idx + 1 }, 'entra') : p)); },
+        // El lead que vuelve con una sesión próxima: la reprograma o suma otra.
+        elegirProxima(v) { setS(p => (p.reco ? usarGuardados({ ...p, siYaTiene: v }, p.reco, preguntas) : p)); },
         atras() { setS(p => atrasDe(p, preguntas)); },
         alternarPais() {
             setS(p => conFoco({ ...p, paisAbierto: !p.paisAbierto }, p.paisAbierto ? '.rv-pais' : '.rv-pais-op[aria-selected="true"]'));
@@ -394,8 +396,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
             consultor={s.consultor} tapados={s.guardados ? s.tapados : null} />;
     } else if (s.reco) {
-        clave = 'reco-' + s.recoPaso;
-        paso = <PasoConocido ids={ids} reco={s.reco} paso={s.recoPaso} tz={s.tz} acc={acc} />;
+        clave = 'reco';
+        paso = <PasoConocido ids={ids} reco={s.reco} tz={s.tz} acc={acc} />;
     } else if (idx < n) {
         const q = preguntas[idx];
         clave = 'q' + idx;

@@ -38,10 +38,11 @@ export function Respuestas({ preguntas, resp, pais, nombre, asig, slot, d }) {
     );
 }
 
-// El cuadro de "¿Están bien tus datos?": los de contacto que dejó (o los guardados, tapados) y el horario.
-// tapados: {nombre, telefono, instagram} del lead que vuelve y confirmó sus datos (no los volvió a escribir).
-export function DatosLead({ preguntas, s, tapados, hora }) {
-    const filas = CONTACTO.map(c => {
+// Los datos de contacto de la síntesis: nombre, correo y WhatsApp (los que dejó, o los guardados y tapados).
+// tapados: {nombre, telefono, instagram} del lead que vuelve (no los volvió a escribir).
+const EN_SINTESIS = ['nombre', 'email', 'telefono'];
+export function DatosLead({ preguntas, s, tapados }) {
+    const filas = EN_SINTESIS.map(k => CONTACTO.find(c => c.k === k)).map(c => {
         const q = preguntas.find(x => x.id === 'c-' + c.k);
         if (!q) return null;
         const propio = textoRespuesta(q, s.resp[q.id], s.pais), guardado = tapados ? tapados[c.k] : '';
@@ -54,20 +55,12 @@ export function DatosLead({ preguntas, s, tapados, hora }) {
             </div>
         );
     }).filter(Boolean);
-    if (hora != null) {
-        filas.push(
-            <div key="hora" className="rv-dato">
-                <span className="rv-dato-ico" aria-hidden="true"><Icono n="clock" s={17} /></span>
-                <dt>Horario</dt><dd>{fechaTs(hora, s.tz)} · {horaTxt(hora, s.tz)}<small>{mayus(zonaInfo(s.tz).largo)}</small></dd>
-            </div>
-        );
-    }
-    return <dl className="rv-dl">{filas}</dl>;
+    return filas.length ? <dl className="rv-dl rv-dl--tk">{filas}</dl> : null;
 }
 
 /**
- * Sesión agendada, como en Thalamus: arriba cuándo y con quién (el consultor), abajo los datos del lead.
- * "Es correcto" lleva a la redirección del evento si tiene una (ya no redirige solo); si no, despide.
+ * Sesión agendada: una sola tarjeta con la síntesis (cuándo, el consultor y los datos del lead) y
+ * «Confirmar», que lleva a la redirección del evento si tiene una; si no, despide.
  * consultor: {nombre, color} (en la prueba, la persona del horario elegido).
  */
 export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, tapados }) {
@@ -90,43 +83,36 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
         );
     }
     const mes = dtf(s.tz, { month: 'short' }, 'es').format(t).replace('.', ''), dnum = dtf(s.tz, { day: 'numeric' }, 'es').format(t);
-    const esCorrecto = () => { setListo(true); if (redir && !prueba) window.location.assign(redir); };
+    const confirmar = () => { setListo(true); if (redir && !prueba) window.location.assign(redir); };
     return (
         <div className="rv-paso rv-ok rv-paso--entra">
-            <div className="rv-ok-a">
-                <p className="rv-ok-eyebrow"><span className="rv-ok-punto" aria-hidden="true"><Icono n="check" s={14} /></span>Sesión agendada</p>
-                <h1 className="rv-q rv-q--l1" id={ids.q}>{nombre ? 'Listo, ' + nombre + '. Tu sesión quedó agendada.' : 'Listo. Tu sesión quedó agendada.'}</h1>
-                <section className="rv-ticket" aria-label="Tu sesión">
-                    <div className="rv-tk-cuando">
-                        <span className="rv-tk-dia" aria-hidden="true"><small>{mes}</small><b>{dnum}</b></span>
-                        <div className="rv-tk-txt">
-                            <p className="rv-tk-fecha">{fechaTs(t, s.tz)}</p>
-                            <p className="rv-tk-hora"><b>{horaTxt(t, s.tz)} – {horaTxt(t + dur * 60000, s.tz)}</b><span>{mayus(z.largo)} · {gmtTxt(s.tz)}</span></p>
-                        </div>
+            <p className="rv-ok-eyebrow"><span className="rv-ok-punto" aria-hidden="true"><Icono n="check" s={14} /></span>Sesión agendada</p>
+            <h1 className="rv-q rv-q--l1" id={ids.q}>{nombre ? 'Listo, ' + nombre + '. Tu sesión quedó agendada.' : 'Listo. Tu sesión quedó agendada.'}</h1>
+            <section className="rv-ticket" aria-label="Tu sesión">
+                <div className="rv-tk-cuando">
+                    <span className="rv-tk-dia" aria-hidden="true"><small>{mes}</small><b>{dnum}</b></span>
+                    <div className="rv-tk-txt">
+                        <p className="rv-tk-fecha">{fechaTs(t, s.tz)}</p>
+                        <p className="rv-tk-hora"><b>{horaTxt(t, s.tz)} – {horaTxt(t + dur * 60000, s.tz)}</b><span>{mayus(z.largo)} · {gmtTxt(s.tz)}</span></p>
                     </div>
-                    <div className="rv-tk-corte" aria-hidden="true" />
-                    <div className="rv-tk-quien">
-                        {consultor
-                            ? <Avatar p={consultor} clase="rv-av" foto={false} />
-                            : <span className="avatar rv-av" aria-hidden="true" style={{ '--c': 'var(--rv-acento)' }}><Icono n="user" s={20} /></span>}
-                        <div><span className="rv-tk-lbl">Tu consultor</span><b className="rv-tk-nom">{consultor ? consultor.nombre : 'Te lo asignamos en breve'}</b></div>
-                    </div>
-                    <p className="rv-tk-wa"><Icono n="whatsapp" s={18} /><span>Te va a escribir por WhatsApp antes de la sesión.</span></p>
-                </section>
-            </div>
-            <div className="rv-ok-b">
-                <section className="rv-datos" aria-labelledby={ids.q + '-datos'}>
-                    <header className="rv-datos-cab"><h2 id={ids.q + '-datos'}>¿Están bien tus datos?</h2><p>Con estos te contacta tu consultor.</p></header>
-                    <DatosLead preguntas={preguntas} s={s} tapados={tapados} hora={t} />
-                </section>
-                <div className="rv-acc rv-acc--ok">
-                    {redir && prueba
-                        ? <a className="rv-seguir" href={redir} target="_blank" rel="noopener noreferrer" onClick={() => setListo(true)}>Es correcto<Icono n="check" s={18} /></a>
-                        : <button type="button" className="rv-seguir" onClick={esCorrecto}>Es correcto<Icono n="check" s={18} /></button>}
                 </div>
-                {respuestas}
-                {prueba && <Acciones acc={acc} />}
+                <div className="rv-tk-corte" aria-hidden="true" />
+                <div className="rv-tk-quien">
+                    {consultor
+                        ? <Avatar p={consultor} clase="rv-av" foto={false} />
+                        : <span className="avatar rv-av" aria-hidden="true" style={{ '--c': 'var(--rv-acento)' }}><Icono n="user" s={20} /></span>}
+                    <div><span className="rv-tk-lbl">Tu consultor</span><b className="rv-tk-nom">{consultor ? consultor.nombre : 'Te lo asignamos en breve'}</b></div>
+                </div>
+                <DatosLead preguntas={preguntas} s={s} tapados={tapados} />
+                <p className="rv-tk-wa"><Icono n="whatsapp" s={18} /><span>Te va a escribir por WhatsApp antes de la sesión.</span></p>
+            </section>
+            <div className="rv-acc rv-acc--ok">
+                {redir && prueba
+                    ? <a className="rv-seguir" href={redir} target="_blank" rel="noopener noreferrer" onClick={() => setListo(true)}>Confirmar<Icono n="check" s={18} /></a>
+                    : <button type="button" className="rv-seguir" onClick={confirmar}>Confirmar<Icono n="check" s={18} /></button>}
             </div>
+            {respuestas}
+            {prueba && <Acciones acc={acc} />}
         </div>
     );
 }
