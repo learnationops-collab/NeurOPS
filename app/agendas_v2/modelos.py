@@ -90,3 +90,24 @@ class SchedPerfil(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     datos = db.Column(db.JSON, nullable=False, default=dict)
     actualizado_en = db.Column(db.DateTime, nullable=False, default=_ahora, onupdate=_ahora)
+
+
+class SchedIntento(db.Model):
+    """Un lead que dejó sus datos en un link y todavía no agendó: es lo que mide Stats para ver dónde
+    se caen (los cuellos de botella). Se crea al completar el contacto y se actualiza en cada paso con
+    sus respuestas. Uno por lead y evento (por email). Si agenda, se borra: desde ahí es la Appointment.
+    `paso`: hasta dónde llegó (1 contacto, 2+j respondió la pregunta j, n+2 llegó al calendario).
+    `estado`: 'incompleta' o 'descalificada'."""
+
+    __tablename__ = 'sched_intentos'
+    id = db.Column(db.Integer, primary_key=True)
+    evento_id = db.Column(db.String(40), nullable=False, index=True)
+    funnel_id = db.Column(db.String(40), nullable=True)
+    email = db.Column(db.String(120), nullable=False, index=True)
+    estado = db.Column(db.String(20), nullable=False, default='incompleta')
+    paso = db.Column(db.Integer, nullable=False, default=1)
+    resp = db.Column(db.JSON, nullable=False, default=dict)
+    origen = db.Column(db.String(60), nullable=True)
+    setter_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    creado_en = db.Column(db.DateTime, nullable=False, default=_ahora, index=True)
+    actualizado_en = db.Column(db.DateTime, nullable=False, default=_ahora, onupdate=_ahora)

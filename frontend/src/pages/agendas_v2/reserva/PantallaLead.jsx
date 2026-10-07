@@ -195,6 +195,17 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [s.fin]);
 
+    // Link público: desde que dejó sus datos, cada paso queda registrado (Stats ve dónde se caen).
+    // Cuenta el paso al que llegó; el que agenda o no califica lo cierra el servidor al reservar.
+    const nContacto = preguntas.filter(q => q.id.startsWith('c-')).length;
+    useEffect(() => {
+        if (modo !== 'publico' || typeof proveedor.avance !== 'function' || !ctx.evento || s.fin || s.listo || s.reco || s.buscando) return;
+        // Sin correo no hay a quién seguir (el servidor tampoco lo registraría).
+        if ((idx < nContacto && !s.guardados) || !s.resp['c-email']) return;
+        proveedor.avance({ evento: ctx.evento, resp: s.resp, origen, enCalendario: idx >= n, datosGuardados: s.guardados });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [idx, s.reco, s.buscando]);
+
     // El lead dejó su correo: ¿ya agendó antes? Si no (o si falla la búsqueda), sigue como siempre.
     useEffect(() => {
         if (!s.buscando) return undefined;

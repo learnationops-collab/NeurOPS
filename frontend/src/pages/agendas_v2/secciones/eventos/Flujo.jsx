@@ -7,7 +7,7 @@ import { linkEvento, slugLibre } from '../../core/eventos';
 import { almacen, useDatos } from '../../data/hooks';
 import { Icono, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { statsEvento } from '../stats/datosEjemplo';
+import { reachEvento, useLeads } from '../stats/leads';
 import { armarFlujo, caminoArista } from './armarFlujo';
 import { textoEstrategia } from './comun';
 
@@ -134,15 +134,17 @@ function Inspector({ d, e, n }) {
 export default function Flujo({ e, ev }) {
     const { d } = useDatos();
     const calor = ev.calor !== false;
-    const datos = useMemo(() => statsEvento(d, e), [d, e]);
-    const reach = datos ? datos.reach : null;
+    const { leads, ejemplo } = useLeads();
+    const reach = useMemo(() => (leads ? reachEvento(d, e, leads) : null), [d, e, leads]);
     const { nodos, aristas, W, H, cuello, max } = useMemo(() => armarFlujo(d, e, reach, calor), [d, e, reach, calor]);
     return (
         <>
             <div className="barra" style={{ marginBottom: 12 }}>
                 <div className="leyenda">{LEYENDA.map(([c, t]) => <span key={t} style={{ '--c': c }}><i />{t}</span>)}</div>
                 <div className="barra-der">
-                    {datos && <span className="aviso-ej"><Icono n="alerta" />Ejemplo · 30 días</span>}
+                    {reach && (ejemplo
+                        ? <span className="aviso-ej"><Icono n="alerta" />Ejemplo · 30 días</span>
+                        : <span className="t-sm mut">Últimos 30 días</span>)}
                     <span className="sw">
                         <Icono n="fuego" />Mapa de calor
                         <button type="button" className="switch" role="switch" data-nav="" aria-checked={calor} aria-label="Mapa de calor" onClick={() => setEv({ calor: !calor })} />

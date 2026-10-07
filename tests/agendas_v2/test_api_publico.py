@@ -710,3 +710,60 @@ def test_si_se_ocupa_en_google_mientras_elige_el_horario_se_avisa(client, armado
     r = _reservar(client)
     assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
     assert Appointment.query.count() == 0
+
+
+# --- Intentos y Stats: los que dejaron sus datos y no agendaron ---------------------------------
+
+
+def _avance(client, en_calendario=False, **resp):
+    cuerpo = {'resp': resp, 'origen': 'juan-setter', 'en_calendario': en_calendario}
+    return client.post(URL + '/eventos/ev/avance', json=cuerpo)
+
+
+def _contacto(**extra):
+    return {'c-nombre': 'Lucía Fernández', 'c-telefono': '7123 4567', 'c-email': 'Lucia@Correo.com', **extra}
+
+
+def test_el_lead_que_deja_sus_datos_queda_registrado_y_avanza(client, armado):
+    from app.agendas_v2.modelos import SchedIntento
+
+    assert _avance(client, **{'c-email': 'no-es-correo'}).status_code == 204
+    assert SchedIntento.query.count() == 0  # sin un email válido todavía no dejó sus datos
+    _avance(client, **_contacto())
+    i = SchedIntento.query.one()
+    assert (i.email, i.estado, i.paso, i.evento_id) == ('lucia@correo.com', 'incompleta', 1, 'ev')
+    _avance(client, en_calendario=True, **_contacto(q1='a'))
+    _avance(client, **_contacto())  # volver atrás no baja el paso
+    i = SchedIntento.query.one()
+    assert i.paso == 3 and i.resp['q1'] == 'a'
+
+
+def test_si_agenda_el_intento_se_borra(client, armado):
+    from app.agendas_v2.modelos import SchedIntento
+
+    _avance(client, en_calendario=True, **_contacto(q1='a'))
+    assert _reservar(client).status_code == 201
+    assert SchedIntento.query.count() == 0 and Appointment.query.count() == 1
+
+
+def test_el_descalificado_queda_con_la_pregunta_donde_se_cayo(client, armado):
+    from app.agendas_v2.modelos import SchedIntento
+
+    _avance(client, **_contacto())
+    _reservar(client, inicio=None, q1='x')
+    i = SchedIntento.query.one()
+    assert (i.estado, i.paso, i.resp['q1']) == ('descalificada', 2, 'x')
+
+
+def test_stats_junta_las_agendas_y_los_que_se_cayeron(client, armado, cuentas, auth_headers, make_user):
+    _reservar(client)
+    _avance(client, **_contacto(**{'c-email': 'otro@correo.com'}))
+    director = make_user(role='director_comercial', username='mario', email='mario@equipo.com')
+    r = client.get('/api/agendas-v2/estadisticas', headers=auth_headers(director))
+    assert r.status_code == 200
+    leads = sorted(r.get_json()['leads'], key=lambda x: x['agenda'])
+    assert [(x['agenda'], x['llego'], x['ev']) for x in leads] == [(False, 1, 'ev'), (True, 999, 'ev')]
+    agenda = leads[1]
+    assert agenda['closer'] in ('ana', 'beto') and agenda['score'] == 10 and agenda['setter'] == 'juan'
+    assert agenda['inicio'] == calendar.timegm(datetime(2026, 10, 5, 13).timetuple()) * 1000
+    assert client.get('/api/agendas-v2/estadisticas', headers=auth_headers(cuentas['ana'])).status_code == 403

@@ -21,7 +21,7 @@ NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está dispon
 
 # Limite por IP, en memoria y por proceso: frena a un script que martilla el endpoint, no es una
 # defensa distribuida. (pedidos, segundos)
-LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60)}
+LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60)}
 _pedidos = defaultdict(deque)
 _candado = threading.Lock()
 
@@ -94,6 +94,20 @@ def conocido(evento_id):
     if r.get('proxima'):
         r['proxima'] = {'inicio': servicio.ms_a_dt(r['proxima']['inicio']).isoformat(timespec='milliseconds') + 'Z'}
     return jsonify(r)
+
+
+@bp.route('/eventos/<evento_id>/avance', methods=['POST'])
+def avance(evento_id):
+    """{resp, origen, en_calendario, datos_guardados}: el lead avanzó un paso. Solo para Stats (dónde se
+    caen los que dejaron sus datos): no devuelve nada."""
+    if _excede('avance'):
+        return _demasiados()
+    d = servicio.colecciones()
+    x = servicio.evento_publico(d, evento_id)
+    if not x:
+        return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
+    servicio.registrar_avance(d, *x, _cuerpo())
+    return '', 204
 
 
 @bp.route('/reservas', methods=['POST'])

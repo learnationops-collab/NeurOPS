@@ -155,4 +155,26 @@ describe('PantallaLead con la API', () => {
         expect(api.post.mock.calls[0][0]).toBe('/agendas-v2/publico/reservas');
         expect(api.post.mock.calls[0][1]).toMatchObject({ evento_id: 'e1', inicio: null, resp: { q1: 'o2' } });
     });
+
+    it('desde que deja su correo, cada paso queda registrado para Stats', async () => {
+        api.post.mockImplementation((url) => {
+            if (esHorarios(url)) return Promise.resolve({ data: { slots: [H9] } });
+            return Promise.reject(errHttp(404)); // ni /conocido ni /avance frenan al lead
+        });
+        const esAvance = (u) => u === '/agendas-v2/publico/eventos/e1/avance';
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" origen="ig" />);
+        await act(async () => { escribirYEnter(container, 'ana@correo.com'); });
+        escribirYEnter(container, 'Ana Gómez');
+        fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
+        fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
+        escribirYEnter(container, '7123 4567');
+        expect(llamadasA(esAvance)).toHaveLength(0); // todavía no terminó el contacto
+        escribirYEnter(container, '');
+        expect(llamadasA(esAvance)).toHaveLength(1);
+        expect(llamadasA(esAvance)[0][1]).toMatchObject({ origen: 'ig', en_calendario: false, resp: { 'c-email': 'ana@correo.com', 'c-nombre': 'Ana Gómez' } });
+        await act(async () => { elegir('Lo necesario'); });
+        expect(llamadasA(esAvance)).toHaveLength(2);
+        expect(llamadasA(esAvance)[1][1]).toMatchObject({ en_calendario: true, resp: { q1: 'o1' } });
+        expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+    });
 });

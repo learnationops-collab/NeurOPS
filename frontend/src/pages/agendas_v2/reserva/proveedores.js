@@ -16,6 +16,8 @@
 //       slot null = lead que no califica (se registra sin horario). Rechaza con code 'ocupado' (otro
 //       tomó el horario), 'ya_tiene' (el lead ya tiene una agenda próxima, en err.agenda.inicio: se le
 //       pregunta y se repite con siYaTiene 'reprogramar' o 'adicional'), 'limite' o 'fallo'.
+//   avance({evento, resp, origen, enCalendario, datosGuardados})  (solo API) el lead avanzó un paso
+//       después de dejar sus datos: queda para Stats (dónde se caen). Nunca falla ni frena al lead.
 //   cargarEvento(funnelSlug, eventoSlug)   (solo API) → {evento, form, funnel}; rechaza 'no_disponible' o 'fallo'
 //   conocido({evento, email})  → Promise<{conocido, completos, datos: {nombre, telefono, instagram} (tapados),
 //       proxima: {inicio (ms)} | null, resp?}>. El lead que ya agendó antes: no se le piden de nuevo sus
@@ -116,6 +118,11 @@ export function proveedorApi() {
                 if (!data || !data.conocido) return { conocido: false };
                 return { ...data, proxima: data.proxima ? { inicio: Date.parse(data.proxima.inicio) } : null };
             } catch (e) { throw errorPublico(e); }
+        },
+
+        avance({ evento, resp, origen, enCalendario, datosGuardados }) {
+            const cuerpo = { resp, origen: origen || '', en_calendario: !!enCalendario, ...(datosGuardados ? { datos_guardados: true } : {}) };
+            return api.post(`/agendas-v2/publico/eventos/${seg(evento.id)}/avance`, cuerpo, OPC).catch(() => { /* solo es para Stats */ });
         },
 
         async reservar({ lead, evento, slot, origen, siYaTiene, datosGuardados }) {
