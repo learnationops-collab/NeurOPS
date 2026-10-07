@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Grid3x3, CheckCircle2, Target, Users, TrendingUp, DollarSign } from 'lucide-react';
 import api from '../../../../services/api';
 import { COLOR_PAIS, BANDERA, PAISES } from '../lib/escalas';
+import EmbudoFormulario from './EmbudoFormulario';
 
 // Dos pools: todo lo que llegó, o sólo los finalistas (video verificado). Sin
 // video no se revisa la postulación, así que promediar los dos juntos
@@ -16,8 +17,8 @@ const TABS = [
     { id: 'paises', label: 'Comparar países', icon: Grid3x3 },
 ];
 
-const Panel = ({ titulo, children, pie }) => (
-    <div className="flex flex-col gap-5 rounded-[24px] border border-white/[.13] bg-white/[.045] p-6">
+const Panel = ({ titulo, children, pie, className = '' }) => (
+    <div className={`flex flex-col gap-5 rounded-[24px] border border-white/[.13] bg-white/[.045] p-6 ${className}`}>
         <span className="flex items-center gap-2.5 text-[11.5px] font-extrabold uppercase tracking-[.16em] text-white/55">
             {titulo}
         </span>
@@ -226,6 +227,14 @@ const HiringStatsTab = () => {
                                     })}
                                 </div>
                             </div>
+                        </Panel>
+
+                        <Panel
+                            titulo="Embudo del formulario"
+                            className="lg:col-span-2"
+                            pie={`sobre ${data.total_general} postulaciones, con o sin terminar`}
+                        >
+                            <EmbudoFormulario items={data.embudo_formulario} />
                         </Panel>
 
                         <Panel titulo="Nivel de IA declarado">
