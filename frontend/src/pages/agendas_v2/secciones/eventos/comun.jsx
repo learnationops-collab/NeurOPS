@@ -1,8 +1,8 @@
 // Piezas compartidas por la lista, el detalle y el flujo de un evento.
 
 import { useEffect, useState } from 'react';
-import { buscar, nombreOrigen } from '../../core/datos';
-import { linkEvento, pasosAgendamiento } from '../../core/eventos';
+import { buscar, maxOrden, nombreOrigen, ord } from '../../core/datos';
+import { linkEvento, pasosAgendamiento, slugLibre } from '../../core/eventos';
 import { slugify } from '../../core/util';
 import { almacen } from '../../data/hooks';
 import { Icono } from '../../ui/base';
@@ -81,6 +81,24 @@ export function PasosPendientes({ d, e }) {
             ))}
         </ol>
     );
+}
+
+// Crea un evento y lo abre. Sin `funnel` va al primero; el closer (`cm`) crea eventos propios, fijos a
+// su persona y con su nombre en el link. Devuelve el id, o null sin nombre.
+export function crearEvento(d, nombre, { funnel, cm } = {}) {
+    nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
+    if (!nombre) return null;
+    const fu = funnel || (ord(d, 'funnels')[0] || {}).id || '', fo = ord(d, 'formularios')[0];
+    const datos = {
+        nombre, funnel: fu, formulario: fo ? fo.id : '', duracion: 45, activo: true, publicado: '',
+        orden: maxOrden(d, 'eventos') + 1,
+    };
+    let slug = slugify(nombre);
+    if (cm) { datos.persona = cm.id; slug = slugify(cm.nombre + '-' + nombre); }
+    datos.slug = slugLibre(d, { id: null, funnel: datos.funnel }, slug || 'evento');
+    const id = almacen.crear('eventos', datos);
+    abrirEvento(id);
+    return id;
 }
 
 export function abrirEvento(id) {

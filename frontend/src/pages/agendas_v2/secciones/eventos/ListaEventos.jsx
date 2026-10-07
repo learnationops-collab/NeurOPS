@@ -4,34 +4,17 @@
 // En la vista de closer solo aparecen sus eventos propios, sin agrupar.
 
 import React, { useRef, useState } from 'react';
-import { buscar, colorVar, maxOrden, nombreGrupo, ord } from '../../core/datos';
-import { estadoEvento, linkEvento, slugLibre } from '../../core/eventos';
+import { buscar, colorVar, nombreGrupo, ord } from '../../core/datos';
+import { estadoEvento, linkEvento } from '../../core/eventos';
 import { gruposDeForm } from '../../core/formulario';
-import { slugify } from '../../core/util';
-import { almacen, useDatos, usePermisos, useUi } from '../../data/hooks';
+import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import EnTope from '../../ui/EnTope';
-import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, probarEvento } from './comun';
+import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento } from './comun';
 
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
 const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
-
-function crearEvento(d, nombre, cm) {
-    nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
-    if (!nombre) return 'Escribí un nombre.';
-    const fu = ord(d, 'funnels')[0], fo = ord(d, 'formularios')[0];
-    const datos = {
-        nombre, funnel: fu ? fu.id : '', formulario: fo ? fo.id : '', duracion: 45, activo: true, publicado: '',
-        orden: maxOrden(d, 'eventos') + 1,
-    };
-    let slug = slugify(nombre);
-    // El closer crea eventos propios: quedan fijos a su persona y el link lleva su nombre.
-    if (cm) { datos.persona = cm.id; slug = slugify(cm.nombre + '-' + nombre); }
-    datos.slug = slugLibre(d, { id: null, funnel: datos.funnel }, slug || 'evento');
-    abrirEvento(almacen.crear('eventos', datos));
-    return '';
-}
 
 function ErrNuevo({ err, clase }) {
     return (
@@ -108,7 +91,11 @@ export default function ListaEventos() {
     const [err, setErr] = useState('');
     const inp = useRef(null);
     const es = ord(d, 'eventos').filter(e => !cm || e.persona === cm.id);
-    const crear = (v) => { const m = crearEvento(d, v, cm); setErr(m); if (!m && inp.current) inp.current.value = ''; };
+    const crear = (v) => {
+        const m = crearEvento(d, v, { cm }) ? '' : 'Escribí un nombre.';
+        setErr(m);
+        if (!m && inp.current) inp.current.value = '';
+    };
 
     if (!es.length) return <Compo cm={cm} onCrear={crear} err={err} />;
 
@@ -119,6 +106,8 @@ export default function ListaEventos() {
         if (!grupos.has(k)) grupos.set(k, []);
         grupos.get(k).push(e);
     });
+    // Un funnel sin agendamientos no genera agendas: aparece igual, con lo que le falta como acción.
+    if (agrupar === 'funnel') ord(d, 'funnels').forEach(f => { if (!grupos.has(f.id)) grupos.set(f.id, []); });
 
     return (
         <>
@@ -160,7 +149,16 @@ export default function ListaEventos() {
                                 )}
                             </div>
                         )}
-                        <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div>
+                        {lista.length ? <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div> : (
+                            <div className="tarjeta caja ev-card ev-fila">
+                                <span className="t-sm mut">Sin agendamientos: este funnel no genera agendas.</span>
+                                <div className="barra-der">
+                                    <button type="button" className="btn btn--cta btn--sm" onClick={() => ui.set({ funnel: { id: ref.id } })}>
+                                        <Icono n="plus" />Agregar agendamiento
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </React.Fragment>
                 );
             })}

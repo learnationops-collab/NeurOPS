@@ -225,11 +225,15 @@ export default function ConfigEvento({ e }) {
     const { modoCloser: cm } = usePermisos();
     const [borrar, setBorrar] = useState(false);
     const f = buscar(d, 'funnels', e.funnel);
-    const eliminar = () => {
+    // Si es el único agendamiento del funnel, el funnel quedaría sin generar agendas: se ofrece borrarlo
+    // también (el closer no maneja funnels).
+    const ultimo = !cm && f && !d.eventos.some(o => o.id !== e.id && o.funnel === f.id);
+    const eliminar = (conFunnel) => {
         almacen.flush();
         ui.set({ ev: null });
         almacen.borrar('eventos', e.id);
-        toast(e.nombre + ' eliminado');
+        if (conFunnel) almacen.borrar('funnels', f.id);
+        toast(conFunnel ? e.nombre + ' y ' + f.nombre + ' eliminados' : e.nombre + ' eliminado');
     };
     return (
         <div className="ev-grid ev-grid--3">
@@ -238,9 +242,15 @@ export default function ConfigEvento({ e }) {
                 {borrar ? (
                     <div className="ed-pie--borrar">
                         <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
+                        {ultimo && <p className="t-sm">Es el único agendamiento de <b>{f.nombre}</b>: sin él, el funnel no genera agendas.</p>}
                         <div className="der">
                             <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrar(false)}>Cancelar</button>
-                            <button type="button" className="btn btn--borrar btn--sm" onClick={eliminar}><Icono n="basura" />Eliminar</button>
+                            {ultimo ? (
+                                <>
+                                    <button type="button" className="btn btn--linea btn--sm" onClick={() => eliminar(false)}>Solo el evento</button>
+                                    <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(true)}><Icono n="basura" />Eliminar evento y funnel</button>
+                                </>
+                            ) : <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(false)}><Icono n="basura" />Eliminar</button>}
                         </div>
                     </div>
                 ) : (

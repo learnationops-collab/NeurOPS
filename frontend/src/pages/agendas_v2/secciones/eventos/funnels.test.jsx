@@ -49,6 +49,14 @@ describe('Eventos', () => {
         expect(screen.getByText('Workshop', { selector: '.t-rotulo' })).toBeTruthy();
     });
 
+    it('un funnel sin agendamientos aparece igual, con «Agregar agendamiento»', () => {
+        act(() => ui.set({ evAgrupar: 'funnel' }));
+        render(envolver(<ListaEventos />));
+        expect(screen.getByText('VSL', { selector: '.t-rotulo' })).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /Agregar agendamiento/ }));
+        expect(ui.getState().funnel).toEqual({ id: fuVacio });
+    });
+
     it('un evento de un funnel de setting muestra los links de setters', () => {
         act(() => { almacen.editar('funnels', fuListo, { tipo: 'setting', setting: true }, true); });
         render(envolver(<ListaEventos />));

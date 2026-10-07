@@ -35,15 +35,41 @@ describe('Stats', () => {
 });
 
 describe('Modal del funnel', () => {
-    it('crea un funnel con slug único y su tipo, y pasa a editarlo', () => {
+    it('crea un funnel con slug único, su tipo y su primer agendamiento, y abre el agendamiento', () => {
         act(() => ui.set({ funnel: {} }));
         render(envolver(<ModalFunnel estado={{}} />));
         fireEvent.change(document.getElementById('fm-nombre'), { target: { value: 'Webinar' } });
         fireEvent.click(screen.getByRole('radio', { name: /^VSL/ }));
+        fireEvent.change(document.getElementById('fm-evento'), { target: { value: 'Diagnóstico' } });
         fireEvent.submit(document.getElementById('fm-nombre').closest('form'));
-        const nuevo = almacen.getState().d.funnels.find(f => f.slug === 'webinar-2');
+        const { d } = almacen.getState();
+        const nuevo = d.funnels.find(f => f.slug === 'webinar-2');
         expect(nuevo.tipo).toBe('vsl');
-        expect(ui.getState().funnel).toEqual({ id: nuevo.id });
+        // Un funnel no se crea vacío: nace con su agendamiento, que queda abierto para configurarlo.
+        const ev = d.eventos.find(e => e.funnel === nuevo.id);
+        expect(ev.nombre).toBe('Diagnóstico');
+        expect(ui.getState().funnel).toBe(null);
+        expect(ui.getState().ev).toMatchObject({ id: ev.id, tab: 'config' });
+    });
+
+    it('sin nombre de agendamiento, el agendamiento toma el del funnel', () => {
+        render(envolver(<ModalFunnel estado={{}} />));
+        fireEvent.change(document.getElementById('fm-nombre'), { target: { value: 'Masterclass' } });
+        fireEvent.submit(document.getElementById('fm-nombre').closest('form'));
+        const { d } = almacen.getState();
+        const fu = d.funnels.find(f => f.slug === 'masterclass');
+        expect(d.eventos.filter(e => e.funnel === fu.id).map(e => e.nombre)).toEqual(['Masterclass']);
+    });
+
+    it('a un funnel vacío le ofrece agregar un agendamiento', () => {
+        let fu;
+        act(() => { fu = almacen.crear('funnels', { nombre: 'Vacío', slug: 'vacio', orden: 9 }); });
+        render(envolver(<ModalFunnel estado={{ id: fu }} />));
+        expect(screen.getByText(/este funnel no genera agendas/)).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /Agregar agendamiento/ }));
+        const ev = almacen.getState().d.eventos.find(e => e.funnel === fu);
+        expect(ev.nombre).toBe('Vacío');
+        expect(ui.getState().ev).toMatchObject({ id: ev.id });
     });
 
     it('edita el tipo de un funnel; en setting muestra los links de setters', () => {
