@@ -32,7 +32,18 @@
 }
 .equipo .eq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .equipo .eq-acciones { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-end; }
-.equipo .eq-borrar:hover:not(:disabled) { color: var(--error); border-color: var(--error-border); }
+/* Botones: son los `.btn` / `.ibtn` del shell (comercial.css), no los `.ln-btn` del DS: dentro de
+   `.dc-shell` el reset `button{background:none;border:0}` les gana a esas clases y se veían como texto suelto. */
+.equipo .eq-cab .ln-btn-row { gap: var(--space-3); }
+.equipo .btn--linea { background: var(--bg-element); border-color: var(--border-control); color: var(--text-on-surface); }
+.equipo .btn--linea:hover:not(:disabled) { background: color-mix(in srgb, var(--text-on-surface) 10%, transparent); border-color: var(--text-on-surface); }
+.equipo .btn--linea[aria-pressed="true"] { background: var(--brand-secondary-surface); border-color: var(--brand-secondary-border); }
+.equipo .btn--cta:hover:not(:disabled) { background: var(--brand-secondary-light); transform: translateY(-1px); }
+.equipo .btn--cta:active:not(:disabled) { transform: scale(.97); }
+.equipo .btn--sm.btn--linea { color: var(--text-muted); }
+.equipo .btn--sm.btn--linea:hover:not(:disabled) { color: var(--text-on-surface); }
+.equipo .ibtn:hover:not(:disabled) { background: color-mix(in srgb, var(--text-on-surface) 10%, transparent); }
+.equipo .eq-borrar:hover:not(:disabled) { color: var(--error); border-color: var(--error-border); background: var(--error-surface, color-mix(in srgb, var(--error) 14%, transparent)); }
 .equipo .eq-fila--inactiva { opacity: .55; }
 
 /* Modal: el cuerpo y el pie van en portal, cada uno con su `.dc-shell` para los tokens. */

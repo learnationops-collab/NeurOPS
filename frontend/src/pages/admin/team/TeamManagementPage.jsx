@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Calendar, Check, Ghost, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
+import { AlertCircle, Calendar, Check, Eye, EyeOff, Ghost, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
 import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
@@ -257,14 +257,14 @@ const TeamManagementPage = ({ embebido = false }) => {
                     </p>
                 </div>
                 <div className="ln-btn-row">
-                    <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" aria-pressed={showDeactivated}
+                    <button type="button" className="btn btn--linea" aria-pressed={showDeactivated}
                         onClick={() => setShowDeactivated(!showDeactivated)}>
-                        {showDeactivated ? 'Ocultar inactivos' : 'Ver inactivos'}
+                        {showDeactivated ? <EyeOff /> : <Eye />}{showDeactivated ? 'Ocultar inactivos' : 'Ver inactivos'}
                     </button>
-                    <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" onClick={() => setVinculando(true)}>
+                    <button type="button" className="btn btn--linea" onClick={() => setVinculando(true)}>
                         <Link2 />Vincular cuentas
                     </button>
-                    <button type="button" className="ln-btn ln-btn--cta ln-btn--sm" onClick={() => handleOpenModal('create')}>
+                    <button type="button" className="btn btn--cta" onClick={() => handleOpenModal('create')}>
                         <UserPlus />Nuevo miembro
                     </button>
                 </div>
@@ -314,16 +314,16 @@ const TeamManagementPage = ({ embebido = false }) => {
                                 {rolesDe(u).includes('admin') && u.can_view_finance && <span className="ln-chip ln-chip--sm ln-chip--warning">Finanzas</span>}
                             </div>
                             <div className="eq-acciones">
-                                <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm"
+                                <button type="button" className="btn btn--linea btn--sm"
                                     onClick={() => handleImpersonate(u)} onContextMenu={(e) => handleImpersonateNewTab(e, u)}
                                     disabled={!u.is_active || impersonatingId === u.id}
                                     title="Clic: simular en esta pestaña. Clic derecho: en una pestaña nueva.">
                                     {impersonatingId === u.id ? <span className="ln-spinner" /> : <Ghost />}Simular
                                 </button>
-                                <button type="button" className="ln-iconbtn" title="Editar" aria-label={`Editar a ${u.username}`} onClick={() => handleOpenModal('edit', u)}>
+                                <button type="button" className="ibtn ibtn--sm" title="Editar" aria-label={`Editar a ${u.username}`} onClick={() => handleOpenModal('edit', u)}>
                                     <Pencil />
                                 </button>
-                                <button type="button" className="ln-iconbtn eq-borrar" title="Eliminar" aria-label={`Eliminar a ${u.username}`} onClick={() => handleDelete(u)}>
+                                <button type="button" className="ibtn ibtn--sm eq-borrar" title="Eliminar" aria-label={`Eliminar a ${u.username}`} onClick={() => handleDelete(u)}>
                                     <Trash2 />
                                 </button>
                             </div>
@@ -349,8 +349,8 @@ const TeamManagementPage = ({ embebido = false }) => {
                     cerrable={!submitting}
                     pie={(
                         <div className="dc-shell dc-shell--embebido ln-btn-row eq-pie">
-                            <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm" onClick={cerrarModal} disabled={submitting}>Cancelar</button>
-                            <button type="submit" className="ln-btn ln-btn--cta ln-btn--sm" disabled={submitting}>
+                            <button type="button" className="btn btn--linea" onClick={cerrarModal} disabled={submitting}>Cancelar</button>
+                            <button type="submit" className="btn btn--cta" disabled={submitting}>
                                 {submitting ? <span className="ln-spinner" /> : <Check />}
                                 {modal.type === 'create' ? 'Crear Miembro' : 'Guardar Cambios'}
                             </button>
