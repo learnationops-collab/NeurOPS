@@ -1,4 +1,4 @@
-// Editor de un formulario: barra (volver, vistas, "No califica", eliminar) y la vista elegida.
+// Editor de un formulario: barra (volver, vistas, importar preguntas, "No califica", eliminar) y la vista elegida.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen, useDatos, useUi } from '../../data/hooks';
@@ -17,11 +17,11 @@ import Previa from './Previa';
 import { ModalImportar, ModalNoCalifica, fuentesImport } from './Modales';
 import { toast } from '../../ui/toast';
 
-const VISTAS = [{ v: 'preguntas', n: 'Questions', icono: 'lista' }, { v: 'ruteo', n: 'Segmentación', icono: 'flujo' }, { v: 'previa', n: 'Preview', icono: 'ojo' }];
+const VISTAS = [{ v: 'preguntas', n: 'Preguntas', icono: 'lista' }, { v: 'ruteo', n: 'Segmentación', icono: 'flujo' }, { v: 'previa', n: 'Vista previa', icono: 'ojo' }];
 
 function cerrarForm() { almacen.flush(); ui.set({ form: null }); window.scrollTo({ top: 0 }); }
 
-function Barra({ f, vista, prevModo, onFin, finRef }) {
+function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
     const [borrar, setBorrar] = useState(false);
     const r = resumenForm(f);
     const papelera = useRef(null), cancelar = useRef(null);
@@ -46,6 +46,9 @@ function Barra({ f, vista, prevModo, onFin, finRef }) {
                     </div>
                 ) : (
                     <>
+                        <button type="button" className="fe-btn" title="Traer preguntas de otro formulario" onClick={e => onImportar(e.currentTarget)}>
+                            <Icono n="importar" s={15} /><span>Importar preguntas</span>
+                        </button>
                         <button type="button" className="fe-btn" ref={finRef} title="Pantalla para quien no califica" onClick={onFin}>
                             <Icono n="prohibido" s={15} /><span>No califica</span>{r.filtra > 0 && <b className="num">{r.filtra}</b>}
                         </button>
@@ -135,7 +138,12 @@ function VistaPreguntas({ f, sel, raiz, onImportar }) {
                         <Pregunta key={id} q={porId[id]} i={lista.indexOf(id)} f={f} on={sel === id} ord={ord} enfocar={enfocar} />
                     ))}
                 </div>
-            ) : <div className="panel vacio"><p className="t-sm mut">Sin preguntas propias todavía.</p></div>}
+            ) : (
+                <div className="panel vacio">
+                    <p className="t-sm mut">Sin preguntas propias todavía. Agregá una o traelas de otro formulario.</p>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={e => onImportar(e.currentTarget)}><Icono n="importar" />Importar preguntas</button>
+                </div>
+            )}
             <div className="fe-mas">
                 <button type="button" className="fe-mas-b caja" onClick={agregar}>
                     <Humo clase="humo--tarjeta" cols={HUMO_MARCA} />
@@ -165,6 +173,7 @@ export default function Editor() {
 
     const vista = form.vista || 'preguntas';
     const abrir = (m, origen) => { almacen.flush(); volver.current = origen; setModal(m); };
+    const importar = (o) => { if (fuentesImport(d, f.id).length) abrir('imp', o); else toast('No hay otros formularios con preguntas.', 'error'); };
     const cerrar = () => {
         almacen.flush(); setModal(null);
         const v = volver.current; volver.current = null;
@@ -173,10 +182,10 @@ export default function Editor() {
 
     return (
         <div ref={raiz} style={{ display: 'contents' }}>
-            <EnTope reemplaza><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} /></EnTope>
+            <EnTope reemplaza><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} onImportar={importar} /></EnTope>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
                 : vista === 'ruteo' ? <div className="columna"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></div>
-                    : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={o => { if (fuentesImport(d, f.id).length) abrir('imp', o); else toast('No hay otros formularios con preguntas.', 'error'); }} />}
+                    : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={importar} />}
             {modal === 'fin' && <ModalNoCalifica f={f} onCerrar={cerrar} />}
             {modal === 'imp' && <ModalImportar f={f} d={d} onCerrar={cerrar} onImportado={(qid) => {
                 setModal(null); volver.current = null; setFormUi({ sel: qid, vista: 'preguntas' });
