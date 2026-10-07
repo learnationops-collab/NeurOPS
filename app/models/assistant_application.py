@@ -51,6 +51,27 @@ CAMPOS_FORMULARIO = [campo for _, campos in BLOQUES for campo in campos]
 OPCIONALES = ('automatizacion_ejemplo',)
 META_CON_PRESUPUESTO = 'Gestioné cuentas publicitarias de forma habitual'
 
+# Cómo se llama cada pregunta en el panel (embudo del formulario). Corto y
+# legible: no es el enunciado literal del formulario.
+ETIQUETAS_PREGUNTA = {
+    'pais': 'País', 'provincia': 'Provincia o estado', 'nombre': 'Nombre',
+    'email': 'Email', 'whatsapp': 'WhatsApp', 'edad': 'Edad',
+    'equipo': 'Equipo para trabajar', 'disponibilidad': 'Disponibilidad 4 h a 8 h',
+    'horario': 'Sin horario fijo', 'empleo': 'Otro empleo',
+    'confirma': 'Cómo arranca el puesto', 'remuneracion': 'Cuánto pide por mes',
+    'experiencia': 'Años de experiencia', 'digital': 'Negocio digital',
+    'remoto': 'Trabajo remoto', 'dinero': 'Manejo de dinero',
+    'pm': 'Project manager', 'educacion': 'Nivel educativo', 'area': 'Área de formación',
+    'idioma2': 'Portugués o español', 'ingles': 'Inglés',
+    'sheets': 'Google Sheets', 'ia_nivel': 'ChatGPT y Claude',
+    'ia_avanzado': 'Lo más avanzado con IA', 'meta': 'Meta Business Suite',
+    'meta_presupuesto': 'Presupuesto en Meta', 'notion': 'Notion',
+    'wa_tools': 'WhatsApp masivo', 'automatizacion_ejemplo': 'Automatización armada',
+    'aporte': 'Qué aporta al equipo', 'pendientes': 'Cómo maneja pendientes',
+    'retraso': 'Caso: entrega atrasada', 'video': 'Video de presentación',
+    'video_verificado': 'Video verificado', 'cv': 'Link al CV',
+}
+
 # Preguntas de la versión anterior del formulario (41 preguntas) que el actual
 # ya no hace. Las columnas se conservan: las postulaciones viejas siguen siendo
 # consultables (y el score las usa), pero no cuentan para el embudo ni para la
@@ -179,6 +200,17 @@ class AssistantApplication(db.Model):
 
     def respondidas(self):
         return sum(1 for campo in CAMPOS_FORMULARIO if not _vacio(getattr(self, campo)))
+
+    def ultima_contestada(self):
+        """Posición (en CAMPOS_FORMULARIO) de la pregunta más avanzada que
+        tiene respuesta, o -1 si no hay ninguna. Se mide por «la última» y no
+        por «cuáles contestó» porque las opcionales y condicionales se saltean:
+        quien dejó en blanco `meta_presupuesto` pero contestó `cv` igual llegó
+        hasta el final."""
+        for pos in range(len(CAMPOS_FORMULARIO) - 1, -1, -1):
+            if not _vacio(getattr(self, CAMPOS_FORMULARIO[pos])):
+                return pos
+        return -1
 
     def preguntas_esperadas(self):
         """Columnas que el formulario le pide de verdad a ESTA postulación:
