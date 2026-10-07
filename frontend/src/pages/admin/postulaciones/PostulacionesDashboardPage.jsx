@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Users, BarChart3, Sliders, ArrowLeft } from 'lucide-react';
+import { Inbox, CheckCircle2, Users, BarChart3, Sliders, ArrowLeft, LogOut } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
+import MenuSesion from '../../comercial/components/MenuSesion';
+import '../../comercial/comercial.css';
 import PostulacionesInbox from './components/PostulacionesInbox';
 import PostulacionesRevisoresTab from './components/PostulacionesRevisoresTab';
 import PostulacionesStatsTab from './components/PostulacionesStatsTab';
@@ -21,6 +24,7 @@ const TABS = [
 ];
 
 const PostulacionesDashboardPage = () => {
+    const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('pendientes');
 
     return (
@@ -91,6 +95,15 @@ const PostulacionesDashboardPage = () => {
                             </button>
                         );
                     })}
+
+                    {/* El usuario al final del menú: de acá se reporta un problema y se ven las respuestas. */}
+                    <div className="dc-shell dc-shell--embebido flex flex-none items-center">
+                        <MenuSesion
+                            nombre={user?.name || user?.username || ''}
+                            rol="Postulaciones"
+                            grupos={[[{ id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout }]]}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

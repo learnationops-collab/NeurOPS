@@ -7,6 +7,8 @@ import { revertImpersonation } from '../../../utils/impersonation';
 import HiringInbox from './components/HiringInbox';
 import HiringStatsTab from './components/HiringStatsTab';
 import HiringClarityTab from './components/HiringClarityTab';
+import MenuSesion from '../../comercial/components/MenuSesion';
+import '../../comercial/comercial.css';
 
 // Las tres vistas del dock. Clarity vive aparte, en el orbe magenta de la
 // derecha: no es un destino más (no lista candidatos), es el panel que ajusta
@@ -256,6 +258,19 @@ const HiringDashboardPage = () => {
                     >
                         <Sliders size={20} style={{ color: vista === 'clarity' ? '#0B0F26' : '#FF6AD5' }} />
                     </button>
+
+                    {/* El usuario al final del dock: de acá se reporta un problema (y se ven las respuestas).
+                        Es el mismo menú de sesión de los demás docks; el header sigue con Salir y Volver. */}
+                    <div className="dc-shell dc-shell--embebido flex flex-none items-center">
+                        <MenuSesion
+                            nombre={user?.name || user?.username || ''}
+                            rol={user?.is_impersonating ? 'Hiring · simulación' : 'Hiring'}
+                            grupos={[[
+                                ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
+                                { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout },
+                            ]]}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
