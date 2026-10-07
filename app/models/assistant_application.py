@@ -1,7 +1,7 @@
 """Postulación al puesto de Asistente Administrativa y Personal.
 
 Tabla propia, aparte de `job_applications` (Closer de ventas): el formulario es
-otro, las 41 preguntas no se parecen y la rúbrica de evaluación tampoco. Se
+otro, las preguntas no se parecen y la rúbrica de evaluación tampoco. Se
 comparte el PATRÓN (upsert por `dedupe_key`, guardado progresivo, `completo`),
 no la tabla.
 
@@ -14,32 +14,40 @@ import unicodedata
 from datetime import datetime
 from app import db
 
-# Los 9 bloques del formulario, en orden, con las `id` de pregunta que le
-# corresponden a cada uno. Es la misma agrupación que ve el candidato
-# (`bloque` en el PREGUNTAS del formulario) y la que usa el panel para mostrar
-# la postulación entera sin que sea una lista plana de 41 respuestas.
+# Los bloques del formulario REAL (institute-site, vacante-assistant/formulario),
+# en orden, con las columnas que guarda cada uno. Son 35 preguntas. Es la misma
+# agrupación que ve el candidato (`bloque` en el PREGUNTAS del formulario) y la
+# que usa el panel para mostrar la postulación entera sin que sea una lista
+# plana. Ojo: el formulario manda la provincia/estado como `ciudad`; el
+# endpoint público la guarda en la columna `provincia`.
 BLOQUES = [
-    ("Identificación", ['pais', 'nombre', 'email', 'whatsapp', 'edad']),
+    ("Identificación", ['pais', 'provincia', 'nombre', 'email', 'whatsapp', 'edad']),
     ("Requisitos", ['equipo', 'disponibilidad', 'horario', 'empleo']),
     ("Remuneración", ['confirma', 'remuneracion']),
     ("Experiencia", ['experiencia', 'digital', 'remoto', 'dinero', 'pm', 'educacion', 'area']),
     ("Idiomas", ['idioma2', 'ingles']),
     ("Herramientas", [
-        'sheets', 'ia_nivel', 'ia_avanzado', 'ia_construido', 'ia_uso', 'meta',
-        'meta_presupuesto', 'notion', 'wa_tools', 'automatizaciones',
-        'automatizacion_ejemplo', 'diseno', 'diseno_link',
+        'sheets', 'ia_nivel', 'ia_avanzado', 'meta', 'meta_presupuesto',
+        'notion', 'wa_tools', 'automatizacion_ejemplo',
     ]),
-    ("Organización", ['pendientes', 'instrucciones']),
-    ("Cómo resolvés", ['retraso', 'monitor', 'martes']),
+    ("Criterio", ['aporte']),
+    ("Organización", ['pendientes']),
+    ("Cómo resolvés", ['retraso']),
     ("Video y CV", ['video', 'video_verificado', 'cv']),
 ]
 
-# Las 41 columnas que son una respuesta del formulario, en el orden en que se
-# preguntan. Sirve para contar cuántas contestó alguien que no terminó sin
-# depender de qué preguntas condicionales le tocaron ver (`ia_construido`,
-# `ia_uso`, `meta_presupuesto`, `automatizacion_ejemplo` y `diseno_link` solo
-# aparecen según respuestas anteriores) — es una cuenta aproximada.
+# Las 35 columnas que son una respuesta del formulario actual, en el orden en
+# que se preguntan.
 CAMPOS_FORMULARIO = [campo for _, campos in BLOQUES for campo in campos]
+
+# Preguntas de la versión anterior del formulario (41 preguntas) que el actual
+# ya no hace. Las columnas se conservan: las postulaciones viejas siguen siendo
+# consultables (y el score las usa), pero no cuentan para el embudo ni para la
+# completitud. Salen en `to_dict(include_respuestas=True)`.
+CAMPOS_LEGACY = [
+    'ia_construido', 'ia_uso', 'automatizaciones', 'diseno', 'diseno_link',
+    'instrucciones', 'monitor', 'martes',
+]
 
 # Los 4 excluyentes del bloque Requisitos: si la respuesta NO es la que se
 # espera acá, el formulario cortó la postulación en el acto (`ko`). Se usa para
@@ -99,7 +107,11 @@ class AssistantApplication(db.Model):
     # --- Bloque 6 · Herramientas ---
     sheets = db.Column(db.String(120), nullable=True)
     ia_nivel = db.Column(db.String(120), nullable=True)
-    ia_avanzado = db.Column(db.String(300), nullable=True)
+    # Multi-select: el endpoint público guarda las opciones marcadas unidas con
+    # " | " (cada opción es una frase larga, por eso Text y no String(300)).
+    ia_avanzado = db.Column(db.Text, nullable=True)
+    # ia_construido, ia_uso, automatizaciones, diseno, diseno_link, instrucciones,
+    # monitor y martes: ya no se preguntan (ver CAMPOS_LEGACY).
     ia_construido = db.Column(db.Text, nullable=True)
     ia_uso = db.Column(db.Text, nullable=True)
     meta = db.Column(db.String(200), nullable=True)
@@ -111,18 +123,21 @@ class AssistantApplication(db.Model):
     diseno = db.Column(db.String(300), nullable=True)
     diseno_link = db.Column(db.String(500), nullable=True)
 
-    # --- Bloque 7 · Organización y escritura ---
+    # --- Bloque 7 · Criterio ---
+    aporte = db.Column(db.Text, nullable=True)
+
+    # --- Bloque 8 · Organización y escritura ---
     # Ojo con el nombre: es la pregunta "¿cómo manejás tus pendientes?", NO
     # tiene nada que ver con la pestaña "Pendientes" del panel.
     pendientes = db.Column(db.String(200), nullable=True)
     instrucciones = db.Column(db.Text, nullable=True)
 
-    # --- Bloque 8 · Cómo resolvés ---
+    # --- Bloque 9 · Cómo resolvés ---
     retraso = db.Column(db.Text, nullable=True)
     monitor = db.Column(db.String(300), nullable=True)
     martes = db.Column(db.Text, nullable=True)
 
-    # --- Bloque 9 · Video y CV ---
+    # --- Bloque 10 · Video y CV ---
     video = db.Column(db.String(500), nullable=True)
     video_verificado = db.Column(db.String(60), nullable=True)
     cv = db.Column(db.String(500), nullable=True)
@@ -238,7 +253,7 @@ class AssistantApplication(db.Model):
             "cv": self.cv,
         }
         if include_respuestas:
-            for campo in CAMPOS_FORMULARIO:
+            for campo in CAMPOS_FORMULARIO + CAMPOS_LEGACY:
                 data.setdefault(campo, getattr(self, campo))
         return data
 
