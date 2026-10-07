@@ -1,20 +1,22 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     Inbox, Clock, CheckCircle2, XCircle, Target, Trash2, MessageCircle,
     ChevronRight, AlertTriangle, Trophy, Star, Zap, Globe,
 } from 'lucide-react';
 import api from '../../../../services/api';
+import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import HiringCandidateModal from './HiringCandidateModal';
 import {
     escalaDe, nivelDe, techoIA, BANDERA, soloDigitos, MODALIDAD,
 } from '../lib/escalas';
 
 // Sub-filtros por grupo. El `id` es directamente el valor de `filtro` que
-// entiende GET /assistant-applications.
+// entiende GET /assistant-applications. En Pendientes no hay segunda barra:
+// «Sin analizar» es la vista por defecto e «Incompletas» es un toggle más en la
+// barra del título (junto a Híbridos/Online) — ver `INCOMPLETAS`.
 const SUBFILTROS = {
     pendientes: [
         { id: 'sin_analizar', label: 'Sin analizar', icon: Clock, color: '#D9A441' },
-        { id: 'incompletas', label: 'Incompletas', icon: AlertTriangle, color: '#E85C4A' },
     ],
     analizados: [
         { id: 'seleccionadas', label: 'Seleccionadas', icon: CheckCircle2, color: '#2FBF8F' },
@@ -37,6 +39,32 @@ const MODALIDADES = [
     { id: 'hibrido', label: 'Híbridos', icon: Zap },
     { id: 'online', label: 'Online', icon: Globe },
 ];
+
+// Las que abandonaron el formulario a mitad de camino. Apagado se ve «sin
+// analizar»; respeta la modalidad elegida (y su contador también).
+const INCOMPLETAS = { id: 'incompletas', label: 'Incompletas', icon: AlertTriangle, color: '#E85C4A' };
+
+/** Pastilla de una barra de filtros: icono + etiqueta + contador, con el
+ * gradiente azul cuando está activa. */
+const Pastilla = ({ activo, onClick, icon: Icon, iconColor, label, n }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={activo}
+        className={`flex h-11 flex-none items-center gap-2.5 whitespace-nowrap rounded-[14px] px-4 text-[13.5px] font-bold transition-all ${
+            activo ? 'text-white' : 'text-white/60 hover:bg-[#5B7CFF]/10 hover:text-white'
+        }`}
+        style={activo ? { background: 'linear-gradient(100deg,#1323C6,#5B7CFF)', boxShadow: '0 8px 20px rgba(19,35,198,.42)' } : undefined}
+    >
+        <Icon size={16} style={iconColor ? { color: activo ? '#fff' : iconColor } : undefined} />
+        <span>{label}</span>
+        <span className="tabular-nums" style={{ color: activo ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.38)' }}>
+            {n}
+        </span>
+    </button>
+);
+
+const BARRA = 'inline-flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5';
 
 export const VEREDICTO = {
     seleccionada: { label: 'Seleccionada', fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
@@ -93,12 +121,14 @@ const AVATARES = [
     'linear-gradient(135deg,#3D5AE0,#7A46D8)',
 ];
 
-const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
+// `titulo` es el <h1> de la vista: lo pinta el inbox para que, en Pendientes, los
+// toggles de modalidad e Incompletas queden en la MISMA línea que el título.
+const HiringInbox = ({ grupo = 'pendientes', query = '', titulo, onConteos }) => {
     const subfiltros = SUBFILTROS[grupo] || [];
     const [sub, setSub] = useState(subfiltros[0]?.id || 'todas');
-    // El toggle Híbridos/Online solo aparece en Pendientes (ver SUBFILTROS de
-    // arriba): en Analizados/Finalistas ese lugar lo ocupan sus propios
-    // sub-filtros de estado.
+    // El toggle Híbridos/Online (con Incompletas al lado) solo aparece en
+    // Pendientes, en la barra del título: en Analizados/Finalistas se ven sus
+    // propios sub-filtros de estado debajo de las tarjetas.
     const [modalidad, setModalidad] = useState(null);
     const [postulaciones, setPostulaciones] = useState([]);
     const [conteos, setConteos] = useState({});
@@ -154,8 +184,41 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
     const analizadas = (conteos.seleccionadas || 0) + (conteos.en_reserva || 0)
         + (conteos.testeo || 0) + (conteos.descartadas || 0) + (conteos.bajas || 0);
 
+    const enPendientes = grupo === 'pendientes';
+
     return (
         <div className="flex flex-col gap-6">
+            {(titulo || enPendientes) && (
+                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                    {titulo && (
+                        <h1 className="text-[clamp(26px,3.4vw,38px)] font-black leading-none tracking-tight">{titulo}</h1>
+                    )}
+                    {enPendientes && (
+                        <div className={BARRA}>
+                            {MODALIDADES.map((m) => (
+                                <Pastilla
+                                    key={m.id}
+                                    activo={modalidad === m.id}
+                                    onClick={() => setModalidad(modalidad === m.id ? null : m.id)}
+                                    icon={m.icon}
+                                    label={m.label}
+                                    n={conteos[m.id] ?? 0}
+                                />
+                            ))}
+                            <span aria-hidden="true" className="my-2 w-px flex-none bg-white/[.12]" />
+                            <Pastilla
+                                activo={sub === INCOMPLETAS.id}
+                                onClick={() => setSub(sub === INCOMPLETAS.id ? 'sin_analizar' : INCOMPLETAS.id)}
+                                icon={INCOMPLETAS.icon}
+                                iconColor={INCOMPLETAS.color}
+                                label={INCOMPLETAS.label}
+                                n={conteos[INCOMPLETAS.id] ?? 0}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
                 <MetricCard icon={Inbox} n={total} label="Postulaciones" />
                 <MetricCard icon={Clock} n={conteos.sin_analizar ?? 0} label="Sin analizar" color="#D9A441" />
@@ -170,53 +233,19 @@ const HiringInbox = ({ grupo = 'pendientes', query = '', onConteos }) => {
                 <MetricCard icon={Target} n={conteos.con_video ?? 0} label="Con video verificado" color="#2FBF8F" bg="#071A24" bd="#10413D" />
             </div>
 
-            {grupo === 'pendientes' && !query && (
-                <div className="inline-flex max-w-full items-stretch gap-1 self-end overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5">
-                    {MODALIDADES.map((m) => {
-                        const activo = modalidad === m.id;
-                        return (
-                            <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => setModalidad(activo ? null : m.id)}
-                                className={`flex h-11 flex-none items-center gap-2.5 whitespace-nowrap rounded-[14px] px-4 text-[13.5px] font-bold transition-all ${
-                                    activo ? 'text-white' : 'text-white/60 hover:bg-[#5B7CFF]/10 hover:text-white'
-                                }`}
-                                style={activo ? { background: 'linear-gradient(100deg,#1323C6,#5B7CFF)', boxShadow: '0 8px 20px rgba(19,35,198,.42)' } : undefined}
-                            >
-                                <m.icon size={16} />
-                                <span>{m.label}</span>
-                                <span className="tabular-nums" style={{ color: activo ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.38)' }}>
-                                    {conteos[m.id] ?? 0}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
-            {subfiltros.length > 0 && !query && (
-                <div className="inline-flex max-w-full items-stretch gap-1 self-start overflow-x-auto rounded-[18px] border border-white/[.12] bg-white/[.045] p-1.5">
-                    {subfiltros.map((f) => {
-                        const activo = sub === f.id;
-                        return (
-                            <button
-                                key={f.id}
-                                type="button"
-                                onClick={() => setSub(f.id)}
-                                className={`flex h-11 flex-none items-center gap-2.5 whitespace-nowrap rounded-[14px] px-4 text-[13.5px] font-bold transition-all ${
-                                    activo ? 'text-white' : 'text-white/60 hover:bg-[#5B7CFF]/10 hover:text-white'
-                                }`}
-                                style={activo ? { background: 'linear-gradient(100deg,#1323C6,#5B7CFF)', boxShadow: '0 8px 20px rgba(19,35,198,.42)' } : undefined}
-                            >
-                                <f.icon size={16} style={{ color: activo ? '#fff' : f.color }} />
-                                <span>{f.label}</span>
-                                <span className="tabular-nums" style={{ color: activo ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.38)' }}>
-                                    {conteos[f.id] ?? 0}
-                                </span>
-                            </button>
-                        );
-                    })}
+            {!enPendientes && subfiltros.length > 0 && !query && (
+                <div className={`${BARRA} self-start`}>
+                    {subfiltros.map((f) => (
+                        <Pastilla
+                            key={f.id}
+                            activo={sub === f.id}
+                            onClick={() => setSub(f.id)}
+                            icon={f.icon}
+                            iconColor={f.color}
+                            label={f.label}
+                            n={conteos[f.id] ?? 0}
+                        />
+                    ))}
                 </div>
             )}
 
