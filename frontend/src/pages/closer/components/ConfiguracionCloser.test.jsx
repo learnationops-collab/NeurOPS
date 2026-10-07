@@ -23,6 +23,6 @@ describe('Configuración del closer', () => {
         render(<ConfiguracionCloser />);
 
         expect(await screen.findByText(/Conectado/)).toBeTruthy();
-        expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+        expect(screen.getByText('Ana (principal)')).toBeTruthy();  // el calendario de destino
     });
 });

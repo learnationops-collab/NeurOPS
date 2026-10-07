@@ -199,3 +199,15 @@ class _HttpError(Exception):
 def test_evento_cancelado_solo_si_google_lo_confirma(app, closer, monkeypatch, servicio, cancelado):
     monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda user_id: servicio))
     assert GoogleService.evento_cancelado(closer.id, 'evt1') is cancelado
+
+
+def test_desde_agendamiento_vuelve_a_su_configuracion(client, make_user, auth_headers):
+    h = auth_headers(make_user(role='director_comercial'))
+    r = client.get('/api/google/login?volver=agendamiento', headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == '/agendas-v2?config=integraciones&google_connected=cancelado'
+    # La próxima conexión sin ?volver vuelve a la de siempre.
+    state = _login(client, h)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == '/closer/settings?google_connected=cancelado'

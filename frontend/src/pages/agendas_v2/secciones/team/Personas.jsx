@@ -15,6 +15,8 @@ import { horarioLaV } from './cobertura';
 import { CampoNombre, Compo, HUMO_PERSONA, METAL, SemanaMini, opcionesRol } from './comun';
 import { abrirHorario } from './Horario';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { SIMULAN_CLOSERS, simularParaConfigurar } from '../conf/TabEquipo';
 
 // El Top es solo una etiqueta del equipo: no cambia el reparto (eso lo decide cada estrategia).
 function Nivel({ p, onChange }) {
@@ -67,7 +69,7 @@ function rolDeUsuario(d, u) {
     return r ? r.id : 'setter';
 }
 
-function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, sinWhatsapp }) {
+function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, sinWhatsapp, simularId }) {
     const { d } = useDatos();
     const { yo } = usePermisos();
     const hs = horasSemana(p), closer = esCloser(d, p);
@@ -105,6 +107,11 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
                         {sinCuenta && <span className="pc-vos" title="Su email no coincide con ningún closer activo de la app">Sin usuario</span>}
                         {closer && sinCalendar && <span className="pc-vos" title="No recibe agendas hasta que conecte su Google Calendar en NeurOPS (su menú › Configuración)">Sin Calendar</span>}
                         {closer && sinWhatsapp && <span className="pc-vos" title="No recibe agendas hasta que confirme su WhatsApp en NeurOPS (su menú › Configuración)">Sin WhatsApp</span>}
+                        {closer && (sinCalendar || sinWhatsapp) && simularId && (
+                            <button type="button" className="pc-link" title={'Entrar como ' + p.nombre + ' a su Configuración'} onClick={() => simularParaConfigurar(simularId)}>
+                                <Icono n="mascara" s={12} />Simular para configurar
+                            </button>
+                        )}
                         {closer
                             ? <><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></>
                             : <span>No toma llamadas</span>}
@@ -155,6 +162,9 @@ export default function Personas() {
     const enTeam = conEmail(ps);
     const disponibles = (usuarios || []).filter(u => u.email && !enTeam.has(u.email.toLowerCase()));
     const cuentas = new Map((usuarios || []).map(u => [(u.email || '').toLowerCase(), u]));
+    const { user } = useAuth();
+    const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
+    const simula = SIMULAN_CLOSERS.includes(rolReal);
 
     const sumarUsuarios = (us) => {
         let st = almacen.getState().d, orden0 = maxOrden(st, 'personas');
@@ -197,7 +207,9 @@ export default function Personas() {
                         <Persona key={p.id} p={p} ordenable={orden} borrando={borrando === p.id} setBorrando={setBorrando}
                             sinCuenta={reales && usuarios !== null && !cuentas.has((p.email || '').toLowerCase())}
                             sinCalendar={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).calendar}
-                            sinWhatsapp={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).whatsapp} />
+                            sinWhatsapp={reales && cuentas.has((p.email || '').toLowerCase()) && !cuentas.get((p.email || '').toLowerCase()).whatsapp}
+                            simularId={simula && cuentas.has((p.email || '').toLowerCase()) && cuentas.get((p.email || '').toLowerCase()).id !== (user && user.id)
+                                ? cuentas.get((p.email || '').toLowerCase()).id : null} />
                     ))}
                 </div>
             </div>

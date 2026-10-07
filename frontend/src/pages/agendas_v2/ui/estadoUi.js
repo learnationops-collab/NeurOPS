@@ -18,6 +18,7 @@ let estado = {
     ev: null,               // {id, tab:'config'|'flujo'} evento abierto
     team: { tab: 'personas', horario: null },  // horario: id de la persona con el modal de horario abierto
     funnel: null,           // modal del funnel: {id} para editarlo, {} para crear uno
+    conf: null,             // Configuración abierta: {tab}
     prueba: null,           // {evento?, form?, persona?} pantalla del lead a pantalla completa
     crear: false,           // menú de crear rápido
     menu: null,             // menú del perfil: 'main'|'rol'|'persona'

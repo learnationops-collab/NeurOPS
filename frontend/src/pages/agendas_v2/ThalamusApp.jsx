@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Settings, Users, VenetianMask } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { SECCIONES } from './core/catalogos';
@@ -20,6 +20,9 @@ import Eventos from './secciones/eventos/Eventos';
 import Stats from './secciones/stats/Stats';
 import ModalFunnel from './secciones/eventos/ModalFunnel';
 import CrearRapido from './secciones/conf/CrearRapido';
+import Configuracion, { TABS as TABS_CONF } from './secciones/conf/Configuracion';
+import { SIMULAN_CLOSERS, simularParaConfigurar } from './secciones/conf/TabEquipo';
+import api from '../../services/api';
 import PruebaLead from './reserva/PruebaLead';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
@@ -42,9 +45,20 @@ function Dock() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const secciones = SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || CalendarDays }));
+    const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     const grupos = [
+        [{ id: 'conf', label: 'Configuración', Icono: Settings, onClick: () => ui.set({ conf: { tab: 'datos' } }) }],
         opcionCambiarDeArea(user, 'agendamiento', navigate),
         opcionesDeRol(user, (m) => toast(m, 'error')),
+        // Entra como el closer directo a su Configuración (Calendar, WhatsApp y disponibilidad).
+        SIMULAN_CLOSERS.includes(rolReal) ? [{
+            id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
+            panel: {
+                titulo: 'Simular a un closer', vacio: 'No hay closers activos.',
+                cargar: async () => ((await api.get('/auth/impersonate/closers')).data?.closers || [])
+                    .map(c => ({ id: c.id, label: c.username, onClick: () => simularParaConfigurar(c.id) })),
+            },
+        }] : [],
         [{ id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
             onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } }],
     ];
@@ -151,8 +165,22 @@ function usePerfilDeLaSesion() {
     }, [cargado, perfil, user]);
 }
 
+// ?config=<pestaña> abre Configuración (es a donde vuelve Google después de conectar el calendario).
+function useConfigDeLaUrl() {
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const t = params.get('config');
+        if (!t) return;
+        params.delete('config');
+        const resto = params.toString();
+        window.history.replaceState({}, document.title, window.location.pathname + (resto ? '?' + resto : ''));
+        ui.set({ conf: { tab: TABS_CONF.some(x => x[0] === t) ? t : 'datos' } });
+    }, []);
+}
+
 export default function ThalamusApp() {
     useIniciarAlmacen();
+    useConfigDeLaUrl();
     usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();
@@ -174,6 +202,7 @@ export default function ThalamusApp() {
                 <Vista />
             </div>
             {estado.funnel && <ModalFunnel estado={estado.funnel} />}
+            {estado.conf && <Configuracion />}
             {estado.crear && <CrearRapido />}
             {estado.prueba && <PruebaLead />}
             <Toasts />

@@ -22,7 +22,9 @@ def _volver(resultado):
     """A la pantalla desde donde se conecta, según el rol activo. Mismo dominio que el backend salvo
     en local, donde FRONTEND_URL apunta al servidor de Vite."""
     base = os.environ.get('FRONTEND_URL', '').rstrip('/')
-    if current_user.is_authenticated and current_user.role == 'closer':
+    if session.pop('google_volver', None) == 'agendamiento':
+        destino = '/agendas-v2?config=integraciones&'
+    elif current_user.is_authenticated and current_user.role == 'closer':
         destino = '/closer/deck?vista=configuracion&'
     elif current_user.is_authenticated and current_user.role == 'admin':
         destino = '/admin/settings?'
@@ -44,6 +46,11 @@ def login():
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)  # es conectar el calendario, no entrar con Google
+    # ?volver=agendamiento: se conecta desde la Configuración de Agendamiento y vuelve ahí.
+    if request.args.get('volver') == 'agendamiento':
+        session['google_volver'] = 'agendamiento'
+    else:
+        session.pop('google_volver', None)
     return jsonify({'auth_url': auth_url})
 
 
