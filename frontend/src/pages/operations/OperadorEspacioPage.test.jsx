@@ -102,12 +102,13 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
     });
 
-    it('el menú del avatar ofrece pasar a los otros roles de la cuenta', () => {
+    it('el menú del avatar ofrece cambiar a los otros roles de la cuenta', async () => {
         montar('/ops/dashboard');
 
         fireEvent.click(screen.getByRole('button', { name: /Mario/ }));
 
-        expect(screen.getByRole('menuitem', { name: /Pasar a Closer/ })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('menuitem', { name: /Cambiar de rol/ }));
+        expect(await screen.findByRole('menuitem', { name: /Closer/ })).toBeInTheDocument();
     });
 
     it('las rutas viejas mandan al operador a su sección del espacio', () => {

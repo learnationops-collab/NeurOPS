@@ -1,14 +1,18 @@
 // Inicio de sesión al estilo del de Windows, con la marca Learnation. Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
-//   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra.
+//   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra (Eleccion).
+// Después va a destinoDeEntrada: si el rol tiene más de un área, a /inicio para elegirla (o directo a su
+// área por defecto).
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { ArrowRight, BarChart3, Briefcase, Eye, EyeOff, Filter, Loader2, Mail, Megaphone, MessageCircle, PhoneCall, Settings2, User, UserPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { roleLandingPath } from '../../utils/roleLanding';
+import { destinoDeEntrada } from '../../utils/areas';
 import { cambiarDeRol, cambiarDeRolEnLaCuenta, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
+import { Isotipo } from '../comercial/components/Shared';
+import Eleccion from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
 
@@ -74,8 +78,8 @@ function Entrar({ onEntrar, errorInicial }) {
 
     return (
         <div className="lg-panel">
-            <Avatar texto={iniciales(username)} />
-            <h1 className="lg-titulo">LEARNATION<span> WORKERS</span></h1>
+            <span className="lg-logo"><Isotipo idGrad="lnGradLogin" /></span>
+            <h1 className="lg-titulo">LEARNATION<span> ACQUISITIONS</span></h1>
             <form className="lg-form" onSubmit={conClave}>
                 <label className="sr-only" htmlFor="lg-usuario">Usuario o email</label>
                 <input id="lg-usuario" ref={ref} className="lg-input" autoComplete="username" required
@@ -142,6 +146,11 @@ function PedirEmail({ user, onListo }) {
     );
 }
 
+const ICONO_DE_ROL = {
+    admin: Settings2, director_comercial: BarChart3, director_marketing: Megaphone, closer: PhoneCall,
+    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
+};
+
 function ElegirRol({ user, onElegido }) {
     const [eligiendo, setEligiendo] = useState(null);
     const [error, setError] = useState(null);
@@ -162,21 +171,16 @@ function ElegirRol({ user, onElegido }) {
     };
 
     return (
-        <div className="lg-panel">
-            <Avatar texto={iniciales(user.username)} />
-            <h2 className="lg-hola">Hola, {user.username}</h2>
-            <p className="lg-texto">¿Con qué rol entrás? Después podés cambiar desde tu menú.</p>
-            <div className="lg-roles" role="group" aria-label="Roles">
-                {opciones.map((o) => (
-                    <button key={o.clave} type="button" className="lg-rol" disabled={!!eligiendo} onClick={() => elegir(o)}>
-                        <span className="lg-rol-ini">{iniciales(rotuloDeRol(o.rol))}</span>
-                        <span className="lg-rol-txt"><b>{rotuloDeRol(o.rol)}</b>{o.detalle && <em>{o.detalle}</em>}</span>
-                        {eligiendo === o.clave ? <Loader2 size={16} className="lg-gira" /> : <ArrowRight size={16} />}
-                    </button>
-                ))}
-            </div>
-            {error && <p className="lg-error" role="alert">{error}</p>}
-        </div>
+        <Eleccion
+            nombre={user.username}
+            pregunta="Seleccioná tu rol. Después podés cambiarlo desde tu menú."
+            eligiendo={eligiendo}
+            error={error}
+            opciones={opciones.map((o) => ({
+                clave: o.clave, titulo: rotuloDeRol(o.rol), detalle: o.detalle, Icono: ICONO_DE_ROL[o.rol] || User,
+                onElegir: () => elegir(o),
+            }))}
+        />
     );
 }
 
@@ -195,7 +199,7 @@ export default function LoginPage() {
     const seguir = (u) => {
         setUser(u);
         if (tieneVariosRoles(u)) setPaso('rol');
-        else navigate(roleLandingPath(u.role));
+        else navigate(destinoDeEntrada(u));
     };
     const alEntrar = (u) => {
         if (!u.email) { setUser(u); setPaso('email'); } else seguir(u);
@@ -212,15 +216,16 @@ export default function LoginPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    if (paso === 'rol' && user) return <ElegirRol user={user} onElegido={(u) => navigate(destinoDeEntrada(u))} />;
+
     return (
         <div className="lg lg--abierto">
             <div className="lg-fondo" aria-hidden="true"><i /><i /><i /></div>
             <main className="lg-centro">
                     {paso === 'entrar' && (entrandoGoogle
-                        ? <div className="lg-panel"><Avatar /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
+                        ? <div className="lg-panel"><span className="lg-logo"><Isotipo idGrad="lnGradLogin" /></span><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>
                         : <Entrar onEntrar={alEntrar} errorInicial={errorGoogle} />)}
                     {paso === 'email' && user && <PedirEmail user={user} onListo={seguir} />}
-                    {paso === 'rol' && user && <ElegirRol user={user} onElegido={(u) => navigate(roleLandingPath(u.role))} />}
             </main>
             <DebugConsole />
         </div>

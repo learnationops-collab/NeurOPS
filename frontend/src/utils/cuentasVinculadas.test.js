@@ -18,7 +18,9 @@ describe('cuentas vinculadas', () => {
 
     it('ofrece solo las otras cuentas de la persona', () => {
         expect(otrasCuentas(marlon).map((c) => c.id)).toEqual([2]);
-        expect(opcionesDeRol(marlon).map((o) => o.label)).toEqual(['Pasar a Closer']);
+        const [cambiar] = opcionesDeRol(marlon);
+        expect(cambiar.label).toBe('Cambiar de rol');
+        expect(cambiar.panel.cargar().map((o) => o.label)).toEqual(['Closer · marlon_closer']);
     });
 
     it('no ofrece nada sin vínculos ni mientras se simula a otro usuario', () => {
@@ -66,7 +68,7 @@ describe('cuentas vinculadas', () => {
 
         it('ofrece los otros roles de la misma cuenta', () => {
             expect(otrosRoles(unico)).toEqual(['closer']);
-            expect(opcionesDeRol(unico).map((o) => o.label)).toEqual(['Pasar a Closer']);
+            expect(opcionesDeRol(unico)[0].panel.cargar().map((o) => o.label)).toEqual(['Closer']);
         });
 
         it('con un solo rol, o simulando a otro, no ofrece nada', () => {

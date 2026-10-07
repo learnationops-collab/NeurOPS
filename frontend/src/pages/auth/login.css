@@ -105,3 +105,44 @@
     .lg-fondo i, .lg-panel { animation: none; }
     .lg-fondo { transition: none; }
 }
+
+/* Elección de rol y de área (Eleccion.jsx), con el formato de Learnation Marketing: hora arriba a la
+   izquierda, isotipo, saludo grande y tarjetas de vidrio; la primera, en rosa. */
+.el .lg-fondo { filter: blur(48px) saturate(1.25); }
+.el-reloj { position: absolute; z-index: 2; top: 28px; left: 32px; display: grid; gap: 2px; }
+.el-reloj b { font-family: var(--font-header); font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.el-reloj span { font-size: 11px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--lg-suave); }
+.el-centro { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 96px 16px 48px; text-align: center; animation: lg-sube 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.el-logo { position: relative; display: grid; place-items: center; margin-bottom: 6px; }
+.el-logo svg { width: 76px; height: 76px; filter: drop-shadow(0 14px 30px rgba(255, 63, 164, 0.45)); }
+.el-logo::after { content: ''; position: absolute; inset: -14px; border-radius: 50%; border: 1px dashed rgba(255, 63, 164, 0.45); }
+.el-hola { margin: 0; font-family: var(--font-header); font-size: clamp(36px, 6vw, 64px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; }
+.el-pregunta { margin: -6px 0 6px; font-size: 15px; color: var(--lg-suave); }
+.el-tarjetas { width: min(880px, 100%); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; margin-top: 18px; }
+.el-tarjeta { position: relative; min-height: 170px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr; gap: 12px; padding: 18px;
+    border-radius: 22px; border: 1px solid var(--lg-borde); background: var(--lg-vidrio); backdrop-filter: blur(18px); color: var(--lg-texto); text-align: left; cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s, background 0.2s; }
+.el-tarjeta:hover:not(:disabled), .el-tarjeta:focus-visible { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.45); background: rgba(255, 255, 255, 0.13); outline: none; }
+.el-tarjeta:disabled { cursor: default; }
+.el-tarjeta--primera { background: linear-gradient(150deg, rgba(255, 63, 164, 0.42), rgba(255, 63, 164, 0.12)); border-color: rgba(255, 63, 164, 0.55); }
+.el-tarjeta--primera:hover:not(:disabled) { background: linear-gradient(150deg, rgba(255, 63, 164, 0.55), rgba(255, 63, 164, 0.18)); }
+.el-ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.14); }
+.el-tarjeta--primera .el-ico { background: var(--lg-rosa); box-shadow: 0 10px 24px -8px var(--lg-rosa); }
+.el-num { justify-self: end; font-size: 11px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--lg-suave); }
+.el-txt { grid-column: 1 / -1; align-self: end; display: grid; gap: 2px; }
+.el-txt b { font-family: var(--font-header); font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.el-txt em { font-style: normal; font-size: 13px; color: var(--lg-suave); }
+.el-tarjeta:disabled .el-txt, .el-tarjeta:disabled .el-ico { opacity: 0.55; }
+.el-cargando { position: absolute; right: 18px; bottom: 18px; }
+.el-defecto { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; color: var(--lg-suave); cursor: pointer; }
+.el-defecto input { position: absolute; opacity: 0; pointer-events: none; }
+.el-switch { position: relative; width: 40px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); border: 1px solid var(--lg-borde); transition: background 0.2s; }
+.el-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.el-defecto input:checked + .el-switch { background: var(--lg-rosa); border-color: var(--lg-rosa); }
+.el-defecto input:checked + .el-switch::after { transform: translateX(16px); }
+.el-defecto input:focus-visible + .el-switch { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5); }
+@media (max-width: 560px) { .el-reloj { top: 18px; left: 18px; } .el-tarjeta { min-height: 130px; } }
+
+/* Isotipo en el panel de entrar. */
+.lg-logo svg { width: 84px; height: 84px; filter: drop-shadow(0 14px 30px rgba(255, 63, 164, 0.45)); }

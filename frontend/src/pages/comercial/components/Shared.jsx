@@ -74,8 +74,8 @@ export const Isotipo = ({ idGrad = 'lnGrad' }) => (
     <svg width="36" height="36" viewBox="0 0 100 100" role="img" aria-label="Learnation">
         <defs>
             <linearGradient id={idGrad} x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="var(--brand-secondary)" />
-                <stop offset="100%" stopColor="var(--brand-secondary-light)" />
+                <stop offset="0%" stopColor="var(--brand-secondary, #FF3FA4)" />
+                <stop offset="100%" stopColor="var(--brand-secondary-light, #FF6AD5)" />
             </linearGradient>
         </defs>
         <rect x="0" y="0" width="100" height="100" rx="26" fill={`url(#${idGrad})`} />
