@@ -103,6 +103,8 @@ export function normalFunnel(id, d) {
         // Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
         // queda a su nombre. No lleva orígenes a mano.
         setting: tipoFunnel(d) === 'setting',
+        // Los setters que trabajan este funnel (ids de usuario). Vacío: todos los setters activos.
+        setters: [...new Set((Array.isArray(d.setters) ? d.setters : []).slice(0, 200).map(Number).filter(Number.isInteger))].sort((a, b) => a - b),
     };
 }
 

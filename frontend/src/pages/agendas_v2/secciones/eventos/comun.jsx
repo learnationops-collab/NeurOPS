@@ -32,16 +32,22 @@ export function useSetters() {
     }, []);
     return lista;
 }
+// Los setters de un funnel: los elegidos, o todos los activos si no eligió ninguno. null mientras carga.
+export function settersDe(f, sts) {
+    if (!sts) return null;
+    const el = f && f.setters && f.setters.length ? new Set(f.setters) : null;
+    return el ? sts.filter(s => el.has(Number(s.id))) : sts;
+}
 export const urlSetter = (d, e, s) => window.location.origin + '/agendas-v2' + linkEvento(d, e) + '?o=' + slugify(s.nombre);
 
 /**
- * «Links de setters» de un evento de un funnel de setting: uno por setter, para copiar y mandar.
+ * «Links de setters» de un evento de un funnel de setting: uno por setter del funnel, para copiar y mandar.
  * La agenda que entra por ese link queda a nombre del setter.
  */
 export function LinksSetters({ d, e, compacto = false }) {
-    const sts = useSetters();
+    const sts = settersDe(buscar(d, 'funnels', e.funnel), useSetters());
     const lista = sts === null ? <span className="t-sm mut">Cargando setters…</span>
-        : !sts.length ? <span className="t-sm mut">No hay setters activos en la app.</span>
+        : !sts.length ? <span className="t-sm mut">Este funnel no tiene setters activos.</span>
             : sts.map(s => (
                 <button key={s.id} type="button" className="ls-b" data-nav="" title={'Copiar ' + urlSetter(d, e, s)}
                     aria-label={'Copiar link de ' + s.nombre} onClick={() => copiarTexto(urlSetter(d, e, s), 'Link de ' + s.nombre + ' copiado')}>

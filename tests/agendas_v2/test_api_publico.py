@@ -589,6 +589,18 @@ def test_un_link_de_setter_que_no_existe_no_atribuye(client, setting, google):
     assert appt.setter_id is None and appt.origin == 'setting'
 
 
+def test_un_setter_que_no_es_del_funnel_no_atribuye_ni_ve_el_link(client, setting, cuentas, google, auth_headers, db):
+    # El funnel lo trabajan solo otros setters: juan queda afuera.
+    servicio.guardar_doc('funnels', 'fs', {'setters': [cuentas['juan'].id + 1000]}, parcial=True)
+    assert _reservar_setting(client, 'juan').status_code == 201
+    assert Appointment.query.one().setter_id is None
+    r = client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['juan']))
+    assert r.get_json()['links'] == []
+    # Elegido: vuelve a tener su link.
+    servicio.guardar_doc('funnels', 'fs', {'setters': [cuentas['juan'].id]}, parcial=True)
+    assert len(client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['juan'])).get_json()['links']) == 1
+
+
 # --- Tipo de funnel: la «Fuente» que leen el panel del workshop, el mazo y la ficha ---------------
 
 

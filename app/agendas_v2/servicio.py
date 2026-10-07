@@ -533,6 +533,13 @@ def setters_activos():
     return User.query.filter(User.role.in_([ROLE_SETTER]), User.is_active.is_(True)).order_by(User.username).all()
 
 
+def setters_del_funnel(funnel, activos=None):
+    """Los setters activos que trabajan un funnel de setting: los elegidos, o todos si no eligió ninguno."""
+    activos = setters_activos() if activos is None else activos
+    elegidos = set(funnel.get('setters') or [])
+    return [u for u in activos if not elegidos or u.id in elegidos]
+
+
 def _setter_de(d, funnel, origen):
     """El usuario setter al que se le atribuye la agenda. En un funnel de setting, el del link
     (?o=<su usuario en slug>), si sigue activo. En los demás, el de un origen viejo con una persona
@@ -542,7 +549,7 @@ def _setter_de(d, funnel, origen):
     if not funnel or not origen:
         return None
     if funnel.get('setting'):
-        return next((u for u in setters_activos() if slugify(u.username) == origen), None)
+        return next((u for u in setters_del_funnel(funnel) if slugify(u.username) == origen), None)
     for o in funnel.get('origenes', []):
         if o.get('setter') and (slugify(nombre_origen(d, o)) or o['id']) == origen:
             user_id = _usuarios_de_personas(d).get(o['setter'])
@@ -552,12 +559,12 @@ def _setter_de(d, funnel, origen):
 
 def links_de_setter(user):
     """Los links de agendamiento de un setter: uno por evento publicado y activo de cada funnel de
-    setting activo. [{funnel, evento, ruta}] con la ruta relativa al sitio."""
+    setting activo en el que trabaja. [{funnel, evento, ruta}] con la ruta relativa al sitio."""
     d = colecciones()
     slug = slugify(user.username)
     links = []
     for f in d['funnels']:
-        if not (f.get('setting') and f.get('activo')):
+        if not (f.get('setting') and f.get('activo')) or (f.get('setters') and user.id not in f['setters']):
             continue
         for e in d['eventos']:
             if e.get('funnel') == f['id'] and e.get('activo') is not False and version_publicada(e):
