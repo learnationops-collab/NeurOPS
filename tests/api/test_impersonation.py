@@ -348,3 +348,74 @@ def test_simulando_a_un_closer_la_direccion_sigue_viendo_la_lista(client, auth_h
     token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
 
     assert client.get(LISTA, headers=bearer(token_a)).status_code == 200
+
+
+# --- Simular a alguien con varios roles (07/10/2026) --------------------------------------------
+#
+# Una persona con varios roles se simula con UNO: el que se elige. Antes entraba siempre con el
+# principal: al simular a Mario desde la pestaña «Hiring» de Equipo caía en su sesión de operador.
+
+@pytest.fixture()
+def multirol(make_user):
+    return make_user(role='operator', username='mario', roles_extra='closer,hiring')
+
+
+def test_sin_elegir_rol_se_simula_con_el_principal(client, auth_headers, equipo, multirol):
+    respuesta = suplantar(client, auth_headers(equipo['admin']), multirol.id, isolated=True)
+
+    assert respuesta.get_json()['user']['role'] == 'operator'
+    assert 'active_role' not in claims(respuesta.get_json()['token'])
+
+
+def test_se_simula_con_el_rol_elegido(client, auth_headers, equipo, multirol):
+    respuesta = suplantar(client, auth_headers(equipo['admin']), multirol.id, isolated=True, role='hiring')
+
+    cuerpo = respuesta.get_json()
+    assert respuesta.status_code == 200
+    assert cuerpo['user']['role'] == 'hiring'
+    assert claims(cuerpo['token'])['active_role'] == 'hiring'
+    yo = client.get('/api/auth/me', headers=bearer(cuerpo['token'])).get_json()['user']
+    assert (yo['id'], yo['role'], yo['is_impersonating']) == (multirol.id, 'hiring', True)
+
+
+def test_elegir_el_rol_principal_no_agrega_claim(client, auth_headers, equipo, multirol):
+    respuesta = suplantar(client, auth_headers(equipo['admin']), multirol.id, isolated=True, role='operator')
+
+    assert 'active_role' not in claims(respuesta.get_json()['token'])
+
+
+@pytest.mark.parametrize('rol', ['admin', 'setter', '', 7])
+def test_un_rol_que_la_persona_no_tiene_es_400(client, auth_headers, equipo, multirol, rol):
+    respuesta = suplantar(client, auth_headers(equipo['admin']), multirol.id, isolated=True, role=rol)
+
+    assert respuesta.status_code == 400
+    assert 'token' not in respuesta.get_json()
+
+
+def test_el_modo_clasico_deja_el_rol_elegido_en_la_cookie(client, equipo, multirol):
+    client.post('/api/auth/login', json={'username': 'root', 'password': 'secret123'})
+
+    assert client.post(IMPERSONAR, json={'user_id': multirol.id, 'role': 'hiring'}).status_code == 200
+
+    usuario = client.get('/api/auth/me').get_json()['user']
+    assert (usuario['id'], usuario['role'], usuario['is_impersonating']) == (multirol.id, 'hiring', True)
+
+
+def test_al_revertir_no_queda_el_rol_simulado(client, equipo, multirol):
+    client.post('/api/auth/login', json={'username': 'root', 'password': 'secret123'})
+    client.post(IMPERSONAR, json={'user_id': multirol.id, 'role': 'hiring'})
+
+    client.post(REVERTIR)
+
+    usuario = client.get('/api/auth/me').get_json()['user']
+    assert (usuario['id'], usuario['role'], usuario['is_impersonating']) == (equipo['admin'].id, 'admin', False)
+
+
+def test_la_direccion_simula_a_quien_es_closer_pero_no_principal(client, auth_headers, direccion, multirol):
+    sin_elegir = suplantar(client, auth_headers(direccion), multirol.id, isolated=True)
+    como_closer = suplantar(client, auth_headers(direccion), multirol.id, isolated=True, role='closer')
+    como_hiring = suplantar(client, auth_headers(direccion), multirol.id, isolated=True, role='hiring')
+
+    assert sin_elegir.status_code == 403  # su principal es operador
+    assert como_closer.status_code == 200
+    assert como_hiring.status_code == 403
