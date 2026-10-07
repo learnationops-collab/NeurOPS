@@ -30,7 +30,7 @@ describe('PaginaPublica con la API', () => {
     it('carga el evento publicado y pone el título', async () => {
         api.get.mockResolvedValue({ data: { evento, form, funnel: { nombre: 'Meta', slug: 'meta' } } });
         abrir('/agenda/meta/diagnostico?o=ig');
-        expect(await screen.findByRole('heading', { name: '¿Cómo te llamás?' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: '¿Cuál es tu correo?' })).toBeInTheDocument();
         expect(api.get).toHaveBeenCalledTimes(1);
         expect(api.get.mock.calls[0][0]).toBe('/agendas-v2/publico/eventos/meta/diagnostico');
         expect(document.title).toBe('Llamada de diagnóstico');

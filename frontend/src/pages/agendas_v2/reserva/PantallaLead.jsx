@@ -17,12 +17,12 @@ import { limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarR
 import { COLECCIONES, normalForm, preguntasFlujo } from '../core/normalizar';
 import { Humo, Icono } from '../ui/base';
 import PasoCalendario from './PasoCalendario';
+import PasoConocido from './PasoConocido';
 import { PasoFin, PasoListo, Respuestas } from './PasoFinal';
 import PasoPregunta, { opcionesVisibles } from './PasoPregunta';
 
 const HUMO_RV = ['var(--rv-humo-a)', 'var(--rv-humo-b)', 'var(--rv-humo-b)', 'var(--rv-humo-a)'];
 const AUTO_AVANCE = 380;
-const ESPERA_REDIR = 4000;
 const MSG_OCUPADO = 'Ese horario se acaba de ocupar. Elegí otro.';
 const MSG_FALLO = 'No pudimos agendar la llamada. Revisá tu conexión y probá de nuevo.';
 const MSG_LIMITE = 'Demasiados intentos, probá en un minuto.';
@@ -55,6 +55,9 @@ function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
         pais: p0.c, tz: ctx.tzFija || p0.tz, mes: null, dia: null, hora: null,
         error: '', errN: 0, paisAbierto: false, zonaAbierta: false, busca: '',
         fin: false, listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
+        // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
+        // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
+        buscando: '', recoN: 0, reco: null, recoPaso: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
         foco: enfocar ? 'entra' : null, focoN: enfocar ? 1 : 0,
     };
 }
@@ -69,20 +72,33 @@ function fijarTexto(p, preguntas) {
     return { ...p, resp: { ...p.resp, [q.id]: limpiarRespuesta(q, p.resp[q.id]) } };
 }
 
-function seguirDe(p, preguntas) {
-    if (p.idx >= preguntas.length || p.listo || p.fin) return p;
+// reconocer: el proveedor sabe buscar al lead que vuelve; al dejar el correo se lo busca antes de seguir.
+function seguirDe(p, preguntas, reconocer = false) {
+    if (p.idx >= preguntas.length || p.listo || p.fin || p.buscando || p.reco) return p;
     const q = preguntas[p.idx], p1 = fijarTexto(p, preguntas);
     const err = validarRespuesta(q, p1.resp[q.id] || '');
     if (err) return { ...p1, error: err, errN: p1.errN + 1 };
     const cerrado = { ...p1, error: '', paisAbierto: false, zonaAbierta: false };
+    if (reconocer && q.id === 'c-email' && p1.resp[q.id]) {
+        return { ...cerrado, buscando: p1.resp[q.id], recoN: p1.recoN + 1, guardados: false, tapados: null, siYaTiene: null };
+    }
     if (opcionDescalifica(q, p1.resp)) return conFoco({ ...cerrado, fin: true }, 'entra');
     return conFoco({ ...cerrado, idx: p1.idx + 1, busca: '' }, 'entra');
 }
 
 function atrasDe(p, preguntas) {
-    if (p.idx === 0 || p.listo || p.fin) return p;
+    if (p.listo || p.fin) return p;
+    // Desde "no es tu primera vez" se vuelve al correo.
+    if (p.reco) return conFoco({ ...p, reco: null, recoPaso: null, siYaTiene: null }, 'entra');
+    if (p.idx === 0) return p;
     const p1 = fijarTexto(p, preguntas);
-    return conFoco({ ...p1, idx: Math.min(p1.idx, preguntas.length) - 1, error: '', busca: '', paisAbierto: false, zonaAbierta: false }, 'entra');
+    let idx = Math.min(p1.idx, preguntas.length) - 1;
+    // Confirmó sus datos guardados: las preguntas de contacto se saltearon, así que se vuelve al correo.
+    if (p1.guardados && preguntas[idx] && preguntas[idx].id.startsWith('c-')) {
+        idx = Math.max(0, preguntas.findIndex(q => q.id === 'c-email'));
+        return conFoco({ ...p1, idx, guardados: false, tapados: null, siYaTiene: null, error: '', busca: '' }, 'entra');
+    }
+    return conFoco({ ...p1, idx, error: '', busca: '', paisAbierto: false, zonaAbierta: false }, 'entra');
 }
 
 // Tab no sale de la pantalla a pantalla completa.
@@ -114,6 +130,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
 
     const { preguntas } = ctx;
     const n = preguntas.length;
+    const reconocer = typeof proveedor.conocido === 'function' && !!ctx.evento;
     const idx = Math.min(s.idx, n);
     const nombre = nombreLead(s.resp, s.ejemplo);
     const enCal = idx >= n && !s.listo && !s.fin;
@@ -172,18 +189,28 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
         try {
-            proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter })
+            proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter, datosGuardados: s.guardados })
                 .catch(() => { /* no frena al lead */ });
         } catch { /* no frena al lead */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [s.fin]);
 
-    // Link público con redirección: después de agendar, lo lleva solo.
+    // El lead dejó su correo: ¿ya agendó antes? Si no (o si falla la búsqueda), sigue como siempre.
     useEffect(() => {
-        if (modo !== 'publico' || !s.listo || !ctx.redir) return undefined;
-        const t = setTimeout(() => window.location.assign(ctx.redir), ESPERA_REDIR);
-        return () => clearTimeout(t);
-    }, [modo, s.listo, ctx.redir]);
+        if (!s.buscando) return undefined;
+        const n0 = s.recoN, seguir = (p) => conFoco({ ...p, buscando: '', idx: p.idx + 1, busca: '' }, 'entra');
+        let vivo = true;
+        Promise.resolve().then(() => proveedor.conocido({ evento: ctx.evento, email: s.buscando })).then((r) => {
+            if (!vivo || !vivoRef.current) return;
+            setS(p => {
+                if (p.recoN !== n0 || !p.buscando) return p;
+                if (!r || !r.conocido || (!r.proxima && !r.completos)) return seguir(p);
+                return conFoco({ ...p, buscando: '', reco: r, recoPaso: r.proxima ? 'proxima' : 'datos' }, 'entra');
+            });
+        }, () => { if (vivo && vivoRef.current) setS(p => (p.recoN === n0 && p.buscando ? seguir(p) : p)); });
+        return () => { vivo = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [s.recoN]);
 
     // Clic afuera cierra el selector de país o de zona.
     useEffect(() => {
@@ -217,11 +244,29 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             });
             clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
-                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas) : p));
+                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas, reconocer) : p));
             }, AUTO_AVANCE);
         },
         buscar(v) { setS(p => ({ ...p, busca: v })); },
-        seguir() { setS(p => seguirDe(p, preguntas)); },
+        seguir() { setS(p => seguirDe(p, preguntas, reconocer)); },
+        // El lead que vuelve: qué hace con la sesión que ya tiene, y si sus datos guardados están bien.
+        elegirProxima(v) {
+            setS(p => {
+                if (!p.reco) return p;
+                if (p.reco.completos) return conFoco({ ...p, siYaTiene: v, recoPaso: 'datos' }, 'entra');
+                return conFoco({ ...p, siYaTiene: v, reco: null, recoPaso: null, idx: p.idx + 1 }, 'entra');
+            });
+        },
+        datosOk() {
+            setS(p => {
+                if (!p.reco) return p;
+                const i = preguntas.findIndex(q => !q.id.startsWith('c-'));
+                const resp = { ...p.resp, ...(p.reco.resp || {}) };
+                if (!resp['c-nombre'] && p.reco.datos.nombre) resp['c-nombre'] = p.reco.datos.nombre;
+                return conFoco({ ...p, resp, guardados: true, tapados: p.reco.datos, reco: null, recoPaso: null, idx: i < 0 ? n : i }, 'entra');
+            });
+        },
+        datosNo() { setS(p => (p.reco ? conFoco({ ...p, reco: null, recoPaso: null, idx: p.idx + 1 }, 'entra') : p)); },
         atras() { setS(p => atrasDe(p, preguntas)); },
         alternarPais() {
             setS(p => conFoco({ ...p, paisAbierto: !p.paisAbierto }, p.paisAbierto ? '.rv-pais' : '.rv-pais-op[aria-selected="true"]'));
@@ -250,18 +295,22 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         confirmar(hora, siYaTiene) {
             const asig = asigViva, slot = asig && asig.slots.find(x => x.t === hora);
             if (!slot) return;
-            if (prueba) { setS(p => conFoco({ ...p, listo: true, slot, asigFinal: asig }, 'entra')); return; }
+            const per = slot.p ? buscar(d, 'personas', slot.p) : null;
+            const delSlot = per ? { nombre: per.nombre, color: per.color } : null;
+            if (prueba) { setS(p => conFoco({ ...p, listo: true, slot, asigFinal: asig, consultor: delSlot }, 'entra')); return; }
             if (envio.enviando) return;
             setEnvio(x => ({ ...x, enviando: true, error: '', yaTiene: null }));
             const p = sRef.current;
             let envioP;
             try {
-                envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter, siYaTiene });
+                envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter,
+                    siYaTiene: siYaTiene || p.siYaTiene || undefined, datosGuardados: p.guardados });
             } catch (e) { envioP = Promise.reject(e); }
-            envioP.then(() => {
+            envioP.then((r) => {
                 if (!vivoRef.current) return;
+                const consultor = (r && r.reserva && r.reserva.consultor) || delSlot;
                 setEnvio(x => ({ ...x, enviando: false, error: '' }));
-                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig }, 'entra'));
+                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor }, 'entra'));
             }, (e) => {
                 if (!vivoRef.current) return;
                 if (e && e.code === 'ya_tiene' && e.agenda) {
@@ -331,7 +380,11 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} />;
     } else if (s.listo) {
         clave = 'listo';
-        paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc} />;
+        paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
+            consultor={s.consultor} tapados={s.guardados ? s.tapados : null} />;
+    } else if (s.reco) {
+        clave = 'reco-' + s.recoPaso;
+        paso = <PasoConocido ids={ids} reco={s.reco} paso={s.recoPaso} tz={s.tz} acc={acc} />;
     } else if (idx < n) {
         const q = preguntas[idx];
         clave = 'q' + idx;
@@ -364,8 +417,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             <div className="rv-control">
                 {prueba && <span className="rv-prueba"><Icono n="play" s={13} />Prueba<span className="rv-prueba-largo">&nbsp;· no se agenda nada</span></span>}
                 <div className="rv-nav">
-                    <button type="button" className="rv-navbtn" aria-label="Anterior" disabled={idx === 0 || terminado} onClick={acc.atras}><Icono n="chevron-up" s={18} /></button>
-                    <button type="button" className="rv-navbtn" aria-label="Siguiente" disabled={idx >= n || terminado} onClick={acc.seguir}><Icono n="chevron-down" s={18} /></button>
+                    <button type="button" className="rv-navbtn" aria-label="Anterior" disabled={(idx === 0 && !s.reco) || terminado} onClick={acc.atras}><Icono n="chevron-up" s={18} /></button>
+                    <button type="button" className="rv-navbtn" aria-label="Siguiente" disabled={idx >= n || terminado || !!s.reco || !!s.buscando} onClick={acc.seguir}><Icono n="chevron-down" s={18} /></button>
                     {emb && <button type="button" className="rv-salir" onClick={acc.reiniciar}><Icono n="rotar" s={16} /><span>Reiniciar</span></button>}
                     {modo === 'prueba' && onSalir && <button type="button" className="rv-salir" onClick={onSalir}><Icono n="x" s={16} /><span>Salir</span></button>}
                 </div>

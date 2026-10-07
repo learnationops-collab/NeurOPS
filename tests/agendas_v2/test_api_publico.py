@@ -58,7 +58,7 @@ def whatsapp(monkeypatch):
 @pytest.fixture(autouse=True)
 def google(monkeypatch):
     """Google Calendar simulado: guarda cada evento que se crea o se borra."""
-    llamadas = {'crear': [], 'borrar': [], 'falla': None}
+    llamadas = {'crear': [], 'borrar': [], 'falla': None, 'cancelados': set()}
 
     def crear(user_id, inicio, fin, titulo, descripcion, invitado_email=None):
         if llamadas['falla']:
@@ -79,6 +79,7 @@ def google(monkeypatch):
     monkeypatch.setattr(
         GoogleService, 'delete_event', staticmethod(lambda u, e: llamadas['borrar'].append((u, e)) or True)
     )
+    monkeypatch.setattr(GoogleService, 'evento_cancelado', staticmethod(lambda u, e: e in llamadas['cancelados']))
     return llamadas
 
 
@@ -193,11 +194,16 @@ def test_el_link_devuelve_la_version_publicada_sin_datos_del_equipo(client, arma
 
 
 def test_lo_que_no_esta_publicado_no_existe(client, armado):
-    servicio.guardar_doc('formularios', 'fo', {'nombre': 'Cambiado sin publicar'}, parcial=True)
-    assert client.get(URL + '/eventos/workshop/llamada').get_json()['form']['nombre'] == 'Calificación'
+    servicio.guardar_doc('eventos', 'ev', {'nombre': 'Cambiado sin publicar'}, parcial=True)
+    assert client.get(URL + '/eventos/workshop/llamada').get_json()['evento']['nombre'] != 'Cambiado sin publicar'
     assert client.get(URL + '/eventos/otro/llamada').status_code == 404
     servicio.guardar_doc('funnels', 'fu', {'activo': False}, parcial=True)
     assert client.get(URL + '/eventos/workshop/llamada').status_code == 404
+
+
+def test_el_formulario_editado_se_ve_sin_volver_a_publicar(client, armado):
+    servicio.guardar_doc('formularios', 'fo', {'nombre': 'Cambiado'}, parcial=True)
+    assert client.get(URL + '/eventos/workshop/llamada').get_json()['form']['nombre'] == 'Cambiado'
 
 
 def test_evento_pausado_no_esta_disponible(client, armado):
@@ -298,6 +304,17 @@ def test_si_ya_tiene_una_agenda_futura_se_le_pregunta_antes_de_tocar_nada(client
     appt = Appointment.query.one()
     assert appt.start_time == datetime(2026, 10, 5, 13) and not appt.is_rescheduled
     assert len(google['crear']) == 1 and google['borrar'] == []
+
+
+def test_una_agenda_cancelada_en_google_calendar_no_cuenta_como_proxima(client, armado, google):
+    assert _reservar(client).status_code == 201
+    google['cancelados'].add('evt1')  # el closer la canceló en su Calendar, no en NeurOPS
+    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z')
+    assert r.status_code == 201
+    vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
+    # La vieja no se toca: la cierra el closer en NeurOPS, como siempre.
+    assert vieja.result is None and not vieja.is_rescheduled and google['borrar'] == []
+    assert nueva.start_time == datetime(2026, 10, 5, 14)
 
 
 def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google):
@@ -612,3 +629,53 @@ def test_sin_whatsapp_confirmado_no_recibe_agendas(client, armado, cuentas, db, 
     db.session.commit()
     assert _reservar(client).status_code == 201
     assert Appointment.query.one().closer_id == cuentas['beto'].id  # Ana se saltea, como sin Calendar
+
+
+# --- El lead que vuelve y su consultor ------------------------------------------------------------
+
+
+def _conocido(client, email):
+    return client.post(URL + '/eventos/ev/conocido', json={'email': email})
+
+
+def test_un_email_nuevo_no_es_conocido(client, armado):
+    r = _conocido(client, 'nadie@correo.com')
+    assert r.status_code == 200 and r.get_json() == {'conocido': False}
+
+
+def test_el_lead_que_vuelve_ve_sus_datos_tapados_y_su_proxima_agenda(client, armado):
+    assert _reservar(client).status_code == 201
+    r = _conocido(client, 'LUCIA@correo.com').get_json()
+    assert r['conocido'] is True and r['completos'] is True
+    assert r['datos'] == {'nombre': 'Lucía', 'telefono': '+59 ••• 567', 'instagram': ''}
+    assert r['proxima'] == {'inicio': '2026-10-05T13:00:00.000Z'}
+    # Nada que sirva para contactarlo: ni el número entero ni el correo.
+    texto = _conocido(client, 'lucia@correo.com').get_data(as_text=True)
+    assert '71234567' not in texto and '@correo' not in texto
+
+
+def test_con_datos_guardados_no_hace_falta_escribirlos_de_nuevo(client, armado):
+    assert _reservar(client).status_code == 201
+    r = client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': {'c-email': 'lucia@correo.com', 'q1': 'a'}, 'pais': 'BO', 'tz': 'America/La_Paz',
+        'inicio': '2026-10-05T14:00:00.000Z', 'datos_guardados': True, 'si_ya_tiene': 'adicional',
+    })
+    assert r.status_code == 201
+    nueva = Appointment.query.order_by(Appointment.start_time.desc()).first()
+    assert nueva.agenda_payload['lead']['nombre'] == 'Lucía Fernández'
+    assert nueva.agenda_payload['lead']['telefono'] == '+59171234567'
+
+
+def test_sin_datos_guardados_los_obligatorios_se_piden(client, armado):
+    r = client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': {'c-email': 'lucia@correo.com', 'q1': 'a'}, 'pais': 'BO', 'tz': 'America/La_Paz',
+        'inicio': LUNES_9, 'datos_guardados': True,
+    })
+    assert r.status_code == 400 and 'c-nombre' in r.get_json()['errores']
+
+
+def test_al_agendar_el_lead_ve_el_nombre_de_su_consultor_y_nada_de_contacto(client, armado):
+    r = _reservar(client)
+    consultor = r.get_json()['reserva']['consultor']
+    assert consultor['nombre'] and consultor['color']
+    assert set(consultor) == {'nombre', 'color'} and '@equipo.com' not in r.get_data(as_text=True)

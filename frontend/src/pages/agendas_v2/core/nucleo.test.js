@@ -90,7 +90,7 @@ describe('formulario', () => {
         expect(validarRespuesta(q('opciones'), '')).toBe('Elegí una opción.');
     });
     it('los datos de contacto van primero y en orden fijo', () => {
-        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-nombre', 'c-telefono', 'c-email', 'c-instagram']);
+        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-email', 'c-nombre', 'c-telefono', 'c-instagram']);
     });
 });
 

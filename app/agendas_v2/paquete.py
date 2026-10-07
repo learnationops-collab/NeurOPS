@@ -636,7 +636,7 @@ def aplicar(d, plan, evento_id, usuario_id=None):
     """Escribe el paquete editado ENCIMA del evento, su funnel, su formulario y sus prioridades (mismos
     ids). Las prioridades nuevas se crean. Lo que el paquete no trae (publicación, colores, orden, la
     zona horaria) queda como estaba. Devuelve los ids tocados."""
-    from app.agendas_v2.servicio import _subir_version
+    from app.agendas_v2.servicio import _subir_version, republicar_form
 
     ev = buscar(d, 'eventos', evento_id)
 
@@ -650,6 +650,7 @@ def aplicar(d, plan, evento_id, usuario_id=None):
         fila.datos = {k: v for k, v in doc.items() if k != 'id'}
         fila.orden = doc.get('orden') or 0
         fila.actualizado_por_id = usuario_id
+        return doc
 
     _sumar_personas(d, plan, usuario_id)
     for g in plan['prioridades']:
@@ -661,7 +662,7 @@ def aplicar(d, plan, evento_id, usuario_id=None):
         # Lo que el paquete no trae de cada pregunta (el placeholder) queda como estaba.
         previas = {q['id']: q for q in (buscar(d, 'formularios', ev['formulario']) or {}).get('preguntas', [])}
         fo = {**fo, 'preguntas': [{**previas.get(q['id'], {}), **q} for q in fo['preguntas']]}
-        escribir('formularios', ev['formulario'], {k: fo[k] for k in ('nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin') if k in fo})
+        republicar_form(escribir('formularios', ev['formulario'], {k: fo[k] for k in ('nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin') if k in fo}))
     fu = plan['funnel']
     escribir('funnels', ev['funnel'], {k: fu[k] for k in ('nombre', 'tipo', 'setting', 'origenes')})
     nuevo = plan['evento']

@@ -37,8 +37,23 @@ def _tomar(o, ks):
 
 def config_de(e, form):
     """Lo que queda en vivo al publicar: la configuración completa del evento y una copia del formulario.
-    Así, editar un formulario no cambia los links publicados hasta volver a publicar."""
+    La copia del formulario se pone al día sola cuando se edita el formulario (con_form_al_dia)."""
     return js_json({'ev': _tomar(e, CAMPOS_EV), 'form': _tomar(form, CAMPOS_FORM) if form else None})
+
+
+def con_form_al_dia(e, form):
+    """`publicado` del evento con la copia del formulario al día y el resto como se publicó, o None si
+    no hay nada que cambiar. Editar un formulario cambia sus links en vivo sin volver a publicar."""
+    if not e or not e.get('publicado') or not form:
+        return None
+    try:
+        p = _leer(e)
+    except ValueError:
+        return None
+    if not isinstance(p, dict) or not js_truthy(p.get('ev')):
+        return None
+    nuevo = js_json({**p, 'form': _tomar(form, CAMPOS_FORM)})
+    return nuevo if nuevo != e['publicado'] else None
 
 
 def sin_publicar(e, form):

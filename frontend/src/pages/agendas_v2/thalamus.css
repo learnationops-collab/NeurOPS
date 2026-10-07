@@ -1474,3 +1474,58 @@
 /* Distribuida: porcentaje por closer. */
 .thalamus .pm-pct{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-2,inherit)}
 .thalamus .pm-pct .input{width:58px;height:28px;padding:0 6px;text-align:right}
+
+/* Pantalla final (como Thalamus): cuándo y con quién arriba, los datos del lead abajo. */
+.thalamus .rv-ok{width:min(100%,1040px);grid-template-columns:minmax(0,1fr);gap:clamp(22px,3cqi,40px);align-items:start}
+@container (min-width:860px){.thalamus .rv-ok{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}.thalamus .rv-ok-b{padding-top:52px}}
+.thalamus .rv-ok-a,.thalamus .rv-ok-b{display:grid;gap:clamp(18px,2.2cqi,26px);min-width:0;align-content:start}
+.thalamus .rv-ok-eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:var(--rv-ok)}
+.thalamus .rv-ok-punto{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--rv-ok);color:#02150E;animation:lnRvPop .5s .1s var(--spring) both}
+.thalamus .rv-ok .rv-q{max-width:18ch}
+@keyframes lnRvPop{from{transform:scale(.4);opacity:0}}
+/* Ticket: cuándo y con quién */
+.thalamus .rv-ticket{position:relative;border-radius:26px;padding:clamp(18px,2cqi,26px);display:grid;gap:16px;isolation:isolate;
+  background:linear-gradient(155deg,rgba(255,63,164,.2),rgba(19,35,198,.28) 60%,rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 30px 60px -30px rgba(255,63,164,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+.thalamus .rv-tk-cuando{display:flex;align-items:center;gap:16px;min-width:0}
+.thalamus .rv-tk-dia{flex-shrink:0;width:66px;height:72px;border-radius:18px;display:grid;place-items:center;align-content:center;gap:2px;background:var(--rv-acento);color:var(--rv-on-acento);box-shadow:0 12px 26px -10px rgba(255,63,164,.8)}
+.thalamus .rv-tk-dia small{font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;line-height:1}
+.thalamus .rv-tk-dia b{font-size:30px;font-weight:900;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.thalamus .rv-tk-txt{display:grid;gap:4px;min-width:0}
+.thalamus .rv-tk-fecha{font-size:clamp(19px,1.8cqi,24px);font-weight:900;letter-spacing:-.015em;line-height:1.15}
+.thalamus .rv-tk-hora{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:14px;color:var(--rv-mut)}
+.thalamus .rv-tk-hora b{font-size:clamp(17px,1.5cqi,20px);font-weight:800;color:var(--rv-fg);font-variant-numeric:tabular-nums}
+.thalamus .rv-tk-corte{height:0;border-top:2px dashed rgba(255,255,255,.16);margin:2px 0}
+.thalamus .rv-tk-quien{display:flex;align-items:center;gap:14px;min-width:0}
+.thalamus .rv-tk-quien > div{display:grid;gap:3px;min-width:0}
+.thalamus .reserva .rv-av{width:50px;height:50px;border-radius:50%;font-size:17px;color:#020617;box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.thalamus .rv-tk-lbl{font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--rv-mut40)}
+.thalamus .rv-tk-nom{font-size:clamp(18px,1.6cqi,22px);font-weight:900;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .rv-tk-wa{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:16px;background:rgba(47,191,143,.1);border:1px solid rgba(47,191,143,.28);font-size:14.5px;line-height:1.4;color:var(--rv-mut)}
+.thalamus .rv-tk-wa svg{flex-shrink:0;margin-top:1px;color:var(--rv-ok)}
+.thalamus .rv-tk-wa b{color:var(--rv-fg);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Datos del lead */
+.thalamus .rv-datos{display:grid;gap:4px;min-width:0}
+.thalamus .rv-datos-cab{display:grid;gap:4px;margin-bottom:8px}
+.thalamus .rv-datos-cab h2{font-size:clamp(18px,1.6cqi,22px);font-weight:900;letter-spacing:-.01em}
+.thalamus .rv-datos-cab p{font-size:14px;color:var(--rv-mut)}
+.thalamus .rv-dl{display:grid;border-radius:20px;background:var(--rv-campo);border:1px solid var(--rv-campo-borde);padding:4px 16px}
+.thalamus .rv-dato{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--rv-linea)}
+.thalamus .rv-dato:first-child{border-top:0}
+.thalamus .rv-dato-ico{grid-row:1 / span 2;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--rv-acento)}
+.thalamus .rv-dato dt{grid-column:2;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--rv-mut40)}
+.thalamus .rv-dato dd{margin:0;grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:15.5px;font-weight:700;overflow-wrap:anywhere;min-width:0}
+.thalamus .rv-dato dd small{font-size:13px;font-weight:600;color:var(--rv-mut)}
+.thalamus .rv-dato .bandera{width:20px;height:14px}
+.thalamus .rv-acc--ok{margin-top:6px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.thalamus .rv-acc--ok .rv-seguir{justify-content:center;text-decoration:none}
+.thalamus .rv-sec{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:clamp(52px,4.8cqi,66px);padding:0 clamp(20px,2cqi,30px);border-radius:999px;border:1px solid var(--rv-campo-borde);
+  background:rgba(255,255,255,.04);color:var(--rv-fg);font-size:clamp(13px,1.15cqi,15px);font-weight:900;letter-spacing:.14em;text-transform:uppercase;transition:border-color .16s,background-color .16s}
+.thalamus .rv-sec:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.08)}
+.thalamus .rv-sec svg{width:16px;height:16px}
+@container (max-width:520px){.thalamus .rv-acc--ok{grid-template-columns:minmax(0,1fr)}.thalamus .rv-acc--ok .rv-seguir{letter-spacing:.16em}}
+.thalamus .rv-chau{justify-items:start}
+/* El lead que vuelve */
+.thalamus .rv-conocido{display:grid;gap:clamp(18px,2.2cqi,26px);width:min(100%,640px)}
+.thalamus .rv-conocido .rv-q{max-width:24ch}
+.thalamus .rv-conocido .rv-acc{margin-top:0}

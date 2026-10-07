@@ -37,8 +37,17 @@ def con_opciones(k):
     return k == 'opciones' or k == 'lista'
 
 
-# Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios.
+# Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El correo va
+# primero: con él se reconoce al lead que ya agendó antes y no se le piden de nuevo sus datos.
 CONTACTO = [
+    {
+        'k': 'email',
+        'tipo': 'email',
+        'n': 'Correo',
+        'ico': 'mail',
+        'titulo': '¿Cuál es tu correo?',
+        'placeholder': 'nombre@correo.com',
+    },
     {
         'k': 'nombre',
         'tipo': 'texto',
@@ -54,14 +63,6 @@ CONTACTO = [
         'ico': 'whatsapp',
         'titulo': '{nombre}, ¿a qué WhatsApp te escribimos?',
         'ayuda': 'Por ahí te confirmamos la llamada.',
-    },
-    {
-        'k': 'email',
-        'tipo': 'email',
-        'n': 'Correo',
-        'ico': 'mail',
-        'titulo': '¿Cuál es tu correo?',
-        'placeholder': 'nombre@correo.com',
     },
     {
         'k': 'instagram',

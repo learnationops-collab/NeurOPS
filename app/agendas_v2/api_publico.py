@@ -1,8 +1,9 @@
 """API publica de Agendas 2.0 (/api/agendas-v2/publico): la pagina de reserva del lead.
 
 Sin sesion y exenta de CSRF (la usa un visitante anonimo). Solo trabaja con la version PUBLICADA de
-un evento activo con su funnel activo, y nunca devuelve nombres, emails ni horarios del equipo: los
-horarios salen sin decir de que closer son, y el closer lo elige el servidor al reservar.
+un evento activo con su funnel activo, y nunca devuelve emails ni horarios del equipo: los horarios
+salen sin decir de que closer son, y el closer lo elige el servidor al reservar. Recien con la agenda
+tomada el lead ve el nombre de su consultor (nada de contacto).
 Contrato: docs/agendas_v2_api.md.
 """
 
@@ -20,7 +21,7 @@ NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está dispon
 
 # Limite por IP, en memoria y por proceso: frena a un script que martilla el endpoint, no es una
 # defensa distribuida. (pedidos, segundos)
-LIMITES = {'horarios': (30, 60), 'reservas': (10, 60)}
+LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60)}
 _pedidos = defaultdict(deque)
 _candado = threading.Lock()
 
@@ -80,6 +81,21 @@ def horarios(evento_id):
     return jsonify({'slots': servicio.horarios(d, evento, form, _cuerpo().get('resp'))})
 
 
+@bp.route('/eventos/<evento_id>/conocido', methods=['POST'])
+def conocido(evento_id):
+    """{email} → si ya agendó antes: su primer nombre, sus datos tapados y su próxima agenda."""
+    if _excede('conocido'):
+        return _demasiados()
+    x = servicio.evento_publico(servicio.colecciones(), evento_id)
+    if not x:
+        return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
+    email = str(_cuerpo().get('email') or '').strip().lower()[:120]
+    r = servicio.conocido(x[1], email)
+    if r.get('proxima'):
+        r['proxima'] = {'inicio': servicio.ms_a_dt(r['proxima']['inicio']).isoformat(timespec='milliseconds') + 'Z'}
+    return jsonify(r)
+
+
 @bp.route('/reservas', methods=['POST'])
 def reservar():
     if _excede('reservas'):
@@ -106,5 +122,6 @@ def reservar():
         return servicio.ms_a_dt(ms).isoformat(timespec='milliseconds') + 'Z'
 
     return jsonify(
-        {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion']}}
+        {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion'],
+                     'consultor': r.get('consultor')}}
     ), 201

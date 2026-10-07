@@ -45,14 +45,14 @@ function escribirYEnter(c, v) {
     fireEvent.change(el, { target: { value: v } });
     fireEvent.keyDown(el, { key: 'Enter' });
 }
-// Nombre, WhatsApp de Bolivia y los dos opcionales vacíos.
+// El correo (opcional, va primero) vacío, nombre, WhatsApp de Bolivia e Instagram vacío.
 function responderContacto(c) {
+    escribirYEnter(c, '');
     escribirYEnter(c, 'Ana Gómez');
     expect(screen.getByRole('heading', { name: 'Ana, ¿a qué WhatsApp te escribimos?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
     fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
     escribirYEnter(c, '7123 4567');
-    escribirYEnter(c, '');
     escribirYEnter(c, '');
     expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
 }
@@ -72,6 +72,10 @@ describe('PantallaLead', () => {
 
     it('valida antes de seguir', () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
+        expect(screen.getByRole('heading', { name: '¿Cuál es tu correo?' })).toBeInTheDocument();
+        escribirYEnter(container, 'no-es-un-correo');
+        expect(screen.getByRole('alert')).toHaveTextContent('Revisá el correo.');
+        escribirYEnter(container, '');
         fireEvent.keyDown(campo(container), { key: 'Enter' });
         expect(screen.getByRole('alert')).toHaveTextContent('Completá este dato.');
         expect(screen.getByRole('heading', { name: '¿Cómo te llamás?' })).toBeInTheDocument();
@@ -99,8 +103,29 @@ describe('PantallaLead', () => {
         expect(payload.lead.telefono).toBe('+59171234567');
         expect(payload.origen).toBe('ig');
         expect(payload.inicio).toBe(new Date(Date.UTC(2026, 9, 5, 13)).toISOString());
-        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu llamada quedó agendada.' })).toBeInTheDocument();
-        expect(screen.queryByText('Lo que recibe el closer')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
+        expect(screen.getByText('Ana Pérez')).toBeInTheDocument(); // su consultor
+        expect(screen.queryByText(/Vista del closer/)).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Es correcto/ }));
+        expect(screen.getByRole('heading', { name: /^Nos vemos el lunes, Ana\.$/ })).toBeInTheDocument();
+    });
+
+    it('al lead que vuelve lo reconoce por el correo y no le pide de nuevo sus datos', async () => {
+        const reservas = [{
+            id: 'r0', estado: 'agendada', inicio_ms: Date.UTC(2026, 9, 6, 13), fin_ms: Date.UTC(2026, 9, 6, 14), closer_id: 'ana',
+            lead: { nombre: 'Ana Gómez', telefono: '+59171234567', email: 'ana@correo.com', instagram: '' },
+        }];
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, reservas)} modo="prueba" />);
+        await act(async () => { escribirYEnter(container, 'ANA@correo.com'); });
+        expect(screen.getByRole('heading', { name: 'Detectamos que no es tu primera vez agendando una sesión con nosotros.' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Agendar una nueva/ }));
+        expect(screen.getByRole('heading', { name: '¿Son correctos tus datos?' })).toBeInTheDocument();
+        expect(screen.getByText('+59 ••• 567')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Sí, son correctos/ }));
+        // Sin volver a escribir nombre ni WhatsApp: directo a las preguntas.
+        expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
+        elegir('Lo necesario');
+        expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
     });
 });
 

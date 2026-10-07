@@ -11,9 +11,19 @@ const CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto',
 const tomar = (o, ks) => ks.reduce((a, k) => { a[k] = o[k]; return a; }, {});
 
 // Lo que queda en vivo al publicar: la configuración completa del evento y una copia del formulario.
-// Así, editar un formulario no cambia los links publicados hasta volver a publicar.
+// La copia del formulario se pone al día sola cuando se edita el formulario (conFormAlDia).
 export function configDe(e, form) {
     return JSON.stringify({ ev: tomar(e, CAMPOS_EV), form: form ? tomar(form, CAMPOS_FORM) : null });
+}
+// `publicado` con la copia del formulario al día y el resto como se publicó, o null si no cambia nada.
+// El servidor hace lo mismo al guardar el formulario (nucleo/eventos.py con_form_al_dia).
+export function conFormAlDia(e, form) {
+    if (!e || !e.publicado || !form) return null;
+    let p;
+    try { p = JSON.parse(e.publicado); } catch { return null; }
+    if (!p || !p.ev) return null;
+    const nuevo = JSON.stringify({ ...p, form: tomar(form, CAMPOS_FORM) });
+    return nuevo !== e.publicado ? nuevo : null;
 }
 export function sinPublicar(e, form) { return configDe(e, form) !== e.publicado; }
 

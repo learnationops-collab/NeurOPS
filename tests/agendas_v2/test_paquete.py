@@ -203,9 +203,10 @@ def test_editar_escribe_encima_conserva_los_links_y_queda_en_borrador(client, eq
     assert fo['preguntas'][1]['titulo'] == '¿A qué te dedicás hoy?'
     ultra = next(g for g in d['grupos'] if g['nombre'] == 'Ultra')
     assert ultra['miembros'] == ['p2'] and len(d['grupos']) == 3  # Ultra se edita; Nueva se crea
-    # Lo publicado sigue igual hasta que se publique de nuevo.
-    r = client.get('/api/agendas-v2/publico/eventos/workshop/diagnostico')
-    assert r.get_json()['form']['preguntas'][1]['titulo'] == '¿A qué te dedicás?'
+    # El formulario editado ya se ve en el link; lo del evento, recién al volver a publicar.
+    r = client.get('/api/agendas-v2/publico/eventos/workshop/diagnostico').get_json()
+    assert r['form']['preguntas'][1]['titulo'] == '¿A qué te dedicás hoy?'
+    assert r['evento']['duracion'] != 60
 
 
 # --- Reusar lo que ya existe y completar un funnel sin agendamientos ------------------------------

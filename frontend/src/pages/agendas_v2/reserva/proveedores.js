@@ -17,6 +17,10 @@
 //       tomó el horario), 'ya_tiene' (el lead ya tiene una agenda próxima, en err.agenda.inicio: se le
 //       pregunta y se repite con siYaTiene 'reprogramar' o 'adicional'), 'limite' o 'fallo'.
 //   cargarEvento(funnelSlug, eventoSlug)   (solo API) → {evento, form, funnel}; rechaza 'no_disponible' o 'fallo'
+//   conocido({evento, email})  → Promise<{conocido, completos, datos: {nombre, telefono, instagram} (tapados),
+//       proxima: {inicio (ms)} | null, resp?}>. El lead que ya agendó antes: no se le piden de nuevo sus
+//       datos. resp (solo local): las respuestas de contacto completas; en la API las pone el servidor.
+//   reservar(...) devuelve {reserva: {…, consultor: {nombre, color}}} en la API y la reserva en local.
 
 import api from '../../../services/api';
 import { asignacion } from '../core/asignacion';
@@ -24,11 +28,37 @@ import { buscar } from '../core/datos';
 import { armarReserva } from '../core/reserva';
 import { opcionesDeOcupacion } from '../data/ocupacion';
 
+// Lo que el lead que vuelve ve de sus datos: el primer nombre y lo demás tapado (igual que el servidor).
+export function datosTapados(lead) {
+    const tel = String(lead.telefono || '').replace(/\D/g, ''), ig = String(lead.instagram || '');
+    return {
+        nombre: String(lead.nombre || '').split(' ')[0],
+        telefono: tel ? '+' + tel.slice(0, 2) + ' ••• ' + tel.slice(-3) : '',
+        instagram: ig ? '@' + ig.slice(0, 2) + '•••' : '',
+    };
+}
+
+// Mismo margen que el servidor: una agenda que empezó hace menos de 2 h todavía cuenta como próxima.
+const MARGEN_PROXIMA = 2 * 3600000;
+
 export function proveedorLocal(d, reservas = [], crear = null) {
     const asignar = (ctx, prueba) => asignacion(ctx, d, { ...opcionesDeOcupacion(reservas), prueba });
     return {
         tipo: 'local', sinc: true, d,
         horarios({ ctx, prueba = false }) { return asignar(ctx, prueba); },
+        async conocido({ email }) {
+            const mail = String(email || '').trim().toLowerCase();
+            const suyas = mail ? reservas.filter(r => r.lead && String(r.lead.email || '').toLowerCase() === mail) : [];
+            if (!suyas.length) return { conocido: false };
+            const lead = suyas[suyas.length - 1].lead, ahora = Date.now();
+            const prox = suyas.filter(r => r.estado === 'agendada' && r.inicio_ms != null && r.inicio_ms >= ahora - MARGEN_PROXIMA)
+                .sort((a, b) => a.inicio_ms - b.inicio_ms)[0];
+            const resp = {};
+            if (lead.nombre) resp['c-nombre'] = lead.nombre;
+            if (lead.telefono) resp['c-telefono'] = lead.telefono;
+            if (lead.instagram) resp['c-instagram'] = lead.instagram;
+            return { conocido: true, completos: !!(lead.nombre && lead.telefono), datos: datosTapados(lead), proxima: prox ? { inicio: prox.inicio_ms } : null, resp };
+        },
         async reservar({ lead, ctx, evento, form, asig, slot, origen, setter }) {
             if (!crear) throw Object.assign(new Error('Esta vista no agenda'), { code: 'fallo' });
             const funnel = evento ? buscar(d, 'funnels', evento.funnel) || null : null;
@@ -80,11 +110,20 @@ export function proveedorApi() {
             } catch (e) { throw errorPublico(e); }
         },
 
-        async reservar({ lead, evento, slot, origen, siYaTiene }) {
+        async conocido({ evento, email }) {
+            try {
+                const { data } = await api.post(`/agendas-v2/publico/eventos/${seg(evento.id)}/conocido`, { email }, OPC);
+                if (!data || !data.conocido) return { conocido: false };
+                return { ...data, proxima: data.proxima ? { inicio: Date.parse(data.proxima.inicio) } : null };
+            } catch (e) { throw errorPublico(e); }
+        },
+
+        async reservar({ lead, evento, slot, origen, siYaTiene, datosGuardados }) {
             const cuerpo = {
                 evento_id: evento.id, resp: lead.resp, pais: lead.pais, tz: lead.tz,
                 inicio: slot ? new Date(slot.t).toISOString() : null, origen: origen || '',
                 ...(siYaTiene ? { si_ya_tiene: siYaTiene } : {}),
+                ...(datosGuardados ? { datos_guardados: true } : {}),
             };
             try {
                 const { data } = await api.post('/agendas-v2/publico/reservas', cuerpo, OPC);

@@ -152,16 +152,24 @@ def _payload_en_espejo(fa, payload):
 
 
 def proxima_de(cliente_id, ahora):
-    """La próxima agenda vigente del cliente (cualquier sistema), o None."""
-    return (
+    """La próxima agenda vigente del cliente (cualquier sistema), o None. Una agenda que el closer
+    canceló directo en Google Calendar no cuenta, aunque en NeurOPS siga abierta (no se la toca)."""
+    from app.services.google_service import GoogleService
+
+    candidatas = (
         Appointment.query.filter(
             Appointment.client_id == cliente_id,
             Appointment.start_time >= ahora - MARGEN_REPROGRAMAR,
             *filtro_vigente(),
         )
         .order_by(Appointment.start_time)
-        .first()
+        .all()
     )
+    for appt in candidatas:
+        if appt.google_event_id and GoogleService.evento_cancelado(appt.closer_id, appt.google_event_id):
+            continue
+        return appt
+    return None
 
 
 def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None):

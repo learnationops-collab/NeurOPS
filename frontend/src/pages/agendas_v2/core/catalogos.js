@@ -30,11 +30,12 @@ export function tipo(k) {
 }
 export function conOpciones(k) { return k === 'opciones' || k === 'lista'; }
 
-// Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios.
+// Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El correo va
+// primero: con él se reconoce al lead que ya agendó antes y no se le piden de nuevo sus datos.
 export const CONTACTO = [
+    { k: 'email', tipo: 'email', n: 'Correo', ico: 'mail', titulo: '¿Cuál es tu correo?', placeholder: 'nombre@correo.com' },
     { k: 'nombre', tipo: 'texto', n: 'Nombre', ico: 'user', titulo: '¿Cómo te llamás?', placeholder: 'Nombre y apellido' },
     { k: 'telefono', tipo: 'telefono', n: 'WhatsApp', ico: 'whatsapp', titulo: '{nombre}, ¿a qué WhatsApp te escribimos?', ayuda: 'Por ahí te confirmamos la llamada.' },
-    { k: 'email', tipo: 'email', n: 'Correo', ico: 'mail', titulo: '¿Cuál es tu correo?', placeholder: 'nombre@correo.com' },
     { k: 'instagram', tipo: 'instagram', n: 'Instagram', ico: 'instagram', titulo: '¿Cuál es tu Instagram?', placeholder: 'tu.usuario' },
 ];
 export const FIN_DEF = { titulo: 'Gracias por tu sinceridad', texto: 'Por ahora no vamos a agendar la sesión. Te mandamos por email la ruta para que sigas avanzando.' };

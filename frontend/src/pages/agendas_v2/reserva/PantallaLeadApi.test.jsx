@@ -52,12 +52,13 @@ function escribirYEnter(c, v) {
     fireEvent.change(el, { target: { value: v } });
     fireEvent.keyDown(el, { key: 'Enter' });
 }
+// El correo (opcional, va primero) vacío, nombre, WhatsApp de Bolivia e Instagram vacío.
 function responderContacto(c) {
+    escribirYEnter(c, '');
     escribirYEnter(c, 'Ana Gómez');
     fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
     fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
     escribirYEnter(c, '7123 4567');
-    escribirYEnter(c, '');
     escribirYEnter(c, '');
 }
 function elegir(texto) {
@@ -118,7 +119,7 @@ describe('PantallaLead con la API', () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
         expect(screen.getByRole('alert')).toHaveTextContent('Demasiados intentos, probá en un minuto.');
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
-        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu llamada quedó agendada.' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
     });
 
     it('si ya tiene otra agenda le pregunta y repite el pedido con lo que eligió', async () => {
@@ -135,13 +136,13 @@ describe('PantallaLead con la API', () => {
 
         // No se agendó nada: le muestra la que ya tiene (09:00 en La Paz) y le pregunta.
         expect(screen.getByRole('alertdialog')).toHaveTextContent('ya tenés una sesión agendada para el Lunes, 5 de octubre a las 09:00');
-        expect(screen.queryByRole('heading', { name: /Tu llamada quedó agendada/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: /Tu sesión quedó agendada/ })).not.toBeInTheDocument();
 
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Quiero una sesión adicional' })); });
         const reservas = llamadasA(u => u === '/agendas-v2/publico/reservas');
         expect(reservas).toHaveLength(2);
         expect(reservas[1][1]).toMatchObject({ inicio: new Date(H10).toISOString(), si_ya_tiene: 'adicional' });
-        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu llamada quedó agendada.' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
     });
 
     it('el que no califica se registra una vez, sin horario', async () => {

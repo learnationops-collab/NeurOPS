@@ -175,3 +175,27 @@ def test_usuarios_con_varios_roles_cuentan_como_closer(client, dir_h, make_user,
     db.session.commit()
     usuarios = client.get('/api/agendas-v2/usuarios', headers=dir_h).get_json()['usuarios']
     assert {x['email']: x['rol'] for x in usuarios}['dos@neuro.com'] == 'closer'
+
+
+def test_editar_el_formulario_pone_al_dia_los_links_publicados(client, dir_h):
+    """El link en vivo muestra las preguntas nuevas sin volver a publicar, pero lo que se cambió del
+    evento y no se publicó sigue sin publicarse."""
+    import json
+
+    from app.agendas_v2.nucleo.eventos import config_de
+
+    pregunta = {'id': 'q1', 'tipo': 'opciones', 'titulo': 'Vieja', 'opciones': [{'id': 'a', 'texto': 'A'}]}
+    url = '/api/agendas-v2/'
+    form = client.put(url + 'formularios/fo1', headers=dir_h, json={'nombre': 'F', 'preguntas': [pregunta]})
+    ev = client.put(url + 'eventos/e1', headers=dir_h, json={'nombre': 'Diagnóstico', 'formulario': 'fo1'})
+    publicado = config_de(ev.get_json()['doc'], form.get_json()['doc'])
+    client.patch(url + 'eventos/e1', headers=dir_h, json={'publicado': publicado})
+    client.patch(url + 'eventos/e1', headers=dir_h, json={'nombre': 'Borrador sin publicar'})
+
+    client.patch(url + 'formularios/fo1', headers=dir_h, json={'preguntas': [{**pregunta, 'titulo': 'Nueva'}]})
+
+    eventos = client.get(url + 'estado', headers=dir_h).get_json()['cols']['eventos']
+    e = next(x for x in eventos if x['id'] == 'e1')
+    pub = json.loads(e['publicado'])
+    assert pub['form']['preguntas'][0]['titulo'] == 'Nueva'
+    assert pub['ev']['nombre'] == 'Diagnóstico'

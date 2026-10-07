@@ -7,6 +7,7 @@ asignacion con las agendas reales y, antes de escribir, se bloquea al closer y s
 siga libre.
 """
 
+import re
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -16,9 +17,16 @@ from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
-from app.agendas_v2.nucleo.eventos import version_publicada
+from app.agendas_v2.nucleo.eventos import con_form_al_dia, version_publicada
 from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
-from app.agendas_v2.nucleo.normalizar import COLECCIONES, NORM, normal_integ, normal_perfil, preguntas_flujo
+from app.agendas_v2.nucleo.normalizar import (
+    COLECCIONES,
+    NORM,
+    contacto_preguntas,
+    normal_integ,
+    normal_perfil,
+    preguntas_flujo,
+)
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva
 from app.agendas_v2.nucleo.util import slugify, uid
@@ -183,9 +191,23 @@ def guardar_doc(col, doc_id, datos, usuario_id=None, parcial=False):
     if col == 'personas':
         fila.email = doc.get('email') or None
         fila.user_id = _email_de_cuenta(fila.email)
+    if col == 'formularios':
+        republicar_form(doc)
     _subir_version()
     db.session.commit()
     return doc
+
+
+def republicar_form(form):
+    """Los eventos publicados con este formulario pasan a su versión nueva; lo demás del evento queda
+    como se publicó. No hace commit."""
+    for fila in db.session.query(MODELOS['eventos']).all():
+        e = fila.datos or {}
+        if e.get('formulario') != form.get('id'):
+            continue
+        nuevo = con_form_al_dia(e, form)
+        if nuevo:
+            fila.datos = {**e, 'publicado': nuevo}
 
 
 def borrar_doc(col, doc_id):
@@ -510,6 +532,71 @@ def _segmento(d, form, asig):
     }
 
 
+# --- El lead que vuelve --------------------------------------------------------------------------
+
+CONTACTO_GUARDADO = ('c-nombre', 'c-telefono', 'c-instagram')
+
+
+def datos_guardados(form, email):
+    """Lo que ya sabemos del lead por su email, para no volver a pedírselo: (cliente, respuestas de
+    contacto válidas, completos). `completos` es False si falta (o no sirve) alguno obligatorio."""
+    cliente = operacion.cliente_por_email(email) if isinstance(email, str) else None
+    if not cliente:
+        return None, {}, False
+    pl = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
+    lead = pl.get('lead') if isinstance(pl.get('lead'), dict) else {}
+    nombre = lead.get('nombre') or cliente.full_name
+    crudos = {
+        'c-nombre': '' if nombre == 'Desconocido' else nombre,
+        'c-telefono': lead.get('telefono') or cliente.phone,
+        'c-instagram': lead.get('instagram') or cliente.instagram,
+    }
+    preguntas = {q['id']: q for q in contacto_preguntas(form)}
+    resp, completos = {}, True
+    for k, crudo in crudos.items():
+        q = preguntas[k]
+        v = limpiar_respuesta(q, crudo if isinstance(crudo, str) else '')[: LARGO_MAX_TEXTO.get(q['tipo'], 300)]
+        # Sin el +país no se sabe de dónde es el número (los clientes viejos no siempre lo tienen).
+        if q['tipo'] == 'telefono' and not v.startswith('+'):
+            v = ''
+        if v and not validar_respuesta(q, v):
+            resp[k] = v
+        elif q.get('obligatoria'):
+            completos = False
+    return cliente, resp, completos
+
+
+def _tapar(v, ver):
+    return v[:ver] + '•••' if v else ''
+
+
+def conocido(form, email, ahora=None):
+    """Lo que ve el lead que vuelve: su primer nombre, el WhatsApp y el Instagram tapados (nadie
+    saca los datos de otro con su email) y el horario de su próxima agenda, si tiene."""
+    cliente, resp, completos = datos_guardados(form, email)
+    if not cliente:
+        return {'conocido': False}
+    tel = re.sub('[^0-9]', '', resp.get('c-telefono', ''))
+    proxima = operacion.proxima_de(cliente.id, ms_a_dt(ahora or ahora_ms()))
+    return {
+        'conocido': True,
+        'completos': completos,
+        'datos': {
+            'nombre': (resp.get('c-nombre') or '').split(' ')[0],
+            'telefono': '+' + tel[:2] + ' ••• ' + tel[-3:] if tel else '',
+            'instagram': '@' + _tapar(resp.get('c-instagram', ''), 2) if resp.get('c-instagram') else '',
+        },
+        'proxima': {'inicio': dt_a_ms(proxima.start_time)} if proxima else None,
+    }
+
+
+def _consultor(d, closer):
+    """Lo que el lead ve de su closer: el nombre que tiene en Team y su color. Nada de contacto."""
+    email = (closer.email or '').lower()
+    per = next((p for p in d['personas'] if email and p.get('email') == email), None)
+    return {'nombre': per['nombre'] if per else (closer.username or ''), 'color': per['color'] if per else 'azul'}
+
+
 def _respuesta(appt):
     """Lo que la pagina publica le muestra al lead de su agenda."""
     r = reserva_a_dict(appt)
@@ -524,7 +611,11 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
 
     ahora = ahora or ahora_ms()
     preguntas = preguntas_flujo(form)
-    limpias, errores, descalifica = _limpiar_respuestas(preguntas, cuerpo.get('resp'))
+    resp = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
+    # El lead que vuelve y confirmó sus datos no los escribe de nuevo: salen de lo que ya tenemos.
+    if cuerpo.get('datos_guardados') is True:
+        resp = {**resp, **datos_guardados(form, resp.get('c-email'))[1]}
+    limpias, errores, descalifica = _limpiar_respuestas(preguntas, resp)
     pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in PAISES) else 'BO'
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)
     origen = slugify(str(cuerpo.get('origen') or ''))[:60]
@@ -547,7 +638,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     cliente = operacion.cliente_por_email(limpias.get('c-email'))
     previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
     if previa:
-        return _respuesta(previa), False
+        return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id))}, False
 
     # Ya tiene otra agenda próxima: antes de tocar nada se le pregunta si quiere cambiarla de fecha o
     # sumar una sesión. La página repite el pedido con `si_ya_tiene`.
@@ -588,4 +679,4 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
     operacion.avisar_discord(appt)
     operacion.avisar_whatsapp(appt)
-    return _respuesta(appt), True
+    return {**_respuesta(appt), 'consultor': _consultor(d, closer)}, True

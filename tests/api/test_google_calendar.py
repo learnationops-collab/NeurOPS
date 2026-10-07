@@ -161,3 +161,41 @@ def test_agendas_v2_no_cuenta_un_token_vencido(db, token_rechazado):
     assert servicio._con_calendar({token_rechazado.id}) == {token_rechazado.id}
     GoogleService.get_credentials(token_rechazado.id)
     assert servicio._con_calendar({token_rechazado.id}) == set()
+
+
+class _Servicio:
+    """Lo mínimo del cliente de Calendar para events().get(...).execute()."""
+
+    def __init__(self, respuesta=None, error=None):
+        self.respuesta, self.error = respuesta, error
+
+    def events(self):
+        return self
+
+    def get(self, **_):
+        return self
+
+    def execute(self):
+        if self.error:
+            raise self.error
+        return self.respuesta
+
+
+class _HttpError(Exception):
+    def __init__(self, status):
+        super().__init__(f'HTTP {status}')
+        self.resp = type('R', (), {'status': status})()
+
+
+@pytest.mark.parametrize('servicio, cancelado', [
+    (_Servicio({'status': 'cancelled'}), True),
+    (_Servicio(error=_HttpError(410)), True),
+    (_Servicio({'status': 'confirmed'}), False),
+    # 404: puede ser que el closer cambió de calendario. Ante la duda, la agenda sigue contando.
+    (_Servicio(error=_HttpError(404)), False),
+    (_Servicio(error=OSError('sin red')), False),
+    (None, False),
+])
+def test_evento_cancelado_solo_si_google_lo_confirma(app, closer, monkeypatch, servicio, cancelado):
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda user_id: servicio))
+    assert GoogleService.evento_cancelado(closer.id, 'evt1') is cancelado

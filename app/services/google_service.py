@@ -231,6 +231,22 @@ class GoogleService:
         return evt.get('id'), meet
 
     @staticmethod
+    def evento_cancelado(user_id, event_id):
+        """True solo si Google confirma que el evento se canceló o se borró. Ante cualquier duda (sin
+        token, sin red, 404 porque se cambió de calendario) devuelve False: la agenda sigue contando."""
+        service = GoogleService.get_service(user_id)
+        if not service or not event_id:
+            return False
+        try:
+            evt = service.events().get(calendarId=GoogleService._calendario(user_id), eventId=event_id).execute()
+        except Exception as e:  # noqa: BLE001
+            if getattr(getattr(e, 'resp', None), 'status', None) == 410:
+                return True
+            current_app.logger.warning(f'[GOOGLE] No se pudo leer el evento {event_id} del usuario #{user_id}: {e}')
+            return False
+        return (evt or {}).get('status') == 'cancelled'
+
+    @staticmethod
     def delete_event(user_id, event_id):
         service = GoogleService.get_service(user_id)
         if not service or not event_id:

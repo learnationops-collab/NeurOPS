@@ -2,6 +2,7 @@
 // Las ediciones se ven al instante y se guardan en una pausa de 600 ms. Ctrl+Z deshace con un
 // historial de 80 cambios. El estado es inmutable para que React detecte los cambios.
 
+import { conFormAlDia } from '../core/eventos';
 import { COLECCIONES, NORM, normalInteg, normalPerfil } from '../core/normalizar';
 import { clonar, uid } from '../core/util';
 import { crearAdaptadorApi } from './adaptadorApi';
@@ -69,6 +70,24 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         return adaptador.guardar(col, id, data, campos).catch(fallo);
     }
 
+    // Un formulario editado se ve ya en los eventos publicados que lo usan. El servidor lo hace al
+    // guardarlo; acá solo se copia para no esperar a recargar (y se guarda si los datos viven en el navegador).
+    function republicarForm(formId) {
+        const form = buscar('formularios', formId);
+        if (!form) return;
+        const cambiados = [];
+        const eventos = estado.d.eventos.map(e => {
+            if (e.formulario !== formId) return e;
+            const publicado = conFormAlDia(e, form);
+            if (!publicado) return e;
+            cambiados.push(e.id);
+            return { ...e, publicado };
+        });
+        if (!cambiados.length) return;
+        setCol('eventos', eventos);
+        if (adaptador.tipo === 'local') cambiados.forEach(id => persistir('eventos', id));
+    }
+
     function flush() {
         clearTimeout(pendT);
         const ks = Object.keys(pend);
@@ -104,6 +123,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
             if (!x) return;
             recordar(col, id);
             setCol(col, estado.d[col].map(y => (y.id === id ? NORM[col](id, { ...y, ...clonar(campos) }) : y)));
+            if (col === 'formularios') republicarForm(id);
             const k = col + '/' + id;
             pend[k] = { ...(pend[k] || {}), ...clonar(campos) };
             clearTimeout(pendT);
@@ -117,6 +137,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
             setCol(col, arr.some(x => x.id === id) ? arr.map(x => (x.id === id ? n : x)) : [...arr, n]);
             delete pend[col + '/' + id];
             persistir(col, id);
+            if (col === 'formularios') republicarForm(id);
         },
 
         borrar(col, id) {
