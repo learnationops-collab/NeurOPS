@@ -101,6 +101,61 @@ describe('barra de Pendientes', () => {
     });
 });
 
+describe('contadores y tarjetas KPI', () => {
+    // «Sin analizar» también es el texto del chip de cada fila: la etiqueta de la tarjeta es la gris.
+    const kpi = (etiqueta) => screen.getAllByText(etiqueta).find((el) => el.className.includes('text-white/50')).parentElement;
+
+    it('«Postulaciones» muestra el total del backend (solo completas) y el resto de las tarjetas, sus conteos', async () => {
+        montarApi({
+            conteos: { ...CONTEOS, seleccionadas: 2, en_reserva: 1, descartadas: 1, testeo: 1, winners: 1, top_tier: 1, bajas: 1 },
+            total: 9,
+        });
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" />);
+        await screen.findByText('Ana Pérez');
+
+        expect(kpi('Postulaciones')).toHaveTextContent('9');
+        expect(kpi('Sin analizar')).toHaveTextContent('7');
+        // Analizadas = Analizados + Finalistas del dock: no deja afuera a Winner ni a Top tier.
+        expect(kpi('Analizadas')).toHaveTextContent('8');
+        expect(kpi('Con video verificado')).toHaveTextContent('2');
+    });
+
+    it('con Híbridos elegido, las sub-pestañas y las tarjetas cuentan los de esa modalidad y el dock sigue con el total global', async () => {
+        const vacio = { ...Object.fromEntries(Object.keys(CONTEOS).map((k) => [k, 0])), hibrido: 4, online: 3 };
+        const onConteos = vi.fn();
+        api.get.mockImplementation((ruta) => Promise.resolve({
+            data: ruta.includes('modalidad=hibrido')
+                ? { postulaciones: [], conteos: vacio, conteos_globales: CONTEOS, total: 0 }
+                : { postulaciones: [fila(1, 'Ana Pérez')], conteos: CONTEOS, conteos_globales: CONTEOS, total: 9 },
+        }));
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" onConteos={onConteos} />);
+        await screen.findByText('Ana Pérez');
+        expect(screen.getByRole('button', { name: /Incompletas/ })).toHaveTextContent('3');
+
+        fireEvent.click(screen.getByRole('button', { name: /Híbridos/ }));
+
+        await waitFor(() => expect(screen.getByRole('button', { name: /Incompletas/ })).toHaveTextContent('0'));
+        expect(kpi('Sin analizar')).toHaveTextContent('0');
+        expect(kpi('Postulaciones')).toHaveTextContent('0');
+        // El toggle de modalidad sigue mostrando lo de la pestaña, no 0.
+        expect(screen.getByRole('button', { name: /Híbridos/ })).toHaveTextContent('4');
+        // Y el dock nunca se enteró: todas las llamadas llevan el total global.
+        expect(onConteos).toHaveBeenCalled();
+        for (const [resumen] of onConteos.mock.calls) {
+            expect(resumen).toEqual({ pendientes: 7, analizados: 2, finalistas: 0 });
+        }
+    });
+
+    it('tolera un backend sin conteos_globales', async () => {
+        const onConteos = vi.fn();
+        api.get.mockResolvedValue({ data: { postulaciones: [fila(1, 'Ana Pérez')], conteos: CONTEOS, total: 9 } });
+        render(<HiringInbox grupo="pendientes" titulo="Pendientes" onConteos={onConteos} />);
+        await screen.findByText('Ana Pérez');
+
+        expect(onConteos).toHaveBeenCalledWith({ pendientes: 7, analizados: 2, finalistas: 0 });
+    });
+});
+
 describe('Analizados, Finalistas y búsqueda', () => {
     it('Analizados mantiene su título y sus sub-filtros de estado', async () => {
         render(<HiringInbox grupo="analizados" titulo="Analizados" />);
