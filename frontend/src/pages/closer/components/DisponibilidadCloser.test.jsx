@@ -21,11 +21,12 @@ describe('Disponibilidad del closer', () => {
         api.put.mockImplementation((url, cuerpo) => Promise.resolve({ data: { ...DATOS, ...cuerpo, en_team: true } }));
         render(<DisponibilidadCloser />);
 
-        expect(await screen.findByRole('checkbox', { name: 'Trabajo el lunes' })).toBeChecked();
-        expect(screen.getByDisplayValue('Argentina')).toBeTruthy();  // la zona adivinada por su WhatsApp
+        // El mismo editor de Team en Thalamus: el lunes con su franja, el martes sin horario.
+        expect(await screen.findByRole('button', { name: /Quitar 09:00–13:00, lunes/i })).toBeTruthy();
+        expect(screen.getByText(/Argentina/)).toBeTruthy();  // la zona adivinada por su WhatsApp
         expect(screen.getByRole('button', { name: 'Guardar disponibilidad' })).toBeDisabled();
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Trabajo el martes' }));
+        fireEvent.click(screen.getByRole('button', { name: /Agregar horario el martes/i }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Guardar disponibilidad' })); });
         const [url, cuerpo] = api.put.mock.calls[0];
         expect(url).toBe('/auth/me/disponibilidad');

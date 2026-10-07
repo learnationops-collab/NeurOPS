@@ -16,7 +16,19 @@ import { CampoNombre, Compo, HUMO_PERSONA, METAL, SemanaMini, opcionesRol } from
 import { abrirHorario } from './Horario';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 
-const OPS_NIVEL = [1, 2, 3].map(n => ({ v: n, n: 'Top ' + n, icono: 'estrellaLlena', color: METAL[n - 1] }));
+// El Top es solo una etiqueta del equipo: no cambia el reparto (eso lo decide cada estrategia).
+function Nivel({ p, onChange }) {
+    return (
+        <div className="top-sel" role="radiogroup" aria-label={'Top de ' + p.nombre} title="Top (solo para el equipo; no cambia el reparto)">
+            {[1, 2, 3].map(n => (
+                <button key={n} type="button" role="radio" aria-checked={p.nivel === n} aria-label={'Top ' + n} style={{ '--m': METAL[n - 1] }}
+                    onClick={() => onChange(n)}>
+                    <Icono n="estrellaLlena" s={12} />{n}
+                </button>
+            ))}
+        </div>
+    );
+}
 
 // Con la API: los closers de la app que todavía no están en Team, con lo que les falta para recibir
 // agendas (ElegirCloser). Los listos van primero.
@@ -102,7 +114,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
                     <Sx sm label="Rol" valor={p.rol} opciones={opcionesRol(d, p.rol)} onChange={v => cambiar({ rol: v })} />
                     {closer ? (
                         <>
-                            <Sx sm label="Nivel" valor={p.nivel} opciones={OPS_NIVEL} onChange={v => cambiar({ nivel: v })} />
+                            <Nivel p={p} onChange={v => cambiar({ nivel: v })} />
                             <button type="button" className="horas-btn" data-nav="" aria-haspopup="dialog" onClick={e => abrirHorario(p, e.currentTarget)}>
                                 <Icono n="clock" />Horario<Icono n="edit" s={14} />
                             </button>

@@ -48,13 +48,18 @@ function CopiarA({ desde, onAplicar, onCerrar }) {
     );
 }
 
-/** Editor del horario. `bloqueado`: solo lectura (todo deshabilitado). */
-export function HorarioEditor({ p, bloqueado = false }) {
+/**
+ * Editor del horario. `bloqueado`: solo lectura (todo deshabilitado).
+ * onGuardar({horario?, tz?}): fuera de Thalamus (la Configuración del closer) guarda ahí en vez de en
+ * la persona de Team, y no ofrece copiar de otro closer.
+ */
+export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
     const { d } = useDatos();
     const [copiar, setCopiar] = useState(null);   // día con el popover abierto
     const raiz = useRef(null);
-    const otros = closers(d).filter(x => x.id !== p.id && horasSemana(x) > 0);
-    const guardar = (horario, extra) => almacen.editar('personas', p.id, { horario, ...extra }, true);
+    const otros = onGuardar ? [] : closers(d).filter(x => x.id !== p.id && horasSemana(x) > 0);
+    const editarPersona = (campos) => (onGuardar ? onGuardar(campos) : almacen.editar('personas', p.id, campos, true));
+    const guardar = (horario, extra) => editarPersona({ horario, ...extra });
     const h = (dow) => clonar(p.horario[dow] || []);
     const dis = bloqueado || undefined;
 
@@ -83,7 +88,7 @@ export function HorarioEditor({ p, bloqueado = false }) {
     return (
         <div className="horario" ref={raiz}>
             <div className="horario-barra">
-                <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => almacen.editar('personas', p.id, { tz: v }, true)} />
+                <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => editarPersona({ tz: v })} />
                 <div className="barra-der">
                     <button type="button" className="sug" disabled={dis} onClick={() => guardar(horarioLaV())}><Icono n="rayo" />L a V 9–18</button>
                     {otros.length > 0 && (

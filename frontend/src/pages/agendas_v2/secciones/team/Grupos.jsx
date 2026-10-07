@@ -104,7 +104,14 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 <span className="pr-n num" title={'Estrategia ' + (i + 1)}>{i + 1}</span>
                 <label className="sr" htmlFor={'gn-' + g.id}>Nombre de la estrategia</label>
                 <CampoNombre className="pr-nom" id={'gn-' + g.id} maxLength={60} valor={g.nombre} onGuardar={v => almacen.editar('grupos', g.id, { nombre: v })} />
-                <span className="pr-cuenta num">{ms.length}{ms.length === 1 ? ' closer' : ' closers'}</span>
+                <div className="seg seg--sm pr-est" role="radiogroup" aria-label="Cómo reparte">
+                    {Object.keys(ESTRATEGIAS).map(k => (
+                        <button key={k} type="button" role="radio" aria-checked={g.estrategia === k} aria-pressed={g.estrategia === k} style={{ '--ec': COLOR_EST[k] }}
+                            onClick={() => almacen.editar('grupos', g.id, { estrategia: k }, true)}>
+                            <Icono n={ICO_EST[k]} s={14} />{ESTRATEGIAS[k]}
+                        </button>
+                    ))}
+                </div>
                 <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar estrategia ' + g.nombre} onClick={() => borrarGrupo(g)}><Icono n="basura" s={15} /></button>
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>
@@ -117,20 +124,10 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 )}
                 {!ms.length && <span className="t-cap mut40">Sin closers todavía</span>}
             </div>
-            <div className="pr-pie">
-                <div className="seg seg--sm pr-est" role="radiogroup" aria-label="Cómo reparte">
-                    {Object.keys(ESTRATEGIAS).map(k => (
-                        <button key={k} type="button" role="radio" aria-checked={g.estrategia === k} aria-pressed={g.estrategia === k} style={{ '--ec': COLOR_EST[k] }}
-                            onClick={() => almacen.editar('grupos', g.id, { estrategia: k }, true)}>
-                            <Icono n={ICO_EST[k]} s={14} />{ESTRATEGIAS[k]}
-                        </button>
-                    ))}
-                </div>
-                <p className="pr-regla">
-                    {textoEstrategia(d, g)}
-                    {aviso && <><br /><span style={{ color: 'var(--warning)' }}>{aviso}</span></>}
-                </p>
-            </div>
+            <p className="pr-regla">
+                <span className="num">{ms.length}{ms.length === 1 ? ' closer' : ' closers'}</span> · {textoEstrategia(d, g)}
+                {aviso && <><br /><span style={{ color: 'var(--warning)' }}>{aviso}</span></>}
+            </p>
         </article>
     );
 }
