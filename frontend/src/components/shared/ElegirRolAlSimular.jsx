@@ -7,16 +7,9 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import {
-    BarChart3, Briefcase, Filter, Megaphone, MessageCircle, PhoneCall, Settings2, User, UserPlus,
-} from 'lucide-react';
+import { User } from 'lucide-react';
 import Eleccion from '../../pages/auth/Eleccion';
-import { rotuloDeRol } from '../../utils/cuentasVinculadas';
-
-const ICONO_DE_ROL = {
-    admin: Settings2, director_comercial: BarChart3, director_marketing: Megaphone, closer: PhoneCall,
-    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
-};
+import { ICONO_DE_ROL, rotuloDeRol } from '../../utils/cuentasVinculadas';
 
 /** Los roles de una cuenta del listado de equipo (`roles`, con el principal primero). */
 export const rolesDePersona = (u) => (u?.roles?.length ? u.roles : [u?.role]).filter(Boolean);
