@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Target, Award, Sliders, Search, X, ArrowLeft, LogOut, Ghost, Loader2 } from 'lucide-react';
+import { Inbox, CheckCircle2, Target, Award, Sliders, Search, X, ArrowLeft, ArrowLeftRight, LogOut, Ghost, Loader2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
 import OperatorControls from '../../../components/modals/OperatorControls';
 import { revertImpersonation } from '../../../utils/impersonation';
+import { opcionesDeRol } from '../../../utils/cuentasVinculadas';
 import HiringInbox from './components/HiringInbox';
 import HiringStatsTab from './components/HiringStatsTab';
 import HiringClarityTab from './components/HiringClarityTab';
@@ -40,6 +43,19 @@ const HiringDashboardPage = () => {
     // CloserWorkflowPage, para que un operador pueda salir de la simulación.
     const [showOperatorControls, setShowOperatorControls] = useState(false);
     const [saliendo, setSaliendo] = useState(false);
+    // «Pasar a <rol>» para quien tiene más roles en la cuenta. Las demás pantallas lo traen en su
+    // dock o en el menú de sesión; esta no tiene ninguno, y quien pasaba a Hiring quedaba encerrado
+    // (solo podía cerrar sesión) sin volver a Operador para simular (Mario, 08/10/2026).
+    const [menuRoles, setMenuRoles] = useState(false);
+    const cambioDeRol = useRef(null);
+    const roles = opcionesDeRol(user, (m) => toast.error(m));
+
+    useEffect(() => {
+        if (!menuRoles) return undefined;
+        const fuera = (e) => { if (!cambioDeRol.current?.contains(e.target)) setMenuRoles(false); };
+        document.addEventListener('mousedown', fuera);
+        return () => document.removeEventListener('mousedown', fuera);
+    }, [menuRoles]);
 
     // Ctrl/Cmd+P enfoca el buscador, Escape lo limpia — mismos atajos del mockup.
     // `w` (sin modificadores y fuera de un input) abre Acceso Simulado.
@@ -167,6 +183,47 @@ const HiringDashboardPage = () => {
                                 {saliendo ? <Loader2 size={15} className="animate-spin" /> : <Ghost size={15} />}
                                 <span className="hidden sm:inline">Volver a mi sesión</span>
                             </button>
+                        )}
+                        {roles.length > 0 && (
+                            <div ref={cambioDeRol} className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setMenuRoles((v) => !v)}
+                                    aria-haspopup="menu"
+                                    aria-expanded={menuRoles}
+                                    title="Cambiar de rol"
+                                    className="flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-extrabold uppercase tracking-wide text-white/50 transition-all hover:bg-white/10 hover:text-white"
+                                >
+                                    <ArrowLeftRight size={15} />
+                                    <span className="hidden sm:inline">Cambiar de rol</span>
+                                </button>
+                                <AnimatePresence>
+                                    {menuRoles && (
+                                        <motion.div
+                                            role="menu"
+                                            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                                            className="absolute right-0 top-full z-50 mt-2 min-w-[260px] origin-top-right rounded-2xl border border-white/10 bg-[#0B0F26]/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                                        >
+                                            {roles.map((op) => (
+                                                <button
+                                                    key={op.id}
+                                                    type="button"
+                                                    role="menuitem"
+                                                    onClick={() => { setMenuRoles(false); op.onClick(); }}
+                                                    title={op.titulo}
+                                                    className="flex w-full items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-[13px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                                                >
+                                                    <op.Icono size={15} className="flex-none text-white/40" />
+                                                    {op.label}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         )}
                         <button
                             type="button"
