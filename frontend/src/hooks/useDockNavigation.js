@@ -87,7 +87,6 @@ const useDockNavigation = () => {
             const adminPages = [
                 { id: 'comercial', icon: BarChart3, label: 'Comercial', path: '/admin/comercial' },
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
-                { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
                 { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' },
                 { id: 'postulaciones', icon: UserCheck, label: 'Postulaciones', path: '/admin/postulaciones' },
                 // El resto del panel de Operaciones (Equipo, Bugs, Bitácora, etc.) el admin lo
@@ -102,10 +101,9 @@ const useDockNavigation = () => {
                 { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' }
                 // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
                 // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
+                // Finanzas y PayRoll ya no van acá: desde el 08/10/2026 son las dos últimas
+                // secciones del dock de Comercial, para quien tiene «ver finanzas».
             ];
-            if (user?.can_view_finance) {
-                adminPages.push({ id: 'finance', icon: DollarSign, label: 'Finanzas', path: '/admin/finance' });
-            }
             return adminPages;
         } else if (user?.role === 'director_comercial') {
             // Rol enfocado en ventas: closing (Closers) y setting (Setters), sin

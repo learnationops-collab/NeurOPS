@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
-import FinancePage from './pages/admin/reports/FinancePage';
 import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
@@ -53,7 +52,6 @@ import FormsManagementPage from './pages/shared/FormsManagementPage';
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
-import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
 import CourseEditorPage from './pages/operations/course-editor/CourseEditorPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
@@ -188,25 +186,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Finanzas y Payroll son secciones del dashboard comercial desde el 08/10/2026: los
+                links viejos llevan ahí (sin el permiso «ver finanzas», el tablero abre Analizar). */}
             <Route
               path="/admin/finance"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <FinancePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/admin/comercial?s=finanzas" replace />}
             />
             <Route
               path="/admin/payroll"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <AdminPayrollPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/admin/comercial?s=payroll" replace />}
             />
             <Route
               path="/admin/marketing"
