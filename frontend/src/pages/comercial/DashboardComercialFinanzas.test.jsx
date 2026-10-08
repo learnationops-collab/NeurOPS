@@ -11,6 +11,8 @@ import DashboardComercial from './DashboardComercial';
  */
 
 const estado = vi.hoisted(() => ({ puede: false }));
+const navegar = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => navegar }));
 
 vi.mock('./comercialApi', () => ({
     getContexto: vi.fn(() => Promise.resolve({
@@ -38,7 +40,14 @@ vi.mock('./components/finanzas/Finanzas', async (original) => ({
 }));
 vi.mock('./components/finanzas/Payroll', async (original) => ({
     ...(await original()),
-    default: ({ desde, hasta }) => <div data-testid="payroll">{`${desde} → ${hasta}`}</div>,
+    default: ({ desde, hasta, onVerVentas }) => (
+        <div data-testid="payroll">
+            {`${desde} → ${hasta}`}
+            <button type="button" onClick={() => onVerVentas({ ids: [7, 9], rotulo: 'Comisión de Andy', desde, hasta })}>
+                ver ventas de Andy
+            </button>
+        </div>
+    ),
 }));
 
 const montar = (url = '/admin/comercial', props = {}) => render(
@@ -145,5 +154,37 @@ describe('DashboardComercial · espacio Finanzas', () => {
         expect(await screen.findByText('Sin acceso a Finanzas')).toBeTruthy();
         expect(screen.queryByTestId('analizar')).toBeNull();
         expect(screen.queryByTestId('finanzas')).toBeNull();
+    });
+});
+
+describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
+    beforeEach(() => {
+        navegar.mockClear();
+        try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+    });
+
+    const tocarTile = async (url, props = {}) => {
+        estado.puede = true;
+        montar(url, props);
+        const boton = await screen.findByText(/ver ventas de Andy/);
+        await act(async () => { fireEvent.click(boton); });
+    };
+
+    it('en Comercial abre Revisar › Ventas con esas ventas, como una sola etiqueta', async () => {
+        await tocarTile('/admin/comercial?s=payroll');
+
+        expect(await screen.findByRole('button', { name: 'Quitar Comisión de Andy' })).toBeTruthy();
+        expect(screen.getByRole('tab', { name: 'Ventas', selected: true })).toBeTruthy();
+        expect(navegar).not.toHaveBeenCalled();
+    });
+
+    it('en /finanzas, que no tiene Revisar, lleva al dashboard comercial con el mismo filtro', async () => {
+        await tocarTile('/finanzas?s=payroll', { espacio: 'finanzas' });
+
+        const destino = new URL(`http://x${navegar.mock.calls[0][0]}`);
+        const q = Object.fromEntries(destino.searchParams);
+        expect(destino.pathname).toBe('/admin/comercial');
+        expect([q.s, q.t, q.rol, q.p]).toEqual(['revisar', 'ventas', 'closers', 'custom']);
+        expect(JSON.parse(q.f)).toEqual({ __ids: [7, 9], __ids_rotulo: 'Comisión de Andy', __de: 'Comisión de Andy' });
     });
 });
