@@ -104,10 +104,10 @@ const FinancePage = () => {
                 const res = await api.get(`/public/finance/balances?month=${selectedMonth}`);
                 setBalances(res.data.balances);
             } else if (activeTab === 'payroll') {
-                const [payRes, teamRes] = await Promise.all([
-                    api.get(`/public/finance/payroll?month=${selectedMonth}`),
-                    api.get('/public/finance/team-members')
-                ]);
+                // En orden: la nómina siembra a los integrantes variables que falten, y la lista de
+                // integrantes tiene que llegar con ellos (si no, salían como fijos y sin rol).
+                const payRes = await api.get(`/public/finance/payroll?month=${selectedMonth}`);
+                const teamRes = await api.get('/public/finance/team-members');
                 setPayroll(payRes.data);
                 setTeamMembers(teamRes.data);
             } else if (activeTab === 'ad-budget') {
