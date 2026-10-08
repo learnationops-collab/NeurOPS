@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../../services/api', () => ({
@@ -54,8 +54,82 @@ describe('TeamManagementPage · modal de miembro', () => {
         await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
 
         expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
-            username: 'Mario Opera', email: 'mario@thelearnation.com', role: 'operator', password: '',
+            username: 'Mario Opera', email: 'mario@thelearnation.com', role: 'operator', roles: ['operator'], password: '',
         }));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+});
+
+describe('TeamManagementPage · pestañas por rol', () => {
+    const EQUIPO = [
+        { ...MARIO, roles: ['operator', 'closer'] },
+        { id: 7, username: 'Ana', email: 'ana@x.com', role: 'setter', roles: ['setter'], is_active: true },
+        { id: 8, username: 'Beto', email: 'beto@x.com', role: 'closer', roles: ['closer'], is_active: true },
+    ];
+
+    beforeEach(() => { api.get.mockResolvedValue({ data: EQUIPO }); });
+
+    it('el filtro es una fila de pestañas con la cuenta de cada rol, no una columna de botones', async () => {
+        render(<TeamManagementPage embebido />);
+
+        const pestanas = await screen.findByRole('tablist', { name: 'Filtrar el equipo por rol' });
+        expect(screen.getByRole('tab', { name: /Todos/ })).toHaveTextContent('3');
+        expect(screen.getByRole('tab', { name: /Closers/ })).toHaveTextContent('2');
+        expect(screen.getByRole('tab', { name: /Setters/ })).toHaveTextContent('1');
+        expect(pestanas).toBeInTheDocument();
+        // Embebido: el título de la página lo pone la pantalla que lo contiene.
+        expect(screen.queryByRole('heading', { name: /Gestión de Equipo/ })).not.toBeInTheDocument();
+    });
+
+    it('una persona con varios roles aparece en la pestaña de cada uno', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByRole('tab', { name: /Closers/ }));
+
+        expect(screen.getByText('Mario Opera')).toBeInTheDocument();
+        expect(screen.getByText('Beto')).toBeInTheDocument();
+        await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument());
+    });
+});
+
+describe('TeamManagementPage · varios roles', () => {
+    beforeEach(() => {
+        api.get.mockResolvedValue({ data: [{ ...MARIO, roles: ['operator', 'closer'] }] });
+        api.put.mockResolvedValue({ data: {} });
+    });
+
+    it('muestra todos los roles y el principal marcado', async () => {
+        render(<TeamManagementPage />);
+        expect(await screen.findByTitle('Rol principal: entra con este')).toHaveTextContent('Operador');
+        expect(screen.getAllByText('Closer').length).toBeGreaterThan(0);
+    });
+
+    it('suma un rol y cambia con cuál entra', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByTitle('Editar'));
+        await usuario.click(screen.getByLabelText(/Dirección comercial/));
+        await usuario.click(screen.getByRole('button', { name: 'Entra como Dirección comercial' }));
+        await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
+
+        expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
+            roles: ['operator', 'closer', 'director_comercial'], role: 'director_comercial',
+        }));
+    });
+
+    it('con la dirección comercial se le puede dar «ver finanzas», como a un admin', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByTitle('Editar'));
+        // Operador y closer: el permiso no abriría nada, así que no se ofrece.
+        expect(screen.queryByLabelText(/Acceso a finanzas/)).toBeNull();
+
+        await usuario.click(screen.getByLabelText(/Dirección comercial/));
+        await usuario.click(screen.getByLabelText(/Acceso a finanzas/));
+        await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
+
+        expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
+            roles: ['operator', 'closer', 'director_comercial'], can_view_finance: true,
+        }));
     });
 });

@@ -1,70 +1,128 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Ghost,
-    Search,
-    User,
-    Shield,
-    Users,
-    Zap,
-    ArrowRight,
-    Loader2,
-    AlertCircle,
-    UserPlus,
-    Edit2,
-    Trash2,
-    Check,
-    Power,
-    Eye,
-    EyeOff,
-    Mail,
-    Link2
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Calendar, Check, Copy, Eye, EyeOff, Ghost, KeyRound, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
-import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/Badge';
-import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
 import VincularCuentasModal from './VincularCuentasModal';
+import { Segmented } from '../../comercial/components/Shared';
+import '../../comercial/comercial.css';
+import '../../../components/learnation-ds/learnation-ds.css';
+import './equipo.css';
 import { saveSession } from '../../../utils/sessionStore';
 import { roleLandingPath } from '../../../utils/roleLanding';
 
-const TeamManagementPage = () => {
+/**
+ * Gestión de equipo. Una persona puede tener varios roles (`roles`): entra con el principal (`role`)
+ * y cambia a los otros desde su menú de sesión. Con el sistema de diseño Learnation (`ln-*`), sobre
+ * su propio fondo navy para verse igual con cualquier tema.
+ *
+ * `embebido`: va dentro de otra pantalla (configuración del admin, espacio del operador), que ya
+ * pone su propio título.
+ */
+
+export const ROLES = [
+    { id: 'admin', label: 'Administrador', plural: 'Admins', desc: 'Acceso total, finanzas opcional' },
+    { id: 'operator', label: 'Operador', plural: 'Operadores', desc: 'Configuración técnica y datos' },
+    { id: 'director_comercial', label: 'Dirección comercial', plural: 'Dirección comercial', desc: 'Dashboard comercial y Agendamiento' },
+    { id: 'director_marketing', label: 'Dirección de marketing', plural: 'Marketing', desc: 'Workshops y campañas' },
+    { id: 'closer', label: 'Closer', plural: 'Closers', desc: 'Mazo de llamadas y cartera' },
+    { id: 'setter', label: 'Setter', plural: 'Setters', desc: 'Calificación de leads' },
+    { id: 'triage', label: 'Call confirmer', plural: 'Call confirmers', desc: 'Confirma las llamadas' },
+    { id: 'hiring', label: 'Hiring', plural: 'Hiring', desc: 'Asistente de contratación' },
+];
+const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
+const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);
+// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en el dashboard
+// comercial (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
+const ROLES_FINANZAS = ['admin', 'director_comercial'];
+const veFinanzas = (roles) => roles.some(r => ROLES_FINANZAS.includes(r));
+const iniciales = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+
+const VACIO = {
+    username: '', email: '', password: '', roles: ['closer'], role: 'closer',
+    timezone: 'America/La_Paz', two_chat_number: '', is_active: true, can_view_finance: false,
+};
+
+function Interruptor({ id, label, hint, valor, onChange }) {
+    return (
+        <div className="ln-choice">
+            <input id={id} type="checkbox" role="switch" className="ln-choice-input" checked={valor} onChange={e => onChange(e.target.checked)} />
+            <label htmlFor={id} className="ln-choice-label">
+                <span className="ln-switch"><span className="ln-switch-knob" /></span>
+                <span className="ln-choice-text">{label}{hint && <span className="ln-choice-hint">{hint}</span>}</span>
+            </label>
+        </div>
+    );
+}
+
+function Campo({ label, hint, children }) {
+    return (
+        <label className="ln-field-wrap">
+            <span className="ln-field-label">{label}</span>
+            <span className="ln-field">{children}</span>
+            {hint && <span className="ln-field-hint">{hint}</span>}
+        </label>
+    );
+}
+
+/** Elegir los roles de la persona y con cuál entra (el principal). */
+function ElegirRoles({ roles, principal, onChange }) {
+    const alternar = (id) => {
+        const nuevos = roles.includes(id) ? roles.filter(r => r !== id) : [...roles, id];
+        if (!nuevos.length) return;
+        onChange(nuevos, nuevos.includes(principal) ? principal : nuevos[0]);
+    };
+    return (
+        <fieldset className="eq-roles">
+            <legend className="ln-field-label">Roles · la estrella marca con cuál entra</legend>
+            {ROLES.map(r => {
+                const tiene = roles.includes(r.id);
+                return (
+                    <div key={r.id} className={`eq-rol${tiene ? ' eq-rol--on' : ''}`}>
+                        <div className="ln-choice">
+                            <input id={`rol-${r.id}`} type="checkbox" className="ln-choice-input" checked={tiene} onChange={() => alternar(r.id)} />
+                            <label htmlFor={`rol-${r.id}`} className="ln-choice-label">
+                                <span className="ln-check"><Check /></span>
+                                <span className="ln-choice-text">{r.label}<span className="ln-choice-hint">{r.desc}</span></span>
+                            </label>
+                        </div>
+                        {tiene && (
+                            <button type="button" className={`eq-estrella${principal === r.id ? ' eq-estrella--on' : ''}`}
+                                aria-pressed={principal === r.id} aria-label={`Entra como ${r.label}`}
+                                title={principal === r.id ? 'Entra con este rol' : 'Entrar con este rol'}
+                                onClick={() => onChange(roles, r.id)}>
+                                <Star size={16} />
+                            </button>
+                        )}
+                    </div>
+                );
+            })}
+        </fieldset>
+    );
+}
+
+const TeamManagementPage = ({ embebido = false }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeRole, setActiveRole] = useState('all');
     const [impersonatingId, setImpersonatingId] = useState(null);
+    const [simulando, setSimulando] = useState(null); // { persona, nuevaPestana }: eligiendo con qué rol
     const [showDeactivated, setShowDeactivated] = useState(false);
     const [vinculando, setVinculando] = useState(false);
 
-    // Modal state
     const [modal, setModal] = useState({ show: false, type: 'create', user: null });
-    const [formData, setFormData] = useState({
-        username: '',
-        email: '',
-        password: '',
-        role: 'closer',
-        timezone: 'America/La_Paz',
-        two_chat_number: '',
-        is_active: true,
-        can_view_finance: false
-    });
+    const [formData, setFormData] = useState(VACIO);
     const [submitting, setSubmitting] = useState(false);
     const [modalError, setModalError] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
     const errorRef = useRef(null);
+    const set = (cambios) => setFormData(f => ({ ...f, ...cambios }));
 
     const cerrarModal = () => setModal(m => ({ ...m, show: false }));
 
-    // El error va arriba del cuerpo, que scrollea: si se guardó desde abajo, se lo trae a la vista.
     useEffect(() => {
         if (modalError) errorRef.current?.scrollIntoView?.({ block: 'nearest' });
     }, [modalError]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [showDeactivated]);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -72,38 +130,28 @@ const TeamManagementPage = () => {
             const res = await api.get(`/admin/users?show_deactivated=${showDeactivated}`);
             setUsers(res.data);
         } catch (err) {
-            console.error("Error fetching users", err);
+            console.error('Error fetching users', err);
         } finally {
             setLoading(false);
         }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { fetchUsers(); }, [showDeactivated]);
 
     const handleOpenModal = (type, user = null) => {
         setModal({ show: true, type, user });
         setModalError(null);
-        if (type === 'edit' && user) {
-            setFormData({
-                username: user.username,
-                email: user.email || '',
-                password: '',
-                role: user.role,
-                timezone: user.timezone || 'America/La_Paz',
-                two_chat_number: user.two_chat_number || '',
-                is_active: user.is_active,
-                can_view_finance: user.can_view_finance || false
-            });
-        } else {
-            setFormData({
-                username: '',
-                email: '',
-                password: '',
-                role: 'closer',
-                timezone: 'America/La_Paz',
-                two_chat_number: '',
-                is_active: true,
-                can_view_finance: false
-            });
-        }
+        setFormData(type === 'edit' && user ? {
+            username: user.username,
+            email: user.email || '',
+            password: '',
+            roles: rolesDe(user),
+            role: user.role,
+            timezone: user.timezone || 'America/La_Paz',
+            two_chat_number: user.two_chat_number || '',
+            is_active: user.is_active,
+            can_view_finance: user.can_view_finance || false,
+        } : VACIO);
     };
 
     const handleSubmit = async (e) => {
@@ -111,11 +159,8 @@ const TeamManagementPage = () => {
         setSubmitting(true);
         setModalError(null);
         try {
-            if (modal.type === 'create') {
-                await api.post('/admin/users', formData);
-            } else {
-                await api.put(`/admin/users/${modal.user.id}`, formData);
-            }
+            if (modal.type === 'create') await api.post('/admin/users', formData);
+            else await api.put(`/admin/users/${modal.user.id}`, formData);
             setModal({ show: false, type: 'create', user: null });
             fetchUsers();
         } catch (err) {
@@ -125,60 +170,82 @@ const TeamManagementPage = () => {
         }
     };
 
-    const handleImpersonate = async (e, targetUser) => {
-        e.stopPropagation();
+    // Simular: con varios roles se pregunta con cuál (ElegirRolAlSimular); con uno, entra directo.
+    // `nuevaPestana` recuerda si fue clic derecho para seguir después de elegir.
+    const iniciarSimulacion = (targetUser, nuevaPestana) => {
         if (!targetUser.is_active) return;
+        if (tieneVariosRoles(targetUser)) setSimulando({ persona: targetUser, nuevaPestana });
+        else return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
+    };
 
+    const simularAqui = async (targetUser, rol = null) => {
         setImpersonatingId(targetUser.id);
         try {
-            const res = await api.post('/auth/impersonate', { user_id: targetUser.id });
+            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
-
             saveSession(impersonatedUser, token);
             window.location.href = roleLandingPath(impersonatedUser.role);
         } catch (err) {
-            alert(err.response?.data?.message || 'Error al iniciar simulación');
             setImpersonatingId(null);
+            throw err;
         }
     };
 
-    // Clic derecho sobre "Simular": abre al usuario simulado en una pestaña NUEVA, aislada
-    // de la pestaña actual (y de cualquier otra simulación ya abierta) - así se puede tener
-    // varios usuarios simulados a la vez en el mismo navegador. window.open() se llama
-    // síncrono, ANTES del await, porque los navegadores bloquean como popup cualquier
-    // window.open() disparado después de una espera asíncrona; se navega esa pestaña ya
-    // abierta recién cuando llega la respuesta.
-    const handleImpersonateNewTab = async (e, targetUser) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!targetUser.is_active) return;
-
+    // Clic derecho sobre "Simular": abre al usuario simulado en una pestaña NUEVA, aislada (se pueden
+    // simular varios a la vez). window.open() va síncrono, antes del await: los navegadores bloquean
+    // como popup cualquier window.open() después de una espera.
+    const simularEnPestanaNueva = async (targetUser, rol = null) => {
         const newTab = window.open('', '_blank');
         try {
-            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true });
+            const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
-
-            const params = new URLSearchParams({
-                token,
-                u: JSON.stringify(impersonatedUser),
-                next: roleLandingPath(impersonatedUser.role),
-            });
-            const url = `/session-entry?${params.toString()}`;
-
-            if (newTab) {
-                newTab.location.href = url;
-            } else {
-                alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
-            }
+            const params = new URLSearchParams({ token, u: JSON.stringify(impersonatedUser), next: roleLandingPath(impersonatedUser.role) });
+            if (newTab) newTab.location.href = `/session-entry?${params.toString()}`;
+            else alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
         } catch (err) {
             if (newTab) newTab.close();
-            alert(err.response?.data?.message || 'Error al iniciar simulación');
+            throw err;
         }
     };
 
-    const handleDelete = async (e, user) => {
-        e.stopPropagation();
-        if (!window.confirm(`¿Estás seguro de que deseas eliminar a ${user.username}?`)) return;
+    const handleImpersonate = (targetUser) => {
+        const r = iniciarSimulacion(targetUser, false);
+        r?.catch((err) => alert(err.response?.data?.message || 'Error al iniciar simulación'));
+    };
+
+    const handleImpersonateNewTab = (e, targetUser) => {
+        e.preventDefault();
+        const r = iniciarSimulacion(targetUser, true);
+        r?.catch((err) => alert(err.response?.data?.message || 'Error al iniciar simulación'));
+    };
+
+    // Ya eligió el rol: aquí no se captura el error, ElegirRolAlSimular lo muestra en su pantalla.
+    const simularConRol = async (rol) => {
+        const { persona, nuevaPestana } = simulando;
+        if (nuevaPestana) {
+            await simularEnPestanaNueva(persona, rol);
+            setSimulando(null);
+        } else {
+            await simularAqui(persona, rol);
+        }
+    };
+
+    // Contraseña temporal nueva: se muestra una sola vez para pasársela a la persona.
+    const [reseteada, setReseteada] = useState(null); // {username, password}
+    const [copiada, setCopiada] = useState(false);
+    const handleReset = async (user) => {
+        if (!window.confirm(`¿Resetear la contraseña de ${user.username}? La actual deja de servir.`)) return;
+        try {
+            const r = await api.post(`/admin/users/${user.id}/reset-password`);
+            setCopiada(false);
+            setReseteada(r.data);
+        } catch (err) {
+            alert(err.response?.data?.message || 'No se pudo resetear la contraseña');
+        }
+    };
+
+    const handleDelete = async (user) => {
+        if (!window.confirm(`¿Eliminar a ${user.username}? Si solo deja de trabajar, mejor desactivalo.`)) return;
         try {
             await api.delete(`/admin/users/${user.id}`);
             fetchUsers();
@@ -187,379 +254,180 @@ const TeamManagementPage = () => {
         }
     };
 
-    const roles = [
-        { id: 'all', label: 'Todos', icon: Users },
-        { id: 'closer', label: 'Closers', icon: User },
-        { id: 'setter', label: 'Setters', icon: User },
-        { id: 'triage', label: 'Call Confirmer', icon: Shield },
-        { id: 'operator', label: 'Operadores', icon: Zap },
-        { id: 'director_comercial', label: 'Director Comercial', icon: Shield },
-        { id: 'director_marketing', label: 'Director de Marketing', icon: Shield },
-        { id: 'hiring', label: 'Hiring', icon: Shield },
-        { id: 'admin', label: 'Admins', icon: Shield },
-    ];
-
-    const getRoleLabel = (roleId) => {
-        const role = roles.find(r => r.id === roleId);
-        return role ? role.label : roleId.replace('_', ' ').toUpperCase();
-    };
-
-    const filteredUsers = users.filter(u => {
-        const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRole = activeRole === 'all' || u.role === activeRole;
-        return matchesSearch && matchesRole;
-    });
+    const q = searchTerm.toLowerCase();
+    const filteredUsers = users.filter(u =>
+        (u.username.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
+        && (activeRole === 'all' || rolesDe(u).includes(activeRole)));
+    const pestanasDeRol = [{ id: 'all', plural: 'Todos' }, ...ROLES].map(r => ({
+        key: r.id,
+        label: r.plural,
+        cuenta: r.id === 'all' ? users.length : users.filter(u => rolesDe(u).includes(r.id)).length,
+    })).filter(p => p.key === 'all' || p.cuenta > 0 || p.key === activeRole);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-5xl font-black italic tracking-tighter text-base uppercase">Gestión de Equipo</h1>
-                    <p className="text-muted font-medium uppercase text-xs tracking-[0.3em] flex items-center gap-2">
-                        <Users size={14} className="text-primary" />
-                        Control central de usuarios y simulación de roles
+        <div className={`dc-shell dc-shell--embebido equipo${embebido ? ' equipo--embebido' : ''}`}>
+            <header className="eq-cab">
+                <div>
+                    {!embebido && <h1 className="ln-t-h1">Gestión de equipo</h1>}
+                    <p className="ln-t-body-sm ln-muted">
+                        {users.length} {users.length === 1 ? 'persona' : 'personas'}{showDeactivated ? ', incluidas las inactivas' : ''}.
+                        Cada una entra con su rol principal y cambia a los otros desde su menú.
                     </p>
                 </div>
-
-                <div className="flex gap-4">
-                    <Button
-                        onClick={() => setShowDeactivated(!showDeactivated)}
-                        variant="outline"
-                        className={`h-14 px-6 rounded-2xl border-base font-black uppercase text-[10px] tracking-widest ${showDeactivated ? 'bg-primary/10 text-primary border-primary/20' : ''}`}
-                    >
-                        {showDeactivated ? 'Ocultar Inactivos' : 'Ver Inactivos'}
-                    </Button>
-                    <Button
-                        onClick={() => setVinculando(true)}
-                        variant="outline"
-                        className="h-14 px-6 rounded-2xl border-base font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
-                    >
-                        <Link2 size={18} />
-                        Vincular cuentas
-                    </Button>
-                    <Button
-                        onClick={() => handleOpenModal('create')}
-                        variant="primary"
-                        className="h-14 px-8 rounded-2xl shadow-brand-glow font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
-                    >
-                        <UserPlus size={18} />
-                        Nuevo Miembro
-                    </Button>
+                <div className="ln-btn-row">
+                    <button type="button" className="btn btn--linea" aria-pressed={showDeactivated}
+                        onClick={() => setShowDeactivated(!showDeactivated)}>
+                        {showDeactivated ? <EyeOff /> : <Eye />}{showDeactivated ? 'Ocultar inactivos' : 'Ver inactivos'}
+                    </button>
+                    <button type="button" className="btn btn--linea" onClick={() => setVinculando(true)}>
+                        <Link2 />Vincular cuentas
+                    </button>
+                    <button type="button" className="btn btn--cta" onClick={() => handleOpenModal('create')}>
+                        <UserPlus />Nuevo miembro
+                    </button>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1">Búsqueda</label>
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Nombre o Email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-surface border border-base rounded-2xl py-4 pl-12 pr-4 text-sm font-bold placeholder:text-muted focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1">Filtro por Rol</label>
-                        <div className="space-y-2">
-                            {roles.map(role => (
-                                <button
-                                    key={role.id}
-                                    onClick={() => setActiveRole(role.id)}
-                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${activeRole === role.id
-                                        ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
-                                        : 'bg-surface border-base text-muted hover:border-primary/40'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <role.icon size={16} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">{role.label}</span>
-                                    </div>
-                                    {activeRole === role.id && <ArrowRight size={14} />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="lg:col-span-3">
-                    {loading ? (
-                        <div className="h-96 flex flex-col items-center justify-center gap-4 glass-panel rounded-[2.5rem] border border-base">
-                            <Loader2 size={40} className="text-primary animate-spin" />
-                            <p className="text-xs font-black text-muted uppercase tracking-widest">Sincronizando equipo...</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                            <AnimatePresence mode="popLayout">
-                                {filteredUsers.map((u, idx) => (
-                                    <motion.div
-                                        key={u.id}
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                    >
-                                        <Card variant="surface" className={`p-6 group relative overflow-hidden h-full border-base hover:border-primary/50 transition-all ${!u.is_active ? 'opacity-50' : ''}`}>
-                                            <div className="flex items-start justify-between mb-6">
-                                                <div className="w-16 h-16 bg-main rounded-[1.25rem] flex items-center justify-center text-2xl font-black text-primary border border-base group-hover:scale-110 transition-transform">
-                                                    {u.username[0].toUpperCase()}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleOpenModal('edit', u); }}
-                                                        className="p-3 bg-main border border-base rounded-xl text-muted hover:text-white hover:border-primary transition-all"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => handleDelete(e, u)}
-                                                        className="p-3 bg-main border border-base rounded-xl text-muted hover:text-rose-500 hover:border-rose-500/50 transition-all"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-1 mb-6">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="text-xl font-black text-base truncate uppercase italic tracking-tighter">{u.username}</h3>
-                                                    {!u.is_active && <Badge variant="destructive" className="text-[8px] px-1.5 py-0">INACTIVO</Badge>}
-                                                </div>
-                                                <p className="text-xs text-muted font-medium truncate flex items-center gap-2">
-                                                    <Mail size={12} />
-                                                    {u.email || 'Sin correo configurado'}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-base/50">
-                                                <div className="flex gap-2 items-center">
-                                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
-                                                        {getRoleLabel(u.role)}
-                                                    </Badge>
-                                                    {u.persona_id && (
-                                                        <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                                                            Varios roles
-                                                        </Badge>
-                                                    )}
-                                                    {u.role === 'admin' && u.can_view_finance && (
-                                                        <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                                            Finanzas
-                                                        </Badge>
-                                                    )}
-                                                </div>
-
-                                                <button
-                                                    onClick={(e) => handleImpersonate(e, u)}
-                                                    onContextMenu={(e) => handleImpersonateNewTab(e, u)}
-                                                    disabled={!u.is_active || impersonatingId === u.id}
-                                                    title="Clic: simular en esta pestaña. Clic derecho: abrir en pestaña nueva (para simular varios usuarios a la vez)."
-                                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${u.is_active
-                                                        ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black shadow-lg shadow-amber-500/5'
-                                                        : 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                                        }`}
-                                                >
-                                                    {impersonatingId === u.id ? <Loader2 size={14} className="animate-spin" /> : <Ghost size={14} />}
-                                                    Simular
-                                                </button>
-                                            </div>
-
-                                            {/* Decoration */}
-                                            <div className="absolute -right-6 -bottom-6 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
-                                                <Users size={120} />
-                                            </div>
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    )}
+            <div className="eq-barra">
+                <span className="ln-field eq-busca">
+                    <Search />
+                    <input type="text" placeholder="Buscar por nombre o email" aria-label="Buscar miembro"
+                        value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                </span>
+                <div className="eq-pestanas">
+                    <Segmented opciones={pestanasDeRol} valor={activeRole} onChange={setActiveRole} ariaLabel="Filtrar el equipo por rol" />
                 </div>
             </div>
 
-            {vinculando && (
-                <VincularCuentasModal users={users} onCerrar={() => setVinculando(false)} onCambio={fetchUsers} />
-            )}
-
-            {/* Alta y edición de un miembro. Va sobre el cascarón `Modal` (portal a body, cabecera
-                y pie fijos): montado acá, adentro del `space-y-10`, el velo se corría 40px y un
-                formulario más alto que la ventana dejaba «Guardar» fuera de alcance. */}
-            {modal.show && (
-                <Modal
-                    tono="tema"
-                    ancho="xl"
-                    titulo={modal.type === 'create' ? 'Nuevo Miembro' : 'Editar Miembro'}
-                    subtitulo="Configuración técnica de acceso"
-                    onCerrar={cerrarModal}
-                    onSubmit={handleSubmit}
-                    cerrable={!submitting}
-                    cuerpoClassName="space-y-5"
-                    pie={(
-                        <>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={cerrarModal}
-                                disabled={submitting}
-                                className="h-12 px-6 rounded-2xl text-[10px]"
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={submitting}
-                                variant="primary"
-                                className="h-12 px-6 rounded-2xl shadow-brand-glow flex items-center justify-center gap-2 text-[10px]"
-                            >
-                                {submitting ? <Loader2 className="animate-spin" size={18} /> : (
-                                    <>
-                                        <Check size={18} />
-                                        {modal.type === 'create' ? 'Crear Miembro' : 'Guardar Cambios'}
-                                    </>
-                                )}
-                            </Button>
-                        </>
-                    )}
-                >
-                    {modalError && (
-                        <div ref={errorRef} role="alert" className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs font-black uppercase tracking-widest flex items-center gap-3">
-                            <AlertCircle size={20} className="shrink-0" />
-                            {modalError}
-                        </div>
-                    )}
-
-                    {/* Dos columnas solo con lugar: en un panel angosto, Rol y Contraseña se apilan. */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="space-y-2 sm:col-span-2">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Nombre de Usuario</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ej: jsmith"
-                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                value={formData.username}
-                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="space-y-2 sm:col-span-2">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Correo Electrónico</label>
-                            <input
-                                type="email"
-                                placeholder="usuario@learnation.com"
-                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="space-y-2 sm:col-span-2">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Número de WhatsApp (recordatorios de seguimiento)</label>
-                            <input
-                                type="text"
-                                placeholder="Ej: 525620873819 (código de país + número, sin +, opcional)"
-                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/30"
-                                value={formData.two_chat_number}
-                                onChange={(e) => setFormData({ ...formData, two_chat_number: e.target.value })}
-                            />
-                            <p className="text-[10px] text-muted/70 font-bold uppercase ml-1">Si se deja vacío, este closer no recibe avisos automáticos de seguimiento por WhatsApp.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Rol Operativo</label>
-                            <select
-                                className="w-full px-5 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold appearance-none cursor-pointer"
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                            >
-                                <option value="admin">Administrador</option>
-                                <option value="closer">Closer Principal</option>
-                                <option value="setter">Setter de Leads</option>
-                                <option value="operator">Operador Técnico</option>
-                                <option value="triage">Call Confirmer</option>
-                                <option value="director_comercial">Director Comercial</option>
-                                <option value="director_marketing">Director de Marketing</option>
-                                <option value="hiring">Hiring (Asistente)</option>
-                            </select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Contraseña</label>
-                            <div className="relative">
-                                {/* `pr-12`: el texto no pasa por debajo del ojo. */}
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder={modal.type === 'edit' ? 'Vacio para no cambiar' : '••••••••'}
-                                    required={modal.type === 'create'}
-                                    className="w-full pl-5 pr-12 py-3.5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
-                                >
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            {loading ? (
+                <div className="ln-empty"><span className="ln-spinner" /><p className="ln-empty-desc">Cargando el equipo…</p></div>
+            ) : filteredUsers.length === 0 ? (
+                <div className="ln-empty"><p className="ln-empty-title">Nadie con ese filtro</p></div>
+            ) : (
+                <div className="ln-table eq-tabla">
+                    <div className="ln-table-head"><span>Persona</span><span>Roles</span><span>Estado</span><span /></div>
+                    {filteredUsers.map(u => (
+                        <div key={u.id} className={`ln-table-row${u.is_active ? '' : ' eq-fila--inactiva'}`}>
+                            <div className="ln-cell--title eq-persona">
+                                <span className="eq-avatar" aria-hidden="true">{iniciales(u.username)}</span>
+                                <div className="eq-persona-txt">
+                                    <div className="ln-cell-label">{u.username}</div>
+                                    <div className="ln-cell-sublabel eq-mail"><Mail size={12} />{u.email || 'Sin email'}</div>
+                                </div>
+                            </div>
+                            <div className="eq-chips">
+                                {rolesDe(u).map(r => (
+                                    <span key={r} className={`ln-chip ln-chip--sm ${r === u.role ? 'ln-chip--brand' : 'ln-chip--idle'}`}
+                                        title={r === u.role ? 'Rol principal: entra con este' : undefined}>
+                                        {r === u.role && <Star />}{rotulo(r)}
+                                    </span>
+                                ))}
+                                {u.persona_id && <span className="ln-chip ln-chip--sm ln-chip--info">Cuentas vinculadas</span>}
+                            </div>
+                            <div className="eq-chips">
+                                {!u.is_active
+                                    ? <span className="ln-chip ln-chip--sm ln-chip--error">Inactivo</span>
+                                    : <span className="ln-chip ln-chip--sm ln-chip--success">Activo</span>}
+                                {u.calendar && <span className="ln-chip ln-chip--sm ln-chip--info" title="Google Calendar conectado"><Calendar />Calendar</span>}
+                                {veFinanzas(rolesDe(u)) && u.can_view_finance && <span className="ln-chip ln-chip--sm ln-chip--warning">Finanzas</span>}
+                            </div>
+                            <div className="eq-acciones">
+                                <button type="button" className="btn btn--linea btn--sm"
+                                    onClick={() => handleImpersonate(u)} onContextMenu={(e) => handleImpersonateNewTab(e, u)}
+                                    disabled={!u.is_active || impersonatingId === u.id}
+                                    title="Clic: simular en esta pestaña. Clic derecho: en una pestaña nueva.">
+                                    {impersonatingId === u.id ? <span className="ln-spinner" /> : <Ghost />}Simular
+                                </button>
+                                <button type="button" className="ibtn ibtn--sm" title="Resetear contraseña" aria-label={`Resetear la contraseña de ${u.username}`} onClick={() => handleReset(u)}>
+                                    <KeyRound />
+                                </button>
+                                <button type="button" className="ibtn ibtn--sm" title="Editar" aria-label={`Editar a ${u.username}`} onClick={() => handleOpenModal('edit', u)}>
+                                    <Pencil />
+                                </button>
+                                <button type="button" className="ibtn ibtn--sm eq-borrar" title="Eliminar" aria-label={`Eliminar a ${u.username}`} onClick={() => handleDelete(u)}>
+                                    <Trash2 />
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    ))}
+                </div>
+            )}
 
-                    <div className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-main/40 rounded-[1.5rem] border border-base">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <div className={`p-3 rounded-2xl shrink-0 ${formData.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                                <Power size={22} />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[11px] font-black uppercase text-base tracking-widest">Estado de Cuenta</p>
-                                <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.is_active ? 'Acceso Habilitado' : 'Acceso Restringido'}</p>
-                            </div>
+            {simulando && (
+                <ElegirRolAlSimular persona={simulando.persona} onElegir={simularConRol} onCancelar={() => setSimulando(null)} />
+            )}
+
+            {reseteada && (
+                <Modal tono="slate" titulo="Contraseña nueva" subtitulo={reseteada.username} onCerrar={() => setReseteada(null)}>
+                    <div className="eq-reset">
+                        <p>Pasásela a {reseteada.username}. No se vuelve a mostrar; puede cambiarla después.</p>
+                        <div className="eq-reset-clave">
+                            <code>{reseteada.password}</code>
+                            <button type="button" className="ln-btn ln-btn--ghost ln-btn--sm"
+                                onClick={() => navigator.clipboard?.writeText(reseteada.password).then(() => setCopiada(true), () => {})}>
+                                {copiada ? <Check /> : <Copy />}{copiada ? 'Copiada' : 'Copiar'}
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={formData.is_active}
-                            aria-label="Estado de cuenta"
-                            onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                            className={`w-14 h-7 shrink-0 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.is_active ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                        >
-                            <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.is_active ? 'translate-x-7' : 'translate-x-0'}`} />
-                        </button>
                     </div>
+                </Modal>
+            )}
 
-                    {formData.role === 'admin' && (
-                        <div className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-main/40 rounded-[1.5rem] border border-base">
-                            <div className="flex items-center gap-4 min-w-0">
-                                <div className={`p-3 rounded-2xl shrink-0 ${formData.can_view_finance ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
-                                    <Shield size={22} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-black uppercase text-base tracking-widest">Acceso a Finanzas</p>
-                                    <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.can_view_finance ? 'Permitido' : 'Restringido'}</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={formData.can_view_finance}
-                                aria-label="Acceso a finanzas"
-                                onClick={() => setFormData({ ...formData, can_view_finance: !formData.can_view_finance })}
-                                className={`w-14 h-7 shrink-0 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.can_view_finance ? 'bg-indigo-500' : 'bg-slate-700'}`}
-                            >
-                                <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.can_view_finance ? 'translate-x-7' : 'translate-x-0'}`} />
+            {vinculando && <VincularCuentasModal users={users} onCerrar={() => setVinculando(false)} onCambio={fetchUsers} />}
+
+            {modal.show && (
+                <Modal
+                    tono="slate"
+                    ancho="xl"
+                    titulo={modal.type === 'create' ? 'Nuevo Miembro' : 'Editar Miembro'}
+                    subtitulo={modal.type === 'create' ? 'Acceso, roles y estado' : modal.user?.username}
+                    onCerrar={cerrarModal}
+                    onSubmit={handleSubmit}
+                    cerrable={!submitting}
+                    pie={(
+                        <div className="dc-shell dc-shell--embebido ln-btn-row eq-pie">
+                            <button type="button" className="btn btn--linea" onClick={cerrarModal} disabled={submitting}>Cancelar</button>
+                            <button type="submit" className="btn btn--cta" disabled={submitting}>
+                                {submitting ? <span className="ln-spinner" /> : <Check />}
+                                {modal.type === 'create' ? 'Crear Miembro' : 'Guardar Cambios'}
                             </button>
                         </div>
                     )}
+                >
+                    <div className="dc-shell dc-shell--embebido eq-form">
+                        {modalError && (
+                            <div ref={errorRef} role="alert" className="ln-alert ln-alert--error">
+                                <AlertCircle className="ln-alert-ico" /><div className="ln-alert-body"><div className="ln-alert-desc">{modalError}</div></div>
+                            </div>
+                        )}
+                        <div className="ln-grid ln-grid-2">
+                            <Campo label="Nombre de usuario">
+                                <input type="text" required placeholder="Ej.: Ana Paz" value={formData.username} onChange={(e) => set({ username: e.target.value })} />
+                            </Campo>
+                            <Campo label="Email" hint="Con este entra con Google y se cruza con Agendas 2.0.">
+                                <input type="email" placeholder="ana@gmail.com" value={formData.email} onChange={(e) => set({ email: e.target.value })} />
+                            </Campo>
+                            <Campo label="Contraseña">
+                                <input type="password" autoComplete="new-password" required={modal.type === 'create'}
+                                    placeholder={modal.type === 'edit' ? 'Vacía para no cambiarla' : '••••••••'}
+                                    value={formData.password} onChange={(e) => set({ password: e.target.value })} />
+                            </Campo>
+                            <Campo label="WhatsApp (avisos de seguimiento)" hint="Código de país y número, sin +. Opcional.">
+                                <input type="text" placeholder="525620873819" value={formData.two_chat_number} onChange={(e) => set({ two_chat_number: e.target.value })} />
+                            </Campo>
+                        </div>
+
+                        <ElegirRoles roles={formData.roles} principal={formData.role}
+                            onChange={(roles, role) => set({ roles, role })} />
+
+                        <div className="eq-switches">
+                            <Interruptor id="eq-activo" label="Cuenta activa" hint={formData.is_active ? 'Puede entrar' : 'No puede entrar; su historial queda'}
+                                valor={formData.is_active} onChange={(v) => set({ is_active: v })} />
+                            {veFinanzas(formData.roles) && (
+                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Comercial"
+                                    valor={formData.can_view_finance} onChange={(v) => set({ can_view_finance: v })} />
+                            )}
+                        </div>
+                    </div>
                 </Modal>
             )}
         </div>

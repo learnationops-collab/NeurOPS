@@ -91,6 +91,22 @@ def login():
         }
     }), 200
 
+@bp.route('/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+@operator_required
+def resetear_contrasena(user_id):
+    """Admin u operador: le pone a la cuenta una contraseña temporal nueva y la devuelve una sola vez,
+    para pasársela a la persona. La vieja deja de servir."""
+    import secrets
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"message": "Not found"}), 404
+    temporal = secrets.token_urlsafe(9)
+    user.set_password(temporal)
+    db.session.commit()
+    return jsonify({"password": temporal, "username": user.username}), 200
+
+
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
     logout_user()
