@@ -5,6 +5,46 @@ import { roleLandingPath } from '../../utils/roleLanding';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import DebugConsole from '../../components/modals/DebugConsole';
+import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
+import Eleccion from './Eleccion';
+
+// Quien tiene más de un rol (o cuentas vinculadas) elige con cuál entra, con la pantalla de elección
+// de develop. Con uno solo entra directo a su pantalla, como siempre.
+const tieneVariosRoles = (user) => (user.roles?.length || 0) > 1 || otrasCuentas(user).length > 0;
+
+function ElegirRol({ user, onElegido }) {
+  const [eligiendo, setEligiendo] = useState(null);
+  const [error, setError] = useState(null);
+  const roles = user.roles?.length ? user.roles : [user.role];
+  const opciones = [
+    ...roles.map((rol) => ({ clave: `rol-${rol}`, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol], entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
+    ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), Icono: ICONO_DE_ROL[c.role], detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
+  ];
+
+  const elegir = async (o) => {
+    setEligiendo(o.clave);
+    setError(null);
+    try {
+      await o.entrar();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo entrar con ese rol');
+      setEligiendo(null);
+    }
+  };
+
+  return (
+    <Eleccion
+      nombre={user.username}
+      pregunta="Seleccioná tu rol. Después podés cambiarlo desde tu menú."
+      eligiendo={eligiendo}
+      error={error}
+      opciones={opciones.map((o) => ({
+        clave: o.clave, titulo: o.titulo, detalle: o.detalle, Icono: o.Icono || User,
+        onElegir: () => elegir(o),
+      }))}
+    />
+  );
+}
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -12,6 +52,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [eligiendoRol, setEligiendoRol] = useState(null); // el usuario recién entrado, si tiene varios roles
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -24,13 +65,18 @@ const LoginPage = () => {
       // Un solo mapa rol -> pantalla (utils/roleLanding.js), compartido con
       // ProtectedRoute y con la simulación desde Equipo. Tener la lista repetida
       // acá dejaba afuera a los roles nuevos (`hiring` se quedaba en el login).
-      navigate(roleLandingPath(user.role));
+      if (tieneVariosRoles(user)) setEligiendoRol(user);
+      else navigate(roleLandingPath(user.role));
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
   };
+
+  if (eligiendoRol) {
+    return <ElegirRol user={eligiendoRol} onElegido={(u) => navigate(roleLandingPath(u.role))} />;
+  }
 
   return (
     <div className="min-h-screen w-full bg-main flex items-center justify-center p-4">
