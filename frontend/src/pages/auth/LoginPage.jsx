@@ -79,7 +79,7 @@ function Entrar({ onEntrar, errorInicial }) {
     return (
         <div className="lg-panel">
             <LogoEntrada idGrad="lnGradLogin" />
-            <h1 className="lg-titulo"><small>Learnation</small>Acquisition</h1>
+            <h1 className="lg-titulo"><small>Learnation</small>Adquisitions</h1>
             <p className="lg-texto">Entrá con tu cuenta del equipo.</p>
             <form className="lg-form" onSubmit={conClave}>
                 <label className="sr-only" htmlFor="lg-usuario">Usuario o email</label>
