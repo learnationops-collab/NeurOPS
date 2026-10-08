@@ -32,6 +32,10 @@ export const ROLES = [
 ];
 const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
 const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);
+// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en el dashboard
+// comercial (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
+const ROLES_FINANZAS = ['admin', 'director_comercial'];
+const veFinanzas = (roles) => roles.some(r => ROLES_FINANZAS.includes(r));
 const iniciales = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
 const VACIO = {
@@ -325,7 +329,7 @@ const TeamManagementPage = ({ embebido = false }) => {
                                     ? <span className="ln-chip ln-chip--sm ln-chip--error">Inactivo</span>
                                     : <span className="ln-chip ln-chip--sm ln-chip--success">Activo</span>}
                                 {u.calendar && <span className="ln-chip ln-chip--sm ln-chip--info" title="Google Calendar conectado"><Calendar />Calendar</span>}
-                                {rolesDe(u).includes('admin') && u.can_view_finance && <span className="ln-chip ln-chip--sm ln-chip--warning">Finanzas</span>}
+                                {veFinanzas(rolesDe(u)) && u.can_view_finance && <span className="ln-chip ln-chip--sm ln-chip--warning">Finanzas</span>}
                             </div>
                             <div className="eq-acciones">
                                 <button type="button" className="btn btn--linea btn--sm"
@@ -418,8 +422,8 @@ const TeamManagementPage = ({ embebido = false }) => {
                         <div className="eq-switches">
                             <Interruptor id="eq-activo" label="Cuenta activa" hint={formData.is_active ? 'Puede entrar' : 'No puede entrar; su historial queda'}
                                 valor={formData.is_active} onChange={(v) => set({ is_active: v })} />
-                            {formData.roles.includes('admin') && (
-                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Solo para administradores"
+                            {veFinanzas(formData.roles) && (
+                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Comercial"
                                     valor={formData.can_view_finance} onChange={(v) => set({ can_view_finance: v })} />
                             )}
                         </div>

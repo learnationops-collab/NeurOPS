@@ -116,4 +116,20 @@ describe('TeamManagementPage · varios roles', () => {
             roles: ['operator', 'closer', 'director_comercial'], role: 'director_comercial',
         }));
     });
+
+    it('con la dirección comercial se le puede dar «ver finanzas», como a un admin', async () => {
+        render(<TeamManagementPage />);
+        const usuario = userEvent.setup();
+        await usuario.click(await screen.findByTitle('Editar'));
+        // Operador y closer: el permiso no abriría nada, así que no se ofrece.
+        expect(screen.queryByLabelText(/Acceso a finanzas/)).toBeNull();
+
+        await usuario.click(screen.getByLabelText(/Dirección comercial/));
+        await usuario.click(screen.getByLabelText(/Acceso a finanzas/));
+        await usuario.click(screen.getByRole('button', { name: /Guardar Cambios/ }));
+
+        expect(api.put).toHaveBeenCalledWith('/admin/users/3', expect.objectContaining({
+            roles: ['operator', 'closer', 'director_comercial'], can_view_finance: true,
+        }));
+    });
 });
