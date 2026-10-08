@@ -88,7 +88,32 @@ def team_member_operations(id):
         db.session.commit()
         return jsonify(member.to_dict()), 200
 
+# Fragmento del nombre en TeamMember (sin espacios) -> clave de la comision.
+_CLAVES_POR_NOMBRE = (
+    ('elias', 'elias'),
+    ('paula', 'paula'),
+    ('jeancarlo', 'jeancarlo'),
+    ('facundo', 'facundo'),
+    ('marlon', 'marlon'),
+)
+
+
+def comision_de_miembro(member, dynamic_commissions):
+    """La comision autocalculada de un integrante variable del equipo; 0 para el resto."""
+    if member.salary_type != 'variable':
+        return 0.0
+    name_clean = member.name.lower().strip().replace(' ', '')
+    for fragmento, clave in _CLAVES_POR_NOMBRE:
+        if fragmento in name_clean:
+            return dynamic_commissions.get(clave, 0.0)
+    return 0.0
+
+
 def get_commissions_calculated(month_str):
+    from app.services.commission_service import (
+        CLOSER_RATE, SETTER_RATE, DIRECTOR_RATE, SETTERS_CON_COMISION, CLOSERS_CON_COMISION,
+    )
+
     try:
         year, month = map(int, month_str.split('-'))
         start_date = datetime(year, month, 1)
@@ -96,48 +121,47 @@ def get_commissions_calculated(month_str):
         end_date = datetime(year, month, last_day, 23, 59, 59, 999999)
     except Exception:
         return {}
-        
+
     sales = FinancialSale.query.filter(
         FinancialSale.date >= start_date,
         FinancialSale.date <= end_date
     ).all()
-    
+
     all_agendas = FinancialAgenda.query.all()
     from app.services.attribution_service import AttributionService
     attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
-                
-    elias_recaudado = 0.0
-    jeancarlo_recaudado = 0.0
+
+    recaudado = {clave: 0.0 for clave in (*SETTERS_CON_COMISION.values(), *CLOSERS_CON_COMISION.values())}
     marlon_recaudado = 0.0
-    
+
     for s in sales:
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
             continue
-            
+
         resolved_setter = None
-        
+
         agenda = attribution_map.get(s.id)
         if agenda:
             is_valid_lead_source = (
-                agenda.nombre and 
-                agenda.nombre.strip() and 
-                agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
-                'entrevista' not in agenda.nombre.lower() and 
+                agenda.nombre and
+                agenda.nombre.strip() and
+                agenda.nombre.lower() not in ('s/f', 'n/a', '') and
+                'entrevista' not in agenda.nombre.lower() and
                 'diagnostica' not in agenda.nombre.lower() and
                 'diagnóstica' not in agenda.nombre.lower()
             )
             if is_valid_lead_source:
                 resolved_setter = agenda.nombre
-                
+
         if not resolved_setter:
             s_setter = s.setter
             if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
                 resolved_setter = s_setter
-                
+
         final_setter = resolved_setter or "Sin Setter"
         final_closer = resolve_closer_name(s.email_vendedor)
-        
+
         monto_original = float(s.monto or 0.0)
         if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
             monto_ajustado = monto_original * 0.955
@@ -145,29 +169,32 @@ def get_commissions_calculated(month_str):
             monto_ajustado = monto_original * 0.911
         else:
             monto_ajustado = monto_original
-            
-        if final_setter.lower() == 'elias':
-            elias_recaudado += monto_ajustado
-            
-        if final_closer.lower() == 'jean carlo':
-            jeancarlo_recaudado += monto_ajustado
-            
+
+        setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
+        if setter_clave:
+            recaudado[setter_clave] += monto_ajustado
+
+        closer_clave = CLOSERS_CON_COMISION.get(final_closer.strip().lower())
+        if closer_clave:
+            recaudado[closer_clave] += monto_ajustado
+
             prog, simple_tp = split_tipo_pago(s.tipo_pago)
             is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
             if not is_renovacion:
                 marlon_recaudado += monto_ajustado
-                
-    return {
-        "elias": round(elias_recaudado * 0.08, 2),
-        "jeancarlo": round(jeancarlo_recaudado * 0.10, 2),
-        "marlon": round(marlon_recaudado * 0.05, 2)
-    }
+
+    comisiones = {clave: round(recaudado[clave] * SETTER_RATE, 2) for clave in SETTERS_CON_COMISION.values()}
+    comisiones.update({clave: round(recaudado[clave] * CLOSER_RATE, 2) for clave in CLOSERS_CON_COMISION.values()})
+    comisiones['marlon'] = round(marlon_recaudado * DIRECTOR_RATE, 2)
+    return comisiones
 
 def _seed_variable_members():
-    """Crea Elias, Jean Carlos y Marlon en TeamMember si no existen."""
+    """Crea en TeamMember a quienes cobran comision variable si no existen."""
     defaults = [
         {'name': 'Elias',       'role': 'Setter',              'salary_type': 'variable', 'payment_method': 'AirTM'},
+        {'name': 'Paula',       'role': 'Setter',              'salary_type': 'variable', 'payment_method': 'Mercury'},
         {'name': 'Jean Carlos', 'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
+        {'name': 'Facundo',     'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
         {'name': 'Marlon',      'role': 'Director de Ventas',  'salary_type': 'variable', 'payment_method': 'Mercury'},
     ]
     changed = False
@@ -239,7 +266,7 @@ def manage_payroll():
     saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
     saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
     
-    # Auto-seedea los 3 miembros variables si no existen
+    # Auto-seedea los miembros variables si no existen
     _seed_variable_members()
     
     members = TeamMember.query.all()
@@ -254,15 +281,7 @@ def manage_payroll():
             p = saved_payroll_map[m.id]
             payroll_data.append(p.to_dict())
         else:
-            calculated_comm = 0.0
-            if m.salary_type == 'variable':
-                name_clean = m.name.lower().strip().replace(' ', '')
-                if 'elias' in name_clean:
-                    calculated_comm = dynamic_commissions.get('elias', 0.0)
-                elif 'jeancarlo' in name_clean or 'jeancarlos' in name_clean:
-                    calculated_comm = dynamic_commissions.get('jeancarlo', 0.0)
-                elif 'marlon' in name_clean:
-                    calculated_comm = dynamic_commissions.get('marlon', 0.0)
+            calculated_comm = comision_de_miembro(m, dynamic_commissions)
                     
             payroll_data.append({
                 "id": None,
@@ -333,15 +352,7 @@ def manage_balances():
             total_pay = p.base_salary + p.commissions + p.bonuses
         else:
             method = mem.payment_method
-            comm = 0.0
-            if mem.salary_type == 'variable':
-                nc = mem.name.lower().strip().replace(' ', '')
-                if 'elias' in nc:
-                    comm = dyn_comm.get('elias', 0.0)
-                elif 'jeancarlo' in nc or 'jeancarlos' in nc:
-                    comm = dyn_comm.get('jeancarlo', 0.0)
-                elif 'marlon' in nc:
-                    comm = dyn_comm.get('marlon', 0.0)
+            comm = comision_de_miembro(mem, dyn_comm)
             total_pay = mem.base_salary + comm
         if method in expected_by_method:
             expected_by_method[method] += total_pay
@@ -531,15 +542,7 @@ def get_finance_summary():
             p = saved_payroll_map[m.id]
             total_sueldos += (p.base_salary + p.commissions + p.bonuses)
         else:
-            calculated_comm = 0.0
-            if m.salary_type == 'variable':
-                name_clean = m.name.lower().strip().replace(' ', '')
-                if 'elias' in name_clean:
-                    calculated_comm = dynamic_commissions.get('elias', 0.0)
-                elif 'jeancarlo' in name_clean or 'jeancarlos' in name_clean:
-                    calculated_comm = dynamic_commissions.get('jeancarlo', 0.0)
-                elif 'marlon' in name_clean:
-                    calculated_comm = dynamic_commissions.get('marlon', 0.0)
+            calculated_comm = comision_de_miembro(m, dynamic_commissions)
             total_sueldos += (m.base_salary + calculated_comm)
             
     total_expenses = total_software + total_anuncios + total_sueldos
