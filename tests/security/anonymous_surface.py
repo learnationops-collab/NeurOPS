@@ -17,6 +17,9 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/manychat-webhook'),
     ('POST', '/api/manychat-webhook'),
     ('POST', '/api/public/assistant-applications'),
+    # Formulario público de Asistente: lee las preguntas del formulario activo (las mismas que muestra a
+    # cualquiera) y los datos de la búsqueda. No expone postulaciones.
+    ('GET', '/api/public/assistant-form'),
     ('POST', '/api/public/book'),
     # Pagina publica de reservas (BookingPage): el visitante carga el evento con sus preguntas y horarios y
     # comprueba si ya lo conocemos por email o Instagram para precargar el formulario. La comprobacion solo
