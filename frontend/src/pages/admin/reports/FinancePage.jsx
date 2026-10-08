@@ -36,6 +36,24 @@ const getCurrentMonthStr = () => {
     return `${year}-${month}`;
 };
 
+// El período queda en el último mes elegido (por navegador): revisar un mes cerrado no obliga a
+// volver a elegirlo cada vez que se entra o se recarga.
+const MES_GUARDADO = 'finanzas.mes';
+
+const leerMesGuardado = () => {
+    try {
+        const mes = localStorage.getItem(MES_GUARDADO);
+        if (mes && /^\d{4}-\d{2}$/.test(mes)) return mes;
+    } catch { /* sin almacenamiento: se usa el mes actual */ }
+    return getCurrentMonthStr();
+};
+
+const guardarMes = (mes) => {
+    try {
+        localStorage.setItem(MES_GUARDADO, mes);
+    } catch { /* sin almacenamiento: solo dura mientras la página está abierta */ }
+};
+
 const InfoTooltip = ({ content }) => {
     if (!content) return null;
     return (
@@ -47,7 +65,7 @@ const InfoTooltip = ({ content }) => {
 
 const FinancePage = () => {
     const { user } = useAuth();
-    const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthStr());
+    const [selectedMonth, setSelectedMonth] = useState(leerMesGuardado);
     const [activeTab, setActiveTab] = useState('summary');
     const [summary, setSummary] = useState(null);
     const [balances, setBalances] = useState([]);
@@ -366,7 +384,12 @@ const FinancePage = () => {
                         <input
                             type="month"
                             value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            onChange={(e) => {
+                                // Borrar el campo deja '': se ignora para no pedir un mes inválido.
+                                if (!e.target.value) return;
+                                setSelectedMonth(e.target.value);
+                                guardarMes(e.target.value);
+                            }}
                             className="bg-transparent border-none text-xs font-bold text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-28 text-center"
                         />
                     </div>
