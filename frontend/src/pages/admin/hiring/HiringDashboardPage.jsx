@@ -4,6 +4,8 @@ import { Inbox, CheckCircle2, Target, Award, Sliders, Search, X, ArrowLeft, LogO
 import { useAuth } from '../../../contexts/AuthContext';
 import OperatorControls from '../../../components/modals/OperatorControls';
 import { revertImpersonation } from '../../../utils/impersonation';
+import { opcionesDeRol } from '../../../utils/cuentasVinculadas';
+import toast from 'react-hot-toast';
 import HiringInbox from './components/HiringInbox';
 import HiringStatsTab from './components/HiringStatsTab';
 import HiringClarityTab from './components/HiringClarityTab';
@@ -260,12 +262,14 @@ const HiringDashboardPage = () => {
                     </button>
 
                     {/* El usuario al final del dock: de acá se reporta un problema (y se ven las respuestas).
-                        Es el mismo menú de sesión de los demás docks; el header sigue con Salir y Volver. */}
+                        Es el mismo menú de sesión de los demás docks; el header sigue con Salir y Volver.
+                        «Cambiar de rol» también: sin él, quien tiene varios roles quedaba encerrado en
+                        Hiring y solo podía cerrar sesión (Mario, 08/10/2026). */}
                     <div className="dc-shell dc-shell--embebido flex flex-none items-center">
                         <MenuSesion
                             nombre={user?.name || user?.username || ''}
                             rol={user?.is_impersonating ? 'Hiring · simulación' : 'Hiring'}
-                            grupos={[[
+                            grupos={[opcionesDeRol(user, (m) => toast.error(m)), [
                                 ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
                                 { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout },
                             ]]}
