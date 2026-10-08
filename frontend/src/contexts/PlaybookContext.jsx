@@ -30,14 +30,15 @@ export const PlaybookProvider = ({ children }) => {
     };
     const closePlaybook = () => setIsOpen(false);
 
-    if (!user) return <>{children}</>;
-
+    // Siempre el mismo elemento, con o sin sesión (sin ella, `null`: usePlaybook da el no-op). Antes,
+    // sin sesión devolvía un fragmento, y al iniciar sesión el cambio de tipo remontaba TODA la app:
+    // el login perdía su estado y no llegaba a mostrar la elección de rol.
     return (
-        <PlaybookContext.Provider value={{
+        <PlaybookContext.Provider value={user ? {
             isOpen, initialView, openPlaybook, closePlaybook,
             pendingCount: pending.pending_count, newCount: pending.new_count,
             pendingLessons: pending.lessons, refreshPending,
-        }}>
+        } : null}>
             {children}
         </PlaybookContext.Provider>
     );
