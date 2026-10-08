@@ -333,3 +333,18 @@ class MonthlySaving(db.Model):
         }
 
 
+
+class ComisionTasas(db.Model):
+    """Los porcentajes de comisión de la nómina, por persona, desde un mes (08/10/2026).
+
+    Cada fila es un juego completo de porcentajes que vale desde `vigente_desde` hasta el mes
+    anterior al de la fila siguiente: cambiar un % en noviembre no recalcula septiembre. Sin
+    ninguna fila que cubra un mes valen los de fábrica (`comision_tasas_service.TASAS_DE_FABRICA`).
+    `tasas` es el JSON que arma ese servicio: setters, closers, director y la tabla de Fulfillment.
+    """
+    __tablename__ = 'comision_tasas'
+    id = db.Column(db.Integer, primary_key=True)
+    vigente_desde = db.Column(db.String(7), unique=True, nullable=False)  # YYYY-MM
+    tasas = db.Column(db.JSON, nullable=False)
+    editado_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -2,10 +2,9 @@
 10/sep/2026): % fijo sobre el cash collected NETO (ya descontadas las fees de Stripe/Hotmart)
 que cada quien generó este mes — 10% para closers, 8% para setters.
 
-No hay todavía un % configurable por persona: los 3 casos especiales de `finance.py`
-(`get_commissions_calculated`) con un % propio para Elias/Jean Carlos/Marlon siguen viviendo
-ahí sin tocarse — esto es el caso general para el resto del equipo, que hoy no tenía ninguna
-comisión visible en su propio espacio de trabajo."""
+Quien está en la nómina con un % propio (Elias, Paula, Jean Carlo, Facundo) ve el suyo, el del mes
+según `comision_tasas_service` (editable desde Payroll desde el 08/10/2026): así la tarjeta y la
+nómina dicen lo mismo. El resto del equipo, el caso general de 10% / 8%."""
 from datetime import datetime, timedelta
 
 CLOSER_RATE = 0.10
@@ -36,6 +35,14 @@ def cash_neto_de(monto, metodo_pago):
 _FUENTE_INVALIDA = {'s/f', 'n/a', ''}
 
 
+def _tasa_propia(grupo, clave, mes, por_defecto):
+    """El % (como fracción) de una persona de la nómina en ese mes, o `por_defecto` si no está."""
+    if not clave:
+        return por_defecto
+    from app.services.comision_tasas_service import vigentes
+    return vigentes(mes)[0][grupo][clave] / 100
+
+
 class CommissionService:
 
     @staticmethod
@@ -56,12 +63,15 @@ class CommissionService:
         inicio, fin, mes = CommissionService._rango_mes_actual(user)
         stats = CloserService.get_comprehensive_stats(user.id, start_date=inicio, end_date=fin)
         cash_neto = float((stats.get('sales') or {}).get('totals', {}).get('cash_neto') or 0.0)
+        from app.services.closer_name_service import resolver_nombre_closer
+        clave = CLOSERS_CON_COMISION.get((resolver_nombre_closer(user.username) or '').strip().lower())
+        tasa = _tasa_propia('closers', clave, mes, CLOSER_RATE)
         return {
             'role': 'closer',
             'month': mes,
-            'rate': CLOSER_RATE,
+            'rate': tasa,
             'cash_neto': round(cash_neto, 2),
-            'commission': round(cash_neto * CLOSER_RATE, 2),
+            'commission': round(cash_neto * tasa, 2),
         }
 
     @staticmethod
@@ -112,12 +122,14 @@ class CommissionService:
 
                 cash_neto += cash_neto_de(s.monto, s.metodo_pago)
 
+        tasa = _tasa_propia('setters', SETTERS_CON_COMISION.get((user.username or '').strip().lower()),
+                            mes, SETTER_RATE)
         return {
             'role': 'setter',
             'month': mes,
-            'rate': SETTER_RATE,
+            'rate': tasa,
             'cash_neto': round(cash_neto, 2),
-            'commission': round(cash_neto * SETTER_RATE, 2),
+            'commission': round(cash_neto * tasa, 2),
         }
 
     @staticmethod

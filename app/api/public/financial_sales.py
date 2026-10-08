@@ -754,15 +754,22 @@ def get_financial_sales_payroll():
     from app.services.attribution_service import AttributionService
     attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
                 
-    from app.services.commission_service import (
-        CLOSER_RATE, SETTER_RATE, DIRECTOR_RATE, SETTERS_CON_COMISION, CLOSERS_CON_COMISION,
-    )
-    tasas = {clave: SETTER_RATE for clave in SETTERS_CON_COMISION.values()}
-    tasas.update({clave: CLOSER_RATE for clave in CLOSERS_CON_COMISION.values()})
-    tasas['marlon'] = DIRECTOR_RATE
-    ventas_de = {clave: [] for clave in tasas}
-    recaudado = {clave: 0.0 for clave in tasas}
+    from app.services.commission_service import SETTERS_CON_COMISION, CLOSERS_CON_COMISION
+    from app.services.comision_tasas_service import por_mes
+    # Los % son editables y valen desde un mes (ver comision_tasas_service): un rango puede cruzar
+    # un cambio, así que cada venta cobra con el % del mes en que entró.
+    tasas_de_mes = por_mes()
+    grupo_de = {clave: 'setters' for clave in SETTERS_CON_COMISION.values()}
+    grupo_de.update({clave: 'closers' for clave in CLOSERS_CON_COMISION.values()})
+    grupo_de['marlon'] = 'director'
+    ventas_de = {clave: [] for clave in grupo_de}
+    recaudado = {clave: 0.0 for clave in grupo_de}
+    comision = {clave: 0.0 for clave in grupo_de}
+    porcentajes = {clave: set() for clave in grupo_de}
     completadas = []  # (venta, sale_data) para la nómina de Fulfillment
+    # El cash del período, con o sin comisión de por medio: el contexto de lo que se paga.
+    cash = {"neto": 0.0, "bruto": 0.0, "ventas": 0}
+    mes_de_cierre = (end_date_str or datetime.utcnow().strftime('%Y-%m-%d'))[:7]
 
     for s in sales:
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
@@ -817,11 +824,18 @@ def get_financial_sales_payroll():
         
         completadas.append((s, sale_data))
         excluida = sale_data["is_excluded_from_payroll"]
+        cash["neto"] += monto_ajustado
+        cash["bruto"] += monto_original
+        cash["ventas"] += 1
+        mes_venta = s.date.strftime('%Y-%m') if s.date else mes_de_cierre
 
         def sumar(clave):
-            ventas_de[clave].append(sale_data)
+            pct = tasas_de_mes(mes_venta)[grupo_de[clave]][clave]
+            porcentajes[clave].add(pct)
+            ventas_de[clave].append({**sale_data, "porcentaje": pct, "comision": round(monto_ajustado * pct / 100, 2)})
             if not excluida:
                 recaudado[clave] += monto_ajustado
+                comision[clave] += monto_ajustado * pct / 100
 
         setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
         if setter_clave:
@@ -831,25 +845,35 @@ def get_financial_sales_payroll():
         if closer_clave:
             sumar(closer_clave)
 
-            # Marlon cobra el 5% del cash collect de los closers sin renovaciones
+            # Marlon cobra su % del cash collect de los closers sin renovaciones
             prog, simple_tp = split_tipo_pago(s.tipo_pago)
             is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
             if not is_renovacion:
                 sumar('marlon')
 
+    def porcentaje_de(clave):
+        # Un solo % en el rango es el de la persona; si el rango cruza un cambio, no hay uno solo
+        # (None, como Fulfillment) y cada venta trae el suyo. Sin ventas, el del último mes.
+        usados = porcentajes[clave]
+        if not usados:
+            return tasas_de_mes(mes_de_cierre)[grupo_de[clave]][clave]
+        return next(iter(usados)) if len(usados) == 1 else None
+
     nomina = {
         clave: {
             "sales": ventas_de[clave],
             "total_recaudado_neto": round(recaudado[clave], 2),
-            "porcentaje_comision": round(tasa * 100, 2),
-            "comision_total": round(recaudado[clave] * tasa, 2),
+            "porcentaje_comision": porcentaje_de(clave),
+            "comision_total": round(comision[clave], 2),
             "total_ventas": len([x for x in ventas_de[clave] if not x["is_excluded_from_payroll"]])
         }
-        for clave, tasa in tasas.items()
+        for clave in grupo_de
     }
     # Fulfillment: el % cambia venta a venta (programa y fuente), así que cada venta trae el suyo.
     from app.services.fulfillment_commission_service import nomina_por_persona
-    nomina.update(nomina_por_persona(completadas))
+    nomina.update(nomina_por_persona(completadas, tasas_de_mes))
+    nomina["totales"] = {"cash_neto": round(cash["neto"], 2), "cash_bruto": round(cash["bruto"], 2),
+                         "ventas": cash["ventas"]}
     return jsonify(nomina), 200
 
 @bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])

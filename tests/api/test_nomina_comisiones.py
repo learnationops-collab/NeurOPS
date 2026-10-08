@@ -67,6 +67,8 @@ def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ve
 
     assert r.status_code == 200
     datos = r.get_json()
+    # El cash del período: todas las ventas completadas, también la excluida de la nómina.
+    assert datos.pop('totales') == {'cash_neto': 2000.0, 'cash_bruto': 2000.0, 'ventas': 4}
     resumen = {clave: (d['porcentaje_comision'], d['comision_total'], d['total_ventas'], len(d['sales']))
                for clave, d in datos.items()}
     # Ninguna de estas ventas trae programa (AL/RR/SI): Fulfillment aparece, pero vacío.
