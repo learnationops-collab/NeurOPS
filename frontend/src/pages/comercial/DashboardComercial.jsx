@@ -24,7 +24,7 @@ import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './c
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
-import Payroll, { FiltroGrupos, MenuPeriodoPayroll, leerGrupos, rangoPayroll } from './components/finanzas/Payroll';
+import Payroll, { FiltroGrupos, FiltroPersonas, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
 import { MenuMes, guardarMes, leerMesGuardado } from './components/finanzas/comun';
 import './components/finanzas/finanzas.css';
 
@@ -230,8 +230,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // Finanzas se mira por mes (queda el último elegido) y Payroll por un rango libre.
     const [mesFinanzas, setMesFinanzas] = useState(leerMesGuardado);
     const [rangoNomina, setRangoNomina] = useState(() => rangoPayroll('mes'));
-    // Payroll: qué grupos se ven (queda el último elegido) y el editor de porcentajes.
+    // Payroll: qué grupos y qué personas se ven (queda lo último elegido) y sus dos modales.
     const [gruposNomina, setGruposNomina] = useState(leerGrupos);
+    const [personasNomina, setPersonasNomina] = useState(leerPersonas);
     const [tasasAbiertas, setTasasAbiertas] = useState(false);
     const [excluirAbierto, setExcluirAbierto] = useState(false);
     // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
@@ -725,6 +726,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                     {seccion === 'reportar' && stepper}
                     {seccion === 'payroll' && !sinPermiso && <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina} />}
+                    {seccion === 'payroll' && !sinPermiso && (
+                        <FiltroPersonas grupos={gruposNomina} elegidas={personasNomina} onCambiar={setPersonasNomina} />
+                    )}
 
                     <div className="barra-der">
                         {contexto.puede_elegir_equipo && seccion === 'analizar' && (
@@ -835,7 +839,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'finanzas' && !sinPermiso && <Finanzas tab={tab} mes={mesFinanzas} />}
                     {seccion === 'payroll' && !sinPermiso && (
                         <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} onVerVentas={irAVentasDeNomina}
-                            grupos={gruposNomina} tasasAbiertas={tasasAbiertas}
+                            grupos={gruposNomina} personas={personasNomina} tasasAbiertas={tasasAbiertas}
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
