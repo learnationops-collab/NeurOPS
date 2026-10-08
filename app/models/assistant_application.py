@@ -317,9 +317,10 @@ class AssistantApplication(db.Model):
         provincia = _normaliza(self.provincia)
         if not provincia:
             return 'online'
-        if self.pais == 'Argentina' and provincia == 'salta':
+        pais = pais_limpio(self.pais)
+        if pais == 'Argentina' and provincia == 'salta':
             return 'hibrido'
-        if self.pais == 'Brasil' and provincia == 'parana':
+        if pais == 'Brasil' and provincia == 'parana':
             return 'hibrido'
         return 'online'
 
@@ -343,7 +344,7 @@ class AssistantApplication(db.Model):
             "nombre": self.nombre,
             "email": self.email,
             "whatsapp": self.whatsapp,
-            "pais": self.pais,
+            "pais": pais_limpio(self.pais),
             "provincia": self.provincia,
             "modalidad": self.modalidad(),
             "edad": self.edad,
@@ -426,6 +427,20 @@ def _cumple_condicion(app_row, si):
     esperados = si.get('eq') if isinstance(si.get('eq'), list) else [si.get('eq')]
     marcadas = {v.strip() for v in str(valor).split('|')}
     return any(e == valor or (isinstance(e, str) and e.strip() in marcadas) for e in esperados)
+
+
+def pais_limpio(texto):
+    """El país sin la bandera: el formulario manda la opción tal cual se ve
+    («🇦🇷  Argentina») y hay filas guardadas así. Se descarta todo lo que va
+    antes de la primera letra y se juntan los espacios: «Argentina». Las filas
+    viejas no se migran; se limpian al leerlas (y las nuevas, al guardarlas)."""
+    if not texto:
+        return texto
+    texto = str(texto)
+    for pos, caracter in enumerate(texto):
+        if caracter.isalpha():
+            return ' '.join(texto[pos:].split())
+    return None
 
 
 def _normaliza(texto):

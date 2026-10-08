@@ -18,7 +18,7 @@ from app import db
 from app.decorators import hiring_required
 from app.models import AssistantApplication, AssistantClarityWeight
 from app.models.assistant_application import (
-    BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK,
+    BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK, pais_limpio,
 )
 from app.services import assistant_clarity
 from app.services.assistant_clarity import CLARITY_CRITERIA
@@ -357,7 +357,7 @@ def stats_assistant_applications():
     def por_pais(fn):
         salida = []
         for p in paises:
-            grupo = [a for a in pool if a.pais == p]
+            grupo = [a for a in pool if pais_limpio(a.pais) == p]
             salida.append(fn(grupo))
         return salida
 
@@ -388,7 +388,7 @@ def stats_assistant_applications():
 
     comparacion = {
         "paises": [
-            {"pais": p, "cantidad": len([a for a in pool if a.pais == p])}
+            {"pais": p, "cantidad": len([a for a in pool if pais_limpio(a.pais) == p])}
             for p in paises
         ],
         "filas": [
@@ -454,7 +454,8 @@ def stats_assistant_applications():
         "embudo_formulario": _embudo_formulario(todas_las_filas),
         "por_dia": linea_por_dia,
         "comparacion": comparacion,
-        "distribucion_pais": distribucion('pais'),
+        # Con y sin bandera es el mismo país (ver `pais_limpio`).
+        "distribucion_pais": distribucion('pais', pais_limpio),
         "distribucion_edad": distribucion('edad', lambda v: _tramo(v, TRAMOS_EDAD)),
         "distribucion_presupuesto": distribucion('remuneracion', lambda v: _tramo(v, TRAMOS_PRESUPUESTO)),
         "distribucion_ia": distribucion('ia_nivel'),
