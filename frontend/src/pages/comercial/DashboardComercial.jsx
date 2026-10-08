@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Banknote, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,7 +24,7 @@ import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './c
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
-import Payroll, { MenuPeriodoPayroll, rangoPayroll } from './components/finanzas/Payroll';
+import Payroll, { FiltroGrupos, MenuPeriodoPayroll, leerGrupos, rangoPayroll } from './components/finanzas/Payroll';
 import { MenuMes, guardarMes, leerMesGuardado } from './components/finanzas/comun';
 import './components/finanzas/finanzas.css';
 
@@ -230,6 +230,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // Finanzas se mira por mes (queda el último elegido) y Payroll por un rango libre.
     const [mesFinanzas, setMesFinanzas] = useState(leerMesGuardado);
     const [rangoNomina, setRangoNomina] = useState(() => rangoPayroll('mes'));
+    // Payroll: qué grupos se ven (queda el último elegido) y el editor de porcentajes.
+    const [gruposNomina, setGruposNomina] = useState(leerGrupos);
+    const [tasasAbiertas, setTasasAbiertas] = useState(false);
     // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
     const [basisElegida, setBasisElegida] = useState({});
     const [resumen, setResumen] = useState(null);
@@ -455,6 +458,28 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
      * ninguna parte. Sin `irA`, Analizar y Variabilidad muestran los números como números.
      */
     const irADetalle = embebido && !onIrASeccion ? null : irA;
+
+    /**
+     * Desde Payroll: las ventas que componen la comisión de una persona, en Revisar › Ventas y en
+     * el período de Payroll. Viajan las ventas mismas (`__ids`, ver `seleccion` en Revisar): la
+     * atribución de la nómina no se puede escribir con las facetas de la tabla.
+     */
+    const irAVentasDeNomina = useCallback(({ ids, rotulo, desde, hasta }) => {
+        const destino = {
+            s: 'revisar', rol: 'closers', t: 'ventas', m: null, p: 'custom', d: desde, h: hasta,
+            f: JSON.stringify({ __ids: ids, __ids_rotulo: rotulo, __de: rotulo }),
+            ft: proximoToken(),
+        };
+        // En /finanzas no hay Revisar: se abre el dashboard comercial con el mismo filtro (quien ve
+        // Finanzas —admin o dirección— entra ahí también).
+        if (espacio) {
+            const query = new URLSearchParams(Object.entries(destino).filter(([, v]) => v !== null));
+            navigate(`/admin/comercial?${query.toString()}`);
+            return;
+        }
+        olvidarBasis('ventas');
+        set(destino);
+    }, [set, proximoToken, olvidarBasis, espacio, navigate]);
 
     /**
      * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
@@ -698,6 +723,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
 
                     {seccion === 'reportar' && stepper}
+                    {seccion === 'payroll' && !sinPermiso && <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina} />}
 
                     <div className="barra-der">
                         {contexto.puede_elegir_equipo && seccion === 'analizar' && (
@@ -713,6 +739,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             con las dos fechas debajo de los períodos. */}
                         {seccion === 'finanzas' && !sinPermiso && (
                             <MenuMes mes={mesFinanzas} onCambiar={(m) => { setMesFinanzas(m); guardarMes(m); }} />
+                        )}
+                        {seccion === 'payroll' && !sinPermiso && (
+                            <button type="button" className={`pastilla${tasasAbiertas ? ' pastilla--on' : ''}`}
+                                onClick={() => setTasasAbiertas(true)}>
+                                <Percent size={14} />
+                                <span>Porcentajes</span>
+                            </button>
                         )}
                         {seccion === 'payroll' && !sinPermiso && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
@@ -788,7 +821,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         </section>
                     )}
                     {seccion === 'finanzas' && !sinPermiso && <Finanzas tab={tab} mes={mesFinanzas} />}
-                    {seccion === 'payroll' && !sinPermiso && <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} />}
+                    {seccion === 'payroll' && !sinPermiso && (
+                        <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} onVerVentas={irAVentasDeNomina}
+                            grupos={gruposNomina} tasasAbiertas={tasasAbiertas}
+                            onCerrarTasas={() => setTasasAbiertas(false)} />
+                    )}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
