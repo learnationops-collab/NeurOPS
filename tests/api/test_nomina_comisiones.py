@@ -60,7 +60,7 @@ def test_un_sueldo_fijo_no_toma_comision():
 
 
 def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ventas_del_mes):
-    admin = make_user(role='admin')
+    admin = make_user(role='admin', can_view_finance=True)
 
     r = client.get('/api/public/financial-sales/payroll?start_date=2026-10-01&end_date=2026-10-31',
                    headers=auth_headers(admin))

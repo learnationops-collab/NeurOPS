@@ -410,6 +410,21 @@ def test_el_contexto_dice_quien_puede_comparar(client, db, equipo, auth_headers,
     assert respuesta.get_json()['puede_comparar'] is puede
 
 
+def test_finanzas_y_payroll_son_solo_de_quien_ve_finanzas(client, db, equipo, make_user, auth_headers):
+    """Las secciones Finanzas y Payroll del dock: admin o dirección comercial con el permiso «ver
+    finanzas», como sus endpoints. Sin el permiso no, y el permiso en otro rol tampoco."""
+    admin_con_permiso = make_user(role='admin', username='Mario Bühler', can_view_finance=True)
+    director_con_permiso = make_user(role='director_comercial', username='dir2', can_view_finance=True)
+    closer_con_permiso = make_user(role='closer', username='c2', can_view_finance=True)
+
+    def puede(usuario):
+        return client.get(CONTEXTO, headers=auth_headers(usuario)).get_json()['puede_ver_finanzas']
+
+    assert [puede(admin_con_permiso), puede(director_con_permiso)] == [True, True]
+    assert [puede(u) for u in (equipo['admin'], equipo['director'], closer_con_permiso,
+                               equipo['closer_a'], equipo['setter'])] == [False] * 5
+
+
 @pytest.mark.parametrize('quien', ['director', 'admin'])
 def test_la_direccion_si_ve_la_comparativa(client, db, equipo, auth_headers, quien):
     assert client.get(COMPARATIVAS, headers=auth_headers(equipo[quien])).status_code == 200

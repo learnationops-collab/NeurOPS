@@ -140,9 +140,9 @@ POLITICA = {
     ('PUT', '/api/public/financial-sales/<int:sale_id>'): _p(COMERCIAL, OPERATOR),
     ('DELETE', '/api/public/financial-sales/<int:sale_id>'): _p(COMERCIAL, OPERATOR),
     ('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'): _p(COMERCIAL, OPERATOR),
-    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'): _p(),  # nomina: solo admin
+    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'): _p(COMERCIAL),  # nomina: la vista pide ademas «ver finanzas»
     ('POST', '/api/public/financial-sales/new'): _p(COMERCIAL, OPERATOR),
-    ('GET', '/api/public/financial-sales/payroll'): _p(),  # nomina: solo admin
+    ('GET', '/api/public/financial-sales/payroll'): _p(COMERCIAL),  # nomina: la vista pide ademas «ver finanzas»
     ('POST', '/api/public/financial-sales/sync'): _p(COMERCIAL, OPERATOR),
 
     # --- Clientes y roadmap del lead. Los de consulta documentados para "otra pagina" admiten el secreto -

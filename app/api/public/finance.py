@@ -9,12 +9,23 @@ from functools import wraps
 from . import bp
 from sqlalchemy import or_, func
 
+# Finanzas y Payroll son secciones del dashboard comercial (08/10/2026): las ve quien entra a
+# Comercial como admin o como dirección comercial Y tiene el permiso «ver finanzas». El rol solo no
+# alcanza (hay más de un admin) ni el permiso solo (lo da el operador en Gestión de equipo).
+ROLES_FINANZAS = ('admin', 'director_comercial')
+
+
+def puede_ver_finanzas(usuario):
+    return (usuario.is_authenticated and usuario.role in ROLES_FINANZAS
+            and bool(getattr(usuario, 'can_view_finance', False)))
+
+
 def finance_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return jsonify({"error": "No autenticado"}), 401
-        if current_user.role != 'admin' or not getattr(current_user, 'can_view_finance', False):
+        if not puede_ver_finanzas(current_user):
             return jsonify({"error": "No tienes acceso a esta sección de finanzas"}), 403
         return f(*args, **kwargs)
     return decorated_function
@@ -396,6 +407,64 @@ def manage_balances():
         "total_actual": round(total_actual, 2),
         "total_expected": round(total_expected, 2)
     }), 200
+
+def _rango_del_mes(month):
+    """(inicio, fin) del mes 'YYYY-MM', o None si el formato no sirve."""
+    try:
+        year, month_num = map(int, month.split('-'))
+        last_day = calendar.monthrange(year, month_num)[1]
+        return datetime(year, month_num, 1), datetime(year, month_num, last_day, 23, 59, 59, 999999)
+    except Exception:
+        return None
+
+
+def _gasto_a_dict(gasto):
+    return {"id": gasto.id, "description": gasto.description, "amount": float(gasto.amount or 0.0),
+            "category": gasto.category, "date": gasto.date.isoformat() if gasto.date else None}
+
+
+@bp.route('/public/finance/software', methods=['GET', 'POST'])
+@login_required
+@finance_admin_required
+def manage_software_expenses():
+    """Los gastos de software del mes, los mismos que suma el resumen. Antes la pestaña Software
+    usaba /admin/finance/*, que es solo de admin y operaciones: la dirección comercial con «ver
+    finanzas» quedaba afuera de una de las cinco vistas."""
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        try:
+            fecha = datetime.strptime(data.get('date') or '', '%Y-%m-%d')
+            monto = float(data.get('amount'))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Fecha (YYYY-MM-DD) y monto son requeridos"}), 400
+        descripcion = (data.get('description') or '').strip()
+        if not descripcion:
+            return jsonify({"error": "La descripción es requerida"}), 400
+        gasto = Expense(description=descripcion, amount=monto, date=fecha, category='software', is_recurring=False)
+        db.session.add(gasto)
+        db.session.commit()
+        return jsonify(_gasto_a_dict(gasto)), 201
+
+    rango = _rango_del_mes(request.args.get('month') or '')
+    if not rango:
+        return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
+    gastos = Expense.query.filter(
+        Expense.date >= rango[0], Expense.date <= rango[1], func.lower(Expense.category) == 'software'
+    ).order_by(Expense.date.asc()).all()
+    return jsonify([_gasto_a_dict(g) for g in gastos]), 200
+
+
+@bp.route('/public/finance/software/<int:id>', methods=['DELETE'])
+@login_required
+@finance_admin_required
+def delete_software_expense(id):
+    gasto = Expense.query.get_or_404(id)
+    if (gasto.category or '').lower() != 'software':
+        return jsonify({"error": "Solo se borran gastos de software desde acá"}), 400
+    db.session.delete(gasto)
+    db.session.commit()
+    return jsonify({"message": "Gasto eliminado"}), 200
+
 
 @bp.route('/public/finance/savings', methods=['GET', 'POST'])
 @login_required

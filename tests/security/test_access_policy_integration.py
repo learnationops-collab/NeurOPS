@@ -74,8 +74,18 @@ def test_un_anonimo_no_puede_leer_la_nomina(client, db):
 def test_un_operator_no_puede_leer_la_nomina_pero_admin_si(client, db, make_user, auth_headers):
     assert client.get('/api/public/financial-sales/payroll', headers=auth_headers(make_user(role='operator'))
                       ).status_code == 403
-    assert client.get('/api/public/financial-sales/payroll', headers=auth_headers(make_user(role='admin'))
-                      ).status_code == 200
+    assert client.get('/api/public/financial-sales/payroll',
+                      headers=auth_headers(make_user(role='admin', can_view_finance=True))).status_code == 200
+
+
+def test_la_nomina_es_solo_de_quien_ve_finanzas(client, db, make_user, auth_headers):
+    """Desde que Payroll es una sección del dashboard comercial (08/10/2026), un admin sin «ver finanzas»
+    pasa la política de acceso pero la vista lo frena, como al resto de Finanzas."""
+    cabeceras = auth_headers(make_user(role='admin'))
+
+    assert client.get('/api/public/financial-sales/payroll', headers=cabeceras).status_code == 403
+    assert client.post('/api/public/financial-sales/1/toggle-payroll-exclusion', headers=cabeceras,
+                       json={}).status_code == 403
 
 
 def test_un_setter_no_puede_borrar_todos_los_registros_de_interaccion(client, db, make_user, auth_headers):

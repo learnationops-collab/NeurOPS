@@ -16,6 +16,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.models import Appointment
+from app.api.public.finance import puede_ver_finanzas
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 from app.services import comercial_analitica as analitica
 from app.services import comercial_reporte as reporte
@@ -108,6 +109,9 @@ def contexto():
         'puede_elegir_equipo': puede_elegir,
         'puede_reportar': current_user.role in ROLES_DIRECCION,
         'puede_comparar': _puede_comparar(),
+        # Las secciones Finanzas y Payroll del dock: el mismo criterio con el que responden sus
+        # endpoints (`finance_admin_required`), admin o dirección con el permiso «ver finanzas».
+        'puede_ver_finanzas': puede_ver_finanzas(current_user),
         'yo': {'id': current_user.id, 'nombre': current_user.username, 'rol': current_user.role},
         'miembros': ComercialService.miembros(rol) if puede_elegir else [],
         # La lista del selector de persona depende del switch Closers / Setters, que se mueve sin
