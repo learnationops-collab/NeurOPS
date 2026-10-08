@@ -10,7 +10,7 @@ import {
     PREGUNTA_CORTA, CAMPOS_ESCRITOS, VAL_CORTO, AREA_CORTO,
     escalaDe, nivelDe, techoIA, nivelCorto, estrellas, BANDERA, soloDigitos, href, MODALIDAD,
 } from '../lib/escalas';
-import { VEREDICTO } from './HiringInbox';
+import { VEREDICTO } from './comun';
 import logoSheets from '../assets/apps/google-sheets.png';
 import logoChatgpt from '../assets/apps/chatgpt.png';
 import logoClaude from '../assets/apps/claude.png';

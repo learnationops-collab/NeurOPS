@@ -1,321 +1,474 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Target, Award, Sliders, Search, X, ArrowLeft, ArrowLeftRight, LogOut, Ghost, Loader2 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import toast from 'react-hot-toast';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, Check, LogOut, Ghost, ArrowLeft, AlertTriangle,
+} from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import api from '../../../services/api';
 import OperatorControls from '../../../components/modals/OperatorControls';
 import { revertImpersonation } from '../../../utils/impersonation';
-import { opcionesDeRol } from '../../../utils/cuentasVinculadas';
-import HiringInbox from './components/HiringInbox';
-import HiringStatsTab from './components/HiringStatsTab';
-import HiringClarityTab from './components/HiringClarityTab';
+import DockSecciones from '../../comercial/components/DockSecciones';
+import MenuSesion from '../../comercial/components/MenuSesion';
+import HiringCandidateModal from './components/HiringCandidateModal';
+import TablaPostulaciones from './components/TablaPostulaciones';
+import MenuVista from './components/MenuVista';
+import ResumenInbox from './components/ResumenInbox';
+import HiringStats from './components/HiringStats';
+import ConfigTalent from './components/ConfigTalent';
+import HiringForms from './components/forms/HiringForms';
+import { IsotipoTalent } from './components/Piezas';
+import {
+    PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
+    normalizar, ordenar, pasaFiltros, vistaDefault,
+} from './lib/vista';
+import '../../comercial/comercial.css';
+import './talent.css';
 
-// Las tres vistas del dock. Clarity vive aparte, en el orbe magenta de la
-// derecha: no es un destino más (no lista candidatos), es el panel que ajusta
-// cómo se rankean todos — así lo separa el mockup de referencia.
-const DESTINOS = [
-    { id: 'pendientes', label: 'Pendientes', icon: Inbox, color: '#D9A441' },
-    { id: 'analizados', label: 'Analizados', icon: CheckCircle2, color: '#2FBF8F' },
-    { id: 'finalistas', label: 'Finalistas', icon: Award, color: '#FF6AD5' },
-    { id: 'stats', label: 'Estadísticas', icon: Target, color: '#5B7CFF' },
+// Learnation Talent: el panel del rol `hiring` (postulaciones al puesto de
+// Asistente Administrativa y Personal). Corre sin MainLayout (ver App.jsx): es
+// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats y
+// Forms— y el orbe de Configuración (Clarity y la búsqueda) al final, junto a
+// la sesión.
+//
+// El listado se pide entero una vez y todo lo demás —pestañas, búsqueda, filtros,
+// orden, grupos— se resuelve en el navegador (ver `lib/vista.js`).
+
+const SECCIONES = [
+    { id: 'pend', label: 'Inbox', Icono: Inbox },
+    { id: 'anal', label: 'Analyze', Icono: CheckCircle2 },
+    { id: 'fin', label: 'Winners', Icono: Trophy },
+    { id: 'stats', label: 'Stats', Icono: BarChart3 },
+    { id: 'forms', label: 'Forms', Icono: FileText },
 ];
 
-const TITULOS = {
-    pendientes: 'Pendientes',
-    analizados: 'Analizados',
-    finalistas: 'Finalistas',
-    stats: 'Estadísticas',
-    clarity: 'Clarity',
-};
+const ES_TABLA = new Set(['pend', 'anal', 'fin']);
+
+const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
+    <div className="tabs" role="group">
+        {lista.map((t) => (
+            <button key={t.id} type="button" className="tab" aria-pressed={t.id === actual} onClick={() => onElegir(t.id)}>
+                {t.c && <span className="punto" style={{ '--c': t.c }} />}
+                {t.label}
+                {cuentaDe && <span className="cuenta">{cuentaDe(t.id)}</span>}
+            </button>
+        ))}
+    </div>
+);
 
 const HiringDashboardPage = () => {
     const { user, logout } = useAuth();
-    const [vista, setVista] = useState('pendientes');
+    const navigate = useNavigate();
+
+    const [seccion, setSeccion] = useState('pend');
+    const [pestanas, setPestanas] = useState({ pend: 'hibrido', anal: 'seleccionada', fin: 'testeo' });
+    const [statsTab, setStatsTab] = useState('panorama');
+    const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
-    // Los badges del dock (cuántas sin analizar / cuántas analizadas) los sube
-    // el inbox cuando carga: el dock no pide los datos por su cuenta.
-    const [badges, setBadges] = useState({ pendientes: 0, analizados: 0, finalistas: 0 });
-    const buscador = useRef(null);
-    // Modal de Acceso Simulado (el mismo que abre la tecla `w` dentro de
-    // MainLayout). Esta ruta corre sin MainLayout, así que no hereda el
-    // HotkeysManager global ni el modal: se montan acá, igual que en
-    // CloserWorkflowPage, para que un operador pueda salir de la simulación.
+    const [todas, setTodas] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [errorCarga, setErrorCarga] = useState('');
+    const [errorBorrado, setErrorBorrado] = useState('');
+    const [cfg, setCfg] = useState(leerVista);
+    const [menuAbierto, setMenuAbierto] = useState(false);
+    const [config, setConfig] = useState(null);
+    const [pesos, setPesos] = useState({});
+    const [busquedaCfg, setBusquedaCfg] = useState(null);
+    const [abierta, setAbierta] = useState(null);
     const [showOperatorControls, setShowOperatorControls] = useState(false);
-    const [saliendo, setSaliendo] = useState(false);
-    // «Pasar a <rol>» para quien tiene más roles en la cuenta. Las demás pantallas lo traen en su
-    // dock o en el menú de sesión; esta no tiene ninguno, y quien pasaba a Hiring quedaba encerrado
-    // (solo podía cerrar sesión) sin volver a Operador para simular (Mario, 08/10/2026).
-    const [menuRoles, setMenuRoles] = useState(false);
-    const cambioDeRol = useRef(null);
-    const roles = opcionesDeRol(user, (m) => toast.error(m));
+    const [entradas, setEntradas] = useState(0);
+    const buscador = useRef(null);
+    const botonVista = useRef(null);
+
+    // --- Datos ---
+    const pedido = useRef(0);
+    const yaCargo = useRef(false);
+    const cargar = useCallback(async ({ silencioso = false } = {}) => {
+        const mio = ++pedido.current;
+        if (!silencioso) setCargando(true);
+        try {
+            const res = await api.get('/assistant-applications?filtro=todas');
+            if (mio !== pedido.current) return;
+            const filas = (res.data.postulaciones || []).map(normalizar);
+            setTodas(filas);
+            setErrorCarga('');
+            // La primera vez, el Inbox abre en la tanda que tiene algo (híbridos primero).
+            if (!yaCargo.current) {
+                yaCargo.current = true;
+                const hay = (m) => filas.some((p) => p.veredicto === 'sin_analizar' && p.modalidad === m);
+                if (!hay('hibrido') && hay('online')) setPestanas((prev) => ({ ...prev, pend: 'online' }));
+            }
+        } catch (err) {
+            console.error('Error al cargar postulaciones de Asistente:', err);
+            if (mio === pedido.current) setErrorCarga('No se pudieron cargar las postulaciones.');
+        } finally {
+            if (mio === pedido.current) setCargando(false);
+        }
+    }, []);
+
+    const cargarPesos = useCallback(() => {
+        api.get('/assistant-applications/clarity-weights')
+            .then((res) => setPesos(Object.fromEntries((res.data || []).map((p) => [p.criterion, p.weight]))))
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
-        if (!menuRoles) return undefined;
-        const fuera = (e) => { if (!cambioDeRol.current?.contains(e.target)) setMenuRoles(false); };
-        document.addEventListener('mousedown', fuera);
-        return () => document.removeEventListener('mousedown', fuera);
-    }, [menuRoles]);
+        cargar();
+        cargarPesos();
+        api.get('/hiring/config').then((res) => setBusquedaCfg(res.data)).catch(() => setBusquedaCfg(null));
+    }, [cargar, cargarPesos]);
 
-    // Ctrl/Cmd+P enfoca el buscador, Escape lo limpia — mismos atajos del mockup.
-    // `w` (sin modificadores y fuera de un input) abre Acceso Simulado.
+    const cambiarVista = useCallback((nueva) => { setCfg(nueva); guardarVista(nueva); }, []);
+
+    // --- Atajos: ⌘K / Ctrl+K (y Ctrl+P, el de antes) enfocan el buscador; Escape lo limpia; `w` abre Acceso Simulado ---
     useEffect(() => {
         const onKey = (e) => {
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+            if ((e.ctrlKey || e.metaKey) && ['k', 'K', 'p', 'P'].includes(e.key)) {
                 e.preventDefault();
                 buscador.current?.focus();
+                return;
             }
-            if (e.key === 'Escape' && query) setQuery('');
-
-            const enCampo = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-            if (!enCampo && e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            const enCampo = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable;
+            if (e.key === 'Escape' && query && (e.target === buscador.current || !enCampo) && !abierta && !config) {
+                setQuery('');
+                return;
+            }
+            if (!enCampo && !abierta && e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
                 setShowOperatorControls((prev) => !prev);
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [query]);
+    }, [query, abierta, config]);
 
-    // "Volver a mi sesión": misma salida que ofrece el modal de Acceso Simulado,
-    // pero como botón visible en el header — la persona que simula a la usuaria
-    // de hiring no tiene por qué saber el atajo de teclado.
     const volverAMiSesion = async () => {
-        setSaliendo(true);
         try {
             await revertImpersonation();
         } catch (err) {
             alert(err.response?.data?.message || 'No se pudo volver a tu sesión');
-            setSaliendo(false);
         }
     };
 
-    // Al limpiar la búsqueda se vuelve donde estabas, salvo que estuvieras en
-    // Clarity: ahí el resultado que acabás de buscar es lo que querés seguir
-    // mirando, no los sliders.
-    useEffect(() => {
-        if (query.trim() && vista === 'clarity') setVista('pendientes');
-    }, [query, vista]);
+    // --- Lo que se ve ---
+    const q = query.trim();
+    const enBusqueda = q.length > 0;
+    const esTabla = enBusqueda || ES_TABLA.has(seccion);
+    const c = useMemo(() => contar(todas), [todas]);
+    const pestana = pestanas[seccion];
 
-    // Buscar recorre TODAS las postulaciones y pisa la vista activa, sea cual
-    // sea: si alguien escribe un nombre no le importa en qué pestaña quedó ni
-    // si estaba mirando estadísticas. Se vuelve a la vista al limpiar (Escape).
-    const enBusqueda = query.trim().length > 0;
-    const enListas = vista === 'pendientes' || vista === 'analizados' || vista === 'finalistas' || enBusqueda;
-    const titulo = enBusqueda ? `Resultados para «${query.trim()}»` : TITULOS[vista];
+    const base = useMemo(() => {
+        if (enBusqueda) return todas.filter((p) => coincide(p, q));
+        if (!ES_TABLA.has(seccion)) return [];
+        return todas.filter((p) => enPestana(p, seccion, pestana));
+    }, [todas, enBusqueda, q, seccion, pestana]);
+
+    const filas = useMemo(() => ordenar(base.filter((p) => pasaFiltros(p, cfg.filtros)), cfg.orden), [base, cfg.filtros, cfg.orden]);
+    const grupos = useMemo(() => agrupar(filas, cfg.agrupar), [filas, cfg.agrupar]);
+    const ids = useMemo(() => grupos.flatMap((g) => g.filas.map((p) => p.id)), [grupos]);
+    const cols = colsVisibles(cfg);
+
+    // La próxima a revisar: la de mejor score entre las que nadie miró (de la tanda elegida si es
+    // Híbridos u Online; de todas si se está mirando Incompletas).
+    const proxima = useMemo(() => {
+        const candidatas = todas.filter((p) => p.veredicto === 'sin_analizar' && (pestanas.pend === 'incompletas' || p.modalidad === pestanas.pend));
+        const lista = candidatas.length ? candidatas : todas.filter((p) => p.veredicto === 'sin_analizar');
+        return [...lista].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0] || null;
+    }, [todas, pestanas.pend]);
+
+    const modoDescarte = !enBusqueda && ((seccion === 'anal' && pestana === 'descartado') || (seccion === 'fin' && pestana === 'baja'));
+
+    // Al cambiar de sección o de pestaña las barritas de la tabla vuelven a crecer.
+    useEffect(() => { setEntradas((n) => n + 1); }, [seccion, pestana, enBusqueda]);
+    useEffect(() => { if (!esTabla) setMenuAbierto(false); }, [esTabla]);
+
+    const elegirSeccion = (id) => {
+        setSeccion(id);
+        setQuery('');
+        setMenuAbierto(false);
+    };
+
+    const irA = (sec, pes) => {
+        setSeccion(sec);
+        if (pes) setPestanas((prev) => ({ ...prev, [sec]: pes }));
+        setQuery('');
+    };
+
+    const eliminar = useCallback(async (id) => {
+        try {
+            await api.delete(`/assistant-applications/${id}`);
+        } catch (err) {
+            setErrorBorrado(err.response?.data?.message || 'No se pudo eliminar la postulación.');
+            throw err;
+        }
+        setErrorBorrado('');
+        setTodas((prev) => prev.filter((p) => p.id !== id));
+        cargar({ silencioso: true });
+    }, [cargar]);
+
+    // La lista por la que se navega con las flechas del modal es la que se veía al abrirlo: al
+    // decidir, la postulación sale de la pestaña y la lista viva se movería debajo del modal.
+    const [listaModal, setListaModal] = useState([]);
+    const abrir = useCallback((id) => {
+        setListaModal(ids.includes(id) ? ids : [id]);
+        setAbierta(id);
+    }, [ids]);
+
+    const titulo = enBusqueda ? `Resultados para «${q}»` : SECCIONES.find((s) => s.id === seccion)?.label;
+
+    // --- Cabecera: las pestañas de cada sección y el botón Vista ---
+    let controles = null;
+    if (!enBusqueda && ES_TABLA.has(seccion)) {
+        controles = <Pestanas lista={PESTANAS[seccion]} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
+    } else if (!enBusqueda && seccion === 'stats') {
+        controles = (
+            <>
+                <Pestanas lista={[{ id: 'panorama', label: 'Panorama' }, { id: 'paises', label: 'Comparar países' }]} actual={statsTab} onElegir={setStatsTab} />
+                <div className="seg" role="group" aria-label="Universo">
+                    <button type="button" aria-pressed={statsSeg === 'gen'} onClick={() => setStatsSeg('gen')}>Generales · {c.total}</button>
+                    <button type="button" aria-pressed={statsSeg === 'fin'} onClick={() => setStatsSeg('fin')}>
+                        Finalistas · {todas.filter((p) => p.completo && p.video_ok).length}
+                    </button>
+                </div>
+            </>
+        );
+    }
+    const nf = filtrosActivos(cfg);
+
+    const marcas = {
+        pend: c.pend ? [{ tipo: 'cuenta', texto: String(c.pend), titulo: `${c.pend} sin analizar` }] : [],
+        anal: c.anal ? [{ tipo: 'cuenta', texto: String(c.anal), titulo: `${c.anal} analizadas` }] : [],
+        fin: c.fin ? [{ tipo: 'cuenta', texto: String(c.fin), titulo: `${c.fin} finalistas` }] : [],
+    };
+    const secciones = SECCIONES.map((s) => ({ ...s, marcas: marcas[s.id] || [] }));
+
+    const vacio = (() => {
+        if (cargando) return <p className="t-cap mut40">Cargando postulaciones…</p>;
+        if (filtrosActivos(cfg) && base.length > 0) {
+            return (
+                <>
+                    <span className="tl-vacio-ico tl-vacio-ico--idle"><Filter size={22} /></span>
+                    <p className="t-h3">Nadie cumple los filtros de la vista</p>
+                    <p className="mut t-cap">Hay {base.length} en esta lista. Aflojá un filtro o quitalos.</p>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}><X /> Quitar filtros</button>
+                </>
+            );
+        }
+        if (enBusqueda) {
+            return (
+                <>
+                    <span className="tl-vacio-ico tl-vacio-ico--idle"><Search size={22} /></span>
+                    <p className="t-h3">Nadie coincide con «{q}»</p>
+                    <p className="mut t-cap">Probá con el nombre, el país o la provincia.</p>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setQuery('')}><X /> Limpiar búsqueda</button>
+                </>
+            );
+        }
+        if (seccion === 'pend' && pestana !== 'incompletas') {
+            const otra = pestana === 'hibrido' ? 'online' : 'hibrido';
+            const nombre = (m) => (m === 'hibrido' ? 'híbridas' : 'online');
+            return (
+                <>
+                    <span className="tl-vacio-ico"><Check size={22} /></span>
+                    <p className="t-h3">Revisaste todas las {nombre(pestana)}</p>
+                    <p className="mut t-cap">{c[otra] ? `Quedan ${c[otra]} postulaciones ${nombre(otra)} sin analizar.` : 'No queda ninguna postulación sin analizar.'}</p>
+                    {c[otra] > 0 && <button type="button" className="btn btn--linea btn--sm" onClick={() => irA('pend', otra)}>Ver las {nombre(otra)}</button>}
+                </>
+            );
+        }
+        return (
+            <>
+                <span className="tl-vacio-ico tl-vacio-ico--idle"><Inbox size={22} /></span>
+                <p className="t-h3">Todavía nadie en este estado</p>
+                <p className="mut t-cap">Las candidatas aparecen acá cuando les asignás este estado desde su postulación.</p>
+            </>
+        );
+    })();
+
+    const formActivoNombre = busquedaCfg?.puesto;
 
     return (
-        <div
-            className="dash-v6 min-h-screen text-white"
-            style={{
-                background:
-                    'radial-gradient(1100px 640px at 88% -12%, rgba(19,35,198,.34) 0%, transparent 62%),' +
-                    'radial-gradient(860px 560px at 6% 108%, rgba(91,124,255,.16) 0%, transparent 64%), #0B0F26',
-                paddingBottom: 140,
-            }}
-        >
-            <header className="sticky top-0 z-40 border-b border-white/10 bg-[#020617]/95 backdrop-blur-xl">
-                <div className="flex flex-wrap items-center justify-between gap-6 px-4 py-4 sm:px-8 lg:px-14">
-                    <div className="flex min-w-0 items-center gap-4">
-                        {user?.role === 'admin' && (
-                            <Link
-                                to="/admin/ventas"
-                                title="Volver a la sesión del admin"
-                                className="group flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 transition-all hover:bg-white/10 hover:text-white"
-                            >
-                                <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
-                            </Link>
-                        )}
-                        <div className="flex items-center gap-3">
-                            <div
-                                className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[17px] font-black"
-                                style={{ background: 'linear-gradient(135deg,#1323C6,#FF3FA4)', boxShadow: '0 5px 18px rgba(19,35,198,.45)' }}
-                            >
-                                L
-                            </div>
-                            <div className="leading-none">
-                                <span className="text-[14px] font-black tracking-[.16em] whitespace-nowrap">
-                                    LEARNATION <span className="text-[#5B7CFF]">HIRING</span>
-                                </span>
-                                <small className="mt-1 block text-[8.5px] font-extrabold uppercase tracking-[.22em] text-white/40">
-                                    Asistente Administrativa y Personal
-                                </small>
+        <>
+            <div className="dc-shell talent">
+                <div className="wrap">
+                    <header className="tl-tope">
+                        <div className="tl-marca">
+                            <IsotipoTalent />
+                            <div className="tl-tit">
+                                <h1 className="t-h1">{titulo}</h1>
+                                {!enBusqueda && seccion === 'forms' && formActivoNombre && (
+                                    <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
+                                )}
                             </div>
                         </div>
-                    </div>
+                        <div className="tl-tope-der">
+                            <label className="busca" htmlFor="tl-q">
+                                <Search />
+                                <input
+                                    id="tl-q"
+                                    ref={buscador}
+                                    type="text"
+                                    autoComplete="off"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Buscar candidata, país o provincia"
+                                    aria-label="Buscar postulante"
+                                />
+                                {enBusqueda ? (
+                                    <button type="button" className="tl-busca-x" onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} /></button>
+                                ) : (
+                                    <span className="flex gap-1" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+                                )}
+                            </label>
+                            <div className="tl-controles">
+                                {controles}
+                                {esTabla && (
+                                    <button
+                                        ref={botonVista}
+                                        type="button"
+                                        className="tl-vista-btn"
+                                        aria-haspopup="true"
+                                        aria-expanded={menuAbierto}
+                                        aria-label="Configurar la vista"
+                                        title="Vista: filtrar, columnas, ordenar, agrupar"
+                                        onClick={() => setMenuAbierto((v) => !v)}
+                                    >
+                                        <Filter size={19} />
+                                        {nf > 0 && <span className="tl-badge">{nf}</span>}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </header>
 
-                    <div className="flex h-[46px] min-w-[220px] max-w-[520px] flex-1 items-center gap-3 rounded-2xl border border-white/[.13] bg-white/5 px-4 transition-all focus-within:border-[#5B7CFF] focus-within:bg-[#5B7CFF]/10 focus-within:shadow-[0_0_0_3px_rgba(91,124,255,.22)]">
-                        <Search size={17} className="flex-none text-white/40" />
-                        <input
-                            ref={buscador}
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Buscar postulante o país…"
-                            aria-label="Buscar postulante"
-                            className="min-w-0 flex-1 border-none bg-transparent text-[14.5px] font-semibold text-white outline-none placeholder:text-white/35"
-                        />
-                        {enBusqueda ? (
-                            <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda" className="flex-none text-white/40 hover:text-white">
-                                <X size={16} />
-                            </button>
-                        ) : (
-                            <span className="hidden flex-none gap-1 sm:flex">
-                                {['Ctrl', 'P'].map((k) => (
-                                    <span key={k} className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-extrabold tracking-wide text-white/40">
-                                        {k}
-                                    </span>
-                                ))}
-                            </span>
+                    <main className="tl-vista" key={`${seccion}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                        {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
+                        {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
+
+                        {!enBusqueda && seccion === 'pend' && !cargando && (
+                            <ResumenInbox
+                                proxima={proxima}
+                                cuentas={c}
+                                pesos={pesos}
+                                onAbrir={abrir}
+                                onPesos={() => setConfig('clarity')}
+                                onIr={irA}
+                            />
                         )}
-                    </div>
 
-                    {/* Acciones de sesión. El rol hiring no tiene dock global (ni
-                        MainLayout), así que cerrar sesión y salir de la simulación
-                        tienen que vivir en este header o no existen para él. */}
-                    <div className="flex flex-none items-center gap-2">
-                        {user?.is_impersonating && (
+                        {esTabla && (
+                            <TablaPostulaciones
+                                grupos={grupos}
+                                cols={cols}
+                                cfg={cfg}
+                                totalBase={base.length}
+                                entra={entradas}
+                                ctx={{
+                                    conEstado: enBusqueda,
+                                    modoDescarte,
+                                    etiquetaDescarte: seccion === 'fin' ? 'Motivo' : 'Descarte',
+                                    presMax: busquedaCfg?.presupuesto_max || 400,
+                                    ahora: Date.now(),
+                                }}
+                                onOrden={(campo) => cambiarVista({
+                                    ...cfg,
+                                    orden: cfg.orden.campo === campo
+                                        ? { campo, dir: cfg.orden.dir === 'asc' ? 'desc' : 'asc' }
+                                        : { campo, dir: campo === 'nombre' || campo === 'pide' ? 'asc' : 'desc' },
+                                })}
+                                // Mientras se arrastra el ancho cambia en pantalla; se guarda al soltar
+                                // (`px` null), con flechas o con el doble clic que lo restablece (`undefined`).
+                                onAncho={(id, px, persistir) => setCfg((prev) => {
+                                    let nueva = prev;
+                                    if (px !== null) {
+                                        const anchos = { ...prev.anchos };
+                                        if (px === undefined) delete anchos[id];
+                                        else anchos[id] = px;
+                                        nueva = { ...prev, anchos };
+                                    }
+                                    if (persistir) guardarVista(nueva);
+                                    return nueva;
+                                })}
+                                onAbrir={abrir}
+                                onEliminar={eliminar}
+                                onLimpiarFiltros={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}
+                                vacio={vacio}
+                            />
+                        )}
+
+                        {!enBusqueda && seccion === 'stats' && <HiringStats todas={todas} pestana={statsTab} segmento={statsSeg} />}
+                        {!enBusqueda && seccion === 'forms' && <HiringForms />}
+                    </main>
+                </div>
+
+                <DockSecciones
+                    secciones={secciones}
+                    activa={seccion}
+                    onElegir={elegirSeccion}
+                    ariaLabel="Secciones de Learnation Talent"
+                    despues={(
+                        <>
                             <button
                                 type="button"
-                                onClick={volverAMiSesion}
-                                disabled={saliendo}
-                                title="Volver a tu sesión original (también con la tecla W)"
-                                className="flex h-9 items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 text-[12px] font-extrabold uppercase tracking-wide text-amber-300 transition-all hover:bg-amber-400/20 hover:text-amber-200 disabled:opacity-60"
+                                className="tl-orb"
+                                aria-label="Configuración de Learnation Talent"
+                                aria-expanded={Boolean(config)}
+                                title="Configuración: Clarity y búsqueda"
+                                onClick={() => setConfig((v) => (v ? null : 'clarity'))}
                             >
-                                {saliendo ? <Loader2 size={15} className="animate-spin" /> : <Ghost size={15} />}
-                                <span className="hidden sm:inline">Volver a mi sesión</span>
+                                <IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" />
                             </button>
-                        )}
-                        {roles.length > 0 && (
-                            <div ref={cambioDeRol} className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setMenuRoles((v) => !v)}
-                                    aria-haspopup="menu"
-                                    aria-expanded={menuRoles}
-                                    title="Cambiar de rol"
-                                    className="flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-extrabold uppercase tracking-wide text-white/50 transition-all hover:bg-white/10 hover:text-white"
-                                >
-                                    <ArrowLeftRight size={15} />
-                                    <span className="hidden sm:inline">Cambiar de rol</span>
-                                </button>
-                                <AnimatePresence>
-                                    {menuRoles && (
-                                        <motion.div
-                                            role="menu"
-                                            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                                            transition={{ duration: 0.16, ease: 'easeOut' }}
-                                            className="absolute right-0 top-full z-50 mt-2 min-w-[260px] origin-top-right rounded-2xl border border-white/10 bg-[#0B0F26]/95 p-1.5 shadow-2xl backdrop-blur-xl"
-                                        >
-                                            {roles.map((op) => (
-                                                <button
-                                                    key={op.id}
-                                                    type="button"
-                                                    role="menuitem"
-                                                    onClick={() => { setMenuRoles(false); op.onClick(); }}
-                                                    title={op.titulo}
-                                                    className="flex w-full items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-[13px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                                                >
-                                                    <op.Icono size={15} className="flex-none text-white/40" />
-                                                    {op.label}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            onClick={logout}
-                            title="Cerrar sesión"
-                            className="flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-extrabold uppercase tracking-wide text-white/50 transition-all hover:bg-white/10 hover:text-white"
-                        >
-                            <LogOut size={15} />
-                            <span className="hidden sm:inline">Salir</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
+                            <MenuSesion
+                                nombre={user?.name || user?.username || ''}
+                                rol={user?.is_impersonating ? 'Hiring · simulación' : 'Hiring'}
+                                grupos={[[
+                                    ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : []),
+                                    ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
+                                    { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout },
+                                ]]}
+                            />
+                        </>
+                    )}
+                />
+            </div>
+
+            {menuAbierto && esTabla && (
+                <MenuVista
+                    ancla={botonVista}
+                    cfg={cfg}
+                    onCambiar={cambiarVista}
+                    onCerrar={() => setMenuAbierto(false)}
+                    onCriterios={() => { setMenuAbierto(false); setConfig('clarity'); }}
+                />
+            )}
+
+            {config && (
+                <ConfigTalent
+                    tab={config}
+                    onTab={setConfig}
+                    onCerrar={() => setConfig(null)}
+                    todas={todas}
+                    onAbrir={abrir}
+                    onPesosGuardados={() => { cargar({ silencioso: true }); cargarPesos(); }}
+                    onConfigGuardada={setBusquedaCfg}
+                />
+            )}
 
             <OperatorControls isOpen={showOperatorControls} onClose={() => setShowOperatorControls(false)} />
 
-            <main className="px-4 py-8 sm:px-8 lg:px-14">
-                {/* En las vistas de lista el título lo pinta el inbox (prop `titulo`):
-                    en Pendientes comparte línea con los toggles de modalidad. */}
-                {!enListas && (
-                    <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-black leading-none tracking-tight">
-                        {titulo}
-                    </h1>
-                )}
-
-                {/* El inbox se monta en las dos vistas de lista; `grupo` decide qué
-                    sub-filtros ofrece, igual que en el panel de Closer. */}
-                {enListas && (
-                    <HiringInbox
-                        grupo={enBusqueda ? 'busqueda' : vista}
-                        query={enBusqueda ? query.trim() : ''}
-                        titulo={titulo}
-                        onConteos={setBadges}
+            {abierta && (
+                // El modal de la postulación es el de siempre (Tailwind, paleta `dash-v6`): va fuera
+                // del `.dc-shell`, cuyas reglas de botón e input le pisarían el padding y los bordes.
+                <div className="dash-v6 text-white">
+                    <HiringCandidateModal
+                        applicationId={abierta}
+                        ids={listaModal.includes(abierta) ? listaModal : [abierta]}
+                        onClose={() => setAbierta(null)}
+                        onNavigate={setAbierta}
+                        onDecidido={() => cargar({ silencioso: true })}
                     />
-                )}
-                {vista === 'stats' && !enBusqueda && <HiringStatsTab />}
-                {vista === 'clarity' && !enBusqueda && <HiringClarityTab />}
-            </main>
-
-            {/* Dock flotante. Esta ruta no usa MainLayout (ver App.jsx): el panel
-                es su propia sub-app, con su menú propio en vez del dock global. */}
-            <div className="pointer-events-none fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4">
-                <div
-                    className="pointer-events-auto flex max-w-full items-stretch gap-2 overflow-x-auto rounded-[26px] border border-[#5B7CFF]/30 bg-[#040718]/95 p-2.5 backdrop-blur-xl"
-                    style={{ boxShadow: '0 28px 70px rgba(0,0,0,.62)' }}
-                >
-                    {DESTINOS.map((d) => {
-                        const activo = vista === d.id;
-                        const badge = badges[d.id] || 0;
-                        return (
-                            <button
-                                key={d.id}
-                                type="button"
-                                onClick={() => setVista(d.id)}
-                                className={`flex h-[58px] flex-none items-center gap-3 whitespace-nowrap rounded-[18px] px-6 text-[15px] font-bold transition-all ${
-                                    activo ? 'text-white' : 'text-white/60 hover:-translate-y-0.5 hover:bg-[#5B7CFF]/10 hover:text-white'
-                                }`}
-                                style={activo ? { background: 'linear-gradient(100deg,#1323C6,#5B7CFF,#FF3FA4)', boxShadow: '0 12px 30px rgba(19,35,198,.5)' } : undefined}
-                            >
-                                <d.icon size={19} style={{ color: activo ? '#fff' : d.color }} />
-                                <span>{d.label}</span>
-                                {badge > 0 && (
-                                    <span
-                                        className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-[9px] px-2 text-[12px] font-black tabular-nums"
-                                        style={{ background: activo ? 'rgba(255,255,255,.26)' : 'rgba(91,124,255,.2)' }}
-                                    >
-                                        {badge}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-
-                    <button
-                        type="button"
-                        onClick={() => setVista('clarity')}
-                        title="Clarity · pesos del score"
-                        aria-label="Clarity"
-                        className="relative flex h-[58px] w-[58px] flex-none items-center justify-center rounded-full border-2 transition-all hover:-translate-y-0.5 hover:scale-105"
-                        style={
-                            vista === 'clarity'
-                                ? { background: 'linear-gradient(135deg,#FF3FA4,#FF6AD5)', borderColor: '#FF6AD5', boxShadow: '0 12px 30px rgba(255,63,164,.5)' }
-                                : { background: 'rgba(255,63,164,.1)', borderColor: 'rgba(255,63,164,.65)' }
-                        }
-                    >
-                        <Sliders size={20} style={{ color: vista === 'clarity' ? '#0B0F26' : '#FF6AD5' }} />
-                    </button>
                 </div>
-            </div>
-        </div>
+            )}
+        </>
     );
 };
 
