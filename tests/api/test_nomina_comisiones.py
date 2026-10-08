@@ -54,3 +54,21 @@ def test_un_sueldo_fijo_no_toma_comision():
 
     assert comision_de_miembro(miembro, {'paula': 64.0}) == 0.0
 
+
+def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ventas_del_mes):
+    admin = make_user(role='admin')
+
+    r = client.get('/api/public/financial-sales/payroll?start_date=2026-10-01&end_date=2026-10-31',
+                   headers=auth_headers(admin))
+
+    assert r.status_code == 200
+    datos = r.get_json()
+    resumen = {clave: (d['porcentaje_comision'], d['comision_total'], d['total_ventas'], len(d['sales']))
+               for clave, d in datos.items()}
+    assert resumen == {
+        'elias': (8.0, 80.0, 1, 1),
+        'paula': (8.0, 64.0, 2, 2),
+        'jeancarlo': (10.0, 100.0, 1, 2),  # la venta excluida se lista pero no suma
+        'facundo': (10.0, 80.0, 2, 2),
+        'marlon': (5.0, 75.0, 2, 3),
+    }
