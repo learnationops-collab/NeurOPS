@@ -2,10 +2,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-// El listado trae mucho más que lo que el modal necesita de él.
-vi.mock('./HiringInbox', () => ({
-    VEREDICTO: { sin_analizar: { label: 'Sin analizar', fg: '#8AA3FF', bg: '#000', bd: '#111' } },
-}));
 
 import api from '../../../../services/api';
 import HiringCandidateModal, { Completitud, colorCompletitud, dimensionesPanel } from './HiringCandidateModal';
@@ -96,6 +92,21 @@ describe('HiringCandidateModal · encabezado', () => {
         await waitFor(() => expect(screen.getByRole('dialog').querySelector('header').textContent).toContain('Score'));
         expect(screen.queryByTestId('completitud')).toBeNull();
         expect(screen.queryByRole('progressbar')).toBeNull();
+    });
+});
+
+describe('respuestas a preguntas nuevas del editor', () => {
+    it('salen con su enunciado; el puntaje de una de varias opciones no es una tarjeta', async () => {
+        api.get.mockResolvedValue({
+            data: postulacion({
+                respuestas_extra: { extra_ab12cd: 'Trello | ClickUp', extra_ab12cd_pts: 4 },
+                preguntas_extra: [{ id: 'extra_ab12cd', t: '¿Qué gestor de tareas usás?', bloque: 'Extra' }],
+            }),
+        });
+        render(<HiringCandidateModal applicationId={7} ids={[7]} onClose={vi.fn()} onNavigate={vi.fn()} />);
+        expect(await screen.findByText('¿Qué gestor de tareas usás?')).toBeTruthy();
+        expect(screen.getByText('Trello | ClickUp')).toBeTruthy();
+        expect(screen.queryByText('extra_ab12cd_pts')).toBeNull();
     });
 });
 

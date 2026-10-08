@@ -21,8 +21,11 @@ const Fila = ({ e, puesto }) => {
     ].filter(Boolean).join(' ');
 
     return (
+        // La grilla va en `style` y no con la clase `grid`: dentro de `.dc-shell` (Talent) esa
+        // clase es la de las tarjetas del tablero comercial y le pisaba las columnas.
         <div
-            className="grid items-center gap-x-3 [grid-template-columns:minmax(100px,168px)_minmax(0,1fr)_74px]"
+            className="items-center gap-x-3"
+            style={{ display: 'grid', gridTemplateColumns: 'minmax(100px,168px) minmax(0,1fr) 74px' }}
             title={pista}
         >
             <span className="flex min-w-0 items-center gap-1.5">

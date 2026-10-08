@@ -6,7 +6,7 @@ BLUEPRINTS_ESPERADOS = {
     'public_api', 'external_academy_api', 'external_dev_platform_api', 'setter', 'google_calendar_bp',
     'webhooks', 'analytics', 'marketing', 'backup', 'comments', 'manychat', 'triage', 'sheets',
     'workshop', 'metrics', 'conversational', 'alerts', 'bug_reports', 'job_applications',
-    'assistant_applications', 'playbook',
+    'assistant_applications', 'hiring_forms', 'playbook',
 }
 
 # Rutas de las que depende el frontend para arrancar la sesion.

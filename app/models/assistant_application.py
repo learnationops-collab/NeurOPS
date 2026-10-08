@@ -13,6 +13,7 @@ cambiar la redacción de una opción sin que haga falta migrar nada acá.
 import unicodedata
 from datetime import datetime
 from app import db
+from app.models.hiring_form import COLUMNA_DE_PREGUNTA, HiringForm
 
 # Los bloques del formulario REAL (institute-site, vacante-assistant/formulario),
 # en orden, con las columnas que guarda cada uno. Son 35 preguntas. Es la misma
@@ -91,6 +92,10 @@ EXCLUYENTES = {
 }
 
 VERIFICADO_OK = 'Sí, lo verifiqué'
+
+# Las respuestas que tienen columna propia. Una pregunta del formulario
+# editable con otro id se guarda en `respuestas_extra`.
+COLUMNAS_DE_RESPUESTA = frozenset(CAMPOS_FORMULARIO + CAMPOS_LEGACY)
 
 
 class AssistantApplication(db.Model):
@@ -194,7 +199,21 @@ class AssistantApplication(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Con qué formulario editable (HiringForm) se contestó. None en las que
+    # llegaron antes de que existieran los formularios editables y no se
+    # asignaron todavía (ver `asegurar_semilla` en app/services/hiring_forms.py).
+    form_id = db.Column(
+        db.Integer, db.ForeignKey('hiring_forms.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Respuestas a preguntas agregadas desde el editor, que no tienen columna
+    # propia: {id de la pregunta: texto}. Siempre se reasigna el dict entero
+    # (db.JSON no detecta cambios hechos adentro).
+    respuestas_extra = db.Column(db.JSON, nullable=True)
+
     revisado_por = db.relationship('User', foreign_keys=[revisado_por_id])
+    # Many-to-one: SQLAlchemy lo resuelve por el identity map, así que listar
+    # cientos de postulaciones del mismo formulario hace UNA consulta, no una
+    # por fila.
+    form = db.relationship('HiringForm', foreign_keys=[form_id])
 
     # ------------------------------------------------------------------ #
 
@@ -212,9 +231,44 @@ class AssistantApplication(db.Model):
                 return pos
         return -1
 
+    def formulario(self):
+        """El HiringForm con el que contestó, o None. Pasa por el identity map
+        de la sesión: cientos de postulaciones del mismo formulario lo leen una
+        sola vez (también las recién creadas, que todavía no lo tienen cargado)."""
+        if self.form_id is None:
+            return None
+        return self.form or db.session.get(HiringForm, self.form_id)
+
+    def respuesta(self, pregunta_id):
+        """La respuesta a una pregunta, venga de su columna o de
+        `respuestas_extra`. Acepta el id del formulario (`ciudad`) o la columna
+        (`provincia`)."""
+        columna = COLUMNA_DE_PREGUNTA.get(pregunta_id, pregunta_id)
+        if columna in COLUMNAS_DE_RESPUESTA:
+            return getattr(self, columna)
+        return (self.respuestas_extra or {}).get(pregunta_id)
+
+    def campos_apagados(self):
+        """Columnas de las preguntas que su formulario tiene apagadas (no se le
+        preguntaron): el score no las cuenta en contra (ver `aplica` en
+        app/services/assistant_clarity.py)."""
+        form = self.formulario()
+        return form.campos_apagados() if form is not None else frozenset()
+
     def preguntas_esperadas(self):
-        """Columnas que el formulario le pide de verdad a ESTA postulación:
-        las 35 menos la opcional y menos la condicional que no le tocó ver."""
+        """Lo que el formulario le pide de verdad a ESTA postulación.
+
+        Con formulario editable: sus preguntas prendidas y obligatorias (sin la
+        intro) cuya condición `si` se cumple, con `ciudad` como `provincia`.
+        Sin formulario (las de antes de que existieran): las 35 menos la
+        opcional y menos la condicional que no le tocó ver."""
+        form = self.formulario()
+        if form is not None:
+            return [
+                COLUMNA_DE_PREGUNTA.get(p['id'], p['id'])
+                for p in form.preguntas_obligatorias()
+                if _cumple_condicion(self, form, p)
+            ]
         esperadas = []
         for campo in CAMPOS_FORMULARIO:
             if campo in OPCIONALES:
@@ -227,16 +281,19 @@ class AssistantApplication(db.Model):
     def completitud(self):
         """Porcentaje entero 0-100 de las preguntas del formulario contestadas.
 
-        Denominador: `preguntas_esperadas()` (33 siempre, 34 si gestionó
-        cuentas de Meta). Así una opcional salteada o una condicional que no le
-        apareció no baja el porcentaje de nadie. Si `completo` es True, 100
-        (terminó el formulario, aunque falte alguna). Mientras no esté
-        completa, tope 99: llegar a 100 es terminar.
+        Denominador: `preguntas_esperadas()` (con el formulario base, 33
+        siempre y 34 si gestionó cuentas de Meta). Así una opcional salteada,
+        una condicional que no le apareció o una pregunta apagada no baja el
+        porcentaje de nadie. Si `completo` es True, 100 (terminó el formulario,
+        aunque falte alguna). Mientras no esté completa, tope 99: llegar a 100
+        es terminar.
         """
         if self.completo:
             return 100
         esperadas = self.preguntas_esperadas()
-        contestadas = sum(1 for campo in esperadas if not _vacio(getattr(self, campo)))
+        if not esperadas:
+            return 0
+        contestadas = sum(1 for campo in esperadas if not _vacio(self.respuesta(campo)))
         return min(99, round(100 * contestadas / len(esperadas)))
 
     def auto_ko(self):
@@ -260,9 +317,10 @@ class AssistantApplication(db.Model):
         provincia = _normaliza(self.provincia)
         if not provincia:
             return 'online'
-        if self.pais == 'Argentina' and provincia == 'salta':
+        pais = pais_limpio(self.pais)
+        if pais == 'Argentina' and provincia == 'salta':
             return 'hibrido'
-        if self.pais == 'Brasil' and provincia == 'parana':
+        if pais == 'Brasil' and provincia == 'parana':
             return 'hibrido'
         return 'online'
 
@@ -286,7 +344,7 @@ class AssistantApplication(db.Model):
             "nombre": self.nombre,
             "email": self.email,
             "whatsapp": self.whatsapp,
-            "pais": self.pais,
+            "pais": pais_limpio(self.pais),
             "provincia": self.provincia,
             "modalidad": self.modalidad(),
             "edad": self.edad,
@@ -318,15 +376,42 @@ class AssistantApplication(db.Model):
             "meta": self.meta,
             "wa_tools": self.wa_tools,
             "automatizaciones": self.automatizaciones,
+            # De acá sale el ícono de automatizaciones (Zapier) de la tabla.
+            "automatizacion_ejemplo": self.automatizacion_ejemplo,
             "video": self.video,
             "video_verificado": self.video_verificado,
             "video_ok": self.video_ok(),
             "cv": self.cv,
+            "form_id": self.form_id,
         }
         if include_respuestas:
             for campo in CAMPOS_FORMULARIO + CAMPOS_LEGACY:
                 data.setdefault(campo, getattr(self, campo))
+            data["respuestas_extra"] = dict(self.respuestas_extra or {})
         return data
+
+    def preguntas_extra(self):
+        """Cómo rotular cada respuesta de `respuestas_extra`: [{id, t, bloque}],
+        en el orden de su formulario. Si la pregunta ya no está (o no hay
+        formulario), el rótulo es el propio id."""
+        extras = self.respuestas_extra or {}
+        if not extras:
+            return []
+        form = self.formulario()
+        salida = []
+        if form is not None:
+            for p in form.preguntas or []:
+                if not isinstance(p, dict) or not p.get('id'):
+                    continue
+                if p['id'] in extras:
+                    salida.append({"id": p['id'], "t": p.get('t') or p['id'], "bloque": p.get('bloque')})
+                # El puntaje que manda el formulario en las de opción múltiple.
+                if f"{p['id']}_pts" in extras:
+                    salida.append({"id": f"{p['id']}_pts", "t": f"{p.get('t') or p['id']} · puntos",
+                                   "bloque": p.get('bloque')})
+        ya = {e['id'] for e in salida}
+        salida += [{"id": pid, "t": pid, "bloque": None} for pid in extras if pid not in ya]
+        return salida
 
     def __repr__(self):
         return f'<AssistantApplication {self.nombre} · {self.pais}>'
@@ -334,6 +419,54 @@ class AssistantApplication(db.Model):
 
 def _vacio(v):
     return v is None or v == '' or v == []
+
+
+# Cómo puede llamarse el valor esperado de una condición `si`, en el orden en
+# que lo busca el formulario público (`cumpleSi`).
+CLAVES_DE_CONDICION = ('es', 'igual', 'valor', 'en', 'valores')
+
+
+def _cumple_condicion(app_row, form, pregunta, profundidad=0):
+    """Si a esta postulación le tocó ver `pregunta`, con la misma regla que el
+    formulario público (`cumpleSi`): `si: {id, es}` la muestra solo si la
+    respuesta a `id` es `es` (o una de la lista; en una de opción múltiple
+    alcanza con que esté marcada). Sin valor esperado, alcanza con que `id`
+    tenga respuesta. Si la pregunta de la que depende está apagada (o tampoco
+    le tocó verla), esta tampoco."""
+    si = form.condicion(pregunta)
+    if not isinstance(si, dict) or not si.get('id'):
+        return True
+    padre = form.pregunta(si['id'])
+    if padre is None or padre.get('on') is False or profundidad > 8:
+        return False
+    if not _cumple_condicion(app_row, form, padre, profundidad + 1):
+        return False
+
+    valor = app_row.respuesta(si['id'])
+    clave = next((c for c in CLAVES_DE_CONDICION if c in si), None)
+    esperado = si[clave] if clave else None
+    if esperado is None:
+        return not _vacio(valor)
+    if _vacio(valor):
+        return False
+    esperados = {str(e).strip() for e in (esperado if isinstance(esperado, list) else [esperado])}
+    # Una de opción múltiple llega con las marcadas unidas por « | ».
+    dados = {str(valor).strip()} | {v.strip() for v in str(valor).split('|')}
+    return bool(esperados & dados)
+
+
+def pais_limpio(texto):
+    """El país sin la bandera: el formulario manda la opción tal cual se ve
+    («🇦🇷  Argentina») y hay filas guardadas así. Se descarta todo lo que va
+    antes de la primera letra y se juntan los espacios: «Argentina». Las filas
+    viejas no se migran; se limpian al leerlas (y las nuevas, al guardarlas)."""
+    if not texto:
+        return texto
+    texto = str(texto)
+    for pos, caracter in enumerate(texto):
+        if caracter.isalpha():
+            return ' '.join(texto[pos:].split())
+    return None
 
 
 def _normaliza(texto):

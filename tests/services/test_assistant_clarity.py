@@ -179,3 +179,78 @@ def test_un_peso_de_un_criterio_que_ya_no_existe_no_distorsiona_el_score():
 
 def test_con_todos_los_pesos_en_cero_el_score_es_cero():
     assert ac.score_de(fila(), {c: 0 for c in ac.DEFAULT_WEIGHTS}) == 0
+
+
+# --- Preguntas apagadas en el formulario editable ---------------------------------------------
+
+def _con_form(db, apagar=(), **campos):
+    """Postulación guardada con un formulario que tiene apagadas `apagar`."""
+    import copy
+
+    from app.models import HiringForm
+    from app.services.hiring_forms import PREGUNTAS_BASE
+
+    preguntas = copy.deepcopy(PREGUNTAS_BASE)
+    for p in preguntas:
+        if p['id'] in apagar:
+            p['on'] = False
+    form = HiringForm(nombre='F', preguntas=preguntas)
+    db.session.add(form)
+    db.session.flush()
+    app_row = fila(form_id=form.id, **campos)
+    db.session.add(app_row)
+    db.session.commit()
+    return app_row
+
+
+def test_las_partes_dan_lo_mismo_que_cada_criterio():
+    # PARTES repite las cuentas de cada criterio: sin nada apagado tienen que coincidir.
+    for a in (fila(), vacia(), fila(sheets='Básico, me defiendo con lo esencial', video_verificado=None, pm='No')):
+        for criterio, partes in ac.PARTES.items():
+            total = sum(peso for _, peso, _ in partes)
+            ponderado = sum(peso * valor(a) for _, peso, valor in partes) / total
+            assert ponderado == pytest.approx(ac._REGLAS[criterio](a)), criterio
+            assert {campo for campo, _, _ in partes} == set(ac.CAMPOS_DE_CRITERIO[criterio])
+
+
+def test_con_el_formulario_base_el_score_no_cambia(db):
+    con = _con_form(db, ingles='Básico', aporte='Soy responsable')
+    sin = fila(ingles='Básico', aporte='Soy responsable')
+
+    assert ac.compute_criteria_values(con) == ac.compute_criteria_values(sin)
+    assert ac.score_de(con) == ac.score_de(sin)
+
+
+def test_un_criterio_con_todas_sus_preguntas_apagadas_no_aplica(db):
+    # No contestó idiomas porque no se le preguntaron: no puede costarle puntos.
+    sin_idiomas = dict(ingles=None, idioma2=None)
+    apagado = _con_form(db, apagar=('ingles', 'idioma2'), **sin_idiomas)
+
+    assert not ac.aplica(apagado, 'idiomas')
+    assert ac.aplica(apagado, 'ia')
+    assert ac.score_de(apagado) > ac.score_de(fila(**sin_idiomas))
+    # Lo mismo que si el criterio pesara cero.
+    assert ac.score_de(apagado) == ac.score_de(fila(**sin_idiomas), {**ac.DEFAULT_WEIGHTS, 'idiomas': 0})
+
+
+def test_apagar_la_unica_pregunta_de_un_criterio(db):
+    apagado = _con_form(db, apagar=('remuneracion',), remuneracion=None)
+
+    assert not ac.aplica(apagado, 'pretension')
+    assert ac.score_de(apagado) == ac.score_de(fila(remuneracion=None), {**ac.DEFAULT_WEIGHTS, 'pretension': 0})
+
+
+def test_apagar_parte_de_un_criterio_reparte_el_peso_entre_las_que_quedan(db):
+    # Todo al máximo menos Notion, que no se le preguntó.
+    apagado = _con_form(db, apagar=('notion',), notion=None)
+
+    assert ac.aplica(apagado, 'herramientas')
+    assert ac.compute_criteria_values(apagado)['herramientas'] == 1.0
+    assert ac.compute_criteria_values(fila(notion=None))['herramientas'] < 1.0
+
+
+def test_apagar_la_verificacion_del_video_no_lo_castiga(db):
+    apagado = _con_form(db, apagar=('video_verificado',), video_verificado=None)
+
+    assert ac.compute_criteria_values(apagado)['video'] == 1.0
+    assert ac.compute_criteria_values(fila(video_verificado=None))['video'] == pytest.approx(0.7)

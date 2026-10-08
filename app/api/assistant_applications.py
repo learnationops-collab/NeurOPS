@@ -18,7 +18,7 @@ from app import db
 from app.decorators import hiring_required
 from app.models import AssistantApplication, AssistantClarityWeight
 from app.models.assistant_application import (
-    BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK,
+    BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK, pais_limpio,
 )
 from app.services import assistant_clarity
 from app.services.assistant_clarity import CLARITY_CRITERIA
@@ -144,6 +144,9 @@ def ver_assistant_application(app_id):
     # en el frontend.
     data["bloques"] = [{"titulo": titulo, "campos": campos} for titulo, campos in BLOQUES]
     data["criterios"] = assistant_clarity.compute_criteria_values(app_row)
+    # Rótulos de las respuestas a preguntas agregadas desde el editor (no
+    # tienen columna ni lugar en `bloques`).
+    data["preguntas_extra"] = app_row.preguntas_extra()
     return jsonify(data), 200
 
 
@@ -243,6 +246,36 @@ def guardar_clarity_weights():
         return jsonify({"message": "Error interno al guardar los pesos"}), 500
 
 
+@bp.route('/assistant-applications/clarity-weights/preview', methods=['POST'])
+@login_required
+@hiring_required
+def previsualizar_clarity_weights():
+    """El score de TODAS las postulaciones con unos pesos de prueba, sin guardar
+    nada: la pestaña Clarity lo llama mientras se mueven los sliders para
+    reordenar en vivo. Los criterios que no vienen usan el peso guardado; los
+    que no existen se ignoran; un negativo cuenta como cero. Es el mismo
+    `score_de` del listado (con los criterios que no aplican fuera)."""
+    data = request.get_json(silent=True) or {}
+    pedidos = data.get('weights') or {}
+    if not isinstance(pedidos, dict):
+        return jsonify({"message": "weights tiene que ser un objeto {criterio: peso}"}), 400
+
+    pesos = _weights_map()
+    for criterio, peso in pedidos.items():
+        if criterio not in pesos:
+            continue
+        try:
+            pesos[criterio] = max(0, int(peso))
+        except (TypeError, ValueError):
+            return jsonify({"message": f"El peso de «{criterio}» tiene que ser un número"}), 400
+
+    return jsonify({
+        "scores": {
+            str(a.id): assistant_clarity.score_de(a, pesos) for a in AssistantApplication.query.all()
+        },
+    }), 200
+
+
 # Rangos de la pretensión mensual (USD) para el histograma de la pestaña de
 # estadísticas. El rango de referencia del puesto es 200-400 USD.
 TRAMOS_PRESUPUESTO = [(0, 251, '200–250'), (251, 301, '251–300'), (301, 351, '301–350'),
@@ -324,7 +357,7 @@ def stats_assistant_applications():
     def por_pais(fn):
         salida = []
         for p in paises:
-            grupo = [a for a in pool if a.pais == p]
+            grupo = [a for a in pool if pais_limpio(a.pais) == p]
             salida.append(fn(grupo))
         return salida
 
@@ -355,7 +388,7 @@ def stats_assistant_applications():
 
     comparacion = {
         "paises": [
-            {"pais": p, "cantidad": len([a for a in pool if a.pais == p])}
+            {"pais": p, "cantidad": len([a for a in pool if pais_limpio(a.pais) == p])}
             for p in paises
         ],
         "filas": [
@@ -421,7 +454,8 @@ def stats_assistant_applications():
         "embudo_formulario": _embudo_formulario(todas_las_filas),
         "por_dia": linea_por_dia,
         "comparacion": comparacion,
-        "distribucion_pais": distribucion('pais'),
+        # Con y sin bandera es el mismo país (ver `pais_limpio`).
+        "distribucion_pais": distribucion('pais', pais_limpio),
         "distribucion_edad": distribucion('edad', lambda v: _tramo(v, TRAMOS_EDAD)),
         "distribucion_presupuesto": distribucion('remuneracion', lambda v: _tramo(v, TRAMOS_PRESUPUESTO)),
         "distribucion_ia": distribucion('ia_nivel'),
