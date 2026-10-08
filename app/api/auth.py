@@ -156,13 +156,17 @@ def _roles_que_puede_simular(usuario):
 
     La dirección comercial simula closers (pedido del 30/09/2026): para ver el mazo como lo ve cada
     uno. No simula setters ni a otra dirección, y menos a un admin.
+
+    Cuenta cualquiera de sus roles, no solo el activo: un operador que pasó a su rol de dirección o de
+    closer seguía pudiendo volver a operador con un clic, pero mientras tanto no podía simular a nadie
+    (Mario, 08/10/2026).
     """
     from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR
     if usuario is None:
         return frozenset()
-    if usuario.role in (ROLE_ADMIN, ROLE_OPERATOR):
+    if usuario.tiene_rol(ROLE_ADMIN) or usuario.tiene_rol(ROLE_OPERATOR):
         return None
-    if usuario.role == ROLE_DIRECTOR_COMERCIAL:
+    if usuario.tiene_rol(ROLE_DIRECTOR_COMERCIAL):
         return frozenset({ROLE_CLOSER})
     return frozenset()
 
