@@ -97,7 +97,7 @@ def test_el_consolidado_lista_cada_venta_con_su_porcentaje(client, db, make_user
     db.session.commit()
 
     r = client.get('/api/public/financial-sales/payroll?start_date=2026-08-01&end_date=2026-09-30',
-                   headers=auth_headers(make_user(role='admin')))
+                   headers=auth_headers(make_user(role='admin', can_view_finance=True)))
 
     assert r.status_code == 200
     datos = r.get_json()

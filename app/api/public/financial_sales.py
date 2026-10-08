@@ -5,6 +5,7 @@ from app.decorators import admin_required
 from app.services.identity_service import normalize_ig
 from datetime import datetime
 from . import bp
+from .finance import finance_admin_required
 from sqlalchemy import or_, func, case
 
 def resolve_closer_name(email_or_name):
@@ -723,7 +724,10 @@ def get_financial_sales():
     else:
         return jsonify(processed_sales), 200
 
+# La nómina (la sección Payroll del dashboard comercial) es de quien tiene «ver finanzas», como
+# el resto de Finanzas: la política de acceso deja pasar a cualquier admin, esto acota.
 @bp.route('/public/financial-sales/payroll', methods=['GET'])
+@finance_admin_required
 def get_financial_sales_payroll():
     start_date_str = request.args.get('start_date', default='', type=str).strip()
     end_date_str = request.args.get('end_date', default='', type=str).strip()
@@ -1026,6 +1030,7 @@ def bulk_update_financial_sales():
 
 
 @bp.route('/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion', methods=['POST'])
+@finance_admin_required
 def toggle_payroll_exclusion(sale_id):
     # Alterna la exclusion de una venta para la nomina
     sale = FinancialSale.query.get_or_404(sale_id)

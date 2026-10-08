@@ -116,8 +116,8 @@ def test_una_respuesta_401_es_json_y_no_revela_la_tabla(app, db):
 
 # (metodo, ruta) -> (roles que pasan). Verdad escrita a mano, independiente de la tabla.
 MATRIZ = {
-    ('GET', '/api/public/financial-sales/payroll'): {'admin'},
-    ('POST', '/api/public/financial-sales/1/toggle-payroll-exclusion'): {'admin'},
+    ('GET', '/api/public/financial-sales/payroll'): {'admin', 'director_comercial'},
+    ('POST', '/api/public/financial-sales/1/toggle-payroll-exclusion'): {'admin', 'director_comercial'},
     ('GET', '/api/public/reports/sales-attribution'): {'admin'},
     ('POST', '/api/public/financial-agendas/repair-db'): {'admin'},
     ('DELETE', '/api/public/financial-sales/1'): {'admin', 'director_comercial', 'operator'},
