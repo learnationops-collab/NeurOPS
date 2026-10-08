@@ -10,6 +10,14 @@ from datetime import datetime, timedelta
 
 CLOSER_RATE = 0.10
 SETTER_RATE = 0.08
+DIRECTOR_RATE = 0.05
+
+# Quiénes cobran comisión variable en la nómina (/admin/finance y /admin/payroll), por el
+# nombre con el que aparecen en las ventas (setter = fuente de la agenda que originó la venta,
+# closer = `resolver_nombre_closer`) -> clave con la que viajan en las respuestas. Marlon, como
+# Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos closers, sin renovaciones.
+SETTERS_CON_COMISION = {'elias': 'elias', 'paula': 'paula'}
+CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo'}
 
 # Fees de la pasarela que se descuentan para llegar al cash NETO. Los mismos factores viven
 # repetidos en media docena de sitios de app/api/public (finance.py, financial_sales.py); acá se

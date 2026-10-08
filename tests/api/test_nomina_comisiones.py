@@ -1,0 +1,56 @@
+"""Comisiones variables de la nómina: /admin/finance (`get_commissions_calculated`) y /admin/payroll
+(`/public/financial-sales/payroll`) cubren a los dos setters (Elias y Paula, 8%), a los dos closers
+(Jean Carlo y Facundo, 10%) y a Marlon como Director de Ventas (5% de lo que venden los closers,
+sin renovaciones).
+"""
+from datetime import datetime
+
+import pytest
+
+from app.api.public.finance import comision_de_miembro, get_commissions_calculated
+from app.models import FinancialSale
+from app.models.financial import TeamMember
+
+
+@pytest.fixture()
+def ventas_del_mes(db, make_user):
+    make_user(role='closer', username='Facundo', email='facundo@test.local')
+
+    def venta(monto, setter=None, closer=None, tipo='Bootcamp - Pago completo', excluida=False):
+        db.session.add(FinancialSale(monto=monto, metodo_pago='zelle', tipo_pago=tipo, estado='Completada',
+                                     setter=setter, email_vendedor=closer, date=datetime(2026, 10, 3),
+                                     is_excluded_from_payroll=excluida))
+
+    venta(1000.0, setter='Elias', closer='jeancarlo@thelearnation.com')
+    venta(500.0, setter='Paula', closer='facundo@test.local')
+    venta(300.0, setter='Paula', closer='facundo@test.local', tipo='Bootcamp - Renovación')
+    venta(200.0, closer='jeancarlo@thelearnation.com', excluida=True)
+    db.session.commit()
+
+
+def test_finanzas_calcula_la_comision_de_las_cinco_personas(ventas_del_mes):
+    assert get_commissions_calculated('2026-10') == {
+        'elias': 80.0,       # 8% de 1000
+        'paula': 64.0,       # 8% de 500 + 300
+        'jeancarlo': 120.0,  # 10% de 1000 + 200 (Finanzas no mira la exclusión de la nómina)
+        'facundo': 80.0,     # 10% de 500 + 300
+        'marlon': 85.0,      # 5% de 1000 + 200 + 500: la renovación de Facundo no cuenta
+    }
+
+
+@pytest.mark.parametrize('nombre,clave', [
+    ('Elias', 'elias'), ('Paula', 'paula'), ('Jean Carlos', 'jeancarlo'), ('Facundo', 'facundo'),
+    ('Marlon', 'marlon'),
+])
+def test_cada_integrante_variable_toma_su_comision(nombre, clave):
+    comisiones = {'elias': 1.0, 'paula': 2.0, 'jeancarlo': 3.0, 'facundo': 4.0, 'marlon': 5.0}
+    miembro = TeamMember(name=nombre, role='x', salary_type='variable')
+
+    assert comision_de_miembro(miembro, comisiones) == comisiones[clave]
+
+
+def test_un_sueldo_fijo_no_toma_comision():
+    miembro = TeamMember(name='Paula', role='Setter', salary_type='fijo')
+
+    assert comision_de_miembro(miembro, {'paula': 64.0}) == 0.0
+
