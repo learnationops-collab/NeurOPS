@@ -13,8 +13,9 @@ import HiringDashboardPage from './HiringDashboardPage';
 vi.mock('../../../services/api', () => ({
     default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
+let usuario = { username: 'Mario Hire', role: 'hiring' };
 vi.mock('../../../contexts/AuthContext', () => ({
-    useAuth: () => ({ user: { username: 'Mario Hire', role: 'hiring' }, logout: vi.fn() }),
+    useAuth: () => ({ user: usuario, logout: vi.fn() }),
 }));
 vi.mock('../../../components/modals/OperatorControls', () => ({ default: () => null }));
 vi.mock('./components/HiringCandidateModal', () => ({
@@ -40,7 +41,9 @@ const LISTA = [
 
 beforeEach(() => {
     vi.clearAllMocks();
+    usuario = { username: 'Mario Hire', role: 'hiring' };
     window.localStorage.clear();
+    window.sessionStorage.clear();
     api.get.mockImplementation((ruta) => {
         if (ruta.startsWith('/assistant-applications?')) return Promise.resolve({ data: { postulaciones: LISTA } });
         if (ruta === '/assistant-applications/clarity-weights') return Promise.resolve({ data: [{ criterion: 'ia', weight: 10 }] });

@@ -6,7 +6,9 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
 import OperatorControls from '../../../components/modals/OperatorControls';
+import toast from 'react-hot-toast';
 import { revertImpersonation } from '../../../utils/impersonation';
+import { opcionesDeRol } from '../../../utils/cuentasVinculadas';
 import DockSecciones from '../../comercial/components/DockSecciones';
 import MenuSesion from '../../comercial/components/MenuSesion';
 import HiringCandidateModal from './components/HiringCandidateModal';
@@ -140,6 +142,8 @@ const HiringDashboardPage = () => {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [query, abierta, config]);
+
+    const rolesDeLaCuenta = opcionesDeRol(user, (m) => toast.error(m));
 
     const volverAMiSesion = async () => {
         try {
@@ -420,7 +424,9 @@ const HiringDashboardPage = () => {
                             <MenuSesion
                                 nombre={user?.name || user?.username || ''}
                                 rol={user?.is_impersonating ? 'Hiring · simulación' : 'Hiring'}
-                                grupos={[[
+                                // «Pasar a <rol>» para quien tiene más roles en la cuenta: sin esto,
+                                // quien entraba a Hiring quedaba encerrado (Mario, 08/10/2026).
+                                grupos={[...(rolesDeLaCuenta.length ? [rolesDeLaCuenta] : []), [
                                     ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : []),
                                     ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
                                     { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout },
