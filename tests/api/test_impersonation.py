@@ -64,6 +64,41 @@ def test_admin_y_operator_pueden_suplantar(client, auth_headers, equipo, quien):
     assert respuesta.status_code == 200
 
 
+# Varios roles en una cuenta (08/10/2026): Mario es operador con dirección, closer y admin como roles
+# adicionales. Pasado a otro de sus roles no podía simular a Marlon (director con closer extra):
+# contaba solo el rol activo.
+
+@pytest.fixture()
+def mario(make_user):
+    return make_user(role='operator', username='mario',
+                     roles_extra='closer,admin,hiring,director_comercial,director_marketing')
+
+
+@pytest.fixture()
+def marlon(make_user):
+    return make_user(role='director_comercial', username='marlon', roles_extra='closer')
+
+
+@pytest.mark.parametrize('activo', [None, 'closer', 'admin', 'hiring', 'director_comercial', 'director_marketing'])
+def test_un_operador_simula_desde_cualquiera_de_sus_roles(client, auth_headers, mario, marlon, activo):
+    headers = auth_headers(mario, **({'active_role': activo} if activo else {}))
+
+    respuesta = suplantar(client, headers, marlon.id, isolated=True)
+
+    assert respuesta.status_code == 200
+    reclamos = claims(respuesta.get_json()['token'])
+    assert (reclamos['id'], reclamos['original_user_id']) == (marlon.id, mario.id)
+    assert client.get('/api/auth/impersonate/closers', headers=headers).status_code == 200
+
+
+def test_un_rol_adicional_que_no_simula_no_da_permiso(client, make_user, auth_headers, equipo):
+    # Lo que cuenta son los roles que la cuenta TIENE: un closer que además es setter sigue sin simular.
+    closer_setter = make_user(role='closer', username='cs', roles_extra='setter')
+
+    assert suplantar(client, auth_headers(closer_setter), equipo['admin'].id).status_code == 403
+    assert suplantar(client, auth_headers(closer_setter, active_role='setter'), equipo['admin'].id).status_code == 403
+
+
 def test_un_token_falsificado_no_puede_suplantar(client, equipo):
     falso = jwt.encode({'id': equipo['admin'].id, 'exp': 9_999_999_999}, 'otra-clave-de-32-bytes-o-mas-para-hs256',
                        algorithm='HS256')
