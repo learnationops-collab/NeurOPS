@@ -128,9 +128,7 @@ def comision_de_miembro(member, dynamic_commissions):
 
 
 def get_commissions_calculated(month_str):
-    from app.services.commission_service import (
-        CLOSER_RATE, SETTER_RATE, DIRECTOR_RATE, SETTERS_CON_COMISION, CLOSERS_CON_COMISION,
-    )
+    from app.services.commission_service import SETTERS_CON_COMISION, CLOSERS_CON_COMISION
 
     try:
         year, month = map(int, month_str.split('-'))
@@ -203,12 +201,17 @@ def get_commissions_calculated(month_str):
             if not is_renovacion:
                 marlon_recaudado += monto_ajustado
 
-    comisiones = {clave: round(recaudado[clave] * SETTER_RATE, 2) for clave in SETTERS_CON_COMISION.values()}
-    comisiones.update({clave: round(recaudado[clave] * CLOSER_RATE, 2) for clave in CLOSERS_CON_COMISION.values()})
-    comisiones['marlon'] = round(marlon_recaudado * DIRECTOR_RATE, 2)
+    # Los % del mes: editables desde Payroll, cada juego vale desde un mes (ver comision_tasas_service).
+    from app.services.comision_tasas_service import vigentes
+    tasas, _ = vigentes(month_str)
+    comisiones = {clave: round(recaudado[clave] * tasas['setters'][clave] / 100, 2)
+                  for clave in SETTERS_CON_COMISION.values()}
+    comisiones.update({clave: round(recaudado[clave] * tasas['closers'][clave] / 100, 2)
+                       for clave in CLOSERS_CON_COMISION.values()})
+    comisiones['marlon'] = round(marlon_recaudado * tasas['director']['marlon'] / 100, 2)
 
     from app.services.fulfillment_commission_service import comisiones_del_mes
-    comisiones['fulfillment'] = comisiones_del_mes(month_str, completadas)
+    comisiones['fulfillment'] = comisiones_del_mes(month_str, completadas, tasas['fulfillment'])
     return comisiones
 
 def _seed_variable_members():
@@ -464,6 +467,35 @@ def delete_software_expense(id):
     db.session.delete(gasto)
     db.session.commit()
     return jsonify({"message": "Gasto eliminado"}), 200
+
+
+@bp.route('/public/finance/comisiones/tasas', methods=['GET', 'PUT'])
+@login_required
+@finance_admin_required
+def comisiones_tasas():
+    """Los % de comisión de la nómina (08/10/2026): GET los que valen en `mes` (por defecto, el
+    actual) con el historial de juegos guardados; PUT guarda un juego que vale desde
+    `vigente_desde`. Los edita quien entra a Finanzas: admin o dirección comercial con el permiso."""
+    from app.services import comision_tasas_service as tasas_service
+
+    if request.method == 'PUT':
+        data = request.get_json() or {}
+        try:
+            juego = tasas_service.guardar(data.get('vigente_desde'), data.get('tasas'), current_user)
+        except tasas_service.TasasInvalidas as e:
+            return jsonify({"error": str(e)}), 400
+        return jsonify({"vigente_desde": data.get('vigente_desde'), "tasas": juego,
+                        "historial": tasas_service.historial()}), 200
+
+    mes = request.args.get('mes') or datetime.utcnow().strftime('%Y-%m')
+    if not _rango_del_mes(mes):
+        return jsonify({"error": "Parámetro 'mes' (YYYY-MM) inválido"}), 400
+    juego, desde = tasas_service.vigentes(mes)
+    return jsonify({
+        "mes": mes, "vigente_desde": desde, "tasas": juego, "historial": tasas_service.historial(),
+        "personas": {g: [{"clave": c, "nombre": n} for c, n in lista] for g, lista in tasas_service.PERSONAS.items()},
+        "programas": list(tasas_service.PROGRAMAS), "fuentes": list(tasas_service.FUENTES),
+    }), 200
 
 
 @bp.route('/public/finance/savings', methods=['GET', 'POST'])

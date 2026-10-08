@@ -9,25 +9,22 @@ SI, el prefijo de `FinancialSale.tipo_pago`) y la fuente del ingreso:
 Un pago parcial o completo sin seña previa es una venta nueva del closer, no de Fulfillment.
 
 Se cobra sobre el monto NETO (sin la fee de Stripe/Hotmart), como el resto de la nómina.
+
+Los % son editables desde el 08/10/2026 (`comision_tasas_service`): cada función recibe la tabla de
+Fulfillment del mes que corresponde (`tasas['fulfillment']`) y, sin ella, usa la de fábrica.
 """
 from datetime import datetime
 
 from sqlalchemy import or_
 
+from app.services.comision_tasas_service import FUENTES, TASAS_DE_FABRICA
 from app.services.commission_service import cash_neto_de
 
 DESDE = '2026-09'
 
-FUENTES = ('renovacion', 'upsell', 'conversion', 'cuota')
-
-# Clave de la persona -> programa -> % por fuente (renovación, upsell, conversión, cuota).
-TASAS = {
-    'andy': {'AL': (2, 2, 2, 1), 'RR': (2, 2, 2, 2), 'SI': (5, 5, 3, 5)},
-    'dari': {'AL': (2, 2, 2, 1), 'RR': (2, 2, 2, 1), 'SI': (2, 2, 2, 1)},
-    'santi': {'AL': (1, 1, 1, 1), 'RR': (1, 1, 1, 1), 'SI': (1, 1, 1, 1)},
-    'belu': {'AL': (0, 1, 1, 0), 'RR': (2, 2, 2, 2), 'SI': (2, 2, 2, 2)},
-    'pedro': {'AL': (0, 0, 0, 0), 'RR': (0, 1, 1, 0), 'SI': (0, 1, 1, 0)},
-}
+# Clave de la persona -> programa -> % por fuente (renovación, upsell, conversión, cuota): los de
+# fábrica. Los vigentes de cada mes los da `comision_tasas_service.vigentes`.
+TASAS = TASAS_DE_FABRICA['fulfillment']
 
 # Fragmento del nombre en TeamMember (minúsculas, sin espacios) -> clave de la persona.
 NOMBRES = (
@@ -91,9 +88,9 @@ def fuente_de(venta, tipo, primera_sena):
     return None
 
 
-def tasa_de(clave, programa, fuente):
+def tasa_de(clave, programa, fuente, tasas=None):
     """El % que cobra una persona sobre un ingreso de ese programa y esa fuente."""
-    return TASAS[clave][programa][FUENTES.index(fuente)]
+    return (tasas or TASAS)[clave][programa][FUENTES.index(fuente)]
 
 
 def ingresos_de_fulfillment(sales):
@@ -124,13 +121,14 @@ def recaudado_por_programa(sales):
     return recaudado
 
 
-def comisiones_del_mes(month_str, sales):
+def comisiones_del_mes(month_str, sales, tasas=None):
     """{clave de persona -> comisión} del mes. Antes de DESDE no hay comisión de Fulfillment."""
+    tasas = tasas or TASAS
     if month_str < DESDE:
-        return {clave: 0.0 for clave in TASAS}
+        return {clave: 0.0 for clave in tasas}
     recaudado = recaudado_por_programa(sales)
     comisiones = {}
-    for clave, por_programa in TASAS.items():
+    for clave, por_programa in tasas.items():
         total = 0.0
         for programa, tasas in por_programa.items():
             for fuente, tasa in zip(FUENTES, tasas):
@@ -143,22 +141,26 @@ def comisiones_del_mes(month_str, sales):
 DESDE_FECHA = datetime(int(DESDE[:4]), int(DESDE[5:]), 1)
 
 
-def nomina_por_persona(ventas):
+def nomina_por_persona(ventas, tasas_de_mes=None):
     """El Consolidado de Nómina de Fulfillment: {clave -> {'sales', 'total_recaudado_neto',
     'comision_total', 'total_ventas', ...}}, con la misma forma que el resto de las personas.
     `ventas` son pares (venta completada, dict de la venta que arma el endpoint, con
     `is_excluded_from_payroll`). Cada venta lleva su programa, su fuente, el % de esa persona y su
     comisión, porque el % cambia venta a venta. Una venta que a esa persona no le paga nada (0%)
-    no se lista."""
+    no se lista. `tasas_de_mes(mes)` da el juego de % de cada mes (un rango puede cruzar un cambio);
+    sin él, los de fábrica."""
     datos_de = {id(v): d for v, d in ventas}
     vigentes = [v for v, _ in ventas if v.date and v.date >= DESDE_FECHA]
     ingresos = ingresos_de_fulfillment(vigentes)
 
     nomina = {}
+    def tabla_de(venta):
+        return tasas_de_mes(venta.date.strftime('%Y-%m'))['fulfillment'] if tasas_de_mes else TASAS
+
     for clave in TASAS:
         filas, neto, comision = [], 0.0, 0.0
         for venta, programa, fuente in ingresos:
-            tasa = tasa_de(clave, programa, fuente)
+            tasa = tasa_de(clave, programa, fuente, tabla_de(venta))
             if not tasa:
                 continue
             datos = datos_de[id(venta)]
