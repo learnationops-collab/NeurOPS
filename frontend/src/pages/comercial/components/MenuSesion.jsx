@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react';
 import { fmt } from './Shared';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
+import Mascota from '../../../components/mascota/Mascota';
+import { MASCOTAS, mascotaDe, nombreDeMascota } from '../../../components/mascota/mascotas';
+import { useAuth } from '../../../contexts/AuthContext';
+import api from '../../../services/api';
+import { saveSession } from '../../../utils/sessionStore';
 
 /**
  * La sesión al final del dock: quién está conectado y lo que no es una sección —crear algo, el
@@ -33,6 +38,12 @@ import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeRepo
  * lista que se pide al tocarla (`cargar` devuelve `[{ id, label, onClick }]`). Es "Simular a un
  * closer" de la dirección comercial: la lista de closers activos sale del backend en ese momento.
  * Arriba de la lista va la vuelta al menú, que también es Escape o la flecha a la izquierda.
+ *
+ * El avatar es un personaje (page-mascot, ver `components/mascota`) que mira hacia el cursor; antes
+ * eran las iniciales. Con el menú abierto, tocar el de la cabecera abre en el mismo menú los 10 para
+ * elegir (pedido del 08/10/2026). Elegir lo cambia al instante —dock incluido— y lo guarda en la
+ * cuenta (`PUT /auth/me/mascota`); si el guardado falla vuelve al anterior y lo dice. Mientras no
+ * eligió, cada cuenta tiene uno fijo según su id. Simulando a otro no se elige (se ve el suyo).
  */
 const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const [abierto, setAbierto] = useState(false);
@@ -47,6 +58,17 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const regreso = useRef(null);
     const boton = useRef(null);
     const menu = useRef(null);
+    // La vista para elegir personaje, si falló el último guardado, y los toques de cada personaje
+    // (cada uno reacciona cuando el suyo cambia).
+    const [eligiendo, setEligiendo] = useState(false);
+    const [noSeGuardo, setNoSeGuardo] = useState(false);
+    const [toques, setToques] = useState({});
+    const tocar = useCallback((clave) => setToques(t => ({ ...t, [clave]: (t[clave] || 0) + 1 })), []);
+
+    const auth = useAuth();
+    const usuario = auth?.user;
+    const personaje = mascotaDe(usuario, nombre);
+    const puedeElegir = !!usuario && !usuario.is_impersonating && typeof auth.setUser === 'function';
 
     const cerrar = useCallback((devolverFoco = false) => {
         pedido.current += 1;
@@ -54,6 +76,8 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         setPos(null);
         setPanel(null);
         setLista(null);
+        setEligiendo(false);
+        setNoSeGuardo(false);
         if (devolverFoco) boton.current?.focus();
     }, []);
 
@@ -70,10 +94,33 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
 
     const volverAlMenu = useCallback(() => {
         pedido.current += 1;
-        regreso.current = panel?.id || null;
+        regreso.current = eligiendo ? 'mascota' : (panel?.id || null);
         setPanel(null);
         setLista(null);
-    }, [panel]);
+        setEligiendo(false);
+        setNoSeGuardo(false);
+    }, [panel, eligiendo]);
+
+    const fijarMascota = useCallback((mascota) => {
+        auth.setUser((u) => {
+            if (!u) return u;
+            const nuevo = { ...u, mascota };
+            saveSession(nuevo);
+            return nuevo;
+        });
+    }, [auth]);
+
+    const elegirMascota = (id) => {
+        tocar(id);
+        if (id === personaje) return;
+        const anterior = usuario.mascota ?? null;
+        setNoSeGuardo(false);
+        fijarMascota(id);
+        api.put('/auth/me/mascota', { mascota: id }).catch(() => {
+            fijarMascota(anterior);
+            setNoSeGuardo(true);
+        });
+    };
 
     // Se mide después de dibujarlo (invisible) para saber su ancho y su alto reales.
     useLayoutEffect(() => {
@@ -101,7 +148,9 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         const m = menu.current;
         if (!abierto || !pos || !m) return;
         let destino;
-        if (panel) {
+        if (eligiendo) {
+            destino = m.querySelector('[aria-checked="true"]') || m.querySelector('[data-volver]');
+        } else if (panel) {
             destino = m.querySelector('[data-opcion]') || m.querySelector('[data-volver]');
         } else {
             destino = (regreso.current && m.querySelector(`[data-id="${regreso.current}"]`))
@@ -109,7 +158,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             regreso.current = null;
         }
         destino?.focus();
-    }, [abierto, pos, panel, estadoDeLista]);
+    }, [abierto, pos, panel, estadoDeLista, eligiendo]);
 
     useEffect(() => {
         if (!abierto) return undefined;
@@ -120,16 +169,19 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         const teclas = (e) => {
             if (e.key === 'Escape' || (e.key === 'ArrowLeft' && panel)) {
                 e.preventDefault();
-                if (panel) volverAlMenu();
+                if (panel || eligiendo) volverAlMenu();
                 else cerrar(true);
                 return;
             }
-            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-            const items = [...(menu.current?.querySelectorAll('[role="menuitem"]') || [])];
+            // Entre los personajes (una grilla de 5) también se anda con izquierda y derecha.
+            const adelante = e.key === 'ArrowDown' || (eligiendo && e.key === 'ArrowRight');
+            const atras = e.key === 'ArrowUp' || (eligiendo && e.key === 'ArrowLeft');
+            if (!adelante && !atras) return;
+            const items = [...(menu.current?.querySelectorAll('[role^="menuitem"]') || [])];
             if (!items.length) return;
             e.preventDefault();
             const i = items.indexOf(document.activeElement);
-            const paso = e.key === 'ArrowDown' ? 1 : -1;
+            const paso = adelante ? 1 : -1;
             items[(i + paso + items.length) % items.length].focus();
         };
         document.addEventListener('pointerdown', afuera);
@@ -138,7 +190,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             document.removeEventListener('pointerdown', afuera);
             document.removeEventListener('keydown', teclas);
         };
-    }, [abierto, cerrar, panel, volverAlMenu]);
+    }, [abierto, cerrar, panel, eligiendo, volverAlMenu]);
 
     const elegir = (op) => {
         if (op.panel) {
@@ -148,8 +200,6 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         flushSync(() => cerrar());
         op.onClick();
     };
-
-    const iniciales = fmt.iniciales(nombre);
 
     // Los reportes: sus opciones van antes del último grupo (cerrar sesión) y las respuestas sin leer
     // se suman a la cuenta del avatar.
@@ -165,8 +215,8 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         <>
             <button ref={boton} type="button" className="dock-sesion" aria-label={etiqueta}
                 title={etiqueta} aria-haspopup="menu" aria-expanded={abierto}
-                onClick={() => (abierto ? cerrar() : setAbierto(true))}>
-                <span className="avatar" aria-hidden="true">{iniciales}</span>
+                onClick={() => { tocar('dock'); if (abierto) cerrar(); else setAbierto(true); }}>
+                <Mascota personaje={personaje} size={50} toques={toques.dock} />
                 {cuenta && <span className="dock-sesion-aviso" aria-hidden="true">{cuenta}</span>}
             </button>
             {abierto && createPortal(
@@ -175,7 +225,28 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                         style={pos
                             ? { left: pos.left, bottom: pos.bottom, maxHeight: pos.alto }
                             : { left: 0, bottom: 0, visibility: 'hidden' }}>
-                        {panel ? (
+                        {eligiendo ? (
+                            <div role="group" aria-label="Elegí tu personaje">
+                                <button type="button" role="menuitem" data-volver=""
+                                    className="menu-item menu-item--ico menu-volver"
+                                    aria-label="Volver al menú. Elegí tu personaje" onClick={volverAlMenu}>
+                                    <ArrowLeft size={16} aria-hidden="true" />
+                                    <span className="trunc">Elegí tu personaje</span>
+                                </button>
+                                <hr className="menu-sep" />
+                                <div className="menu-mascotas">
+                                    {MASCOTAS.map((m, i) => (
+                                        <button key={m.id} type="button" role="menuitemradio"
+                                            aria-checked={m.id === personaje} aria-label={m.nombre} title={m.nombre}
+                                            className="menu-mascota" style={{ '--i': i }}
+                                            onClick={() => elegirMascota(m.id)}>
+                                            <Mascota personaje={m.id} size={50} toques={toques[m.id]} />
+                                        </button>
+                                    ))}
+                                </div>
+                                {noSeGuardo && <p className="menu-nota" role="alert">No se pudo guardar. Probá de nuevo.</p>}
+                            </div>
+                        ) : panel ? (
                             <div role="group" aria-label={panel.panel.titulo} aria-busy={lista?.estado === 'cargando'}>
                                 <button type="button" role="menuitem" data-volver=""
                                     className="menu-item menu-item--ico menu-volver"
@@ -209,7 +280,17 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                         ) : (
                             <>
                                 <div className="menu-quien">
-                                    <span className="avatar" aria-hidden="true">{iniciales}</span>
+                                    {puedeElegir ? (
+                                        <button type="button" className="menu-quien-avatar" data-id="mascota"
+                                            aria-label={`Cambiar tu personaje (ahora: ${nombreDeMascota(personaje)})`}
+                                            title="Cambiar tu personaje"
+                                            onClick={() => { tocar('cabecera'); setEligiendo(true); }}>
+                                            <Mascota personaje={personaje} size={48} toques={toques.cabecera} />
+                                            <span className="menu-quien-cambiar" aria-hidden="true"><Pencil size={9} strokeWidth={3} /></span>
+                                        </button>
+                                    ) : (
+                                        <Mascota personaje={personaje} size={48} />
+                                    )}
                                     <span className="menu-quien-txt">
                                         <b className="trunc">{nombre}</b>
                                         {rol && <small>{rol}</small>}
