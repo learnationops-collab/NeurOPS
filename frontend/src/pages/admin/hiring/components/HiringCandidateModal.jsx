@@ -25,7 +25,7 @@ import logoZapier from '../assets/apps/zapier.png';
 const ACCIONES = [
     { id: 'seleccionada', label: 'Seleccionar', icon: CheckCircle2, fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
     { id: 'en_reserva', label: 'Reserva', icon: Clock, fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
-    { id: 'testeo', label: 'Testeo', icon: Target, fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
+    { id: 'testeo', label: 'Pasar a prueba', icon: Target, fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
     { id: 'winner', label: 'Winner', icon: Trophy, fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
     { id: 'top_tier', label: 'Top tier', icon: Star, fg: '#8AA3FF', bg: 'rgba(91,124,255,.14)', bd: 'rgba(91,124,255,.5)' },
     { id: 'descartado', label: 'Descartar', icon: XCircle, fg: 'rgba(255,255,255,.82)', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.38)' },
@@ -36,15 +36,28 @@ const ACCIONES = [
 // cada estado tiene un siguiente paso lógico, no todos a la vez.
 const ACCIONES_POR_VEREDICTO = {
     sin_analizar: ['seleccionada', 'en_reserva', 'descartado'],
-    incompleta: ['seleccionada', 'en_reserva', 'descartado'],
+    // Una incompleta o una que cortó el formulario igual se puede rescatar: aprobarla o pasarla
+    // directo a prueba (Winners). Lo pidió Kerwin el 08/10/2026 para quien no terminó el
+    // formulario pero vale la pena.
+    incompleta: ['seleccionada', 'en_reserva', 'testeo', 'descartado'],
     seleccionada: ['testeo', 'en_reserva', 'descartado'],
     en_reserva: ['seleccionada', 'descartado'],
-    descartado: ['descartado'], // tocarlo de nuevo deshace el descarte
+    // Descartada: rescatarla, o (si la descartó un revisor) tocar «Descartar» de nuevo para
+    // deshacerlo. Si la cortó el formulario no hay nada que deshacer: ver `botonesDe`.
+    descartado: ['seleccionada', 'en_reserva', 'testeo', 'descartado'],
     testeo: ['winner', 'top_tier', 'baja'],
     winner: ['baja'],
     top_tier: ['baja'],
     baja: [], // terminal: ya se fue, no hay a dónde moverlo
 };
+
+/** Los botones de decisión de una postulación. A una descartada por el formulario (sin
+ * veredicto de un revisor) no se le ofrece «Descartar»: ya lo está, y tocarlo solo la
+ * convertiría en un descarte manual. */
+export const botonesDe = (d) => ACCIONES.filter((a) => {
+    if (!(ACCIONES_POR_VEREDICTO[d.veredicto] || []).includes(a.id)) return false;
+    return !(d.veredicto === 'descartado' && a.id === 'descartado' && d.estado !== 'descartado');
+});
 
 // El icono que acompaña al veredicto en la cabecera.
 const ICONO_VEREDICTO = {
@@ -587,7 +600,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
         (String(valor).length > 60 ? escritas : opcion).push(campo);
     });
 
-    const botones = ACCIONES.filter((a) => (ACCIONES_POR_VEREDICTO[d.veredicto] || []).includes(a.id));
+    const botones = botonesDe(d);
     const estadoTexto = [
         d.revisado_por && `Decidió ${d.revisado_por}`,
         d.estado_motivo,
@@ -724,6 +737,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                     <span className="text-[14px] leading-snug text-white/60">
                                         <span className="font-bold text-[#E85C4A]">El formulario cortó esta postulación · </span>
                                         {d.motivo_descarte || 'Una respuesta del bloque Requisitos es excluyente. No llegó a completar el resto.'}
+                                        {!d.estado && ' · Si igual vale la pena, abajo podés seleccionarla o pasarla a prueba.'}
                                     </span>
                                 </div>
                             )}
