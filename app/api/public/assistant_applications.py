@@ -138,9 +138,10 @@ def ver_assistant_form():
     de la búsqueda. Sin formulario activo, `activo: false` (el formulario
     público muestra que la búsqueda está cerrada).
 
-    `?preview=<id>` devuelve ese formulario aunque esté inactivo, para que el
-    editor lo pruebe antes de activarlo (con `preview: true`). Las preguntas no
-    son secretas: el formulario activo las muestra a cualquiera."""
+    `?preview=<id>` devuelve ese formulario con sus preguntas aunque esté
+    inactivo, para que el editor lo pruebe antes de activarlo: `preview: true`
+    y `activo` dice si de verdad es el activo. Las preguntas no son secretas: el
+    formulario activo las muestra a cualquiera."""
     hiring_forms.asegurar_semilla()
     config = HiringConfig.vigente()
     config_publica = {
@@ -159,7 +160,7 @@ def ver_assistant_form():
             return jsonify({"activo": False, "config": config_publica}), 200
 
     data = {
-        "activo": True,
+        "activo": bool(form.activo),
         "id": form.id,
         "nombre": form.nombre,
         "preguntas": hiring_forms.preguntas_publicas(form),

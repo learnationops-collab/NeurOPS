@@ -74,8 +74,19 @@ def test_preview_devuelve_uno_inactivo(client, db):
     cuerpo = client.get(FORM, query_string={'preview': borrador.id}).get_json()
 
     assert cuerpo['id'] == borrador.id and cuerpo['preview'] is True
+    # `activo` dice la verdad (es un borrador), pero las preguntas vienen igual.
+    assert cuerpo['activo'] is False
+    assert len(cuerpo['preguntas']) == 35
     assert 'notion' not in [p['id'] for p in cuerpo['preguntas']]
     assert client.get(FORM, query_string={'preview': 999}).status_code == 404
+
+
+def test_preview_del_activo_dice_activo(client):
+    activo_id = client.get(FORM).get_json()['id']
+
+    cuerpo = client.get(FORM, query_string={'preview': activo_id}).get_json()
+
+    assert cuerpo['activo'] is True and cuerpo['preview'] is True
 
 
 def test_es_publico(client):
