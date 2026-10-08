@@ -102,7 +102,10 @@ def test_completa_llega_a_todas_aunque_le_falte_alguna(client, db, hiring_header
 
 
 def test_las_cortadas_por_el_formulario_se_distinguen_de_las_que_se_fueron(client, db, hiring_headers):
-    _alta(db, hasta='horario', descartado=True, motivo_descarte='Necesita horario fijo')
+    # El motivo es el texto de la opción excluyente, y sigue elegida (si la hubiera cambiado, el
+    # descarte ya no valdría: ver test_hiring_descarte_vigente.py).
+    fijo = 'No, necesito un horario fijo y cerrado'
+    _alta(db, hasta='horario', horario=fijo, descartado=True, motivo_descarte=fijo)
     _alta(db, hasta='horario')
 
     e = _embudo(client, hiring_headers)

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
 import api from '../../../../services/api';
-import HiringCandidateModal, { Completitud, colorCompletitud, dimensionesPanel } from './HiringCandidateModal';
+import HiringCandidateModal, { Completitud, botonesDe, colorCompletitud, dimensionesPanel } from './HiringCandidateModal';
 
 const postulacion = (extra = {}) => ({
     id: 7,
@@ -92,6 +92,33 @@ describe('HiringCandidateModal · encabezado', () => {
         await waitFor(() => expect(screen.getByRole('dialog').querySelector('header').textContent).toContain('Score'));
         expect(screen.queryByTestId('completitud')).toBeNull();
         expect(screen.queryByRole('progressbar')).toBeNull();
+    });
+});
+
+describe('botonesDe: rescatar descartadas e incompletas', () => {
+    const ids = (d) => botonesDe(d).map((a) => a.id);
+
+    it('a una que cortó el formulario se la puede aprobar o pasar a prueba, sin «Descartar»', () => {
+        expect(ids({ veredicto: 'descartado', estado: null })).toEqual(['seleccionada', 'en_reserva', 'testeo']);
+    });
+
+    it('a una que descartó un revisor también, y «Descartar» sigue para deshacerlo', () => {
+        expect(ids({ veredicto: 'descartado', estado: 'descartado' })).toEqual(['seleccionada', 'en_reserva', 'testeo', 'descartado']);
+    });
+
+    it('una incompleta puede ir directo a prueba', () => {
+        expect(ids({ veredicto: 'incompleta' })).toContain('testeo');
+    });
+
+    it('en el modal, una descartada por el formulario ofrece Seleccionar y Pasar a prueba', async () => {
+        api.get.mockResolvedValue({ data: postulacion({ veredicto: 'descartado', estado: null, auto_ko: true, motivo_descarte: 'Me falta alguna de las tres' }) });
+        api.post.mockResolvedValue({ data: { status: 'success' } });
+        render(<HiringCandidateModal applicationId={7} ids={[7]} onClose={vi.fn()} onNavigate={vi.fn()} />);
+        await screen.findByText('Ana Pérez');
+        expect(screen.getByRole('button', { name: /Seleccionar/ })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /^Descartar$/ })).toBeNull();
+        screen.getByRole('button', { name: /Pasar a prueba/ }).click();
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/assistant-applications/7/estado', { valor: 'testeo', motivo: null }));
     });
 });
 

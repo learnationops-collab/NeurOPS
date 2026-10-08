@@ -296,9 +296,55 @@ class AssistantApplication(db.Model):
         contestadas = sum(1 for campo in esperadas if not _vacio(self.respuesta(campo)))
         return min(99, round(100 * contestadas / len(esperadas)))
 
+    def _valores_contestados(self):
+        """Todos los textos que hoy tiene como respuesta (las de opción múltiple,
+        separadas)."""
+        valores = set()
+        crudos = [getattr(self, c) for c in CAMPOS_FORMULARIO + CAMPOS_LEGACY]
+        crudos += list((self.respuestas_extra or {}).values())
+        for v in crudos:
+            if v is None or v == '':
+                continue
+            valores |= _partes(v)
+        return valores
+
+    def descarte_vigente(self):
+        """`descartado` dice que en algún momento eligió una respuesta excluyente y
+        el formulario le mostró la pantalla de descarte. Pero desde ahí se puede
+        volver atrás, cambiar la respuesta y seguir: el formulario nunca apaga la
+        marca, así que se mira si la respuesta que lo cortó (`motivo_descarte`,
+        el texto de la opción) sigue estando. Si ya no está, no lo cortó nada.
+        Con formulario editable, además tiene que seguir siendo excluyente ahí.
+        Sin motivo guardado no hay cómo saberlo y la marca vale."""
+        if not self.descartado:
+            return False
+        motivo = (self.motivo_descarte or '').strip()
+        if not motivo:
+            return True
+        if motivo not in self._valores_contestados():
+            return False
+        form = self.formulario()
+        if form is not None:
+            return any(motivo in kos for kos in form.excluyentes().values())
+        return True
+
+    def cortada_por_formulario(self):
+        """Lo que el panel muestra como «descartada automáticamente»."""
+        return self.descarte_vigente() or self.auto_ko()
+
     def auto_ko(self):
-        """True si alguna respuesta del bloque Requisitos es excluyente. Es lo
-        que distingue "lo cortó el formulario" de "lo descartó un revisor"."""
+        """True si alguna respuesta actual es excluyente. Es lo que distingue "lo
+        cortó el formulario" de "lo descartó un revisor". Con formulario editable,
+        las excluyentes son las opciones marcadas `ko` en sus preguntas prendidas
+        (si se apaga la pregunta o se le saca la marca, deja de cortar); sin él,
+        las del formulario original."""
+        form = self.formulario()
+        if form is not None:
+            for pregunta_id, kos in form.excluyentes().items():
+                valor = self.respuesta(pregunta_id)
+                if valor not in (None, '') and _partes(valor) & kos:
+                    return True
+            return False
         for campo, esperado in EXCLUYENTES.items():
             valor = getattr(self, campo)
             if valor and valor != esperado:
@@ -329,7 +375,7 @@ class AssistantApplication(db.Model):
         todo: esa postulación ni siquiera llegó a hacerse."""
         if self.estado:
             return self.estado
-        if self.descartado or self.auto_ko():
+        if self.cortada_por_formulario():
             return 'descartado'
         if not self.completo:
             return 'incompleta'
@@ -353,7 +399,8 @@ class AssistantApplication(db.Model):
             "estado_motivo": self.estado_motivo,
             "revisado_por": self.revisado_por.username if self.revisado_por else None,
             "revisado_at": self.revisado_at.isoformat() if self.revisado_at else None,
-            "descartado": bool(self.descartado),
+            # Solo si la respuesta que lo cortó sigue en pie (ver `descarte_vigente`).
+            "descartado": self.descarte_vigente(),
             "motivo_descarte": self.motivo_descarte,
             "auto_ko": self.auto_ko(),
             "completo": self.completo,
@@ -419,6 +466,15 @@ class AssistantApplication(db.Model):
 
 def _vacio(v):
     return v is None or v == '' or v == []
+
+
+def _partes(valor):
+    """Una respuesta como conjunto de textos: entera y, si es de opción múltiple
+    (las marcadas unidas por « | »), cada una."""
+    if isinstance(valor, (list, tuple)):
+        return {str(v).strip() for v in valor}
+    texto = str(valor).strip()
+    return {texto} | {p.strip() for p in texto.split('|') if p.strip()}
 
 
 # Cómo puede llamarse el valor esperado de una condición `si`, en el orden en
