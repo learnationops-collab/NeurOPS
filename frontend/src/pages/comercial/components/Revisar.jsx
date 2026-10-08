@@ -136,6 +136,14 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
     const [chip, setChip] = useState(null);
+    /**
+     * Una selección de filas puntuales que llega de otra sección: `{ ids: Set, rotulo }`. Hoy la
+     * manda Payroll (08/10/2026): «las ventas de la comisión de Andy» no se pueden escribir con
+     * las facetas de la tabla —al setter lo cuenta la agenda que originó la venta, a Fulfillment
+     * la seña previa del cliente—, así que viajan las ventas mismas (`__ids` en el filtro del
+     * drill-down). Se ve como UNA etiqueta con su X, como cualquier otra condición.
+     */
+    const [seleccion, setSeleccion] = useState(null);
     const [menu, setMenu] = useState(null);
     const [agrupacion, setAgrupacion] = useState(null);
     // `{ key, dir }` de la columna por la que se ordena, o null para el orden de la tabla.
@@ -194,9 +202,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     nuevas[k] = Array.isArray(valor) ? valor : [valor];
                 });
             }
-            const de = Object.keys(nuevas).length ? filtroInicial.__de || null : null;
+            const ids = token !== null && token !== origen.token && Array.isArray(filtroInicial.__ids)
+                ? filtroInicial.__ids : null;
+            const de = Object.keys(nuevas).length || ids ? filtroInicial.__de || null : null;
             setOrigen({ tabla, token, de, soltado: false });
             setFacetas(nuevas);
+            setSeleccion(ids ? { ids: new Set(ids.map(Number)), rotulo: filtroInicial.__ids_rotulo || 'Selección' } : null);
             setChip(null);
             setQuery('');
             setMenu(null);
@@ -241,7 +252,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         return () => document.removeEventListener('mousedown', fuera);
     }, [menu]);
 
-    const filas = datos?.filas || [];
+    const filas = useMemo(() => {
+        const todas = datos?.filas || [];
+        return seleccion ? todas.filter(f => seleccion.ids.has(f.id)) : todas;
+    }, [datos, seleccion]);
     const filtradas = useMemo(
         () => aplicarFiltros(filas, def, query, facetas, modo),
         [filas, def, query, facetas, modo]);
@@ -318,10 +332,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      */
     const cambiarFacetas = (nuevas) => {
         setFacetas(nuevas);
-        if (!hayCondiciones(def, nuevas) && (origen.de || token !== null)) olvidarOrigen();
+        if (!hayCondiciones(def, nuevas) && !seleccion && (origen.de || token !== null)) olvidarOrigen();
+    };
+
+    const quitarSeleccion = () => {
+        setSeleccion(null);
+        if (!hayCondiciones(def, facetas) && (origen.de || token !== null)) olvidarOrigen();
     };
 
     const limpiar = () => {
+        setSeleccion(null);
         setFacetas({});
         setChip(null);
         setQuery('');
@@ -457,7 +477,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     // ¿La lista está recortada por algo que eligió el usuario? Es lo que enciende la tira (ver
     // `TotalesTira`). El período no cuenta: es el de toda la pantalla y ya lo dice el alcance.
-    const filtrando = chipActivo !== def.chips[0].key || activas > 0 || query.trim() !== '';
+    const filtrando = chipActivo !== def.chips[0].key || activas > 0 || !!seleccion || query.trim() !== '';
 
     return (
         <section className="panel" ref={panel}>
@@ -596,7 +616,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 ("Viniste de… · 13 de 238 registros", con las mismas etiquetas repetidas y un
                 "Quitar el filtro"); se sacó por pedido del usuario (30/09) y de qué número viene
                 la lista quedó en el "i" del rótulo. La cuenta ya la dice "mostrando X de Y". */}
-            {activas > 0 && (
+            {(activas > 0 || seleccion) && (
                 <div className="fila filtro-fila">
                     <span className="filtro-rotulo">
                         <span className="t-rotulo">
@@ -606,6 +626,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             <Tip titulo={`Filtro de ${origen.de}`} texto="Viene del número que tocaste." />
                         )}
                     </span>
+                    {seleccion && (
+                        <button type="button" className="chip filtro-tag"
+                            style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
+                                letterSpacing: 0, fontWeight: 700 }}
+                            aria-label={`Quitar ${seleccion.rotulo}`}
+                            onClick={quitarSeleccion}>
+                            {seleccion.rotulo}
+                            <X size={12} />
+                        </button>
+                    )}
                     {criterios.map(c => (
                         <button key={`${c.clave}-${c.valor}`} type="button" className="chip filtro-tag"
                             style={{ '--c': 'var(--brand-secondary)', textTransform: 'none',
