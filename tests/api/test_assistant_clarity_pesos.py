@@ -86,3 +86,81 @@ def test_las_estadisticas_cuentan_cada_opcion_marcada_de_ia_y_no_cada_combinacio
     stats = client.get('/api/assistant-applications/stats', headers=auth_headers(hiring)).get_json()
 
     assert {d['opcion']: d['cantidad'] for d in stats['distribucion_ia_avanzado']} == {uno: 2, dos: 1}
+
+
+# --- Previsualizar pesos (sliders en vivo) ----------------------------------------------------
+
+PREVIEW = f'{PESOS}/preview'
+
+
+@pytest.fixture()
+def dos_postulaciones(db):
+    """Una fuerte en experiencia y otra fuerte en idiomas: según los pesos, cambia quién va primero."""
+    exp = AssistantApplication(nombre='Exp', completo=True, aporte='x', experiencia='Más de 5 años')
+    idi = AssistantApplication(nombre='Idi', completo=True, aporte='x',
+                               ingles='Avanzado o nativo', idioma2='Avanzado o nativo')
+    db.session.add_all([exp, idi])
+    db.session.commit()
+    return exp, idi
+
+
+def test_preview_reordena_sin_guardar(client, auth_headers, hiring, dos_postulaciones):
+    exp, idi = dos_postulaciones
+    solo_idiomas = {c: 0 for c in assistant_clarity.DEFAULT_WEIGHTS}
+    solo_idiomas['idiomas'] = 10
+
+    respuesta = client.post(PREVIEW, headers=auth_headers(hiring), json={'weights': solo_idiomas})
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json() == {'scores': {str(exp.id): 0, str(idi.id): 100}}
+    assert AssistantClarityWeight.query.count() == 0
+
+
+def test_preview_completa_con_los_pesos_guardados_e_ignora_lo_desconocido(
+        client, db, auth_headers, hiring, dos_postulaciones):
+    cabeceras = auth_headers(hiring)
+    client.put(PESOS, headers=cabeceras, json={'weights': {'idiomas': 50}})
+
+    scores = client.post(PREVIEW, headers=cabeceras,
+                         json={'weights': {'experiencia': -3, 'escritura': 99}}).get_json()['scores']
+
+    esperados = {**assistant_clarity.DEFAULT_WEIGHTS, 'idiomas': 50, 'experiencia': 0}
+    for a in dos_postulaciones:
+        assert scores[str(a.id)] == assistant_clarity.score_de(a, esperados)
+    assert AssistantClarityWeight.query.filter_by(criterion='experiencia').first() is None
+
+
+def test_preview_respeta_las_preguntas_apagadas(client, db, auth_headers, hiring):
+    import copy
+
+    from app.models import HiringForm
+    from app.services.hiring_forms import PREGUNTAS_BASE
+
+    preguntas = copy.deepcopy(PREGUNTAS_BASE)
+    for p in preguntas:
+        if p['id'] in ('ingles', 'idioma2'):
+            p['on'] = False
+    form = HiringForm(nombre='Sin idiomas', preguntas=preguntas)
+    db.session.add(form)
+    db.session.flush()
+    fila = AssistantApplication(nombre='Ana', completo=True, aporte='x', form_id=form.id,
+                                experiencia='Más de 5 años')
+    db.session.add(fila)
+    db.session.commit()
+
+    solo_idiomas_y_exp = {c: 0 for c in assistant_clarity.DEFAULT_WEIGHTS}
+    solo_idiomas_y_exp.update(idiomas=90, experiencia=10)
+    scores = client.post(PREVIEW, headers=auth_headers(hiring), json={'weights': solo_idiomas_y_exp}).get_json()
+
+    # Idiomas no se le preguntó: queda solo experiencia, que tiene al máximo.
+    assert scores['scores'][str(fila.id)] == 100
+
+
+def test_preview_con_un_peso_que_no_es_numero(client, auth_headers, hiring):
+    respuesta = client.post(PREVIEW, headers=auth_headers(hiring), json={'weights': {'ia': 'mucho'}})
+    assert respuesta.status_code == 400
+
+
+def test_preview_pide_rol_de_hiring(client, auth_headers, make_user):
+    assert client.post(PREVIEW, json={}).status_code == 401
+    assert client.post(PREVIEW, json={}, headers=auth_headers(make_user(role='closer'))).status_code == 403

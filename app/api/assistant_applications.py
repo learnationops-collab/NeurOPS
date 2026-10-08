@@ -246,6 +246,36 @@ def guardar_clarity_weights():
         return jsonify({"message": "Error interno al guardar los pesos"}), 500
 
 
+@bp.route('/assistant-applications/clarity-weights/preview', methods=['POST'])
+@login_required
+@hiring_required
+def previsualizar_clarity_weights():
+    """El score de TODAS las postulaciones con unos pesos de prueba, sin guardar
+    nada: la pestaña Clarity lo llama mientras se mueven los sliders para
+    reordenar en vivo. Los criterios que no vienen usan el peso guardado; los
+    que no existen se ignoran; un negativo cuenta como cero. Es el mismo
+    `score_de` del listado (con los criterios que no aplican fuera)."""
+    data = request.get_json(silent=True) or {}
+    pedidos = data.get('weights') or {}
+    if not isinstance(pedidos, dict):
+        return jsonify({"message": "weights tiene que ser un objeto {criterio: peso}"}), 400
+
+    pesos = _weights_map()
+    for criterio, peso in pedidos.items():
+        if criterio not in pesos:
+            continue
+        try:
+            pesos[criterio] = max(0, int(peso))
+        except (TypeError, ValueError):
+            return jsonify({"message": f"El peso de «{criterio}» tiene que ser un número"}), 400
+
+    return jsonify({
+        "scores": {
+            str(a.id): assistant_clarity.score_de(a, pesos) for a in AssistantApplication.query.all()
+        },
+    }), 200
+
+
 # Rangos de la pretensión mensual (USD) para el histograma de la pestaña de
 # estadísticas. El rango de referencia del puesto es 200-400 USD.
 TRAMOS_PRESUPUESTO = [(0, 251, '200–250'), (251, 301, '251–300'), (301, 351, '301–350'),
