@@ -3,6 +3,7 @@ import { Calendar, Compass, Eye, UserCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EsqueletoTablero, Humo, PillMenu } from '../Shared';
 import TasasComision from './TasasComision';
+import ExcluirVentas from './ExcluirVentas';
 import Cifra from '../Cifra';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
@@ -15,7 +16,8 @@ import * as apiFz from './finanzasApi';
  * Tocar un tile abre sus ventas en Revisar › Ventas, en el mismo período (`onVerVentas`): la lista
  * de abajo que había acá se sacó a pedido (08/10/2026), y Revisar ya tiene la tabla, la búsqueda,
  * los totales y la ficha de cada venta. Van las ventas que suman en la comisión: las que se sacaron
- * de la nómina quedan afuera, como en el número del tile.
+ * de la nómina quedan afuera, como en el número del tile. Sacarlas o volver a sumarlas se hace en
+ * «Excluir ventas» de la barra (`ExcluirVentas`).
  */
 
 const v = (tono) => `var(--${tono})`;
@@ -151,7 +153,7 @@ const Tile = ({ persona, datos, onVer }) => {
     );
 };
 
-const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTasas }) => {
+const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
     const [datos, setDatos] = useState(null);
 
     const cargar = useCallback(() => apiFz.getPayroll(desde, hasta).then(setDatos)
@@ -162,6 +164,11 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
         <TasasComision onCerrar={onCerrarTasas} onGuardado={() => { onCerrarTasas(); setDatos(null); cargar(); }} />
     );
     if (!datos) return <><EsqueletoTablero rotulo="Calculando la nómina…" />{modal}</>;
+    // Recalcula sin volver al esqueleto: los tiles cambian detrás del modal a cada venta tocada.
+    const excluir = excluirAbierto && (
+        <ExcluirVentas datos={datos} personas={GRUPOS.flatMap(g => g.personas)}
+            onCerrar={onCerrarExcluir} onCambio={cargar} />
+    );
 
     const verVentas = (persona) => {
         const ids = (datos[persona.id]?.sales || [])
@@ -201,6 +208,7 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
                 </section>
             ))}
             {modal}
+            {excluir}
         </>
     );
 };

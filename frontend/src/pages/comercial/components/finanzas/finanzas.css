@@ -108,6 +108,11 @@
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .fz-persona .kpi-cab{justify-content:space-between}
 
+/* Una venta sacada de la nómina («Excluir ventas» de Payroll): apagada y con el cliente y la
+   comisión tachados, para que se vea qué deja de sumar. */
+.dc-shell .fz-excluida{opacity:.42}
+.dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
+
 /* Exportar a PDF: solo el contenido, sin dock ni barra de filtros. */
 @media print{
   .dc-shell .dock,

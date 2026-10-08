@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Banknote, Calendar, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -219,6 +219,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // Payroll: qué grupos se ven (queda el último elegido) y el editor de porcentajes.
     const [gruposNomina, setGruposNomina] = useState(leerGrupos);
     const [tasasAbiertas, setTasasAbiertas] = useState(false);
+    const [excluirAbierto, setExcluirAbierto] = useState(false);
     // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
     const [basisElegida, setBasisElegida] = useState({});
     const [resumen, setResumen] = useState(null);
@@ -714,11 +715,18 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             <MenuMes mes={mesFinanzas} onCambiar={(m) => { setMesFinanzas(m); guardarMes(m); }} />
                         )}
                         {seccion === 'payroll' && (
-                            <button type="button" className={`pastilla${tasasAbiertas ? ' pastilla--on' : ''}`}
-                                onClick={() => setTasasAbiertas(true)}>
-                                <Percent size={14} />
-                                <span>Porcentajes</span>
-                            </button>
+                            <>
+                                <button type="button" className={`pastilla${excluirAbierto ? ' pastilla--on' : ''}`}
+                                    onClick={() => setExcluirAbierto(true)}>
+                                    <ListX size={14} />
+                                    <span>Excluir ventas</span>
+                                </button>
+                                <button type="button" className={`pastilla${tasasAbiertas ? ' pastilla--on' : ''}`}
+                                    onClick={() => setTasasAbiertas(true)}>
+                                    <Percent size={14} />
+                                    <span>Porcentajes</span>
+                                </button>
+                            </>
                         )}
                         {seccion === 'payroll' && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
@@ -788,7 +796,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'payroll' && (
                         <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} onVerVentas={irAVentasDeNomina}
                             grupos={gruposNomina} tasasAbiertas={tasasAbiertas}
-                            onCerrarTasas={() => setTasasAbiertas(false)} />
+                            onCerrarTasas={() => setTasasAbiertas(false)}
+                            excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
