@@ -1,0 +1,118 @@
+/* ============================================================================
+   FINANZAS Y PAYROLL — las dos secciones de plata del dashboard comercial
+   (desde el 08/10/2026 reemplazan a /admin/finance y /admin/payroll).
+
+   Usan las piezas del tablero (`.panel`, `.kpi`, `.mini`, `.chip`, `.btn`, `.pastilla`) y agregan
+   solo lo que el tablero no tenía: tablas con campos editables, grillas de 2/3/4/5 tiles sin
+   tarjetas sueltas y el campo de monto. Todo cuelga de `.dc-shell`, como el resto de la hoja.
+   ============================================================================ */
+
+/* Grillas de tiles: siempre filas completas. Cuando no entran, una columna (nunca 3 + 1). */
+.dc-shell .fz-grid{display:grid;gap:var(--s4);min-width:0}
+.dc-shell .fz-grid > *{min-width:0}
+.dc-shell .fz-grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dc-shell .fz-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dc-shell .fz-grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dc-shell .fz-grid--5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:1000px){.dc-shell .fz-grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.dc-shell .fz-grid--5{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.dc-shell .fz-grid--3{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:620px){
+  .dc-shell .fz-grid--2,
+  .dc-shell .fz-grid--4{grid-template-columns:minmax(0,1fr)}
+}
+/* Cinco tiles por fila son angostos: la cifra baja un escalón para no cortarse. */
+.dc-shell .fz-grid--5 .kpi-n{font-size:clamp(22px,2.1vw,30px)}
+
+.dc-shell .fz-bloque{display:grid;gap:var(--s3);min-width:0}
+
+/* Tablas: grilla por fila, columnas en `--cols`. Con `--min` scrollean de costado en vez de
+   apretarse hasta encimar los campos. */
+.dc-shell .fz-scroll{overflow-x:auto;min-width:0;scrollbar-width:thin}
+.dc-shell .fz-tabla{display:grid;min-width:var(--min,0)}
+.dc-shell .fz-cab,
+.dc-shell .fz-fila{display:grid;grid-template-columns:var(--cols);gap:var(--s3);align-items:center;padding:0 10px}
+.dc-shell .fz-cab{min-height:34px;border-bottom:1px solid var(--border-main)}
+.dc-shell .fz-cab > span{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40);min-width:0}
+.dc-shell .fz-fila{min-height:54px;border-bottom:1px solid var(--border-subtle);font-size:13px;
+  transition:background-color .16s ease,opacity .2s ease}
+.dc-shell .fz-fila:hover{background:var(--mat-0)}
+.dc-shell .fz-fila:last-child{border-bottom:0}
+.dc-shell .fz-der{justify-content:flex-end;text-align:right;justify-self:end}
+.dc-shell .fz-centro{justify-content:center;text-align:center;justify-self:center}
+.dc-shell .fz-n{font-size:14.5px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.dc-shell .fz-nom{display:grid;gap:2px;min-width:0}
+.dc-shell .fz-nom b{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .fz-nom small{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .fz-total{border-top:1px solid var(--border-main);border-bottom:0;min-height:52px}
+.dc-shell .fz-total:hover{background:none}
+.dc-shell .fz-total .fz-rot{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted)}
+.dc-shell .fz-grupo{display:flex;align-items:center;gap:8px;padding:var(--s4) 10px var(--s2);
+  font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .fz-grupo i{width:7px;height:7px;border-radius:var(--radius-pill);background:var(--c)}
+.dc-shell .fz-excluida{opacity:.42}
+.dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
+.dc-shell .fz-vacio{padding:var(--s8) var(--s4);text-align:center;color:var(--text-muted-40);font-size:13px}
+
+/* Monto editable: «$» adelante, número alineado a la derecha, guarda al salir. */
+.dc-shell .fz-monto{display:inline-flex;align-items:center;gap:6px;height:36px;width:100%;max-width:150px;
+  padding:0 12px;border-radius:var(--radius-control);background:var(--bg-input);
+  border:1px solid var(--border-subtle);transition:border-color .16s ease;justify-self:end}
+.dc-shell .fz-monto:hover{border-color:var(--border-control)}
+.dc-shell .fz-monto:focus-within{border-color:var(--brand-secondary-border)}
+.dc-shell .fz-monto span{color:var(--text-muted-40);font-size:12px;font-weight:700}
+.dc-shell .fz-monto input{flex:1;min-width:0;border:0;background:none;outline:none;text-align:right;
+  font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text-on-surface);
+  -moz-appearance:textfield}
+.dc-shell .fz-monto input::-webkit-outer-spin-button,
+.dc-shell .fz-monto input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.dc-shell .fz-monto input:focus-visible{box-shadow:none;outline:none}
+
+.dc-shell .fz-select{height:36px;max-width:100%;padding:0 12px;border-radius:var(--radius-pill);
+  background:var(--bg-input);border:1px solid var(--border-control);color:var(--text-on-surface);
+  font-size:12.5px;font-weight:700;cursor:pointer;outline:none}
+.dc-shell .fz-select:focus{border-color:var(--brand-secondary-border)}
+.dc-shell .fz-select option{background:var(--bg-flotante)}
+.dc-shell .campo .fz-select{height:42px;border-radius:var(--radius-control);width:100%}
+
+/* Pagado / incluido en la nómina: un tilde que se prende. */
+.dc-shell .fz-check{width:28px;height:28px;flex-shrink:0;border-radius:9px;display:inline-flex;
+  align-items:center;justify-content:center;border:1px solid var(--border-control);
+  background:var(--bg-input);color:transparent;
+  transition:background-color .16s ease,border-color .16s ease,transform .16s var(--spring)}
+.dc-shell .fz-check svg{width:15px;height:15px}
+.dc-shell .fz-check:hover{border-color:var(--text-muted)}
+.dc-shell .fz-check:active{transform:scale(.9)}
+.dc-shell .fz-check[aria-pressed="true"]{background:var(--success);border-color:var(--success);color:var(--on-state)}
+
+.dc-shell .fz-acciones{display:flex;align-items:center;gap:var(--s2);justify-content:flex-end}
+
+/* Balance del período y anuncios: cajas hundidas con su cifra. */
+.dc-shell .fz-dato{display:grid;gap:var(--s2);align-content:start}
+.dc-shell .fz-dato b{font-size:clamp(20px,2vw,24px);line-height:1.1;font-weight:900;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .fz-dato .fz-monto{max-width:none;justify-self:stretch;height:42px}
+
+/* Payroll: cada persona es un tile que elige su auditoría. */
+.dc-shell .fz-persona{text-align:left;cursor:pointer;width:100%;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s var(--spring)}
+.dc-shell .fz-persona:hover{border-color:var(--border-control)}
+.dc-shell .fz-persona:active{transform:scale(.985)}
+.dc-shell .fz-persona[aria-pressed="true"]{border-color:var(--brand-secondary-border);
+  box-shadow:0 0 0 1px var(--brand-secondary-border)}
+.dc-shell .fz-persona-nom{font-size:17px;font-weight:900;letter-spacing:-.02em;line-height:1.15;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .fz-persona .kpi-cab{justify-content:space-between}
+
+/* Exportar a PDF: solo el contenido, sin dock ni barra de filtros. */
+@media print{
+  .dc-shell .dock,
+  .dc-shell .barra,
+  .dc-shell .tope-meta,
+  .dc-shell .humo{display:none !important}
+  .dc-shell .fz-scroll{overflow:visible}
+}
