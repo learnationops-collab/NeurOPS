@@ -144,6 +144,9 @@ def ver_assistant_application(app_id):
     # en el frontend.
     data["bloques"] = [{"titulo": titulo, "campos": campos} for titulo, campos in BLOQUES]
     data["criterios"] = assistant_clarity.compute_criteria_values(app_row)
+    # Rótulos de las respuestas a preguntas agregadas desde el editor (no
+    # tienen columna ni lugar en `bloques`).
+    data["preguntas_extra"] = app_row.preguntas_extra()
     return jsonify(data), 200
 
 

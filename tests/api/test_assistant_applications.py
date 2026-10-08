@@ -148,3 +148,35 @@ def test_los_roles_sin_acceso_a_hiring_no_borran(client, auth_headers, make_user
 
     assert respuesta.status_code == 403
     assert AssistantApplication.query.count() == len(postulaciones)
+
+
+# --- Formulario editable: form_id y respuestas extra --------------------------------------------
+
+def test_el_detalle_rotula_las_respuestas_extra(client, db, auth_headers, admin):
+    from app.models import HiringForm
+
+    form = HiringForm(nombre='F', activo=True, preguntas=[
+        {'id': 'linkedin', 'bloque': 'Video y CV', 'tipo': 'link', 't': 'Tu LinkedIn', 'on': True, 'base': False},
+    ])
+    db.session.add(form)
+    db.session.flush()
+    fila = AssistantApplication(nombre='Ana', form_id=form.id,
+                                respuestas_extra={'huerfana': 'x', 'linkedin': 'https://linkedin.com/in/ana'})
+    db.session.add(fila)
+    db.session.commit()
+
+    cuerpo = client.get(f'{LISTA}/{fila.id}', headers=auth_headers(admin)).get_json()
+
+    assert cuerpo['form_id'] == form.id
+    assert cuerpo['respuestas_extra'] == {'huerfana': 'x', 'linkedin': 'https://linkedin.com/in/ana'}
+    assert cuerpo['preguntas_extra'] == [
+        {'id': 'linkedin', 't': 'Tu LinkedIn', 'bloque': 'Video y CV'},
+        {'id': 'huerfana', 't': 'huerfana', 'bloque': None},
+    ]
+
+
+def test_el_listado_trae_form_id_pero_no_las_respuestas_extra(client, auth_headers, admin, postulaciones):
+    fila = pedir(client, auth_headers, admin, filtro='todas').get_json()['postulaciones'][0]
+
+    assert fila['form_id'] is None
+    assert 'respuestas_extra' not in fila

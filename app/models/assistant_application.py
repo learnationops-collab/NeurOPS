@@ -372,11 +372,30 @@ class AssistantApplication(db.Model):
             "video_verificado": self.video_verificado,
             "video_ok": self.video_ok(),
             "cv": self.cv,
+            "form_id": self.form_id,
         }
         if include_respuestas:
             for campo in CAMPOS_FORMULARIO + CAMPOS_LEGACY:
                 data.setdefault(campo, getattr(self, campo))
+            data["respuestas_extra"] = dict(self.respuestas_extra or {})
         return data
+
+    def preguntas_extra(self):
+        """Cómo rotular cada respuesta de `respuestas_extra`: [{id, t, bloque}],
+        en el orden de su formulario. Si la pregunta ya no está (o no hay
+        formulario), el rótulo es el propio id."""
+        extras = self.respuestas_extra or {}
+        if not extras:
+            return []
+        form = self.formulario()
+        salida = []
+        if form is not None:
+            for p in form.preguntas or []:
+                if isinstance(p, dict) and p.get('id') in extras:
+                    salida.append({"id": p['id'], "t": p.get('t') or p['id'], "bloque": p.get('bloque')})
+        ya = {e['id'] for e in salida}
+        salida += [{"id": pid, "t": pid, "bloque": None} for pid in extras if pid not in ya]
+        return salida
 
     def __repr__(self):
         return f'<AssistantApplication {self.nombre} · {self.pais}>'
