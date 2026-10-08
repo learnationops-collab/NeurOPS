@@ -20,6 +20,16 @@ export function primerNombre(nombre) {
     return p ? p.charAt(0).toUpperCase() + p.slice(1) : '';
 }
 
+/**
+ * Cuántas columnas para `n` tarjetas, sin dejar una sola en la última fila: en ancho completo hasta 5
+ * en una fila y después dos filas; hasta 900px, 2 + 2 con 4 y de a 3 desde 5 (3 + 2, 3 + 3), o de a 4
+ * cuando de a 3 sobraría una (4 + 3 con 7).
+ */
+export function columnas(n) {
+    const medio = n <= 3 ? n : n === 4 ? 2 : n % 3 === 1 ? 4 : 3;
+    return { ancho: n <= 5 ? n : Math.ceil(n / 2), medio };
+}
+
 // El color de cada tarjeta, en orden (como las de la referencia).
 const ACENTOS = ['#ff3fa4', '#22c3ee', '#9b6bff', '#ffb03a', '#2fd4a7', '#8e9bd8'];
 
@@ -87,13 +97,15 @@ function Saludo({ nombre }) {
  */
 export default function Eleccion({ nombre, pregunta, opciones, eligiendo = null, error = null, pie = null }) {
     const n = primerNombre(nombre);
+    const cols = columnas(opciones.length);
     return (
         <MarcoEntrada>
             <main className="el-centro">
                 <LogoEntrada idGrad="lnGradEleccion" />
                 <Saludo nombre={n} />
                 {pregunta && <p className="el-pregunta">{pregunta}</p>}
-                <div className="el-tarjetas" role="group" aria-label={pregunta || 'Opciones'}>
+                <div className="el-tarjetas" role="group" aria-label={pregunta || 'Opciones'}
+                    style={{ '--cols': cols.ancho, '--cols-medio': cols.medio }}>
                     {opciones.map((o, i) => {
                         const pronto = o.pronto || !o.onElegir;
                         return (

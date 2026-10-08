@@ -168,7 +168,13 @@
 @keyframes fe-letra { to { opacity: 1; transform: none; filter: blur(0); } }
 .el-pregunta { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, .68); animation: fe-entra .8s .7s var(--fe-ease) both; }
 
-.el-tarjetas { width: min(980px, 100%); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: clamp(10px, 1.1vw, 16px); margin-top: 12px; }
+/* Filas parejas, nunca una tarjeta suelta abajo (4 + 1, 3 + 1): las columnas las da Eleccion según
+   cuántas hay (`--cols` en ancho completo, `--cols-medio` hasta 900px) y la última fila se centra. */
+.el-tarjetas { --cols: 4; --cols-medio: 2; --el-gap: clamp(10px, 1.1vw, 16px); width: min(980px, 100%); display: flex; flex-wrap: wrap; justify-content: center;
+    gap: var(--el-gap); margin-top: 12px; }
+.el-tarjeta { flex: 0 0 calc((100% - (var(--cols) - 1) * var(--el-gap)) / var(--cols)); min-width: 0; }
+@media (max-width: 900px) { .el-tarjeta { flex-basis: calc((100% - (var(--cols-medio) - 1) * var(--el-gap)) / var(--cols-medio)); } }
+@media (max-width: 560px) { .el-tarjeta { flex-basis: 100%; } }
 .el-tarjeta { --acento: #ff3fa4; position: relative; isolation: isolate; min-height: clamp(130px, 20vh, 172px); display: flex; flex-direction: column; justify-content: space-between;
     padding: clamp(14px, 1.4vw, 18px); border-radius: 18px; border: 1px solid #282c5c; background-color: rgba(18, 20, 50, .82); color: #fff; text-align: left; cursor: pointer;
     backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
