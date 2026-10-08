@@ -19,7 +19,9 @@ const Interruptor = ({ on, onClick, etiqueta, disabled, title }) => (
 );
 
 const Opciones = ({ q, onCambiar }) => {
-    const ops = q.o || [];
+    // Las opciones sin marcas llegan como texto plano (así las escribe el formulario público);
+    // al tocar una, todas pasan a objeto. El backend acepta las dos formas.
+    const ops = (q.o || []).map((o) => (typeof o === 'string' ? { t: o } : o));
     const set = (j, cambio) => onCambiar({ o: ops.map((o, k) => (k === j ? { ...o, ...cambio } : o)) });
     return (
         <>
