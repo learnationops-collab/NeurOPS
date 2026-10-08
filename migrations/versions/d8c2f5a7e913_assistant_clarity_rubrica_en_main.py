@@ -1,8 +1,13 @@
-"""Rúbrica nueva de Clarity para el puesto de Asistente (formulario de 35 preguntas)
+"""Rúbrica nueva de Clarity para el puesto de Asistente (versión de main)
 
-Revision ID: f2b8d4a6c910
-Revises: c3e7a2b9d104
-Create Date: 2026-10-07 11:00:00.000000
+Revision ID: d8c2f5a7e913
+Revises: b3e6d9a1c724
+Create Date: 2026-10-08 12:01:00.000000
+
+Es la misma siembra que `f2b8d4a6c910` de develop, colgada de la cabeza de main
+para que llegue a producción antes que el resto de develop. Es idempotente: si la
+rúbrica nueva ya está (hay una fila `aporte`), no toca nada — así no pisa los pesos
+que alguien ajuste después, cuando la de develop corra detrás.
 
 El score pasa de 8 a 10 criterios (se va `escritura`, que medía una prueba que el
 formulario ya no hace; entran `aporte`, `idiomas` y `pretension`). Los pesos
@@ -20,8 +25,8 @@ import sqlalchemy as sa
 from alembic import op
 
 
-revision = 'f2b8d4a6c910'
-down_revision = 'c3e7a2b9d104'
+revision = 'd8c2f5a7e913'
+down_revision = 'b3e6d9a1c724'
 branch_labels = None
 depends_on = None
 
@@ -70,7 +75,14 @@ def _sembrar(criterios):
     ])
 
 
+def _ya_sembrada():
+    fila = op.get_bind().execute(sa.text(f"SELECT 1 FROM {TABLA} WHERE criterion = 'aporte'")).first()
+    return fila is not None
+
+
 def upgrade():
+    if _ya_sembrada():
+        return
     _sembrar(NUEVOS)
 
 
