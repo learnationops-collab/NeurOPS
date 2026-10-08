@@ -99,14 +99,21 @@ _CLAVES_POR_NOMBRE = (
 
 
 def comision_de_miembro(member, dynamic_commissions):
-    """La comision autocalculada de un integrante variable del equipo; 0 para el resto."""
-    if member.salary_type != 'variable':
-        return 0.0
+    """La comision autocalculada de un integrante: la de ventas si es variable, mas la de
+    Fulfillment, que se cobra encima del sueldo fijo."""
+    from app.services.fulfillment_commission_service import clave_de_miembro
+
+    total = 0.0
     name_clean = member.name.lower().strip().replace(' ', '')
-    for fragmento, clave in _CLAVES_POR_NOMBRE:
-        if fragmento in name_clean:
-            return dynamic_commissions.get(clave, 0.0)
-    return 0.0
+    if member.salary_type == 'variable':
+        for fragmento, clave in _CLAVES_POR_NOMBRE:
+            if fragmento in name_clean:
+                total += dynamic_commissions.get(clave, 0.0)
+                break
+    clave_fulfillment = clave_de_miembro(member.name)
+    if clave_fulfillment:
+        total += dynamic_commissions.get('fulfillment', {}).get(clave_fulfillment, 0.0)
+    return round(total, 2)
 
 
 def get_commissions_calculated(month_str):
@@ -133,11 +140,13 @@ def get_commissions_calculated(month_str):
 
     recaudado = {clave: 0.0 for clave in (*SETTERS_CON_COMISION.values(), *CLOSERS_CON_COMISION.values())}
     marlon_recaudado = 0.0
+    completadas = []
 
     for s in sales:
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
             continue
+        completadas.append(s)
 
         resolved_setter = None
 
@@ -186,6 +195,9 @@ def get_commissions_calculated(month_str):
     comisiones = {clave: round(recaudado[clave] * SETTER_RATE, 2) for clave in SETTERS_CON_COMISION.values()}
     comisiones.update({clave: round(recaudado[clave] * CLOSER_RATE, 2) for clave in CLOSERS_CON_COMISION.values()})
     comisiones['marlon'] = round(marlon_recaudado * DIRECTOR_RATE, 2)
+
+    from app.services.fulfillment_commission_service import comisiones_del_mes
+    comisiones['fulfillment'] = comisiones_del_mes(month_str, completadas)
     return comisiones
 
 def _seed_variable_members():

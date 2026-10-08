@@ -29,7 +29,11 @@ def ventas_del_mes(db, make_user):
 
 
 def test_finanzas_calcula_la_comision_de_las_cinco_personas(ventas_del_mes):
-    assert get_commissions_calculated('2026-10') == {
+    comisiones = get_commissions_calculated('2026-10')
+
+    # Ninguna de estas ventas trae programa (AL/RR/SI): Fulfillment no cobra sobre ellas.
+    assert set(comisiones.pop('fulfillment').values()) == {0.0}
+    assert comisiones == {
         'elias': 80.0,       # 8% de 1000
         'paula': 64.0,       # 8% de 500 + 300
         'jeancarlo': 120.0,  # 10% de 1000 + 200 (Finanzas no mira la exclusión de la nómina)

@@ -767,7 +767,7 @@ const FinancePage = () => {
                                                 </th>
                                                 <th className="p-4 font-semibold text-right">
                                                     Comisión
-                                                    <InfoTooltip content="Comisiones generadas por rendimiento del periodo, autocalculadas a partir de las ventas cerradas (Setters: 8% Elias y Paula; Closers: 10% Jean Carlo y Facundo; Director de Ventas: 5% Marlon sobre las ventas de los closers sin renovaciones)." />
+                                                    <InfoTooltip content="Comisiones generadas por rendimiento del periodo, autocalculadas a partir de las ventas cerradas (Setters: 8% Elias y Paula; Closers: 10% Jean Carlo y Facundo; Director de Ventas: 5% Marlon sobre las ventas de los closers sin renovaciones; Fulfillment, desde septiembre de 2026: % por programa sobre renovaciones, upsells, cuotas y conversiones de seña a pago parcial o completo)." />
                                                 </th>
                                                 <th className="p-4 font-semibold text-right">
                                                     Bonos
