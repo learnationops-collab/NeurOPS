@@ -23,6 +23,10 @@ ROLE_DIRECTOR_MARKETING = 'director_marketing'
 # en app/decorators.py.
 ROLE_HIRING = 'hiring'
 
+# Los personajes que se pueden elegir de avatar (page-mascot; las hojas están en
+# frontend/public/mascotas y la misma lista en frontend/src/components/mascota/mascotas.js).
+MASCOTAS = ('fox', 'cat', 'panda', 'owl', 'penguin', 'redpanda', 'koala', 'astronaut', 'wizard', 'gearbot')
+
 def _esta_desactivado(user):
     """True si la cuenta esta desactivada. Falsy (False o NULL) es "desactivada", igual que para
     Flask-Login: UserMixin.is_authenticated devuelve `is_active`, asi que una cuenta asi ya recibia 401
@@ -145,6 +149,9 @@ class User(UserMixin, db.Model):
     # Las cuentas con el mismo `persona_id` son la misma persona con varios roles (ver
     # `app/services/cuentas_vinculadas.py`). NULL: cuenta suelta, que es el caso de casi todas.
     persona_id = db.Column(db.Integer, index=True, nullable=True)
+    # El personaje que la persona eligió para su avatar del dock (uno de `MASCOTAS`). NULL: todavía no
+    # eligió y el frontend le asigna uno fijo según su id.
+    mascota = db.Column(db.String(20), nullable=True)
 
     # El rol activo de ESTE request (lo fija el loader con el claim `active_role` del token o la
     # sesión). Vive solo en la instancia: no se guarda en la base.

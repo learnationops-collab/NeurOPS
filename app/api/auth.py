@@ -21,6 +21,7 @@ def _usuario_json(u, **extra):
         "email": u.email,
         "can_view_finance": getattr(u, 'can_view_finance', False),
         "cuentas_vinculadas": cuentas_de(u),
+        "mascota": u.mascota,
         **extra,
     }
 
@@ -90,6 +91,7 @@ def login():
             "email": user.email,
             "can_view_finance": getattr(user, 'can_view_finance', False),
             "cuentas_vinculadas": cuentas_de(user),
+            "mascota": user.mascota,
         }
     }), 200
 
@@ -134,6 +136,23 @@ def cargar_mi_email():
     current_user.email = email
     db.session.commit()
     return jsonify({"user": _usuario_json(current_user)}), 200
+
+
+@bp.route('/auth/me/mascota', methods=['PUT'])
+@login_required
+def elegir_mi_mascota():
+    """El personaje del avatar (menú de sesión del dock). PUT {mascota}: uno de `MASCOTAS`.
+    Simulando no: sería cambiarle el avatar a la persona simulada."""
+    from app.models import get_impersonation_state
+    from app.models.user import MASCOTAS
+    if get_impersonation_state()[0]:
+        return jsonify({"message": "No se puede cambiar el personaje mientras simulás a otro usuario"}), 403
+    mascota = (request.get_json(silent=True) or {}).get('mascota')
+    if mascota not in MASCOTAS:
+        return jsonify({"message": "Ese personaje no existe"}), 400
+    current_user.mascota = mascota
+    db.session.commit()
+    return jsonify({"mascota": mascota}), 200
 
 
 def _whatsapp_json(u):
@@ -294,6 +313,7 @@ def get_me():
             "original_user_role": original_user_role,
             "can_view_finance": getattr(current_user, 'can_view_finance', False),
             "cuentas_vinculadas": [] if is_impersonating else cuentas_de(current_user),
+            "mascota": current_user.mascota,
         }
     }), 200
 
@@ -421,7 +441,8 @@ def impersonate():
             "email": target_user.email,
             "is_impersonating": True,
             "original_user_role": original_role,
-            "can_view_finance": getattr(target_user, 'can_view_finance', False)
+            "can_view_finance": getattr(target_user, 'can_view_finance', False),
+            "mascota": target_user.mascota,
         }
     }), 200
 

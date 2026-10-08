@@ -102,7 +102,7 @@ def test_el_modo_aislado_emite_un_token_con_el_estado_de_suplantacion(client, au
     assert respuesta.status_code == 200
     assert cuerpo['user'] == {
         'id': equipo['closer_a'].id, 'username': 'cata', 'role': 'closer', 'email': equipo['closer_a'].email,
-        'is_impersonating': True, 'original_user_role': 'admin', 'can_view_finance': False,
+        'is_impersonating': True, 'original_user_role': 'admin', 'can_view_finance': False, 'mascota': None,
     }
     assert claims(cuerpo['token']) | {'exp': 0} == {
         'id': equipo['closer_a'].id, 'exp': 0, 'is_impersonating': True,
