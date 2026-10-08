@@ -131,7 +131,6 @@ export const TUTORIALS = {
 
 export const TUTORIAL_ROUTES = [
     { path: '/admin/dashboard', role: 'admin', tutorialId: 'admin-dashboard-v3' },
-    { path: '/admin/finance', role: 'admin', tutorialId: 'admin-finance-page-v1' },
     { path: '/admin/sales', role: 'admin', tutorialId: 'admin-sales-page-v1' },
     { role: 'setter', tutorialId: 'setter-onboarding-v1' }
 ];
