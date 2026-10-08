@@ -29,6 +29,11 @@ Las postulaciones completas sin `aporte` guardado (formulario viejo, o contestad
 antes de que el backend guardara esa pregunta) no lo cuentan ni a favor ni en
 contra, ver `aplica`.
 
+Apagar una pregunta en el editor de formularios (Hiring → Forms) no le cuesta
+puntos a nadie: si su formulario tiene apagadas TODAS las preguntas de un
+criterio, el criterio no aplica; si apaga solo algunas, el criterio se calcula
+con las que quedan, repartiendo el peso entre ellas (ver `PARTES`).
+
 Cada `_valor_<criterio>` devuelve un float 0-1; `score_de` los pondera.
 """
 import re
@@ -294,6 +299,79 @@ def _valor_pretension(app):
     return 0.0
 
 
+def _valor_pendientes(app):
+    return _escala('pendientes', app.pendientes) / 4
+
+
+# Las preguntas (columnas) de las que sale cada criterio. Si el formulario de la
+# postulación las tiene todas apagadas, el criterio no aplica.
+CAMPOS_DE_CRITERIO = {
+    'criterio': ('retraso', 'pendientes'),
+    'aporte': ('aporte',),
+    'experiencia': ('experiencia',),
+    'herramientas': ('sheets', 'notion', 'meta', 'wa_tools', 'automatizacion_ejemplo'),
+    'ia': ('ia_nivel', 'ia_avanzado'),
+    'digital': ('digital', 'remoto'),
+    'dinero': ('dinero', 'pm'),
+    'video': ('video', 'video_verificado', 'cv'),
+    'idiomas': ('ingles', 'idioma2'),
+    'pretension': ('remuneracion',),
+}
+
+# Los criterios de varias preguntas, partidos en (pregunta, peso, valor 0-1). Son
+# las mismas cuentas que `_valor_<criterio>`; solo se usan cuando el formulario
+# apaga ALGUNAS de esas preguntas, para promediar entre las que quedan.
+PARTES = {
+    'criterio': [('retraso', 0.7, _valor_retraso), ('pendientes', 0.3, _valor_pendientes)],
+    'herramientas': [
+        ('sheets', 2, lambda a: _nivel(a.sheets) / 4),
+        ('notion', 1, lambda a: _escala('notion', a.notion) / 4),
+        ('meta', 1, lambda a: _escala('meta', a.meta) / 4),
+        ('wa_tools', 1, lambda a: _escala('wa_tools', a.wa_tools) / 4),
+        ('automatizacion_ejemplo', 1, _valor_automatizacion),
+    ],
+    'ia': [
+        ('ia_nivel', 0.35, lambda a: _nivel(a.ia_nivel) / 4),
+        ('ia_avanzado', 0.65, lambda a: _techo_ia(a.ia_avanzado) / IA_TECHO_MAX),
+    ],
+    'digital': [
+        ('digital', 1, lambda a: _escala('digital', a.digital) / 4),
+        ('remoto', 1, lambda a: _escala('remoto', a.remoto) / 4),
+    ],
+    'dinero': [
+        ('dinero', 1, lambda a: _escala('dinero', a.dinero) / 4),
+        ('pm', 1, lambda a: _escala('pm', a.pm) / 4),
+    ],
+    'video': [
+        ('video', 0.35, lambda a: 1.0 if a.video else 0.0),
+        ('video_verificado', 0.3, lambda a: 1.0 if a.video_ok() else 0.0),
+        ('cv', 0.35, lambda a: 1.0 if a.cv else 0.0),
+    ],
+    'idiomas': [
+        ('ingles', 0.6, lambda a: _idioma(a.ingles) / 3),
+        ('idioma2', 0.4, lambda a: _idioma(a.idioma2) / 3),
+    ],
+}
+
+
+def _apagados(app):
+    """Columnas apagadas en el formulario de la postulación (vacío si no tiene)."""
+    fn = getattr(app, 'campos_apagados', None)
+    return fn() if fn else frozenset()
+
+
+def _sin_apagadas(criterio, fn, app, apagados):
+    """El valor del criterio contando solo las preguntas que se hicieron."""
+    campos = CAMPOS_DE_CRITERIO.get(criterio, ())
+    if not apagados or criterio not in PARTES or not apagados.intersection(campos):
+        return fn(app)
+    partes = [(peso, valor) for campo, peso, valor in PARTES[criterio] if campo not in apagados]
+    total = sum(peso for peso, _ in partes)
+    if not total:
+        return 0.0
+    return sum(peso * valor(app) for peso, valor in partes) / total
+
+
 _REGLAS = {
     'criterio': _valor_criterio,
     'aporte': _valor_aporte,
@@ -316,15 +394,25 @@ def aplica(app, criterio):
     no guardaba esa pregunta cuando la contestó (hasta el 07/10/2026 se descartaba).
     En los dos casos no es que haya contestado mal, es que no hay dato: no suma ni
     resta. Una postulación incompleta sí lo cuenta en cero, como a cualquier
-    pregunta que todavía no contestó."""
+    pregunta que todavía no contestó.
+
+    Tampoco cuenta un criterio cuyas preguntas están TODAS apagadas en el
+    formulario de la postulación: no se le preguntaron."""
+    campos = CAMPOS_DE_CRITERIO.get(criterio)
+    if campos:
+        apagados = _apagados(app)
+        if apagados and apagados.issuperset(campos):
+            return False
     if criterio == 'aporte':
         return bool(app.aporte) or not app.completo
     return True
 
 
 def compute_criteria_values(app):
-    """{criterio: valor 0-1} para las claves de CLARITY_CRITERIA."""
-    return {criterio: round(fn(app), 4) for criterio, fn in _REGLAS.items()}
+    """{criterio: valor 0-1} para las claves de CLARITY_CRITERIA. Las preguntas
+    apagadas en su formulario no entran en la cuenta (ver `PARTES`)."""
+    apagados = _apagados(app)
+    return {criterio: round(_sin_apagadas(criterio, fn, app, apagados), 4) for criterio, fn in _REGLAS.items()}
 
 
 def score_de(app, weights=None):

@@ -248,6 +248,13 @@ class AssistantApplication(db.Model):
             return getattr(self, columna)
         return (self.respuestas_extra or {}).get(pregunta_id)
 
+    def campos_apagados(self):
+        """Columnas de las preguntas que su formulario tiene apagadas (no se le
+        preguntaron): el score no las cuenta en contra (ver `aplica` en
+        app/services/assistant_clarity.py)."""
+        form = self.formulario()
+        return form.campos_apagados() if form is not None else frozenset()
+
     def preguntas_esperadas(self):
         """Lo que el formulario le pide de verdad a ESTA postulación.
 
