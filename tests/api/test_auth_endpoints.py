@@ -34,7 +34,8 @@ def test_login_correcto_devuelve_token_y_usuario(client, make_user):
     cuerpo = respuesta.get_json()
     assert cuerpo['message'] == 'Login successful'
     assert cuerpo['user'] == {'id': usuario.id, 'username': 'ana', 'role': 'closer',
-                              'email': 'ana@x.com', 'can_view_finance': True, 'cuentas_vinculadas': [], 'roles': ['closer']}
+                              'email': 'ana@x.com', 'can_view_finance': True, 'cuentas_vinculadas': [], 'roles': ['closer'],
+                              'mascota': None}
     assert jwt.decode(cuerpo['token'], ENTORNO_DE_TEST['SECRET_KEY'], algorithms=['HS256'])['id'] == usuario.id
 
 
@@ -246,7 +247,7 @@ def test_me_con_token_devuelve_al_usuario(client, make_user, auth_headers):
     assert respuesta.get_json()['user'] == {
         'id': usuario.id, 'username': 'beto', 'role': 'setter', 'email': 'beto@x.com',
         'is_impersonating': False, 'original_user_role': None, 'can_view_finance': False,
-        'cuentas_vinculadas': [], 'roles': ['setter'],
+        'cuentas_vinculadas': [], 'roles': ['setter'], 'mascota': None,
     }
 
 
