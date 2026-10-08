@@ -25,14 +25,22 @@ depends_on = None
 
 
 def upgrade():
+    # Idempotente: producción recibió el mismo cambio antes, por main (b3e6d9a1c724). Cuando esta
+    # rama llegue allá, la columna ya existe y el tipo ya es Text: no hay nada que hacer.
+    columnas = {c['name']: c for c in sa.inspect(op.get_bind()).get_columns('assistant_applications')}
+    ya_es_text = isinstance(columnas['ia_avanzado']['type'], sa.Text)
+    if 'aporte' in columnas and ya_es_text:
+        return
     with op.batch_alter_table('assistant_applications', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('aporte', sa.Text(), nullable=True))
-        batch_op.alter_column(
-            'ia_avanzado',
-            existing_type=sa.String(length=300),
-            type_=sa.Text(),
-            existing_nullable=True,
-        )
+        if 'aporte' not in columnas:
+            batch_op.add_column(sa.Column('aporte', sa.Text(), nullable=True))
+        if not ya_es_text:
+            batch_op.alter_column(
+                'ia_avanzado',
+                existing_type=sa.String(length=300),
+                type_=sa.Text(),
+                existing_nullable=True,
+            )
 
 
 def downgrade():

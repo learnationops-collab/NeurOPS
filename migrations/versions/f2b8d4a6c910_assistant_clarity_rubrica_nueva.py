@@ -71,6 +71,10 @@ def _sembrar(criterios):
 
 
 def upgrade():
+    # Idempotente: producción recibió la rúbrica nueva antes, por main (d8c2f5a7e913). Si ya está
+    # (hay una fila `aporte`), no se toca: volver a sembrar pisaría los pesos que alguien ajustó.
+    if op.get_bind().execute(sa.text(f"SELECT 1 FROM {TABLA} WHERE criterion = 'aporte'")).first():
+        return
     _sembrar(NUEVOS)
 
 
