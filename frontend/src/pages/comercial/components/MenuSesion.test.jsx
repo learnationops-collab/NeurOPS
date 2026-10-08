@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { CalendarPlus, Compass, LogOut } from 'lucide-react';
 import MenuSesion from './MenuSesion';
+import api from '../../../services/api';
+
+// La sesión del contexto: sin usuario en los tests de siempre; `ConSesion` la llena con estado real.
+const sesion = vi.hoisted(() => ({ auth: { user: null } }));
+vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => sesion.auth }));
+vi.mock('../../../services/api', () => ({ default: { put: vi.fn() } }));
 
 /**
  * La sesión al final del dock: lo que antes eran botones del header del mazo. Lo que importa es
@@ -20,10 +27,13 @@ const renderMenu = (acciones = { agenda: vi.fn(), playbook: vi.fn(), salir: vi.f
 };
 
 describe('MenuSesion', () => {
+    beforeEach(() => { sesion.auth = { user: null }; });
+
     it('el botón es el avatar, dice de quién es la sesión y lleva la cuenta de lo pendiente', () => {
         renderMenu(undefined, { texto: 5, titulo: '5 videos pendientes del Playbook' });
         const boton = screen.getByRole('button', { name: 'Tu sesión: Marlon Closer, 5 videos pendientes del Playbook' });
-        expect(boton.querySelector('.avatar').textContent).toBe('MC');
+        // El avatar es un personaje (sin sesión en el contexto, uno fijo según el nombre).
+        expect(boton.querySelector('[data-mascota]')).not.toBeNull();
         expect(boton.querySelector('.dock-sesion-aviso').textContent).toBe('5');
         expect(boton.getAttribute('aria-expanded')).toBe('false');
     });
@@ -144,5 +154,92 @@ describe('MenuSesion', () => {
         await act(async () => { fireEvent.click(boton); });
         fireEvent.pointerDown(document.body);
         expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    describe('el personaje', () => {
+        // El menú con una sesión de verdad en el contexto: elegir cambia el usuario (y lo que se ve).
+        const ConSesion = ({ inicial }) => {
+            const [user, setUser] = useState(inicial);
+            sesion.auth = { user, setUser };
+            return (
+                <>
+                    <MenuSesion nombre="Ana" rol="Closer" grupos={grupos({ agenda: vi.fn(), playbook: vi.fn(), salir: vi.fn() })} />
+                    <output data-testid="guardado">{user.mascota ?? ''}</output>
+                </>
+            );
+        };
+        const abrir = async () => {
+            await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Ana' })); });
+        };
+        const enDock = () => screen.getByRole('button', { name: 'Tu sesión: Ana' }).querySelector('[data-mascota]').dataset.mascota;
+
+        beforeEach(() => { api.put.mockReset(); localStorage.clear(); });
+
+        it('sin elegir, cada cuenta tiene uno fijo según su id; si eligió, el suyo', () => {
+            const { unmount } = render(<ConSesion inicial={{ id: 3, username: 'Ana' }} />);
+            expect(enDock()).toBe('owl'); // 3 % 10 → el cuarto
+            unmount();
+            render(<ConSesion inicial={{ id: 3, username: 'Ana', mascota: 'wizard' }} />);
+            expect(enDock()).toBe('wizard');
+        });
+
+        it('con el menú abierto, tocar el de la cabecera muestra los 10 y el actual marcado', async () => {
+            render(<ConSesion inicial={{ id: 1, username: 'Ana', mascota: 'panda' }} />);
+            await abrir();
+
+            await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cambiar tu personaje (ahora: Panda)' })); });
+
+            const opciones = screen.getAllByRole('menuitemradio');
+            expect(opciones).toHaveLength(10);
+            expect(opciones.filter(o => o.getAttribute('aria-checked') === 'true').map(o => o.getAttribute('aria-label'))).toEqual(['Panda']);
+            expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'Panda' }));
+        });
+
+        it('elegir lo cambia al instante —también en el dock—, lo guarda y queda en la sesión guardada', async () => {
+            api.put.mockResolvedValue({ data: { mascota: 'koala' } });
+            render(<ConSesion inicial={{ id: 1, username: 'Ana', mascota: 'panda' }} />);
+            await abrir();
+            await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Cambiar tu personaje/ })); });
+
+            await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: 'Koala' })); });
+
+            expect(api.put).toHaveBeenCalledWith('/auth/me/mascota', { mascota: 'koala' });
+            expect(screen.getByTestId('guardado').textContent).toBe('koala');
+            expect(enDock()).toBe('koala');
+            expect(screen.getByRole('menuitemradio', { name: 'Koala' }).getAttribute('aria-checked')).toBe('true');
+            expect(JSON.parse(localStorage.getItem('user')).mascota).toBe('koala');
+        });
+
+        it('si no se pudo guardar, vuelve al anterior y lo dice', async () => {
+            api.put.mockRejectedValue(new Error('caído'));
+            render(<ConSesion inicial={{ id: 1, username: 'Ana', mascota: 'panda' }} />);
+            await abrir();
+            await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Cambiar tu personaje/ })); });
+
+            await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: 'Koala' })); });
+
+            expect(screen.getByTestId('guardado').textContent).toBe('panda');
+            expect(screen.getByRole('alert').textContent).toBe('No se pudo guardar. Probá de nuevo.');
+        });
+
+        it('Escape vuelve al menú con el foco en el personaje; otro Escape cierra', async () => {
+            render(<ConSesion inicial={{ id: 1, username: 'Ana' }} />);
+            await abrir();
+            const cabecera = screen.getByRole('button', { name: /Cambiar tu personaje/ });
+            await act(async () => { fireEvent.click(cabecera); });
+
+            await act(async () => { fireEvent.keyDown(document, { key: 'Escape' }); });
+            expect(screen.queryByRole('menuitemradio')).toBeNull();
+            expect(document.activeElement).toBe(screen.getByRole('button', { name: /Cambiar tu personaje/ }));
+
+            await act(async () => { fireEvent.keyDown(document, { key: 'Escape' }); });
+            expect(screen.queryByRole('menu')).toBeNull();
+        });
+
+        it('simulando a otro no se puede cambiar: el de la cabecera no es un botón', async () => {
+            render(<ConSesion inicial={{ id: 1, username: 'Ana', is_impersonating: true }} />);
+            await abrir();
+            expect(screen.queryByRole('button', { name: /Cambiar tu personaje/ })).toBeNull();
+        });
     });
 });

@@ -617,6 +617,34 @@
 .dc-shell .menu-volver{color:var(--text-on-surface);font-weight:700}
 .dc-shell .menu-nota{padding:8px 14px 10px;font-size:12.5px;font-weight:600;color:var(--text-muted-40)}
 .dc-shell .avatar.avatar--chica{width:24px;height:24px;border-radius:8px;font-size:9.5px}
+/* El personaje de la sesión (ver `Mascota`). En la cabecera del menú es el botón para cambiarlo:
+   el lápiz en la esquina lo anuncia. Al elegir, los 10 en una grilla de 5 × 2 que entra escalonada.
+   Las hojas traen aire alrededor del dibujo (~30% de la celda), así que el personaje es algo más
+   grande que su casilla y ese margen transparente desborda. */
+.dc-shell .menu-quien-avatar{position:relative;flex-shrink:0;padding:0;border-radius:14px;
+  transition:background-color .16s ease,transform .26s var(--spring)}
+.dc-shell .menu-quien-avatar:hover,
+.dc-shell .menu-quien-avatar:focus-visible{background:var(--mat-3)}
+.dc-shell .menu-quien-avatar:active{transform:scale(.94)}
+.dc-shell .menu-quien-cambiar{position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;
+  display:grid;place-items:center;border-radius:var(--radius-pill);
+  background:var(--brand-secondary);color:var(--on-brand);box-shadow:0 0 0 2px var(--bg-flotante);
+  transition:transform .26s var(--spring)}
+.dc-shell .menu-quien-avatar:hover .menu-quien-cambiar,
+.dc-shell .menu-quien-avatar:focus-visible .menu-quien-cambiar{transform:scale(1.15)}
+.dc-shell .menu-mascotas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:2px 4px 6px}
+.dc-shell .menu-mascota{display:grid;place-items:center;aspect-ratio:1;border-radius:14px;
+  border:1px solid transparent;outline:none;
+  animation:menuMascotaEntra .32s var(--spring) both;animation-delay:calc(var(--i) * 28ms);
+  transition:background-color .16s ease,border-color .16s ease,transform .26s var(--spring)}
+.dc-shell .menu-mascota:hover,
+.dc-shell .menu-mascota:focus-visible{background:var(--bg-element)}
+.dc-shell .menu-mascota:focus-visible{border-color:var(--border-control)}
+.dc-shell .menu-mascota[aria-checked="true"]{background:var(--brand-secondary-surface);
+  border-color:var(--brand-secondary-border)}
+.dc-shell .menu-mascota:active{transform:scale(.9)}
+@keyframes menuMascotaEntra{from{opacity:0;transform:translateY(6px) scale(.85)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.dc-shell .menu-mascota{animation:none}}
 
 /* ============================================================
    9 · DATA VIZ
