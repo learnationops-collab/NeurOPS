@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TabHistorial from './TabHistorial';
@@ -670,6 +670,17 @@ describe('el registro de eventos', () => {
 });
 
 describe('agendar un seguimiento desde el historial', () => {
+    // El aviso de reemplazo dice el estado del seguimiento, y uno con el día ya pasado se lee
+    // «Atrasado»: con el reloj real, el del 6 oct dejó de ser «Pendiente» el 7. Se congela solo
+    // `Date`, para que los timers de userEvent y de framer-motion sigan corriendo.
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-03T12:00:00'));
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     const RECIENTE = { ...AGENDA, tipo_seguimiento: 'tomada' };
     const formulario = () => screen.getByRole('group', { name: 'Agendar un seguimiento' });
     const abrirFormulario = async (usuario, f, onAccion) => {
