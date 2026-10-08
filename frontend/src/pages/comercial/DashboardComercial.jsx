@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Banknote, Calendar, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, FileDown, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -716,6 +716,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         )}
                         {seccion === 'payroll' && (
                             <>
+                                <button type="button" className="pastilla" onClick={() => window.print()}>
+                                    <FileDown size={14} />
+                                    <span>Exportar PDF</span>
+                                </button>
                                 <button type="button" className={`pastilla${excluirAbierto ? ' pastilla--on' : ''}`}
                                     onClick={() => setExcluirAbierto(true)}>
                                     <ListX size={14} />

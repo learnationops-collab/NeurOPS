@@ -18,10 +18,15 @@ import * as apiFz from './finanzasApi';
  * los totales y la ficha de cada venta. Van las ventas que suman en la comisión: las que se sacaron
  * de la nómina quedan afuera, como en el número del tile. Sacarlas o volver a sumarlas se hace en
  * «Excluir ventas» de la barra (`ExcluirVentas`).
+ *
+ * «Exportar PDF» imprime la página: el CSS de impresión deja solo esto, con el encabezado que acá
+ * no se ve (`.fz-impresion`: período y grupos, que en pantalla dice la barra).
  */
 
 const v = (tono) => `var(--${tono})`;
 const iso = (f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+// En el PDF va el año siempre: el papel se guarda y se mira meses después.
+const fechaLarga = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 
 export const PERIODOS_PAYROLL = [
     { key: 'mes', label: 'Este mes' },
@@ -186,6 +191,10 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
 
     return (
         <>
+            <div className="fz-impresion">
+                <p className="t-eyebrow">Payroll · {visibles.map(g => g.titulo).join(', ')}</p>
+                <h1 className="t-h2">Nómina · {fechaLarga(desde)} – {fechaLarga(hasta)}</h1>
+            </div>
             <div className="fz-grid fz-grid--3">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
                     sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
