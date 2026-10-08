@@ -54,8 +54,6 @@
 .dc-shell .fz-grupo{display:flex;align-items:center;gap:8px;padding:var(--s4) 10px var(--s2);
   font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted)}
 .dc-shell .fz-grupo i{width:7px;height:7px;border-radius:var(--radius-pill);background:var(--c)}
-.dc-shell .fz-excluida{opacity:.42}
-.dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
 .dc-shell .fz-vacio{padding:var(--s8) var(--s4);text-align:center;color:var(--text-muted-40);font-size:13px}
 
 /* Monto editable: «$» adelante, número alineado a la derecha, guarda al salir. */
@@ -97,13 +95,15 @@
   font-variant-numeric:tabular-nums}
 .dc-shell .fz-dato .fz-monto{max-width:none;justify-self:stretch;height:42px}
 
-/* Payroll: cada persona es un tile que elige su auditoría. */
+/* Payroll: cada persona es un tile que abre sus ventas en Revisar. Sin ventas en el período no
+   hay a dónde ir: el tile queda quieto. */
 .dc-shell .fz-persona{text-align:left;cursor:pointer;width:100%;
   transition:border-color .18s ease,box-shadow .18s ease,transform .18s var(--spring)}
-.dc-shell .fz-persona:hover{border-color:var(--border-control)}
-.dc-shell .fz-persona:active{transform:scale(.985)}
-.dc-shell .fz-persona[aria-pressed="true"]{border-color:var(--brand-secondary-border);
+.dc-shell .fz-persona:disabled{cursor:default}
+.dc-shell .fz-persona:not(:disabled):hover{border-color:var(--brand-secondary-border);
   box-shadow:0 0 0 1px var(--brand-secondary-border)}
+.dc-shell .fz-persona:not(:disabled):hover .kpi-acc{color:var(--text-on-surface);border-color:var(--border-control)}
+.dc-shell .fz-persona:not(:disabled):active{transform:scale(.985)}
 .dc-shell .fz-persona-nom{font-size:17px;font-weight:900;letter-spacing:-.02em;line-height:1.15;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .fz-persona .kpi-cab{justify-content:space-between}
@@ -116,3 +116,6 @@
   .dc-shell .humo{display:none !important}
   .dc-shell .fz-scroll{overflow:visible}
 }
+
+/* Porcentaje editable (editor de comisiones de Payroll): el número y el «%» después. */
+.dc-shell .fz-pct{max-width:104px}

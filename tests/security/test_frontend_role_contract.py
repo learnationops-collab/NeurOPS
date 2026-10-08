@@ -46,8 +46,7 @@ EXCEPCIONES = {
                   'espacio de trabajo, no la de los demas, y la seccion Payroll no se le muestra.',
         'setter': 'Mismo motivo que el closer: la seccion Payroll no aparece en sus "Mis datos" y la nomina '
                   'del equipo no es informacion para un setter.',
-    } for ruta in (('GET', '/api/public/financial-sales/payroll'),
-                   ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
+    } for ruta in (('GET', '/api/public/financial-sales/payroll'),)},
 }
 
 
