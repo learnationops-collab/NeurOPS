@@ -68,3 +68,98 @@ def test_viene_en_to_dict_con_y_sin_respuestas(db):
     fila = _fila(db, pais='Argentina')
     assert fila.to_dict(include_respuestas=True)['completitud'] == _pct(2)
     assert fila.to_dict(include_respuestas=False)['completitud'] == _pct(2)
+
+
+# --- Con formulario editable -----------------------------------------------------------------
+
+def _form_editable(db, apagar=(), extra=None, cambios=None):
+    import copy
+
+    from app.models import HiringForm
+    from app.services.hiring_forms import PREGUNTAS_BASE
+
+    preguntas = copy.deepcopy(PREGUNTAS_BASE)
+    for p in preguntas:
+        if p['id'] in apagar:
+            p['on'] = False
+        p.update((cambios or {}).get(p['id'], {}))
+    form = HiringForm(nombre='F', activo=True, preguntas=preguntas + (extra or []))
+    db.session.add(form)
+    db.session.commit()
+    return form
+
+
+def test_con_el_formulario_base_da_lo_mismo_que_sin_formulario(db):
+    form = _form_editable(db)
+    for campos in ({}, {'pais': 'Argentina', 'provincia': 'Salta'}, {'meta': META_CON_PRESUPUESTO},
+                   {'meta': META_CON_PRESUPUESTO, 'meta_presupuesto': '1000 USD'},
+                   {c: 'x' for c in CAMPOS_FORMULARIO if c != 'nombre'}):
+        sin = AssistantApplication(nombre='Ana', **campos)
+        con = _fila(db, form_id=form.id, **campos)
+        assert con.preguntas_esperadas() == sin.preguntas_esperadas()
+        assert con.completitud() == sin.completitud()
+
+
+def test_una_pregunta_apagada_no_se_espera(db):
+    form = _form_editable(db, apagar=('notion', 'ciudad'))
+    fila = _fila(db, form_id=form.id, pais='Argentina')
+
+    esperadas = fila.preguntas_esperadas()
+    assert 'notion' not in esperadas and 'provincia' not in esperadas
+    assert len(esperadas) == 31
+    assert fila.completitud() == _pct(2, 31)
+
+
+def test_la_ciudad_cuenta_como_provincia(db):
+    form = _form_editable(db)
+    fila = _fila(db, form_id=form.id, provincia='Salta')
+    assert 'provincia' in fila.preguntas_esperadas()
+    assert fila.completitud() == _pct(2)
+
+
+def test_una_pregunta_nueva_obligatoria_se_espera_y_se_lee_de_respuestas_extra(db):
+    nueva = {'id': 'linkedin', 'tipo': 'link', 't': 'LinkedIn', 'on': True, 'base': False}
+    opcional = {'id': 'hobby', 'tipo': 'texto', 't': 'Hobby', 'req': False, 'on': True, 'base': False}
+    form = _form_editable(db, extra=[nueva, opcional])
+
+    sin_responder = _fila(db, form_id=form.id)
+    assert 'linkedin' in sin_responder.preguntas_esperadas()
+    assert 'hobby' not in sin_responder.preguntas_esperadas()
+    assert sin_responder.completitud() == _pct(1, 34)
+
+    respondida = _fila(db, form_id=form.id, respuestas_extra={'linkedin': 'https://linkedin.com/in/ana'})
+    assert respondida.completitud() == _pct(2, 34)
+
+
+def test_condicion_sobre_una_pregunta_nueva(db):
+    pregunta = {'id': 'tiene_auto', 'tipo': 'radio', 't': '¿Tenés auto?', 'o': [{'t': 'Sí'}, {'t': 'No'}],
+                'on': True, 'base': False}
+    condicional = {'id': 'patente', 'tipo': 'texto', 't': 'Patente', 'si': {'id': 'tiene_auto', 'eq': 'Sí'},
+                   'on': True, 'base': False}
+    form = _form_editable(db, extra=[pregunta, condicional])
+
+    assert 'patente' not in _fila(db, form_id=form.id).preguntas_esperadas()
+    assert 'patente' not in _fila(
+        db, form_id=form.id, respuestas_extra={'tiene_auto': 'No'}).preguntas_esperadas()
+    assert 'patente' in _fila(
+        db, form_id=form.id, respuestas_extra={'tiene_auto': 'Sí'}).preguntas_esperadas()
+
+
+def test_condicion_sobre_una_de_opcion_multiple(db):
+    marca = 'Creé mis propios GPTs o asistentes personalizados para tareas que repito'
+    condicional = {'id': 'gpt_link', 'tipo': 'link', 't': 'Link a tu GPT',
+                   'si': {'id': 'ia_avanzado', 'eq': marca}, 'on': True, 'base': False}
+    form = _form_editable(db, extra=[condicional])
+
+    fila = _fila(db, form_id=form.id, ia_avanzado=f'Casi no la uso | {marca}')
+    assert 'gpt_link' in fila.preguntas_esperadas()
+
+
+def test_una_base_que_pasa_a_opcional_no_se_espera(db):
+    form = _form_editable(db, cambios={'edad': {'req': False}})
+    assert 'edad' not in _fila(db, form_id=form.id).preguntas_esperadas()
+
+
+def test_recien_creada_sin_guardar_lee_su_formulario(db):
+    form = _form_editable(db, apagar=('notion',))
+    assert 'notion' not in AssistantApplication(nombre='Ana', form_id=form.id).preguntas_esperadas()

@@ -13,6 +13,7 @@ cambiar la redacción de una opción sin que haga falta migrar nada acá.
 import unicodedata
 from datetime import datetime
 from app import db
+from app.models.hiring_form import COLUMNA_DE_PREGUNTA, HiringForm
 
 # Los bloques del formulario REAL (institute-site, vacante-assistant/formulario),
 # en orden, con las columnas que guarda cada uno. Son 35 preguntas. Es la misma
@@ -91,6 +92,10 @@ EXCLUYENTES = {
 }
 
 VERIFICADO_OK = 'Sí, lo verifiqué'
+
+# Las respuestas que tienen columna propia. Una pregunta del formulario
+# editable con otro id se guarda en `respuestas_extra`.
+COLUMNAS_DE_RESPUESTA = frozenset(CAMPOS_FORMULARIO + CAMPOS_LEGACY)
 
 
 class AssistantApplication(db.Model):
@@ -226,9 +231,37 @@ class AssistantApplication(db.Model):
                 return pos
         return -1
 
+    def formulario(self):
+        """El HiringForm con el que contestó, o None. Pasa por el identity map
+        de la sesión: cientos de postulaciones del mismo formulario lo leen una
+        sola vez (también las recién creadas, que todavía no lo tienen cargado)."""
+        if self.form_id is None:
+            return None
+        return self.form or db.session.get(HiringForm, self.form_id)
+
+    def respuesta(self, pregunta_id):
+        """La respuesta a una pregunta, venga de su columna o de
+        `respuestas_extra`. Acepta el id del formulario (`ciudad`) o la columna
+        (`provincia`)."""
+        columna = COLUMNA_DE_PREGUNTA.get(pregunta_id, pregunta_id)
+        if columna in COLUMNAS_DE_RESPUESTA:
+            return getattr(self, columna)
+        return (self.respuestas_extra or {}).get(pregunta_id)
+
     def preguntas_esperadas(self):
-        """Columnas que el formulario le pide de verdad a ESTA postulación:
-        las 35 menos la opcional y menos la condicional que no le tocó ver."""
+        """Lo que el formulario le pide de verdad a ESTA postulación.
+
+        Con formulario editable: sus preguntas prendidas y obligatorias (sin la
+        intro) cuya condición `si` se cumple, con `ciudad` como `provincia`.
+        Sin formulario (las de antes de que existieran): las 35 menos la
+        opcional y menos la condicional que no le tocó ver."""
+        form = self.formulario()
+        if form is not None:
+            return [
+                COLUMNA_DE_PREGUNTA.get(p['id'], p['id'])
+                for p in form.preguntas_obligatorias()
+                if _cumple_condicion(self, p.get('si'))
+            ]
         esperadas = []
         for campo in CAMPOS_FORMULARIO:
             if campo in OPCIONALES:
@@ -241,16 +274,19 @@ class AssistantApplication(db.Model):
     def completitud(self):
         """Porcentaje entero 0-100 de las preguntas del formulario contestadas.
 
-        Denominador: `preguntas_esperadas()` (33 siempre, 34 si gestionó
-        cuentas de Meta). Así una opcional salteada o una condicional que no le
-        apareció no baja el porcentaje de nadie. Si `completo` es True, 100
-        (terminó el formulario, aunque falte alguna). Mientras no esté
-        completa, tope 99: llegar a 100 es terminar.
+        Denominador: `preguntas_esperadas()` (con el formulario base, 33
+        siempre y 34 si gestionó cuentas de Meta). Así una opcional salteada,
+        una condicional que no le apareció o una pregunta apagada no baja el
+        porcentaje de nadie. Si `completo` es True, 100 (terminó el formulario,
+        aunque falte alguna). Mientras no esté completa, tope 99: llegar a 100
+        es terminar.
         """
         if self.completo:
             return 100
         esperadas = self.preguntas_esperadas()
-        contestadas = sum(1 for campo in esperadas if not _vacio(getattr(self, campo)))
+        if not esperadas:
+            return 0
+        contestadas = sum(1 for campo in esperadas if not _vacio(self.respuesta(campo)))
         return min(99, round(100 * contestadas / len(esperadas)))
 
     def auto_ko(self):
@@ -348,6 +384,20 @@ class AssistantApplication(db.Model):
 
 def _vacio(v):
     return v is None or v == '' or v == []
+
+
+def _cumple_condicion(app_row, si):
+    """La condición `si: {id, eq}` de una pregunta del formulario: se muestra
+    solo si la respuesta a `id` es `eq` (o, en una de opción múltiple, si `eq`
+    está entre las marcadas). `eq` puede ser una lista: alcanza con una."""
+    if not isinstance(si, dict) or not si.get('id'):
+        return True
+    valor = app_row.respuesta(si['id'])
+    if _vacio(valor):
+        return False
+    esperados = si.get('eq') if isinstance(si.get('eq'), list) else [si.get('eq')]
+    marcadas = {v.strip() for v in str(valor).split('|')}
+    return any(e == valor or (isinstance(e, str) and e.strip() in marcadas) for e in esperados)
 
 
 def _normaliza(texto):
