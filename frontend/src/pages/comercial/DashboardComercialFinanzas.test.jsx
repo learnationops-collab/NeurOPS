@@ -38,7 +38,14 @@ vi.mock('./components/finanzas/Finanzas', async (original) => ({
 }));
 vi.mock('./components/finanzas/Payroll', async (original) => ({
     ...(await original()),
-    default: ({ desde, hasta }) => <div data-testid="payroll">{`${desde} → ${hasta}`}</div>,
+    default: ({ desde, hasta, onVerVentas }) => (
+        <div data-testid="payroll">
+            {`${desde} → ${hasta}`}
+            <button type="button" onClick={() => onVerVentas({ ids: [7, 9], rotulo: 'Comisión de Andy', desde, hasta })}>
+                ver ventas de Andy
+            </button>
+        </div>
+    ),
 }));
 
 const montar = (url = '/admin/comercial') => render(
@@ -107,5 +114,21 @@ describe('DashboardComercial · Finanzas y Payroll', () => {
         const pasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
         const mesPasado = `${pasado.getFullYear()}-${String(pasado.getMonth() + 1).padStart(2, '0')}`;
         expect(screen.getByTestId('payroll').textContent).toMatch(new RegExp(`^${mesPasado}-01 → ${mesPasado}-`));
+    });
+});
+
+describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
+    beforeEach(() => {
+        try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+    });
+
+    it('abre Revisar › Ventas con esas ventas, como una sola etiqueta', async () => {
+        estado.puede = true;
+        montar('/admin/comercial?s=payroll');
+        const boton = await screen.findByText(/ver ventas de Andy/);
+        await act(async () => { fireEvent.click(boton); });
+
+        expect(await screen.findByRole('button', { name: 'Quitar Comisión de Andy' })).toBeTruthy();
+        expect(screen.getByRole('tab', { name: 'Ventas', selected: true })).toBeTruthy();
     });
 });
