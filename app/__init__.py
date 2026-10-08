@@ -192,6 +192,9 @@ def create_app(config_class=Config):
     from app.api.assistant_applications import bp as assistant_applications_bp
     app.register_blueprint(assistant_applications_bp, url_prefix='/api')
 
+    from app.api.hiring_forms import bp as hiring_forms_bp
+    app.register_blueprint(hiring_forms_bp, url_prefix='/api')
+
     from app.api.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp, url_prefix='/api')
 
