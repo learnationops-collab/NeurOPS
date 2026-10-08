@@ -356,7 +356,7 @@ const useCortado = (colapsado, texto) => {
 
 const CLASE_TARJETA = 'min-w-0 rounded-2xl border border-white/[.1] bg-white/[.04] transition-colors hover:border-[#5B7CFF]/45 hover:bg-[#5B7CFF]/[.07]';
 
-const TarjetaRespuesta = ({ campo, valor, abierta, onToggle }) => {
+const TarjetaRespuesta = ({ campo, valor, etiqueta, abierta, onToggle }) => {
     const texto = String(valor);
     const enlace = campo === 'diseno_link' ? href(texto) : null;
     const nivel = NIVELES[campo]?.(texto);
@@ -366,7 +366,7 @@ const TarjetaRespuesta = ({ campo, valor, abierta, onToggle }) => {
 
     const titulo = (
         <span className="flex items-center gap-2">
-            <span className="truncate text-[13px] font-bold">{PREGUNTA_CORTA[campo] || campo}</span>
+            <span className="truncate text-[13px] font-bold">{PREGUNTA_CORTA[campo] || etiqueta || campo}</span>
             {puntos && <Estrellas n={puntos} />}
         </span>
     );
@@ -434,6 +434,7 @@ const GrupoRespuestas = ({ icono: Icono, titulo, campos, d, columnas, cerrado, o
                             key={campo}
                             campo={campo}
                             valor={d[campo]}
+                            etiqueta={d.__etiquetas?.[campo]}
                             abierta={todasAbiertas || abiertas.has(campo)}
                             onToggle={() => onToggle(campo)}
                         />
@@ -571,6 +572,20 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
         if (YA_MOSTRADAS.has(campo) || d[campo] == null || d[campo] === '') return;
         (CAMPOS_ESCRITOS.has(campo) ? escritas : opcion).push(campo);
     }));
+
+    // Las preguntas que se agregaron desde el editor de Forms no tienen columna: llegan en
+    // `respuestas_extra`, con su enunciado en `preguntas_extra`. Van al final, como escritas si
+    // la respuesta es larga. Los `<id>_pts` son el puntaje de una de varias opciones, no una respuesta.
+    const extras = d.respuestas_extra || {};
+    const dResp = {
+        ...extras,
+        ...d,
+        __etiquetas: Object.fromEntries((d.preguntas_extra || []).map((q) => [q.id, q.t])),
+    };
+    Object.entries(extras).forEach(([campo, valor]) => {
+        if (campo.endsWith('_pts') || valor == null || valor === '' || d[campo] != null) return;
+        (String(valor).length > 60 ? escritas : opcion).push(campo);
+    });
 
     const botones = ACCIONES.filter((a) => (ACCIONES_POR_VEREDICTO[d.veredicto] || []).includes(a.id));
     const estadoTexto = [
@@ -817,7 +832,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                             icono={ListChecks}
                                             titulo="Choice"
                                             campos={opcion}
-                                            d={d}
+                                            d={dResp}
                                             columnas="sm:grid-cols-2"
                                             cerrado={gruposCerrados.has('opcion')}
                                             onToggleGrupo={() => toggleGrupo('opcion')}
@@ -832,7 +847,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                             icono={PenLine}
                                             titulo="Escrito"
                                             campos={escritas}
-                                            d={d}
+                                            d={dResp}
                                             columnas={escritas.length > 3 ? 'sm:grid-cols-2' : ''}
                                             cerrado={gruposCerrados.has('escrito')}
                                             onToggleGrupo={() => toggleGrupo('escrito')}
