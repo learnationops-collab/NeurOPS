@@ -1,0 +1,219 @@
+/* Entrada (login y elección de rol o área) con la marca Learnation, como la referencia de Learnation
+   Holding: navy con gradientes y una grilla tenue, el fondo a elección (FondoEntrada.jsx) y paneles de
+   vidrio. No sigue el tema elegido por el usuario: todavía no se sabe quién es. */
+
+.lg {
+    --lg-navy: var(--brand-navy, #0a0e3d);
+    --lg-azul: var(--brand-primary, #1323c6);
+    --lg-rosa: var(--brand-secondary, #ff3fa4);
+    --lg-vidrio: rgba(255, 255, 255, 0.08);
+    --lg-borde: rgba(255, 255, 255, 0.16);
+    --lg-texto: #ffffff;
+    --lg-suave: rgba(255, 255, 255, 0.72);
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background:
+        radial-gradient(62% 80% at 10% 105%, rgba(196, 48, 140, .5), transparent 64%),
+        radial-gradient(52% 72% at 94% 52%, rgba(34, 92, 196, .46), transparent 66%),
+        radial-gradient(46% 55% at 50% -8%, rgba(92, 60, 196, .38), transparent 70%),
+        #0a0b20;
+    color: var(--lg-texto);
+    font-family: var(--font-body);
+}
+
+/* Fondo: manchas de color que se mueven lento; al desbloquear se desenfoca, como en Windows. */
+.lg-fondo { position: absolute; inset: 0; transition: filter 0.6s ease, transform 0.6s ease; }
+.lg-fondo i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.75; animation: lg-flota 22s ease-in-out infinite alternate; }
+.lg-fondo i:nth-child(1) { width: 55vmax; height: 55vmax; left: -15vmax; top: -20vmax; background: var(--lg-azul); }
+.lg-fondo i:nth-child(2) { width: 42vmax; height: 42vmax; right: -12vmax; bottom: -16vmax; background: var(--lg-rosa); opacity: 0.55; animation-delay: -7s; }
+.lg-fondo i:nth-child(3) { width: 30vmax; height: 30vmax; left: 40%; top: 45%; background: #5b3df5; opacity: 0.45; animation-delay: -14s; }
+@keyframes lg-flota { to { transform: translate(6vmax, 4vmax) scale(1.1); } }
+
+/* Panel centrado: avatar redondo, nombre y campos, como el inicio de sesión de Windows. */
+.lg-centro { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.lg-panel { width: min(340px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; animation: lg-sube 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes lg-sube { from { opacity: 0; transform: translateY(24px); } }
+
+.lg-avatar {
+    width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--lg-azul), var(--lg-rosa));
+    border: 3px solid rgba(255, 255, 255, 0.35); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    font-family: var(--font-header); font-size: 40px; font-weight: 700; letter-spacing: 0.02em;
+}
+.lg-avatar-l { font-style: italic; font-weight: 900; }
+.lg-titulo { margin: 4px 0 0; display: grid; gap: 4px; font-family: var(--font-header); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.lg-titulo small { font-size: 10px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase; color: var(--lg-rosa); }
+.lg-hola { margin: 4px 0 0; font-family: var(--font-header); font-size: 26px; font-weight: 600; }
+.lg-texto { margin: 0 0 4px; font-size: 14px; color: var(--lg-suave); line-height: 1.5; display: inline-flex; align-items: center; gap: 8px; }
+
+.lg-form { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.lg-clave { position: relative; display: flex; }
+.lg-input {
+    width: 100%; height: 46px; padding: 0 14px; border-radius: 10px;
+    background: var(--lg-vidrio); border: 1px solid var(--lg-borde); color: var(--lg-texto);
+    font-size: 15px; outline: none; backdrop-filter: blur(12px); transition: border-color 0.15s, background 0.15s;
+}
+.lg-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.lg-input:focus { border-color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.12); }
+.lg-clave .lg-input { padding-right: 92px; }
+.lg-clave .lg-input--icono { padding-left: 38px; }
+.lg-icono { position: absolute; left: 13px; top: 15px; color: var(--lg-suave); pointer-events: none; }
+.lg-ojo, .lg-ir { position: absolute; top: 5px; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; border: 0; cursor: pointer; }
+.lg-ojo { right: 46px; background: none; color: var(--lg-suave); }
+.lg-ojo:hover { color: var(--lg-texto); }
+.lg-ir { right: 5px; background: var(--lg-azul); color: #fff; transition: background 0.15s, transform 0.15s; }
+.lg-ir:hover:not(:disabled) { background: var(--lg-rosa); }
+.lg-ir:disabled { opacity: 0.6; cursor: default; }
+
+.lg-o { width: 100%; display: flex; align-items: center; gap: 12px; color: var(--lg-suave); font-size: 12px; }
+.lg-o::before, .lg-o::after { content: ''; flex: 1; height: 1px; background: var(--lg-borde); }
+
+.lg-google {
+    width: 100%; height: 46px; border-radius: 10px; border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #1f1f1f; font-size: 15px; font-weight: 600; transition: transform 0.15s, box-shadow 0.15s;
+}
+.lg-google:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); transform: translateY(-1px); }
+.lg-google:disabled { opacity: 0.7; cursor: default; }
+
+.lg-link { background: none; border: 0; color: var(--lg-suave); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lg-link:hover { color: var(--lg-texto); }
+
+.lg-error {
+    width: 100%; margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4;
+    background: rgba(255, 63, 164, 0.16); border: 1px solid rgba(255, 63, 164, 0.4); color: #fff;
+}
+
+/* Elegir rol: una fila por rol, como la lista de cuentas de Windows. */
+.lg-roles { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.lg-rol {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    background: var(--lg-vidrio); border: 1px solid var(--lg-borde); color: var(--lg-texto); text-align: left;
+    backdrop-filter: blur(12px); transition: background 0.15s, border-color 0.15s;
+}
+.lg-rol:hover:not(:disabled), .lg-rol:focus-visible { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.5); outline: none; }
+.lg-rol:disabled { opacity: 0.6; cursor: default; }
+.lg-rol-ini { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: linear-gradient(135deg, var(--lg-azul), var(--lg-rosa)); }
+.lg-rol-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.lg-rol-txt b { font-size: 15px; font-weight: 600; }
+.lg-rol-txt em { font-style: normal; font-size: 12px; color: var(--lg-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lg-gira { animation: lg-gira 0.8s linear infinite; }
+@keyframes lg-gira { to { transform: rotate(360deg); } }
+
+.lg .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .lg-fondo i, .lg-panel { animation: none; }
+    .lg-fondo { transition: none; }
+}
+
+/* --- Fondo a elección (FondoEntrada.jsx) ------------------------------------------------------ */
+.fe { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+/* Light: la grilla tenue, que se pinta una vez. */
+.fe::before { content: ''; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 40%, #000, transparent 78%); mask-image: radial-gradient(ellipse 72% 62% at 50% 40%, #000, transparent 78%); }
+.fe--humo::before, .fe--aurora::before { opacity: 0; }
+.fe-lienzo { position: absolute; inset: 0; width: 100%; height: 100%; animation: fe-aparece 2.4s ease both; }
+.fe--particulas .fe-lienzo { mix-blend-mode: screen; }
+.fe-vineta { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(3, 4, 16, .65) 100%); animation: fe-aparece 2s .6s ease both; }
+.fe-aurora { filter: blur(48px) saturate(1.25); animation: fe-aparece 1.6s ease both; }
+@keyframes fe-aparece { from { opacity: 0; } }
+
+/* Arriba: la hora a la izquierda y el selector de fondo a la derecha. */
+.fe-arriba { position: absolute; z-index: 3; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding: clamp(14px, 2.6vh, 28px) clamp(16px, 3vw, 44px); pointer-events: none; }
+.fe-arriba > * { pointer-events: auto; }
+.el-reloj { display: grid; gap: 6px; }
+.el-reloj b { font-family: var(--font-header); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.el-reloj span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
+.fe-selector { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(18, 20, 50, .72); border: 1px solid #282c5c; backdrop-filter: blur(10px); }
+.fe-selector button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: rgba(255, 255, 255, .5); cursor: pointer;
+    font: 800 10px/1 var(--font-body); letter-spacing: 0.16em; text-transform: uppercase; transition: color .2s, background-color .2s; }
+.fe-selector button:hover { color: #fff; }
+.fe-selector button[aria-checked="true"] { color: #fff; background: linear-gradient(90deg, var(--lg-rosa), #8a5cff); }
+.fe-selector button:focus-visible { outline: 2px solid #ff7bc6; outline-offset: 2px; }
+
+/* El isotipo con anillos que giran lento y un brillo que respira. */
+.fe-logo { --rs: clamp(84px, 13vh, 116px); position: relative; width: var(--rs); height: var(--rs); display: grid; place-items: center; flex: none; animation: fe-entra .9s var(--fe-ease) both; }
+.fe-logo > svg:last-child { width: 62%; height: 62%; border-radius: 28%; filter: drop-shadow(0 14px 30px rgba(255, 63, 164, 0.45)); animation: fe-respira 6s 1.2s ease-in-out infinite; }
+.fe-anillos { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fe-anillo-a { transform-origin: 66px 66px; animation: fe-gira 26s linear infinite; }
+.fe-anillo-b { transform-origin: 66px 66px; animation: fe-gira 40s linear infinite reverse; }
+@keyframes fe-gira { to { transform: rotate(360deg); } }
+@keyframes fe-respira { 50% { filter: drop-shadow(0 18px 44px rgba(255, 63, 164, 0.7)); } }
+
+/* La entrada: cada cosa aparece de a una, suave (logo, saludo letra por letra, texto y tarjetas). */
+.lg { --fe-ease: cubic-bezier(.2, .8, .2, 1); }
+@keyframes fe-entra { from { opacity: 0; transform: translateY(10px) scale(.98); filter: blur(6px); } }
+.lg-panel { animation: fe-entra .8s var(--fe-ease) both; }
+.lg-panel > * { animation: fe-entra .8s var(--fe-ease) both; }
+.lg-panel > :nth-child(2) { animation-delay: .12s; } .lg-panel > :nth-child(3) { animation-delay: .2s; }
+.lg-panel > :nth-child(4) { animation-delay: .28s; } .lg-panel > :nth-child(n+5) { animation-delay: .36s; }
+.lg-centro { position: relative; z-index: 2; }
+
+/* --- Elección de rol y de área (Eleccion.jsx) ----------------------------------------------- */
+.el-centro { position: relative; z-index: 2; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(10px, 2vh, 18px); padding: 96px 16px 48px; text-align: center; }
+/* Sin letras gigantes: el saludo es el título, no el protagonista. */
+.el-hola { margin: 4px 0 0; font-family: var(--font-header); font-size: clamp(26px, 3.6vw, 42px); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; }
+.fe-ch { display: inline-block; white-space: pre; opacity: 0; transform: translateY(.3em); filter: blur(8px);
+    animation: fe-letra .8s var(--fe-ease) forwards; animation-delay: calc(.35s + var(--i) * 32ms); }
+.fe-nombre { white-space: nowrap; }
+.fe-ch--nombre { color: #ff7bc6; }
+@keyframes fe-letra { to { opacity: 1; transform: none; filter: blur(0); } }
+.el-pregunta { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, .68); animation: fe-entra .8s .7s var(--fe-ease) both; }
+
+/* Filas parejas, nunca una tarjeta suelta abajo (4 + 1, 3 + 1): las columnas las da Eleccion según
+   cuántas hay (`--cols` en ancho completo, `--cols-medio` hasta 900px) y la última fila se centra. */
+.el-tarjetas { --cols: 4; --cols-medio: 2; --el-gap: clamp(10px, 1.1vw, 16px); width: min(980px, 100%); display: flex; flex-wrap: wrap; justify-content: center;
+    gap: var(--el-gap); margin-top: 12px; }
+.el-tarjeta { flex: 0 0 calc((100% - (var(--cols) - 1) * var(--el-gap)) / var(--cols)); min-width: 0; }
+@media (max-width: 900px) { .el-tarjeta { flex-basis: calc((100% - (var(--cols-medio) - 1) * var(--el-gap)) / var(--cols-medio)); } }
+@media (max-width: 560px) { .el-tarjeta { flex-basis: 100%; } }
+.el-tarjeta { --acento: #ff3fa4; position: relative; isolation: isolate; min-height: clamp(130px, 20vh, 172px); display: flex; flex-direction: column; justify-content: space-between;
+    padding: clamp(14px, 1.4vw, 18px); border-radius: 18px; border: 1px solid #282c5c; background-color: rgba(18, 20, 50, .82); color: #fff; text-align: left; cursor: pointer;
+    backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
+    transition: translate .2s, border-color .2s, background-color .2s, box-shadow .3s;
+    animation: fe-entra .9s var(--fe-ease) both; animation-delay: calc(.85s + var(--n) * .12s); }
+.el-tarjeta:hover:not(:disabled), .el-tarjeta:focus-visible { translate: 0 -2px; border-color: var(--acento); outline: none;
+    background-color: color-mix(in srgb, var(--acento) 16%, rgba(18, 20, 50, .82)); box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--acento) 80%, transparent); }
+.el-tarjeta:focus-visible { outline: 2px solid color-mix(in srgb, var(--acento) 70%, #fff); outline-offset: 3px; }
+.el-tarjeta:disabled { cursor: default; }
+.el-tarjeta--pronto { border-style: dashed; background-color: transparent; }
+.el-ico { width: clamp(42px, 6.4vh, 52px); height: clamp(42px, 6.4vh, 52px); border-radius: 30%; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--acento) 82%, white 18%), var(--acento));
+    box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 8px 18px -8px color-mix(in srgb, var(--acento) 75%, transparent); }
+.el-tarjeta--pronto .el-ico { background: #272b5a; box-shadow: none; }
+.el-num { position: absolute; top: clamp(14px, 1.4vw, 18px); right: clamp(14px, 1.4vw, 18px); font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
+.el-txt { display: grid; gap: 3px; }
+.el-txt small { font-size: 8.5px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
+.el-txt b { font-family: var(--font-header); font-size: clamp(18px, 1.6vw, 22px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.el-txt em { font-style: normal; font-size: 13px; color: rgba(255, 255, 255, .68); }
+.el-tarjeta--pronto .el-txt { opacity: .6; }
+.el-ir { position: absolute; right: 14px; bottom: 14px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.14);
+    opacity: 0; transform: translateX(-6px); transition: opacity .25s, transform .35s var(--fe-ease); }
+.el-tarjeta:hover .el-ir, .el-tarjeta:focus-visible .el-ir { opacity: 1; transform: none; }
+.el-cargando { position: absolute; right: 18px; bottom: 18px; }
+.el-defecto { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; color: var(--lg-suave); cursor: pointer; animation: fe-entra .8s 1.2s var(--fe-ease) both; }
+.el-defecto input { position: absolute; opacity: 0; pointer-events: none; }
+.el-switch { position: relative; width: 40px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); border: 1px solid var(--lg-borde); transition: background 0.2s; }
+.el-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.el-defecto input:checked + .el-switch { background: var(--lg-rosa); border-color: var(--lg-rosa); }
+.el-defecto input:checked + .el-switch::after { transform: translateX(16px); }
+.el-defecto input:focus-visible + .el-switch { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5); }
+
+@media (max-width: 560px) {
+    .fe-arriba { flex-direction: column; align-items: stretch; }
+    .fe-selector { align-self: flex-end; }
+    .el-centro { padding-top: 132px; }
+    .el-tarjeta { min-height: 112px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lg *, .lg *::before, .lg *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
