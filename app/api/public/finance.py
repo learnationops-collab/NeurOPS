@@ -353,7 +353,8 @@ def manage_balances():
     # Calcula "por pagar" por pasarela desde la nómina del mes
     saved_payroll_all = MonthlyPayroll.query.filter_by(month=month).all()
     saved_payroll_map_all = {p.member_id: p for p in saved_payroll_all}
-    members_all = TeamMember.query.filter_by(is_active=True).all()
+    # Los mismos integrantes que suma la nómina: los activos y los que ya tienen nómina guardada.
+    members_all = [m for m in TeamMember.query.all() if m.is_active or m.id in saved_payroll_map_all]
     dyn_comm = get_commissions_calculated(month)
     expected_by_method = {m: 0.0 for m in default_methods}
 
@@ -366,8 +367,12 @@ def manage_balances():
             method = mem.payment_method
             comm = comision_de_miembro(mem, dyn_comm)
             total_pay = mem.base_salary + comm
-        if method in expected_by_method:
-            expected_by_method[method] += total_pay
+        # Un medio que no es una pasarela de pago ('Stripe' de los integrantes viejos, o vacío) es
+        # el que la tabla de nómina muestra como elegido: el selector solo ofrece Mercury y AirTM
+        # y cae en el primero. Antes ese sueldo no se sumaba a ninguna pasarela.
+        if method not in expected_by_method:
+            method = default_methods[0]
+        expected_by_method[method] += total_pay
 
     result = []
     total_actual = 0.0
