@@ -113,6 +113,31 @@
 .dc-shell .fz-excluida{opacity:.42}
 .dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
 
+/* El detalle de ventas por persona del PDF de Payroll (`DetalleNomina`): solo existe en el papel. */
+.dc-shell .fz-detalle{display:none}
+.dc-shell .fz-detalle-persona{margin-top:var(--s6)}
+.dc-shell .fz-detalle-nom{display:flex;align-items:baseline;gap:var(--s2);margin:0 0 var(--s2);
+  font-size:15px;font-weight:900;letter-spacing:-.01em;break-after:avoid}
+.dc-shell .fz-detalle-nom span{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted)}
+.dc-shell .fz-detalle-vacio{font-size:11px;color:var(--text-muted)}
+.dc-shell .fz-detalle-tabla{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px;line-height:1.35}
+/* Anchos fijos: con los automáticos cada persona tenía sus columnas en otro lugar. */
+.dc-shell .fz-detalle-tabla .c-fecha{width:86px}
+.dc-shell .fz-detalle-tabla .c-tipo{width:118px}
+.dc-shell .fz-detalle-tabla .c-metodo{width:64px}
+.dc-shell .fz-detalle-tabla .c-fuente{width:78px}
+.dc-shell .fz-detalle-tabla .c-pct{width:40px}
+.dc-shell .fz-detalle-tabla .c-monto{width:78px}
+.dc-shell .fz-detalle-tabla td{overflow:hidden;text-overflow:ellipsis}
+.dc-shell .fz-detalle-tabla th{padding:5px 6px;text-align:left;font-size:9px;font-weight:900;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border-main)}
+.dc-shell .fz-detalle-tabla td{padding:5px 6px;border-bottom:1px solid var(--border-subtle);vertical-align:top}
+.dc-shell .fz-detalle-tabla .fz-der{text-align:right;white-space:nowrap}
+.dc-shell .fz-detalle-tabla tfoot td{font-weight:800;border-bottom:0;border-top:1px solid var(--border-main)}
+.dc-shell .fz-detalle-tabla tr{break-inside:avoid}
+.dc-shell .fz-detalle-tabla thead{display:table-header-group}
+
 /* Exportar a PDF: solo el contenido, sin dock ni barra de filtros. El encabezado de la nómina
    (período y grupos) solo existe en el papel: en pantalla lo dice la barra. */
 .dc-shell .fz-impresion{display:none}
@@ -143,6 +168,7 @@
   .dc-shell .kpi-acciones{display:none !important}
   .dc-shell .fz-scroll{overflow:visible}
   .dc-shell .fz-impresion{display:block;margin-bottom:var(--s4)}
+  .dc-shell .fz-detalle{display:block;break-before:page}
   /* Una hoja A4 mide menos que los cortes de pantalla (760 y 900px), que apilaban todo en una
      columna. Los cinco de Fulfillment van en una sola fila (de a tres quedaban 3 + 2) y sin su
      chip, que ahí no entra y repite el título del grupo. */
