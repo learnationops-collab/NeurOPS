@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Calendar, Check, ChevronDown, Compass, Eye, UserCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EsqueletoTablero, Humo, PillMenu } from '../Shared';
 import TasasComision from './TasasComision';
 import ExcluirVentas from './ExcluirVentas';
+import DetalleNomina from './DetalleNomina';
 import Cifra from '../Cifra';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
@@ -20,7 +22,8 @@ import * as apiFz from './finanzasApi';
  * «Excluir ventas» de la barra (`ExcluirVentas`).
  *
  * «Exportar PDF» imprime la página: el CSS de impresión deja solo esto, con el encabezado que acá
- * no se ve (`.fz-impresion`: período y grupos, que en pantalla dice la barra).
+ * no se ve (`.fz-impresion`: período y grupos, que en pantalla dice la barra) y, en hoja nueva, el
+ * detalle de ventas de cada persona que se ve (`DetalleNomina`), que en pantalla está en Revisar.
  */
 
 const v = (tono) => `var(--${tono})`;
@@ -266,6 +269,21 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
         .catch(() => toast.error('No se pudo cargar la nómina')), [desde, hasta]);
     useEffect(() => { setDatos(null); cargar(); }, [cargar]);
 
+    // El detalle de ventas del PDF se arma solo mientras se imprime: siempre montado eran cientos
+    // de filas escondidas y cada nombre dos veces en la página. `flushSync` porque el navegador
+    // toma la hoja apenas termina `beforeprint` (vale también para Ctrl+P).
+    const [imprimiendo, setImprimiendo] = useState(false);
+    useEffect(() => {
+        const antes = () => flushSync(() => setImprimiendo(true));
+        const despues = () => setImprimiendo(false);
+        window.addEventListener('beforeprint', antes);
+        window.addEventListener('afterprint', despues);
+        return () => {
+            window.removeEventListener('beforeprint', antes);
+            window.removeEventListener('afterprint', despues);
+        };
+    }, []);
+
     const modal = tasasAbiertas && (
         <TasasComision onCerrar={onCerrarTasas} onGuardado={() => { onCerrarTasas(); setDatos(null); cargar(); }} />
     );
@@ -331,6 +349,7 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
                     </div>
                 </section>
             ))}
+            {imprimiendo && <DetalleNomina personas={secciones.flatMap(g => g.personas)} datos={datos} />}
             {modal}
             {excluir}
         </>
