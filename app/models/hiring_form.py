@@ -74,6 +74,16 @@ class HiringForm(db.Model):
     def pregunta(self, pregunta_id):
         return self._derivados()['por_id'].get(pregunta_id)
 
+    def condicion(self, pregunta):
+        """La condición `si` de una pregunta. Si es una de las base y el editor
+        la mandó SIN la clave `si` (no con null), vale la original, igual que en
+        el formulario público (`HEREDABLES`)."""
+        if 'si' in pregunta:
+            return pregunta['si']
+        from app.services.hiring_forms import PREGUNTAS_BASE_POR_ID
+        base = PREGUNTAS_BASE_POR_ID.get(pregunta.get('id'))
+        return base.get('si') if base and base.get('tipo') == pregunta.get('tipo') else None
+
     def campos_apagados(self):
         return self._derivados()['apagadas']
 

@@ -267,7 +267,7 @@ class AssistantApplication(db.Model):
             return [
                 COLUMNA_DE_PREGUNTA.get(p['id'], p['id'])
                 for p in form.preguntas_obligatorias()
-                if _cumple_condicion(self, p.get('si'))
+                if _cumple_condicion(self, form, p)
             ]
         esperadas = []
         for campo in CAMPOS_FORMULARIO:
@@ -415,18 +415,38 @@ def _vacio(v):
     return v is None or v == '' or v == []
 
 
-def _cumple_condicion(app_row, si):
-    """La condición `si: {id, eq}` de una pregunta del formulario: se muestra
-    solo si la respuesta a `id` es `eq` (o, en una de opción múltiple, si `eq`
-    está entre las marcadas). `eq` puede ser una lista: alcanza con una."""
+# Cómo puede llamarse el valor esperado de una condición `si`, en el orden en
+# que lo busca el formulario público (`cumpleSi`).
+CLAVES_DE_CONDICION = ('es', 'igual', 'valor', 'en', 'valores')
+
+
+def _cumple_condicion(app_row, form, pregunta, profundidad=0):
+    """Si a esta postulación le tocó ver `pregunta`, con la misma regla que el
+    formulario público (`cumpleSi`): `si: {id, es}` la muestra solo si la
+    respuesta a `id` es `es` (o una de la lista; en una de opción múltiple
+    alcanza con que esté marcada). Sin valor esperado, alcanza con que `id`
+    tenga respuesta. Si la pregunta de la que depende está apagada (o tampoco
+    le tocó verla), esta tampoco."""
+    si = form.condicion(pregunta)
     if not isinstance(si, dict) or not si.get('id'):
         return True
+    padre = form.pregunta(si['id'])
+    if padre is None or padre.get('on') is False or profundidad > 8:
+        return False
+    if not _cumple_condicion(app_row, form, padre, profundidad + 1):
+        return False
+
     valor = app_row.respuesta(si['id'])
+    clave = next((c for c in CLAVES_DE_CONDICION if c in si), None)
+    esperado = si[clave] if clave else None
+    if esperado is None:
+        return not _vacio(valor)
     if _vacio(valor):
         return False
-    esperados = si.get('eq') if isinstance(si.get('eq'), list) else [si.get('eq')]
-    marcadas = {v.strip() for v in str(valor).split('|')}
-    return any(e == valor or (isinstance(e, str) and e.strip() in marcadas) for e in esperados)
+    esperados = {str(e).strip() for e in (esperado if isinstance(esperado, list) else [esperado])}
+    # Una de opción múltiple llega con las marcadas unidas por « | ».
+    dados = {str(valor).strip()} | {v.strip() for v in str(valor).split('|')}
+    return bool(esperados & dados)
 
 
 def pais_limpio(texto):

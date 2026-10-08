@@ -36,8 +36,13 @@ def test_las_marcas_de_las_opciones_se_conservan():
     assert p['confirma']['o'][0]['correcta'] is True
     assert [o['pts'] for o in p['ia_avanzado']['o']] == [6, 5, 4, 2, 0]
     assert p['video_verificado']['o'][1]['bloquea'] is True
-    assert p['meta_presupuesto']['si'] == {'id': 'meta', 'eq': 'Gestioné cuentas publicitarias de forma habitual'}
-    assert p['idioma2']['tBrasil'] == '¿Qué nivel de español tenés?'
+    assert p['meta_presupuesto']['si'] == {'id': 'meta', 'es': 'Gestioné cuentas publicitarias de forma habitual'}
+    assert p['idioma2']['t_pais'] == {'Brasil': '¿Qué nivel de español tenés?'}
+    assert p['ciudad']['t_pais'] == {'Brasil': '¿En qué estado vivís?'}
+    assert (p['remuneracion']['ref'], p['remuneracion']['ph']) == ('brl', '300')
+    assert (p['edad']['min'], p['edad']['max'], p['edad']['ph']) == (16, 80, '32')
+    # Opciones como en el formulario: texto suelto si no tienen marcas.
+    assert p['experiencia']['o'][0] == 'No tengo experiencia en este tipo de puesto'
     assert p['automatizacion_ejemplo']['req'] is False
 
 

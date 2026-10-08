@@ -1,11 +1,14 @@
 """Formularios de postulación editables (panel de Hiring → Forms).
 
-`PREGUNTAS_BASE` es el `PREGUNTAS` del formulario público de Asistente
-(institute-site, vacante-assistant/formulario/index.html) pasado a datos: mismas
-claves, mismos textos y mismas opciones con sus marcas (`ko`, `pts`, `correcta`,
-`reexplica`, `bloquea`, `nota`). Lo que allá era una función se volvió dato:
-  · el título que cambia para Brasil (`ciudad`, `idioma2`) va en `tBrasil`;
-  · la condición de `meta_presupuesto` va en `si: {id, eq}`;
+`PREGUNTAS_BASE` es copia fiel del `PREGUNTAS_BASE` del formulario público de
+Asistente (institute-site, vacante-assistant/formulario/index.html, la versión
+que lee sus preguntas de la API): mismas claves, mismos textos y mismas opciones
+—texto suelto o {t} con sus marcas (`ko`, `pts`, `correcta`, `reexplica`,
+`bloquea`, `nota`)—. Allá ya es JSON puro:
+  · el texto que cambia según el país va en `t_pais` / `h_pais`
+    ({"Brasil": "..."});
+  · la condición de una pregunta va en `si: {id, es}` (también `igual`,
+    `valor`, `en` o `valores`; ver `cumple_condicion`);
   · la equivalencia en reales de `remuneracion` va en `ref: 'brl'` (la tasa sale
     de la configuración de la búsqueda, ver HiringConfig).
 Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: se
@@ -31,9 +34,9 @@ IDIOMA4 = ['No lo hablo', 'Básico', 'Intermedio', 'Avanzado o nativo']
 
 
 def _o(*textos):
-    """Opciones sin marcas: el formulario acepta texto suelto o {t}, acá van
-    siempre como {t} para que el editor no tenga que distinguir."""
-    return [{'t': t} for t in textos]
+    """Opciones sin marcas: texto suelto, como en el formulario (que acepta
+    texto suelto o {t})."""
+    return list(textos)
 
 
 _PREGUNTAS = [
@@ -50,15 +53,15 @@ _PREGUNTAS = [
     {'id': 'pais', 'bloque': 'Identificación', 'tipo': 'radio', 'req': True, 't': '¿En qué país vivís?',
      'o': _o('🇦🇷  Argentina', '🇧🇷  Brasil', '🇻🇪  Venezuela')},
     {'id': 'ciudad', 'bloque': 'Identificación', 'tipo': 'buscable', 'req': True, 't': '¿En qué provincia vivís?',
-     'tBrasil': '¿En qué estado vivís?', 'h': 'Escribí para filtrar y elegí una de la lista.'},
+     't_pais': {'Brasil': '¿En qué estado vivís?'}, 'h': 'Escribí para filtrar y elegí una de la lista.'},
     {'id': 'nombre', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 't': '¿Cómo te llamás?',
      'h': 'Nombre y apellido, como figura en tus documentos.'},
     {'id': 'email', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 'mail': True, 't': '¿Cuál es tu email?',
      'h': 'Ahí te avisamos si avanzás en el proceso.'},
     {'id': 'whatsapp', 'bloque': 'Identificación', 'tipo': 'tel', 'req': True, 't': '¿Cuál es tu WhatsApp?',
      'h': 'El código de país ya está puesto. Escribí el resto del número.'},
-    {'id': 'edad', 'bloque': 'Identificación', 'tipo': 'numero', 'req': True, 'unidad': 'años', 't': '¿Qué edad tenés?',
-     'guarda': True},
+    {'id': 'edad', 'bloque': 'Identificación', 'tipo': 'numero', 'req': True, 'unidad': 'años', 'min': 16, 'max': 80,
+     'ph': '32', 't': '¿Qué edad tenés?', 'guarda': True},
 
     # Bloque 2 · Excluyentes
     {'id': 'equipo', 'bloque': 'Requisitos', 'tipo': 'radio', 'req': True, 't': '¿Tenés el equipo para trabajar?',
@@ -97,7 +100,7 @@ _PREGUNTAS = [
     {'id': 'remuneracion', 'bloque': 'Remuneración', 'tipo': 'numero', 'req': True, 'unidad': 'USD por mes',
      't': '¿Cuánto pedís por mes?',
      'h': 'Pon tu remuneración mensual en dólares pretendida por un trabajo de 4 horas diarias.',
-     'ref': 'brl'},
+     'ph': '300', 'ref': 'brl'},
 
     # Bloque 4 · Experiencia
     {'id': 'experiencia', 'bloque': 'Experiencia', 'tipo': 'radio', 'req': True, 't': '¿Cuántos años de experiencia tenés?',
@@ -126,7 +129,7 @@ _PREGUNTAS = [
 
     # Bloque 5 · Idiomas
     {'id': 'idioma2', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 'o': _o(*IDIOMA4),
-     't': '¿Qué nivel de portugués tenés?', 'tBrasil': '¿Qué nivel de español tenés?'},
+     't': '¿Qué nivel de portugués tenés?', 't_pais': {'Brasil': '¿Qué nivel de español tenés?'}},
     {'id': 'ingles', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 't': '¿Qué nivel de inglés tenés?',
      'o': _o(*IDIOMA4)},
 
@@ -151,7 +154,7 @@ _PREGUNTAS = [
              'Monto y publico campañas sola/o', 'Gestioné cuentas publicitarias de forma habitual')},
     {'id': 'meta_presupuesto', 'bloque': 'Herramientas', 'tipo': 'parrafo', 'req': True, 'filas': 3, 'largo': 400,
      't': '¿Qué presupuesto mensual manejabas, aproximadamente, y en qué tipo de negocio?',
-     'si': {'id': 'meta', 'eq': 'Gestioné cuentas publicitarias de forma habitual'}},
+     'si': {'id': 'meta', 'es': 'Gestioné cuentas publicitarias de forma habitual'}},
     {'id': 'notion', 'bloque': 'Herramientas', 'tipo': 'radio', 'req': True, 'apps': ['notion'], 't': 'Tu nivel con Notion',
      'o': _o('Nunca lo usé', 'Lo usé como bloc de notas', 'Creo páginas y bases de datos simples',
              'Creo bases de datos con vistas, filtros y propiedades',
@@ -201,6 +204,7 @@ _PREGUNTAS = [
 
 PREGUNTAS_BASE = [{**p, 'on': True, 'base': True} for p in _PREGUNTAS]
 IDS_BASE = [p['id'] for p in PREGUNTAS_BASE]
+PREGUNTAS_BASE_POR_ID = {p['id']: p for p in PREGUNTAS_BASE}
 
 # --- Validación del editor ----------------------------------------------------
 

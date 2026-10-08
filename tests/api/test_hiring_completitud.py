@@ -3,6 +3,8 @@
 El nombre siempre está contestado (la fila no existe sin él), así que una
 postulación recién nacida ya trae 1 de 33.
 """
+import pytest
+
 from app.models import AssistantApplication
 from app.models.assistant_application import CAMPOS_FORMULARIO, META_CON_PRESUPUESTO, OPCIONALES
 
@@ -134,7 +136,7 @@ def test_una_pregunta_nueva_obligatoria_se_espera_y_se_lee_de_respuestas_extra(d
 def test_condicion_sobre_una_pregunta_nueva(db):
     pregunta = {'id': 'tiene_auto', 'tipo': 'radio', 't': '¿Tenés auto?', 'o': [{'t': 'Sí'}, {'t': 'No'}],
                 'on': True, 'base': False}
-    condicional = {'id': 'patente', 'tipo': 'texto', 't': 'Patente', 'si': {'id': 'tiene_auto', 'eq': 'Sí'},
+    condicional = {'id': 'patente', 'tipo': 'texto', 't': 'Patente', 'si': {'id': 'tiene_auto', 'es': 'Sí'},
                    'on': True, 'base': False}
     form = _form_editable(db, extra=[pregunta, condicional])
 
@@ -148,11 +150,56 @@ def test_condicion_sobre_una_pregunta_nueva(db):
 def test_condicion_sobre_una_de_opcion_multiple(db):
     marca = 'Creé mis propios GPTs o asistentes personalizados para tareas que repito'
     condicional = {'id': 'gpt_link', 'tipo': 'link', 't': 'Link a tu GPT',
-                   'si': {'id': 'ia_avanzado', 'eq': marca}, 'on': True, 'base': False}
+                   'si': {'id': 'ia_avanzado', 'en': [marca]}, 'on': True, 'base': False}
     form = _form_editable(db, extra=[condicional])
 
     fila = _fila(db, form_id=form.id, ia_avanzado=f'Casi no la uso | {marca}')
     assert 'gpt_link' in fila.preguntas_esperadas()
+
+
+@pytest.mark.parametrize('clave, valor', [
+    ('es', 'Sí'), ('igual', 'Sí'), ('valor', 'Sí'), ('en', ['Tal vez', 'Sí']), ('valores', ['Sí']),
+])
+def test_condicion_acepta_los_alias_del_formulario(db, clave, valor):
+    pregunta = {'id': 'tiene_auto', 'tipo': 'radio', 't': '¿Tenés auto?', 'o': ['Sí', 'No'], 'on': True, 'base': False}
+    condicional = {'id': 'patente', 'tipo': 'texto', 't': 'Patente', 'si': {'id': 'tiene_auto', clave: valor},
+                   'on': True, 'base': False}
+    form = _form_editable(db, extra=[pregunta, condicional])
+
+    assert 'patente' in _fila(db, form_id=form.id, respuestas_extra={'tiene_auto': 'Sí'}).preguntas_esperadas()
+    assert 'patente' not in _fila(db, form_id=form.id, respuestas_extra={'tiene_auto': 'No'}).preguntas_esperadas()
+
+
+def test_condicion_sin_valor_esperado_pide_que_este_contestada(db):
+    condicional = {'id': 'detalle', 'tipo': 'texto', 't': 'Contá más', 'si': {'id': 'aporte'},
+                   'on': True, 'base': False}
+    form = _form_editable(db, extra=[condicional])
+
+    assert 'detalle' not in _fila(db, form_id=form.id).preguntas_esperadas()
+    assert 'detalle' in _fila(db, form_id=form.id, aporte='Algo').preguntas_esperadas()
+
+
+def test_si_la_pregunta_de_la_que_depende_esta_apagada_no_se_espera(db):
+    # Como en el formulario público: meta apagada => meta_presupuesto no se muestra.
+    form = _form_editable(db, apagar=('meta',))
+    fila = _fila(db, form_id=form.id, meta=META_CON_PRESUPUESTO)
+    assert 'meta_presupuesto' not in fila.preguntas_esperadas()
+
+
+def test_una_base_sin_la_clave_si_hereda_la_condicion_original(db):
+    form = _form_editable(db)
+    preguntas = [dict(p) for p in form.preguntas]
+    del next(p for p in preguntas if p['id'] == 'meta_presupuesto')['si']
+    form.preguntas = preguntas
+    db.session.commit()
+
+    assert 'meta_presupuesto' not in _fila(db, form_id=form.id, meta='Nunca entré').preguntas_esperadas()
+    # Con `si: null` explícito, en cambio, deja de ser condicional.
+    preguntas = [dict(p) for p in form.preguntas]
+    next(p for p in preguntas if p['id'] == 'meta_presupuesto')['si'] = None
+    form.preguntas = preguntas
+    db.session.commit()
+    assert 'meta_presupuesto' in _fila(db, form_id=form.id, meta='Nunca entré').preguntas_esperadas()
 
 
 def test_una_base_que_pasa_a_opcional_no_se_espera(db):
