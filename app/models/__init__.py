@@ -25,6 +25,7 @@ from .academy_snapshot import AcademySnapshot
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
 from .assistant_application import AssistantApplication, AssistantClarityWeight
+from .hiring_form import HiringForm, HiringConfig
 from .playbook import (
     PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion, PlaybookOption,
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
@@ -50,7 +51,7 @@ __all__ = [
     'InstallmentPlan', 'ClientMergeLog', 'FichaOpcion', 'AcademySnapshot',
     'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
-    'AssistantApplication', 'AssistantClarityWeight',
+    'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES'
 ]

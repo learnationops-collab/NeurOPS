@@ -194,7 +194,21 @@ class AssistantApplication(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Con qué formulario editable (HiringForm) se contestó. None en las que
+    # llegaron antes de que existieran los formularios editables y no se
+    # asignaron todavía (ver `asegurar_semilla` en app/services/hiring_forms.py).
+    form_id = db.Column(
+        db.Integer, db.ForeignKey('hiring_forms.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Respuestas a preguntas agregadas desde el editor, que no tienen columna
+    # propia: {id de la pregunta: texto}. Siempre se reasigna el dict entero
+    # (db.JSON no detecta cambios hechos adentro).
+    respuestas_extra = db.Column(db.JSON, nullable=True)
+
     revisado_por = db.relationship('User', foreign_keys=[revisado_por_id])
+    # Many-to-one: SQLAlchemy lo resuelve por el identity map, así que listar
+    # cientos de postulaciones del mismo formulario hace UNA consulta, no una
+    # por fila.
+    form = db.relationship('HiringForm', foreign_keys=[form_id])
 
     # ------------------------------------------------------------------ #
 
