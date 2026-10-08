@@ -11,7 +11,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Loader2, Mail, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { destinoDeEntrada } from '../../utils/areas';
-import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
+import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, ICONO_FINANZAS, otrasCuentas, RUTA_FINANZAS, rolDeFinanzas, rotuloDeRol } from '../../utils/cuentasVinculadas';
 import Eleccion, { LogoEntrada, MarcoEntrada } from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
@@ -147,12 +147,20 @@ function PedirEmail({ user, onListo }) {
     );
 }
 
+// onElegido(user, destino): sigue con el rol con el que entró; `destino` solo lo pasa «Finanzas».
 function ElegirRol({ user, onElegido }) {
     const [eligiendo, setEligiendo] = useState(null);
     const [error, setError] = useState(null);
+    const roles = user.roles?.length ? user.roles : [user.role];
+    // «Finanzas» no es un rol: entra con el que la habilita (ver `rolDeFinanzas`) y va a /finanzas.
+    const rolFinanzas = rolDeFinanzas(roles, user.can_view_finance);
     const opciones = [
-        ...(user.roles?.length ? user.roles : [user.role]).map((rol) => ({ clave: `rol-${rol}`, rol, entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
-        ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, rol: c.role, detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
+        ...roles.map((rol) => ({ clave: `rol-${rol}`, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol], entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
+        ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), Icono: ICONO_DE_ROL[c.role], detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
+        ...(rolFinanzas ? [{
+            clave: 'finanzas', titulo: 'Finanzas', Icono: ICONO_FINANZAS,
+            entrar: () => (rolFinanzas === user.role ? onElegido(user, RUTA_FINANZAS) : cambiarDeRolEnLaCuenta(rolFinanzas, RUTA_FINANZAS)),
+        }] : []),
     ];
 
     const elegir = async (o) => {
@@ -173,7 +181,7 @@ function ElegirRol({ user, onElegido }) {
             eligiendo={eligiendo}
             error={error}
             opciones={opciones.map((o) => ({
-                clave: o.clave, titulo: rotuloDeRol(o.rol), detalle: o.detalle, Icono: ICONO_DE_ROL[o.rol] || User,
+                clave: o.clave, titulo: o.titulo, detalle: o.detalle, Icono: o.Icono || User,
                 onElegir: () => elegir(o),
             }))}
         />
@@ -212,7 +220,7 @@ export default function LoginPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (paso === 'rol' && user) return <ElegirRol user={user} onElegido={(u) => navigate(destinoDeEntrada(u))} />;
+    if (paso === 'rol' && user) return <ElegirRol user={user} onElegido={(u, destino) => navigate(destino || destinoDeEntrada(u))} />;
 
     return (
         <MarcoEntrada clase="lg--login">

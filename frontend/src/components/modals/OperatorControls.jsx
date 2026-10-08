@@ -56,7 +56,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
     // Una persona con varios roles se simula con uno: se pregunta con cuál (ElegirRolAlSimular).
     // `rol` null: el principal. Con `elegirRol`, el error lo muestra esa pantalla y no un alert.
-    const simular = async (rol = null, elegirRol = false) => {
+    const simular = async (rol = null, elegirRol = false, destino = null) => {
         setLoading(true);
         try {
             const res = await api.post('/auth/impersonate', { user_id: selectedUserId, ...(rol ? { role: rol } : {}) });
@@ -65,7 +65,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             // Sincronizar estado local (mismo store que ya esté usando esta pestaña)
             saveSession(targetUser, token);
 
-            window.location.href = roleLandingPath(targetUser.role);
+            window.location.href = destino || roleLandingPath(targetUser.role);
         } catch (err) {
             setLoading(false);
             if (elegirRol) throw err;
@@ -93,7 +93,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
         else simularEnPestanaNueva();
     };
 
-    const simularEnPestanaNueva = async (rol = null, elegirRol = false) => {
+    const simularEnPestanaNueva = async (rol = null, elegirRol = false, destino = null) => {
         const newTab = window.open('', '_blank');
         setLoading(true);
         try {
@@ -103,7 +103,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             const params = new URLSearchParams({
                 token,
                 u: JSON.stringify(targetUser),
-                next: roleLandingPath(targetUser.role),
+                next: destino || roleLandingPath(targetUser.role),
             });
             const url = `/session-entry?${params.toString()}`;
 
@@ -122,12 +122,13 @@ const OperatorControls = ({ isOpen, onClose }) => {
     };
 
     // Ya eligió el rol (pantalla ElegirRolAlSimular): la pestaña nueva cierra la elección, la misma entra.
-    const simularConRol = async (rol) => {
+    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finanzas» va a /finanzas).
+    const simularConRol = async (rol, destino = null) => {
         if (eligiendoRol.nuevaPestana) {
-            await simularEnPestanaNueva(rol, true);
+            await simularEnPestanaNueva(rol, true, destino);
             setEligiendoRol(null);
         } else {
-            await simular(rol, true);
+            await simular(rol, true, destino);
         }
     };
 

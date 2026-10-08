@@ -50,6 +50,25 @@ describe('LoginPage', () => {
         expect(navigate).not.toHaveBeenCalled();
     });
 
+    it('con «ver finanzas» suma la tarjeta Finanzas: entra con admin y va a /finanzas', async () => {
+        await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], can_view_finance: true, email: 'm@x.com' });
+        fireEvent.click(await screen.findByRole('button', { name: /Finanzas/ }));
+        await waitFor(() => expect(cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('admin', '/finanzas'));
+    });
+
+    it('si ya entró con el rol de Finanzas, va directo a /finanzas', async () => {
+        await entrar({ id: 1, username: 'mario', role: 'admin', roles: ['admin', 'closer'], can_view_finance: true, email: 'm@x.com' });
+        fireEvent.click(await screen.findByRole('button', { name: /Finanzas/ }));
+        expect(navigate).toHaveBeenCalledWith('/finanzas');
+        expect(cambiarDeRolEnLaCuenta).not.toHaveBeenCalled();
+    });
+
+    it('sin «ver finanzas» no hay tarjeta Finanzas', async () => {
+        await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], email: 'm@x.com' });
+        await screen.findByRole('button', { name: /Administrador/ });
+        expect(screen.queryByRole('button', { name: /Finanzas/ })).toBeNull();
+    });
+
     it('la vuelta de Google sin cuenta muestra el motivo', () => {
         montar('/login?google=sin_cuenta');
         expect(screen.getByRole('alert').textContent).toMatch(/Ninguna cuenta tiene ese email/);

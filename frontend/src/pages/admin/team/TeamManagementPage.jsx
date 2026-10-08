@@ -178,13 +178,13 @@ const TeamManagementPage = ({ embebido = false }) => {
         else return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
     };
 
-    const simularAqui = async (targetUser, rol = null) => {
+    const simularAqui = async (targetUser, rol = null, destino = null) => {
         setImpersonatingId(targetUser.id);
         try {
             const res = await api.post('/auth/impersonate', { user_id: targetUser.id, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
             saveSession(impersonatedUser, token);
-            window.location.href = roleLandingPath(impersonatedUser.role);
+            window.location.href = destino || roleLandingPath(impersonatedUser.role);
         } catch (err) {
             setImpersonatingId(null);
             throw err;
@@ -194,12 +194,12 @@ const TeamManagementPage = ({ embebido = false }) => {
     // Clic derecho sobre "Simular": abre al usuario simulado en una pestaña NUEVA, aislada (se pueden
     // simular varios a la vez). window.open() va síncrono, antes del await: los navegadores bloquean
     // como popup cualquier window.open() después de una espera.
-    const simularEnPestanaNueva = async (targetUser, rol = null) => {
+    const simularEnPestanaNueva = async (targetUser, rol = null, destino = null) => {
         const newTab = window.open('', '_blank');
         try {
             const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
-            const params = new URLSearchParams({ token, u: JSON.stringify(impersonatedUser), next: roleLandingPath(impersonatedUser.role) });
+            const params = new URLSearchParams({ token, u: JSON.stringify(impersonatedUser), next: destino || roleLandingPath(impersonatedUser.role) });
             if (newTab) newTab.location.href = `/session-entry?${params.toString()}`;
             else alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
         } catch (err) {
@@ -220,13 +220,14 @@ const TeamManagementPage = ({ embebido = false }) => {
     };
 
     // Ya eligió el rol: aquí no se captura el error, ElegirRolAlSimular lo muestra en su pantalla.
-    const simularConRol = async (rol) => {
+    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finanzas» va a /finanzas).
+    const simularConRol = async (rol, destino = null) => {
         const { persona, nuevaPestana } = simulando;
         if (nuevaPestana) {
-            await simularEnPestanaNueva(persona, rol);
+            await simularEnPestanaNueva(persona, rol, destino);
             setSimulando(null);
         } else {
-            await simularAqui(persona, rol);
+            await simularAqui(persona, rol, destino);
         }
     };
 

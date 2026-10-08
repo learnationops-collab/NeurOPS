@@ -42,7 +42,28 @@ describe('ElegirRolAlSimular', () => {
 
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Hiring/ })); });
 
-        expect(onElegir).toHaveBeenCalledWith('hiring');
+        expect(onElegir).toHaveBeenCalledWith('hiring', null);
+    });
+
+    it('con «ver finanzas» suma la tarjeta Finanzas: simula como admin y va a /finanzas', async () => {
+        const onElegir = vi.fn(() => Promise.resolve());
+        render(<ElegirRolAlSimular persona={{ ...mario, can_view_finance: true }} onElegir={onElegir} onCancelar={vi.fn()} />);
+
+        const tarjetas = screen.getAllByRole('button').map((b) => b.querySelector('b')?.textContent).filter(Boolean);
+        expect(tarjetas).toEqual(['Operador', 'Administrador', 'Closer', 'Hiring', 'Finanzas']);
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Finanzas/ })); });
+        expect(onElegir).toHaveBeenCalledWith('admin', '/finanzas');
+    });
+
+    it('sin el permiso, o sin un rol que lo use, no hay tarjeta Finanzas', () => {
+        const { unmount } = render(<ElegirRolAlSimular persona={mario} onElegir={vi.fn()} onCancelar={vi.fn()} />);
+        expect(screen.queryByRole('button', { name: /Finanzas/ })).toBeNull();
+        unmount();
+
+        render(<ElegirRolAlSimular persona={{ username: 'ana', roles: ['closer', 'setter'], can_view_finance: true }}
+            onElegir={vi.fn()} onCancelar={vi.fn()} />);
+        expect(screen.queryByRole('button', { name: /Finanzas/ })).toBeNull();
     });
 
     it('si la simulación falla, muestra el motivo y deja elegir otra vez', async () => {
