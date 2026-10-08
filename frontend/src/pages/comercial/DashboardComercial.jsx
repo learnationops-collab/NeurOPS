@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,6 +23,10 @@ import Reportar from './components/Reportar';
 import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
+import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
+import Payroll, { MenuPeriodoPayroll, rangoPayroll } from './components/finanzas/Payroll';
+import { MenuMes, guardarMes, leerMesGuardado } from './components/finanzas/comun';
+import './components/finanzas/finanzas.css';
 
 /**
  * La ficha unificada se pide por agenda o por cliente, así que una fila la puede abrir solo si
@@ -135,7 +139,15 @@ const SECCIONES = [
     { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
     { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], pronto: true },
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
+    // Las dos de plata van juntas al final del dock (08/10/2026, antes /admin/finance y
+    // /admin/payroll). `permiso` en una sección, como en una tab: solo para quien tiene «ver
+    // finanzas» (ver `puede_ver_finanzas` en app/api/comercial.py).
+    { id: 'finanzas', label: 'Finanzas', Icono: Wallet, tabs: TABS_FINANZAS, permiso: 'puede_ver_finanzas' },
+    { id: 'payroll', label: 'Payroll', Icono: Banknote, tabs: [], permiso: 'puede_ver_finanzas' },
 ];
+
+// Las secciones con su propio período: la píldora del tablero (Hoy, 7 días, Este mes…) no aplica.
+const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
 
 /**
  * Con qué fecha arranca el toggle "Fecha meet / F. creación" de cada tabla: la MISMA con la que el
@@ -179,7 +191,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const navigate = useNavigate();
     const [saliendo, setSaliendo] = useState(false);
 
-    const seccion = seccionFija || params.get('s') || 'analizar';
+    const seccionPedida = seccionFija || params.get('s') || 'analizar';
+    // Una sección con permiso que esta persona no tiene (un link a Finanzas, por ejemplo) cae a
+    // Analizar en vez de dejar la pantalla vacía.
+    const permisoPedido = SECCIONES.find(s => s.id === seccionPedida)?.permiso;
+    const seccion = permisoPedido && !contexto?.[permisoPedido] ? 'analizar' : seccionPedida;
     const period = params.get('p') || 'mes';
     const compare = params.get('vs') || 'prev';
     /**
@@ -199,6 +215,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const tabla = params.get('t') || null;
 
     const [tab, setTab] = useState('dashboard');
+    // Finanzas se mira por mes (queda el último elegido) y Payroll por un rango libre.
+    const [mesFinanzas, setMesFinanzas] = useState(leerMesGuardado);
+    const [rangoNomina, setRangoNomina] = useState(() => rangoPayroll('mes'));
     // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
     const [basisElegida, setBasisElegida] = useState({});
     const [resumen, setResumen] = useState(null);
@@ -528,7 +547,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         );
     }
 
-    const secciones = SECCIONES.filter(s => !s.soloDireccion || contexto.puede_reportar);
+    const secciones = SECCIONES.filter(s => (!s.soloDireccion || contexto.puede_reportar)
+        && (!s.permiso || contexto[s.permiso]));
     const titulo = contexto.puede_elegir_equipo ? seccionActual.label : `${seccionActual.label} · mis datos`;
     const salida = SALIDA[contexto.yo.rol];
 
@@ -676,7 +696,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                         {/* Con "Personalizado" la píldora dice el rango, y su menú queda abierto
                             con las dos fechas debajo de los períodos. */}
-                        {seccion !== 'reportar' && (
+                        {seccion === 'finanzas' && (
+                            <MenuMes mes={mesFinanzas} onCambiar={(m) => { setMesFinanzas(m); guardarMes(m); }} />
+                        )}
+                        {seccion === 'payroll' && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
+
+                        {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && (
                             <PillMenu icono={<Calendar size={14} />} rotulo="período"
                                 texto={rango ? textoRango(rango) : etiquetaPeriodo}
                                 detalle={period !== 'custom' && resumen?.dates
@@ -738,6 +763,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onAbrirFila={abrirFila}
                             onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
                     )}
+                    {seccion === 'finanzas' && <Finanzas tab={tab} mes={mesFinanzas} />}
+                    {seccion === 'payroll' && <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} />}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}

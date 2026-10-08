@@ -38,6 +38,16 @@ EXCEPCIONES = {
         'setter': 'Mismo motivo que el closer: el setter ve el dashboard como "Mis datos" y no dispara '
                   'lotes contra el limite de la Academia; ni siquiera ve las tablas Clientes y Ventas.',
     },
+    # Payroll es una seccion del mismo dashboard (08/10/2026) y solo se dibuja con «ver finanzas»
+    # (`puede_ver_finanzas`: admin o direccion comercial con el permiso). La nomina de todo el equipo no
+    # es de closers ni setters; la vista ademas la acota al permiso (`finance_admin_required`).
+    **{ruta: {
+        'closer': 'La nomina con la comision de todo el equipo: el closer ve su propia comision en su '
+                  'espacio de trabajo, no la de los demas, y la seccion Payroll no se le muestra.',
+        'setter': 'Mismo motivo que el closer: la seccion Payroll no aparece en sus "Mis datos" y la nomina '
+                  'del equipo no es informacion para un setter.',
+    } for ruta in (('GET', '/api/public/financial-sales/payroll'),
+                   ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
 }
 
 
