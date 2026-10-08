@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Calendar, Check, Copy, Eye, EyeOff, Ghost, KeyRound, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
+import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
 import VincularCuentasModal from './VincularCuentasModal';
 import { Segmented } from '../../comercial/components/Shared';
 import '../../comercial/comercial.css';
@@ -106,6 +107,7 @@ const TeamManagementPage = ({ embebido = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeRole, setActiveRole] = useState('all');
     const [impersonatingId, setImpersonatingId] = useState(null);
+    const [simulando, setSimulando] = useState(null); // { persona, nuevaPestana }: eligiendo con qué rol
     const [showDeactivated, setShowDeactivated] = useState(false);
     const [vinculando, setVinculando] = useState(false);
 
@@ -168,12 +170,12 @@ const TeamManagementPage = ({ embebido = false }) => {
         }
     };
 
-    // Simular entra con el rol principal de la persona. En develop, a quien tiene varios roles se le
-    // pregunta con cuál (`ElegirRolAlSimular`), que depende de la pantalla nueva de entrada: en main
-    // todavía no está.
+    // Simular: con varios roles se pregunta con cuál (ElegirRolAlSimular); con uno, entra directo.
+    // `nuevaPestana` recuerda si fue clic derecho para seguir después de elegir.
     const iniciarSimulacion = (targetUser, nuevaPestana) => {
         if (!targetUser.is_active) return;
-        return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
+        if (tieneVariosRoles(targetUser)) setSimulando({ persona: targetUser, nuevaPestana });
+        else return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
     };
 
     const simularAqui = async (targetUser, rol = null) => {
@@ -215,6 +217,17 @@ const TeamManagementPage = ({ embebido = false }) => {
         e.preventDefault();
         const r = iniciarSimulacion(targetUser, true);
         r?.catch((err) => alert(err.response?.data?.message || 'Error al iniciar simulación'));
+    };
+
+    // Ya eligió el rol: aquí no se captura el error, ElegirRolAlSimular lo muestra en su pantalla.
+    const simularConRol = async (rol) => {
+        const { persona, nuevaPestana } = simulando;
+        if (nuevaPestana) {
+            await simularEnPestanaNueva(persona, rol);
+            setSimulando(null);
+        } else {
+            await simularAqui(persona, rol);
+        }
     };
 
     // Contraseña temporal nueva: se muestra una sola vez para pasársela a la persona.
@@ -338,6 +351,10 @@ const TeamManagementPage = ({ embebido = false }) => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {simulando && (
+                <ElegirRolAlSimular persona={simulando.persona} onElegir={simularConRol} onCancelar={() => setSimulando(null)} />
             )}
 
             {reseteada && (
