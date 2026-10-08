@@ -110,22 +110,45 @@ def _form_pedido(valor):
     return db.session.get(HiringForm, valor)
 
 
+def _puntaje(valor):
+    """El `<id>_pts` que manda el formulario (suma de los `pts` de las opciones
+    marcadas): un número, o None si no viene o no es un número."""
+    if isinstance(valor, bool):
+        return None
+    if isinstance(valor, (int, float)):
+        return valor
+    if isinstance(valor, str):
+        try:
+            numero = float(valor.strip().replace(',', '.'))
+        except ValueError:
+            return None
+        return int(numero) if numero.is_integer() else numero
+    return None
+
+
 def _guardar_extras(app_row, form, data):
-    """Las respuestas a preguntas de `form` que no tienen columna se suman a
-    `respuestas_extra`. Mismo criterio que `_set_si_presente`: lo que no viene
-    en este POST no borra lo que ya estaba."""
+    """Se suman a `respuestas_extra`:
+      · las respuestas a preguntas de `form` que no tienen columna;
+      · el puntaje `<id>_pts` de las preguntas de `form` que puntúan (lo manda
+        el formulario en las de opción múltiple con `pts`), tenga o no columna
+        la pregunta.
+    Mismo criterio que `_set_si_presente`: lo que no viene en este POST no
+    borra lo que ya estaba."""
     if form is None:
         return
     extras = dict(app_row.respuestas_extra or {})
     cambio = False
     for pregunta in form.preguntas or []:
         pid = pregunta.get('id') if isinstance(pregunta, dict) else None
-        if not pid or pid in CAMPOS or pid in ALIAS or pid in RESERVADAS or pregunta.get('tipo') == 'intro':
+        if not pid or pregunta.get('tipo') == 'intro':
             continue
-        valor = _texto(data.get(pid), MAX_LARGO)
-        if valor is not None and extras.get(pid) != valor:
-            extras[pid] = valor
-            cambio = True
+        nuevos = {f'{pid}_pts': _puntaje(data.get(f'{pid}_pts'))}
+        if pid not in CAMPOS and pid not in ALIAS and pid not in RESERVADAS:
+            nuevos[pid] = _texto(data.get(pid), MAX_LARGO)
+        for clave, valor in nuevos.items():
+            if valor is not None and extras.get(clave) != valor:
+                extras[clave] = valor
+                cambio = True
     if cambio:
         # Dict nuevo: db.JSON no se entera de cambios hechos adentro del viejo.
         app_row.respuestas_extra = extras

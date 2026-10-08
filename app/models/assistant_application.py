@@ -401,8 +401,14 @@ class AssistantApplication(db.Model):
         salida = []
         if form is not None:
             for p in form.preguntas or []:
-                if isinstance(p, dict) and p.get('id') in extras:
+                if not isinstance(p, dict) or not p.get('id'):
+                    continue
+                if p['id'] in extras:
                     salida.append({"id": p['id'], "t": p.get('t') or p['id'], "bloque": p.get('bloque')})
+                # El puntaje que manda el formulario en las de opción múltiple.
+                if f"{p['id']}_pts" in extras:
+                    salida.append({"id": f"{p['id']}_pts", "t": f"{p.get('t') or p['id']} · puntos",
+                                   "bloque": p.get('bloque')})
         ya = {e['id'] for e in salida}
         salida += [{"id": pid, "t": pid, "bloque": None} for pid in extras if pid not in ya]
         return salida

@@ -157,3 +157,21 @@ def test_una_pregunta_nueva_no_pisa_columnas_ni_claves_reservadas(client, db):
     fila = AssistantApplication.query.one()
     assert fila.respuestas_extra is None
     assert fila.email == 'ana@test.local' and fila.completo is True
+
+
+def test_los_puntajes_pts_de_las_preguntas_del_formulario_se_guardan(client, db, make_user, auth_headers):
+    form = _form(db, extra=[HERRAMIENTAS])
+    marcadas = ['Creé mis propios GPTs o asistentes personalizados para tareas que repito', 'Casi no la uso']
+
+    _post(client, form_id=form.id, ia_avanzado=marcadas, ia_avanzado_pts=5, otras_apps=['Canva'],
+          otras_apps_pts='3', inventada_pts=9, notion_pts='mucho')
+    _post(client, form_id=form.id, pais='Argentina')  # un POST sin los puntajes no los borra
+
+    fila = AssistantApplication.query.one()
+    assert fila.ia_avanzado == ' | '.join(marcadas)
+    assert fila.respuestas_extra == {'ia_avanzado_pts': 5, 'otras_apps': 'Canva', 'otras_apps_pts': 3}
+
+    detalle = client.get(f'/api/assistant-applications/{fila.id}',
+                         headers=auth_headers(make_user(role='hiring'))).get_json()
+    assert [e['id'] for e in detalle['preguntas_extra']] == ['ia_avanzado_pts', 'otras_apps', 'otras_apps_pts']
+    assert detalle['preguntas_extra'][0]['t'].endswith('· puntos')
