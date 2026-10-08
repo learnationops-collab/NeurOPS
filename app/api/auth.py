@@ -213,7 +213,16 @@ def impersonate():
     target_user = User.query.get(target_user_id)
     if not target_user:
         return jsonify({"message": "User not found"}), 404
-    if permitidos is not None and target_user.role not in permitidos:
+
+    # Una persona con varios roles se simula con UNO a la vez: el que se elige (`role`, entre los que
+    # de verdad tiene) o, sin elegir, su rol principal. Lo que puede simular quien está detrás se
+    # decide por ese rol, no por los demás que la persona tenga.
+    rol = data.get('role')
+    if rol is not None and (not isinstance(rol, str) or not target_user.tiene_rol(rol)):
+        return jsonify({"message": "Rol no válido para esa persona"}), 400
+    rol = rol or target_user._role
+    principal = rol == target_user._role
+    if permitidos is not None and rol not in permitidos:
         return jsonify({"message": "Forbidden"}), 403
     if not target_user.is_active:
         return jsonify({"message": "User is inactive"}), 400
@@ -228,7 +237,11 @@ def impersonate():
             session['original_user_role'] = current_user.role
             session['is_impersonating'] = True
         login_user(target_user)
-        session.pop('active_role', None)
+        if principal:
+            session.pop('active_role', None)
+        else:
+            session['active_role'] = rol
+    target_user.activar_rol(rol)
 
     # El estado de suplantación viaja en las claims del propio JWT (no en session) para que
     # cada pestaña con su propio token mantenga su propia identidad simulada.
@@ -236,6 +249,7 @@ def impersonate():
         is_impersonating=True,
         original_user_id=original_id,
         original_user_role=original_role,
+        **({} if principal else {'active_role': rol}),
     )
 
     return jsonify({
