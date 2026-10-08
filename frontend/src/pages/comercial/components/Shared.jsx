@@ -136,6 +136,7 @@ export const Segmented = ({ opciones, valor, onChange, ariaLabel, chico }) => (
             <button key={o.key} type="button" role="tab" aria-selected={valor === o.key}
                 className={`tab${chico ? ' tab--sm' : ''}`} onClick={() => onChange(o.key)}>
                 {o.label}
+                {o.cuenta !== undefined && o.cuenta !== null && <span className="cuenta num">{o.cuenta}</span>}
             </button>
         ))}
     </div>
