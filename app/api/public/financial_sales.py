@@ -758,7 +758,8 @@ def get_financial_sales_payroll():
     tasas['marlon'] = DIRECTOR_RATE
     ventas_de = {clave: [] for clave in tasas}
     recaudado = {clave: 0.0 for clave in tasas}
-    
+    completadas = []  # (venta, sale_data) para la nómina de Fulfillment
+
     for s in sales:
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
@@ -810,6 +811,7 @@ def get_financial_sales_payroll():
             "is_excluded_from_payroll": s.is_excluded_from_payroll or False
         }
         
+        completadas.append((s, sale_data))
         excluida = sale_data["is_excluded_from_payroll"]
 
         def sumar(clave):
@@ -831,7 +833,7 @@ def get_financial_sales_payroll():
             if not is_renovacion:
                 sumar('marlon')
 
-    return jsonify({
+    nomina = {
         clave: {
             "sales": ventas_de[clave],
             "total_recaudado_neto": round(recaudado[clave], 2),
@@ -840,7 +842,11 @@ def get_financial_sales_payroll():
             "total_ventas": len([x for x in ventas_de[clave] if not x["is_excluded_from_payroll"]])
         }
         for clave, tasa in tasas.items()
-    }), 200
+    }
+    # Fulfillment: el % cambia venta a venta (programa y fuente), así que cada venta trae el suyo.
+    from app.services.fulfillment_commission_service import nomina_por_persona
+    nomina.update(nomina_por_persona(completadas))
+    return jsonify(nomina), 200
 
 @bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])
 def resend_financial_sale_webhook(sale_id):

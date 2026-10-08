@@ -69,6 +69,9 @@ def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ve
     datos = r.get_json()
     resumen = {clave: (d['porcentaje_comision'], d['comision_total'], d['total_ventas'], len(d['sales']))
                for clave, d in datos.items()}
+    # Ninguna de estas ventas trae programa (AL/RR/SI): Fulfillment aparece, pero vacío.
+    for clave in ('andy', 'dari', 'santi', 'belu', 'pedro'):
+        assert resumen.pop(clave) == (None, 0.0, 0, 0)
     assert resumen == {
         'elias': (8.0, 80.0, 1, 1),
         'paula': (8.0, 64.0, 2, 2),

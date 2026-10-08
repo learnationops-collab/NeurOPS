@@ -87,6 +87,30 @@ def test_cada_integrante_se_reconoce_por_su_nombre(nombre, clave):
     assert clave_de_miembro(nombre) == clave
 
 
+def test_el_consolidado_lista_cada_venta_con_su_porcentaje(client, db, make_user, auth_headers):
+    venta(db, 'SI - Seña', 100.0, fecha=datetime(2026, 8, 20), mail='lead@test.local')
+    venta(db, 'SI - Parcial', 1000.0, fecha=datetime(2026, 9, 5), mail='lead@test.local')
+    venta(db, 'AL - Cuota', 500.0, fecha=datetime(2026, 9, 6))
+    excluida = venta(db, 'RR - Upsell', 200.0, fecha=datetime(2026, 9, 7))
+    excluida.is_excluded_from_payroll = True
+    venta(db, 'RR - Upsell', 300.0, fecha=datetime(2026, 8, 31))  # antes de que arranque Fulfillment
+    db.session.commit()
+
+    r = client.get('/api/public/financial-sales/payroll?start_date=2026-08-01&end_date=2026-09-30',
+                   headers=auth_headers(make_user(role='admin')))
+
+    assert r.status_code == 200
+    datos = r.get_json()
+    andy, belu, pedro = datos['andy'], datos['belu'], datos['pedro']
+    assert [(s['fuente'], s['porcentaje'], s['comision']) for s in andy['sales']] == [
+        ('conversion', 3, 30.0), ('cuota', 1, 5.0), ('upsell', 2, 4.0)]
+    assert (andy['comision_total'], andy['total_ventas'], andy['total_recaudado_neto']) == (35.0, 2, 1500.0)
+    # Belu no cobra cuotas de Ace: esa venta ni se le lista.
+    assert [s['fuente'] for s in belu['sales']] == ['conversion', 'upsell']
+    # Pedro: 1% de la conversión en Specialist y del upsell (excluido de la nómina).
+    assert (pedro['comision_total'], pedro['total_ventas'], len(pedro['sales'])) == (10.0, 1, 2)
+
+
 def test_la_nomina_suma_la_comision_encima_del_sueldo_fijo(db):
     venta(db, 'RR - Cuota', 1000.0)
     venta(db, 'RR - Cuota', 1000.0, estado='Cancelada')

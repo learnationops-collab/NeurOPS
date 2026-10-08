@@ -10,6 +10,8 @@ Un pago parcial o completo sin seña previa es una venta nueva del closer, no de
 
 Se cobra sobre el monto NETO (sin la fee de Stripe/Hotmart), como el resto de la nómina.
 """
+from datetime import datetime
+
 from sqlalchemy import or_
 
 from app.services.commission_service import cash_neto_de
@@ -89,13 +91,18 @@ def fuente_de(venta, tipo, primera_sena):
     return None
 
 
-def recaudado_por_programa(sales):
-    """{(programa, fuente) -> monto neto} de los ingresos de Fulfillment entre `sales`
-    (ya filtradas por mes y por estado completado)."""
+def tasa_de(clave, programa, fuente):
+    """El % que cobra una persona sobre un ingreso de ese programa y esa fuente."""
+    return TASAS[clave][programa][FUENTES.index(fuente)]
+
+
+def ingresos_de_fulfillment(sales):
+    """[(venta, programa, fuente)] de las ventas de `sales` (ya filtradas por estado completado)
+    que son ingresos de Fulfillment."""
     from app.services.sheets_service import SheetsService
 
     primera_sena = None
-    recaudado = {}
+    ingresos = []
     for s in sales:
         programa, tipo = SheetsService.parse_tipo_pago(s.tipo_pago)
         if programa not in ('AL', 'RR', 'SI'):
@@ -103,8 +110,16 @@ def recaudado_por_programa(sales):
         if tipo in ('parcial', 'completo') and primera_sena is None:
             primera_sena = _primera_sena_por_cliente()
         fuente = fuente_de(s, tipo, primera_sena or {})
-        if not fuente:
-            continue
+        if fuente:
+            ingresos.append((s, programa, fuente))
+    return ingresos
+
+
+def recaudado_por_programa(sales):
+    """{(programa, fuente) -> monto neto} de los ingresos de Fulfillment entre `sales`
+    (ya filtradas por mes y por estado completado)."""
+    recaudado = {}
+    for s, programa, fuente in ingresos_de_fulfillment(sales):
         recaudado[(programa, fuente)] = recaudado.get((programa, fuente), 0.0) + cash_neto_de(s.monto, s.metodo_pago)
     return recaudado
 
@@ -122,3 +137,43 @@ def comisiones_del_mes(month_str, sales):
                 total += recaudado.get((programa, fuente), 0.0) * tasa / 100
         comisiones[clave] = round(total, 2)
     return comisiones
+
+
+# Para el Consolidado de Nómina, que filtra por un rango de fechas libre: el primer día con comisión.
+DESDE_FECHA = datetime(int(DESDE[:4]), int(DESDE[5:]), 1)
+
+
+def nomina_por_persona(ventas):
+    """El Consolidado de Nómina de Fulfillment: {clave -> {'sales', 'total_recaudado_neto',
+    'comision_total', 'total_ventas', ...}}, con la misma forma que el resto de las personas.
+    `ventas` son pares (venta completada, dict de la venta que arma el endpoint, con
+    `is_excluded_from_payroll`). Cada venta lleva su programa, su fuente, el % de esa persona y su
+    comisión, porque el % cambia venta a venta. Una venta que a esa persona no le paga nada (0%)
+    no se lista."""
+    datos_de = {id(v): d for v, d in ventas}
+    vigentes = [v for v, _ in ventas if v.date and v.date >= DESDE_FECHA]
+    ingresos = ingresos_de_fulfillment(vigentes)
+
+    nomina = {}
+    for clave in TASAS:
+        filas, neto, comision = [], 0.0, 0.0
+        for venta, programa, fuente in ingresos:
+            tasa = tasa_de(clave, programa, fuente)
+            if not tasa:
+                continue
+            datos = datos_de[id(venta)]
+            monto_neto = cash_neto_de(venta.monto, venta.metodo_pago)
+            fila = {**datos, 'programa': programa, 'fuente': fuente, 'porcentaje': tasa,
+                    'comision': round(monto_neto * tasa / 100, 2)}
+            filas.append(fila)
+            if not datos['is_excluded_from_payroll']:
+                neto += monto_neto
+                comision += monto_neto * tasa / 100
+        nomina[clave] = {
+            'sales': filas,
+            'total_recaudado_neto': round(neto, 2),
+            'porcentaje_comision': None,
+            'comision_total': round(comision, 2),
+            'total_ventas': len([f for f in filas if not f['is_excluded_from_payroll']]),
+        }
+    return nomina

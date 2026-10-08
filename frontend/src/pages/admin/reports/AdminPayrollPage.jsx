@@ -56,15 +56,18 @@ const formatSaleDate = (dateStr) => {
 
 // Quienes cobran comision en la nomina; el `id` es la clave con la que viaja cada una en
 // /public/financial-sales/payroll. Las clases van completas para que Tailwind las vea.
-// Fila de arriba los dos setters (mitad y mitad), abajo los closers y el director (tercios).
+// Ventas: arriba los dos setters (mitad y mitad), abajo los closers y el director (tercios).
+// Fulfillment: los cinco en una fila, con la tarjeta compacta porque cada una es angosta.
 const TONOS = {
     indigo: { badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20', hover: 'group-hover:text-indigo-400' },
     violet: { badge: 'bg-violet-500/10 text-violet-400 border-violet-500/20', hover: 'group-hover:text-violet-400' },
     rose: { badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20', hover: 'group-hover:text-rose-400' },
+    teal: { badge: 'bg-teal-500/10 text-teal-400 border-teal-500/20', hover: 'group-hover:text-teal-400' },
 };
 
-const SETTER = { rol: 'Setter', icono: Compass, tono: 'indigo', ancho: 'lg:col-span-3', ventas: 'Ventas Atribuidas', neto: 'Neto' };
-const CLOSER = { rol: 'Closer', icono: UserCheck, tono: 'violet', ancho: 'lg:col-span-2', ventas: 'Ventas Cerradas', neto: 'Neto' };
+const SETTER = { grupo: 'ventas', rol: 'Setter', icono: Compass, tono: 'indigo', ancho: 'lg:col-span-3', ventas: 'Ventas Atribuidas', neto: 'Neto' };
+const CLOSER = { grupo: 'ventas', rol: 'Closer', icono: UserCheck, tono: 'violet', ancho: 'lg:col-span-2', ventas: 'Ventas Cerradas', neto: 'Neto' };
+const FULFILLMENT = { grupo: 'fulfillment', rol: 'Fulfillment', icono: Users, tono: 'teal', ancho: '', ventas: 'Ingresos', neto: 'Neto' };
 
 const PERSONAS = [
     { ...SETTER, id: 'elias', nombre: 'Elias', auditoria: 'atribuidas a Elías como Setter' },
@@ -72,11 +75,27 @@ const PERSONAS = [
     { ...CLOSER, id: 'jeancarlo', nombre: 'Jean Carlo', auditoria: 'cerradas por Jean Carlo como Closer' },
     { ...CLOSER, id: 'facundo', nombre: 'Facundo', auditoria: 'cerradas por Facundo como Closer' },
     {
-        id: 'marlon', nombre: 'Marlon', rol: 'Director de ventas', icono: UserCheck, tono: 'rose', ancho: 'lg:col-span-2',
+        grupo: 'ventas', id: 'marlon', nombre: 'Marlon', rol: 'Director de ventas', icono: UserCheck, tono: 'rose', ancho: 'lg:col-span-2',
         ventas: 'Ventas Closers Calificadas', neto: 'Neto Closers',
         auditoria: 'cerradas por Jean Carlo y Facundo (excluyendo renovaciones) para la comisión de Marlon',
     },
+    ...[['andy', 'Andy'], ['dari', 'Dari'], ['santi', 'Santi'], ['belu', 'Belu'], ['pedro', 'Pedro']].map(([id, nombre]) => ({
+        ...FULFILLMENT, id, nombre,
+        auditoria: `de Fulfillment (renovaciones, upsells, conversiones de seña y cuotas) que le dan comisión a ${nombre}`,
+    })),
 ];
+
+const GRUPOS = [
+    { id: 'ventas', titulo: 'Equipo de ventas', columnas: 'lg:grid-cols-6' },
+    { id: 'fulfillment', titulo: 'Fulfillment', columnas: 'lg:grid-cols-5' },
+];
+
+const FUENTES = { renovacion: 'Renovación', upsell: 'Upsell', conversion: 'Conversión', cuota: 'Cuota' };
+
+const formatoMonto = (valor, decimales) => new Intl.NumberFormat('en-US', { minimumFractionDigits: decimales }).format(valor);
+
+// Las de Fulfillment no tienen un % fijo: depende del programa y de la fuente de cada ingreso.
+const etiquetaPorcentaje = (datos) => (datos.porcentaje_comision == null ? '% por programa' : `${datos.porcentaje_comision}% Comisión`);
 
 const AdminPayrollPage = () => {
     const reducirMovimiento = useReducedMotion();
@@ -86,6 +105,7 @@ const AdminPayrollPage = () => {
     const [payroll, setPayroll] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('elias');
+    const esFulfillment = PERSONAS.find((p) => p.id === activeTab)?.grupo === 'fulfillment';
 
     const startDateRef = useRef(null);
     const endDateRef = useRef(null);
@@ -339,13 +359,23 @@ const AdminPayrollPage = () => {
                 </div>
             ) : payroll ? (
                 <>
-                    {/* Tarjetas KPI de comisiones */}
+                    {/* Tarjetas KPI de comisiones, por grupo */}
+                    {GRUPOS.map((grupo) => {
+                        const visibles = PERSONAS.filter((p) => p.grupo === grupo.id && payroll[p.id]
+                            && (selectedUserFilter === 'all' || selectedUserFilter === p.id));
+                        if (!visibles.length) return null;
+                        const compacto = grupo.id === 'fulfillment';
+                        return (
+                    <section key={grupo.id} className="space-y-3">
+                    {selectedUserFilter === 'all' && (
+                        <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">{grupo.titulo}</h2>
+                    )}
                     <div className={`grid grid-cols-1 gap-6 ${
                         selectedUserFilter === 'all'
-                            ? 'lg:grid-cols-6'
+                            ? grupo.columnas
                             : 'max-w-md lg:grid-cols-1'
                     }`}>
-                        {PERSONAS.filter((p) => selectedUserFilter === 'all' || selectedUserFilter === p.id).map((p, i) => {
+                        {visibles.map((p, i) => {
                             const datos = payroll[p.id];
                             const tono = TONOS[p.tono];
                             const Icono = p.icono;
@@ -364,33 +394,36 @@ const AdminPayrollPage = () => {
                                             : 'border-slate-800 hover:border-slate-700'
                                     }`}
                                 >
-                                    <div className="flex justify-between items-start">
+                                    <div className={compacto ? 'space-y-1' : 'flex justify-between items-start'}>
                                         <div className="space-y-1">
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${tono.badge}`}>
                                                 <Icono size={10} /> {p.rol}
                                             </span>
                                             <h2 className={`text-lg font-black text-white uppercase transition-colors ${tono.hover}`}>{p.nombre}</h2>
                                         </div>
-                                        <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{datos.porcentaje_comision}% Comisión</span>
+                                        <span className="block text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{etiquetaPorcentaje(datos)}</span>
                                     </div>
 
                                     <div className="mt-6 space-y-2">
-                                        <div className="flex items-baseline justify-between">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
-                                            <span className="text-2xl font-black text-emerald-400 italic">
-                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(datos.comision_total)}
+                                        <div className={compacto ? 'space-y-1' : 'flex items-baseline justify-between'}>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
+                                            <span className="block text-2xl font-black text-emerald-400 italic">
+                                                ${formatoMonto(datos.comision_total, 2)}
                                             </span>
                                         </div>
                                         <div className="w-full bg-slate-950/60 h-px" />
-                                        <div className="flex justify-between text-xs text-slate-400">
-                                            <span>{p.ventas}: <strong className="text-white">{datos.total_ventas}</strong></span>
-                                            <span>{p.neto}: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(datos.total_recaudado_neto)}</strong></span>
+                                        <div className={`text-xs text-slate-400 ${compacto ? 'space-y-1' : 'flex justify-between'}`}>
+                                            <span className="block">{p.ventas}: <strong className="text-white">{datos.total_ventas}</strong></span>
+                                            <span className="block">{p.neto}: <strong>${formatoMonto(datos.total_recaudado_neto, 0)}</strong></span>
                                         </div>
                                     </div>
                                 </motion.div>
                             );
                         })}
                     </div>
+                    </section>
+                        );
+                    })}
 
                     {/* Desglose de Auditoría */}
                     <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/10">
@@ -398,7 +431,9 @@ const AdminPayrollPage = () => {
                             <div>
                                 <h3 className="text-md font-black text-white uppercase tracking-wider">Auditoría de Ventas</h3>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
-                                    {`Lista de transacciones del período ${PERSONAS.find((p) => p.id === activeTab)?.auditoria} (${payroll[activeTab].porcentaje_comision}% de comisión).`}
+                                    {`Lista de transacciones del período ${PERSONAS.find((p) => p.id === activeTab)?.auditoria} (${
+                                        esFulfillment ? 'el % depende del programa y la fuente' : `${payroll[activeTab].porcentaje_comision}% de comisión`
+                                    }).`}
                                 </p>
                             </div>
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -415,6 +450,9 @@ const AdminPayrollPage = () => {
                                         <th className="p-4 font-semibold">Cliente</th>
                                         <th className="p-4 font-semibold">Programa</th>
                                         <th className="p-4 font-semibold">Método</th>
+                                        {esFulfillment && (
+                                            <th className="p-4 font-semibold">Fuente</th>
+                                        )}
                                         {selectedUserFilter === 'all' && (
                                             <th className="p-4 font-semibold text-right">Monto Bruto</th>
                                         )}
@@ -423,8 +461,8 @@ const AdminPayrollPage = () => {
                                 </thead>
                                 <tbody className="text-sm text-slate-350 divide-y divide-slate-800/40">
                                     {payroll[activeTab].sales.map((sale) => {
-                                        const rate = payroll[activeTab].porcentaje_comision;
-                                        const comisionVal = (sale.monto_neto * rate) / 100;
+                                        // Fulfillment trae la comisión de cada venta (su % cambia venta a venta).
+                                        const comisionVal = sale.comision ?? (sale.monto_neto * payroll[activeTab].porcentaje_comision) / 100;
                                         const isExcluded = sale.is_excluded_from_payroll;
                                         
                                         return (
@@ -454,6 +492,11 @@ const AdminPayrollPage = () => {
                                                 <td className="p-4 text-xs">
                                                     {sale.metodo_pago}
                                                 </td>
+                                                {esFulfillment && (
+                                                    <td className="p-4 text-xs whitespace-nowrap">
+                                                        {FUENTES[sale.fuente] || sale.fuente} · <strong>{sale.porcentaje}%</strong>
+                                                    </td>
+                                                )}
                                                 {selectedUserFilter === 'all' && (
                                                     <td className="p-4 text-right font-medium">
                                                         ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sale.monto_bruto)}
@@ -468,7 +511,7 @@ const AdminPayrollPage = () => {
 
                                     {payroll[activeTab].sales.length === 0 && (
                                         <tr>
-                                            <td colSpan={selectedUserFilter === 'all' ? 7 : 6} className="p-12 text-center text-slate-500 italic">
+                                            <td colSpan={(selectedUserFilter === 'all' ? 7 : 6) + (esFulfillment ? 1 : 0)} className="p-12 text-center text-slate-500 italic">
                                                 No se encontraron ventas calificadas en este rango de fecha.
                                             </td>
                                         </tr>
