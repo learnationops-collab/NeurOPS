@@ -412,7 +412,7 @@ def aviso_whatsapp(appt):
         'telefono': lead.get('telefono'),
         'instagram': ('@' + lead['instagram']) if lead.get('instagram') else None,
         'dia': f'{DIAS[local.weekday()]} {local.day}',
-        'hora': f'{hora} {BANDERAS.get(pais['c'], "🌍")}',
+        'hora': f'{hora} {BANDERAS.get(pais["c"], "🌍")}',
         'grupo': payload.get('prioridad_nombre'),
         'fuente': (setter.username if setter else payload.get('origen') or payload.get('funnel_slug')),
     }
