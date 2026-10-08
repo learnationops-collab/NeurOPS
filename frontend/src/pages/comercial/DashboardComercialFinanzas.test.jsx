@@ -41,9 +41,9 @@ vi.mock('./components/finanzas/Payroll', async (original) => ({
     default: ({ desde, hasta }) => <div data-testid="payroll">{`${desde} → ${hasta}`}</div>,
 }));
 
-const montar = (url = '/admin/comercial') => render(
+const montar = (url = '/admin/comercial', props = {}) => render(
     <MemoryRouter initialEntries={[url]}>
-        <DashboardComercial />
+        <DashboardComercial {...props} />
     </MemoryRouter>,
 );
 
@@ -107,5 +107,43 @@ describe('DashboardComercial · Finanzas y Payroll', () => {
         const pasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
         const mesPasado = `${pasado.getFullYear()}-${String(pasado.getMonth() + 1).padStart(2, '0')}`;
         expect(screen.getByTestId('payroll').textContent).toMatch(new RegExp(`^${mesPasado}-01 → ${mesPasado}-`));
+    });
+});
+
+/** /finanzas: la tarjeta «Finanzas» de la elección de rol abre el tablero con solo estas dos. */
+describe('DashboardComercial · espacio Finanzas', () => {
+    beforeEach(() => {
+        try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+    });
+
+    it('el dock trae solo Finanzas y Payroll, sin el switch Closers/Setters, y abre en Finanzas', async () => {
+        estado.puede = true;
+        montar('/finanzas', { espacio: 'finanzas' });
+
+        await screen.findByTestId('finanzas');
+        expect(seccionesDelDock()).toEqual(['Finanzas', 'Payroll']);
+        expect(screen.queryByRole('button', { name: 'Closers' })).toBeNull();
+        expect(screen.queryByTestId('analizar')).toBeNull();
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Finanzas');
+    });
+
+    it('una sección de Comercial en la URL abre Finanzas, y Payroll se elige en el dock', async () => {
+        estado.puede = true;
+        montar('/finanzas?s=analizar', { espacio: 'finanzas' });
+
+        await screen.findByTestId('finanzas');
+        const dock = screen.getByRole('navigation', { name: 'Secciones del dashboard comercial' });
+        await act(async () => { fireEvent.click(within(dock).getByRole('button', { name: /Payroll/ })); });
+        expect(screen.getByTestId('payroll')).toBeTruthy();
+        expect(screen.queryByTestId('finanzas')).toBeNull();
+    });
+
+    it('sin «ver finanzas» avisa en vez de caer en Analizar', async () => {
+        estado.puede = false;
+        montar('/finanzas', { espacio: 'finanzas' });
+
+        expect(await screen.findByText('Sin acceso a Finanzas')).toBeTruthy();
+        expect(screen.queryByTestId('analizar')).toBeNull();
+        expect(screen.queryByTestId('finanzas')).toBeNull();
     });
 });

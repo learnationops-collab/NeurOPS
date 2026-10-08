@@ -150,6 +150,13 @@ const SECCIONES = [
 const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
 
 /**
+ * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
+ * /finanzas, la tarjeta «Finanzas» de la elección de rol: Finanzas y Payroll solas, sin el switch
+ * Closers/Setters. Siguen también al final del dock de Comercial.
+ */
+const ESPACIOS = { finanzas: ['finanzas', 'payroll'] };
+
+/**
  * Con qué fecha arranca el toggle "Fecha meet / F. creación" de cada tabla: la MISMA con la que el
  * backend cuenta su número, para que la lista recién abierta cierre con el dato de Analizar. Las
  * agendas generadas se cuentan por cuándo se reservaron (ver `ComercialService.generadas`); las
@@ -184,18 +191,23 @@ const FaltaFecha = ({ texto, children }) => (
     </section>
 );
 
-const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null }) => {
+const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [saliendo, setSaliendo] = useState(false);
 
-    const seccionPedida = seccionFija || params.get('s') || 'analizar';
+    // En un espacio, una `s` que no es de sus secciones abre la primera.
+    const delEspacio = espacio ? ESPACIOS[espacio] : null;
+    const seccionPedida = seccionFija
+        || (delEspacio && !delEspacio.includes(params.get('s')) ? delEspacio[0] : params.get('s'))
+        || 'analizar';
     // Una sección con permiso que esta persona no tiene (un link a Finanzas, por ejemplo) cae a
-    // Analizar en vez de dejar la pantalla vacía.
+    // Analizar en vez de dejar la pantalla vacía. En un espacio no hay Analizar: queda la pedida y,
+    // sin el permiso, se avisa (ver `sinPermiso`).
     const permisoPedido = SECCIONES.find(s => s.id === seccionPedida)?.permiso;
-    const seccion = permisoPedido && !contexto?.[permisoPedido] ? 'analizar' : seccionPedida;
+    const seccion = permisoPedido && !contexto?.[permisoPedido] && !delEspacio ? 'analizar' : seccionPedida;
     const period = params.get('p') || 'mes';
     const compare = params.get('vs') || 'prev';
     /**
@@ -548,9 +560,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }
 
     const secciones = SECCIONES.filter(s => (!s.soloDireccion || contexto.puede_reportar)
-        && (!s.permiso || contexto[s.permiso]));
-    const titulo = contexto.puede_elegir_equipo ? seccionActual.label : `${seccionActual.label} · mis datos`;
-    const salida = SALIDA[contexto.yo.rol];
+        && (!s.permiso || contexto[s.permiso])
+        && (!delEspacio || delEspacio.includes(s.id)));
+    const sinPermiso = !!permisoPedido && !contexto[permisoPedido];
+    const titulo = contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
+    // En un espacio la vuelta a otro lado es el menú del dock (cambiar de rol o de área).
+    const salida = delEspacio ? null : SALIDA[contexto.yo.rol];
 
     const miembroNombre = miembroId
         ? miembrosDelRol.find(m => String(m.id) === String(miembroId))?.nombre
@@ -677,7 +692,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 )}
 
                 <div className="barra">
-                    {tabsVisibles.length > 0 && (
+                    {tabsVisibles.length > 0 && !sinPermiso && (
                         <Segmented opciones={tabsVisibles} valor={tab} onChange={setTab}
                             ariaLabel={`Vistas de ${seccionActual.label}`} />
                     )}
@@ -696,10 +711,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                         {/* Con "Personalizado" la píldora dice el rango, y su menú queda abierto
                             con las dos fechas debajo de los períodos. */}
-                        {seccion === 'finanzas' && (
+                        {seccion === 'finanzas' && !sinPermiso && (
                             <MenuMes mes={mesFinanzas} onCambiar={(m) => { setMesFinanzas(m); guardarMes(m); }} />
                         )}
-                        {seccion === 'payroll' && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
+                        {seccion === 'payroll' && !sinPermiso && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
                         {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && (
                             <PillMenu icono={<Calendar size={14} />} rotulo="período"
@@ -763,8 +778,17 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onAbrirFila={abrirFila}
                             onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
                     )}
-                    {seccion === 'finanzas' && <Finanzas tab={tab} mes={mesFinanzas} />}
-                    {seccion === 'payroll' && <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} />}
+                    {sinPermiso && (
+                        <section className="panel">
+                            <div className="vacio-grande">
+                                <span className="vacio-icono"><seccionActual.Icono size={24} /></span>
+                                <h2 className="t-h2">Sin acceso a {seccionActual.label}</h2>
+                                <p className="t-sm mut">Finanzas y Payroll son de admin o dirección comercial con el permiso «ver finanzas».</p>
+                            </div>
+                        </section>
+                    )}
+                    {seccion === 'finanzas' && !sinPermiso && <Finanzas tab={tab} mes={mesFinanzas} />}
+                    {seccion === 'payroll' && !sinPermiso && <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} />}
                     {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
@@ -799,7 +823,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         onElegir={(id) => set({ s: id })}
                         ariaLabel="Secciones del dashboard comercial"
                         despues={<MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />}
-                        antes={contexto.puede_elegir_equipo && (
+                        antes={contexto.puede_elegir_equipo && !delEspacio && (
                             <div className="dock-rol caja">
                                 <Humo colores={HUMO_DOCK} />
                                 {[['closers', 'Closers'], ['setters', 'Setters']].map(([k, label]) => (
