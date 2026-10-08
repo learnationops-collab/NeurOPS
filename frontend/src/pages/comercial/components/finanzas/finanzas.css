@@ -156,5 +156,8 @@
   .dc-shell button.fz-persona{display:flex !important;break-inside:avoid}
 }
 
+/* El rótulo de cada grupo en el desplegable de personas de Payroll. */
+.dc-shell .fz-menu-grupo{padding:4px 14px 2px;font-size:10px}
+
 /* Porcentaje editable (editor de comisiones de Payroll): el número y el «%» después. */
 .dc-shell .fz-pct{max-width:104px}
