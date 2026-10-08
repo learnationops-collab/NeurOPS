@@ -750,13 +750,14 @@ def get_financial_sales_payroll():
     from app.services.attribution_service import AttributionService
     attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
                 
-    elias_sales = []
-    jeancarlo_sales = []
-    marlon_sales = []
-    
-    elias_recaudado = 0.0
-    jeancarlo_recaudado = 0.0
-    marlon_recaudado = 0.0
+    from app.services.commission_service import (
+        CLOSER_RATE, SETTER_RATE, DIRECTOR_RATE, SETTERS_CON_COMISION, CLOSERS_CON_COMISION,
+    )
+    tasas = {clave: SETTER_RATE for clave in SETTERS_CON_COMISION.values()}
+    tasas.update({clave: CLOSER_RATE for clave in CLOSERS_CON_COMISION.values()})
+    tasas['marlon'] = DIRECTOR_RATE
+    ventas_de = {clave: [] for clave in tasas}
+    recaudado = {clave: 0.0 for clave in tasas}
     
     for s in sales:
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
@@ -809,50 +810,36 @@ def get_financial_sales_payroll():
             "is_excluded_from_payroll": s.is_excluded_from_payroll or False
         }
         
-        if final_setter.lower() == 'elias':
-            elias_sales.append(sale_data)
-            if not sale_data["is_excluded_from_payroll"]:
-                elias_recaudado += monto_ajustado
-            
-        if final_closer.lower() == 'jean carlo':
-            jeancarlo_sales.append(sale_data)
-            if not sale_data["is_excluded_from_payroll"]:
-                jeancarlo_recaudado += monto_ajustado
-            
-            # Marlon cobra el 5% del cash collect de Jean Carlo sin renovaciones
+        excluida = sale_data["is_excluded_from_payroll"]
+
+        def sumar(clave):
+            ventas_de[clave].append(sale_data)
+            if not excluida:
+                recaudado[clave] += monto_ajustado
+
+        setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
+        if setter_clave:
+            sumar(setter_clave)
+
+        closer_clave = CLOSERS_CON_COMISION.get(final_closer.strip().lower())
+        if closer_clave:
+            sumar(closer_clave)
+
+            # Marlon cobra el 5% del cash collect de los closers sin renovaciones
             prog, simple_tp = split_tipo_pago(s.tipo_pago)
             is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
             if not is_renovacion:
-                marlon_sales.append(sale_data)
-                if not sale_data["is_excluded_from_payroll"]:
-                    marlon_recaudado += monto_ajustado
-                
-    elias_comision = elias_recaudado * 0.08
-    jeancarlo_comision = jeancarlo_recaudado * 0.10
-    marlon_comision = marlon_recaudado * 0.05
-    
+                sumar('marlon')
+
     return jsonify({
-        "elias": {
-            "sales": elias_sales,
-            "total_recaudado_neto": round(elias_recaudado, 2),
-            "porcentaje_comision": 8.0,
-            "comision_total": round(elias_comision, 2),
-            "total_ventas": len([x for x in elias_sales if not x["is_excluded_from_payroll"]])
-        },
-        "jeancarlo": {
-            "sales": jeancarlo_sales,
-            "total_recaudado_neto": round(jeancarlo_recaudado, 2),
-            "porcentaje_comision": 10.0,
-            "comision_total": round(jeancarlo_comision, 2),
-            "total_ventas": len([x for x in jeancarlo_sales if not x["is_excluded_from_payroll"]])
-        },
-        "marlon": {
-            "sales": marlon_sales,
-            "total_recaudado_neto": round(marlon_recaudado, 2),
-            "porcentaje_comision": 5.0,
-            "comision_total": round(marlon_comision, 2),
-            "total_ventas": len([x for x in marlon_sales if not x["is_excluded_from_payroll"]])
+        clave: {
+            "sales": ventas_de[clave],
+            "total_recaudado_neto": round(recaudado[clave], 2),
+            "porcentaje_comision": round(tasa * 100, 2),
+            "comision_total": round(recaudado[clave] * tasa, 2),
+            "total_ventas": len([x for x in ventas_de[clave] if not x["is_excluded_from_payroll"]])
         }
+        for clave, tasa in tasas.items()
     }), 200
 
 @bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])
