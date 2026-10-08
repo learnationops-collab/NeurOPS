@@ -143,3 +143,15 @@ def test_preguntas_publicas_saca_las_apagadas_y_las_claves_del_editor():
     assert 'notion' not in [p['id'] for p in publicas]
     assert len(publicas) == 35
     assert not any('on' in p or 'base' in p for p in publicas)
+
+
+def test_preguntas_publicas_mandan_req_explicito():
+    # Sin `req` el backend la espera (completitud): el formulario público tiene que pedirla igual.
+    form = HiringForm(nombre='x', preguntas=base() + [
+        {'id': 'linkedin', 'tipo': 'link', 't': 'LinkedIn', 'on': True, 'base': False}])
+
+    publicas = {p['id']: p for p in hf.preguntas_publicas(form)}
+
+    assert publicas['linkedin']['req'] is True
+    assert publicas['automatizacion_ejemplo']['req'] is False
+    assert publicas['listo']['req'] is False

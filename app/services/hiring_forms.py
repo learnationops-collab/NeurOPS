@@ -344,9 +344,13 @@ def form_dict(form, respuestas=None, con_preguntas=False):
 
 
 def preguntas_publicas(form):
-    """Las preguntas prendidas, en orden, sin las claves del editor."""
+    """Las preguntas prendidas, en orden, sin las claves del editor.
+
+    `req` va siempre explícito: el backend toma una pregunta sin `req` como
+    obligatoria (completitud) y el formulario público, como opcional (`q.req
+    && vacio`). Así los dos piden lo mismo."""
     return [
-        {k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR}
+        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR}, 'req': bool(p.get('req', True))}
         for p in (form.preguntas or [])
         if isinstance(p, dict) and p.get('on') is not False
     ]
