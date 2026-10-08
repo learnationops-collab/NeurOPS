@@ -67,6 +67,16 @@ class HiringForm(db.Model):
                 p for p in preguntas
                 if p.get('on') is not False and p.get('req', True) and p.get('tipo') != 'intro'
             ],
+            # {id de pregunta prendida: textos de sus opciones excluyentes}. Una opción sin
+            # marcas viene como texto suelto (no puede ser excluyente).
+            'excluyentes': {
+                p.get('id'): frozenset(
+                    str(o.get('t') or '').strip() for o in (p.get('o') or [])
+                    if isinstance(o, dict) and o.get('ko')
+                )
+                for p in preguntas
+                if p.get('on') is not False and any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
+            },
         }
         self.__dict__['_cache_derivados'] = (self.preguntas, derivados)
         return derivados
@@ -86,6 +96,12 @@ class HiringForm(db.Model):
 
     def campos_apagados(self):
         return self._derivados()['apagadas']
+
+    def excluyentes(self):
+        """{id de pregunta: textos de las opciones que cortan la postulación}, solo
+        de las preguntas prendidas. Es lo que el formulario público usa para mandar
+        a la pantalla de descarte."""
+        return self._derivados()['excluyentes']
 
     def preguntas_obligatorias(self):
         return self._derivados()['obligatorias']

@@ -342,7 +342,7 @@ def stats_assistant_applications():
     # Embudo: los escalones son los del propio formulario, no votos.
     sin_analizar = sum(1 for a in todas_las_filas if a.veredicto() == 'sin_analizar')
     analizadas = sum(1 for a in todas_las_filas if a.estado)
-    descartadas_ko = sum(1 for a in todas_las_filas if a.descartado or a.auto_ko())
+    descartadas_ko = sum(1 for a in todas_las_filas if a.cortada_por_formulario())
 
     embudo = [
         {"etapa": "Llegaron", "cantidad": len(todas_las_filas)},
@@ -395,7 +395,7 @@ def stats_assistant_applications():
             {"grupo": "Volumen y embudo"},
             {"label": "Postulaciones", "tipo": "n", "valores": por_pais(len)},
             {"label": "Pasa excluyentes", "tipo": "pct",
-             "valores": por_pais(lambda g: pct(g, lambda a: not (a.descartado or a.auto_ko())))},
+             "valores": por_pais(lambda g: pct(g, lambda a: not a.cortada_por_formulario()))},
             {"label": "Con video verificado", "tipo": "pct",
              "valores": por_pais(lambda g: pct(g, lambda a: a.video_ok()))},
             {"label": "Completó el formulario", "tipo": "pct",
@@ -509,7 +509,7 @@ def _embudo_formulario(filas):
             llegaron[pos] += 1
         if not a.completo and ultima >= 0:
             quedaron[ultima] += 1
-            if a.descartado or a.auto_ko():
+            if a.cortada_por_formulario():
                 cortadas[ultima] += 1
 
     salida = []
