@@ -368,6 +368,8 @@ class AssistantApplication(db.Model):
             "meta": self.meta,
             "wa_tools": self.wa_tools,
             "automatizaciones": self.automatizaciones,
+            # De acá sale el ícono de automatizaciones (Zapier) de la tabla.
+            "automatizacion_ejemplo": self.automatizacion_ejemplo,
             "video": self.video,
             "video_verificado": self.video_verificado,
             "video_ok": self.video_ok(),

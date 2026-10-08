@@ -180,3 +180,12 @@ def test_el_listado_trae_form_id_pero_no_las_respuestas_extra(client, auth_heade
 
     assert fila['form_id'] is None
     assert 'respuestas_extra' not in fila
+
+
+def test_el_listado_trae_la_automatizacion_contada(client, db, auth_headers, admin):
+    db.session.add(AssistantApplication(nombre='Ana', completo=True, automatizacion_ejemplo='Un zap de Stripe a Sheets'))
+    db.session.commit()
+
+    fila = pedir(client, auth_headers, admin, filtro='todas').get_json()['postulaciones'][0]
+
+    assert fila['automatizacion_ejemplo'] == 'Un zap de Stripe a Sheets'
