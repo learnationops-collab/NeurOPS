@@ -108,13 +108,52 @@
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .fz-persona .kpi-cab{justify-content:space-between}
 
-/* Exportar a PDF: solo el contenido, sin dock ni barra de filtros. */
+/* Una venta sacada de la nómina («Excluir ventas» de Payroll): apagada y con el cliente y la
+   comisión tachados, para que se vea qué deja de sumar. */
+.dc-shell .fz-excluida{opacity:.42}
+.dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
+
+/* Exportar a PDF: solo el contenido, sin dock ni barra de filtros. El encabezado de la nómina
+   (período y grupos) solo existe en el papel: en pantalla lo dice la barra. */
+.dc-shell .fz-impresion{display:none}
 @media print{
+  /* El tablero es oscuro, y en papel (o en un PDF que se imprime) el texto blanco no se lee:
+     se imprime con la paleta invertida. Tres veces la clase porque los tokens viven en
+     `.dc-shell.dc-shell` (ver comercial.css) y la hoja global de impresión pinta el fondo de
+     blanco pero no toca los colores del tablero. */
+  .dc-shell.dc-shell.dc-shell{
+    color-scheme:light;
+    --text-on-surface:#0F172A; --text-muted:rgba(15,23,42,.66); --text-muted-40:rgba(15,23,42,.48);
+    --border-main:#CBD5E1; --border-subtle:#E2E8F0; --border-control:#94A3B8;
+    --mat-0:transparent; --mat-1:#F8FAFC; --mat-3:#E2E8F0; --sheen:transparent; --hueco:#E2E8F0;
+    --bg-element:#F1F5F9; --bg-surface:#FFFFFF; --bg-input:#FFFFFF;
+    --success:#0F7A55; --warning:#9A6410; --error:#B4321F; --info:#2459A6; --brand-secondary:#C2186F;
+    --shadow-main:none;
+    background:#FFFFFF;
+    padding-bottom:0;
+    min-height:0;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
   .dc-shell .dock,
   .dc-shell .barra,
   .dc-shell .tope-meta,
-  .dc-shell .humo{display:none !important}
+  .dc-shell .humo,
+  .dc-shell .tip,
+  .dc-shell .kpi-acciones{display:none !important}
   .dc-shell .fz-scroll{overflow:visible}
+  .dc-shell .fz-impresion{display:block;margin-bottom:var(--s4)}
+  /* Una hoja A4 mide menos que los cortes de pantalla (760 y 900px), que apilaban todo en una
+     columna. Los cinco de Fulfillment van en una sola fila (de a tres quedaban 3 + 2) y sin su
+     chip, que ahí no entra y repite el título del grupo. */
+  .dc-shell .fz-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dc-shell .fz-grid--5{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s2)}
+  .dc-shell .fz-grid--5 .kpi-cab{display:none}
+  .dc-shell .fz-grid--5 .kpi{padding:var(--s3)}
+  .dc-shell .fz-grid--5 .kpi-n{font-size:19px}
+  /* Los tiles son botones (llevan a Revisar), y la hoja de impresión global esconde todo
+     `button`: sin esto el PDF salía sin ninguna persona. */
+  .dc-shell button.fz-persona{display:flex !important;break-inside:avoid}
 }
 
 /* Porcentaje editable (editor de comisiones de Payroll): el número y el «%» después. */

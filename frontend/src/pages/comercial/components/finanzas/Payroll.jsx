@@ -3,6 +3,7 @@ import { Calendar, Compass, Eye, UserCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EsqueletoTablero, Humo, PillMenu } from '../Shared';
 import TasasComision from './TasasComision';
+import ExcluirVentas from './ExcluirVentas';
 import Cifra from '../Cifra';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
@@ -15,11 +16,17 @@ import * as apiFz from './finanzasApi';
  * Tocar un tile abre sus ventas en Revisar › Ventas, en el mismo período (`onVerVentas`): la lista
  * de abajo que había acá se sacó a pedido (08/10/2026), y Revisar ya tiene la tabla, la búsqueda,
  * los totales y la ficha de cada venta. Van las ventas que suman en la comisión: las que se sacaron
- * de la nómina quedan afuera, como en el número del tile.
+ * de la nómina quedan afuera, como en el número del tile. Sacarlas o volver a sumarlas se hace en
+ * «Excluir ventas» de la barra (`ExcluirVentas`).
+ *
+ * «Exportar PDF» imprime la página: el CSS de impresión deja solo esto, con el encabezado que acá
+ * no se ve (`.fz-impresion`: período y grupos, que en pantalla dice la barra).
  */
 
 const v = (tono) => `var(--${tono})`;
 const iso = (f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+// En el PDF va el año siempre: el papel se guarda y se mira meses después.
+const fechaLarga = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 
 export const PERIODOS_PAYROLL = [
     { key: 'mes', label: 'Este mes' },
@@ -151,7 +158,7 @@ const Tile = ({ persona, datos, onVer }) => {
     );
 };
 
-const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTasas }) => {
+const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
     const [datos, setDatos] = useState(null);
 
     const cargar = useCallback(() => apiFz.getPayroll(desde, hasta).then(setDatos)
@@ -162,6 +169,11 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
         <TasasComision onCerrar={onCerrarTasas} onGuardado={() => { onCerrarTasas(); setDatos(null); cargar(); }} />
     );
     if (!datos) return <><EsqueletoTablero rotulo="Calculando la nómina…" />{modal}</>;
+    // Recalcula sin volver al esqueleto: los tiles cambian detrás del modal a cada venta tocada.
+    const excluir = excluirAbierto && (
+        <ExcluirVentas datos={datos} personas={GRUPOS.flatMap(g => g.personas)}
+            onCerrar={onCerrarExcluir} onCambio={cargar} />
+    );
 
     const verVentas = (persona) => {
         const ids = (datos[persona.id]?.sales || [])
@@ -179,6 +191,10 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
 
     return (
         <>
+            <div className="fz-impresion">
+                <p className="t-eyebrow">Payroll · {visibles.map(g => g.titulo).join(', ')}</p>
+                <h1 className="t-h2">Nómina · {fechaLarga(desde)} – {fechaLarga(hasta)}</h1>
+            </div>
             <div className="fz-grid fz-grid--3">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
                     sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
@@ -201,6 +217,7 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, tasasAbiertas, onCerrarTas
                 </section>
             ))}
             {modal}
+            {excluir}
         </>
     );
 };

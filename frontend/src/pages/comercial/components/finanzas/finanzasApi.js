@@ -39,6 +39,9 @@ export const eliminarGasto = (id) => api.delete(`/public/finance/software/${id}`
 
 export const getPayroll = (desde, hasta) => api.get('/public/financial-sales/payroll',
     { params: { start_date: desde, end_date: hasta } }).then(datos);
+// Con el valor explícito y no «alternar»: dos clics rápidos no se cancelan entre sí.
+export const marcarExclusion = (ventaId, excluir) => api.post(
+    `/public/financial-sales/${ventaId}/toggle-payroll-exclusion`, { exclude: excluir }).then(datos);
 
 // Los % de comisión (08/10/2026): los que valen en un mes, y guardar un juego desde un mes.
 export const getTasas = (mes) => api.get('/public/finance/comisiones/tasas', { params: { mes } }).then(datos);
