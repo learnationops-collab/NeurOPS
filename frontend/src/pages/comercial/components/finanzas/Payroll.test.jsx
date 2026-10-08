@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import Payroll, { FiltroGrupos, GRUPOS } from './Payroll';
+import Payroll, { FiltroGrupos, FiltroPersonas, GRUPOS } from './Payroll';
 
 /**
  * Payroll (08/10/2026): los tiles de cada persona, el cash del período arriba, el filtro por grupos
- * y el clic que lleva a sus ventas en Revisar. La lista de ventas que tenía abajo se sacó a pedido.
+ * y el de personas, y el clic que lleva a sus ventas en Revisar. La lista de ventas que tenía abajo
+ * se sacó a pedido. Las cifras cuentan hasta su valor (`Cifra`): lo que cambia se espera con `waitFor`.
  */
 
 const api = vi.hoisted(() => ({ getPayroll: vi.fn() }));
@@ -27,11 +28,13 @@ const NOMINA = {
 
 const ConFiltro = ({ onVerVentas = () => {} }) => {
     const [grupos, setGrupos] = useState(GRUPOS.map(g => g.id));
+    const [personas, setPersonas] = useState([]);
     return (
         <>
             <FiltroGrupos visibles={grupos} onCambiar={setGrupos} />
-            <Payroll desde="2026-09-01" hasta="2026-09-30" grupos={grupos} onVerVentas={onVerVentas}
-                tasasAbiertas={false} onCerrarTasas={() => {}} />
+            <FiltroPersonas grupos={grupos} elegidas={personas} onCambiar={setPersonas} />
+            <Payroll desde="2026-09-01" hasta="2026-09-30" grupos={grupos} personas={personas}
+                onVerVentas={onVerVentas} tasasAbiertas={false} onCerrarTasas={() => {}} />
         </>
     );
 };
@@ -79,5 +82,50 @@ describe('Payroll', () => {
         });
         // Sin ventas en el período no hay a dónde ir.
         expect(screen.getByText('Paula').closest('button')).toBeDisabled();
+    });
+
+    it('el desplegable de personas deja ver una o varias, y la suma es la de ellas', async () => {
+        render(<ConFiltro />);
+        await screen.findByText('Elias');
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Todas las personas/ })); });
+        const menu = screen.getByRole('menu', { name: 'Personas de la nómina' });
+        await act(async () => { fireEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Elias' })); });
+        await act(async () => { fireEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Marlon' })); });
+
+        expect(screen.getByRole('button', { name: /Elias y Marlon/ })).toBeTruthy();
+        expect(screen.queryByTitle('Ver en Revisar las ventas de Jean Carlo')).toBeNull();
+        expect(screen.queryByTitle('Ver en Revisar las ventas de Andy')).toBeNull();
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$100.00'));   // 80 + 20
+        expect(screen.getByText('A pagar a Elias y Marlon')).toBeTruthy();
+        expect(JSON.parse(localStorage.getItem('payroll.personas'))).toEqual(['elias', 'marlon']);
+
+        await act(async () => { fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Todas las personas' })); });
+        expect(screen.getByTitle('Ver en Revisar las ventas de Jean Carlo')).toBeTruthy();
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
+    });
+
+    it('solo ofrece personas de los grupos prendidos, y las de un grupo apagado no cuentan', async () => {
+        render(<ConFiltro />);
+        await screen.findByText('Elias');
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Todas las personas/ })); });
+        await act(async () => {
+            fireEvent.click(within(screen.getByRole('menu', { name: 'Personas de la nómina' }))
+                .getByRole('menuitemcheckbox', { name: 'Andy' }));
+        });
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$30.00'));
+        // Un clic afuera cierra el menú.
+        await act(async () => { fireEvent.mouseDown(document.body); });
+        expect(screen.queryByRole('menu', { name: 'Personas de la nómina' })).toBeNull();
+
+        const filtro = screen.getByRole('group', { name: 'Grupos de la nómina' });
+        await act(async () => { fireEvent.click(within(filtro).getByRole('button', { name: /Fulfillment/ })); });
+
+        // Andy quedó elegida pero su grupo está apagado: se ven todas las de los grupos prendidos.
+        expect(screen.getByRole('button', { name: /Todas las personas/ })).toBeTruthy();
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$200.00'));
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Todas las personas/ })); });
+        expect(within(screen.getByRole('menu', { name: 'Personas de la nómina' }))
+            .queryByRole('menuitemcheckbox', { name: 'Andy' })).toBeNull();
     });
 });
