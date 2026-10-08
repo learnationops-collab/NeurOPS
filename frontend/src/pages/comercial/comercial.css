@@ -566,6 +566,19 @@
 .dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-pronto{display:none}
 .dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-num{position:static;margin-top:0}
 .dc-shell .dock--compacto .dock-item:not([aria-current="page"]) .dock-marca{margin-top:0}
+/* `siempreNombres` (el dashboard comercial): los nombres no se esconden nunca, tampoco bajo 1120px.
+   Si no entran, el dock se aprieta; si ni así, scrollea (como en el teléfono). Este dock usa el
+   ancho entero: los 336px que se reservaban eran para el botón flotante de reportar bugs, que no
+   existe desde el 07/10/2026 (reportar está en el menú del avatar). */
+.dc-shell .dock--nombres{max-width:calc(100vw - var(--s4) * 2)}
+.dc-shell .dock--apretado .dock-pronto{display:none !important}
+.dc-shell .dock--nombres .dock-item:not([aria-current="page"]) .dock-label{display:inline}
+.dc-shell .dock--nombres .dock-item:not([aria-current="page"]) .dock-pronto{display:inline-flex}
+.dc-shell .dock--nombres .dock-item:not([aria-current="page"]) .dock-num{position:absolute;margin-top:0}
+.dc-shell .dock--nombres .dock-item:not([aria-current="page"]) .dock-marca{margin-top:9px}
+.dc-shell .dock--apretado .dock-item{padding:0 10px;gap:7px;font-size:13.5px}
+.dc-shell .dock--apretado .dock-num{left:10px}
+.dc-shell .dock--apretado .dock-rol button{padding:0 10px}
 /* Lo que va al final del dock (`despues` de `DockSecciones`) queda pegado al borde derecho
    aunque el dock no entre y scrollee: las secciones pasan por debajo. Solo cuando scrollea lleva
    fondo (el del dock, con un degradé a la izquierda para que no se corten en seco); con el dock

@@ -821,7 +821,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 {!embebido && (
                     <DockSecciones secciones={secciones} activa={seccion}
                         onElegir={(id) => set({ s: id })}
-                        ariaLabel="Secciones del dashboard comercial"
+                        ariaLabel="Secciones del dashboard comercial" siempreNombres
                         despues={<MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />}
                         antes={contexto.puede_elegir_equipo && !delEspacio && (
                             <div className="dock-rol caja">

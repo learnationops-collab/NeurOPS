@@ -26,13 +26,19 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  * `tipo`: sin tipo es el "✓"; `cuenta` es una pastilla con lo hecho sobre el total ("2/5", las
  * pestañas del closer), `apagada` cuando ya no queda nada por hacer ahí; `aviso` es un punto ámbar
  * sin texto (el día de ayer que quedó sin reportar).
+ *
+ * `siempreNombres`: el nombre de cada sección se ve SIEMPRE (el dashboard comercial, 08/10/2026:
+ * con Finanzas y Payroll son siete y solo se leía la activa). En vez de esconder los nombres
+ * cuando no entran, el dock se aprieta (`dock--apretado`: menos aire y letra un punto más chica) y,
+ * si ni así entra, scrollea de costado como en el teléfono.
  */
 const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
 
 const claseDeMarca = (m) => ['dock-marca', m.tipo && `dock-marca--${m.tipo}`, m.apagada && 'dock-marca--apagada']
     .filter(Boolean).join(' ');
 
-const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, despues = null }) => {
+const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, despues = null,
+    siempreNombres = false }) => {
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
     // Se remide al cambiar de sección, al cambiar la lista y al redimensionar.
@@ -47,6 +53,8 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
     // dock depende de quién lo usa —el switch de la dirección, la sesión al final, las cuentas del
     // closer— y un corte pensado para uno dejaba al otro scrolleando (30/09/2026).
     const [compacto, setCompacto] = useState(false);
+    // Lo que se hace cuando no entra: esconder los nombres de las inactivas, o apretar el dock.
+    const claseSinLugar = siempreNombres ? 'dock--apretado' : 'dock--compacto';
     const ids = secciones.map(s => s.id).join('|');
     useEffect(() => {
         const medir = () => {
@@ -59,10 +67,12 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
             // sincrónico, el navegador no llega a pintar en el medio. Así no oscila: lo que se
             // compara es siempre el ancho con nombres, no el que dejó la medición anterior.
             if (dock) {
-                const estaba = dock.classList.contains('dock--compacto');
-                if (estaba) dock.classList.remove('dock--compacto');
+                dock.classList.remove(claseSinLugar);
                 const noEntra = dock.scrollWidth > dock.clientWidth + 1;
-                if (estaba) dock.classList.add('dock--compacto');
+                // Se deja la clase según lo medido y no como estaba: si la decisión no cambia,
+                // React no vuelve a dibujar, y una clase repuesta a mano quedaba pegada aunque ya
+                // entrara (se veía apretado un dock con lugar de sobra).
+                dock.classList.toggle(claseSinLugar, noEntra);
                 setCompacto(noEntra);
             }
 
@@ -99,13 +109,13 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
             window.removeEventListener('resize', medir);
             observador?.disconnect();
         };
-    }, [activa, ids, compacto]);
+    }, [activa, ids, compacto, claseSinLugar]);
 
     // Con seis cosas o más en el dock (el mazo del closer, o la dirección con su switch y su sesión)
     // el aire de las cuatro secciones del dashboard no entra en una laptop: `dock--denso` las junta.
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
-    const clases = ['dock', cosas >= 6 && 'dock--denso', compacto && 'dock--compacto',
-        desborda && 'dock--desborda', 'caja'];
+    const clases = ['dock', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
+        compacto && claseSinLugar, desborda && 'dock--desborda', 'caja'];
     return (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
