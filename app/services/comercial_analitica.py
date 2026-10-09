@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from sqlalchemy import func
 
 from app import db
-from app.models import FinancialSale, User
+from app.models import FinancialAgenda, FinancialSale, User
 from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
@@ -21,6 +21,7 @@ from app.services.comercial_service import (
     _limpiar_email, _limpiar_ig, chip, pct,
 )
 from app.services.commission_service import CLOSER_RATE
+from app.services.procedencia_ingresos_service import procedencia_de_ventas
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
@@ -682,6 +683,48 @@ def por_cobrar_de(closer_id=None):
             'clientes': totales['count'], 'clientes_vencido': totales['count_vencido']}
 
 
+def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
+    """El Cash collected del período abierto por la fuente que trajo cada cobro: workshop,
+    setting, VSL, Fulfillment o sin procedencia (pedido del usuario, 09/10/2026).
+
+    No hay una clasificación propia: es la de Finanzas › Procedencia
+    (`procedencia_ingresos_service`), la misma de la columna Fuente de las ventas y de la nómina. Lo
+    que cambia es qué se reparte, para que la tarjeta cierre con «Cash collected» del mismo filtro:
+
+      · las ventas son las del cash, con el mismo período, los mismos estados y el mismo filtro por
+        closer (`ComercialService.ventas_de`, que comparte `vendio` con la tabla Ventas);
+      · la base es el cash BRUTO, la cifra grande de la tarjeta. Finanzas reparte el neto.
+
+    La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
+    `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
+    del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
+    return procedencia_de_ventas(propias, contexto=del_periodo, base='bruto', agendas=agendas)
+
+
+def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
+    """Analizar › «Ingresos por fuente»: `ingresos_por_fuente` del período y, si se compara, el
+    monto del período comparado y el delta de cada fuente, con el mismo `delta` que los KPIs.
+
+    Va fuera de `bloque_closers`, como `por_cobrar_de`: el bloque se corre por persona y por período
+    en Comparativas y la atribución recorre todas las agendas. Acá se leen una sola vez para los
+    dos períodos."""
+    agendas = FinancialAgenda.query.all()
+    actual = ingresos_por_fuente(start, end, closer_nombre, agendas)
+    # Las claves van siempre, en None sin comparación: el frontend no tiene que preguntar si están.
+    actual['previo'] = actual['delta'] = None
+    for p in actual['procedencias']:
+        p['previo'] = p['delta'] = None
+    if prev_start:
+        previo = ingresos_por_fuente(prev_start, prev_end, closer_nombre, agendas)
+        antes = {p['key']: p['monto'] for p in previo['procedencias']}
+        for p in actual['procedencias']:
+            p['previo'] = antes[p['key']]
+            p['delta'] = delta(p['monto'], p['previo'], 'pct')
+        actual['previo'] = previo['total']
+        actual['delta'] = delta(actual['total'], previo['total'], 'pct')
+    return actual
+
+
 def _bloque_de(rol):
     return bloque_setters if rol == ROL_SETTERS else bloque_closers
 
@@ -714,6 +757,9 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
     # Fuera de `actual` a propósito: no es una cifra del período (ver `por_cobrar_de`).
     if rol == ROL_CLOSERS:
         datos['por_cobrar'] = por_cobrar_de(miembro_id)
+        # Solo con closers, que es donde está el Cash collected con el que cierra. El tablero de
+        # setters no muestra plata: un setter no la ve, y la dirección con Setters tampoco.
+        datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre)
     return datos
 
 

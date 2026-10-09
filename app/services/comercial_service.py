@@ -534,21 +534,49 @@ class ComercialService:
         return programa, (tipo or 'otro'), (tipo in REAL_SALE_TIPOS)
 
     @staticmethod
-    def ventas(start, end, closer_nombre=None):
-        """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas."""
+    def ventas_del_periodo(start, end):
+        """Los cobros (`FinancialSale`) del período que cuentan como cash, de todo el equipo y del
+        más reciente al más viejo: los de estado vacío, «Completada» o «Confirmada»."""
         desde, hasta = ComercialService._limites(start, end)
         q = FinancialSale.query.filter(FinancialSale.date >= desde, FinancialSale.date <= hasta)
+        return [v for v in q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all()
+                if (v.estado or '').strip().lower() in ('', 'completada', 'confirmada')]
 
+    @staticmethod
+    def vendio(nombre_vendedor, closer_nombre):
+        """¿Es de `closer_nombre` una venta cuyo vendedor resuelve a `nombre_vendedor`?
+
+        None es "no acotar" (todo el equipo); cualquier otro valor acota, también uno vacío, que no
+        es de nadie: no se repite la fuga del conjunto vacío de `_atribucion_de_ventas`. Es el
+        único lugar que lo decide para la tabla Ventas, el cash de Analizar y sus ingresos por
+        fuente (`comercial_analitica.fuentes_de`), que por eso cierran entre sí."""
+        if closer_nombre is None:
+            return True
+        return normalizar_nombre(nombre_vendedor) == normalizar_nombre(closer_nombre)
+
+    @staticmethod
+    def ventas_de(start, end, closer_nombre=None):
+        """(las del período, las de `closer_nombre`): las dos listas de `FinancialSale` con las que
+        se reparte el cash por fuente. La primera es el contexto de la atribución (ver
+        `procedencia_ingresos_service.procedencia_de_ventas`); la segunda, lo que se reparte."""
+        del_periodo = ComercialService.ventas_del_periodo(start, end)
+        if closer_nombre is None:
+            return del_periodo, del_periodo
+        return del_periodo, [v for v in del_periodo
+                             if ComercialService.vendio(resolver_nombre_closer(v.email_vendedor), closer_nombre)]
+
+    @staticmethod
+    def ventas(start, end, closer_nombre=None):
+        """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas."""
         # El cliente de cada venta, para que la fila pueda abrir la ficha unificada. Se resuelve
         # en bloque ANTES del bucle: adentro sería una consulta por fila.
-        del_periodo = [v for v in q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all()
-                       if (v.estado or '').strip().lower() in ('', 'completada', 'confirmada')]
+        del_periodo = ComercialService.ventas_del_periodo(start, end)
         clientes = clientes_de_ventas(del_periodo)
 
         filas = []
         for v in del_periodo:
             nombre = resolver_nombre_closer(v.email_vendedor)
-            if closer_nombre and normalizar_nombre(nombre) != normalizar_nombre(closer_nombre):
+            if not ComercialService.vendio(nombre, closer_nombre):
                 continue
             programa, tipo, es_venta = ComercialService.clasificar_venta(v)
             monto = float(v.monto or 0.0)

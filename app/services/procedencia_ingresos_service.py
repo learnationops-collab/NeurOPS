@@ -41,6 +41,11 @@ Los baldes:
 Monto y ventas: los del ingreso del Resumen (`get_finance_summary`): ventas con fecha en el período
 y estado vacío, «Completada» o «Confirmada», en cash NETO de la fee de Stripe/Hotmart
 (`cash_neto_de`). La suma de los baldes es ese ingreso, al centavo (lo afirma un test).
+
+Desde el 09/10/2026 el reparto también lo usa el dashboard comercial (Analizar › «Ingresos por
+fuente», `comercial_analitica.fuentes_de`), con dos ajustes que se piden acá y no se copian allá:
+una parte de las ventas (las de un closer) y la base BRUTA, que es la de su «Cash collected». Ver
+`procedencia_de_ventas`.
 """
 import re
 from datetime import datetime, time
@@ -183,34 +188,62 @@ def _porcentajes(montos, total):
     return [p / 10 for p in pisos]
 
 
-def procedencia_de_ingresos(desde, hasta):
-    """El ingreso de [desde, hasta] (fechas, ambas incluidas) repartido por procedencia.
-
-    Devuelve `total` y `cantidad` (el ingreso y los pagos del período, los del Resumen) y
-    `procedencias`: los cinco baldes SIEMPRE, también en cero, para que el panel no cambie de forma
-    de un período a otro. Cada uno con `monto` (neto), `cantidad` (pagos), `pct` (del total) y su
-    `detalle`, ordenado de mayor a menor (solo lo que tuvo pagos)."""
+def ventas_que_suman(desde, hasta):
+    """Las ventas del ingreso de [desde, hasta] (fechas, ambas incluidas): las del Resumen."""
     inicio = datetime.combine(desde, time.min)
     fin = datetime.combine(hasta, time.max)
-    ventas = [v for v in FinancialSale.query.filter(FinancialSale.date >= inicio, FinancialSale.date <= fin).all()
-              if (v.estado or '').strip().lower() in ESTADOS_QUE_SUMAN]
+    return [v for v in FinancialSale.query.filter(FinancialSale.date >= inicio, FinancialSale.date <= fin).all()
+            if (v.estado or '').strip().lower() in ESTADOS_QUE_SUMAN]
 
-    atribucion = AttributionService.get_sales_attribution(sales=ventas, agendas=FinancialAgenda.query.all()) \
-        if ventas else {}
+
+# Con qué monto entra cada pago a su balde. Finanzas reparte el ingreso NETO de la fee de la
+# pasarela, que es su «Ingresos»; el dashboard comercial, el cash BRUTO, que es el número grande de
+# su «Cash collected» (`ComercialService.ventas` redondea cada fila al centavo y suma eso). Cada uno
+# cierra con la cifra que tiene al lado.
+BASES = {
+    'neto': lambda venta: cash_neto_de(venta.monto, venta.metodo_pago),
+    'bruto': lambda venta: round(float(venta.monto or 0.0), 2),
+}
+
+
+def procedencia_de_ventas(ventas, contexto=None, base='neto', agendas=None):
+    """`ventas` repartidas por procedencia, con el monto de `base` ('neto' o 'bruto').
+
+    Devuelve `total` y `cantidad` (lo que suman y cuántos pagos son) y `procedencias`: los cinco
+    baldes SIEMPRE, también en cero, para que el panel no cambie de forma de un período a otro. Cada
+    uno con `monto`, `cantidad` (pagos), `pct` (del total) y su `detalle`, ordenado de mayor a menor
+    (solo lo que tuvo pagos).
+
+    `contexto` son las ventas sobre las que se calcula la atribución cuando `ventas` es una parte de
+    ellas (las de un closer, en el dashboard comercial): todas las del período. La agenda de un pago
+    depende de los OTROS pagos de la misma persona —manda el primero calificado—, así que con solo
+    los de un closer una cuota podía cambiar de agenda según quién mirara. Con el período entero,
+    cada pago cae en el mismo balde en «Mis datos», en el equipo y en Finanzas. Sin `contexto`, la
+    atribución es sobre las mismas `ventas`.
+
+    `agendas` (opcional) son las `FinancialAgenda` ya leídas, para quien reparte dos períodos seguidos
+    —el actual y el comparado— y no quiere leerlas dos veces."""
+    monto_de = BASES[base]
+    contexto = ventas if contexto is None else contexto
+    if ventas:
+        agendas = FinancialAgenda.query.all() if agendas is None else agendas
+        atribucion = AttributionService.get_sales_attribution(sales=contexto, agendas=agendas)
+    else:
+        atribucion = {}
     setters = setters_conocidos()
 
     baldes = {p['key']: {'monto': 0.0, 'cantidad': 0, 'detalle': {}} for p in PROCEDENCIAS}
     total = 0.0
     for venta in ventas:
-        neto = cash_neto_de(venta.monto, venta.metodo_pago)
-        total += neto
+        monto = monto_de(venta)
+        total += monto
         clave, sub, rotulo = clasificar_pago(venta, atribucion.get(venta.id), setters)
         balde = baldes[clave]
-        balde['monto'] += neto
+        balde['monto'] += monto
         balde['cantidad'] += 1
         if sub:
             fila = balde['detalle'].setdefault(sub, {'key': sub, 'label': rotulo, 'monto': 0.0, 'cantidad': 0})
-            fila['monto'] += neto
+            fila['monto'] += monto
             fila['cantidad'] += 1
 
     total = round(total, 2)
@@ -230,10 +263,11 @@ def procedencia_de_ingresos(desde, hasta):
         procedencias.append({**p, 'monto': monto, 'cantidad': balde['cantidad'], 'pct': pct,
                              'detalle': detalle})
 
-    return {
-        'desde': desde.isoformat(),
-        'hasta': hasta.isoformat(),
-        'total': total,
-        'cantidad': len(ventas),
-        'procedencias': procedencias,
-    }
+    return {'base': base, 'total': total, 'cantidad': len(ventas), 'procedencias': procedencias}
+
+
+def procedencia_de_ingresos(desde, hasta):
+    """El ingreso de [desde, hasta] (fechas, ambas incluidas) repartido por procedencia: el panel de
+    Finanzas › Resumen, en neto. La forma es la de `procedencia_de_ventas`, con el período."""
+    return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(),
+            **procedencia_de_ventas(ventas_que_suman(desde, hasta))}
