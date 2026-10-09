@@ -4,8 +4,8 @@ import {
     rotuloToques,
 } from '../../pages/comercial/components/tablasDef';
 import {
-    DESTINOS_CLOSER, DESTINOS_METRICA, DESTINOS_SETTER, PASOS_CLOSER, PASOS_SETTER, conDia,
-    destinoDeSerie, destinoToques, serieCortable,
+    DESTINOS_CLOSER, DESTINOS_METRICA, DESTINOS_SETTER, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER,
+    PASOS_SETTER, conDia, destinoDeSerie, destinoProcedencia, destinoToques, serieCortable,
 } from '../../pages/comercial/components/destinos';
 import {
     DESTINOS_RANKING, METRICS, destino, destinoFuente, destinoPrograma,
@@ -43,6 +43,9 @@ const todos = () => {
     sumar('destinoFuente(agendas)', destinoFuente('Setting'));
     sumar('destinoFuente(asistencias)', destinoFuente('Setting', 'asistencias'));
     sumar('destinoToques()', destinoToques('3'));
+    sumar('destinoProcedencia()', destinoProcedencia('Workshop'));
+    sumar('destinoProcedencia(detalle)', destinoProcedencia('Setting', 'Elias'));
+    sumar('DESTINO_PROCEDENCIAS_TOTAL', DESTINO_PROCEDENCIAS_TOTAL);
 
     ['closers', 'setters'].forEach(rol => {
         ['cash', 'agendas', 'ventas', 'showup', 'senas', 'programas',
@@ -290,6 +293,23 @@ describe('la tenacidad del seguimiento', () => {
         expect(faceta.de({ mensajes: 1 })).toBe('1 toque');
         expect(faceta.de({ mensajes: 7 })).toBe('4 toques o más');
         expect(faceta.de({ mensajes: 0 })).toBeNull();
+    });
+});
+
+describe('ingresos por fuente', () => {
+    it('lo que manda la tarjeta es lo que la faceta lee de una fila de Ventas', () => {
+        // La tarjeta arma el filtro con los rótulos de su payload y la faceta los lee de la fila: si
+        // los dos no se escriben igual, tocar «Setting · Elias» abre una lista vacía sin fallar.
+        const fila = { procedencia: { key: 'setting', label: 'Setting', tone: 'cat-2' },
+            procedencia_detalle: { key: 'elias', label: 'Elias' } };
+        const de = (key) => TABLAS.ventas.facetas.find(f => f.key === key).de(fila);
+
+        expect(destinoProcedencia('Setting').filtro).toEqual({ fuente: de('fuente') });
+        expect(destinoProcedencia('Setting', 'Elias').filtro).toEqual({ fuente_detalle: de('fuente_detalle') });
+        expect(de('fuente_detalle')).toBe('Setting · Elias');
+        // La VSL no se abre en detalle: su fila no tiene renglón que filtrar.
+        expect(TABLAS.ventas.facetas.find(f => f.key === 'fuente_detalle')
+            .de({ ...fila, procedencia_detalle: null })).toBeNull();
     });
 });
 

@@ -566,18 +566,25 @@ class ComercialService:
                              if ComercialService.vendio(resolver_nombre_closer(v.email_vendedor), closer_nombre)]
 
     @staticmethod
-    def ventas(start, end, closer_nombre=None):
-        """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas."""
+    def ventas(start, end, closer_nombre=None, con_fuente=False):
+        """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas.
+
+        `con_fuente` le agrega a cada fila la fuente que trajo ese cobro (`_con_fuente`): la faceta
+        y el agrupar «Fuente» de Revisar. Solo lo pide la tabla: esta función la corren también el
+        bloque de Analizar, Variabilidad y el reporte diario, y en Comparativas una vez por persona
+        y por período, que no muestran la fuente y no tienen por qué pagar la atribución."""
         # El cliente de cada venta, para que la fila pueda abrir la ficha unificada. Se resuelve
         # en bloque ANTES del bucle: adentro sería una consulta por fila.
         del_periodo = ComercialService.ventas_del_periodo(start, end)
         clientes = clientes_de_ventas(del_periodo)
 
         filas = []
+        propias = []
         for v in del_periodo:
             nombre = resolver_nombre_closer(v.email_vendedor)
             if not ComercialService.vendio(nombre, closer_nombre):
                 continue
+            propias.append(v)
             programa, tipo, es_venta = ComercialService.clasificar_venta(v)
             monto = float(v.monto or 0.0)
             filas.append({
@@ -615,7 +622,39 @@ class ComercialService:
         for fila_id, dato in clasificar_senas(filas).items():
             filas_por_id[fila_id]['sena_estado'] = dato['estado']
         ComercialService._con_academia(filas)
+        if con_fuente:
+            ComercialService._con_fuente(filas_por_id, propias, del_periodo)
         return filas
+
+    @staticmethod
+    def _con_fuente(filas_por_id, propias, del_periodo):
+        """Le pone a cada fila de Ventas la fuente que trajo ese cobro: `procedencia` (el balde,
+        `{key, label, tone}`: Workshop, Setting, VSL, Fulfillment o Sin procedencia) y
+        `procedencia_detalle` (`{key, label}`: en vivo o grabación, el setter… o None si el balde
+        no se abre, como la VSL).
+
+        Es la MISMA clasificación que la tarjeta «Ingresos por fuente» de Analizar y que Finanzas ›
+        Procedencia (`procedencia_ingresos_service.procedencia_por_venta`), con el mismo contexto que
+        la tarjeta: la atribución corre sobre TODAS las ventas del período aunque la tabla esté
+        acotada a un closer, así que un cobro cae en la misma fuente en «Mis datos», en el equipo y
+        en la tarjeta. El contexto solo decide la agenda de cada cobro: las filas siguen siendo las
+        de `vendio`, y un closer no ve nada de otro.
+
+        Cada fila es UN cobro (`FinancialSale`), así que no hay que decidir qué hacer con una venta
+        cuyos cobros caen en fuentes distintas: cada cobro lleva la suya, como en la tarjeta. Por la
+        atribución, casi siempre es la misma para todos los cobros de una persona (manda la agenda
+        del primer pago calificado); la excepción son las renovaciones y los upsells, que van a
+        Fulfillment aunque la venta original haya sido de un setter.
+
+        Con eso, filtrar Revisar › Ventas por una fuente da exactamente los cobros de esa fila de la
+        tarjeta, y su cash (bruto, como la tarjeta) suma su monto."""
+        from app.services.procedencia_ingresos_service import PROCEDENCIAS, procedencia_por_venta
+
+        baldes = {p['key']: {'key': p['key'], 'label': p['label'], 'tone': p['tone']} for p in PROCEDENCIAS}
+        for venta_id, (balde, sub, rotulo) in procedencia_por_venta(propias, contexto=del_periodo).items():
+            fila = filas_por_id[venta_id]
+            fila['procedencia'] = dict(baldes[balde])
+            fila['procedencia_detalle'] = {'key': sub, 'label': rotulo} if sub else None
 
     @staticmethod
     def _con_academia(filas):

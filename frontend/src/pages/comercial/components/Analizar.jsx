@@ -11,8 +11,8 @@ import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/Mat
 import RepartoEstados from './RepartoEstados';
 import { AYUDA_PROCEDENCIA } from './procedencias';
 import {
-    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER,
-    destinoToques,
+    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, DESTINO_PROCEDENCIAS_TOTAL,
+    PASOS_CLOSER, PASOS_SETTER, destinoProcedencia, destinoToques,
 } from './destinos';
 
 /**
@@ -595,10 +595,14 @@ const PanelPagos = ({ bloque, irA }) => {
  * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto).
  *
  * Las filas abren su detalle (el vivo y la grabación, cada setter…) en vez de mostrarlo siempre: con
- * todo abierto la tarjeta era el doble de alta que Payment types, su vecina. No llevan a Revisar: la
- * tabla Ventas no tiene una faceta con la fuente atribuida (su "Setter" es el que se escribió en la
- * venta, que no siempre es el de la agenda), y un clic que abre una lista que no cierra con el
- * número es peor que un número que no se puede pinchar.
+ * todo abierto la tarjeta era el doble de alta que Payment types, su vecina.
+ *
+ * El MONTO de cada fila (y de cada renglón del detalle) lleva a Revisar › Ventas filtrado por esa
+ * fuente, con el mismo período y la misma persona (ver `destinoProcedencia`): cada cobro de la tabla
+ * trae la fuente con la que lo cuenta esta tarjeta, así que la lista son exactamente sus cobros y
+ * la tira de totales dice su monto. Es el monto y no la fila entera porque tocar la fila abre el
+ * detalle: el botón que lo abre se estira debajo de toda la fila (`.fuente-abrir`) y el monto y la
+ * «i» quedan por encima. Un botón dentro de otro no se puede.
  */
 const TABS_FUENTES = [['tabla', 'Tabla', Rows], ['grafico', 'Gráfico', PieChart]];
 
@@ -618,40 +622,42 @@ const DeltaFuente = ({ delta, previo }) => {
     );
 };
 
-const FilaFuente = ({ p, total, i, abierta, alternar }) => {
+const FilaFuente = ({ p, total, i, abierta, alternar, irA }) => {
     const ancho = total > 0 ? (p.monto / total) * 100 : 0;
     const conDetalle = p.detalle.length > 0;
-    const celdas = (
-        <>
+    const destino = destinoProcedencia(p.label);
+    return (
+        <div className="tdatos-fila fuente" data-vacio={p.cantidad ? undefined : '1'}
+            data-abierta={conDetalle && abierta ? '1' : undefined}>
             <span className="tdatos-nom tdatos-nom--fuerte">
                 <span className="dato-punto" style={{ background: v(p.tone) }} />
                 <span className="trunc" title={p.label}>{p.label}</span>
                 <span className="solo-ancho"><Tip texto={AYUDA_PROCEDENCIA[p.key]} titulo={p.label} /></span>
             </span>
             <span className="tdatos-p">{fmt.num(p.cantidad)}</span>
-            <span className="tdatos-n" style={{ color: p.cantidad ? v(p.tone) : undefined }}>
+            <MetricaClicable irA={irA} destino={destino} vacio={!p.cantidad}
+                detalle={`${fmt.plural(p.cantidad, 'cobro', 'cobros')} de ${p.label}, ${fmt.money(p.monto)}`}
+                className="tdatos-n" style={{ color: p.cantidad ? v(p.tone) : undefined }}>
                 {fmt.money(p.monto)}
-            </span>
+            </MetricaClicable>
             <span className="tdatos-p">{fmt.pct(p.pct)}</span>
             <span className="fuente-chev" aria-hidden="true">{conDetalle && <ChevronDown size={14} />}</span>
             <span className="fuente-riel">
                 <Riel pct={ancho} color={v(p.tone)} fino delay={150 + i * 90} />
             </span>
             <DeltaFuente delta={p.delta} previo={p.previo} />
-        </>
-    );
-    return conDetalle ? (
-        <button type="button" className="tdatos-fila fuente" aria-expanded={abierta}
-            aria-label={`${p.label}: ${fmt.money(p.monto)}. ${abierta ? 'Cerrar' : 'Ver'} el detalle`}
-            onClick={alternar}>
-            {celdas}
-        </button>
-    ) : (
-        <div className="tdatos-fila fuente" data-vacio={p.cantidad ? undefined : '1'}>{celdas}</div>
+            {/* Último, para que las celdas sigan siendo los primeros hijos de la grilla: está
+                fuera del flujo (absoluto, debajo de toda la fila). */}
+            {conDetalle && (
+                <button type="button" className="fuente-abrir" aria-expanded={abierta}
+                    aria-label={`${p.label}: ${fmt.money(p.monto)}. ${abierta ? 'Cerrar' : 'Ver'} el detalle`}
+                    onClick={alternar} />
+            )}
+        </div>
     );
 };
 
-const PanelFuentes = ({ fuentes }) => {
+const PanelFuentes = ({ fuentes, irA }) => {
     const [vista, setVista] = useState('tabla');
     // Una abierta por vez: con dos, la tarjeta vuelve a crecer lo que se ahorró al plegarlas.
     const [abierta, setAbierta] = useState(null);
@@ -685,13 +691,18 @@ const PanelFuentes = ({ fuentes }) => {
                     </div>
                     {procedencias.map((p, i) => (
                         <React.Fragment key={p.key}>
-                            <FilaFuente p={p} total={total} i={i} abierta={abierta === p.key}
+                            <FilaFuente p={p} total={total} i={i} abierta={abierta === p.key} irA={irA}
                                 alternar={() => setAbierta(a => (a === p.key ? null : p.key))} />
                             {abierta === p.key && p.detalle.map((d, j) => (
                                 <div key={d.key} className="tdatos-fila fuente-sub" style={{ '--j': j }}>
                                     <span className="fuente-sub-nom trunc" title={d.label}>{d.label}</span>
                                     <span className="tdatos-p">{fmt.num(d.cantidad)}</span>
-                                    <span className="fuente-sub-n num">{fmt.money(d.monto)}</span>
+                                    <MetricaClicable irA={irA} destino={destinoProcedencia(p.label, d.label)}
+                                        detalle={`${fmt.plural(d.cantidad, 'cobro', 'cobros')} de ${p.label} · `
+                                            + `${d.label}, ${fmt.money(d.monto)}`}
+                                        className="fuente-sub-n num">
+                                        {fmt.money(d.monto)}
+                                    </MetricaClicable>
                                     <span className="tdatos-p">{fmt.pct(d.pct)}</span>
                                     <span />
                                 </div>
@@ -706,7 +717,10 @@ const PanelFuentes = ({ fuentes }) => {
                                     + 'y el mismo monto bruto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
                         </span>
                         <span className="tdatos-p">{fmt.num(cantidad)}</span>
-                        <span className="tdatos-n">{fmt.money(total)}</span>
+                        <MetricaClicable irA={irA} destino={DESTINO_PROCEDENCIAS_TOTAL} className="tdatos-n"
+                            detalle={`${fmt.plural(cantidad, 'cobro', 'cobros')} del período, ${fmt.money(total)}`}>
+                            {fmt.money(total)}
+                        </MetricaClicable>
                         <span className="tdatos-p">{total > 0 ? '100%' : '—'}</span>
                         <span />
                         <DeltaFuente delta={fuentes.delta} previo={fuentes.previo} />
@@ -999,7 +1013,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA }) => (
         {fuentes ? (
             <div className="grid-2">
                 <PanelPagos bloque={bloque} irA={irA} />
-                <PanelFuentes fuentes={fuentes} />
+                <PanelFuentes fuentes={fuentes} irA={irA} />
             </div>
         ) : <PanelPagos bloque={bloque} irA={irA} />}
 
