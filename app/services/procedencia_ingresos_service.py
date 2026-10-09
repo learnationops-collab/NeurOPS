@@ -206,6 +206,24 @@ BASES = {
 }
 
 
+def procedencia_por_venta(ventas, contexto=None, agendas=None):
+    """{id de cada una de `ventas` -> (balde, clave del detalle, rótulo del detalle)}: el balde de
+    cada pago, uno por uno, con la atribución calculada sobre `contexto`.
+
+    Es lo que reparte `procedencia_de_ventas` y lo que la tabla Ventas de Revisar le pone a cada fila
+    (`ComercialService.ventas`, la faceta «Fuente»): las dos piden a esta función, así que un cobro no
+    puede caer en una fuente en la tarjeta y en otra en la lista. `contexto` y `agendas`, como en
+    `procedencia_de_ventas`. Lee las agendas una vez y corre la atribución una vez, sea cual sea la
+    cantidad de pagos: nunca por fila."""
+    if not ventas:
+        return {}
+    contexto = ventas if contexto is None else contexto
+    agendas = FinancialAgenda.query.all() if agendas is None else agendas
+    atribucion = AttributionService.get_sales_attribution(sales=contexto, agendas=agendas)
+    setters = setters_conocidos()
+    return {venta.id: clasificar_pago(venta, atribucion.get(venta.id), setters) for venta in ventas}
+
+
 def procedencia_de_ventas(ventas, contexto=None, base='neto', agendas=None):
     """`ventas` repartidas por procedencia, con el monto de `base` ('neto' o 'bruto').
 
@@ -224,20 +242,14 @@ def procedencia_de_ventas(ventas, contexto=None, base='neto', agendas=None):
     `agendas` (opcional) son las `FinancialAgenda` ya leídas, para quien reparte dos períodos seguidos
     —el actual y el comparado— y no quiere leerlas dos veces."""
     monto_de = BASES[base]
-    contexto = ventas if contexto is None else contexto
-    if ventas:
-        agendas = FinancialAgenda.query.all() if agendas is None else agendas
-        atribucion = AttributionService.get_sales_attribution(sales=contexto, agendas=agendas)
-    else:
-        atribucion = {}
-    setters = setters_conocidos()
+    balde_de = procedencia_por_venta(ventas, contexto, agendas)
 
     baldes = {p['key']: {'monto': 0.0, 'cantidad': 0, 'detalle': {}} for p in PROCEDENCIAS}
     total = 0.0
     for venta in ventas:
         monto = monto_de(venta)
         total += monto
-        clave, sub, rotulo = clasificar_pago(venta, atribucion.get(venta.id), setters)
+        clave, sub, rotulo = balde_de[venta.id]
         balde = baldes[clave]
         balde['monto'] += monto
         balde['cantidad'] += 1
