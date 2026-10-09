@@ -10,6 +10,9 @@ Lo que no se negocia, y por eso se prueba acá contra el endpoint y no contra el
     ventas recibe ceros, no las del equipo (la fuga del conjunto vacío del 24/09);
   · la clasificación es la de Finanzas › Procedencia, sin copia: un cobro cae en el mismo balde
     para el closer, para el equipo y para Finanzas.
+
+Y desde el mismo día, la faceta y el agrupar «Fuente» de Revisar › Ventas: cada fila de la tabla
+lleva la fuente de su cobro, la misma que la cuenta en la tarjeta.
 """
 from datetime import datetime
 
@@ -205,6 +208,122 @@ def test_sin_comparacion_no_hay_delta(client, equipo, cobros, auth_headers):
 
     assert (fuentes['previo'], fuentes['delta']) == (None, None)
     assert {(p['previo'], p['delta']) for p in fuentes['procedencias']} == {(None, None)}
+
+
+# --- Revisar › Ventas: la faceta y el agrupar «Fuente» ------------------------------------------
+# Revisar filtra y agrupa del lado del cliente, sobre las filas de la tabla: lo que se prueba acá
+# es que cada fila llegue con su fuente y que sea la de la tarjeta. Filtrar por una fuente es
+# quedarse con las filas de ese balde; agrupar, repartirlas por él.
+
+def _tabla_ventas(client, headers, **extra):
+    return client.get(TABLA, headers=headers, query_string={**SEPTIEMBRE, **extra, 'tabla': 'ventas'}).get_json()
+
+
+def _por_fuente(filas):
+    """{balde: (monto, cobros)} y {(balde, detalle): (monto, cobros)} de las filas: agrupar por la
+    fuente, como Revisar."""
+    baldes, detalles = {}, {}
+    for f in filas:
+        clave = f['procedencia']['key']
+        monto, n = baldes.get(clave, (0.0, 0))
+        baldes[clave] = (round(monto + f['monto'], 2), n + 1)
+        if f['procedencia_detalle']:
+            sub = (clave, f['procedencia_detalle']['label'])
+            monto, n = detalles.get(sub, (0.0, 0))
+            detalles[sub] = (round(monto + f['monto'], 2), n + 1)
+    return baldes, detalles
+
+
+@freeze_time(HOY)
+def test_cada_cobro_de_la_tabla_lleva_la_fuente_que_lo_trajo(client, equipo, cobros, auth_headers):
+    filas = _tabla_ventas(client, auth_headers(equipo['director']))['filas']
+
+    def fuente(f):
+        detalle = f['procedencia_detalle']
+        return (f['procedencia']['label'], detalle and detalle['label'])
+
+    assert sorted((f['ig'], f['tipo_pago_raw'], fuente(f)) for f in filas) == sorted([
+        ('ana', 'RR - Parcial', ('Workshop', 'En vivo')),
+        # La cuota sigue a la agenda del primer pago, aunque ana haya vuelto a agendar con un setter.
+        ('ana', 'RR - Cuota', ('Workshop', 'En vivo')),
+        ('caro', 'RR - Completo', ('Setting', 'Elias')),
+        ('fede', 'RR - Completo', ('VSL', None)),          # la VSL no se abre en detalle
+        ('nadie', 'RR - Completo', ('Sin procedencia', 'Sin agenda')),
+        ('dani', 'RR - Renovación', ('Fulfillment', 'Renovaciones')),
+    ])
+    # El balde viaja con su clave y su tono, los de la tarjeta.
+    assert {f['procedencia']['key']: f['procedencia']['tone'] for f in filas} == {
+        'workshop': 'cat-4', 'setting': 'cat-2', 'vsl': 'cat-1', 'fulfillment': 'cat-3', 'sin_procedencia': 'idle'}
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('quien, miembro', [
+    ('director', None), ('director', 'marlon'), ('director', 'nerina'), ('director', 'gabriela'),
+    ('marlon', None), ('nerina', None), ('gabriela', None),
+])
+def test_filtrar_o_agrupar_por_fuente_da_lo_mismo_que_la_tarjeta(client, equipo, cobros, auth_headers,
+                                                                  quien, miembro):
+    """Cada fuente de la tarjeta (y cada renglón de su detalle) son exactamente las filas de la tabla
+    con esa fuente, con el mismo filtro: el mismo monto bruto y los mismos cobros. Es lo que deja
+    que tocar una fila de la tarjeta abra Revisar filtrado y la tira de totales diga su número."""
+    headers = auth_headers(equipo[quien])
+    extra = {'miembro_id': equipo[miembro].id} if miembro else {}
+    fuentes = _resumen(client, headers, **extra)['fuentes']
+    tabla = _tabla_ventas(client, headers, **extra)
+
+    baldes, detalles = _por_fuente(tabla['filas'])
+    assert baldes == {p['key']: (p['monto'], p['cantidad']) for p in fuentes['procedencias'] if p['cantidad']}
+    assert detalles == {(p['key'], d['label']): (d['monto'], d['cantidad'])
+                        for p in fuentes['procedencias'] for d in p['detalle']}
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('pedido', [{}, {'miembro_id': 'otro'}, {'miembro_id': 'all'}, {'rol': 'setters'}])
+def test_un_closer_filtra_por_fuente_solo_lo_suyo(client, equipo, cobros, auth_headers, pedido):
+    """Nerina, pida lo que pida, recibe sus cobros y nada más. La fuente se calcula con todo el
+    período (la cuota de ana es workshop porque el primer pago lo cobró Marlon), pero ese contexto
+    no le agrega ninguna fila: el workshop de Marlon no aparece en su lista."""
+    if pedido.get('miembro_id') == 'otro':
+        pedido = {'miembro_id': equipo['marlon'].id}
+
+    filas = _tabla_ventas(client, auth_headers(equipo['nerina']), **pedido)['filas']
+
+    assert {f['closer'] for f in filas} == {'Nerina'}
+    assert sorted((f['ig'], f['procedencia']['key']) for f in filas) == [
+        ('ana', 'workshop'), ('caro', 'setting'), ('nadie', 'sin_procedencia')]
+
+
+@freeze_time(HOY)
+def test_un_closer_sin_ventas_no_recibe_fuentes_de_nadie(client, equipo, cobros, auth_headers):
+    for pedido in ({}, {'miembro_id': equipo['marlon'].id}, {'miembro_id': 'all'}):
+        assert _tabla_ventas(client, auth_headers(equipo['gabriela']), **pedido)['filas'] == []
+
+
+@freeze_time(HOY)
+def test_la_fuente_se_calcula_una_vez_por_pedido_y_solo_en_la_tabla(client, equipo, cobros, auth_headers,
+                                                                     monkeypatch):
+    """La atribución recorre todas las agendas: la tabla la corre UNA vez por pedido, tenga las filas
+    que tenga, y filtrar o agrupar después no vuelve al servidor. Las demás que leen las ventas —el
+    bloque de Analizar, Comparativas por persona y período, Variabilidad— no la pagan."""
+    from app.services import procedencia_ingresos_service as servicio
+    from app.services.attribution_service import AttributionService
+    from app.services.comercial_service import ComercialService
+
+    llamadas = []
+    original = AttributionService.get_sales_attribution
+
+    def contada(*args, **kwargs):
+        llamadas.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(servicio.AttributionService, 'get_sales_attribution', staticmethod(contada))
+
+    filas = _tabla_ventas(client, auth_headers(equipo['director']))['filas']
+    assert len(filas) == 6 and len(llamadas) == 1
+
+    llamadas.clear()
+    sin_fuente = ComercialService.ventas(datetime(2026, 9, 1).date(), datetime(2026, 9, 30).date())
+    assert llamadas == [] and all('procedencia' not in f for f in sin_fuente)
 
 
 def test_acotar_a_un_nombre_vacio_es_acotar_a_nadie(db):
