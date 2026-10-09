@@ -5,20 +5,35 @@ import { roleLandingPath } from '../../utils/roleLanding';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import DebugConsole from '../../components/modals/DebugConsole';
-import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, otrasCuentas, rotuloDeRol } from '../../utils/cuentasVinculadas';
+import {
+  cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, ICONO_FINANZAS, otrasCuentas, RUTA_FINANZAS, rolDeFinanzas,
+  rotuloDeRol, TITULO_FINANZAS,
+} from '../../utils/cuentasVinculadas';
 import Eleccion from './Eleccion';
 
-// Quien tiene más de un rol (o cuentas vinculadas) elige con cuál entra, con la pantalla de elección
-// de develop. Con uno solo entra directo a su pantalla, como siempre.
-const tieneVariosRoles = (user) => (user.roles?.length || 0) > 1 || otrasCuentas(user).length > 0;
+const rolesDe = (user) => (user.roles?.length ? user.roles : [user.role]);
 
+// Quien tiene más de un rol (o cuentas vinculadas) elige con cuál entra, con la pantalla de elección
+// de develop. También quien ve finanzas aunque tenga un solo rol (08/10/2026): Finances es una vista
+// aparte de la de su rol, y sin la elección no tenía cómo llegar al entrar. Con uno solo y sin
+// finanzas entra directo a su pantalla, como siempre.
+const hayQueElegir = (user) => rolesDe(user).length > 1 || otrasCuentas(user).length > 0
+  || !!rolDeFinanzas(rolesDe(user), user.can_view_finance);
+
+// onElegido(user, destino): sigue con el rol con el que entró; `destino` solo lo pasa «Finances».
 function ElegirRol({ user, onElegido }) {
   const [eligiendo, setEligiendo] = useState(null);
   const [error, setError] = useState(null);
-  const roles = user.roles?.length ? user.roles : [user.role];
+  const roles = rolesDe(user);
+  // «Finances» no es un rol: entra con el que la habilita (ver `rolDeFinanzas`) y va a /finanzas.
+  const rolFinanzas = rolDeFinanzas(roles, user.can_view_finance);
   const opciones = [
     ...roles.map((rol) => ({ clave: `rol-${rol}`, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol], entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
     ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), Icono: ICONO_DE_ROL[c.role], detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
+    ...(rolFinanzas ? [{
+      clave: 'finanzas', titulo: TITULO_FINANZAS, Icono: ICONO_FINANZAS,
+      entrar: () => (rolFinanzas === user.role ? onElegido(user, RUTA_FINANZAS) : cambiarDeRolEnLaCuenta(rolFinanzas, RUTA_FINANZAS)),
+    }] : []),
   ];
 
   const elegir = async (o) => {
@@ -65,7 +80,7 @@ const LoginPage = () => {
       // Un solo mapa rol -> pantalla (utils/roleLanding.js), compartido con
       // ProtectedRoute y con la simulación desde Equipo. Tener la lista repetida
       // acá dejaba afuera a los roles nuevos (`hiring` se quedaba en el login).
-      if (tieneVariosRoles(user)) setEligiendoRol(user);
+      if (hayQueElegir(user)) setEligiendoRol(user);
       else navigate(roleLandingPath(user.role));
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');
@@ -75,7 +90,7 @@ const LoginPage = () => {
   };
 
   if (eligiendoRol) {
-    return <ElegirRol user={eligiendoRol} onElegido={(u) => navigate(roleLandingPath(u.role))} />;
+    return <ElegirRol user={eligiendoRol} onElegido={(u, destino) => navigate(destino || roleLandingPath(u.role))} />;
   }
 
   return (

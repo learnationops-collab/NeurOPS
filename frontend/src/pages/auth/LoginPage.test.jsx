@@ -21,10 +21,23 @@ const montar = () => render(
     <MemoryRouter initialEntries={['/login']}>
         <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/finanzas" element={<p>finances</p>} />
             <Route path="*" element={<p>pantalla</p>} />
         </Routes>
     </MemoryRouter>,
 );
+
+// Cambia de rol en la cuenta: se mira a dónde manda la página entera.
+const conLocation = async (fn) => {
+    const original = window.location;
+    delete window.location;
+    window.location = { href: '' };
+    try {
+        await fn();
+    } finally {
+        window.location = original;
+    }
+};
 
 const entrar = async () => {
     fireEvent.change(screen.getByPlaceholderText(/usuario/i), { target: { value: 'mario' } });
@@ -77,6 +90,67 @@ describe('LoginPage · elegir rol al entrar', () => {
 
     it('con un solo rol entra directo', async () => {
         login.mockResolvedValue({ id: 9, username: 'Cata', role: 'closer', roles: ['closer'], cuentas_vinculadas: [] });
+        montar();
+        await entrar();
+
+        expect(screen.getByText('pantalla')).toBeTruthy();
+        expect(screen.queryByText(/Seleccioná tu rol/)).toBeNull();
+    });
+});
+
+/**
+ * La tarjeta «Finances» (08/10/2026, se lee «Learnation Finances»): Finanzas y Payroll en /finanzas,
+ * aparte del dashboard de la dirección comercial. Es para admin o dirección comercial con «ver finanzas».
+ */
+describe('LoginPage · la tarjeta Finances', () => {
+    beforeEach(() => { login.mockReset(); post.mockReset(); localStorage.clear(); sessionStorage.clear(); });
+
+    it('con «ver finanzas» va al final, se lee «Learnation Finances», y entra con admin a /finanzas', async () => {
+        login.mockResolvedValue({ ...MARIO, roles: ['operator', 'admin'], can_view_finance: true });
+        post.mockResolvedValue({ data: { token: 'tk', user: { ...MARIO, role: 'admin', roles: ['operator', 'admin'] } } });
+        montar();
+        await entrar();
+
+        expect(tarjetas()).toEqual(['Operador', 'Administrador', 'Finances']);
+        expect(screen.getByRole('button', { name: /Finances/ }).querySelector('small').textContent).toBe('Learnation');
+        await conLocation(async () => {
+            await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Finances/ })); });
+            expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'admin', isolated: false });
+            expect(window.location.href).toBe('/finanzas');
+        });
+    });
+
+    it('si ya entró con el rol que la habilita, va directo a /finanzas sin cambiar de rol', async () => {
+        login.mockResolvedValue({ ...MARIO, role: 'admin', roles: ['admin', 'closer'], can_view_finance: true });
+        montar();
+        await entrar();
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Finances/ })); });
+
+        expect(screen.getByText('finances')).toBeTruthy();
+        expect(post).not.toHaveBeenCalled();
+    });
+
+    it('con un solo rol y «ver finanzas» elige igual: la dirección comercial o Finances', async () => {
+        login.mockResolvedValue({ id: 4, username: 'Marlon', role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true, cuentas_vinculadas: [] });
+        montar();
+        await entrar();
+
+        expect(tarjetas()).toEqual(['Dirección comercial', 'Finances']);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Dirección comercial/ })); });
+        expect(screen.getByText('pantalla')).toBeTruthy();
+    });
+
+    it('sin «ver finanzas» no hay tarjeta', async () => {
+        login.mockResolvedValue({ ...MARIO, roles: ['operator', 'admin'] });
+        montar();
+        await entrar();
+        expect(tarjetas()).toEqual(['Operador', 'Administrador']);
+        expect(screen.queryByRole('button', { name: /Finances/ })).toBeNull();
+    });
+
+    it('«ver finanzas» con un rol que no la usa no cambia nada', async () => {
+        login.mockResolvedValue({ id: 9, username: 'Cata', role: 'closer', roles: ['closer'], can_view_finance: true, cuentas_vinculadas: [] });
         montar();
         await entrar();
 

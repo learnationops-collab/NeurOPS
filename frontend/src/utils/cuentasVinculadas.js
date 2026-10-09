@@ -1,5 +1,5 @@
 import {
-    ArrowLeftRight, BarChart3, Briefcase, Filter, Megaphone, MessageCircle, PhoneCall, Settings2, UserPlus,
+    ArrowLeftRight, BarChart3, Briefcase, Filter, Megaphone, MessageCircle, PhoneCall, Settings2, UserPlus, Wallet,
 } from 'lucide-react';
 import api from '../services/api';
 import { saveSession, isIsolatedTab } from './sessionStore';
@@ -29,6 +29,22 @@ export const ICONO_DE_ROL = {
     setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
 };
 
+/**
+ * La tarjeta «Finances» de las pantallas donde se elige un rol (el login y la simulación, desde el
+ * 08/10/2026; se lee «Learnation Finances»): Finanzas y Payroll en su propia vista, /finanzas, aparte
+ * del dashboard de la dirección comercial. No es un rol: entra con el que las habilita —admin o
+ * dirección comercial, y además «ver finanzas», como `puede_ver_finanzas` en
+ * app/api/public/finance.py—. `rolDeFinanzas` es null si no tiene ninguno de los dos o le falta el
+ * permiso.
+ */
+export const TITULO_FINANZAS = 'Finances';
+export const RUTA_FINANZAS = '/finanzas';
+export const ICONO_FINANZAS = Wallet;
+const ROLES_FINANZAS = ['admin', 'director_comercial'];
+export const rolDeFinanzas = (roles, puedeVerFinanzas) => (
+    puedeVerFinanzas ? ROLES_FINANZAS.find((r) => (roles || []).includes(r)) || null : null
+);
+
 /** Los OTROS roles de la misma cuenta (vacío si tiene uno solo o está simulando a alguien). */
 export const otrosRoles = (user) => {
     if (!user || user.is_impersonating) return [];
@@ -52,12 +68,15 @@ export const cambiarDeRol = async (userId) => {
     window.location.href = roleLandingPath(user.role);
 };
 
-/** Pasa a otro rol de la MISMA cuenta (no es una simulación) y entra a la pantalla de ese rol. */
-export const cambiarDeRolEnLaCuenta = async (rol) => {
+/**
+ * Pasa a otro rol de la MISMA cuenta (no es una simulación) y entra a la pantalla de ese rol, o a
+ * `destino` si se pasa (la tarjeta «Finances» entra con admin y va a /finanzas).
+ */
+export const cambiarDeRolEnLaCuenta = async (rol, destino = null) => {
     const res = await api.post('/auth/switch-role', { role: rol, isolated: isIsolatedTab() });
     const { user, token } = res.data;
     saveSession(user, token);
-    window.location.href = roleLandingPath(user.role);
+    window.location.href = destino || roleLandingPath(user.role);
 };
 
 /**

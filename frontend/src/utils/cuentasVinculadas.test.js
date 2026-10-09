@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const post = vi.fn();
 vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
 
-import { otrasCuentas, otrosRoles, opcionesDeRol, cambiarDeRol, cambiarDeRolEnLaCuenta, rotuloDeRol } from './cuentasVinculadas';
+import {
+    otrasCuentas, otrosRoles, opcionesDeRol, cambiarDeRol, cambiarDeRolEnLaCuenta, rotuloDeRol, rolDeFinanzas,
+    RUTA_FINANZAS, TITULO_FINANZAS,
+} from './cuentasVinculadas';
 
 const marlon = {
     id: 1, role: 'director_comercial',
@@ -87,6 +90,34 @@ describe('cuentas vinculadas', () => {
             expect(JSON.parse(localStorage.getItem('user')).role).toBe('closer');
             expect(window.location.href).toContain('/closer/deck');
             window.location = original;
+        });
+
+        it('con `destino` entra ahí en vez de a la pantalla del rol (la tarjeta «Finances»)', async () => {
+            post.mockResolvedValue({ data: { token: 'tk', user: { id: 1, role: 'admin', roles: ['operator', 'admin'] } } });
+            const original = window.location;
+            delete window.location;
+            window.location = { href: '' };
+
+            await cambiarDeRolEnLaCuenta('admin', '/finanzas');
+
+            expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'admin', isolated: false });
+            expect(window.location.href).toBe('/finanzas');
+            window.location = original;
+        });
+    });
+
+    describe('Finances', () => {
+        it('entra con admin o dirección comercial, y solo con «ver finanzas»', () => {
+            expect(rolDeFinanzas(['operator', 'admin'], true)).toBe('admin');
+            expect(rolDeFinanzas(['director_comercial'], true)).toBe('director_comercial');
+            expect(rolDeFinanzas(['operator', 'admin'], false)).toBeNull();
+            expect(rolDeFinanzas(['closer', 'setter'], true)).toBeNull();
+            expect(rolDeFinanzas(undefined, true)).toBeNull();
+        });
+
+        it('la tarjeta se llama «Finances» y va a /finanzas', () => {
+            expect(TITULO_FINANZAS).toBe('Finances');
+            expect(RUTA_FINANZAS).toBe('/finanzas');
         });
     });
 });
