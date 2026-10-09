@@ -52,23 +52,27 @@ describe('VentasDePersona', () => {
         api.cambiarAtribucion.mockReset().mockResolvedValue({});
     });
 
-    it('lo que recibió por transferencia va aparte, con lo que queda por pagarle', () => {
+    it('lo que recibió por transferencia va arriba en rojo y aparte, con lo que queda por pagarle', () => {
         montar('jeancarlo', datosDe([venta(3)], {
             sueldo_base: 0, transferencias_recibidas: 150, a_pagar: -50,
             transferencias: [{ id: 9, date: '2026-09-09T00:00:00', nombre_cliente: 'Ana Gomez', tipo_pago: 'RR - Seña',
                 metodo_pago: 'Transferencia Bancaria', monto: 150 }],
         }));
 
-        const panel = screen.getByText('Transferencias recibidas', { selector: '.t-h3, h2, h3, p, span' }).closest('.panel');
+        // En la cifra de la comisión, como en su tile.
+        expect(screen.getByText(/^descuentos /, { selector: '.kpi-sub .fz-persona-descuento' }).textContent)
+            .toBe('descuentos -$150.00 · debe devolver $50.00');
+        const panel = screen.getByText('Descuentos · transferencias recibidas', { selector: '.t-h3, h2, h3, p, span' }).closest('.panel');
         expect([...within(panel).getByText('Ana Gomez').closest('.fz-fila').children].map(c => c.textContent))
             .toEqual(['09/09', 'Ana GomezRR - Seña', 'Transferencia Bancaria', '-$150.00']);
-        expect(within(panel).getByText(/Transferencias recibidas · debe devolver \$50\.00/)).toBeTruthy();
+        expect(within(panel).getByText(/Descuentos · debe devolver \$50\.00/)).toBeTruthy();
     });
 
     it('sin transferencias recibidas no hay nada aparte', () => {
         montar('jeancarlo', datosDe([venta(3)]));
 
-        expect(screen.queryByText('Transferencias recibidas')).toBeNull();
+        expect(screen.queryByText('Descuentos · transferencias recibidas')).toBeNull();
+        expect(document.querySelector('.fz-persona-descuento')).toBeNull();
     });
 
     it('cada fila trae fecha, cliente, concepto, setter y closer, neto, % y comisión; el pie suma lo que suma', () => {

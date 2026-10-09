@@ -132,7 +132,7 @@ export const TransferenciasRecibidas = ({ persona, datos }) => {
     const neto = datos.a_pagar ?? ((datos.sueldo_base || 0) + (datos.comision_total || 0) - (datos.transferencias_recibidas || 0));
     return (
         <section className="panel">
-            <PanelCab titulo="Transferencias recibidas"
+            <PanelCab titulo="Descuentos · transferencias recibidas"
                 tip={`Pagos de clientes que se le hicieron por transferencia a ${persona.nombre}: la plata ya la tiene, así que se le descuenta de lo que se le paga. No cambia su comisión ni lo que cuesta. Se marcan en la ficha del cliente, sección Pagos.`} />
             <div className="fz-scroll">
                 <div className="fz-tabla" style={{ '--cols': '56px minmax(150px,1fr) minmax(96px,.6fr) 110px', '--min': '480px' }}>
@@ -150,14 +150,14 @@ export const TransferenciasRecibidas = ({ persona, datos }) => {
                                 <small className="trunc" title={pago.tipo_pago}>{pago.tipo_pago}</small>
                             </span>
                             <span className="trunc mut">{pago.metodo_pago}</span>
-                            <span className="fz-n fz-der" style={{ color: v('warning') }}>{dinero(-pago.monto)}</span>
+                            <span className="fz-n fz-der" style={{ color: v('error') }}>{dinero(-pago.monto)}</span>
                         </div>
                     ))}
                     <div className="fz-fila fz-total">
                         <span className="fz-rot" style={{ gridColumn: '1 / 4' }}>
-                            Transferencias recibidas · {neto < -0.004 ? 'debe devolver' : 'a pagar'} {dinero(Math.abs(neto))}
+                            Descuentos · {neto < -0.004 ? 'debe devolver' : 'a pagar'} {dinero(Math.abs(neto))}
                         </span>
-                        <span className="fz-n fz-der" style={{ color: v('warning') }}>{dinero(-datos.transferencias_recibidas)}</span>
+                        <span className="fz-n fz-der" style={{ color: v('error') }}>{dinero(-datos.transferencias_recibidas)}</span>
                     </div>
                 </div>
             </div>
@@ -238,11 +238,21 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
             sub: partidas.map(([k]) => PARTIDAS[k]).join(' · ') }
         : datos.porcentaje_comision != null ? { valor: `${datos.porcentaje_comision}%`, sub: 'Sobre el neto de cada venta' }
             : { valor: 'Por venta', sub: persona.rol === 'Fulfillment' ? 'Según el programa y la fuente' : 'Cambió dentro del período' };
+    // Lo que recibió por transferencia de un cliente (09/10/2026), también arriba y en rojo, como en
+    // su tile: la lista de abajo dice de qué pagos sale. Con descuento, «A pagar en el período»
+    // sobra: lo que se le paga es el «a pagar» del renglón rojo.
+    const recibidas = datos.transferencias_recibidas || 0;
     const subComision = [
         partidas.length ? partidas.map(([k]) => `${PARTIDAS[k]} ${dinero(datos.desglose[k].comision_total)}`).join(' · ')
-            : 'A pagar en el período',
+            : recibidas > 0.004 ? null : 'A pagar en el período',
         datos.sueldo_base > 0 ? `base ${dinero(datos.sueldo_base)} aparte` : null,
     ].filter(Boolean).join(' · ');
+    const aPagar = datos.a_pagar ?? ((datos.sueldo_base || 0) + (datos.comision_total || 0) - recibidas);
+    const descuento = recibidas > 0.004 && (
+        <span className="fz-persona-descuento" style={{ display: 'block' }}>
+            descuentos {dinero(-recibidas)} · {aPagar < -0.004 ? `debe devolver ${dinero(-aPagar)}` : `a pagar ${dinero(aPagar)}`}
+        </span>
+    );
     const cols = ['48px', '56px', 'minmax(150px,1.3fr)', 'minmax(84px,.6fr)', 'minmax(96px,.7fr)', 'minmax(104px,.7fr)',
         '96px', '52px', '100px', ...(atribuible ? ['44px'] : [])].join(' ');
 
@@ -259,7 +269,7 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
 
             <div className="fz-grid fz-grid--4">
                 <Cifron rotulo="Comisión" valor={dinero(datos.comision_total)} tono="success" humo={HUMOS.ingreso}
-                    sub={subComision}
+                    sub={descuento ? <>{subComision}{descuento}</> : subComision}
                     ayuda="La suma de la comisión de cada venta que suma, con el % del mes de cada una: el número de su tile. Las excluidas no cuentan." />
                 <Cifron rotulo="Neto que suma" valor={dinero(datos.total_recaudado_neto)} humo={HUMOS.info}
                     sub="Sin la comisión de Stripe y Hotmart"
