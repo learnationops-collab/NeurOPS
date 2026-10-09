@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Payroll, { FiltroGrupos, FiltroPersonas, GRUPOS } from './Payroll';
 
 /**
@@ -237,20 +237,28 @@ describe('Payroll · las ventas de una persona', () => {
     const PERSONAS = { setters: [{ id: 21, nombre: 'Elias', activo: true }],
         closers: [{ id: 4, nombre: 'Jean Carlo', activo: true }, { id: 11, nombre: 'Facundo', activo: true }] };
 
+    let movimiento;
     beforeEach(() => {
         api.getPayroll.mockReset().mockResolvedValue(nomina());
         api.marcarExclusion.mockReset().mockResolvedValue({});
         api.getPersonasAtribuibles.mockReset().mockResolvedValue(PERSONAS);
         api.cambiarAtribucion.mockReset().mockResolvedValue({});
         try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+        // Con movimiento reducido `Cifra` no cuenta: el número del tile se lee entero. Contando, el
+        // render deja el valor final y el primer cuadro lo vuelve a $0.00, y con la suite entera
+        // corriendo la lectura caía a veces en ese cuadro.
+        movimiento = vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+            matches: query.includes('prefers-reduced-motion'), media: query, onchange: null,
+            addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {},
+            dispatchEvent: () => false,
+        }));
     });
+    afterEach(() => movimiento.mockRestore());
 
-    // Abre la lista desde el tile, después de que su cifra terminó de contar (`Cifra`): devuelve el
-    // número que mostraba.
-    const abrir = async (nombre, cifraDelTile = '$140.50') => {
+    // Abre la lista desde su tile y devuelve el número que mostraba el tile.
+    const abrir = async (nombre) => {
         render(<ConFiltro />);
         const tile = (await screen.findByTitle(`Ver las ventas de ${nombre}`));
-        await waitFor(() => expect(tile.querySelector('.kpi-n').textContent).toBe(cifraDelTile), { timeout: 3000 });
         const delTile = tile.querySelector('.kpi-n').textContent;
         await act(async () => { fireEvent.click(tile); });
         return delTile;
@@ -262,6 +270,7 @@ describe('Payroll · las ventas de una persona', () => {
     it('lo que suma la lista cierra con el número del tile: las excluidas se ven y no cuentan', async () => {
         const delTile = await abrir('Jean Carlo');
 
+        expect(delTile).toBe('$140.50');
         const suman = screen.getAllByRole('button', { name: /^Sacar de la nómina la venta de/ })
             .map(b => Number(b.closest('.fz-fila').children[8].textContent.replace(/[$,]/g, '')));
         expect(suman.reduce((t, n) => t + n, 0)).toBe(140.5);
