@@ -32,9 +32,12 @@ vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: { id: 1, role: 'admin', is_impersonating: false }, logout: vi.fn() }),
 }));
 vi.mock('./components/Analizar', () => ({ default: () => <div data-testid="analizar" /> }));
+// El período que recibe Finanzas: el mes si es justo uno, y si no las dos fechas.
 vi.mock('./components/finanzas/Finanzas', async (original) => ({
     ...(await original()),
-    default: ({ tab, mes }) => <div data-testid="finanzas">{`${tab} · ${mes}`}</div>,
+    default: ({ tab, periodo }) => (
+        <div data-testid="finanzas">{`${tab} · ${periodo.mes || `${periodo.desde} → ${periodo.hasta}`}`}</div>
+    ),
 }));
 vi.mock('./components/finanzas/Payroll', async (original) => ({
     ...(await original()),
@@ -99,6 +102,37 @@ describe('DashboardComercial · Finanzas y Payroll', () => {
         await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: /agosto 2026/ })); });
         expect(screen.getByTestId('finanzas').textContent).toBe('nomina · 2026-08');
         expect(localStorage.getItem('finanzas.mes')).toBe('2026-08');
+    });
+
+    it('«Personalizado» arranca en el mes que se veía, toma las dos fechas y queda guardado', async () => {
+        estado.puede = true;
+        localStorage.setItem('finanzas.mes', '2026-08');
+        const { unmount } = montar('/admin/comercial?s=finanzas');
+        await screen.findByTestId('finanzas');
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /agosto 2026/ })); });
+        await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: 'Personalizado' })); });
+        // Del 1 al 31 de agosto sigue siendo ese mes: las vistas lo reciben como mes (y se editan).
+        expect(screen.getByTestId('finanzas').textContent).toBe('resumen · 2026-08');
+        expect(screen.getByRole('button', { name: /01\/08(\/26)? – 31\/08/ })).toBeTruthy();
+
+        const desde = screen.getByLabelText('Período: desde');
+        await act(async () => {
+            fireEvent.change(desde, { target: { value: '2026-07-16' } });
+            fireEvent.blur(desde);
+        });
+        expect(screen.getByTestId('finanzas').textContent).toBe('resumen · 2026-07-16 → 2026-08-31');
+        expect(JSON.parse(localStorage.getItem('finanzas.periodo'))).toEqual({ desde: '2026-07-16', hasta: '2026-08-31' });
+
+        // Al volver, el rango manda sobre el mes guardado; elegir un mes lo olvida.
+        unmount();
+        montar('/admin/comercial?s=finanzas');
+        expect((await screen.findByTestId('finanzas')).textContent).toBe('resumen · 2026-07-16 → 2026-08-31');
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /16\/07(\/26)? – 31\/08/ })); });
+        await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: /septiembre 2026/ })); });
+        expect(screen.getByTestId('finanzas').textContent).toBe('resumen · 2026-09');
+        expect(localStorage.getItem('finanzas.periodo')).toBeNull();
+        expect(localStorage.getItem('finanzas.mes')).toBe('2026-09');
     });
 
     it('Payroll arranca en el mes en curso y cambia con su píldora de período', async () => {

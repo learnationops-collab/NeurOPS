@@ -196,6 +196,20 @@
   .dc-shell button.fz-persona{display:flex !important;break-inside:avoid}
 }
 
+/* El período de Finanzas (08/10/2026). El menú de su píldora son 18 meses y «Personalizado»
+   (marcado con `.fz-periodo`): no pasa del alto de la pantalla, los meses scrollean, y con
+   «Personalizado» las dos fechas quedan pegadas al pie, a la vista. */
+.dc-shell .menu:has(.fz-periodo){max-height:min(560px,calc(100vh - 170px));overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-width:thin}
+.dc-shell .menu:has(.fz-periodo) .menu-pie{position:sticky;bottom:calc(var(--s2) * -1);
+  padding-bottom:var(--s2);background:var(--bg-flotante)}
+
+/* La nota de los libros mensuales (nómina, saldos, anuncios, ahorros) en un período que no es un
+   mes: se ven sumados y no se editan. Chica y apagada, con su candado. */
+.dc-shell .fz-nota{display:inline-flex;align-items:center;gap:6px;min-width:0;
+  font-size:11.5px;font-weight:600;line-height:1.35;color:var(--text-muted-40)}
+.dc-shell .fz-nota svg{width:12px;height:12px;flex-shrink:0}
+
 /* El rótulo de cada grupo en el desplegable de personas de Payroll. */
 .dc-shell .fz-menu-grupo{padding:4px 14px 2px;font-size:10px}
 

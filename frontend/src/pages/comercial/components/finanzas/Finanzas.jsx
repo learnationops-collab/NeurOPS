@@ -1,17 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Pencil, Plus, RotateCcw, X } from 'lucide-react';
+import { Check, Lock, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../Shared';
-import { CampoMonto, Cifron, HUMOS, conSigno, dinero, nombreDelMes, tonoDe } from './comun';
+import { CampoMonto, Cifron, HUMOS, conSigno, dinero, mesesDelRango, nombreDelMes, textoPeriodo, tonoDe } from './comun';
 import * as apiFz from './finanzasApi';
 
 /**
  * Sección Finanzas del dashboard comercial (desde el 08/10/2026; antes /admin/finance).
  *
  * Las cinco vistas son las mismas de siempre y van en la barra de pestañas de arriba, como las de
- * Analizar: Resumen, Medios de pago, Anuncios, Nómina y Software. El mes lo elige la píldora de
- * la derecha (`MenuMes`) y queda guardado en el navegador. Cada vista pide lo suyo al abrirse.
+ * Analizar: Resumen, Medios de pago, Anuncios, Nómina y Software. Cada vista pide lo suyo al abrirse.
+ *
+ * El período lo elige la píldora de la derecha (`MenuPeriodoFinanzas`) y queda guardado en el
+ * navegador: un mes o, desde el 08/10/2026, un rango personalizado. Cada vista recibe `periodo` =
+ * {desde, hasta, mes}; `mes` existe solo si el período es justo un mes calendario. Lo fechado
+ * (ingresos, software) va por las fechas exactas. Los libros mensuales (nómina, saldos, anuncios,
+ * ahorros) se editan solo con `mes`: en un rango se ven sumados (el mes cortado, proporcional a sus
+ * días) y en solo lectura, con la nota `SoloPorMes`.
  */
 export const TABS_FINANZAS = [
     { key: 'resumen', label: 'Resumen' },
@@ -36,15 +42,28 @@ const useDatos = (pedir, clave) => {
     return [datos, recargar, setDatos];
 };
 
+const claveDe = (periodo) => `${periodo.desde}|${periodo.hasta}`;
+
+/** Lo que dicen los libros mensuales en un período que no es un mes: se ven sumados y no se editan. */
+const SoloPorMes = () => (
+    <span className="fz-nota"><Lock aria-hidden="true" />Se edita por mes: elegí un mes en el período</span>
+);
+
+// Lo mismo que corta el backend: cada mes de un rango pide su nómina con las comisiones.
+const MAX_MESES = 24;
+
 // ------------------------------------------------------------------------------------------------
 // Resumen
 
-const Resumen = ({ mes }) => {
+const Resumen = ({ periodo }) => {
+    // `periodo.desde`/`periodo.hasta` son el período exacto (YYYY-MM-DD): lo que necesita un bloque
+    // fechado del resumen. `mes`, solo si es justo un mes: lo único editable acá (los ahorros).
+    const { mes } = periodo;
     const pedir = useCallback(async () => {
-        const [resumen, ahorros] = await Promise.all([apiFz.getResumen(mes), apiFz.getAhorros(mes)]);
+        const [resumen, ahorros] = await Promise.all([apiFz.getResumen(periodo), apiFz.getAhorros(periodo)]);
         return { ...resumen, ahorros: ahorros.savings };
-    }, [mes]);
-    const [datos, recargar] = useDatos(pedir, mes);
+    }, [periodo]);
+    const [datos, recargar] = useDatos(pedir, claveDe(periodo));
 
     if (!datos) return <EsqueletoTablero rotulo="Cargando el resumen…" />;
     const { kpis, expenses_breakdown: gastos, income_breakdown: ingresos } = datos;
@@ -60,9 +79,9 @@ const Resumen = ({ mes }) => {
     };
 
     const rubros = [
-        { key: 'sueldos', label: 'Equipo (nómina)', tono: 'error', ayuda: 'Sueldos fijos, comisiones y bonos del equipo en el mes.' },
-        { key: 'anuncios', label: 'Inversión en anuncios', tono: 'brand-secondary', ayuda: 'El presupuesto de anuncios cargado para el mes.' },
-        { key: 'software', label: 'Software', tono: 'warning', ayuda: 'Suscripciones y herramientas registradas en el mes.' },
+        { key: 'sueldos', label: 'Equipo (nómina)', tono: 'error', ayuda: 'Sueldos fijos, comisiones y bonos del equipo. Si el período corta un mes, la parte proporcional a sus días.' },
+        { key: 'anuncios', label: 'Inversión en anuncios', tono: 'brand-secondary', ayuda: 'El presupuesto de anuncios cargado para cada mes del período (proporcional a los días si el período corta un mes).' },
+        { key: 'software', label: 'Software', tono: 'warning', ayuda: 'Suscripciones y herramientas con fecha en el período.' },
     ];
     const totalGastos = kpis.total_expenses || 0;
 
@@ -71,21 +90,21 @@ const Resumen = ({ mes }) => {
             <div className="fz-grid fz-grid--4">
                 <Cifron rotulo="Ingresos" valor={dinero(kpis.total_income)} tono="success" humo={HUMOS.ingreso}
                     sub="Cash collect neto de ventas completadas"
-                    ayuda="Monto neto de las ventas completadas y confirmadas del mes, ya sin la comisión de la pasarela (4,5% Stripe, 8,9% Hotmart)." />
+                    ayuda="Monto neto de las ventas completadas y confirmadas con fecha en el período, ya sin la comisión de la pasarela (4,5% Stripe, 8,9% Hotmart)." />
                 <Cifron rotulo="Gastos" valor={dinero(totalGastos)} tono="error" humo={HUMOS.gasto}
                     sub="Nómina, anuncios y software"
-                    ayuda="La suma de la nómina del equipo, el presupuesto de anuncios y el software del mes." />
+                    ayuda="La suma de la nómina del equipo, el presupuesto de anuncios y el software del período. Si el período corta un mes, la nómina y los anuncios de ese mes cuentan proporcionales a sus días." />
                 <Cifron rotulo="Profit" valor={dinero(kpis.profit)} tono={tonoDe(kpis.profit)} humo={HUMOS.marca}
-                    sub="Ingresos menos gastos" ayuda="Ingresos del mes menos sus gastos." />
+                    sub="Ingresos menos gastos" ayuda="Ingresos del período menos sus gastos." />
                 <Cifron rotulo="Balance neto" valor={dinero(kpis.balance_neto)} tono={tonoDe(kpis.balance_neto)}
-                    humo={HUMOS.info} sub="Profit más los ahorros del mes"
-                    ayuda="(Ingresos − Gastos) + los ahorros cargados a mano para el mes." />
+                    humo={HUMOS.info} sub="Profit más los ahorros"
+                    ayuda="(Ingresos − Gastos) + los ahorros cargados a mano, que cuentan por mes entero (ver Ahorros abajo)." />
             </div>
 
             <div className="fz-grid fz-grid--2">
                 <section className="panel">
                     <PanelCab titulo="Distribución de gastos"
-                        tip="Los egresos del mes en sus tres rubros, con lo que pesa cada uno sobre el total." />
+                        tip="Los egresos del período en sus tres rubros, con lo que pesa cada uno sobre el total." />
                     <div className="fz-tabla" style={{ '--cols': 'minmax(0,1fr) 120px 56px' }}>
                         <div className="fz-cab"><span>Rubro</span><span className="fz-der">Monto</span><span className="fz-der">%</span></div>
                         {rubros.map(r => (
@@ -111,7 +130,7 @@ const Resumen = ({ mes }) => {
 
                 <section className="panel">
                     <PanelCab titulo="Ingresos por medio de pago"
-                        tip="Lo recaudado en el mes por cada pasarela, neto de su comisión." />
+                        tip="Lo recaudado en el período por cada pasarela, neto de su comisión." />
                     <div className="fz-tabla" style={{ '--cols': 'minmax(0,1fr) 80px 120px' }}>
                         <div className="fz-cab"><span>Medio</span><span className="fz-der">Ventas</span><span className="fz-der">Neto</span></div>
                         {ingresos.map(i => (
@@ -121,14 +140,14 @@ const Resumen = ({ mes }) => {
                                 <span className="fz-n fz-der" style={{ color: v('success') }}>{dinero(i.total)}</span>
                             </div>
                         ))}
-                        {ingresos.length === 0 && <p className="fz-vacio">No hubo ingresos este mes.</p>}
+                        {ingresos.length === 0 && <p className="fz-vacio">No hubo ingresos en este período.</p>}
                     </div>
                 </section>
             </div>
 
             <section className="panel">
                 <PanelCab titulo="Balance del período"
-                    tip="Ingresos menos gastos, más los ahorros que se cargan a mano: el resultado del mes." />
+                    tip="Ingresos menos gastos, más los ahorros que se cargan a mano: el resultado del período." />
                 <div className="fz-grid fz-grid--4">
                     <div className="mini fz-dato">
                         <p className="t-rotulo">Ingresos (A)</p>
@@ -139,8 +158,13 @@ const Resumen = ({ mes }) => {
                         <b style={{ color: v('error') }}>{dinero(-totalGastos)}</b>
                     </div>
                     <div className="mini fz-dato">
-                        <p className="t-rotulo">Ahorros (C) · a mano</p>
-                        <CampoMonto valor={datos.ahorros} onGuardar={guardarAhorros} etiqueta="Ahorros del mes" />
+                        <p className="t-rotulo">
+                            Ahorros (C) · a mano{' '}
+                            <Tip titulo="Ahorros"
+                                texto="Se cargan a mano, un monto por mes. En un período de varios meses cuentan los meses enteros: el mes que el período corta no suma sus ahorros, porque se cargan al cierre y no se reparten por día como un sueldo." />
+                        </p>
+                        {mes ? <CampoMonto valor={datos.ahorros} onGuardar={guardarAhorros} etiqueta="Ahorros del mes" />
+                            : <><b>{dinero(datos.ahorros)}</b><SoloPorMes /></>}
                     </div>
                     <div className="mini fz-dato">
                         <p className="t-rotulo">Balance neto (A − B + C)</p>
@@ -155,13 +179,13 @@ const Resumen = ({ mes }) => {
 // ------------------------------------------------------------------------------------------------
 // Medios de pago
 
-const MediosDePago = ({ mes }) => {
-    const pedir = useCallback(() => apiFz.getSaldos(mes), [mes]);
-    const [datos, recargar] = useDatos(pedir, mes);
+const MediosDePago = ({ periodo }) => {
+    const pedir = useCallback(() => apiFz.getSaldos(periodo), [periodo]);
+    const [datos, recargar] = useDatos(pedir, claveDe(periodo));
 
     const guardar = async (metodo, n) => {
         try {
-            await apiFz.guardarSaldo(mes, metodo, 'actual_amount', n);
+            await apiFz.guardarSaldo(periodo.mes, metodo, 'actual_amount', n);
             await recargar();
         } catch {
             toast.error('No se pudo guardar el saldo');
@@ -177,13 +201,15 @@ const MediosDePago = ({ mes }) => {
     return (
         <section className="panel">
             <PanelCab titulo="Saldos en medios de pago"
-                tip="Lo que hay en cada pasarela contra lo que hay que pagarle al equipo por ella. El saldo se carga a mano; lo que hay que pagar sale de la nómina del mes." />
+                tip="Lo que hay en cada pasarela contra lo que hay que pagarle al equipo por ella. El saldo se carga a mano, por mes; lo que hay que pagar sale de la nómina. En un período de varios meses se suman, y el mes que el período corta cuenta proporcional a sus días.">
+                {!periodo.mes && <SoloPorMes />}
+            </PanelCab>
             <div className="fz-scroll">
                 <div className="fz-tabla" style={cols}>
                     <div className="fz-cab">
                         <span>Pasarela</span>
-                        <span className="fz-der">Saldo actual <Tip texto="Lo que hay hoy en la cuenta. Se carga a mano." titulo="Saldo actual" /></span>
-                        <span className="fz-der">Por pagar <Tip texto="Sueldos, comisiones y bonos del mes de quienes cobran por esta pasarela." titulo="Por pagar" /></span>
+                        <span className="fz-der">Saldo actual <Tip texto="Lo que hay en la cuenta. Se carga a mano, mes por mes." titulo="Saldo actual" /></span>
+                        <span className="fz-der">Por pagar <Tip texto="Sueldos, comisiones y bonos del período de quienes cobran por esta pasarela." titulo="Por pagar" /></span>
                         <span className="fz-der">Diferencia</span>
                     </div>
                     {filas.map(b => {
@@ -191,8 +217,10 @@ const MediosDePago = ({ mes }) => {
                         return (
                             <div key={b.payment_method} className="fz-fila">
                                 <span style={{ fontWeight: 800 }}>{b.payment_method}</span>
-                                <CampoMonto valor={b.actual_amount} etiqueta={`Saldo actual de ${b.payment_method}`}
-                                    onGuardar={(n) => guardar(b.payment_method, n)} />
+                                {periodo.mes ? (
+                                    <CampoMonto valor={b.actual_amount} etiqueta={`Saldo actual de ${b.payment_method}`}
+                                        onGuardar={(n) => guardar(b.payment_method, n)} />
+                                ) : <span className="fz-n fz-der">{dinero(b.actual_amount)}</span>}
                                 <span className="fz-n fz-der" style={{ color: v('warning') }}>{dinero(b.expected_amount)}</span>
                                 <span className="fz-n fz-der" style={{ color: v(tonoDe(diferencia)) }}>{conSigno(diferencia)}</span>
                             </div>
@@ -215,13 +243,13 @@ const MediosDePago = ({ mes }) => {
 // ------------------------------------------------------------------------------------------------
 // Anuncios
 
-const Anuncios = ({ mes }) => {
-    const pedir = useCallback(() => apiFz.getAnuncios(mes), [mes]);
-    const [datos, , setDatos] = useDatos(pedir, mes);
+const Anuncios = ({ periodo }) => {
+    const pedir = useCallback(() => apiFz.getAnuncios(periodo), [periodo]);
+    const [datos, , setDatos] = useDatos(pedir, claveDe(periodo));
 
     const guardar = async (n) => {
         try {
-            setDatos(await apiFz.guardarAnuncios(mes, n));
+            setDatos(await apiFz.guardarAnuncios(periodo.mes, n));
             toast.success('Presupuesto de anuncios guardado');
         } catch {
             toast.error('No se pudo guardar el presupuesto');
@@ -234,12 +262,13 @@ const Anuncios = ({ mes }) => {
     return (
         <div className="fz-grid fz-grid--3">
             <Cifron rotulo="Presupuesto (A)" valor={dinero(datos.budget)} humo={HUMOS.marca}
-                ayuda="Lo que se planea invertir en anuncios este mes. Es el monto que entra en los gastos del resumen.">
-                <CampoMonto valor={datos.budget} onGuardar={guardar} etiqueta="Presupuesto de anuncios" />
+                ayuda="Lo que se planea invertir en anuncios: uno por mes, y el mes que el período corta cuenta proporcional a sus días. Es el monto que entra en los gastos del resumen.">
+                {periodo.mes ? <CampoMonto valor={datos.budget} onGuardar={guardar} etiqueta="Presupuesto de anuncios" />
+                    : <SoloPorMes />}
             </Cifron>
             <Cifron rotulo="Gastado (B)" valor={dinero(datos.spent)} tono="warning" humo={HUMOS.gasto}
                 sub="Sale del registro de inversión de Marketing"
-                ayuda="La inversión real del mes según los períodos de gasto cargados en Marketing." />
+                ayuda="La inversión real según los períodos de gasto cargados en Marketing que tocan el período." />
             <Cifron rotulo="Diferencia (A − B)" valor={conSigno(diferencia)} tono={tonoDe(diferencia)}
                 humo={HUMOS.info} sub={diferencia >= 0 ? 'Queda presupuesto' : 'Se pasó del presupuesto'}
                 ayuda="Presupuesto menos lo gastado: positivo si sobra, negativo si se gastó de más." />
@@ -391,7 +420,11 @@ const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
     );
 };
 
-const totalNomina = (filas) => filas.reduce((s, f) => s + (f.base_salary || 0) + (f.commissions || 0) + (f.bonuses || 0), 0);
+const totalFila = (f) => (f.base_salary || 0) + (f.commissions || 0) + (f.bonuses || 0);
+const totalNomina = (filas) => filas.reduce((s, f) => s + totalFila(f), 0);
+// Lo pagado de una fila: entera si está tildada. Sumada de varios meses (`sumarNominas`) trae lo
+// de los meses tildados en `pagado`.
+const pagadoDe = (f) => (f.pagado != null ? f.pagado : f.is_paid ? totalFila(f) : 0);
 const nIntegrantes = (n) => `${n} ${n === 1 ? 'integrante' : 'integrantes'}`;
 
 /**
@@ -401,7 +434,7 @@ const nIntegrantes = (n) => `${n} ${n === 1 ? 'integrante' : 'integrantes'}`;
 const TotalesNomina = ({ filas, rotulo }) => {
     const pagadas = filas.filter(f => f.is_paid);
     const total = totalNomina(filas);
-    const pagado = totalNomina(pagadas);
+    const pagado = filas.reduce((s, f) => s + pagadoDe(f), 0);
     return (
         <div className="fz-grid fz-grid--3">
             <Cifron rotulo={rotulo} valor={dinero(total)} humo={HUMOS.marca} sub={nIntegrantes(filas.length)}
@@ -416,12 +449,23 @@ const TotalesNomina = ({ filas, rotulo }) => {
     );
 };
 
-const Nomina = ({ mes }) => {
+/** Las filas en sus dos grupos, fijo y variable, según el tipo de sueldo del integrante. */
+const gruposDe = (filas, integranteDe) => [
+    { key: 'fijo', label: 'Equipo fijo', tono: 'info', filas: filas.filter(f => integranteDe(f)?.salary_type !== 'variable') },
+    { key: 'variable', label: 'Equipo variable · comisiones', tono: 'success', filas: filas.filter(f => integranteDe(f)?.salary_type === 'variable') },
+];
+
+const EsqueletoNomina = () => <section className="panel"><EsqueletoFilas rotulo="Cargando la nómina…" lineas={8} /></section>;
+
+/** La nómina: la del mes se edita; la de un período que no es un mes se ve sumada. */
+const Nomina = ({ periodo }) => (periodo.mes ? <NominaDelMes mes={periodo.mes} /> : <NominaDelPeriodo periodo={periodo} />);
+
+const NominaDelMes = ({ mes }) => {
     const pedir = useCallback(() => apiFz.getNomina(mes), [mes]);
     const [datos, recargar, setDatos] = useDatos(pedir, mes);
     const [modal, setModal] = useState(null); // null | { integrante } (integrante null = nuevo)
 
-    if (!datos) return <section className="panel"><EsqueletoFilas rotulo="Cargando la nómina…" lineas={8} /></section>;
+    if (!datos) return <EsqueletoNomina />;
     const { nomina, integrantes } = datos;
     const integranteDe = (fila) => integrantes.find(i => i.id === fila.member_id);
 
@@ -460,10 +504,7 @@ const Nomina = ({ mes }) => {
         }
     };
 
-    const grupos = [
-        { key: 'fijo', label: 'Equipo fijo', tono: 'info', filas: nomina.filter(f => integranteDe(f)?.salary_type !== 'variable') },
-        { key: 'variable', label: 'Equipo variable · comisiones', tono: 'success', filas: nomina.filter(f => integranteDe(f)?.salary_type === 'variable') },
-    ];
+    const grupos = gruposDe(nomina, integranteDe);
     const total = totalNomina(nomina);
 
     return (
@@ -513,15 +554,137 @@ const Nomina = ({ mes }) => {
     );
 };
 
+/**
+ * La nómina de varios meses sumada por integrante (08/10/2026): el mes que el período cubre entero
+ * cuenta entero y el que corta, proporcional a sus días (la regla de los libros mensuales). Cada
+ * fila trae lo pagado (lo de sus meses tildados), en cuántos meses aparece y en cuántos se pagó, y
+ * el medio de pago del último. `is_paid` es «todos sus meses pagados».
+ */
+export const sumarNominas = (meses, nominas) => {
+    const porIntegrante = new Map();
+    meses.forEach(({ parte }, i) => (nominas[i] || []).forEach((f) => {
+        const fila = porIntegrante.get(f.member_id) || {
+            member_id: f.member_id, member_name: f.member_name, base_salary: 0, commissions: 0, bonuses: 0,
+            pagado: 0, meses: 0, mesesPagados: 0,
+        };
+        const base = (f.base_salary || 0) * parte;
+        const comision = (f.commissions || 0) * parte;
+        const bonos = (f.bonuses || 0) * parte;
+        fila.base_salary += base;
+        fila.commissions += comision;
+        fila.bonuses += bonos;
+        fila.meses += 1;
+        if (f.is_paid) {
+            fila.pagado += base + comision + bonos;
+            fila.mesesPagados += 1;
+        }
+        fila.member_name = f.member_name;
+        fila.payment_method = f.payment_method;
+        porIntegrante.set(f.member_id, fila);
+    }));
+    return [...porIntegrante.values()].map(f => ({ ...f, is_paid: f.mesesPagados === f.meses }));
+};
+
+const COLS_NOMINA_PERIODO = { '--cols': 'minmax(150px,1.3fr) 130px 130px 130px 130px 120px 116px', '--min': '960px' };
+
+/** Pagado en un período de varios meses: todos, ninguno o algunos (con cuántos en su title). */
+const EstadoPago = ({ fila }) => {
+    const [texto, tono] = fila.is_paid ? ['Pagado', 'success']
+        : fila.mesesPagados ? ['Parcial', 'warning'] : ['Pendiente', 'text-muted'];
+    return (
+        <span className="chip" style={{ '--c': v(tono) }}
+            title={`Pagado en ${fila.mesesPagados} de ${fila.meses} ${fila.meses === 1 ? 'mes' : 'meses'}`}>
+            {texto}
+        </span>
+    );
+};
+
+const NominaDelPeriodo = ({ periodo }) => {
+    const pedir = useCallback(async () => {
+        const meses = mesesDelRango(periodo.desde, periodo.hasta);
+        const { nominas, integrantes } = await apiFz.getNominas(meses.map(m => m.mes));
+        return { filas: sumarNominas(meses, nominas), integrantes };
+    }, [periodo]);
+    const [datos] = useDatos(pedir, claveDe(periodo));
+
+    if (!datos) return <EsqueletoNomina />;
+    const { filas, integrantes } = datos;
+    const integranteDe = (fila) => integrantes.find(i => i.id === fila.member_id);
+    const medio = (fila) => (PASARELAS.includes(fila.payment_method) ? fila.payment_method : 'Mercury');
+
+    return (
+        <>
+            <TotalesNomina filas={filas} rotulo="Total del período" />
+            <section className="panel">
+                <PanelCab titulo="Nómina del período"
+                    tip="La nómina de cada mes del período, sumada por integrante: el mes que el período cubre entero cuenta entero, y el que corta, proporcional a sus días. «Pagado» dice si se tildaron todos sus meses, algunos o ninguno; lo pagado de arriba suma los meses tildados.">
+                    <SoloPorMes />
+                </PanelCab>
+                <div className="fz-scroll">
+                    <div className="fz-tabla" style={COLS_NOMINA_PERIODO}>
+                        <div className="fz-cab">
+                            <span>Integrante</span>
+                            <span className="fz-der">Sueldo base</span>
+                            <span className="fz-der">Comisión</span>
+                            <span className="fz-der">Bonos</span>
+                            <span className="fz-der">Total</span>
+                            <span>Medio de pago</span>
+                            <span className="fz-centro">Pagado</span>
+                        </div>
+                        {gruposDe(filas, integranteDe).map(g => (
+                            <React.Fragment key={g.key}>
+                                <p className="fz-grupo" style={{ '--c': v(g.tono) }}><i />{g.label}</p>
+                                {g.filas.map(fila => (
+                                    <div key={fila.member_id} className="fz-fila">
+                                        <span className="fz-nom">
+                                            <b>{fila.member_name}</b>
+                                            <small>{integranteDe(fila)?.role || 'Integrante'}</small>
+                                        </span>
+                                        <span className="fz-n fz-der">{dinero(fila.base_salary)}</span>
+                                        <span className="fz-n fz-der">{dinero(fila.commissions)}</span>
+                                        <span className="fz-n fz-der">{dinero(fila.bonuses)}</span>
+                                        <span className="fz-n fz-der">{dinero(totalFila(fila))}</span>
+                                        <span className="trunc">{medio(fila)}</span>
+                                        <span className="fz-centro" style={{ display: 'flex' }}><EstadoPago fila={fila} /></span>
+                                    </div>
+                                ))}
+                                {g.filas.length === 0 && <p className="fz-vacio">Nadie en este grupo.</p>}
+                            </React.Fragment>
+                        ))}
+                        <div className="fz-fila fz-total">
+                            <span className="fz-rot">Total · {textoPeriodo(periodo)}</span>
+                            <span /><span /><span />
+                            <span className="fz-n fz-der">{dinero(totalNomina(filas))}</span>
+                            <span /><span />
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </>
+    );
+};
+
 // ------------------------------------------------------------------------------------------------
 // Software
 
-const hoyIso = () => new Date().toISOString().slice(0, 10);
+// Hoy en calendario local: `toISOString()` es la fecha en UTC, y en UTC−3 después de las 21 h ya
+// es «mañana» (ver RangoFechas).
+const hoyLocal = () => {
+    const f = new Date();
+    return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+};
 
-const Software = ({ mes }) => {
-    const pedir = useCallback(() => apiFz.getGastosSoftware(mes), [mes]);
-    const [gastos, recargar, setGastos] = useDatos(pedir, mes);
-    const [nuevo, setNuevo] = useState({ description: '', amount: '', date: hoyIso() });
+/** La fecha con la que arranca un gasto nuevo: hoy, o la punta más cercana si hoy cae fuera del
+ *  período (mirando un mes cerrado, el gasto nuevo casi siempre es de ese mes). */
+const fechaInicial = ({ desde, hasta }) => {
+    const hoy = hoyLocal();
+    return hoy < desde ? desde : hoy > hasta ? hasta : hoy;
+};
+
+const Software = ({ periodo }) => {
+    const pedir = useCallback(() => apiFz.getGastosSoftware(periodo), [periodo]);
+    const [gastos, recargar, setGastos] = useDatos(pedir, claveDe(periodo));
+    const [nuevo, setNuevo] = useState(() => ({ description: '', amount: '', date: fechaInicial(periodo) }));
     const [guardando, setGuardando] = useState(false);
 
     const registrar = async (e) => {
@@ -529,8 +692,10 @@ const Software = ({ mes }) => {
         setGuardando(true);
         try {
             await apiFz.crearGasto({ ...nuevo, amount: parseFloat(nuevo.amount) });
-            toast.success('Gasto registrado');
-            setNuevo({ description: '', amount: '', date: hoyIso() });
+            // La lista es la del período: uno con fecha afuera se guarda pero no aparece abajo.
+            const afuera = nuevo.date < periodo.desde || nuevo.date > periodo.hasta;
+            toast.success(afuera ? 'Gasto registrado: su fecha queda fuera del período elegido' : 'Gasto registrado');
+            setNuevo({ description: '', amount: '', date: fechaInicial(periodo) });
             await recargar();
         } catch {
             toast.error('No se pudo registrar el gasto');
@@ -553,7 +718,7 @@ const Software = ({ mes }) => {
     return (
         <div className="fz-grid fz-grid--2" style={{ alignItems: 'start' }}>
             <form className="panel" onSubmit={registrar}>
-                <PanelCab titulo="Nuevo gasto" tip="Una suscripción o herramienta pagada. Entra en los gastos del mes de su fecha." />
+                <PanelCab titulo="Nuevo gasto" tip="Una suscripción o herramienta pagada. Entra en los gastos de cualquier período que incluya su fecha." />
                 <div style={{ display: 'grid', gap: 'var(--s4)' }}>
                     <label className="campo">
                         <span className="t-rotulo">Descripción</span>
@@ -579,7 +744,7 @@ const Software = ({ mes }) => {
             </form>
 
             <section className="panel">
-                <PanelCab titulo="Software del mes" tip="Los gastos de software con fecha en el mes elegido.">
+                <PanelCab titulo="Software del período" tip="Los gastos de software con fecha en el período elegido.">
                     {gastos && <span className="chip" style={{ '--c': v('warning') }}>{dinero(total)}</span>}
                 </PanelCab>
                 {!gastos ? <EsqueletoFilas rotulo="Cargando los gastos…" lineas={4} /> : (
@@ -596,7 +761,7 @@ const Software = ({ mes }) => {
                                 </span>
                             </div>
                         ))}
-                        {gastos.length === 0 && <p className="fz-vacio">No hay gastos de software este mes.</p>}
+                        {gastos.length === 0 && <p className="fz-vacio">No hay gastos de software en este período.</p>}
                     </div>
                 )}
             </section>
@@ -608,9 +773,17 @@ const Software = ({ mes }) => {
 
 const VISTAS = { resumen: Resumen, medios: MediosDePago, anuncios: Anuncios, nomina: Nomina, software: Software };
 
-const Finanzas = ({ tab, mes }) => {
+/** `periodo` = {desde, hasta, mes}: ver el docstring de arriba y `periodoDe` en comun.jsx. */
+const Finanzas = ({ tab, periodo }) => {
     const Vista = VISTAS[tab] || Resumen;
-    return <Vista key={`${tab}-${mes}`} mes={mes} />;
+    if (mesesDelRango(periodo.desde, periodo.hasta).length > MAX_MESES) {
+        return (
+            <section className="panel">
+                <p className="fz-vacio">El período no puede pasar de {MAX_MESES} meses: elegí uno más corto.</p>
+            </section>
+        );
+    }
+    return <Vista key={`${tab}-${claveDe(periodo)}`} periodo={periodo} />;
 };
 
 export default Finanzas;

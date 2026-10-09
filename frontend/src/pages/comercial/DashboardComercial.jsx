@@ -24,7 +24,7 @@ import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, g
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
 import Payroll, { FiltroGrupos, FiltroPersonas, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
-import { MenuMes, guardarMes, leerMesGuardado } from './components/finanzas/comun';
+import { MenuPeriodoFinanzas, guardarPeriodo, leerPeriodoGuardado, periodoDe } from './components/finanzas/comun';
 import './components/finanzas/finanzas.css';
 
 /**
@@ -213,8 +213,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const tabla = params.get('t') || null;
 
     const [tab, setTab] = useState('dashboard');
-    // Finanzas se mira por mes (queda el último elegido) y Payroll por un rango libre.
-    const [mesFinanzas, setMesFinanzas] = useState(leerMesGuardado);
+    // Finanzas se mira por mes o por un rango personalizado (queda el último elegido; las vistas
+    // reciben {desde, hasta, mes}, ver `periodoDe`) y Payroll por un rango libre.
+    const [eleccionFinanzas, setEleccionFinanzas] = useState(leerPeriodoGuardado);
+    const periodoFinanzas = useMemo(() => periodoDe(eleccionFinanzas), [eleccionFinanzas]);
     const [rangoNomina, setRangoNomina] = useState(() => rangoPayroll('mes'));
     // Payroll: qué grupos y qué personas se ven (queda lo último elegido) y sus dos modales.
     const [gruposNomina, setGruposNomina] = useState(leerGrupos);
@@ -716,7 +718,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         {/* Con "Personalizado" la píldora dice el rango, y su menú queda abierto
                             con las dos fechas debajo de los períodos. */}
                         {seccion === 'finanzas' && (
-                            <MenuMes mes={mesFinanzas} onCambiar={(m) => { setMesFinanzas(m); guardarMes(m); }} />
+                            <MenuPeriodoFinanzas eleccion={eleccionFinanzas}
+                                onCambiar={(e) => { setEleccionFinanzas(e); guardarPeriodo(e); }} />
                         )}
                         {seccion === 'payroll' && (
                             <>
@@ -800,7 +803,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onAbrirFila={abrirFila}
                             onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
                     )}
-                    {seccion === 'finanzas' && <Finanzas tab={tab} mes={mesFinanzas} />}
+                    {seccion === 'finanzas' && <Finanzas tab={tab} periodo={periodoFinanzas} />}
                     {seccion === 'payroll' && (
                         <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} onVerVentas={irAVentasDeNomina}
                             grupos={gruposNomina} personas={personasNomina} tasasAbiertas={tasasAbiertas}
