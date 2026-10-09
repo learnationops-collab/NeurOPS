@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, ArrowLeft, Check, Pencil } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Pencil, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PanelCab } from '../Shared';
 import { CONCEPTOS, FUENTES } from './DetalleNomina';
@@ -22,6 +22,8 @@ import * as apiFz from './finanzasApi';
  *    sea). Mueve también las métricas comerciales, así que se abre, se elige y se confirma ahí
  *    mismo, con el aviso a la vista.
  * Cada cambio recalcula Payroll detrás (`onCambio`): los tiles y los KPIs ya están al día al volver.
+ * El buscador (09/10/2026, la lista de Fulfillment es larga) filtra por cliente, programa, concepto,
+ * setter o closer, sin tildes ni mayúsculas; con algo escrito, el pie suma solo lo que coincide.
  */
 
 const fecha = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '—');
@@ -41,6 +43,11 @@ export const conceptoDe = (persona, venta) => {
 };
 
 const idDe = (lista, nombre) => lista?.find(p => normal(p.nombre) === normal(nombre))?.id;
+
+/** Si la venta coincide con lo buscado (ya normalizado) en alguno de los textos que se ven en su fila. */
+const coincide = (persona, venta, texto) => !texto
+    || [venta.nombre_cliente, venta.instagram, venta.tipo_pago, conceptoDe(persona, venta), venta.setter, venta.closer]
+        .some(campo => normal(campo).includes(texto));
 
 /**
  * El cambio de atribución de una venta, abierto debajo de su fila: el setter y el closer con las
@@ -118,6 +125,7 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
     const [enCurso, setEnCurso] = useState(() => new Set());
     const [editando, setEditando] = useState(null);
     const [personas, setPersonas] = useState(null);
+    const [buscar, setBuscar] = useState('');
     const quieto = useReducedMotion();
     const { Icono } = persona;
 
@@ -135,6 +143,24 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
         .map(venta => ({ ...venta, excluida: cambios[venta.id] ?? venta.is_excluded_from_payroll })),
     [datos.sales, cambios]);
     const excluidas = ventas.filter(venta => venta.excluida).length;
+    const texto = normal(buscar);
+    const visibles = texto ? ventas.filter(venta => coincide(persona, venta, texto)) : ventas;
+    // Con una búsqueda, el pie suma las que coinciden y suman; sin ella, los totales de la nómina
+    // (los del tile, al centavo).
+    const sumanVisibles = visibles.filter(venta => !venta.excluida);
+    const pie = texto
+        ? {
+            rotulo: `${visibles.length} de ${ventas.length} coinciden · ${sumanVisibles.length} `
+                + (sumanVisibles.length === 1 ? 'suma' : 'suman'),
+            neto: sumanVisibles.reduce((t, venta) => t + (venta.monto_neto || 0), 0),
+            comision: sumanVisibles.reduce((t, venta) => t + (venta.comision || 0), 0),
+        }
+        : {
+            rotulo: `${datos.total_ventas} ${datos.total_ventas === 1 ? 'venta suma' : 'ventas suman'}`
+                + (excluidas ? ` · ${excluidas} ${excluidas === 1 ? 'excluida' : 'excluidas'}` : ''),
+            neto: datos.total_recaudado_neto,
+            comision: datos.comision_total,
+        };
 
     const alternar = async (venta) => {
         const excluir = !venta.excluida;
@@ -204,7 +230,15 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
                 <PanelCab titulo={`Ventas de ${persona.nombre}`}
                     tip={atribuible
                         ? 'La casilla saca la venta de la nómina de todos los que cobran sobre ella, o la vuelve a sumar. El lápiz cambia su setter o su closer. Cada cambio se guarda al momento y recalcula Payroll.'
-                        : 'La casilla saca la venta de la nómina de todos los que cobran sobre ella, o la vuelve a sumar. Fulfillment cobra sobre todo lo que entra, así que la atribución de cada venta no cambia su comisión y no se edita acá.'} />
+                        : 'La casilla saca la venta de la nómina de todos los que cobran sobre ella, o la vuelve a sumar. Fulfillment cobra sobre todo lo que entra, así que la atribución de cada venta no cambia su comisión y no se edita acá.'}>
+                    {ventas.length > 0 && (
+                        <label className="busca busca--sm fz-ventas-busca">
+                            <Search aria-hidden="true" />
+                            <input type="search" value={buscar} onChange={(e) => setBuscar(e.target.value)}
+                                placeholder="Buscar cliente, programa, setter…" aria-label={`Buscar en las ventas de ${persona.nombre}`} />
+                        </label>
+                    )}
+                </PanelCab>
                 <div className="fz-scroll">
                     <div className="fz-tabla" style={{ '--cols': cols, '--min': atribuible ? '980px' : '920px' }}>
                         <div className="fz-cab">
@@ -219,7 +253,7 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
                             <span className="fz-der">Comisión</span>
                             {atribuible && <span className="fz-centro" aria-label="Atribución" />}
                         </div>
-                        {ventas.map(venta => (
+                        {visibles.map(venta => (
                             <React.Fragment key={venta.id}>
                                 <div className={`fz-fila${venta.excluida ? ' fz-excluida' : ''}${editando === venta.id ? ' fz-fila--abierta' : ''}`}>
                                     <span className="fz-centro" style={{ display: 'flex' }}>
@@ -260,15 +294,15 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
                         {ventas.length === 0 && (
                             <p className="fz-vacio">Sin ventas que le paguen comisión en este período.</p>
                         )}
-                        {ventas.length > 0 && (
+                        {ventas.length > 0 && visibles.length === 0 && (
+                            <p className="fz-vacio">Ninguna venta coincide con «{buscar.trim()}».</p>
+                        )}
+                        {visibles.length > 0 && (
                             <div className="fz-fila fz-total">
-                                <span className="fz-rot" style={{ gridColumn: '1 / 7' }}>
-                                    {datos.total_ventas} {datos.total_ventas === 1 ? 'venta suma' : 'ventas suman'}
-                                    {excluidas ? ` · ${excluidas} ${excluidas === 1 ? 'excluida' : 'excluidas'}` : ''}
-                                </span>
-                                <span className="fz-n fz-der">{dinero(datos.total_recaudado_neto)}</span>
+                                <span className="fz-rot" style={{ gridColumn: '1 / 7' }}>{pie.rotulo}</span>
+                                <span className="fz-n fz-der">{dinero(pie.neto)}</span>
                                 <span />
-                                <span className="fz-n fz-der" style={{ color: v('success') }}>{dinero(datos.comision_total)}</span>
+                                <span className="fz-n fz-der" style={{ color: v('success') }}>{dinero(pie.comision)}</span>
                             </div>
                         )}
                     </div>
