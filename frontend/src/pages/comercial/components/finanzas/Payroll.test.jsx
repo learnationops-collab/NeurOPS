@@ -82,11 +82,11 @@ describe('Payroll', () => {
         const jean = (await screen.findByText('Jean Carlo', { selector: '.fz-persona-nom' }, { timeout: 3000 })).closest('.kpi');
 
         expect([...jean.querySelectorAll('.kpi-sub > span')].map(s => s.textContent))
-            .toEqual(['1 ventas cerradas · neto $1,000.00', 'transferencias -$60.00 · a pagar $40.00']);
+            .toEqual(['1 ventas cerradas · neto $1,000.00', 'descuentos -$60.00 · a pagar $40.00']);
         await waitFor(() => expect(jean.querySelector('.kpi-n').textContent).toBe('$100.00'));
         const pedro = screen.getByText('Pedro', { selector: '.fz-persona-nom' }).closest('.kpi');
         expect(pedro.querySelector('.fz-persona-descuento').textContent)
-            .toBe('transferencias -$300.00 · debe devolver $300.00');
+            .toBe('descuentos -$300.00 · debe devolver $300.00');
         // Lo que cuesta la nómina, igual que sin transferencias (las cifras cuentan hasta su valor).
         await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
         await waitFor(() => expect(cifra('Total').textContent).toBe('$830.00'));

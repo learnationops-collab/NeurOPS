@@ -393,7 +393,7 @@ const ModalIntegrante = ({ integrante, onGuardar, onCerrar }) => {
 };
 
 // La comisión es más ancha que los otros montos: a su lado va la marca «manual» cuando la hay.
-const COLS_NOMINA = { '--cols': 'minmax(150px,1.3fr) 130px 200px 130px 120px 120px 64px 82px', '--min': '1070px' };
+const COLS_NOMINA = { '--cols': 'minmax(150px,1.3fr) 130px 200px 130px 120px 116px 120px 64px 82px', '--min': '1190px' };
 
 /**
  * La marca de una comisión cargada a mano (08/10/2026): la calculada ya no la pisa hasta que se
@@ -414,34 +414,25 @@ const MarcaManual = ({ fila, onVolver }) => {
 };
 
 /**
- * Debajo de la fila de quien recibió plata de un cliente por transferencia en el período (Pedro,
- * Jean Carlo; 09/10/2026): cuánto, y lo que queda por pagarle. El Total de la fila sigue siendo lo
- * que cuesta (sueldo, comisión y bonos): el descuento es sobre lo que se le paga. Termina debajo
- * de la columna Total.
+ * La columna «Descuentos» (09/10/2026): lo que el integrante recibió de un cliente por
+ * transferencia en el período (Pedro, Jean Carlo), en rojo y negativo, al lado del Total. El Total
+ * sigue siendo lo que cuesta (sueldo, comisión y bonos): el descuento es sobre lo que se le paga.
+ * Kerwin la pidió en lugar del renglón «Transferencias recibidas de clientes … · a pagar …» que iba
+ * debajo de la fila.
  */
-export const DescuentoTransferencias = ({ fila, hastaColumna = 6 }) => {
-    const recibidas = fila.transferencias_recibidas || 0;
-    if (recibidas <= 0.004) return null;
-    const neto = aPagarDe(fila);
-    return (
-        <div className="fz-fila fz-fila--descuento" style={fila.is_paid ? { opacity: 0.7 } : undefined}>
-            <span className="fz-descuento" style={{ gridColumn: `1 / ${hastaColumna}` }}>
-                Transferencias recibidas de clientes <b>{dinero(-recibidas)}</b>
-                <span aria-hidden="true"> · </span>
-                {neto < -0.004 ? <>debe devolver <b>{dinero(-neto)}</b></> : <>a pagar <b>{dinero(neto)}</b></>}
-            </span>
-        </div>
-    );
-};
+export const CeldaDescuento = ({ monto }) => (monto > 0.004
+    ? <span className="fz-n fz-der" style={{ color: v('error') }} title="Recibido por transferencia de un cliente">{dinero(-monto)}</span>
+    : <span className="fz-n fz-der mut40">—</span>);
+
+const AYUDA_DESCUENTOS = 'Lo que recibió en su cuenta por transferencia de un cliente en el período (se marca en la ficha del cliente, sección Pagos). Ya lo tiene: se le descuenta de lo que se le paga, no de lo que cuesta.';
 
 const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
     // Un medio que no es una pasarela ('Stripe' de los integrantes viejos) se paga por Mercury:
     // es lo que suma «Medios de pago» (ver `manage_balances`), así que es lo que se muestra.
     const medio = PASARELAS.includes(fila.payment_method) ? fila.payment_method : 'Mercury';
     const total = (fila.base_salary || 0) + (fila.commissions || 0) + (fila.bonuses || 0);
-    const conDescuento = (fila.transferencias_recibidas || 0) > 0.004;
     return (
-        <div className={`fz-fila${conDescuento ? ' fz-fila--seguida' : ''}`} style={fila.is_paid ? { opacity: 0.7 } : undefined}>
+        <div className="fz-fila" style={fila.is_paid ? { opacity: 0.7 } : undefined}>
             <span className="fz-nom">
                 <b>{fila.member_name}</b>
                 <small>{integrante?.role || 'Integrante'}</small>
@@ -458,6 +449,7 @@ const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
             <CampoMonto valor={fila.bonuses} etiqueta={`Bonos de ${fila.member_name}`}
                 onGuardar={(n) => onCambiar(fila, 'bonuses', n)} />
             <span className="fz-n fz-der">{dinero(total)}</span>
+            <CeldaDescuento monto={fila.transferencias_recibidas || 0} />
             <select className="fz-select" value={medio} aria-label={`Medio de pago de ${fila.member_name}`}
                 onChange={(e) => onCambiar(fila, 'payment_method', e.target.value)}>
                 {PASARELAS.map(p => <option key={p} value={p}>{p}</option>)}
@@ -484,6 +476,7 @@ const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
 
 const totalFila = (f) => (f.base_salary || 0) + (f.commissions || 0) + (f.bonuses || 0);
 const totalNomina = (filas) => filas.reduce((s, f) => s + totalFila(f), 0);
+const descuentosDe = (filas) => filas.reduce((s, f) => s + (f.transferencias_recibidas || 0), 0);
 // Lo que hay que pagarle a un integrante (09/10/2026): lo que cobra menos lo que ya recibió de un
 // cliente por transferencia (`a_pagar_de_item` en el backend). Negativo: lo tiene que devolver.
 const aPagarDe = (f) => totalFila(f) - (f.transferencias_recibidas || 0);
@@ -508,10 +501,8 @@ const TotalesNomina = ({ filas, rotulo }) => {
         <div className="fz-grid fz-grid--4">
             <Cifron rotulo={rotulo} valor={dinero(total)} humo={HUMOS.marca} sub={nIntegrantes(filas.length)}
                 ayuda="Sueldos, comisiones y bonos de todo el equipo: lo que cuesta la nómina, lo mismo que suma la fila Total de la tabla." />
-            {/* «Transferencias» a secas: «recibidas» partía el rótulo en dos renglones a 1280 px y la
-                cifra quedaba más abajo que las otras tres. Lo dice el renglón de abajo. */}
-            <Cifron rotulo="Transferencias" valor={dinero(recibidas)} tono="info" humo={HUMOS.info}
-                sub={conTransferencias.length ? `Recibidas: ${conTransferencias.map(f => f.member_name).join(', ')}`
+            <Cifron rotulo="Descuentos" valor={dinero(-recibidas)} tono={recibidas > 0.004 ? 'error' : undefined} humo={HUMOS.gasto}
+                sub={conTransferencias.length ? conTransferencias.map(f => f.member_name).join(', ')
                     : 'Nadie recibió plata de un cliente'}
                 ayuda="Lo que alguien del equipo recibió en su cuenta por transferencia de un cliente en el período (se marca en la ficha del cliente, sección Pagos). Ya lo tiene: se le descuenta de lo que se le paga, no de lo que cuesta." />
             <Cifron rotulo="Pagado" valor={dinero(pagado)} tono="success" humo={HUMOS.ingreso}
@@ -600,6 +591,7 @@ const NominaDelMes = ({ mes }) => {
                             <span className="fz-der">Comisión</span>
                             <span className="fz-der">Bonos</span>
                             <span className="fz-der">Total</span>
+                            <span className="fz-der">Descuentos <Tip titulo="Descuentos" texto={AYUDA_DESCUENTOS} /></span>
                             <span>Medio de pago</span>
                             <span className="fz-centro">Pagado</span>
                             <span />
@@ -612,7 +604,6 @@ const NominaDelMes = ({ mes }) => {
                                         <FilaNomina fila={fila} integrante={integranteDe(fila)}
                                             onCambiar={cambiar} onEliminar={eliminar}
                                             onEditar={(integrante) => setModal({ integrante })} />
-                                        <DescuentoTransferencias fila={fila} />
                                     </React.Fragment>
                                 ))}
                                 {g.filas.length === 0 && <p className="fz-vacio">Nadie en este grupo.</p>}
@@ -622,6 +613,7 @@ const NominaDelMes = ({ mes }) => {
                             <span className="fz-rot">Total del mes · {nombreDelMes(mes)}</span>
                             <span /><span /><span />
                             <span className="fz-n fz-der">{dinero(total)}</span>
+                            <CeldaDescuento monto={descuentosDe(nomina)} />
                             <span /><span /><span />
                         </div>
                     </div>
@@ -667,7 +659,7 @@ export const sumarNominas = (meses, nominas) => {
     return [...porIntegrante.values()].map(f => ({ ...f, is_paid: f.mesesPagados === f.meses }));
 };
 
-const COLS_NOMINA_PERIODO = { '--cols': 'minmax(150px,1.3fr) 130px 130px 130px 130px 120px 116px', '--min': '960px' };
+const COLS_NOMINA_PERIODO = { '--cols': 'minmax(150px,1.3fr) 130px 130px 130px 130px 116px 120px 116px', '--min': '1080px' };
 
 /** Pagado en un período de varios meses: todos, ninguno o algunos (con cuántos en su title). */
 const EstadoPago = ({ fila }) => {
@@ -710,6 +702,7 @@ const NominaDelPeriodo = ({ periodo }) => {
                             <span className="fz-der">Comisión</span>
                             <span className="fz-der">Bonos</span>
                             <span className="fz-der">Total</span>
+                            <span className="fz-der">Descuentos <Tip titulo="Descuentos" texto={AYUDA_DESCUENTOS} /></span>
                             <span>Medio de pago</span>
                             <span className="fz-centro">Pagado</span>
                         </div>
@@ -718,7 +711,7 @@ const NominaDelPeriodo = ({ periodo }) => {
                                 <p className="fz-grupo" style={{ '--c': v(g.tono) }}><i />{g.label}</p>
                                 {g.filas.map(fila => (
                                     <React.Fragment key={fila.member_id}>
-                                        <div className={`fz-fila${fila.transferencias_recibidas > 0.004 ? ' fz-fila--seguida' : ''}`}>
+                                        <div className="fz-fila">
                                             <span className="fz-nom">
                                                 <b>{fila.member_name}</b>
                                                 <small>{integranteDe(fila)?.role || 'Integrante'}</small>
@@ -727,10 +720,10 @@ const NominaDelPeriodo = ({ periodo }) => {
                                             <span className="fz-n fz-der">{dinero(fila.commissions)}</span>
                                             <span className="fz-n fz-der">{dinero(fila.bonuses)}</span>
                                             <span className="fz-n fz-der">{dinero(totalFila(fila))}</span>
+                                            <CeldaDescuento monto={fila.transferencias_recibidas || 0} />
                                             <span className="trunc">{medio(fila)}</span>
                                             <span className="fz-centro" style={{ display: 'flex' }}><EstadoPago fila={fila} /></span>
                                         </div>
-                                        <DescuentoTransferencias fila={{ ...fila, is_paid: false }} />
                                     </React.Fragment>
                                 ))}
                                 {g.filas.length === 0 && <p className="fz-vacio">Nadie en este grupo.</p>}
@@ -740,6 +733,7 @@ const NominaDelPeriodo = ({ periodo }) => {
                             <span className="fz-rot">Total · {textoPeriodo(periodo)}</span>
                             <span /><span /><span />
                             <span className="fz-n fz-der">{dinero(totalNomina(filas))}</span>
+                            <CeldaDescuento monto={descuentosDe(filas)} />
                             <span /><span />
                         </div>
                     </div>
