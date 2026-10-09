@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Barra, EsqueletoFilas, PanelCab, Tip } from '../Shared';
+import { AYUDA_PROCEDENCIA } from '../procedencias';
 import { dinero } from './comun';
 import * as apiFz from './finanzasApi';
 import './procedencia.css';
@@ -23,14 +24,6 @@ import './procedencia.css';
  */
 
 const v = (tono) => `var(--${tono})`;
-
-const AYUDAS = {
-    workshop: 'La clase en vivo y la grabación de la landing. Son el mismo workshop: suman juntas, y abajo se ve cuánto aportó cada una.',
-    setting: 'Las agendas que consiguió cada setter. «Sin identificar» es el link de un setter que no dejó su nombre.',
-    vsl: 'Las agendas que entraron por el embudo de la VSL.',
-    fulfillment: 'Renovaciones y upsells, que los trae Fulfillment y no un embudo, más los pagos de sus agendas.',
-    sin_procedencia: 'Pagos sin una agenda que los origine, o con una fuente que no es ninguna de las de arriba.',
-};
 
 const pct = (n) => (n === null || n === undefined ? '—' : `${n.toFixed(1)}%`);
 
@@ -91,7 +84,7 @@ const Procedencia = ({ desde, hasta }) => {
                                 <span className="fila" style={{ gap: 9, minWidth: 0 }}>
                                     <span className="cab-punto" style={{ background: v(p.tone) }} />
                                     <span className="trunc" style={{ fontWeight: 700 }}>{p.label}</span>
-                                    <Tip texto={AYUDAS[p.key]} titulo={p.label} />
+                                    <Tip texto={AYUDA_PROCEDENCIA[p.key]} titulo={p.label} />
                                 </span>
                                 <Barra valor={ancho(p.monto)} color={v(p.tone)} />
                                 <span className="tdatos-p">{p.cantidad}</span>
