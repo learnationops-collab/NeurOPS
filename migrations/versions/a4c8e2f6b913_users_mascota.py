@@ -9,6 +9,9 @@ elige entre 10 desde el mismo menú.
 
 No destructivo: una columna opcional, NULL para todos (el frontend asigna uno según el id).
 
+Idempotente: la misma columna llegó a producción antes por main (`ee63a37b67f3`). Cuando esta rama
+llegue allá, la columna ya existe y no hay nada que hacer.
+
 """
 
 from alembic import op
@@ -23,6 +26,8 @@ depends_on = None
 
 
 def upgrade():
+    if 'mascota' in {c['name'] for c in sa.inspect(op.get_bind()).get_columns('users')}:
+        return
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(sa.Column('mascota', sa.String(length=20), nullable=True))
 
