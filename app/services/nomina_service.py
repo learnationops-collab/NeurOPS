@@ -1,0 +1,163 @@
+"""El motor de la nómina variable: UNA cuenta de comisiones para Payroll y Finanzas (08/10/2026).
+
+Antes eran dos copias del mismo cálculo: la sección Payroll (`/public/financial-sales/payroll`, por
+rango) y la pestaña Nómina de Finanzas (`get_commissions_calculated`, por mes). Ya no decían lo
+mismo: Finanzas no miraba las ventas sacadas de la nómina (`is_excluded_from_payroll`) y Payroll sí.
+Ahora las dos piden acá, y Finanzas es el rango de un mes.
+
+Quién cobra y con qué %:
+- setters (`SETTERS_CON_COMISION`): la fuente de la agenda que originó la venta, o el campo de la venta;
+- closers (`CLOSERS_CON_COMISION`): `resolver_nombre_closer` sobre `email_vendedor`;
+- Marlon como Director de Ventas, sobre lo que venden los closers con comisión, sin renovaciones;
+- Fulfillment, por programa y fuente (`fulfillment_commission_service.nomina_por_persona`).
+Cada venta cobra con el % del mes en que entró (`comision_tasas_service.por_mes`): un rango puede
+cruzar un cambio. Todo sobre el cash NETO (sin la fee de Stripe/Hotmart) de las ventas completadas.
+"""
+from datetime import datetime, time
+
+from app.services.commission_service import (
+    CLOSERS_CON_COMISION, DIRECTOR_DE_VENTAS, SETTERS_CON_COMISION, cash_neto_de, clave_de_closer)
+
+# Lo que el resto del sistema considera «sin resultado todavía» como fuente de un lead.
+_FUENTE_INVALIDA = ('s/f', 'n/a', '')
+
+
+def venta_completada(venta):
+    """Una venta cuenta si está completada o confirmada (o sin estado, como las viejas)."""
+    estado = (venta.estado or '').strip().lower()
+    return estado in ('', 'completada', 'confirmada')
+
+
+def setter_de_la_venta(venta, agenda):
+    """El setter de una venta: la fuente de la agenda que la originó (vía `AttributionService`)
+    manda sobre el campo `FinancialSale.setter`; una entrevista o diagnóstica no es un setter."""
+    if agenda and agenda.nombre and agenda.nombre.strip():
+        nombre = agenda.nombre.lower()
+        if (nombre not in _FUENTE_INVALIDA and 'entrevista' not in nombre
+                and 'diagnostica' not in nombre and 'diagnóstica' not in nombre):
+            return agenda.nombre
+    setter = venta.setter
+    if setter and setter.strip() and setter not in ('Sin Setter', 'Confirmada'):
+        return setter
+    return 'Sin Setter'
+
+
+def es_renovacion(tipo_pago):
+    """El tipo de pago simple ('RR - Renovación' -> 'Renovación') es una renovación."""
+    tipo = (tipo_pago or '').split(' - ', 1)[-1].lower()
+    return 'renovacion' in tipo or 'renovación' in tipo
+
+
+def _inicio(dia):
+    return datetime.combine(dia, time.min) if dia else None
+
+
+def _fin(dia):
+    return datetime.combine(dia, time.max) if dia else None
+
+
+def comisiones_del_rango(desde=None, hasta=None):
+    """La nómina variable entre dos fechas (`date`, ambas inclusive; None = sin límite).
+
+    Devuelve {clave -> {'sales', 'total_recaudado_neto', 'porcentaje_comision', 'comision_total',
+    'total_ventas'}} de cada persona con comisión, y 'totales' con el cash del período. Cada venta de
+    `sales` trae su `porcentaje` y su `comision`; las sacadas de la nómina se listan pero no suman.
+    `porcentaje_comision` es el % de la persona si en el rango hubo uno solo (None si cruzó un
+    cambio: cada venta trae el suyo)."""
+    from app.models import FinancialAgenda, FinancialSale
+    from app.services.attribution_service import AttributionService
+    from app.services.closer_name_service import resolver_nombre_closer
+    from app.services.comision_tasas_service import por_mes
+    from app.services.fulfillment_commission_service import nomina_por_persona
+
+    query = FinancialSale.query
+    if desde:
+        query = query.filter(FinancialSale.date >= _inicio(desde))
+    if hasta:
+        query = query.filter(FinancialSale.date <= _fin(hasta))
+    sales = query.all()
+    attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=FinancialAgenda.query.all())
+
+    tasas_de_mes = por_mes()
+    grupo_de = {clave: 'setters' for clave in SETTERS_CON_COMISION.values()}
+    grupo_de.update({clave: 'closers' for clave in CLOSERS_CON_COMISION.values()})
+    grupo_de[DIRECTOR_DE_VENTAS] = 'director'
+    ventas_de = {clave: [] for clave in grupo_de}
+    recaudado = {clave: 0.0 for clave in grupo_de}
+    comision = {clave: 0.0 for clave in grupo_de}
+    porcentajes = {clave: set() for clave in grupo_de}
+    completadas = []  # (venta, sale_data) para la nómina de Fulfillment
+    # El cash del período, con o sin comisión de por medio: el contexto de lo que se paga.
+    cash = {"neto": 0.0, "bruto": 0.0, "ventas": 0}
+    mes_de_cierre = (hasta or datetime.utcnow()).strftime('%Y-%m')
+
+    for s in sales:
+        if not venta_completada(s):
+            continue
+        final_setter = setter_de_la_venta(s, attribution_map.get(s.id))
+        final_closer = resolver_nombre_closer(s.email_vendedor)
+        monto_original = float(s.monto or 0.0)
+        monto_ajustado = cash_neto_de(s.monto, s.metodo_pago)
+
+        sale_data = {
+            "id": s.id,
+            "date": s.date.isoformat() if s.date else None,
+            "nombre_cliente": s.nombre_cliente,
+            "instagram": s.instagram,
+            "monto_neto": round(monto_ajustado, 2),
+            "monto_bruto": round(monto_original, 2),
+            "metodo_pago": s.metodo_pago,
+            "tipo_pago": s.tipo_pago,
+            "closer": final_closer,
+            "setter": final_setter,
+            "is_excluded_from_payroll": s.is_excluded_from_payroll or False
+        }
+        completadas.append((s, sale_data))
+        excluida = sale_data["is_excluded_from_payroll"]
+        cash["neto"] += monto_ajustado
+        cash["bruto"] += monto_original
+        cash["ventas"] += 1
+        tasas = tasas_de_mes(s.date.strftime('%Y-%m') if s.date else mes_de_cierre)
+
+        def sumar(clave):
+            pct = tasas[grupo_de[clave]][clave]
+            porcentajes[clave].add(pct)
+            ventas_de[clave].append({**sale_data, "porcentaje": pct, "comision": round(monto_ajustado * pct / 100, 2)})
+            if not excluida:
+                recaudado[clave] += monto_ajustado
+                comision[clave] += monto_ajustado * pct / 100
+
+        setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
+        if setter_clave:
+            sumar(setter_clave)
+
+        closer_clave = clave_de_closer(final_closer)
+        if closer_clave:
+            sumar(closer_clave)
+            # Marlon cobra su % del cash collect de los closers sin renovaciones
+            if not es_renovacion(s.tipo_pago):
+                sumar(DIRECTOR_DE_VENTAS)
+
+    def porcentaje_de(clave):
+        # Un solo % en el rango es el de la persona; si el rango cruza un cambio, no hay uno solo
+        # (None, como Fulfillment) y cada venta trae el suyo. Sin ventas, el del último mes.
+        usados = porcentajes[clave]
+        if not usados:
+            return tasas_de_mes(mes_de_cierre)[grupo_de[clave]][clave]
+        return next(iter(usados)) if len(usados) == 1 else None
+
+    nomina = {
+        clave: {
+            "sales": ventas_de[clave],
+            "total_recaudado_neto": round(recaudado[clave], 2),
+            "porcentaje_comision": porcentaje_de(clave),
+            "comision_total": round(comision[clave], 2),
+            "total_ventas": len([x for x in ventas_de[clave] if not x["is_excluded_from_payroll"]])
+        }
+        for clave in grupo_de
+    }
+    # Fulfillment: el % cambia venta a venta (programa y fuente), así que cada venta trae el suyo.
+    nomina.update(nomina_por_persona(completadas, tasas_de_mes))
+    nomina["totales"] = {"cash_neto": round(cash["neto"], 2), "cash_bruto": round(cash["bruto"], 2),
+                         "ventas": cash["ventas"]}
+    return nomina

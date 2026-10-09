@@ -128,90 +128,21 @@ def comision_de_miembro(member, dynamic_commissions):
 
 
 def get_commissions_calculated(month_str):
-    from app.services.commission_service import SETTERS_CON_COMISION, CLOSERS_CON_COMISION
+    """{clave -> comisión del mes} de quienes cobran por ventas, y en 'fulfillment' la de cada
+    integrante de Fulfillment. Es la nómina de Payroll del mes calendario (`comisiones_del_rango`):
+    desde el 08/10/2026 Finanzas y Payroll hacen la misma cuenta, y Finanzas también deja afuera
+    las ventas sacadas de la nómina."""
+    from app.services.fulfillment_commission_service import TASAS
+    from app.services.nomina_service import comisiones_del_rango
 
-    try:
-        year, month = map(int, month_str.split('-'))
-        start_date = datetime(year, month, 1)
-        last_day = calendar.monthrange(year, month)[1]
-        end_date = datetime(year, month, last_day, 23, 59, 59, 999999)
-    except Exception:
+    rango = _rango_del_mes(month_str or '')
+    if not rango:
         return {}
-
-    sales = FinancialSale.query.filter(
-        FinancialSale.date >= start_date,
-        FinancialSale.date <= end_date
-    ).all()
-
-    all_agendas = FinancialAgenda.query.all()
-    from app.services.attribution_service import AttributionService
-    attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
-
-    recaudado = {clave: 0.0 for clave in (*SETTERS_CON_COMISION.values(), *CLOSERS_CON_COMISION.values())}
-    marlon_recaudado = 0.0
-    completadas = []
-
-    for s in sales:
-        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
-        if not sale_is_completed:
-            continue
-        completadas.append(s)
-
-        resolved_setter = None
-
-        agenda = attribution_map.get(s.id)
-        if agenda:
-            is_valid_lead_source = (
-                agenda.nombre and
-                agenda.nombre.strip() and
-                agenda.nombre.lower() not in ('s/f', 'n/a', '') and
-                'entrevista' not in agenda.nombre.lower() and
-                'diagnostica' not in agenda.nombre.lower() and
-                'diagnóstica' not in agenda.nombre.lower()
-            )
-            if is_valid_lead_source:
-                resolved_setter = agenda.nombre
-
-        if not resolved_setter:
-            s_setter = s.setter
-            if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
-                resolved_setter = s_setter
-
-        final_setter = resolved_setter or "Sin Setter"
-        final_closer = resolve_closer_name(s.email_vendedor)
-
-        monto_original = float(s.monto or 0.0)
-        if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
-            monto_ajustado = monto_original * 0.955
-        elif s.metodo_pago and s.metodo_pago.strip().lower() == 'hotmart':
-            monto_ajustado = monto_original * 0.911
-        else:
-            monto_ajustado = monto_original
-
-        setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
-        if setter_clave:
-            recaudado[setter_clave] += monto_ajustado
-
-        closer_clave = CLOSERS_CON_COMISION.get(final_closer.strip().lower())
-        if closer_clave:
-            recaudado[closer_clave] += monto_ajustado
-
-            prog, simple_tp = split_tipo_pago(s.tipo_pago)
-            is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
-            if not is_renovacion:
-                marlon_recaudado += monto_ajustado
-
-    # Los % del mes: editables desde Payroll, cada juego vale desde un mes (ver comision_tasas_service).
-    from app.services.comision_tasas_service import vigentes
-    tasas, _ = vigentes(month_str)
-    comisiones = {clave: round(recaudado[clave] * tasas['setters'][clave] / 100, 2)
-                  for clave in SETTERS_CON_COMISION.values()}
-    comisiones.update({clave: round(recaudado[clave] * tasas['closers'][clave] / 100, 2)
-                       for clave in CLOSERS_CON_COMISION.values()})
-    comisiones['marlon'] = round(marlon_recaudado * tasas['director']['marlon'] / 100, 2)
-
-    from app.services.fulfillment_commission_service import comisiones_del_mes
-    comisiones['fulfillment'] = comisiones_del_mes(month_str, completadas, tasas['fulfillment'])
+    nomina = comisiones_del_rango(rango[0].date(), rango[1].date())
+    nomina.pop('totales', None)
+    fulfillment = {clave: nomina.pop(clave)['comision_total'] for clave in TASAS}
+    comisiones = {clave: datos['comision_total'] for clave, datos in nomina.items()}
+    comisiones['fulfillment'] = fulfillment
     return comisiones
 
 def _seed_variable_members():

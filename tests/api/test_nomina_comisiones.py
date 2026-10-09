@@ -1,7 +1,7 @@
-"""Comisiones variables de la nómina: /admin/finance (`get_commissions_calculated`) y /admin/payroll
+"""Comisiones variables de la nómina: Finanzas (`get_commissions_calculated`) y Payroll
 (`/public/financial-sales/payroll`) cubren a los dos setters (Elias y Paula, 8%), a los dos closers
 (Jean Carlo y Facundo, 10%) y a Marlon como Director de Ventas (5% de lo que venden los closers,
-sin renovaciones).
+sin renovaciones). Desde el 08/10/2026 las dos hacen la misma cuenta (`nomina_service`).
 """
 from datetime import datetime
 
@@ -36,10 +36,24 @@ def test_finanzas_calcula_la_comision_de_las_cinco_personas(ventas_del_mes):
     assert comisiones == {
         'elias': 80.0,       # 8% de 1000
         'paula': 64.0,       # 8% de 500 + 300
-        'jeancarlo': 120.0,  # 10% de 1000 + 200 (Finanzas no mira la exclusión de la nómina)
+        'jeancarlo': 100.0,  # 10% de 1000: la de 200 se sacó de la nómina
         'facundo': 80.0,     # 10% de 500 + 300
-        'marlon': 85.0,      # 5% de 1000 + 200 + 500: la renovación de Facundo no cuenta
+        'marlon': 75.0,      # 5% de 1000 + 500: la renovación de Facundo no cuenta
     }
+
+
+def test_finanzas_y_payroll_dicen_lo_mismo(client, make_user, auth_headers, ventas_del_mes):
+    """Una sola cuenta (08/10/2026): antes Finanzas sumaba las ventas sacadas de la nómina y
+    Payroll no, y el mismo mes daba dos comisiones distintas."""
+    admin = make_user(role='admin', can_view_finance=True)
+    payroll = client.get('/api/public/financial-sales/payroll?start_date=2026-10-01&end_date=2026-10-31',
+                         headers=auth_headers(admin)).get_json()
+    finanzas = get_commissions_calculated('2026-10')
+
+    for clave, comision in finanzas.pop('fulfillment').items():
+        assert payroll[clave]['comision_total'] == comision
+    for clave, comision in finanzas.items():
+        assert payroll[clave]['comision_total'] == comision
 
 
 @pytest.mark.parametrize('nombre,clave', [

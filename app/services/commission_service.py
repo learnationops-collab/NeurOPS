@@ -11,12 +11,22 @@ CLOSER_RATE = 0.10
 SETTER_RATE = 0.08
 DIRECTOR_RATE = 0.05
 
-# Quiénes cobran comisión variable en la nómina (/admin/finance y /admin/payroll), por el
-# nombre con el que aparecen en las ventas (setter = fuente de la agenda que originó la venta,
-# closer = `resolver_nombre_closer`) -> clave con la que viajan en las respuestas. Marlon, como
-# Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos closers, sin renovaciones.
+# Quiénes cobran comisión variable en la nómina (Finanzas y Payroll; la cuenta vive en
+# `nomina_service`), por el nombre con el que aparecen en las ventas (setter = fuente de la agenda
+# que originó la venta, closer = `resolver_nombre_closer`, normalizado) -> clave con la que viajan
+# en las respuestas. Marlon, como Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos
+# closers, sin renovaciones.
 SETTERS_CON_COMISION = {'elias': 'elias', 'paula': 'paula'}
 CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo'}
+DIRECTOR_DE_VENTAS = 'marlon'
+
+
+def clave_de_closer(nombre):
+    """La clave de nómina del closer con ese nombre canónico (`resolver_nombre_closer`), o None.
+    Se compara normalizado (sin acentos ni mayúsculas): 'Marlon García' y 'Marlon Garcia' son el
+    mismo usuario escrito de dos formas."""
+    from app.services.fuente_service import normalizar
+    return CLOSERS_CON_COMISION.get(normalizar(nombre))
 
 # Fees de la pasarela que se descuentan para llegar al cash NETO. Los mismos factores viven
 # repetidos en media docena de sitios de app/api/public (finance.py, financial_sales.py); acá se
@@ -64,7 +74,7 @@ class CommissionService:
         stats = CloserService.get_comprehensive_stats(user.id, start_date=inicio, end_date=fin)
         cash_neto = float((stats.get('sales') or {}).get('totals', {}).get('cash_neto') or 0.0)
         from app.services.closer_name_service import resolver_nombre_closer
-        clave = CLOSERS_CON_COMISION.get((resolver_nombre_closer(user.username) or '').strip().lower())
+        clave = clave_de_closer(resolver_nombre_closer(user.username))
         tasa = _tasa_propia('closers', clave, mes, CLOSER_RATE)
         return {
             'role': 'closer',
