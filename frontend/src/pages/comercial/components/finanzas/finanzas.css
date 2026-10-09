@@ -252,3 +252,75 @@
 
 /* Porcentaje editable (editor de comisiones de Payroll): el número y el «%» después. */
 .dc-shell .fz-pct{max-width:104px}
+
+/* ============================================================================
+   DIFERENCIAS (09/10/2026): lo reportado contra lo que entró por Stripe y Hotmart.
+   La tabla es una `.fz-tabla` más; cada fila puede abrir su detalle debajo (como la atribución de
+   Payroll) y las acciones de corregir van a la derecha. Nada se monta: los textos largos se cortan
+   con «…» y llevan el texto entero en `title`, y las acciones bajan de renglón antes de pisarse.
+   ============================================================================ */
+.dc-shell .fz-dif-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);
+  margin-bottom:var(--s3);min-width:0}
+.dc-shell .fz-dif-filtros .tabs{overflow-x:auto;scrollbar-width:none}
+.dc-shell .fz-dif-busca{flex:0 1 260px}
+.dc-shell .fz-dif-fila{min-height:60px}
+.dc-shell .fz-dif-estado{display:flex;min-width:0}
+.dc-shell .fz-dif-nom,
+.dc-shell .fz-dif-monto{display:grid;gap:2px;min-width:0}
+.dc-shell .fz-dif-nom b{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .fz-dif-sub{display:block;min-width:0;font-size:11.5px;color:var(--text-muted-40);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .fz-dif-debil{color:var(--warning)}
+.dc-shell .fz-dif-acciones{flex-wrap:wrap;row-gap:6px}
+/* Mientras una corrección pregunta «¿Seguro?», los íconos de al lado se corren: la pregunta y sus
+   dos botones necesitan el ancho entero de la celda. */
+.dc-shell .fz-dif-acciones:has(.fz-dif-confirma) > .ibtn{display:none}
+.dc-shell .fz-dif-accion{flex-shrink:0}
+.dc-shell .fz-dif-confirma{display:inline-flex;align-items:center;gap:6px}
+.dc-shell .fz-dif-confirma small{font-size:11.5px;font-weight:800;color:var(--text-on-surface);white-space:nowrap}
+.dc-shell .fz-dif-sin-cliente{cursor:help}
+/* Una diferencia revisada se sigue viendo, apagada: ya no pide nada. */
+.dc-shell .fz-dif-revisada{opacity:.62;transition:opacity .16s ease}
+.dc-shell .fz-dif-revisada:hover,
+.dc-shell .fz-dif-revisada.fz-fila--abierta{opacity:1}
+
+.dc-shell .fz-dif-detalle{display:grid;gap:var(--s3);min-width:0;padding:var(--s3) 10px var(--s4);
+  background:var(--mat-0);border-bottom:1px solid var(--border-subtle)}
+.dc-shell .fz-dif-lados{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+.dc-shell .fz-dif-lado,
+.dc-shell .fz-dif-candidatos{display:grid;gap:4px;align-content:start;min-width:0}
+.dc-shell .fz-dif-lado small,
+.dc-shell .fz-dif-candidatos > small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .fz-dif-lado p{margin:0;overflow-wrap:anywhere}
+.dc-shell .fz-dif-nota{color:var(--text-muted)}
+.dc-shell .fz-dif-aviso{color:var(--warning)}
+.dc-shell .fz-dif-candidatos ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.dc-shell .fz-dif-candidatos li{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.dc-shell .fz-dif-editor,
+.dc-shell .fz-dif-revisar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3);min-width:0}
+.dc-shell .fz-dif-editor .fz-monto{max-width:none;height:36px}
+.dc-shell .fz-dif-editor .fz-acciones{margin-left:auto}
+.dc-shell .fz-dif-fecha{border-radius:var(--radius-control);cursor:text}
+.dc-shell .fz-dif-atajos{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .fz-dif-error{flex-basis:100%;color:var(--error)}
+.dc-shell .fz-dif-campo-nota{flex:1 1 260px;max-width:440px}
+.dc-shell .fz-dif-campo-nota .fz-select{width:100%;cursor:text;border-radius:var(--radius-control)}
+
+/* Sin CSV en el período: la zona donde soltarlos. */
+.dc-shell .fz-dif-zona{display:grid;justify-items:center;gap:var(--s3);text-align:center;
+  padding:var(--s8) var(--s4);border:1.5px dashed var(--border-control);border-radius:var(--radius-control);
+  transition:border-color .16s ease,background-color .16s ease}
+.dc-shell .fz-dif-zona--encima{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .fz-dif-zona .t-cap{max-width:560px}
+/* Un archivo que no dice de qué pasarela es: se pregunta arriba de la tabla. */
+.dc-shell .fz-dif-elegir{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) var(--s3);
+  padding:var(--s3);margin-bottom:var(--s3);border-radius:var(--radius-control);
+  border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
+  background:color-mix(in srgb,var(--warning) 10%,transparent);animation:dcTagIn .22s var(--spring)}
+.dc-shell .fz-dif-elegir > svg{width:16px;height:16px;color:var(--warning);flex-shrink:0}
+.dc-shell .fz-dif-elegir-txt{flex:1 1 220px;min-width:0;font-size:13px;overflow-wrap:anywhere}
+.dc-shell .fz-dif-cobertura{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3);min-width:0}
+.dc-shell .fz-dif-otra-carga{opacity:.6}
+@media (max-width:760px){.dc-shell .fz-dif-lados{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.dc-shell .fz-dif-elegir{animation:none}}
