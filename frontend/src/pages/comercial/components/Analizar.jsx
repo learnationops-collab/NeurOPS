@@ -589,7 +589,9 @@ const PanelPagos = ({ bloque, irA }) => {
  * Qué cobro va en qué fuente lo decide el backend con la MISMA atribución que Finanzas ›
  * Procedencia y la columna Fuente de las ventas (`comercial_analitica.ingresos_por_fuente`); acá
  * solo se dibuja. Llegan las cinco siempre, también en cero, y suman exacto el Cash collected del
- * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto).
+ * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto). Se dibujan
+ * las cinco salvo «Sin procedencia» en cero (pedido del usuario, 09/10/2026): un embudo en cero dice
+ * que no trajo nada; que no haya cobros sin procedencia no hace falta decirlo.
  *
  * Las filas abren su detalle (el vivo y la grabación, cada setter…) en vez de mostrarlo siempre: con
  * todo abierto la tarjeta era el doble de alta que Payment types, su vecina.
@@ -659,6 +661,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
     // Una abierta por vez: con dos, la tarjeta vuelve a crecer lo que se ahorró al plegarlas.
     const [abierta, setAbierta] = useState(null);
     const { total, cantidad, procedencias } = fuentes;
+    const filas = procedencias.filter(p => p.key !== 'sin_procedencia' || p.cantidad > 0 || p.monto !== 0);
     return (
         <Panel id="p-fuentes" cab={
             <PanelCab titulo="Ingresos por fuente"
@@ -686,7 +689,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
                         <span title="Cobros"><span className="cab-largo">Cobros</span><span className="cab-corto">N.º</span></span>
                         <span>Monto</span><span>%</span><span />
                     </div>
-                    {procedencias.map((p, i) => (
+                    {filas.map((p, i) => (
                         <React.Fragment key={p.key}>
                             <FilaFuente p={p} total={total} i={i} abierta={abierta === p.key} irA={irA}
                                 alternar={() => setAbierta(a => (a === p.key ? null : p.key))} />
