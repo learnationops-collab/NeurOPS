@@ -205,3 +205,14 @@ def test_sin_comparacion_no_hay_delta(client, equipo, cobros, auth_headers):
 
     assert (fuentes['previo'], fuentes['delta']) == (None, None)
     assert {(p['previo'], p['delta']) for p in fuentes['procedencias']} == {(None, None)}
+
+
+def test_acotar_a_un_nombre_vacio_es_acotar_a_nadie(db):
+    """None es todo el equipo; un nombre, aunque esté vacío, acota. Escrito como `if closer_nombre`,
+    un closer sin nombre veía la plata del equipo: la fuga del conjunto vacío, en otro lugar."""
+    from app.services.comercial_service import ComercialService
+
+    assert ComercialService.vendio('Marlon', None) is True
+    assert ComercialService.vendio('Marlon', 'marlon') is True
+    assert ComercialService.vendio('Marlon', 'Nerina') is False
+    assert ComercialService.vendio('Sin Closer', '') is False
