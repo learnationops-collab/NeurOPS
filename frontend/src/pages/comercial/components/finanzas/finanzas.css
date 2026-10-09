@@ -137,6 +137,7 @@
 .dc-shell .fz-ventas-cab{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) var(--s3);min-width:0}
 .dc-shell .fz-ventas-cab .t-h2{min-width:0}
 .dc-shell .fz-ventas-periodo{margin-left:auto}
+.dc-shell .fz-ventas-busca{flex:0 1 260px}
 /* La fila con su cambio de atribución abierto debajo: las dos se leen como una sola pieza. */
 .dc-shell .fz-fila--abierta,
 .dc-shell .fz-fila--abierta:hover{background:var(--mat-0);border-bottom-color:transparent}
