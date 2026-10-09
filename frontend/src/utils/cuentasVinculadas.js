@@ -107,3 +107,27 @@ export const opcionesDeRol = (user, onError = () => {}) => {
         })),
     ];
 };
+
+/**
+ * Ir y volver entre Finances y la pantalla del rol desde el menú de sesión (08/10/2026): son dos vistas
+ * separadas y ninguna puede quedar sin salida a la otra. No cambia de rol, solo navega (`navegar`).
+ *   - Fuera de /finanzas: «Pasar a Finances», si la ve con el rol con el que está (`puede`: por
+ *     defecto, lo que dice la sesión; el dashboard comercial pasa lo que le dijo el backend).
+ *   - En /finanzas (`enFinanzas`): «Pasar a <rol>», la vuelta a la pantalla de su rol (el dashboard
+ *     comercial para la dirección, Ventas para el admin), como las tarjetas de la elección.
+ * Es una lista vacía si no corresponde, así que se puede poner siempre en `grupos`.
+ */
+export const opcionesDeFinanzas = (user, navegar, { enFinanzas = false, puede } = {}) => {
+    if (!user) return [];
+    if (enFinanzas) {
+        return [{
+            id: 'rol-actual', label: `Pasar a ${rotuloDeRol(user.role)}`, Icono: ICONO_DE_ROL[user.role] || ArrowLeftRight,
+            onClick: () => navegar(roleLandingPath(user.role)),
+        }];
+    }
+    const ve = puede ?? !!rolDeFinanzas([user.role], user.can_view_finance);
+    return ve ? [{
+        id: 'finanzas', label: `Pasar a ${TITULO_FINANZAS}`, Icono: ICONO_FINANZAS,
+        onClick: () => navegar(RUTA_FINANZAS),
+    }] : [];
+};

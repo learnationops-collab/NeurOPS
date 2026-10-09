@@ -11,14 +11,14 @@ import DashboardComercial from './DashboardComercial';
  * (`puede_ver_finanzas` del contexto); acá se comprueba que el tablero lo respete.
  */
 
-const estado = vi.hoisted(() => ({ puede: false }));
+const estado = vi.hoisted(() => ({ puede: false, user: null }));
 const navegar = vi.hoisted(() => vi.fn());
 vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => navegar }));
 
 vi.mock('./comercialApi', () => ({
     getContexto: vi.fn(() => Promise.resolve({
         puede_elegir_equipo: true, puede_reportar: true, puede_ver_finanzas: estado.puede,
-        rol: 'closers', yo: { id: 1, rol: 'admin', nombre: 'Mario' }, miembros: [], estados: [],
+        rol: 'closers', yo: { id: 1, rol: estado.user?.role || 'admin', nombre: 'Mario' }, miembros: [], estados: [],
         periodos: [{ key: 'mes', label: 'Este mes' }],
         comparaciones: [{ key: 'prev', label: 'Período anterior' }],
     })),
@@ -32,7 +32,7 @@ vi.mock('./comercialApi', () => ({
     sincronizarAcademia: vi.fn(),
 }));
 vi.mock('../../contexts/AuthContext', () => ({
-    useAuth: () => ({ user: { id: 1, role: 'admin', is_impersonating: false }, logout: vi.fn() }),
+    useAuth: () => ({ user: estado.user || { id: 1, role: 'admin', is_impersonating: false }, logout: vi.fn() }),
 }));
 vi.mock('./components/Analizar', () => ({ default: () => <div data-testid="analizar" /> }));
 // El período que recibe Finanzas: el mes si es justo uno, y si no las dos fechas.
@@ -233,5 +233,68 @@ describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
         montar(destino.pathname + destino.search);
         expect(await screen.findByRole('button', { name: 'Quitar Comisión de Andy' })).toBeTruthy();
         expect(screen.getByRole('tab', { name: 'Ventas', selected: true })).toBeTruthy();
+    });
+});
+
+/** Las dos vistas se pasan de una a la otra desde el menú del avatar: ninguna queda sin salida. */
+describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
+    beforeEach(() => {
+        navegar.mockClear();
+        estado.user = null;
+        try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+    });
+
+    const abrirSesion = async () => {
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Tu sesión: Mario/ })); });
+    };
+    const opciones = () => screen.getAllByRole('menuitem').map(i => i.textContent);
+
+    it('en Comercial, con «ver finanzas», el menú ofrece «Pasar a Finances»', async () => {
+        estado.puede = true;
+        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        montar();
+        await screen.findByTestId('analizar');
+
+        await abrirSesion();
+        expect(screen.getByText('Dirección comercial')).toBeTruthy();
+        expect(opciones()).toEqual(['Pasar a Finances', 'Simular a un closer', 'Cerrar sesión']);
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Finances' }));
+        expect(navegar).toHaveBeenCalledWith('/finanzas');
+    });
+
+    it('en Comercial, sin «ver finanzas», no la ofrece', async () => {
+        estado.puede = false;
+        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        montar();
+        await screen.findByTestId('analizar');
+
+        await abrirSesion();
+        expect(opciones()).not.toContain('Pasar a Finances');
+    });
+
+    it('en /finanzas el menú dice Finances y su primera opción vuelve a la dirección comercial', async () => {
+        estado.puede = true;
+        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        montar('/finanzas');
+        await screen.findByTestId('finanzas');
+
+        await abrirSesion();
+        expect(screen.getByText('Finances')).toBeTruthy();
+        expect(opciones()).toEqual(['Pasar a Dirección comercial', 'Simular a un closer', 'Cerrar sesión']);
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Dirección comercial' }));
+        expect(navegar).toHaveBeenCalledWith('/admin/comercial');
+    });
+
+    it('el admin vuelve de /finanzas a su pantalla, y sus otros roles siguen en el menú', async () => {
+        estado.puede = true;
+        estado.user = { id: 1, role: 'admin', roles: ['admin', 'closer'], can_view_finance: true, is_impersonating: false };
+        montar('/finanzas');
+        await screen.findByTestId('finanzas');
+
+        await abrirSesion();
+        expect(opciones().slice(0, 2)).toEqual(['Pasar a Administrador', 'Pasar a Closer']);
+        expect(opciones()).not.toContain('Pasar a Finances');
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Administrador' }));
+        expect(navegar).toHaveBeenCalledWith('/admin/ventas');
     });
 });

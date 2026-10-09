@@ -5,7 +5,7 @@ vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
 
 import {
     otrasCuentas, otrosRoles, opcionesDeRol, cambiarDeRol, cambiarDeRolEnLaCuenta, rotuloDeRol, rolDeFinanzas,
-    RUTA_FINANZAS, TITULO_FINANZAS,
+    opcionesDeFinanzas, RUTA_FINANZAS, TITULO_FINANZAS,
 } from './cuentasVinculadas';
 
 const marlon = {
@@ -118,6 +118,28 @@ describe('cuentas vinculadas', () => {
         it('la tarjeta se llama «Finances» y va a /finanzas', () => {
             expect(TITULO_FINANZAS).toBe('Finances');
             expect(RUTA_FINANZAS).toBe('/finanzas');
+        });
+
+        it('el menú de sesión ofrece «Pasar a Finances» solo a quien la ve con el rol con el que está', () => {
+            const navegar = vi.fn();
+            const [ir] = opcionesDeFinanzas({ id: 1, role: 'director_comercial', can_view_finance: true }, navegar);
+            expect(ir.label).toBe('Pasar a Finances');
+            ir.onClick();
+            expect(navegar).toHaveBeenCalledWith('/finanzas');
+
+            expect(opcionesDeFinanzas({ id: 1, role: 'director_comercial', can_view_finance: false }, navegar)).toEqual([]);
+            expect(opcionesDeFinanzas({ id: 1, role: 'operator', roles: ['operator', 'admin'], can_view_finance: true }, navegar)).toEqual([]);
+            expect(opcionesDeFinanzas(null, navegar)).toEqual([]);
+            // Lo que diga el backend manda sobre la sesión guardada.
+            expect(opcionesDeFinanzas({ id: 1, role: 'admin' }, navegar, { puede: true })).toHaveLength(1);
+        });
+
+        it('en /finanzas ofrece la vuelta a la pantalla del rol', () => {
+            const navegar = vi.fn();
+            const [volver] = opcionesDeFinanzas({ id: 1, role: 'director_comercial' }, navegar, { enFinanzas: true });
+            expect(volver.label).toBe('Pasar a Dirección comercial');
+            volver.onClick();
+            expect(navegar).toHaveBeenCalledWith('/admin/comercial');
         });
     });
 });

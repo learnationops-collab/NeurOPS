@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation, simularA } from '../../utils/impersonation';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import { opcionesDeFinanzas, opcionesDeRol, RUTA_FINANZAS, TITULO_FINANZAS } from '../../utils/cuentasVinculadas';
 import './comercial.css';
 import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
@@ -157,7 +157,7 @@ const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
  * (`/admin/comercial?s=payroll`) lleva al espacio con el resto de la query.
  */
 const ESPACIOS = { finanzas: ['finanzas', 'payroll'] };
-const RUTA_DE_ESPACIO = { finanzas: '/finanzas' };
+const RUTA_DE_ESPACIO = { finanzas: RUTA_FINANZAS };
 const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)) || null;
 
 /**
@@ -596,7 +596,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         && (delEspacio ? delEspacio.includes(s.id) : !espacioDe(s.id)));
     const sinPermiso = !!permisoPedido && !contexto[permisoPedido];
     const titulo = contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
-    // En un espacio la vuelta a otro lado es el menú del dock.
+    // En un espacio la vuelta a otro lado es el menú del dock (ver `gruposDeSesion`).
     const salida = delEspacio ? null : SALIDA[contexto.yo.rol];
 
     const miembroNombre = miembroId
@@ -666,8 +666,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     };
 
     const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
+    // Comercial y Finances son dos vistas separadas: cada una ofrece pasar a la otra (ver
+    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida.
     const gruposDeSesion = [
-        opcionesDeRol(user, (m) => toast.error(m)),
+        delEspacio
+            ? [...opcionesDeFinanzas(user, navigate, { enFinanzas: true }), ...opcionesDeRol(user, (m) => toast.error(m))]
+            : [...opcionesDeRol(user, (m) => toast.error(m)),
+                ...opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas })],
         SIMULAN_CLOSERS.includes(rolReal) ? [{
             id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
             panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },
@@ -680,8 +685,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
         ],
     ];
-    const rotuloDeRol = [ROTULO_DE_ROL[contexto.yo.rol] || contexto.yo.rol, user?.is_impersonating && 'simulación']
-        .filter(Boolean).join(' · ');
+    // En /finanzas el menú dice Finances, como la tarjeta con la que se entra ahí.
+    const rotuloDeRol = [delEspacio ? TITULO_FINANZAS : ROTULO_DE_ROL[contexto.yo.rol] || contexto.yo.rol,
+        user?.is_impersonating && 'simulación'].filter(Boolean).join(' · ');
 
     const puedeCorregirFila = (fila) => {
         if (!fila || fila.tipo !== 'agenda') return false;
