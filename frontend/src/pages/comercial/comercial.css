@@ -1299,6 +1299,16 @@
 .dc-shell .config-cab{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
 .dc-shell .config-grid{display:grid;gap:var(--s4) var(--s3);
   grid-template-columns:repeat(auto-fit,minmax(min(100%,138px),1fr))}
+/* Nueve facetas (Ventas, desde que tiene Fuente) en el panel de 680px entraban 4 + 4 + 1: la última
+   sola abajo, lo que el usuario no quiere ver en una grilla. Van 3 × 3 mientras cada columna mida
+   al menos 110px; más angosto, como antes. El salto es aritmético, como en `.pareja`: cuando la
+   grilla no llega a los 354px (3 × 110 + 2 huecos) el segundo término vale 138px y manda el
+   `auto-fit` de siempre; cuando llega, es negativo y manda el tercio. */
+.dc-shell .config-grid:has(> :nth-child(9):last-child){
+  grid-template-columns:repeat(auto-fit,minmax(max(
+    calc((100% - 2 * var(--s3)) / 3 - 1px),
+    min(min(100%,138px),calc((3 * 110px + 2 * var(--s3) - 100%) * 999))
+  ),1fr))}
 .dc-shell .config-col{display:grid;gap:var(--s2);align-content:start;min-width:0}
 .dc-shell .config-lista{display:grid;gap:2px;max-height:186px;overflow-y:auto;overflow-x:hidden;
   overscroll-behavior:contain;margin:-2px;padding:2px}

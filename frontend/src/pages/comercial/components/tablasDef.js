@@ -162,6 +162,28 @@ export const duplicadasDe = (filas) => {
     return mapa;
 };
 
+/**
+ * La fuente que trajo un cobro de Ventas: Workshop, Setting, VSL, Fulfillment o Sin procedencia.
+ *
+ * La pone el backend en cada fila (`procedencia`, ver `ComercialService._con_fuente`) con la MISMA
+ * clasificación que la tarjeta «Ingresos por fuente» de Analizar y que Finanzas › Procedencia: acá
+ * no se deduce nada. No es el «Setter» escrito en la venta, que no siempre es el de la agenda que
+ * la originó. Una fila sin el dato (un payload viejo) no lista una opción vacía.
+ */
+export const fuenteDe = (fila) => fila.procedencia?.label ?? null;
+
+/**
+ * El renglón del detalle de una fuente («Workshop · En vivo», «Setting · Elias»), tal como se
+ * escribe en la faceta oculta `fuente_detalle`. Lo arman igual la faceta y la tarjeta que lleva a
+ * ella; con el nombre de la fuente adelante, porque «Sin identificar» u «Otros pagos» solos no dicen
+ * de qué fuente son.
+ */
+export const rotuloDetalleFuente = (fuente, detalle) => `${fuente} · ${detalle}`;
+
+const detalleFuenteDe = (fila) => (fila.procedencia && fila.procedencia_detalle
+    ? rotuloDetalleFuente(fila.procedencia.label, fila.procedencia_detalle.label)
+    : null);
+
 // Columnas que están en los dos juegos de columnas de su tabla: el de siempre y el de la Academia.
 const COL_FECHA_VENTA = { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha,
     ordenLabel: 'Fecha de la venta' };
@@ -245,6 +267,12 @@ export const TABLAS = {
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
             { key: 'metodo', label: 'Método', de: (f) => f.metodo },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
+            // La fuente del cobro, la de «Ingresos por fuente» (ver `fuenteDe`). Su detalle (el vivo
+            // o la grabación, cada setter) va aparte y oculto, como el día: el panel no sabe anidar
+            // opciones dentro de otra, y existe para que un renglón del detalle de la tarjeta tenga
+            // a dónde llevar.
+            { key: 'fuente', label: 'Fuente', de: fuenteDe },
+            { key: 'fuente_detalle', label: 'Detalle de la fuente', de: detalleFuenteDe, oculta: true },
             // El estado de la seña lo agrega el backend a la fila (`sena_estado`): en qué terminó
             // esa reserva, con la MISMA derivación con la que el panel Señas la cuenta. Viene la
             // clave (`pago_completo`…) y acá se traduce a la etiqueta, que es contra lo que se
@@ -266,6 +294,9 @@ export const TABLAS = {
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
+            // El subtotal de cada grupo es el monto de esa fuente en la tarjeta: los mismos cobros,
+            // en bruto.
+            { key: 'fuente', label: 'Fuente', de: fuenteDe },
             AGRUPABLE_ACADEMIA,
         ],
     },
