@@ -131,7 +131,7 @@ const Resumen = ({ periodo }) => {
             <div className="fz-grid fz-grid--4">
                 <Cifron rotulo="Ingresos" valor={dinero(kpis.total_income)} tono="success" humo={HUMOS.ingreso}
                     sub="Cash collect neto de ventas completadas"
-                    ayuda="Monto neto de las ventas completadas y confirmadas con fecha en el período, ya sin la comisión de la pasarela (4,5% Stripe, 8,9% Hotmart)." />
+                    ayuda="Monto neto de las ventas completadas y confirmadas con fecha en el período, ya sin la comisión de la pasarela (4,4% Stripe, 8,2% Hotmart)." />
                 <Cifron rotulo="Gastos" valor={dinero(totalGastos)} tono="error" humo={HUMOS.gasto}
                     sub="Nómina, anuncios y software"
                     ayuda="La suma de la nómina del equipo, el presupuesto de anuncios y el software del período. Si el período corta un mes, la nómina y los anuncios de ese mes cuentan proporcionales a sus días." />

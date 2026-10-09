@@ -2,6 +2,7 @@ from flask import request, jsonify, current_app
 from flask_login import login_required
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from app.decorators import admin_required
+from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
 from datetime import datetime
 from . import bp
@@ -338,12 +339,8 @@ def update_financial_sale(sale_id):
         
         monto_original = float(sale.monto or 0.0)
         s_dict["monto_bruto"] = round(monto_original, 2)
-        if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
-            s_dict["monto"] = round(monto_original * 0.955, 2)
-        elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
-            s_dict["monto"] = round(monto_original * 0.911, 2)
-        else:
-            s_dict["monto"] = round(monto_original, 2)
+        # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
+        s_dict["monto"] = round(cash_neto_de(monto_original, sale.metodo_pago), 2)
             
         s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
         
@@ -584,14 +581,9 @@ def get_financial_sales():
         # Una venta está completada si no tiene estado o su estado es "Completada" o "Confirmada"
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
 
-        # Aplicar el descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
+        # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
         monto_original = float(s.monto or 0.0)
-        if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
-            monto_ajustado = monto_original * 0.955
-        elif s.metodo_pago and s.metodo_pago.strip().lower() == 'hotmart':
-            monto_ajustado = monto_original * 0.911
-        else:
-            monto_ajustado = monto_original
+        monto_ajustado = cash_neto_de(monto_original, s.metodo_pago)
 
         if has_agenda_match or resolved_setter:
             if sale_is_completed:

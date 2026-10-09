@@ -288,9 +288,9 @@ def test_los_kpis_suman_lo_del_periodo_y_la_diferencia_se_explica_por_sus_filas(
     assert kpis['diferencia_por'] == {'pendientes': 33.0, 'revisadas': 0.0, 'otro_periodo': 0.0}
     assert kpis['pendientes'] == {'monto_distinto': 1, 'sin_reportar': 1, 'sin_ingreso': 0, 'total': 2}
     assert kpis['coinciden'] == 1
-    # La comisión real del CSV y la que Finanzas estima (4,5 % de Stripe sobre lo reportado).
+    # La comisión real del CSV y la que Finanzas estima (4,4 % de Stripe sobre lo reportado).
     assert kpis['comision'] == pytest.approx(15.3)
-    assert kpis['comision_estimada'] == pytest.approx(13.815, abs=0.006)
+    assert kpis['comision_estimada'] == pytest.approx(13.508, abs=0.006)
     assert r['kpis']['todas']['diferencia'] == 33.0
 
 

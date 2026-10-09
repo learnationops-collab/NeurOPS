@@ -183,7 +183,7 @@ def test_el_equipo_reparte_como_finanzas_con_el_cash_bruto(client, equipo, cobro
 
     assert forma(fuentes) == forma(finanzas)
     assert next(p['monto'] for p in fuentes['procedencias'] if p['key'] == 'vsl') == 1500.0
-    assert next(p['monto'] for p in finanzas['procedencias'] if p['key'] == 'vsl') == 1432.5
+    assert next(p['monto'] for p in finanzas['procedencias'] if p['key'] == 'vsl') == 1434.0
 
 
 # --- Comparación -------------------------------------------------------------------------------

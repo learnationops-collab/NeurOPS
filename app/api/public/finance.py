@@ -87,6 +87,7 @@ def team_member_operations(id):
 # Fragmento del nombre en TeamMember (sin espacios) -> clave de la comision. Vive en el servicio de
 # la nómina desde el 08/10/2026: Payroll lo usa también para el sueldo base de cada persona.
 from app.services.nomina_service import CLAVES_POR_NOMBRE as _CLAVES_POR_NOMBRE  # noqa: E402
+from app.services.commission_service import cash_neto_de  # noqa: E402
 
 
 def comision_de_miembro(member, dynamic_commissions):
@@ -713,14 +714,9 @@ def get_finance_summary():
         if not sale_is_completed:
             continue
             
-        monto_original = float(s.monto or 0.0)
-        if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
-            monto_ajustado = monto_original * 0.955
-        elif s.metodo_pago and s.metodo_pago.strip().lower() == 'hotmart':
-            monto_ajustado = monto_original * 0.911
-        else:
-            monto_ajustado = monto_original
-            
+        # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
+        monto_ajustado = cash_neto_de(s.monto, s.metodo_pago)
+
         total_income += monto_ajustado
         
         method_name = s.metodo_pago or "No Especificado"
